@@ -75,8 +75,10 @@ import com.vitorpamplona.amethyst.desktop.model.DesktopIAccount
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.desktop.ui.ComposeNoteDialog
+import com.vitorpamplona.amethyst.desktop.ui.ConnectingRelaysScreen
 import com.vitorpamplona.amethyst.desktop.ui.LoginScreen
 import com.vitorpamplona.amethyst.desktop.ui.ZapFeedback
+import com.vitorpamplona.amethyst.desktop.ui.auth.ForceLogoutDialog
 import com.vitorpamplona.amethyst.desktop.ui.chats.DmSendTracker
 import com.vitorpamplona.amethyst.desktop.ui.deck.AddColumnDialog
 import com.vitorpamplona.amethyst.desktop.ui.deck.DeckColumnType
@@ -90,8 +92,10 @@ import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 private val isMacOS = System.getProperty("os.name").lowercase().contains("mac")
 
@@ -104,21 +108,21 @@ enum class LayoutMode {
  * Desktop navigation state — used for in-column navigation (drill-down).
  */
 sealed class DesktopScreen {
-    object Feed : DesktopScreen()
+    data object Feed : DesktopScreen()
 
-    object Reads : DesktopScreen()
+    data object Reads : DesktopScreen()
 
-    object Search : DesktopScreen()
+    data object Search : DesktopScreen()
 
-    object Bookmarks : DesktopScreen()
+    data object Bookmarks : DesktopScreen()
 
-    object Messages : DesktopScreen()
+    data object Messages : DesktopScreen()
 
-    object Notifications : DesktopScreen()
+    data object Notifications : DesktopScreen()
 
-    object Chess : DesktopScreen()
+    data object Chess : DesktopScreen()
 
-    object MyProfile : DesktopScreen()
+    data object MyProfile : DesktopScreen()
 
     data class UserProfile(
         val pubKeyHex: String,
@@ -128,7 +132,7 @@ sealed class DesktopScreen {
         val noteId: String,
     ) : DesktopScreen()
 
-    object Settings : DesktopScreen()
+    data object Settings : DesktopScreen()
 }
 
 fun main() =
@@ -398,20 +402,40 @@ fun App(
 
     // Try to load saved account on startup
     DisposableEffect(Unit) {
-        scope.launch(Dispatchers.IO) {
-            // Load account on IO dispatcher to avoid blocking UI with password prompt (readLine)
-            accountManager.loadSavedAccount()
-        }
-
         relayManager.addDefaultRelays()
         relayManager.connect()
-
-        // Start subscriptions coordinator
         subscriptionsCoordinator.start()
 
+        scope.launch(Dispatchers.IO) {
+            if (accountManager.hasBunkerAccount()) {
+                // Bunker accounts need relay connections before recreating signer
+                accountManager.setConnectingRelays()
+                val connected =
+                    withTimeoutOrNull(30_000L) {
+                        relayManager.connectedRelays.first { it.isNotEmpty() }
+                    }
+                if (connected == null) {
+                    // No relays connected after 30s — fall back to login screen
+                    accountManager.logout()
+                } else {
+                    val result = accountManager.loadSavedAccount(relayManager.client)
+                    if (result.isSuccess) {
+                        accountManager.startHeartbeat(scope)
+                    } else {
+                        // Corrupt bunker state — fall back to login screen
+                        accountManager.logout(deleteKey = true)
+                    }
+                }
+            } else {
+                accountManager.loadSavedAccount()
+            }
+        }
+
         onDispose {
+            accountManager.stopHeartbeat()
             subscriptionsCoordinator.clear()
             relayManager.disconnect()
+            scope.cancel()
         }
     }
 
@@ -426,8 +450,19 @@ fun App(
                 is AccountState.LoggedOut -> {
                     LoginScreen(
                         accountManager = accountManager,
-                        onLoginSuccess = { },
+                        relayClient = relayManager.client,
+                        onLoginSuccess = {
+                            // Start heartbeat if bunker account
+                            val current = accountManager.currentAccount()
+                            if (current?.signerType is com.vitorpamplona.amethyst.desktop.account.SignerType.Remote) {
+                                accountManager.startHeartbeat(scope)
+                            }
+                        },
                     )
+                }
+
+                is AccountState.ConnectingRelays -> {
+                    ConnectingRelaysScreen()
                 }
 
                 is AccountState.LoggedIn -> {
@@ -475,6 +510,15 @@ fun App(
                         )
                     }
                 }
+            }
+
+            // Force logout dialog overlay
+            val forceLogoutReason by accountManager.forceLogoutReason.collectAsState()
+            forceLogoutReason?.let { reason ->
+                ForceLogoutDialog(
+                    reason = reason,
+                    onDismiss = { accountManager.clearForceLogoutReason() },
+                )
             }
         }
     }

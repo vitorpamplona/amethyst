@@ -26,6 +26,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -44,13 +46,16 @@ import com.vitorpamplona.amethyst.desktop.account.AccountManager
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.ui.auth.LoginCard
 import com.vitorpamplona.amethyst.desktop.ui.auth.NewKeyWarningCard
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun LoginScreen(
     accountManager: AccountManager,
+    relayClient: INostrClient?,
     onLoginSuccess: () -> Unit,
 ) {
     var showNewKeyDialog by remember { mutableStateOf(false) }
@@ -81,9 +86,8 @@ fun LoginScreen(
         LoginCard(
             onLogin = { keyInput ->
                 accountManager.loginWithKey(keyInput).map {
-                    // Save account to secure storage (use IO dispatcher to avoid blocking UI)
-                    scope.launch(Dispatchers.IO) {
-                        accountManager.saveCurrentAccount()
+                    scope.launch {
+                        withContext(Dispatchers.IO) { accountManager.saveCurrentAccount() }
                         onLoginSuccess()
                     }
                 }
@@ -92,22 +96,67 @@ fun LoginScreen(
                 generatedAccount = accountManager.generateNewAccount()
                 showNewKeyDialog = true
             },
+            onLoginBunker =
+                if (relayClient != null) {
+                    { bunkerUri ->
+                        accountManager.loginWithBunker(bunkerUri, relayClient).map {
+                            onLoginSuccess()
+                        }
+                    }
+                } else {
+                    null
+                },
         )
 
-        if (showNewKeyDialog && generatedAccount != null) {
+        val account = generatedAccount
+        if (showNewKeyDialog && account != null) {
             Spacer(Modifier.height(24.dp))
             NewKeyWarningCard(
-                npub = generatedAccount!!.npub,
-                nsec = generatedAccount!!.nsec,
+                npub = account.npub,
+                nsec = account.nsec,
                 onContinue = {
                     showNewKeyDialog = false
-                    // Save generated account (use IO dispatcher to avoid blocking UI)
-                    scope.launch(Dispatchers.IO) {
-                        accountManager.saveCurrentAccount()
+                    scope.launch {
+                        withContext(Dispatchers.IO) { accountManager.saveCurrentAccount() }
                         onLoginSuccess()
                     }
                 },
             )
         }
+    }
+}
+
+@Composable
+fun ConnectingRelaysScreen() {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(
+            "Amethyst",
+            style = MaterialTheme.typography.headlineLarge,
+            color = MaterialTheme.colorScheme.onBackground,
+        )
+
+        Spacer(Modifier.height(24.dp))
+
+        CircularProgressIndicator(modifier = Modifier.size(32.dp))
+
+        Spacer(Modifier.height(16.dp))
+
+        Text(
+            "Connecting to relays...",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        Spacer(Modifier.height(8.dp))
+
+        Text(
+            "Restoring remote signer session",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+        )
     }
 }

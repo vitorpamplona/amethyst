@@ -28,10 +28,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -39,6 +41,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,22 +52,37 @@ import com.vitorpamplona.amethyst.commons.resources.login_button
 import com.vitorpamplona.amethyst.commons.resources.login_card_subtitle
 import com.vitorpamplona.amethyst.commons.resources.login_card_title
 import com.vitorpamplona.amethyst.commons.resources.login_generate_button
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.stringResource
 
-/**
- * Login card with Nostr key input field and action buttons.
- *
- * @param onLogin Callback when login is attempted with the key input
- * @param onGenerateNew Callback when "Generate New" is clicked
- * @param modifier Modifier for the card
- * @param cardWidth Width of the card (default 400.dp)
- * @param title Card title
- * @param subtitle Subtitle/hint text
- */
+private val HEX_64_REGEX = Regex("^[0-9a-fA-F]{64}$")
+
+fun validateBunkerUri(input: String): String? {
+    val trimmed = input.trim()
+    if (!trimmed.startsWith("bunker://", ignoreCase = true)) return "Not a bunker URI"
+
+    val afterScheme = trimmed.substring("bunker://".length)
+    val parts = afterScheme.split("?", limit = 2)
+    val pubkeyPart = parts[0]
+
+    if (pubkeyPart.length != 64 || !pubkeyPart.matches(HEX_64_REGEX)) {
+        return "Invalid bunker URI. Expected: bunker://<64-hex-chars>?relay=wss://..."
+    }
+
+    if (parts.size < 2 || !parts[1].contains("relay=wss://", ignoreCase = true)) {
+        return "Bunker URI must include at least one relay parameter (relay=wss://...)"
+    }
+
+    return null // valid
+}
+
 @Composable
 fun LoginCard(
     onLogin: (String) -> Result<Unit>,
     onGenerateNew: () -> Unit,
+    onLoginBunker: (suspend (String) -> Result<Unit>)? = null,
     modifier: Modifier = Modifier,
     cardWidth: Dp = 400.dp,
     title: String = stringResource(Res.string.login_card_title),
@@ -72,6 +90,9 @@ fun LoginCard(
 ) {
     var keyInput by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var isConnecting by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val isBunker = keyInput.trim().startsWith("bunker://", ignoreCase = true)
 
     Card(
         modifier = modifier.width(cardWidth),
@@ -103,36 +124,85 @@ fun LoginCard(
 
             Spacer(Modifier.height(8.dp))
 
-            Text(
-                subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            if (isBunker) {
+                Text(
+                    "This URI connects to your remote signer. Treat it like a password.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            } else {
+                Text(
+                    subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
 
             Spacer(Modifier.height(16.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Button(
-                    onClick = {
-                        onLogin(keyInput).fold(
-                            onSuccess = { /* handled by caller */ },
-                            onFailure = { errorMessage = it.message },
-                        )
-                    },
-                    modifier = Modifier.weight(1f),
-                    enabled = keyInput.isNotBlank(),
+            if (isConnecting) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(stringResource(Res.string.login_button))
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp,
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Text(
+                        "Connecting to remote signer...",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
-
-                OutlinedButton(
-                    onClick = onGenerateNew,
-                    modifier = Modifier.weight(1f),
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Text(stringResource(Res.string.login_generate_button))
+                    Button(
+                        onClick = {
+                            if (isBunker && onLoginBunker != null) {
+                                val validationError = validateBunkerUri(keyInput)
+                                if (validationError != null) {
+                                    errorMessage = validationError
+                                    return@Button
+                                }
+                                isConnecting = true
+                                errorMessage = null
+                                scope.launch(Dispatchers.IO) {
+                                    val result = onLoginBunker(keyInput.trim())
+                                    withContext(Dispatchers.Main) {
+                                        result.fold(
+                                            onSuccess = { isConnecting = false },
+                                            onFailure = {
+                                                errorMessage = it.message
+                                                isConnecting = false
+                                            },
+                                        )
+                                    }
+                                }
+                            } else {
+                                onLogin(keyInput).fold(
+                                    onSuccess = { /* handled by caller */ },
+                                    onFailure = { errorMessage = it.message },
+                                )
+                            }
+                        },
+                        modifier = Modifier.weight(1f),
+                        enabled = keyInput.isNotBlank(),
+                    ) {
+                        Text(if (isBunker) "Connect to Signer" else stringResource(Res.string.login_button))
+                    }
+
+                    OutlinedButton(
+                        onClick = onGenerateNew,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text(stringResource(Res.string.login_generate_button))
+                    }
                 }
             }
         }
