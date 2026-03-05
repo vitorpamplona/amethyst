@@ -20,8 +20,6 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui.auth
 
-import com.github.sarxos.webcam.Webcam
-import com.github.sarxos.webcam.WebcamPanel
 import com.google.zxing.BinaryBitmap
 import com.google.zxing.MultiFormatReader
 import com.google.zxing.NotFoundException
@@ -29,14 +27,21 @@ import com.google.zxing.client.j2se.BufferedImageLuminanceSource
 import com.google.zxing.common.HybridBinarizer
 import java.awt.BorderLayout
 import java.awt.Dimension
+import java.awt.Graphics
 import java.awt.image.BufferedImage
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
+import javax.imageio.ImageIO
 import javax.swing.JDialog
 import javax.swing.JFrame
 import javax.swing.JLabel
+import javax.swing.JPanel
 import javax.swing.SwingConstants
 import javax.swing.SwingUtilities
 
-fun decodeQrFromImage(image: BufferedImage): String? =
+private fun decodeQrFromImage(image: BufferedImage): String? =
     try {
         val source = BufferedImageLuminanceSource(image)
         val bitmap = BinaryBitmap(HybridBinarizer(source))
@@ -45,76 +50,132 @@ fun decodeQrFromImage(image: BufferedImage): String? =
         null
     }
 
+private fun findFfmpeg(): String? =
+    listOf("ffmpeg", "/opt/homebrew/bin/ffmpeg", "/usr/local/bin/ffmpeg")
+        .firstOrNull { path ->
+            try {
+                ProcessBuilder(path, "-version")
+                    .redirectErrorStream(true)
+                    .start()
+                    .waitFor() == 0
+            } catch (_: Exception) {
+                false
+            }
+        }
+
 /**
- * Opens a modal webcam scanner dialog. Scans frames for QR codes continuously.
- * Returns decoded text when found, or null if cancelled / no webcam available.
- * Must be called off the EDT (e.g. from a coroutine on Dispatchers.IO).
+ * Opens a webcam scanner dialog using ffmpeg to capture frames.
+ * Continuously decodes frames looking for QR codes.
+ * Returns decoded text when found, or null if cancelled / no webcam.
+ * Must be called off the EDT (e.g. Dispatchers.IO).
  */
 fun scanQrFromWebcam(): String? {
-    val webcam =
-        try {
-            Webcam.getDefault()
-        } catch (_: Exception) {
-            null
-        } ?: return null
+    val ffmpeg = findFfmpeg() ?: return null
 
-    webcam.viewSize =
-        webcam.viewSizes
-            .filter { it.width <= 1280 }
-            .maxByOrNull { it.width * it.height }
-            ?: webcam.viewSizes.first()
+    val result = AtomicReference<String?>(null)
+    val running = AtomicBoolean(true)
 
-    webcam.open()
+    val imagePanel =
+        object : JPanel() {
+            var currentImage: BufferedImage? = null
 
-    var result: String? = null
+            override fun paintComponent(g: Graphics) {
+                super.paintComponent(g)
+                currentImage?.let { img ->
+                    val scale =
+                        minOf(
+                            width.toDouble() / img.width,
+                            height.toDouble() / img.height,
+                        )
+                    val w = (img.width * scale).toInt()
+                    val h = (img.height * scale).toInt()
+                    val x = (width - w) / 2
+                    val y = (height - h) / 2
+                    g.drawImage(img, x, y, w, h, null)
+                }
+            }
+        }
+
+    val statusLabel = JLabel("Point camera at QR code...", SwingConstants.CENTER)
 
     val dialog = JDialog(null as JFrame?, "Scan QR Code", true)
     dialog.defaultCloseOperation = JDialog.DISPOSE_ON_CLOSE
     dialog.layout = BorderLayout()
-
-    val panel = WebcamPanel(webcam, false)
-    panel.isFPSDisplayed = false
-    panel.isMirrored = true
-    dialog.add(panel, BorderLayout.CENTER)
-
-    val statusLabel = JLabel("Point camera at QR code...", SwingConstants.CENTER)
+    dialog.add(imagePanel, BorderLayout.CENTER)
     dialog.add(statusLabel, BorderLayout.SOUTH)
-
     dialog.preferredSize = Dimension(640, 520)
     dialog.pack()
     dialog.setLocationRelativeTo(null)
 
-    // Scanning thread — reads frames and decodes
-    val scanThread =
+    dialog.addWindowListener(
+        object : java.awt.event.WindowAdapter() {
+            override fun windowClosing(e: java.awt.event.WindowEvent?) {
+                running.set(false)
+            }
+        },
+    )
+
+    // Capture thread — runs ffmpeg to grab single frames in a loop
+    val captureThread =
         Thread {
-            panel.start()
-            while (result == null && webcam.isOpen && dialog.isVisible) {
+            while (running.get()) {
                 try {
-                    val image = webcam.image ?: continue
+                    val process =
+                        ProcessBuilder(
+                            ffmpeg,
+                            "-f",
+                            "avfoundation",
+                            "-video_size",
+                            "640x480",
+                            "-framerate",
+                            "15",
+                            "-i",
+                            "0",
+                            "-frames:v",
+                            "1",
+                            "-f",
+                            "image2pipe",
+                            "-vcodec",
+                            "mjpeg",
+                            "-q:v",
+                            "5",
+                            "pipe:1",
+                        ).redirectError(ProcessBuilder.Redirect.DISCARD)
+                            .start()
+
+                    val baos = ByteArrayOutputStream()
+                    process.inputStream.use { it.copyTo(baos) }
+                    process.waitFor()
+
+                    val bytes = baos.toByteArray()
+                    if (bytes.isEmpty()) continue
+
+                    val image = ImageIO.read(ByteArrayInputStream(bytes)) ?: continue
+
+                    // Update preview
+                    imagePanel.currentImage = image
+                    SwingUtilities.invokeLater { imagePanel.repaint() }
+
+                    // Try to decode QR
                     val decoded = decodeQrFromImage(image)
                     if (decoded != null) {
-                        result = decoded
+                        result.set(decoded)
+                        running.set(false)
                         SwingUtilities.invokeLater { dialog.dispose() }
                         break
                     }
                 } catch (_: Exception) {
-                    // webcam may throw during shutdown
+                    if (!running.get()) break
+                    Thread.sleep(500)
                 }
-                Thread.sleep(150)
             }
         }
-    scanThread.isDaemon = true
-    scanThread.start()
+    captureThread.isDaemon = true
+    captureThread.start()
 
     // Blocks until dialog is closed (modal)
     dialog.isVisible = true
+    running.set(false)
 
-    // Cleanup
-    try {
-        panel.stop()
-        webcam.close()
-    } catch (_: Exception) {
-    }
-
-    return result
+    return result.get()
 }
