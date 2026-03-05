@@ -947,24 +947,7 @@ fun RelaySettingsScreen(
             }
         }
 
-        Spacer(Modifier.height(24.dp))
-        HorizontalDivider()
-        Spacer(Modifier.height(24.dp))
-
-        // Account section
-        Text(
-            "Account",
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onBackground,
-        )
-        Spacer(Modifier.height(8.dp))
-
-        Text(
-            "Logged in as ${account.npub.take(16)}...",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(16.dp))
 
         val logoutScope = rememberCoroutineScope()
         OutlinedButton(
