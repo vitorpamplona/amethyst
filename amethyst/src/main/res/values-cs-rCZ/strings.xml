@@ -1443,21 +1443,4 @@
     <string name="kind_voice_msg">Hlasová zpráva</string>
     <string name="kind_voice_reply">Hlasová odpověď</string>
     <string name="kind_wiki">Wiki</string>
-
-    <string name="reactions_settings_reorder">Změnit pořadí</string>
-    <string name="reactions_settings">Nastavení reakcí</string>
-    <string name="reactions_settings_description">Nastavte, která tlačítka reakcí se zobrazují, jejich pořadí a zda se mají zobrazovat počty.</string>
-    <string name="reactions_settings_enabled">Povoleno</string>
-    <string name="reactions_settings_show_counter">Zobrazit počet</string>
-    <string name="reactions_settings_reply">Odpovědět</string>
-    <string name="reactions_settings_reply_description">Odpovědět na tuto poznámku</string>
-    <string name="reactions_settings_boost">Boost</string>
-    <string name="reactions_settings_boost_description">Repostovat nebo citovat tuto poznámku</string>
-    <string name="reactions_settings_like">To se mi líbí</string>
-    <string name="reactions_settings_like_description">Reagovat na tuto poznámku pomocí emoji</string>
-    <string name="reactions_settings_zap">Zap</string>
-    <string name="reactions_settings_zap_description">Poslat lightning platbu autorovi</string>
-    <string name="reactions_settings_share">Sdílet</string>
-    <string name="reactions_settings_share_description">Sdílet tuto poznámku externě</string>
-
 </resources>

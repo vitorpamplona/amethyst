@@ -1448,20 +1448,4 @@ anz der Bedingungen ist erforderlich</string>
     <string name="kind_voice_msg">Sprachnachricht</string>
     <string name="kind_voice_reply">Sprachantwort</string>
     <string name="kind_wiki">Wiki</string>
-
-    <string name="reactions_settings_reorder">Neu anordnen</string>
-    <string name="reactions_settings">Reaktions-Einstellungen</string>
-    <string name="reactions_settings_description">Konfigurieren Sie, welche Reaktionsschaltflächen angezeigt werden, ihre Reihenfolge und ob Zähler angezeigt werden sollen.</string>
-    <string name="reactions_settings_enabled">Aktiviert</string>
-    <string name="reactions_settings_show_counter">Anzahl anzeigen</string>
-    <string name="reactions_settings_reply">Antworten</string>
-    <string name="reactions_settings_reply_description">Auf diese Notiz antworten</string>
-    <string name="reactions_settings_boost">Boost</string>
-    <string name="reactions_settings_boost_description">Diese Notiz reposten oder zitieren</string>
-    <string name="reactions_settings_like">Gefällt mir</string>
-    <string name="reactions_settings_like_description">Mit einem Emoji auf diese Notiz reagieren</string>
-    <string name="reactions_settings_zap">Zap</string>
-    <string name="reactions_settings_zap_description">Eine Lightning-Zahlung an den Autor senden</string>
-    <string name="reactions_settings_share">Teilen</string>
-    <string name="reactions_settings_share_description">Diese Notiz extern teilen</string>
 </resources>
