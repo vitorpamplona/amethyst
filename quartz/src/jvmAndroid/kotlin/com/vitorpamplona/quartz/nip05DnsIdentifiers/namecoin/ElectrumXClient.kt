@@ -53,48 +53,6 @@ import javax.net.ssl.TrustManager
 import javax.net.ssl.X509TrustManager
 
 /**
- * Result of an ElectrumX name_show query.
- *
- * Maps to the JSON fields returned by Namecoin Core / Electrum-NMC:
- *   { "name": "d/example", "value": "{...}", "txid": "abc...", "height": 12345, ... }
- */
-@Serializable
-data class NameShowResult(
-    val name: String,
-    val value: String,
-    val txid: String? = null,
-    val height: Int? = null,
-    val expiresIn: Int? = null,
-)
-
-/**
- * Specific exception types for Namecoin resolution failures.
- * Allows callers to distinguish "name doesn't exist" from "servers unreachable".
- */
-sealed class NamecoinLookupException(message: String, cause: Throwable? = null) : Exception(message, cause) {
-    /** The name was queried successfully but does not exist on the blockchain. */
-    class NameNotFound(val name: String) : NamecoinLookupException("Name not found: $name")
-
-    /** The name has expired (>36000 blocks since last update). */
-    class NameExpired(val name: String) : NamecoinLookupException("Name expired: $name")
-
-    /** All ElectrumX servers were unreachable or returned errors. */
-    class ServersUnreachable(val lastError: Throwable? = null) :
-        NamecoinLookupException("All ElectrumX servers unreachable", lastError)
-}
-
-/**
- * Represents a single ElectrumX server endpoint.
- */
-data class ElectrumxServer(
-    val host: String,
-    val port: Int,
-    val useSsl: Boolean = true,
-    /** If true, accept any certificate (self-signed, expired, etc.) */
-    val trustAllCerts: Boolean = false,
-)
-
-/**
  * Lightweight, query-only ElectrumX client for Namecoin name resolution.
  *
  * Connects over TCP/TLS to a Namecoin ElectrumX server and resolves
@@ -184,10 +142,6 @@ class ElectrumXClient(
      *
      * @param identifier Full Namecoin name, e.g. "d/example"
      * @param servers    Ordered server list to try; defaults to [DEFAULT_ELECTRUMX_SERVERS]
-     */
-    /**
-     * Try each server in order until one succeeds.
-     *
      * @throws NamecoinLookupException.NameNotFound if the name definitively doesn't exist
      * @throws NamecoinLookupException.NameExpired if the name has expired
      * @throws NamecoinLookupException.ServersUnreachable if all servers failed with connection errors

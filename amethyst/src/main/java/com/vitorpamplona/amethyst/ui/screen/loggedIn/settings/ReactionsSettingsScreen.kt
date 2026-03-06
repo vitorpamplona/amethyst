@@ -238,16 +238,14 @@ private fun ReactionRowItemCard(
                 .fillMaxWidth()
                 .onGloballyPositioned { coordinates ->
                     onMeasured(coordinates.size.height.toFloat())
-                }
-                .graphicsLayer {
+                }.graphicsLayer {
                     translationY = dragOffsetY
                     shadowElevation = elevation
                     if (isDragging) {
                         scaleX = 1.02f
                         scaleY = 1.02f
                     }
-                }
-                .padding(vertical = 8.dp),
+                }.padding(vertical = 8.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),

@@ -34,10 +34,9 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.InvalidatableContent
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.namecoin.NamecoinNameService
-import com.vitorpamplona.quartz.nip05.namecoin.NamecoinLookupException
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.SearchQueryState
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinLookupException
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
 import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
 import kotlinx.coroutines.Dispatchers
@@ -45,6 +44,7 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.SharingStarted.Companion.WhileSubscribed
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -83,10 +83,21 @@ class SearchBarViewModel(
      */
     sealed class NamecoinSearchState {
         data object Idle : NamecoinSearchState()
+
         data object Loading : NamecoinSearchState()
-        data class Resolved(val user: User) : NamecoinSearchState()
-        data class NotFound(val name: String) : NamecoinSearchState()
-        data class Expired(val name: String) : NamecoinSearchState()
+
+        data class Resolved(
+            val user: User,
+        ) : NamecoinSearchState()
+
+        data class NotFound(
+            val name: String,
+        ) : NamecoinSearchState()
+
+        data class Expired(
+            val name: String,
+        ) : NamecoinSearchState()
+
         data object ServersUnreachable : NamecoinSearchState()
     }
 
@@ -132,8 +143,7 @@ class SearchBarViewModel(
                     is NamecoinSearchState.Resolved -> state.user
                     else -> null
                 }
-            }
-            .stateIn(viewModelScope, WhileSubscribed(5000), null)
+            }.stateIn(viewModelScope, WhileSubscribed(5000), null)
 
     val searchResultsUsers =
         combine(

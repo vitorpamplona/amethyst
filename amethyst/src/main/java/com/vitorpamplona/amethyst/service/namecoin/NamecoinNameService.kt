@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.namecoin
 
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.DEFAULT_ELECTRUMX_SERVERS
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumXClient
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumxServer
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinLookupCache
@@ -50,7 +51,7 @@ class NamecoinNameService(
     private val resolver =
         NamecoinNameResolver(
             electrumxClient = electrumxClient,
-            serverListProvider = { customServers.ifEmpty { ElectrumxClient.DEFAULT_SERVERS } },
+            serverListProvider = { customServers.ifEmpty { DEFAULT_ELECTRUMX_SERVERS } },
         )
     private val cache = NamecoinLookupCache()
 
@@ -63,7 +64,7 @@ class NamecoinNameService(
                 "NamecoinNameService not initialized. Call init() first.",
             )
 
-        fun init(electrumxClient: ElectrumxClient): NamecoinNameService =
+        fun init(electrumxClient: ElectrumXClient): NamecoinNameService =
             synchronized(this) {
                 instance?.let { return it }
                 NamecoinNameService(electrumxClient).also { instance = it }
