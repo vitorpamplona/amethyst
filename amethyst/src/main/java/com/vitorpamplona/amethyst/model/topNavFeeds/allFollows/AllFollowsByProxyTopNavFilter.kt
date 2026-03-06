@@ -47,8 +47,8 @@ class AllFollowsByProxyTopNavFilter(
     val communities: Set<String>? = null,
     val proxyRelays: Set<NormalizedRelayUrl>,
 ) : IFeedTopNavFilter {
-    val geotagScopes: Set<String>? = geotags?.mapTo(mutableSetOf<String>()) { GeohashId.Companion.toScope(it) }
-    val hashtagScopes: Set<String>? = hashtags?.mapTo(mutableSetOf<String>()) { HashtagId.Companion.toScope(it) }
+    val geotagScopes: Set<String>? = geotags?.mapTo(mutableSetOf()) { GeohashId.toScope(it) }
+    val hashtagScopes: Set<String>? = hashtags?.mapTo(mutableSetOf()) { HashtagId.toScope(it) }
 
     override fun matchAuthor(pubkey: HexKey): Boolean = authors == null || pubkey in authors
 

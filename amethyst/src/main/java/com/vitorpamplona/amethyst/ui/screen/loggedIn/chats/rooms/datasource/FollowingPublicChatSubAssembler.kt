@@ -40,7 +40,7 @@ class FollowingPublicChatSubAssembler(
     override fun updateFilter(
         key: ChatroomListState,
         since: SincePerRelayMap?,
-    ): List<RelayBasedFilter>? =
+    ): List<RelayBasedFilter> =
         listOfNotNull(
             filterLastMessageFollowingPublicChats(key.account.publicChatList.flowSet.value, since),
             filterFollowingPublicChatsCreationEvent(key.account.publicChatList.flowSet.value, since),

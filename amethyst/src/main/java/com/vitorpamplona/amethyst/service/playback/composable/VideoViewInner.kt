@@ -30,7 +30,7 @@ import com.vitorpamplona.amethyst.service.playback.composable.mainVideo.VideoPla
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.GetMediaItem
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
-public val DEFAULT_MUTED_SETTING = mutableStateOf(true)
+val DEFAULT_MUTED_SETTING = mutableStateOf(true)
 
 @Composable
 fun VideoViewInner(

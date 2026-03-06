@@ -83,7 +83,7 @@ class MeltProcessor {
         )
     }
 
-    suspend fun melt(
+    fun melt(
         token: CashuToken,
         lud16: String,
         okHttpClient: (String) -> OkHttpClient,

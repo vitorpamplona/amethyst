@@ -52,8 +52,8 @@ class AllFollowsByOutboxTopNavFilter(
     val defaultRelays: StateFlow<Set<NormalizedRelayUrl>>,
     val blockedRelays: StateFlow<Set<NormalizedRelayUrl>>,
 ) : IFeedTopNavFilter {
-    val geotagScopes: Set<String>? = geotags?.mapTo(mutableSetOf<String>()) { GeohashId.Companion.toScope(it) }
-    val hashtagScopes: Set<String>? = hashtags?.mapTo(mutableSetOf<String>()) { HashtagId.Companion.toScope(it) }
+    val geotagScopes: Set<String>? = geotags?.mapTo(mutableSetOf<String>()) { GeohashId.toScope(it) }
+    val hashtagScopes: Set<String>? = hashtags?.mapTo(mutableSetOf<String>()) { HashtagId.toScope(it) }
 
     override fun matchAuthor(pubkey: HexKey): Boolean = authors == null || pubkey in authors
 

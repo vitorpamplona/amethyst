@@ -50,7 +50,7 @@ class AccountNotificationsEoseFromRandomRelaysManager(
     override fun updateFilter(
         key: AccountQueryState,
         since: SincePerRelayMap?,
-    ): List<RelayBasedFilter>? {
+    ): List<RelayBasedFilter> {
         // only loads this after the feed is built
         val defaultSince = key.feedContentStates.notifications.lastNoteCreatedAtIfFilled() ?: TimeUtils.oneWeekAgo()
         return (key.account.followsPerRelay.value.keys - key.account.notificationRelays.flow.value).flatMap {

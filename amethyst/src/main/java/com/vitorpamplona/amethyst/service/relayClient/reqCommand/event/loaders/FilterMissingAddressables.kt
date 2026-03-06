@@ -71,7 +71,7 @@ fun potentialRelaysToFindAddress(note: AddressableNote): Set<NormalizedRelayUrl>
     return set
 }
 
-fun filterMissingAddressables(keys: List<EventFinderQueryState>): List<RelayBasedFilter>? {
+fun filterMissingAddressables(keys: List<EventFinderQueryState>): List<RelayBasedFilter> {
     val addressesPerRelay =
         mapOfSet {
             keys.forEach { key ->

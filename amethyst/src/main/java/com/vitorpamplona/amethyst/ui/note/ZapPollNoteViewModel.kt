@@ -262,7 +262,7 @@ class PollNoteViewModel : ViewModel() {
             valueMinimum?.let { minimum ->
                 valueMaximum?.let { maximum ->
                     if (minimum != maximum) {
-                        options.add(((minimum + maximum) / 2).toLong())
+                        options.add(((minimum + maximum) / 2))
                     }
                 }
             }

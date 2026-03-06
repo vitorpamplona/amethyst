@@ -26,7 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 @Stable
 class PrivateOutboxRelayListViewModel : BasicRelaySetupInfoModel() {
-    override fun getRelayList(): List<NormalizedRelayUrl>? =
+    override fun getRelayList(): List<NormalizedRelayUrl> =
         account.privateStorageRelayList.flow.value
             .toList()
 

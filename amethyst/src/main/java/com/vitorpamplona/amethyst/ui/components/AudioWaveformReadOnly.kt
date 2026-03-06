@@ -207,6 +207,4 @@ internal fun Iterable<Float>.normalize(
     return values.map { scale * ((it - currentMin) / range) + min }
 }
 
-private fun Int.safeDiv(value: Int): Float {
-    return if (value == 0) return 0F else this / value.toFloat()
-}
+private fun Int.safeDiv(value: Int): Float = if (value == 0) 0F else this / value.toFloat()

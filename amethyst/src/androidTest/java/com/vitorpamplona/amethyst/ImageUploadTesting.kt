@@ -80,7 +80,7 @@ class ImageUploadTesting {
             .addInterceptor(DefaultContentTypeInterceptor("Amethyst/${BuildConfig.VERSION_NAME}"))
             .build()
 
-    private suspend fun getBitmap(): ByteArray {
+    private fun getBitmap(): ByteArray {
         val bitmap = Bitmap.createBitmap(200, 300, Bitmap.Config.ARGB_8888)
         for (x in 0 until bitmap.width) {
             for (y in 0 until bitmap.height) {

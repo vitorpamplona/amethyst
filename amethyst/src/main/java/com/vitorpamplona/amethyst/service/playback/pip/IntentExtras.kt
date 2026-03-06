@@ -77,7 +77,7 @@ class IntentExtras {
                 data.mimeType?.let { putString("mimeType", it) }
                 data.aspectRatio?.let { putFloat("aspectRatio", it) }
                 data.proxyPort?.let { putInt("proxyPort", it) }
-                data.keepPlaying.let { putBoolean("keepPlaying", it) }
+                putBoolean("keepPlaying", data.keepPlaying)
                 data.waveformData?.let { putFloatArray("wavefrontData", it.wave.toFloatArray()) }
 
                 bounds?.let { putInt("boundLeft", it.left) }

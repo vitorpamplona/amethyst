@@ -26,7 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 @Stable
 class BroadcastRelayListViewModel : BasicRelaySetupInfoModel() {
-    override fun getRelayList(): List<NormalizedRelayUrl>? =
+    override fun getRelayList(): List<NormalizedRelayUrl> =
         account.broadcastRelayList.flow.value
             .toList()
 

@@ -40,7 +40,7 @@ class FollowingEphemeralChatSubAssembler(
     override fun updateFilter(
         key: ChatroomListState,
         since: SincePerRelayMap?,
-    ): List<RelayBasedFilter>? =
+    ): List<RelayBasedFilter> =
         listOfNotNull(
             filterFollowingEphemeralChats(key.account.ephemeralChatList.liveEphemeralChatList.value, since),
         ).flatten()

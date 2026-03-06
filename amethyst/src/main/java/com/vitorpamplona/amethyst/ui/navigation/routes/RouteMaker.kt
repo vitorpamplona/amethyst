@@ -323,7 +323,7 @@ suspend fun routeEditDraftTo(
         is ChatroomKeyable -> {
             val room = draft.chatroomKey(account.userProfile().pubkeyHex)
             account.chatroomList.getOrCreatePrivateChatroom(room)
-            return Route.Room(room, draftId = note.idHex)
+            Route.Room(room, draftId = note.idHex)
         }
 
         is TextNoteEvent -> {

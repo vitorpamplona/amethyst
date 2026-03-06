@@ -120,5 +120,5 @@ class BlossomServerListState(
     suspend fun createBlossomDeleteAuth(
         hash: HexKey,
         alt: String,
-    ): BlossomAuthorizationEvent? = BlossomAuthorizationEvent.createDeleteAuth(hash, alt, signer)
+    ): BlossomAuthorizationEvent = BlossomAuthorizationEvent.createDeleteAuth(hash, alt, signer)
 }

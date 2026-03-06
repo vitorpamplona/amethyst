@@ -64,7 +64,7 @@ class ChannelFeedContentState(
         viewModelScope.launch(Dispatchers.IO) { _scrollToTop.emit(_scrollToTop.value + 1) }
     }
 
-    suspend fun sentToTop() {
+    fun sentToTop() {
         scrolltoTopPending = false
     }
 

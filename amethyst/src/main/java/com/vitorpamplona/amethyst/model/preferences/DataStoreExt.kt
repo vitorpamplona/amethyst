@@ -29,7 +29,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import java.io.IOException
 
-suspend fun <T> DataStore<Preferences>.getProperty(
+fun <T> DataStore<Preferences>.getProperty(
     key: Preferences.Key<String>,
     parser: (String) -> T,
     serializer: (T) -> String,

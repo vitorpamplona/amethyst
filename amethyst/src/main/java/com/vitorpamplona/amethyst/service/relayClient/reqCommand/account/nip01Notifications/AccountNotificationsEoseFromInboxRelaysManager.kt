@@ -49,7 +49,7 @@ class AccountNotificationsEoseFromInboxRelaysManager(
     override fun updateFilter(
         key: AccountQueryState,
         since: SincePerRelayMap?,
-    ): List<RelayBasedFilter>? =
+    ): List<RelayBasedFilter> =
         key.account.notificationRelays.flow.value.flatMap {
             filterSummaryNotificationsToPubkey(
                 relay = it,
