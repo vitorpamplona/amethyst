@@ -115,6 +115,36 @@ class NamecoinNameResolverTest {
         assertEquals("aaaa000000000000000000000000000000000000000000000000000000000001", result!!.pubkey)
     }
 
+    @Test
+    fun `root lookup falls back to first entry when no underscore key`() {
+        val value = """{
+            "nostr": {
+                "names": {
+                    "m": "6cdebccabda1dfa058ab85352a79509b592b2bdfa0370325e28ec1cb4f18667d"
+                }
+            }
+        }"""
+
+        val result = extractNostrFromValue(value, "d/testls", "_")
+        assertNotNull(result)
+        assertEquals("6cdebccabda1dfa058ab85352a79509b592b2bdfa0370325e28ec1cb4f18667d", result!!.pubkey)
+        assertEquals("m", result.localPart)
+    }
+
+    @Test
+    fun `non-root lookup does NOT fall back to first entry`() {
+        val value = """{
+            "nostr": {
+                "names": {
+                    "m": "6cdebccabda1dfa058ab85352a79509b592b2bdfa0370325e28ec1cb4f18667d"
+                }
+            }
+        }"""
+
+        val result = extractNostrFromValue(value, "d/testls", "alice")
+        assertNull(result)
+    }
+
     // ── Value format: id/ namespace ────────────────────────────────────
 
     @Test
@@ -209,9 +239,40 @@ class NamecoinNameResolverTest {
         // Extended form
         if (nostrField is kotlinx.serialization.json.JsonObject) {
             val names = nostrField["names"]?.jsonObject ?: return null
-            val pubkeyElem = names[localPart] ?: names["_"] ?: return null
-            val pubkey = (pubkeyElem as? kotlinx.serialization.json.JsonPrimitive)?.content ?: return null
-            if (!pubkey.matches(Regex("^[0-9a-fA-F]{64}$"))) return null
+
+            // Resolve: exact match → "_" root → first entry (root lookups only)
+            val resolvedLocalPart: String
+            val pubkey: String
+
+            val exactMatch = names[localPart]
+            val rootMatch = names["_"]
+            val firstEntry = if (localPart == "_") names.entries.firstOrNull() else null
+
+            when {
+                exactMatch is kotlinx.serialization.json.JsonPrimitive &&
+                    exactMatch.content.matches(Regex("^[0-9a-fA-F]{64}$")) -> {
+                    resolvedLocalPart = localPart
+                    pubkey = exactMatch.content
+                }
+
+                rootMatch is kotlinx.serialization.json.JsonPrimitive &&
+                    rootMatch.content.matches(Regex("^[0-9a-fA-F]{64}$")) -> {
+                    resolvedLocalPart = "_"
+                    pubkey = rootMatch.content
+                }
+
+                firstEntry != null && firstEntry.value is kotlinx.serialization.json.JsonPrimitive &&
+                    (firstEntry.value as kotlinx.serialization.json.JsonPrimitive)
+                        .content
+                        .matches(Regex("^[0-9a-fA-F]{64}$")) -> {
+                    resolvedLocalPart = firstEntry.key
+                    pubkey = (firstEntry.value as kotlinx.serialization.json.JsonPrimitive).content
+                }
+
+                else -> {
+                    return null
+                }
+            }
 
             val relays =
                 try {
@@ -227,7 +288,7 @@ class NamecoinNameResolverTest {
                 pubkey = pubkey.lowercase(),
                 relays = relays,
                 namecoinName = namecoinName,
-                localPart = localPart,
+                localPart = resolvedLocalPart,
             )
         }
         return null

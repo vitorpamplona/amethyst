@@ -161,6 +161,9 @@ class AppModules(
                 }
             },
         )
+    val namecoinNameService =
+        com.vitorpamplona.amethyst.service.namecoin.NamecoinNameService
+            .init(namecoinElectrumxClient)
     val nip05Client = Nip05Client(nip05Fetcher, namecoinResolver)
 
     // Application-wide block height request cache

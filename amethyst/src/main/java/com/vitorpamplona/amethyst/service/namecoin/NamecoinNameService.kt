@@ -43,11 +43,32 @@ class NamecoinNameService(
 ) {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    private val resolver = NamecoinNameResolver(electrumxClient)
+    // Custom server list (user-configurable)
+    @Volatile
+    private var customServers: List<ElectrumxServer> = emptyList()
+
+    private val resolver =
+        NamecoinNameResolver(
+            electrumxClient = electrumxClient,
+            serverListProvider = { customServers.ifEmpty { ElectrumxClient.DEFAULT_SERVERS } },
+        )
     private val cache = NamecoinLookupCache()
 
-    // Custom server list (user-configurable)
-    private var customServers: List<ElectrumxServer> = emptyList()
+    companion object {
+        @Volatile
+        private var instance: NamecoinNameService? = null
+
+        fun getInstance(): NamecoinNameService =
+            instance ?: throw IllegalStateException(
+                "NamecoinNameService not initialized. Call init() first.",
+            )
+
+        fun init(electrumxClient: ElectrumxClient): NamecoinNameService =
+            synchronized(this) {
+                instance?.let { return it }
+                NamecoinNameService(electrumxClient).also { instance = it }
+            }
+    }
 
     // ── Public API ─────────────────────────────────────────────────────
 
@@ -97,7 +118,10 @@ class NamecoinNameService(
      *
      * Useful for composable UIs that observe resolution state.
      */
-    fun resolveLive(identifier: String): StateFlow<NamecoinResolveState> {
+    fun resolveLive(
+        identifier: String,
+        scope: CoroutineScope = this.scope,
+    ): StateFlow<NamecoinResolveState> {
         val state = MutableStateFlow<NamecoinResolveState>(NamecoinResolveState.Loading)
         scope.launch {
             try {

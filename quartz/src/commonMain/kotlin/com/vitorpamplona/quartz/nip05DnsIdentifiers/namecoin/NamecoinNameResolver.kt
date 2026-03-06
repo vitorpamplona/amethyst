@@ -206,16 +206,43 @@ class NamecoinNameResolver(
         // Extended form: "nostr": { "names": {...}, "relays": {...} }
         if (nostrField is JsonObject) {
             val names = nostrField["names"]?.jsonObject ?: return null
-            val pubkeyElem = names[parsed.localPart] ?: names["_"] // fall back to root
-            val pubkey = (pubkeyElem as? JsonPrimitive)?.content ?: return null
-            if (!isValidPubkey(pubkey)) return null
+
+            // Resolve: exact match → "_" root → first entry (root lookups only)
+            val resolvedLocalPart: String
+            val pubkey: String
+
+            val exactMatch = names[parsed.localPart]
+            val rootMatch = names["_"]
+            val firstEntry = if (parsed.localPart == "_") names.entries.firstOrNull() else null
+
+            when {
+                exactMatch is JsonPrimitive && isValidPubkey(exactMatch.content) -> {
+                    resolvedLocalPart = parsed.localPart
+                    pubkey = exactMatch.content
+                }
+
+                rootMatch is JsonPrimitive && isValidPubkey(rootMatch.content) -> {
+                    resolvedLocalPart = "_"
+                    pubkey = rootMatch.content
+                }
+
+                firstEntry != null && firstEntry.value is JsonPrimitive &&
+                    isValidPubkey((firstEntry.value as JsonPrimitive).content) -> {
+                    resolvedLocalPart = firstEntry.key
+                    pubkey = (firstEntry.value as JsonPrimitive).content
+                }
+
+                else -> {
+                    return null
+                }
+            }
 
             val relays = extractRelays(nostrField, pubkey)
             return NamecoinNostrResult(
                 pubkey = pubkey.lowercase(),
                 relays = relays,
                 namecoinName = parsed.namecoinName,
-                localPart = parsed.localPart,
+                localPart = resolvedLocalPart,
             )
         }
 

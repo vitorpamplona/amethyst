@@ -44,6 +44,7 @@ import java.net.Socket
 import java.security.MessageDigest
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import javax.net.SocketFactory
 import javax.net.ssl.SSLContext
@@ -83,7 +84,7 @@ class ElectrumXClient(
             isLenient = true
         }
     private val requestId = AtomicInteger(0)
-    private val mutex = Mutex()
+    private val serverMutexes = ConcurrentHashMap<String, Mutex>()
 
     companion object {
         private const val PROTOCOL_VERSION = "1.4"
@@ -121,6 +122,7 @@ class ElectrumXClient(
         server: ElectrumxServer = DEFAULT_ELECTRUMX_SERVERS.first(),
     ): NameShowResult? =
         withContext(Dispatchers.IO) {
+            val mutex = serverMutexes.getOrPut("${server.host}:${server.port}") { Mutex() }
             mutex.withLock {
                 try {
                     connectAndQuery(identifier, server)

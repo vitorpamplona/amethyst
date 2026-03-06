@@ -48,7 +48,7 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -83,7 +83,7 @@ class SearchBarViewModel(
             .debounce(400)
             .distinctUntilChanged()
             .filter { NamecoinNameResolver.isNamecoinIdentifier(it) }
-            .map { term ->
+            .mapLatest { term ->
                 try {
                     val result = Amethyst.instance.namecoinResolver.resolve(term)
                     if (result != null) {
@@ -91,6 +91,8 @@ class SearchBarViewModel(
                     } else {
                         null
                     }
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
                 } catch (_: Exception) {
                     null
                 }
