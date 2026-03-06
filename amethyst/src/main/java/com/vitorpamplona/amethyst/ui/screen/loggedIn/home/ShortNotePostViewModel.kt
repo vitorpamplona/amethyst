@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.home
 import android.content.Context
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -220,7 +221,7 @@ open class ShortNotePostViewModel :
     var canUsePoll by mutableStateOf(false)
     var wantsPoll by mutableStateOf(false)
     var pollOptions: SnapshotStateMap<Int, OptionTag> = newStateMapPollOptions()
-    var closedAt by mutableStateOf(TimeUtils.oneDayAhead())
+    var closedAt by mutableLongStateOf(TimeUtils.oneDayAhead())
 
     // Invoices
     var canAddInvoice by mutableStateOf(false)
