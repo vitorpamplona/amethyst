@@ -1898,7 +1898,7 @@ class Account(
     fun getRelevantReports(note: Note): Set<Note> {
         val innerReports =
             if (note.event is RepostEvent || note.event is GenericRepostEvent) {
-                note.replyTo?.map { getRelevantReports(it) }?.flatten() ?: emptyList()
+                note.replyTo?.flatMap { getRelevantReports(it) } ?: emptyList()
             } else {
                 emptyList()
             }

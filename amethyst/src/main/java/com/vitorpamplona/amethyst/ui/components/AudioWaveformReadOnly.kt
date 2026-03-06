@@ -170,7 +170,7 @@ internal fun <T> Iterable<T>.fillToSize(
     transform: (List<T>) -> T,
 ): List<T> {
     val capacity = ceil(size.safeDiv(count())).roundToInt()
-    return map { data -> List(capacity) { data } }.flatten().chunkToSize(size, transform)
+    return flatMap { data -> List(capacity) { data } }.chunkToSize(size, transform)
 }
 
 internal fun <T> Iterable<T>.chunkToSize(
