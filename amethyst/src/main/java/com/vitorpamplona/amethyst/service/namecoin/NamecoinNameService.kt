@@ -55,22 +55,6 @@ class NamecoinNameService(
         )
     private val cache = NamecoinLookupCache()
 
-    companion object {
-        @Volatile
-        private var instance: NamecoinNameService? = null
-
-        fun getInstance(): NamecoinNameService =
-            instance ?: throw IllegalStateException(
-                "NamecoinNameService not initialized. Call init() first.",
-            )
-
-        fun init(electrumxClient: ElectrumXClient): NamecoinNameService =
-            synchronized(this) {
-                instance?.let { return it }
-                NamecoinNameService(electrumxClient).also { instance = it }
-            }
-    }
-
     // ── Public API ─────────────────────────────────────────────────────
 
     /**
