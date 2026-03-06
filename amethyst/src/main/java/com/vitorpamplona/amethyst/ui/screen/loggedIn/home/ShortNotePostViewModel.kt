@@ -555,8 +555,8 @@ open class ShortNotePostViewModel :
             val serverToUse = voiceSelectedServer ?: accountViewModel.account.settings.defaultFileServer
             uploadVoiceMessageSync(
                 serverToUse,
-                { _, _ -> }, // Error handling is done by checking voiceMetadata below
-            )
+            ) { _, _ -> } // Error handling is done by checking voiceMetadata below
+
             // Abort if upload failed - don't post without voice data
             if (voiceMetadata == null) {
                 Log.w("ShortNotePostViewModel", "Voice upload failed, aborting post")

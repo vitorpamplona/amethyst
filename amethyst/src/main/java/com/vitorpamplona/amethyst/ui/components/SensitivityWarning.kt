@@ -117,7 +117,7 @@ fun SensitivityWarning(
 @Composable
 fun ContentWarningNotePreview() {
     ThemeComparisonColumn {
-        ContentWarningNote({})
+        ContentWarningNote {}
     }
 }
 
