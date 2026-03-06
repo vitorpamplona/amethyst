@@ -688,6 +688,7 @@
     <string name="terms_and_conditions">Zasady i warunki użytkowania</string>
     <string name="not_available_acronym">Nie dotyczy</string>
     <string name="relay_error_messages">Błędy i powiadomienia z tego transmitera</string>
+    <string name="relay_active_subscriptions">Aktywne subskrypcje</string>
     <string name="relay_no_active_subscriptions">Brak aktywnych subskrypcji dla tego transmitera</string>
     <string name="relay_filter_since">od %1$s</string>
     <string name="relay_filter_until">do %1$s</string>
@@ -1316,6 +1317,7 @@
     <string name="chess_accept">Akceptuj</string>
     <string name="chess_decline">Odrzuć</string>
     <string name="chess_new_game">Nowa gra</string>
+    <string name="new_chess_game">Nowa gra w Szachy</string>
     <string name="chess_loading_game">Ładowanie gry\u2026</string>
     <string name="chess_game_not_found">Gra nie znaleziona</string>
     <string name="chess_game_waiting">Ta gra mogła się skończyć lub czeka na przeciwnika.</string>
