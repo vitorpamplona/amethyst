@@ -34,6 +34,8 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.InvalidatableContent
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.namecoin.NamecoinNameService
+import com.vitorpamplona.quartz.nip05.namecoin.NamecoinLookupException
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.SearchQueryState
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
@@ -46,8 +48,8 @@ import kotlinx.coroutines.flow.SharingStarted.Companion.WhileSubscribed
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
@@ -75,28 +77,62 @@ class SearchBarViewModel(
     val searchDataSourceState = SearchQueryState(MutableStateFlow(searchValue), account)
 
     /**
-     * Resolves Namecoin identifiers (.bit / d/ / id/) via ElectrumX and
-     * returns the matching [User] from LocalCache, or null.
+     * Observable state for Namecoin resolution in the search bar.
+     * Allows the UI to show loading spinners, resolved profiles, and
+     * specific error messages ("name not found" vs "servers unreachable").
      */
-    private val namecoinResolvedUser =
+    sealed class NamecoinSearchState {
+        data object Idle : NamecoinSearchState()
+        data object Loading : NamecoinSearchState()
+        data class Resolved(val user: User) : NamecoinSearchState()
+        data class NotFound(val name: String) : NamecoinSearchState()
+        data class Expired(val name: String) : NamecoinSearchState()
+        data object ServersUnreachable : NamecoinSearchState()
+    }
+
+    /**
+     * Resolves Namecoin identifiers (.bit / d/ / id/) via ElectrumX.
+     * Emits typed state so the UI can show loading, resolved profile, or
+     * specific error messages.
+     */
+    val namecoinSearchState: StateFlow<NamecoinSearchState> =
         searchValueFlow
             .debounce(400)
             .distinctUntilChanged()
-            .filter { NamecoinNameResolver.isNamecoinIdentifier(it) }
             .mapLatest { term ->
+                if (!NamecoinNameResolver.isNamecoinIdentifier(term)) {
+                    return@mapLatest NamecoinSearchState.Idle
+                }
                 try {
                     val result = Amethyst.instance.namecoinResolver.resolve(term)
                     if (result != null) {
-                        LocalCache.getOrCreateUser(result.pubkey)
+                        NamecoinSearchState.Resolved(LocalCache.getOrCreateUser(result.pubkey))
                     } else {
-                        null
+                        NamecoinSearchState.NotFound(term)
                     }
                 } catch (e: kotlinx.coroutines.CancellationException) {
                     throw e
+                } catch (e: NamecoinLookupException.NameNotFound) {
+                    NamecoinSearchState.NotFound(e.name)
+                } catch (e: NamecoinLookupException.NameExpired) {
+                    NamecoinSearchState.Expired(e.name)
+                } catch (e: NamecoinLookupException.ServersUnreachable) {
+                    NamecoinSearchState.ServersUnreachable
                 } catch (_: Exception) {
-                    null
+                    NamecoinSearchState.ServersUnreachable
                 }
             }.flowOn(Dispatchers.IO)
+            .stateIn(viewModelScope, WhileSubscribed(5000), NamecoinSearchState.Idle)
+
+    /** Convenience: the resolved user (or null) for combining with local search results. */
+    private val namecoinResolvedUser =
+        namecoinSearchState
+            .map { state ->
+                when (state) {
+                    is NamecoinSearchState.Resolved -> state.user
+                    else -> null
+                }
+            }
             .stateIn(viewModelScope, WhileSubscribed(5000), null)
 
     val searchResultsUsers =

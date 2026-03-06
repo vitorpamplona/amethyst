@@ -53,6 +53,48 @@ import javax.net.ssl.TrustManager
 import javax.net.ssl.X509TrustManager
 
 /**
+ * Result of an ElectrumX name_show query.
+ *
+ * Maps to the JSON fields returned by Namecoin Core / Electrum-NMC:
+ *   { "name": "d/example", "value": "{...}", "txid": "abc...", "height": 12345, ... }
+ */
+@Serializable
+data class NameShowResult(
+    val name: String,
+    val value: String,
+    val txid: String? = null,
+    val height: Int? = null,
+    val expiresIn: Int? = null,
+)
+
+/**
+ * Specific exception types for Namecoin resolution failures.
+ * Allows callers to distinguish "name doesn't exist" from "servers unreachable".
+ */
+sealed class NamecoinLookupException(message: String, cause: Throwable? = null) : Exception(message, cause) {
+    /** The name was queried successfully but does not exist on the blockchain. */
+    class NameNotFound(val name: String) : NamecoinLookupException("Name not found: $name")
+
+    /** The name has expired (>36000 blocks since last update). */
+    class NameExpired(val name: String) : NamecoinLookupException("Name expired: $name")
+
+    /** All ElectrumX servers were unreachable or returned errors. */
+    class ServersUnreachable(val lastError: Throwable? = null) :
+        NamecoinLookupException("All ElectrumX servers unreachable", lastError)
+}
+
+/**
+ * Represents a single ElectrumX server endpoint.
+ */
+data class ElectrumxServer(
+    val host: String,
+    val port: Int,
+    val useSsl: Boolean = true,
+    /** If true, accept any certificate (self-signed, expired, etc.) */
+    val trustAllCerts: Boolean = false,
+)
+
+/**
  * Lightweight, query-only ElectrumX client for Namecoin name resolution.
  *
  * Connects over TCP/TLS to a Namecoin ElectrumX server and resolves
@@ -126,6 +168,9 @@ class ElectrumXClient(
             mutex.withLock {
                 try {
                     connectAndQuery(identifier, server)
+                } catch (e: NamecoinLookupException) {
+                    // Propagate name-not-found and expired — these are definitive answers.
+                    throw e
                 } catch (e: Exception) {
                     // Log but don't crash — callers handle null gracefully.
                     e.printStackTrace()
@@ -140,15 +185,31 @@ class ElectrumXClient(
      * @param identifier Full Namecoin name, e.g. "d/example"
      * @param servers    Ordered server list to try; defaults to [DEFAULT_ELECTRUMX_SERVERS]
      */
+    /**
+     * Try each server in order until one succeeds.
+     *
+     * @throws NamecoinLookupException.NameNotFound if the name definitively doesn't exist
+     * @throws NamecoinLookupException.NameExpired if the name has expired
+     * @throws NamecoinLookupException.ServersUnreachable if all servers failed with connection errors
+     */
     override suspend fun nameShowWithFallback(
         identifier: String,
         servers: List<ElectrumxServer>,
     ): NameShowResult? {
+        var lastError: Exception? = null
         for (server in servers) {
-            val result = nameShow(identifier, server)
-            if (result != null) return result
+            try {
+                val result = nameShow(identifier, server)
+                if (result != null) return result
+            } catch (e: NamecoinLookupException.NameNotFound) {
+                throw e // Definitive answer from blockchain — no point trying other servers
+            } catch (e: NamecoinLookupException.NameExpired) {
+                throw e // Definitive answer
+            } catch (e: Exception) {
+                lastError = e // Server error — try next server
+            }
         }
-        return null
+        throw NamecoinLookupException.ServersUnreachable(lastError)
     }
 
     // ── internals ──────────────────────────────────────────────────────
@@ -177,7 +238,7 @@ class ElectrumXClient(
             writer.println(historyReq)
             val historyResponse = reader.readLine() ?: return null
             val historyEntries = parseHistoryResponse(historyResponse) ?: return null
-            if (historyEntries.isEmpty()) return null
+            if (historyEntries.isEmpty()) throw NamecoinLookupException.NameNotFound(identifier)
 
             // 4. Get the latest transaction (last entry = most recent update)
             val latestEntry = historyEntries.last()
@@ -198,7 +259,7 @@ class ElectrumXClient(
             if (currentHeight != null && height > 0) {
                 val blocksSinceUpdate = currentHeight - height
                 if (blocksSinceUpdate >= NAME_EXPIRE_DEPTH) {
-                    return null // Name has expired
+                    throw NamecoinLookupException.NameExpired(identifier)
                 }
             }
 
