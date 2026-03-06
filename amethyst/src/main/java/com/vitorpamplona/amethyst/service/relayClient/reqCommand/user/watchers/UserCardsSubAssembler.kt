@@ -68,7 +68,7 @@ class UserCardsSubAssembler(
         val trustedAccounts: Map<NormalizedRelayUrl, Set<HexKey>> =
             mapOfSet {
                 accounts.forEach { account ->
-                    account.homeRelays.flow.value.map {
+                    account.homeRelays.flow.value.forEach {
                         add(it, account.userProfile().pubkeyHex)
                     }
                 }

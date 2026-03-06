@@ -167,7 +167,7 @@ fun ObserveAllStatusesToAvoidSwitchigAllTheTime(
     statuses: ImmutableList<AddressableNote>,
     accountViewModel: AccountViewModel,
 ) {
-    statuses.map {
+    statuses.forEach {
         EventFinderFilterAssemblerSubscription(it, accountViewModel)
     }
 }

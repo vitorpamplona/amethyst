@@ -41,7 +41,7 @@ class ListWithUniqueSetCache<T, U>(
     }
 
     fun distinct(): Set<U> {
-        var currentSet = cacheSet.get()
+        val currentSet = cacheSet.get()
 
         // Check if the cached set is based on the current list
         if (currentSet != null) {
