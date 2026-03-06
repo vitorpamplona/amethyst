@@ -29,7 +29,7 @@ import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 fun filterMessagesToPublicChat(
     channel: PublicChatChannel,
     since: SincePerRelayMap?,
-): List<RelayBasedFilter>? =
+): List<RelayBasedFilter> =
     channel.relays().toSet().map {
         RelayBasedFilter(
             relay = it,

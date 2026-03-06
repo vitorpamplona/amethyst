@@ -62,7 +62,7 @@ class BookmarkListState(
 
     fun getBookmarkList(): BookmarkListEvent? = bookmarkList.event as? BookmarkListEvent
 
-    suspend fun publicBookmarks(note: Note): List<BookmarkIdTag> {
+    fun publicBookmarks(note: Note): List<BookmarkIdTag> {
         val noteEvent = note.event as? BookmarkListEvent
         return noteEvent?.publicBookmarks() ?: emptyList()
     }

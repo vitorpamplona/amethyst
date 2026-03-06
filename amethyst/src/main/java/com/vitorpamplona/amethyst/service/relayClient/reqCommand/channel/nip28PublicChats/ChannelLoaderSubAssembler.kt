@@ -38,7 +38,7 @@ class ChannelLoaderSubAssembler(
     client: INostrClient,
     allKeys: () -> Set<ChannelFinderQueryState>,
 ) : SingleSubNoEoseCacheEoseManager<ChannelFinderQueryState>(client, allKeys, invalidateAfterEose = true) {
-    override fun updateFilter(keys: List<ChannelFinderQueryState>): List<RelayBasedFilter>? = filterMissingChannelsById(keys)
+    override fun updateFilter(keys: List<ChannelFinderQueryState>): List<RelayBasedFilter> = filterMissingChannelsById(keys)
 
     override fun distinct(key: ChannelFinderQueryState) = key.channel
 }

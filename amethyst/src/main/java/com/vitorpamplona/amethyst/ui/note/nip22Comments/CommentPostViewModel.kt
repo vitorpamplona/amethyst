@@ -474,7 +474,7 @@ open class CommentPostViewModel :
                 myMultiOrchestrator.upload(
                     alt,
                     contentWarningReason,
-                    MediaCompressor.Companion.intToCompressorQuality(mediaQuality),
+                    MediaCompressor.intToCompressorQuality(mediaQuality),
                     server,
                     account,
                     context,
@@ -703,5 +703,5 @@ open class CommentPostViewModel :
         return location!!
     }
 
-    override fun locationManager(): LocationState = Amethyst.Companion.instance.locationManager
+    override fun locationManager(): LocationState = Amethyst.instance.locationManager
 }

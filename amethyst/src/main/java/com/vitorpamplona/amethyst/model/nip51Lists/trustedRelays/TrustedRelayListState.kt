@@ -68,7 +68,7 @@ class TrustedRelayListState(
             .flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
-                SharingStarted.Companion.Eagerly,
+                SharingStarted.Eagerly,
                 emptySet(),
             )
 
@@ -76,13 +76,13 @@ class TrustedRelayListState(
         val relayListForTrusted = getTrustedRelayList()
 
         return if (relayListForTrusted != null && relayListForTrusted.tags.isNotEmpty()) {
-            TrustedRelayListEvent.Companion.updateRelayList(
+            TrustedRelayListEvent.updateRelayList(
                 earlierVersion = relayListForTrusted,
                 relays = trustedRelays,
                 signer = signer,
             )
         } else {
-            TrustedRelayListEvent.Companion.create(
+            TrustedRelayListEvent.create(
                 relays = trustedRelays,
                 signer = signer,
             )

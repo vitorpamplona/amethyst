@@ -173,7 +173,7 @@ fun ChatBubbleLayout(
 private fun BubblePreview() {
     val bgColor =
         remember {
-            mutableStateOf<Color>(Color.Transparent)
+            mutableStateOf(Color.Transparent)
         }
 
     Column {

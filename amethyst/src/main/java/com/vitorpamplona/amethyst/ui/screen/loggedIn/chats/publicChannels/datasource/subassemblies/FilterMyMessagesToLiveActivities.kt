@@ -31,7 +31,7 @@ fun filterMyMessagesToLiveActivities(
     channel: LiveActivitiesChannel,
     pubKey: HexKey,
     since: SincePerRelayMap?,
-): List<RelayBasedFilter>? =
+): List<RelayBasedFilter> =
     channel.relays().toSet().map {
         RelayBasedFilter(
             relay = it,

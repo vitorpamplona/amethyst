@@ -47,7 +47,7 @@ class HiddenUsersState(
 ) {
     var transientHiddenUsers: MutableStateFlow<Set<String>> = MutableStateFlow(setOf())
 
-    suspend fun assembleLiveHiddenUsers(
+    fun assembleLiveHiddenUsers(
         blockList: List<MuteTag>,
         muteList: List<MuteTag>,
         transientHiddenUsers: Set<String>,

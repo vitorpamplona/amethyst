@@ -649,12 +649,12 @@ fun RenderPollGameResultsPreview() {
         Column(Modifier.padding(10.dp)) {
             RenderPoll(
                 note,
-                false,
-                true,
-                2,
-                remember { mutableStateOf(Color.Transparent) },
-                mockAccountViewModel(),
-                EmptyNav(),
+                makeItShort = false,
+                canPreview = true,
+                quotesLeft = 2,
+                backgroundColor = remember { mutableStateOf(Color.Transparent) },
+                accountViewModel = mockAccountViewModel(),
+                nav = EmptyNav(),
             )
         }
     }
@@ -758,12 +758,12 @@ fun RenderPollColorResultsPreview() {
         Column(Modifier.padding(10.dp)) {
             RenderPoll(
                 note,
-                false,
-                true,
-                2,
-                remember { mutableStateOf(Color.Transparent) },
-                mockAccountViewModel(),
-                EmptyNav(),
+                makeItShort = false,
+                canPreview = true,
+                quotesLeft = 2,
+                backgroundColor = remember { mutableStateOf(Color.Transparent) },
+                accountViewModel = mockAccountViewModel(),
+                nav = EmptyNav(),
             )
         }
     }

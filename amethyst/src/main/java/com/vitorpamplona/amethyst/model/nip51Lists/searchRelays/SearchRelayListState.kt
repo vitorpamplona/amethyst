@@ -51,7 +51,7 @@ class SearchRelayListState(
     // Creates a long-term reference for this note so that the GC doesn't collect the note it self
     val searchListNote = cache.getOrCreateAddressableNote(getSearchRelayListAddress())
 
-    fun getSearchRelayListAddress() = SearchRelayListEvent.Companion.createAddress(signer.pubKey)
+    fun getSearchRelayListAddress() = SearchRelayListEvent.createAddress(signer.pubKey)
 
     fun getSearchRelayListFlow(): StateFlow<NoteState> = searchListNote.flow().metadata.stateFlow
 
@@ -70,7 +70,7 @@ class SearchRelayListState(
             .flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
-                SharingStarted.Companion.Eagerly,
+                SharingStarted.Eagerly,
                 emptySet(),
             )
 

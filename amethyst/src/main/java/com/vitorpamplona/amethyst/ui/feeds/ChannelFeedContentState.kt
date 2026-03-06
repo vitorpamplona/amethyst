@@ -49,7 +49,7 @@ class ChannelFeedContentState(
     val feedContent = _feedContent.asStateFlow()
 
     // Simple counter that changes when it needs to invalidate everything
-    private val _scrollToTop = MutableStateFlow<Int>(0)
+    private val _scrollToTop = MutableStateFlow(0)
     val scrollToTop = _scrollToTop.asStateFlow()
     var scrolltoTopPending = false
 
@@ -64,7 +64,7 @@ class ChannelFeedContentState(
         viewModelScope.launch(Dispatchers.IO) { _scrollToTop.emit(_scrollToTop.value + 1) }
     }
 
-    suspend fun sentToTop() {
+    fun sentToTop() {
         scrolltoTopPending = false
     }
 
@@ -98,10 +98,10 @@ class ChannelFeedContentState(
         if (notes.isEmpty()) {
             _feedContent.tryEmit(ChannelFeedState.Empty)
         } else if (currentState is ChannelFeedState.Loaded) {
-            currentState.feed.tryEmit(LoadedFeedState<Channel>(notes, localFilter.showHiddenKey()))
+            currentState.feed.tryEmit(LoadedFeedState(notes, localFilter.showHiddenKey()))
         } else {
             _feedContent.tryEmit(
-                ChannelFeedState.Loaded(MutableStateFlow(LoadedFeedState<Channel>(notes, localFilter.showHiddenKey()))),
+                ChannelFeedState.Loaded(MutableStateFlow(LoadedFeedState(notes, localFilter.showHiddenKey()))),
             )
         }
     }

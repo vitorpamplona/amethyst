@@ -34,9 +34,9 @@ class TorAwareOkHttpOtsResolverBuilder(
 ) : OtsResolverBuilder {
     fun getAPI(usingTor: Boolean) =
         if (usingTor) {
-            OkHttpBitcoinExplorer.Companion.MEMPOOL_API_URL
+            OkHttpBitcoinExplorer.MEMPOOL_API_URL
         } else {
-            OkHttpBitcoinExplorer.Companion.BLOCKSTREAM_API_URL
+            OkHttpBitcoinExplorer.BLOCKSTREAM_API_URL
         }
 
     override fun build(): OtsResolver =
@@ -44,9 +44,9 @@ class TorAwareOkHttpOtsResolverBuilder(
             explorer =
                 OkHttpBitcoinExplorer(
                     baseUrl = {
-                        getAPI(usingTor = isTorActive(OkHttpBitcoinExplorer.Companion.MEMPOOL_API_URL))
+                        getAPI(usingTor = isTorActive(OkHttpBitcoinExplorer.MEMPOOL_API_URL))
                     },
-                    client = okHttpClient(OkHttpBitcoinExplorer.Companion.MEMPOOL_API_URL),
+                    client = okHttpClient(OkHttpBitcoinExplorer.MEMPOOL_API_URL),
                     cache = cache,
                 ),
             calendar = OkHttpCalendar(okHttpClient),

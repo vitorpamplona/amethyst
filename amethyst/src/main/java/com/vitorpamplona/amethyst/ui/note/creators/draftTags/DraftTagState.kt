@@ -34,9 +34,9 @@ import kotlin.uuid.Uuid
 @Stable
 class DraftTagState {
     var current: String by mutableStateOf(newTag())
-    var usedDraftTags by mutableStateOf(setOf<String>(current))
+    var usedDraftTags by mutableStateOf(setOf(current))
 
-    private val _versions = MutableStateFlow<Int>(0)
+    private val _versions = MutableStateFlow(0)
 
     @OptIn(FlowPreview::class)
     val versions = _versions.debounce(1000)

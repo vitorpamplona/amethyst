@@ -87,7 +87,7 @@ class Nav(
     ) {
         navigationScope.launch {
             controller.navigate(route) {
-                popUpTo<T>(klass) { inclusive = true }
+                popUpTo(klass) { inclusive = true }
             }
         }
     }

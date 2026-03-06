@@ -357,10 +357,10 @@ class AccountViewModel(
 
         return if (isPostHidden || isDecryptedPostHidden) {
             // Spam + Blocked Users + Hidden Words + Sensitive Content
-            NoteComposeReportState(isPostHidden, false, false, isHiddenAuthor)
+            NoteComposeReportState(isPostHidden, isAcceptable = false, canPreview = false, isHiddenAuthor = isHiddenAuthor)
         } else if (isFromLoggedIn || isFromLoggedInFollow) {
             // No need to process if from trusted people
-            NoteComposeReportState(isPostHidden, true, true, isHiddenAuthor)
+            NoteComposeReportState(isPostHidden, isAcceptable = true, canPreview = true, isHiddenAuthor = isHiddenAuthor)
         } else {
             val newCanPreview = !note.hasAnyReports()
 
@@ -368,7 +368,7 @@ class AccountViewModel(
 
             if (newCanPreview && newIsAcceptable) {
                 // No need to process reports if nothing is wrong
-                NoteComposeReportState(isPostHidden, true, true, false)
+                NoteComposeReportState(isPostHidden, isAcceptable = true, canPreview = true, isHiddenAuthor = false)
             } else {
                 NoteComposeReportState(
                     isPostHidden,
@@ -511,7 +511,7 @@ class AccountViewModel(
                     }.toMutableMap()
 
             val results =
-                mapNotNullAsync<CombinedZap, DecryptedInfo>(
+                mapNotNullAsync(
                     zaps.filter { (it.request.event as? LnZapRequestEvent)?.isPrivateZap() == true },
                 ) { next ->
                     val info = innerDecryptAmountMessage(next.request, next.response)
@@ -1609,7 +1609,7 @@ class AccountViewModel(
             }.stateIn(
                 viewModelScope,
                 SharingStarted.WhileSubscribed(5000),
-                emptySet<HexKey>(),
+                emptySet(),
             )
 
     val draftNoteCache = CachedDraftNotes(this)

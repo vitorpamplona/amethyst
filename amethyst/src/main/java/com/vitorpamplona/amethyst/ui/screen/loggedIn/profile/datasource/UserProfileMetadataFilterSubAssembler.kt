@@ -34,7 +34,7 @@ class UserProfileMetadataFilterSubAssembler(
     override fun updateFilter(
         keys: List<UserProfileQueryState>,
         since: SincePerRelayMap?,
-    ): List<RelayBasedFilter>? {
+    ): List<RelayBasedFilter> {
         val userPerRelay =
             mapOfSet {
                 keys.mapTo(mutableSetOf()) { key -> key.user }.forEach { user ->

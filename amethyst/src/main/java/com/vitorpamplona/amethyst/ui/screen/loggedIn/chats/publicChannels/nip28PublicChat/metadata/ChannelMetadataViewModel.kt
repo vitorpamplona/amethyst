@@ -129,7 +129,7 @@ class ChannelMetadataViewModel : ViewModel() {
 
                     val template =
                         if (event != null) {
-                            val hint = EventHintBundle<ChannelCreateEvent>(event, channel.relays().firstOrNull())
+                            val hint = EventHintBundle(event, channel.relays().firstOrNull())
 
                             ChannelMetadataEvent.build(
                                 channelName.value.text,

@@ -32,7 +32,7 @@ typealias MutableTime = com.vitorpamplona.amethyst.commons.relays.MutableTime
 open class EOSEByKey<U : Any>(
     cacheSize: Int = 200,
 ) {
-    var followList: LruCache<U, EOSERelayList> = LruCache<U, EOSERelayList>(cacheSize)
+    var followList: LruCache<U, EOSERelayList> = LruCache(cacheSize)
 
     fun addOrUpdate(
         listCode: U,
@@ -99,7 +99,7 @@ open class EOSEAccountKey<U : Any>(
 class EOSEAccountFast<T : Any>(
     cacheSize: Int = 20,
 ) {
-    private val users: LruCache<T, EOSERelayList> = LruCache<T, EOSERelayList>(cacheSize)
+    private val users: LruCache<T, EOSERelayList> = LruCache(cacheSize)
     private val lock = Any()
 
     fun addOrUpdate(

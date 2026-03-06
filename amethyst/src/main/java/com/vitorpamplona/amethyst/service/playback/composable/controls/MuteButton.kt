@@ -76,7 +76,7 @@ fun MuteButton(
 ) {
     val holdOn =
         remember {
-            mutableStateOf<Boolean>(
+            mutableStateOf(
                 true,
             )
         }

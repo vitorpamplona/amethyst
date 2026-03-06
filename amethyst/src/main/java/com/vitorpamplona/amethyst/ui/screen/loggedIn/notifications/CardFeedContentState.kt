@@ -72,7 +72,7 @@ class CardFeedContentState(
     val feedContent = _feedContent.asStateFlow()
 
     // Simple counter that changes when it needs to invalidate everything
-    private val _scrollToTop = MutableStateFlow<Int>(0)
+    private val _scrollToTop = MutableStateFlow(0)
     val scrollToTop = _scrollToTop.asStateFlow()
     var scrolltoTopPending = false
 

@@ -62,8 +62,8 @@ class SearchBarViewModel(
     val focusRequester = FocusRequester()
     var searchValue by mutableStateOf("")
 
-    val invalidations = MutableStateFlow<Int>(0)
-    val searchValueFlow = MutableStateFlow<String>("")
+    val invalidations = MutableStateFlow(0)
+    val searchValueFlow = MutableStateFlow("")
 
     val searchTerm =
         searchValueFlow

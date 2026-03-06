@@ -67,7 +67,7 @@ fun potentialRelaysToFindEvent(note: Note): Set<NormalizedRelayUrl> {
     return set
 }
 
-fun filterMissingEvents(keys: List<EventFinderQueryState>): List<RelayBasedFilter>? {
+fun filterMissingEvents(keys: List<EventFinderQueryState>): List<RelayBasedFilter> {
     val eventsPerRelay =
         mapOfSet {
             keys.forEach { key ->

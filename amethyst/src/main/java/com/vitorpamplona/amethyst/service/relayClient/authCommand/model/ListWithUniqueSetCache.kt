@@ -26,7 +26,7 @@ class ListWithUniqueSetCache<T, U>(
     val key: (T) -> U,
 ) {
     private val list = AtomicReference(listOf<T>())
-    private val cacheSet = AtomicReference<Set<U>?>(setOf<U>())
+    private val cacheSet = AtomicReference<Set<U>?>(setOf())
 
     fun isEmpty() = list.get().isEmpty()
 
@@ -49,7 +49,7 @@ class ListWithUniqueSetCache<T, U>(
         }
 
         // Compute and attempt to atomically update the cache
-        val newSet = list.get().mapTo(mutableSetOf<U>(), key)
+        val newSet = list.get().mapTo(mutableSetOf(), key)
         cacheSet.compareAndSet(currentSet, newSet)
         return newSet
     }

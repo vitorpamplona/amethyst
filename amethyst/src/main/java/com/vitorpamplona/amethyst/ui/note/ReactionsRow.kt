@@ -481,7 +481,7 @@ private fun ReactionDetailGallery(
     accountViewModel: AccountViewModel,
 ) {
     val defaultBackgroundColor = MaterialTheme.colorScheme.background
-    val backgroundColor = remember { mutableStateOf<Color>(defaultBackgroundColor) }
+    val backgroundColor = remember { mutableStateOf(defaultBackgroundColor) }
 
     val hasReactions by observeNoteReferences(baseNote, accountViewModel)
 
@@ -757,7 +757,7 @@ private fun SlidingAnimationCount(
     if (accountViewModel.settings.isPerformanceMode()) {
         TextCount(baseCount, textColor)
     } else {
-        AnimatedContent<Int>(
+        AnimatedContent(
             targetState = baseCount,
             transitionSpec = AnimatedContentTransitionScope<Int>::transitionSpec,
             label = "SlidingAnimationCount",

@@ -32,7 +32,7 @@ class MemoryTrimmingService(
 ) {
     var isTrimmingMemoryMutex = AtomicBoolean(false)
 
-    private suspend fun doTrim(
+    private fun doTrim(
         account: Collection<Account>,
         otherAccounts: List<AccountInfo>,
     ) {

@@ -20,8 +20,6 @@
  */
 package com.vitorpamplona.amethyst.service.playback.pip
 
-import android.content.Context.RECEIVER_EXPORTED
-import android.os.Build
 import androidx.annotation.OptIn
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -34,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.compose.ContentFrame
 import androidx.media3.ui.compose.state.rememberMuteButtonState
@@ -91,13 +90,8 @@ fun RegisterControllerReceiver(controllerState: MediaControllerState) {
                 onPlayPause = controllerState::togglePlayPause,
             )
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            context.registerReceiver(receiver, receiver.filterMute, RECEIVER_EXPORTED)
-            context.registerReceiver(receiver, receiver.filterPlayPause, RECEIVER_EXPORTED)
-        } else {
-            context.registerReceiver(receiver, receiver.filterMute)
-            context.registerReceiver(receiver, receiver.filterPlayPause)
-        }
+        ContextCompat.registerReceiver(context, receiver, receiver.filterMute, ContextCompat.RECEIVER_EXPORTED)
+        ContextCompat.registerReceiver(context, receiver, receiver.filterPlayPause, ContextCompat.RECEIVER_EXPORTED)
 
         onDispose {
             context.unregisterReceiver(receiver)
