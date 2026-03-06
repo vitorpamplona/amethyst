@@ -22,54 +22,65 @@ package com.vitorpamplona.amethyst.desktop.ui.auth
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
 import com.google.zxing.qrcode.QRCodeWriter
+import java.awt.image.BufferedImage
 
 @Composable
 fun QrCodeCanvas(
     data: String,
     modifier: Modifier = Modifier,
     size: Dp = 200.dp,
-    foreground: Color = MaterialTheme.colorScheme.onSurface,
-    background: Color = Color.White,
 ) {
-    val matrix =
+    val bitmap =
         remember(data) {
-            QRCodeWriter().encode(
-                data,
-                BarcodeFormat.QR_CODE,
-                0,
-                0,
-                mapOf(EncodeHintType.MARGIN to 1),
-            )
+            createQrBitmap(data)
         }
 
     Canvas(modifier = modifier.size(size)) {
-        val cellWidth = this.size.width / matrix.width
-        val cellHeight = this.size.height / matrix.height
+        drawImage(
+            image = bitmap,
+            srcOffset = IntOffset.Zero,
+            srcSize = IntSize(bitmap.width, bitmap.height),
+            dstOffset = IntOffset.Zero,
+            dstSize = IntSize(this.size.width.toInt(), this.size.height.toInt()),
+            filterQuality = FilterQuality.None,
+        )
+    }
+}
 
-        drawRect(background, Offset.Zero, this.size)
+private fun createQrBitmap(data: String): ImageBitmap {
+    val matrix =
+        QRCodeWriter().encode(
+            data,
+            BarcodeFormat.QR_CODE,
+            0,
+            0,
+            mapOf(EncodeHintType.MARGIN to 1),
+        )
 
-        for (x in 0 until matrix.width) {
-            for (y in 0 until matrix.height) {
-                if (matrix.get(x, y)) {
-                    drawRect(
-                        color = foreground,
-                        topLeft = Offset(x * cellWidth, y * cellHeight),
-                        size = Size(cellWidth, cellHeight),
-                    )
-                }
-            }
+    val w = matrix.width
+    val h = matrix.height
+    val black = 0xFF000000.toInt()
+    val white = 0xFFFFFFFF.toInt()
+
+    val image = BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB)
+    for (x in 0 until w) {
+        for (y in 0 until h) {
+            image.setRGB(x, y, if (matrix.get(x, y)) black else white)
         }
     }
+
+    return image.toComposeImageBitmap()
 }

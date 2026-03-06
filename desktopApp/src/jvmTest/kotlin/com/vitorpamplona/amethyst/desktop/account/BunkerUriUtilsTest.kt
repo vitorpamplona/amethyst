@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.desktop.account
 
-import com.vitorpamplona.amethyst.desktop.ui.auth.validateBunkerUri
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull

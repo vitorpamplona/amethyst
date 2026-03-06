@@ -42,6 +42,7 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.utils.Hex
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -73,6 +74,7 @@ class NostrSignerRemote(
                 Filter(
                     kinds = listOf(NostrConnectEvent.KIND),
                     tags = mapOf("p" to listOf(signer.pubKey)),
+                    since = TimeUtils.now() - 60,
                 ),
         ) { event ->
             if (event is NostrConnectEvent) {
@@ -301,9 +303,10 @@ class NostrSignerRemote(
             permissions: String? = null,
         ): NostrSignerRemote {
             if (!bunkerUri.startsWith("bunker://")) throw Exception("Invalid bunker uri")
-            val splitData = bunkerUri.split("?")
+            val splitData = bunkerUri.split("?", limit = 2)
             val remotePubkey = splitData[0].removePrefix("bunker://")
             if (!Hex.isHex(remotePubkey)) throw Exception("Invalid pubkey in bunker uri")
+            if (splitData.size < 2) throw Exception("Missing query parameters in bunker uri")
             val params = splitData[1].split("&")
             val relays = mutableSetOf<NormalizedRelayUrl>()
             var secret: String? = null

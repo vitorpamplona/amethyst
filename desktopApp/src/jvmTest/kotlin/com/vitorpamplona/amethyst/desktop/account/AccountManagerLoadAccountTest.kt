@@ -111,28 +111,8 @@ class AccountManagerLoadAccountTest {
                 storage.getPrivateKey(AccountManager.BUNKER_EPHEMERAL_KEY_ALIAS)
             } returns null
 
-            val result = manager.loadSavedAccount(client = com.vitorpamplona.quartz.nip01Core.relay.client.EmptyNostrClient)
+            val result = manager.loadSavedAccount()
             assertTrue(result.isFailure)
-        }
-
-    @Test
-    fun loadSavedAccountBunkerNoClientFallsBackToInternal() =
-        runTest {
-            val validHex = "a".repeat(64)
-            val keyPair = KeyPair()
-            val npub = keyPair.pubKey.toNpub()
-            val privKeyHex = keyPair.privKey!!.toHexKey()
-
-            File(amethystDir, "last_account.txt").writeText(npub)
-            File(amethystDir, "bunker_uri.txt").writeText(
-                "bunker://$validHex?relay=wss://r.com",
-            )
-            coEvery { storage.getPrivateKey(npub) } returns privKeyHex
-
-            // client=null → bunkerUri is found but ignored, falls back to internal
-            val result = manager.loadSavedAccount(client = null)
-            assertTrue(result.isSuccess)
-            assertIs<SignerType.Internal>(result.getOrThrow().signerType)
         }
 
     @Test
@@ -152,10 +132,7 @@ class AccountManagerLoadAccountTest {
                 storage.getPrivateKey(AccountManager.BUNKER_EPHEMERAL_KEY_ALIAS)
             } returns ephemeralPrivKeyHex
 
-            val result =
-                manager.loadSavedAccount(
-                    client = com.vitorpamplona.quartz.nip01Core.relay.client.EmptyNostrClient,
-                )
+            val result = manager.loadSavedAccount()
             assertTrue(result.isSuccess)
             val state = result.getOrThrow()
             assertIs<SignerType.Remote>(state.signerType)

@@ -23,15 +23,17 @@ package com.vitorpamplona.amethyst.desktop.account
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.keystorage.SecureKeyStorage
 import com.vitorpamplona.amethyst.commons.keystorage.SecureStorageException
+import com.vitorpamplona.amethyst.desktop.network.DesktopHttpClient
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
-import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.req
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
@@ -39,12 +41,16 @@ import com.vitorpamplona.quartz.nip19Bech32.decodePrivateKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip19Bech32.toNsec
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerMessage
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequest
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestConnect
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponse
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseAck
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
 import com.vitorpamplona.quartz.nip46RemoteSigner.signer.NostrSignerRemote
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
+import com.vitorpamplona.quartz.utils.Hex
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -52,10 +58,15 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
 import java.io.File
+import java.nio.file.Files
+import java.nio.file.attribute.PosixFilePermission
 import java.security.SecureRandom
 
 sealed class SignerType {
@@ -71,9 +82,7 @@ sealed class SignerConnectionState {
 
     data object Connected : SignerConnectionState()
 
-    data class Unstable(
-        val failCount: Int,
-    ) : SignerConnectionState()
+    data object Disconnected : SignerConnectionState()
 }
 
 sealed class AccountState {
@@ -106,6 +115,7 @@ class AccountManager internal constructor(
         internal const val MAX_CONSECUTIVE_FAILURES = 3
         internal const val BUNKER_EPHEMERAL_KEY_ALIAS = "bunker_ephemeral"
         internal const val NOSTRCONNECT_TIMEOUT_MS = 120_000L
+        internal const val NIP46_RELAY_CONNECT_TIMEOUT_MS = 15_000L
         internal val NIP46_RELAYS = listOf("wss://relay.nsec.app")
     }
 
@@ -127,16 +137,53 @@ class AccountManager internal constructor(
 
     private var heartbeatJob: Job? = null
 
+    // --- Dedicated NIP-46 client (isolated from general relay pool) ---
+
+    private val nip46ClientMutex = Mutex()
+    private var nip46Client: NostrClient? = null
+
+    private suspend fun getOrCreateNip46Client(): NostrClient =
+        nip46ClientMutex.withLock {
+            nip46Client ?: NostrClient(
+                BasicOkHttpWebSocket.Builder(DesktopHttpClient::getHttpClient),
+            ).also {
+                nip46Client = it
+                it.connect()
+            }
+        }
+
+    suspend fun disconnectNip46Client() =
+        nip46ClientMutex.withLock {
+            nip46Client?.disconnect()
+            nip46Client = null
+        }
+
+    /**
+     * Waits for the NIP-46 client to connect to at least one of the target relays.
+     * openSubscription() triggers async relay connection via sendOrConnectAndSync,
+     * but we must wait for the websocket to be ready before sending requests.
+     */
+    private suspend fun awaitNip46RelayConnection(
+        client: NostrClient,
+        targetRelays: Set<NormalizedRelayUrl>,
+    ) {
+        withTimeout(NIP46_RELAY_CONNECT_TIMEOUT_MS) {
+            client.connectedRelaysFlow().first { connected ->
+                targetRelays.any { it in connected }
+            }
+        }
+    }
+
     // --- Account loading ---
 
-    suspend fun loadSavedAccount(client: INostrClient? = null): Result<AccountState.LoggedIn> =
+    suspend fun loadSavedAccount(): Result<AccountState.LoggedIn> =
         try {
             val lastNpub = getLastNpub() ?: return Result.failure(Exception("No saved account"))
 
             // Check for bunker account first
             val bunkerUri = getBunkerUri()
-            if (bunkerUri != null && client != null) {
-                loadBunkerAccount(bunkerUri, lastNpub, client)
+            if (bunkerUri != null) {
+                loadBunkerAccount(bunkerUri, lastNpub)
             } else {
                 loadInternalAccount(lastNpub)
             }
@@ -167,7 +214,6 @@ class AccountManager internal constructor(
     private suspend fun loadBunkerAccount(
         bunkerUri: String,
         npub: String,
-        client: INostrClient,
     ): Result<AccountState.LoggedIn> {
         val ephemeralPrivKeyHex =
             secureStorage.getPrivateKey(BUNKER_EPHEMERAL_KEY_ALIAS)
@@ -176,7 +222,8 @@ class AccountManager internal constructor(
         val ephemeralKeyPair = KeyPair(privKey = ephemeralPrivKeyHex.hexToByteArray())
         val ephemeralSigner = NostrSignerInternal(ephemeralKeyPair)
 
-        val remoteSigner = NostrSignerRemote.fromBunkerUri(bunkerUri, ephemeralSigner, client)
+        val nip46Client = getOrCreateNip46Client()
+        val remoteSigner = NostrSignerRemote.fromBunkerUri(bunkerUri, ephemeralSigner, nip46Client)
         remoteSigner.openSubscription()
 
         val pubKeyHex = decodePublicKeyAsHexOrNull(npub) ?: return Result.failure(Exception("Invalid saved npub"))
@@ -197,16 +244,17 @@ class AccountManager internal constructor(
 
     // --- Bunker login ---
 
-    suspend fun loginWithBunker(
-        bunkerUri: String,
-        client: INostrClient,
-    ): Result<AccountState.LoggedIn> =
+    suspend fun loginWithBunker(bunkerUri: String): Result<AccountState.LoggedIn> =
         try {
             val ephemeralKeyPair = KeyPair()
             val ephemeralSigner = NostrSignerInternal(ephemeralKeyPair)
 
-            val remoteSigner = NostrSignerRemote.fromBunkerUri(bunkerUri, ephemeralSigner, client)
+            val nip46Client = getOrCreateNip46Client()
+            val remoteSigner = NostrSignerRemote.fromBunkerUri(bunkerUri, ephemeralSigner, nip46Client)
             remoteSigner.openSubscription()
+
+            // Wait for websocket to be ready before sending connect request
+            awaitNip46RelayConnection(nip46Client, remoteSigner.relays)
 
             val remotePubkey = remoteSigner.connect()
 
@@ -230,6 +278,8 @@ class AccountManager internal constructor(
             )
 
             Result.success(state)
+        } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+            Result.failure(Exception("Could not connect to NIP-46 relay. Check your network connection."))
         } catch (e: SignerExceptions.TimedOutException) {
             Result.failure(Exception("Connection timed out. Ensure remote signer is online and has approved the connection."))
         } catch (e: SignerExceptions.ManuallyUnauthorizedException) {
@@ -242,10 +292,7 @@ class AccountManager internal constructor(
 
     // --- Nostrconnect login ---
 
-    suspend fun loginWithNostrConnect(
-        client: INostrClient,
-        onUriGenerated: (String) -> Unit,
-    ): Result<AccountState.LoggedIn> =
+    suspend fun loginWithNostrConnect(onUriGenerated: (String) -> Unit): Result<AccountState.LoggedIn> =
         try {
             val ephemeralKeyPair = KeyPair()
             val ephemeralSigner = NostrSignerInternal(ephemeralKeyPair)
@@ -257,17 +304,20 @@ class AccountManager internal constructor(
             val uri = "nostrconnect://$ephemeralPubKey?$relayParams&secret=$secret&name=Amethyst%20Desktop"
             onUriGenerated(uri)
 
+            val nip46Client = getOrCreateNip46Client()
             val normalizedRelays = relays.map { NormalizedRelayUrl(it) }.toSet()
-            val connectData = waitForConnectRequest(ephemeralSigner, ephemeralPubKey, normalizedRelays, secret, client)
+            val connectData = waitForConnectRequest(ephemeralSigner, ephemeralPubKey, normalizedRelays, secret, nip46Client)
 
-            sendAckResponse(ephemeralSigner, connectData, normalizedRelays, client)
+            if (connectData.requestId != null) {
+                sendAckResponse(ephemeralSigner, connectData, normalizedRelays, nip46Client)
+            }
 
             val remoteSigner =
                 NostrSignerRemote(
                     signer = ephemeralSigner,
                     remotePubkey = connectData.signerPubkey,
                     relays = normalizedRelays,
-                    client = client,
+                    client = nip46Client,
                 )
             remoteSigner.openSubscription()
 
@@ -303,7 +353,7 @@ class AccountManager internal constructor(
         ephemeralPubKey: HexKey,
         relays: Set<NormalizedRelayUrl>,
         expectedSecret: String,
-        client: INostrClient,
+        client: NostrClient,
     ): ConnectRequestData {
         val deferred = CompletableDeferred<NostrConnectEvent>()
 
@@ -314,6 +364,7 @@ class AccountManager internal constructor(
                     Filter(
                         kinds = listOf(NostrConnectEvent.KIND),
                         tags = mapOf("p" to listOf(ephemeralPubKey)),
+                        since = TimeUtils.now() - 60,
                     ),
             ) { event ->
                 if (event is NostrConnectEvent && !deferred.isCompleted) {
@@ -327,28 +378,53 @@ class AccountManager internal constructor(
                     deferred.await()
                 }
 
-            val otherPubkey = event.talkingWith(ephemeralSigner.pubKey)
-            val decryptedJson = ephemeralSigner.decrypt(event.content, otherPubkey)
-            val message = OptimizedJsonMapper.fromJsonTo<BunkerRequest>(decryptedJson)
+            val signerPubkey = event.talkingWith(ephemeralSigner.pubKey)
+            val decryptedJson = ephemeralSigner.decrypt(event.content, signerPubkey)
+            val message = OptimizedJsonMapper.fromJsonTo<BunkerMessage>(decryptedJson)
 
-            if (message.method != BunkerRequestConnect.METHOD_NAME) {
-                throw Exception("Expected 'connect' method, got '${message.method}'")
+            return when (message) {
+                is BunkerRequest -> {
+                    if (message.method != BunkerRequestConnect.METHOD_NAME) {
+                        throw Exception("Expected 'connect' method, got '${message.method}'")
+                    }
+
+                    val userPubkey =
+                        message.params.getOrNull(0)
+                            ?: throw Exception("Missing user pubkey in connect request")
+                    val receivedSecret = message.params.getOrNull(1)
+
+                    if (receivedSecret != expectedSecret) {
+                        throw Exception("Secret mismatch in connect request")
+                    }
+
+                    ConnectRequestData(
+                        requestId = message.id,
+                        signerPubkey = signerPubkey,
+                        userPubkey = userPubkey,
+                    )
+                }
+
+                is BunkerResponse -> {
+                    if (message.error != null) {
+                        throw Exception("Signer rejected connection: ${message.error}")
+                    }
+
+                    val userPubkey =
+                        message.result
+                            ?.takeIf { it.length == 64 && Hex.isHex(it) }
+                            ?: signerPubkey
+
+                    ConnectRequestData(
+                        requestId = null,
+                        signerPubkey = signerPubkey,
+                        userPubkey = userPubkey,
+                    )
+                }
+
+                else -> {
+                    throw Exception("Unexpected NIP-46 message format")
+                }
             }
-
-            val userPubkey =
-                message.params.getOrNull(0)
-                    ?: throw Exception("Missing user pubkey in connect request")
-            val receivedSecret = message.params.getOrNull(1)
-
-            if (receivedSecret != expectedSecret) {
-                throw Exception("Secret mismatch in connect request")
-            }
-
-            return ConnectRequestData(
-                requestId = message.id,
-                signerPubkey = event.pubKey,
-                userPubkey = userPubkey,
-            )
         } finally {
             subscription.close()
         }
@@ -358,9 +434,9 @@ class AccountManager internal constructor(
         ephemeralSigner: NostrSignerInternal,
         connectData: ConnectRequestData,
         relays: Set<NormalizedRelayUrl>,
-        client: INostrClient,
+        client: NostrClient,
     ) {
-        val ackResponse = BunkerResponseAck(id = connectData.requestId)
+        val ackResponse = BunkerResponseAck(id = connectData.requestId!!)
         val ackEvent =
             NostrConnectEvent.create(
                 message = ackResponse,
@@ -377,7 +453,7 @@ class AccountManager internal constructor(
     }
 
     private data class ConnectRequestData(
-        val requestId: String,
+        val requestId: String?,
         val signerPubkey: HexKey,
         val userPubkey: HexKey,
     )
@@ -511,6 +587,7 @@ class AccountManager internal constructor(
                 }
             }
         }
+        disconnectNip46Client()
         _signerConnectionState.value = SignerConnectionState.NotRemote
         _accountState.value = AccountState.LoggedOut
         // Cancel heartbeat LAST — may be called from within the heartbeat coroutine
@@ -519,7 +596,7 @@ class AccountManager internal constructor(
 
     suspend fun forceLogoutWithReason(reason: String) {
         _forceLogoutReason.value = reason
-        logout(deleteKey = true)
+        logout(deleteKey = false)
     }
 
     fun clearForceLogoutReason() {
@@ -552,7 +629,7 @@ class AccountManager internal constructor(
                             )
                             return@launch
                         }
-                        _signerConnectionState.value = SignerConnectionState.Unstable(consecutiveFailures)
+                        _signerConnectionState.value = SignerConnectionState.Disconnected
                     }
                 }
             }
@@ -601,8 +678,27 @@ class AccountManager internal constructor(
 
     // --- File storage helpers ---
 
+    private fun ensureAmethystDir() {
+        if (!amethystDir.exists()) {
+            amethystDir.mkdirs()
+        }
+        try {
+            Files.setPosixFilePermissions(
+                amethystDir.toPath(),
+                setOf(
+                    PosixFilePermission.OWNER_READ,
+                    PosixFilePermission.OWNER_WRITE,
+                    PosixFilePermission.OWNER_EXECUTE,
+                ),
+            )
+        } catch (_: UnsupportedOperationException) {
+            // Windows — file system ACLs handle this
+        } catch (_: Exception) {
+        }
+    }
+
     private fun saveNwcUri(uri: String) {
-        amethystDir.mkdirs()
+        ensureAmethystDir()
         getNwcFile().writeText(uri)
     }
 
@@ -614,7 +710,7 @@ class AccountManager internal constructor(
     }
 
     private fun saveLastNpub(npub: String) {
-        amethystDir.mkdirs()
+        ensureAmethystDir()
         getPrefsFile().writeText(npub)
     }
 
@@ -630,7 +726,7 @@ class AccountManager internal constructor(
     }
 
     private fun saveBunkerUri(uri: String) {
-        amethystDir.mkdirs()
+        ensureAmethystDir()
         getBunkerFile().writeText(uri)
     }
 

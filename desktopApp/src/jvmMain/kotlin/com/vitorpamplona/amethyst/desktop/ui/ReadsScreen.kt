@@ -175,7 +175,6 @@ fun ReadsScreen(
     onNavigateToArticle: (String) -> Unit = {},
 ) {
     val connectedRelays by relayManager.connectedRelays.collectAsState()
-    val relayStatuses by relayManager.relayStatuses.collectAsState()
     val scope = rememberCoroutineScope()
 
     val eventState =
@@ -195,11 +194,11 @@ fun ReadsScreen(
     val initialLoadComplete = eoseReceivedCount > 0
 
     // Load followed users for Following feed mode
-    rememberSubscription(relayStatuses, account, feedMode, relayManager = relayManager) {
-        val configuredRelays = relayStatuses.keys
-        if (configuredRelays.isNotEmpty() && account != null && feedMode == FeedMode.FOLLOWING) {
+    rememberSubscription(connectedRelays, account, feedMode, relayManager = relayManager) {
+        val connectedRelays = connectedRelays
+        if (connectedRelays.isNotEmpty() && account != null && feedMode == FeedMode.FOLLOWING) {
             createContactListSubscription(
-                relays = configuredRelays,
+                relays = connectedRelays,
                 pubKeyHex = account.pubKeyHex,
                 onEvent = { event, _, _, _ ->
                     if (event is ContactListEvent) {
@@ -219,16 +218,16 @@ fun ReadsScreen(
     }
 
     // Subscribe to long-form content feed
-    rememberSubscription(relayStatuses, feedMode, followedUsers, relayManager = relayManager) {
-        val configuredRelays = relayStatuses.keys
-        if (configuredRelays.isEmpty()) {
+    rememberSubscription(connectedRelays, feedMode, followedUsers, relayManager = relayManager) {
+        val connectedRelays = connectedRelays
+        if (connectedRelays.isEmpty()) {
             return@rememberSubscription null
         }
 
         when (feedMode) {
             FeedMode.GLOBAL -> {
                 createLongFormFeedSubscription(
-                    relays = configuredRelays,
+                    relays = connectedRelays,
                     onEvent = { event, _, _, _ ->
                         if (event is LongTextNoteEvent) {
                             eventState.addItem(event)
@@ -243,7 +242,7 @@ fun ReadsScreen(
             FeedMode.FOLLOWING -> {
                 if (followedUsers.isNotEmpty()) {
                     createFollowingLongFormFeedSubscription(
-                        relays = configuredRelays,
+                        relays = connectedRelays,
                         followedUsers = followedUsers.toList(),
                         onEvent = { event, _, _, _ ->
                             if (event is LongTextNoteEvent) {

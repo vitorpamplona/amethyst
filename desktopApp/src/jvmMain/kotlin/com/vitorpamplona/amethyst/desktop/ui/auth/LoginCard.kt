@@ -61,31 +61,11 @@ import com.vitorpamplona.amethyst.commons.resources.login_button
 import com.vitorpamplona.amethyst.commons.resources.login_card_subtitle
 import com.vitorpamplona.amethyst.commons.resources.login_card_title
 import com.vitorpamplona.amethyst.commons.resources.login_generate_button
+import com.vitorpamplona.amethyst.desktop.account.validateBunkerUri
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.stringResource
-
-private val HEX_64_REGEX = Regex("^[0-9a-fA-F]{64}$")
-
-fun validateBunkerUri(input: String): String? {
-    val trimmed = input.trim()
-    if (!trimmed.startsWith("bunker://", ignoreCase = true)) return "Not a bunker URI"
-
-    val afterScheme = trimmed.substring("bunker://".length)
-    val parts = afterScheme.split("?", limit = 2)
-    val pubkeyPart = parts[0]
-
-    if (pubkeyPart.length != 64 || !pubkeyPart.matches(HEX_64_REGEX)) {
-        return "Invalid bunker URI. Expected: bunker://<64-hex-chars>?relay=wss://..."
-    }
-
-    if (parts.size < 2 || !parts[1].contains("relay=wss://", ignoreCase = true)) {
-        return "Bunker URI must include at least one relay parameter (relay=wss://...)"
-    }
-
-    return null // valid
-}
 
 @Composable
 fun LoginCard(
@@ -291,7 +271,7 @@ private fun NostrConnectContent(onLoginNostrConnect: suspend (onUriGenerated: (S
                 scope.launch(Dispatchers.IO) {
                     val result =
                         onLoginNostrConnect { uri ->
-                            nostrConnectUri = uri
+                            scope.launch(Dispatchers.Main) { nostrConnectUri = uri }
                         }
                     withContext(Dispatchers.Main) {
                         result.onFailure {

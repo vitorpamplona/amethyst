@@ -72,6 +72,7 @@ import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.model.DesktopDmRelayState
 import com.vitorpamplona.amethyst.desktop.model.DesktopIAccount
+import com.vitorpamplona.amethyst.desktop.network.DefaultRelays
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.desktop.ui.ComposeNoteDialog
@@ -88,6 +89,7 @@ import com.vitorpamplona.amethyst.desktop.ui.deck.DeckState
 import com.vitorpamplona.amethyst.desktop.ui.deck.SinglePaneLayout
 import com.vitorpamplona.amethyst.desktop.ui.profile.ProfileInfoCard
 import com.vitorpamplona.amethyst.desktop.ui.relay.RelayStatusCard
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -95,7 +97,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.runBlocking
 
 private val isMacOS = System.getProperty("os.name").lowercase().contains("mac")
 
@@ -402,13 +404,18 @@ fun App(
     val accountState by accountManager.accountState.collectAsState()
     val scope = remember { CoroutineScope(SupervisorJob() + Dispatchers.Main) }
 
-    // Subscriptions coordinator for metadata/reactions loading
+    // Subscriptions coordinator — uses default relay URLs for metadata indexing.
+    // Feed subscriptions (inside MainContent) drive actual relay pool connections.
     val subscriptionsCoordinator =
         remember(relayManager, localCache) {
             DesktopRelaySubscriptionsCoordinator(
                 client = relayManager.client,
                 scope = scope,
-                indexRelays = relayManager.availableRelays.value,
+                indexRelays =
+                    DefaultRelays.RELAYS
+                        .mapNotNull {
+                            RelayUrlNormalizer.normalizeOrNull(it)
+                        }.toSet(),
                 localCache = localCache,
             )
         }
@@ -421,31 +428,24 @@ fun App(
 
         scope.launch(Dispatchers.IO) {
             if (accountManager.hasBunkerAccount()) {
-                // Bunker accounts need relay connections before recreating signer
+                // Show connecting UI while dedicated NIP-46 client connects
                 accountManager.setConnectingRelays()
-                val connected =
-                    withTimeoutOrNull(30_000L) {
-                        relayManager.connectedRelays.first { it.isNotEmpty() }
-                    }
-                if (connected == null) {
-                    // No relays connected after 30s — fall back to login screen
-                    accountManager.logout(deleteKey = true)
-                } else {
-                    val result = accountManager.loadSavedAccount(relayManager.client)
-                    if (result.isSuccess) {
-                        accountManager.startHeartbeat(scope)
-                    } else {
-                        // Corrupt bunker state — fall back to login screen
-                        accountManager.logout(deleteKey = true)
-                    }
+            }
+            val result = accountManager.loadSavedAccount()
+            if (result.isSuccess) {
+                val current = accountManager.currentAccount()
+                if (current?.signerType is com.vitorpamplona.amethyst.desktop.account.SignerType.Remote) {
+                    accountManager.startHeartbeat(scope)
                 }
-            } else {
-                accountManager.loadSavedAccount()
+            } else if (accountManager.hasBunkerAccount()) {
+                // Corrupt bunker state — fall back to login screen
+                accountManager.logout(deleteKey = true)
             }
         }
 
         onDispose {
             accountManager.stopHeartbeat()
+            runBlocking { accountManager.disconnectNip46Client() }
             subscriptionsCoordinator.clear()
             relayManager.disconnect()
             scope.cancel()
@@ -463,7 +463,6 @@ fun App(
                 is AccountState.LoggedOut -> {
                     LoginScreen(
                         accountManager = accountManager,
-                        relayClient = relayManager.client,
                         onLoginSuccess = {
                             // Start heartbeat if bunker account
                             val current = accountManager.currentAccount()
@@ -475,7 +474,11 @@ fun App(
                 }
 
                 is AccountState.ConnectingRelays -> {
-                    ConnectingRelaysScreen()
+                    val relays by relayManager.relayStatuses.collectAsState()
+                    ConnectingRelaysScreen(
+                        subtitle = "Restoring remote signer session",
+                        relayStatuses = relays,
+                    )
                 }
 
                 is AccountState.LoggedIn -> {
