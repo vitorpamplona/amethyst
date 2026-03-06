@@ -72,7 +72,7 @@ class AccountFollowsLoaderSubAssembler(
      * This assembler saves the EOSE per user key. That EOSE includes their metadata, etc
      * and reports, but only from trusted accounts (follows of all logged in users).
      */
-    val hasTried: EOSEAccountFast<User> = EOSEAccountFast<User>(2000)
+    val hasTried: EOSEAccountFast<User> = EOSEAccountFast(2000)
 
     // updates all filters
     override fun invalidateFilters(ignoreIfDoing: Boolean) {

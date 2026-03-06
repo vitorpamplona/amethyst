@@ -28,5 +28,5 @@ import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
 class LocationTopNavPerRelayFilter(
     val geotags: Set<String>,
 ) : IFeedTopNavPerRelayFilter {
-    val geotagScopes: Set<String> = geotags.mapTo(mutableSetOf<String>()) { GeohashId.toScope(it) }
+    val geotagScopes: Set<String> = geotags.mapTo(mutableSetOf()) { GeohashId.toScope(it) }
 }

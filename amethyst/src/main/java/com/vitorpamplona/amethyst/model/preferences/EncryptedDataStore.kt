@@ -72,7 +72,7 @@ class EncryptedDataStore(
         parser: (String) -> T,
         serializer: (T) -> String,
     ): UpdatablePropertyFlow<T> =
-        UpdatablePropertyFlow<T>(
+        UpdatablePropertyFlow(
             flow =
                 store.data
                     .catch { e ->

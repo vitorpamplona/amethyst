@@ -108,7 +108,7 @@ fun LoadOrCreateNote(
     content: @Composable (Note?) -> Unit,
 ) {
     var note by
-        remember(event.id) { mutableStateOf<Note?>(accountViewModel.getNoteIfExists(event.id)) }
+        remember(event.id) { mutableStateOf(accountViewModel.getNoteIfExists(event.id)) }
 
     if (note == null) {
         LaunchedEffect(key1 = event.id) {

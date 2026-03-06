@@ -35,7 +35,7 @@ fun <T> DataStore<Preferences>.getProperty(
     serializer: (T) -> String,
     scope: CoroutineScope,
 ): UpdatablePropertyFlow<T> =
-    UpdatablePropertyFlow<T>(
+    UpdatablePropertyFlow(
         flow =
             data
                 .catch { e ->

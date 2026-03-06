@@ -49,7 +49,7 @@ class UserOutboxFinderSubAssembler(
      * This assembler saves the EOSE per user key. That EOSE includes their metadata, etc
      * and reports, but only from trusted accounts (follows of all logged in users).
      */
-    var hasTried: EOSEAccountFast<User> = EOSEAccountFast<User>(200)
+    var hasTried: EOSEAccountFast<User> = EOSEAccountFast(200)
 
     fun newEose(
         relay: NormalizedRelayUrl,

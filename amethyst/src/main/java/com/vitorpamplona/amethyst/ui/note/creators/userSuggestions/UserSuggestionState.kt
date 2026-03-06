@@ -43,7 +43,7 @@ class UserSuggestionState(
     val account: Account,
     val requireAtSymbol: Boolean = true,
 ) {
-    val invalidations = MutableStateFlow<Int>(0)
+    val invalidations = MutableStateFlow(0)
     val currentWord = MutableStateFlow("")
     val searchDataSourceState = SearchQueryState(MutableStateFlow(""), account)
 

@@ -38,7 +38,7 @@ class UserProfileReportsFeedFilter(
 
     private fun innerApplyFilter(collection: Collection<Note>): Set<Note> =
         collection
-            .filterTo(mutableSetOf<Note>()) {
+            .filterTo(mutableSetOf()) {
                 it.event is ReportEvent && it.event?.isTaggedUser(user.pubkeyHex) == true
             }
 

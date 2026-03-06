@@ -51,7 +51,7 @@ fun DisplayZapSplits(
         remember(noteEvent) {
             val list = noteEvent.zapSplitSetup()
             if (list.isEmpty() && useAuthorIfEmpty) {
-                listOf<ZapSplitSetup>(
+                listOf(
                     ZapSplitSetup(
                         pubKeyHex = noteEvent.pubKey,
                         relay = null,

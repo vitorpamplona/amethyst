@@ -102,7 +102,7 @@ fun VideoView(
 ) {
     val automaticallyStartPlayback =
         remember {
-            mutableStateOf<Boolean>(
+            mutableStateOf(
                 if (alwaysShowVideo) true else accountViewModel.settings.startVideoPlayback(),
             )
         }

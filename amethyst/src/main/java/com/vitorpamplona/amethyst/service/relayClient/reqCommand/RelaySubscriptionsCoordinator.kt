@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand
 
-import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManagerControls
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountFilterAssembler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.ChannelFinderFilterAssemblyGroup
@@ -88,7 +87,7 @@ class RelaySubscriptionsCoordinator(
     val nwc = NWCPaymentFilterAssembler(client)
 
     val all =
-        listOf<ComposeSubscriptionManagerControls>(
+        listOf(
             account,
             home,
             chatroomList,

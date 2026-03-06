@@ -511,7 +511,7 @@ class AccountViewModel(
                     }.toMutableMap()
 
             val results =
-                mapNotNullAsync<CombinedZap, DecryptedInfo>(
+                mapNotNullAsync(
                     zaps.filter { (it.request.event as? LnZapRequestEvent)?.isPrivateZap() == true },
                 ) { next ->
                     val info = innerDecryptAmountMessage(next.request, next.response)
@@ -1609,7 +1609,7 @@ class AccountViewModel(
             }.stateIn(
                 viewModelScope,
                 SharingStarted.WhileSubscribed(5000),
-                emptySet<HexKey>(),
+                emptySet(),
             )
 
     val draftNoteCache = CachedDraftNotes(this)
