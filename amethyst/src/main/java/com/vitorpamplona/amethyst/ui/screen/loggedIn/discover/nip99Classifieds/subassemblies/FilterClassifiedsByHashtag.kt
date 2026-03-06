@@ -33,7 +33,7 @@ fun filterClassifiedsByHashtag(
     hashtags: Set<String>?,
     since: Long?,
 ): List<RelayBasedFilter>? {
-    if (hashtags == null || hashtags.isEmpty()) return null
+    if (hashtags.isNullOrEmpty()) return null
 
     val hashtags = hashtags.flatMap(::hashtagAlts).distinct().sorted()
 

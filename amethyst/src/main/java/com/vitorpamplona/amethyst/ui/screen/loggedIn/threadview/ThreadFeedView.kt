@@ -842,7 +842,7 @@ private fun RenderClassifiedsReaderForThread(
 
     Row(modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp)) {
         Column {
-            if (imageSet != null && imageSet.isNotEmpty()) {
+            if (!imageSet.isNullOrEmpty()) {
                 AutoNonlazyGrid(imageSet.size) {
                     ZoomableContentView(
                         content = imageSet[it],

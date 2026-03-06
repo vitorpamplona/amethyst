@@ -38,7 +38,7 @@ fun filterBookmarksAndReportsFromKey(
     pubkey: HexKey?,
     since: Long?,
 ): List<RelayBasedFilter> {
-    if (pubkey == null || pubkey.isEmpty()) return emptyList()
+    if (pubkey.isNullOrEmpty()) return emptyList()
 
     return listOf(
         RelayBasedFilter(

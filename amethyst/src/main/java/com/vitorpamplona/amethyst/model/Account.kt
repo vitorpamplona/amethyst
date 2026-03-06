@@ -1240,7 +1240,7 @@ class Account(
         val event = signer.sign(template)
         cache.justConsumeMyOwnEvent(event)
         val relays = relayList(event)
-        if (relays != null && relays.isNotEmpty()) {
+        if (!relays.isNullOrEmpty()) {
             client.send(event, relays.toSet())
         } else {
             client.send(event, computeRelayListToBroadcast(event))

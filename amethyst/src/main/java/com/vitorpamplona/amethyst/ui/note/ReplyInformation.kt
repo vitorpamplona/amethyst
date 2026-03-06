@@ -86,8 +86,8 @@ fun ReplyInformationChannel(
     onUserTagClick: (User) -> Unit,
 ) {
     FlowRow {
-        if (mentions != null && mentions.isNotEmpty()) {
-            if (replyTo != null && replyTo.isNotEmpty()) {
+        if (!mentions.isNullOrEmpty()) {
+            if (!replyTo.isNullOrEmpty()) {
                 Text(
                     stringRes(id = R.string.replying_to),
                     fontSize = 13.sp,

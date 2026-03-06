@@ -596,7 +596,7 @@ class ChatNewMessageViewModel :
             toUsersTagger.run()
 
             val users = toUsersTagger.pTags?.mapTo(mutableSetOf()) { it.pubkeyHex }
-            if (users == null || users.isEmpty()) {
+            if (users.isNullOrEmpty()) {
                 room = null
                 updateNIP17StatusFromRoom()
             } else {
