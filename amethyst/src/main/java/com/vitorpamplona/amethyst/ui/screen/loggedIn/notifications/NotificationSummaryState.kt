@@ -84,7 +84,7 @@ class NotificationSummaryState(
 
     fun today(): String = sdf.format(LocalDateTime.now())
 
-    public suspend fun initializeSuspend() {
+    suspend fun initializeSuspend() {
         checkNotInMainThread()
 
         val currentUser = user.pubkeyHex

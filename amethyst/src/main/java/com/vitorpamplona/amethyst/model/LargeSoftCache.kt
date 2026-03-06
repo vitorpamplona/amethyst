@@ -98,7 +98,7 @@ class LargeSoftCache<K : Any, V : Any> : CacheOperations<K, V> {
                 // another thread may put in between
                 cache.remove(key, softRef)
                 val newObject = builder(key)
-                return cache.putIfAbsent(key, WeakReference(newObject))?.get() ?: newObject
+                cache.putIfAbsent(key, WeakReference(newObject))?.get() ?: newObject
             }
         }
     }
