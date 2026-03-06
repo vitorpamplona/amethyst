@@ -25,14 +25,13 @@ import java.lang.ref.WeakReference
 import java.util.concurrent.ConcurrentSkipListMap
 import java.util.function.BiConsumer
 
-class LargeSoftCache<K, V> : CacheOperations<K, V> {
-    protected val cache = ConcurrentSkipListMap<K, WeakReference<V>>()
+class LargeSoftCache<K : Any, V : Any> : CacheOperations<K, V> {
+    private val cache = ConcurrentSkipListMap<K, WeakReference<V>>()
 
     fun keys() = cache.keys
 
     fun get(key: K): V? {
-        val softRef = cache.get(key)
-        if (softRef == null) return null
+        val softRef = cache.get(key) ?: return null
         val value = softRef.get()
 
         return if (value != null) {
@@ -135,7 +134,7 @@ class LargeSoftCache<K, V> : CacheOperations<K, V> {
             .forEach(BiConsumerWrapper(this, consumer))
     }
 
-    class BiConsumerWrapper<K, V>(
+    class BiConsumerWrapper<K : Any, V : Any>(
         val cache: LargeSoftCache<K, V>,
         val inner: BiConsumer<K, V>,
     ) : BiConsumer<K, WeakReference<V>> {
