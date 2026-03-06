@@ -117,8 +117,7 @@ open class DiscoverLiveFeedFilter(
 
     fun convertStatusToOrder(event: LiveActivitiesEvent?): Int {
         if (event == null) return 0
-        val url = event.streaming()
-        if (url == null) return 0
+        val url = event.streaming() ?: return 0
         return when (event.status()) {
             StatusTag.STATUS.LIVE -> {
                 if (OnlineChecker.isCachedAndOffline(url)) {
