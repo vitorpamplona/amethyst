@@ -54,7 +54,6 @@ tarsosdsp = "2.5"
 torAndroid = "0.4.9.5"
 translate = "17.0.3"
 unifiedpush = "3.0.10"
-urlDetector = "0.1.23"
 vico-charts = "2.4.3"
 zelory = "3.0.1"
 zoomable = "2.11.1"
@@ -154,7 +153,6 @@ secp256k1-kmp-jni-jvm = { group = "fr.acinq.secp256k1", name = "secp256k1-kmp-jn
 tarsosdsp = { group = "be.tarsos.dsp", name = "core", version.ref = "tarsosdsp" }
 tor-android = { module = "info.guardianproject:tor-android", version.ref = "torAndroid" }
 unifiedpush = { group = "com.github.UnifiedPush", name = "android-connector", version.ref = "unifiedpush" }
-url-detector = { group = "io.github.url-detector", name = "url-detector", version.ref = "urlDetector" }
 vico-charts-compose = { group = "com.patrykandpatrick.vico", name = "compose", version.ref = "vico-charts" }
 vico-charts-core = { group = "com.patrykandpatrick.vico", name = "core", version.ref = "vico-charts" }
 vico-charts-m3 = { group = "com.patrykandpatrick.vico", name = "compose-m3", version.ref = "vico-charts" }

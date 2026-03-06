@@ -20,6 +20,9 @@
  */
 package com.vitorpamplona.quartz.nip64Chess
 
+import com.vitorpamplona.quartz.nip64Chess.jester.JesterEvent
+import com.vitorpamplona.quartz.nip64Chess.jester.JesterGameEvents
+import com.vitorpamplona.quartz.nip64Chess.jester.JesterProtocol
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse

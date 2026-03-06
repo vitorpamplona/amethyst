@@ -23,14 +23,14 @@ package com.vitorpamplona.amethyst.benchmark
 import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.linkedin.urls.detection.UrlDetector
-import com.linkedin.urls.detection.UrlDetectorOptions
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.richtext.HashTagSegment
 import com.vitorpamplona.amethyst.commons.richtext.ImageSegment
 import com.vitorpamplona.amethyst.commons.richtext.LinkSegment
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.commons.richtext.UrlParser
+import com.vitorpamplona.quartz.utils.urldetector.detection.UrlDetector
 import junit.framework.TestCase.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -117,21 +117,21 @@ class RichTextParserBenchmark {
     @Test
     fun computeTestCase2UrlDetector() {
         benchmarkRule.measureRepeated {
-            UrlDetector(testCase2, UrlDetectorOptions.Default).detect()
+            UrlDetector(testCase2).detect()
         }
     }
 
     @Test
     fun computeTestCase2UrlDetectorWJapanese() {
         benchmarkRule.measureRepeated {
-            UrlDetector(testCaseJapanese, UrlDetectorOptions.Default).detect()
+            UrlDetector(testCaseJapanese).detect()
         }
     }
 
     @Test
     fun computeTestCase2ParseUrls() {
         benchmarkRule.measureRepeated {
-            RichTextParser().parseValidUrls(testCase2)
+            UrlParser().parseValidUrls(testCase2)
         }
     }
 

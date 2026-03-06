@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.note.creators.previews
 
+import androidx.compose.runtime.Stable
 import androidx.compose.ui.text.input.TextFieldValue
 import com.vitorpamplona.amethyst.service.CachedUrlParser
 import kotlinx.coroutines.Dispatchers
@@ -30,6 +31,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 
+@Stable
 class PreviewState {
     var source = MutableStateFlow(TextFieldValue(""))
 

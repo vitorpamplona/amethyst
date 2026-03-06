@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip64Chess
 
+import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip64Chess.game.ChessGameEvent
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -83,7 +84,7 @@ class ChessGameEventTest {
                 sig = "test_sig",
             )
 
-        assertEquals(customAltText, testEvent.altText(), "Alt text should be extractable from tags")
+        assertEquals(customAltText, testEvent.alt(), "Alt text should be extractable from tags")
     }
 
     @Test
@@ -98,7 +99,7 @@ class ChessGameEventTest {
                 sig = "test_sig",
             )
 
-        assertEquals(null, testEvent.altText(), "Should return null when no alt tag present")
+        assertEquals(null, testEvent.alt(), "Should return null when no alt tag present")
     }
 
     @Test

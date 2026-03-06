@@ -18,8 +18,19 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.utils
+package com.vitorpamplona.quartz.utils.urldetector
 
-import com.vitorpamplona.quartz.utils.urldetector.detection.UrlDetector
+enum class UrlPart(
+    nextPart: UrlPart?,
+) {
+    FRAGMENT(null),
+    QUERY(FRAGMENT),
+    PATH(QUERY),
+    PORT(PATH),
+    HOST(PORT),
+    USERNAME_PASSWORD(HOST),
+    SCHEME(USERNAME_PASSWORD),
+    ;
 
-actual fun fastFindURLs(text: String): List<String> = UrlDetector(text).detect().map { it.originalUrl }
+    val nextPart: UrlPart? = nextPart
+}

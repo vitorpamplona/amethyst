@@ -30,9 +30,8 @@ import com.google.mlkit.nl.translate.TranslateLanguage
 import com.google.mlkit.nl.translate.Translation
 import com.google.mlkit.nl.translate.Translator
 import com.google.mlkit.nl.translate.TranslatorOptions
-import com.linkedin.urls.detection.UrlDetector
-import com.linkedin.urls.detection.UrlDetectorOptions
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import com.vitorpamplona.quartz.utils.urldetector.detection.UrlDetector
 import kotlinx.coroutines.CancellationException
 import java.util.concurrent.Executors
 import java.util.regex.Pattern
@@ -185,8 +184,7 @@ object LanguageTranslatorService {
     }
 
     private fun urlDictionary(text: String): Map<String, String> {
-        val parser = UrlDetector(text, UrlDetectorOptions.Default)
-        val urlsInText = parser.detect()
+        val urlsInText = UrlDetector(text).detect()
 
         var counter = 0
 

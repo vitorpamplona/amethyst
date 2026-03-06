@@ -24,11 +24,10 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
-import kotlinx.collections.immutable.ImmutableSet
 
 @Immutable
 class RichTextViewerState(
-    val urlSet: ImmutableSet<String>,
+    val urlSet: Urls,
     val imagesForPager: ImmutableMap<String, MediaUrlContent>,
     val imageList: ImmutableList<MediaUrlContent>,
     val customEmoji: ImmutableMap<String, String>,
@@ -136,13 +135,6 @@ class HashIndexEventSegment(
 class HashTagSegment(
     segment: String,
     val hashtag: String,
-    val extras: String?,
-) : Segment(segment)
-
-@Immutable
-class SchemelessUrlSegment(
-    segment: String,
-    val url: String,
     val extras: String?,
 ) : Segment(segment)
 

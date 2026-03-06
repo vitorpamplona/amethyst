@@ -54,7 +54,6 @@ Quartz exposes these as `api` (you get them transitively):
 | `fr.acinq.secp256k1:secp256k1-kmp-*` | Schnorr signing |
 | `com.github.anthonynsimon:rfc3986-normalizer` | Relay URL normalization |
 | `com.fasterxml.jackson.module:jackson-module-kotlin` | Event JSON parsing |
-| `com.linkedin.urls:url-detector` | URL extraction from content |
 
 For Android, add to `build.gradle.kts`:
 ```kotlin

@@ -86,8 +86,6 @@ kotlin {
             create("jvmAndroid") {
                 dependsOn(commonMain.get())
                 dependencies {
-                    // URL detection (JVM library, works on both)
-                    implementation(libs.url.detector)
                 }
             }
 
