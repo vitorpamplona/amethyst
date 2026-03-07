@@ -1048,9 +1048,11 @@
     <string name="reactions_settings_reorder">Ändra ordning</string>
     <string name="reactions_settings_reply">Svara</string>
     <string name="reactions_settings_reply_description">Svara på denna notis</string>
+    <string name="reactions_settings_boost">Boosta</string>
     <string name="reactions_settings_boost_description">Reposta eller citera denna notis</string>
     <string name="reactions_settings_like">Gilla</string>
     <string name="reactions_settings_like_description">Reagera på denna notis med en emoji</string>
+    <string name="reactions_settings_zap">Zap</string>
     <string name="reactions_settings_zap_description">Skicka en lightning-betalning till författaren</string>
     <string name="reactions_settings_share">Dela</string>
     <string name="reactions_settings_share_description">Dela denna notis externt</string>
