@@ -58,7 +58,7 @@ class UriDetectionTest {
         runTest(
             "the url google.com is a lot better then www.google.com.",
             "google.com",
-            "www.google.com.",
+            "www.google.com",
         )
     }
 
@@ -76,7 +76,7 @@ class UriDetectionTest {
             "this is an international domain: http://\u043F\u0440\u0438\u043c\u0435\u0440.\u0438\u0441\u043f\u044b" +
                 "\u0442\u0430\u043d\u0438\u0435 so is this: \u4e94\u7926\u767c\u5c55.\u4e2d\u570b.",
             "http://\u043F\u0440\u0438\u043c\u0435\u0440.\u0438\u0441\u043f\u044b\u0442\u0430\u043d\u0438\u0435",
-            "\u4e94\u7926\u767c\u5c55.\u4e2d\u570b.",
+            "\u4e94\u7926\u767c\u5c55.\u4e2d\u570b",
         )
     }
 
@@ -215,7 +215,7 @@ class UriDetectionTest {
             "www.www",
             "yahoo.com",
             "yahoo.com.br",
-            "hello.hello.",
+            "hello.hello",
             "hello.com",
         )
     }
@@ -395,7 +395,7 @@ class UriDetectionTest {
         runTest("%2ewtfismyip")
         runTest("wtfismyip%2e")
         runTest("wtfismyip%2ecom%2e", "wtfismyip%2ecom%2e")
-        runTest("wtfismyip%2ecom.", "wtfismyip%2ecom.")
+        runTest("wtfismyip%2ecom.", "wtfismyip%2ecom")
         runTest("%2ewtfismyip%2ecom", "wtfismyip%2ecom")
     }
 
@@ -662,7 +662,7 @@ class UriDetectionTest {
         runTest("hello:password@go12//", "hello:password@go12//")
         runTest("hello:password@go12", "hello:password@go12")
         runTest("hello:password@go12 lala", "hello:password@go12")
-        runTest("hello.com..", "hello.com.")
+        runTest("hello.com..", "hello.com")
         runTest("a/")
         runTest("4/5")
         runTest("concerns/worries")
@@ -694,7 +694,7 @@ class UriDetectionTest {
 
     @Test
     fun testNostr() {
-        runTest("Check this post nostr:somethingsomething . I think it is really cool", "nostr:somethingsomething")
+        runTest("Check this post nostr:npub1048qg5p6kfnpth2l98kq3dffg097tutm4npsz2exygx25ge2k9xqf5x3nf . I think it is really cool", "nostr:npub1048qg5p6kfnpth2l98kq3dffg097tutm4npsz2exygx25ge2k9xqf5x3nf")
     }
 
     @Test
@@ -704,7 +704,7 @@ class UriDetectionTest {
 
     @Test
     fun testNostrSlashes() {
-        runTest("Check this post nostr://somethingsomething . I think it is really cool", "nostr://somethingsomething")
+        runTest("Check this post nostr://npub1048qg5p6kfnpth2l98kq3dffg097tutm4npsz2exygx25ge2k9xqf5x3nf . I think it is really cool", "nostr://npub1048qg5p6kfnpth2l98kq3dffg097tutm4npsz2exygx25ge2k9xqf5x3nf")
     }
 
     @Test
@@ -740,6 +740,45 @@ class UriDetectionTest {
         runTest("ほtest.com", "test.com")
         runTest("test.comほ", "test.com")
         runTest("ほtest.comほ", "test.com")
+    }
+
+    @Test
+    fun testBeginsAndEndsWithPunctuation() {
+        UrlDetector.CANNOT_END_URLS_WITH.forEach { punctuation ->
+            runTest("${punctuation}http://test.com?s=dd", "http://test.com?s=dd")
+            runTest("http://test.com?s=dd$punctuation", "http://test.com?s=dd")
+            runTest("${punctuation}http://test.com?s=dd$punctuation", "http://test.com?s=dd")
+
+            runTest("${punctuation}http://test.com/", "http://test.com/")
+            runTest("http://test.com/.", "http://test.com/")
+            runTest("${punctuation}http://test.com/$punctuation", "http://test.com/")
+
+            runTest("${punctuation}http://test.com", "http://test.com")
+            runTest("http://test.com$punctuation", "http://test.com")
+            runTest("${punctuation}http://test.com$punctuation", "http://test.com")
+
+            runTest("${punctuation}test.com", "test.com")
+            runTest("test.com$punctuation", "test.com")
+            runTest("${punctuation}test.com$punctuation", "test.com")
+        }
+
+        UrlDetector.CANNOT_BEGIN_URLS_WITH.forEach { punctuation ->
+            runTest("${punctuation}http://test.com?s=dd", "http://test.com?s=dd")
+            runTest("http://test.com?s=dd$punctuation", "http://test.com?s=dd")
+            runTest("${punctuation}http://test.com?s=dd$punctuation", "http://test.com?s=dd")
+
+            runTest("${punctuation}http://test.com/", "http://test.com/")
+            runTest("http://test.com/.", "http://test.com/")
+            runTest("${punctuation}http://test.com/$punctuation", "http://test.com/")
+
+            runTest("${punctuation}http://test.com", "http://test.com")
+            runTest("http://test.com$punctuation", "http://test.com")
+            runTest("${punctuation}http://test.com$punctuation", "http://test.com")
+
+            runTest("${punctuation}test.com", "test.com")
+            runTest("test.com$punctuation", "test.com")
+            runTest("${punctuation}test.com$punctuation", "test.com")
+        }
     }
 
     private fun runTest(

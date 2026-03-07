@@ -220,6 +220,15 @@ class DomainNameReader(
                     // done = true
 
                     lastWasAscii = isAscii
+                } else if (index == 0) {
+                    println("First Char: $curr ${curr in UrlDetector.CANNOT_BEGIN_URLS_WITH}")
+                    if (curr in UrlDetector.CANNOT_BEGIN_URLS_WITH) {
+                        newStart = index + 1
+                        currentLabelLength = 0
+                        topLevelLength = 0
+                        numeric = true
+                        dots = 0
+                    }
                 }
                 index++
             }

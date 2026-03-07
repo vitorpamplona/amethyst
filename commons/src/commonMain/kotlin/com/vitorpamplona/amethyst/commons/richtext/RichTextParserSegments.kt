@@ -144,6 +144,11 @@ class RelayUrlSegment(
 ) : Segment(segment)
 
 @Immutable
+class SchemelessUrlSegment(
+    segment: String,
+) : Segment(segment)
+
+@Immutable
 class RegularTextSegment(
     segment: String,
 ) : Segment(segment)

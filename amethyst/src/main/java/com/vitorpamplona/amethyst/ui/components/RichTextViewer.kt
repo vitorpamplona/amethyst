@@ -81,6 +81,7 @@ import com.vitorpamplona.amethyst.commons.richtext.PhoneSegment
 import com.vitorpamplona.amethyst.commons.richtext.RegularTextSegment
 import com.vitorpamplona.amethyst.commons.richtext.RelayUrlSegment
 import com.vitorpamplona.amethyst.commons.richtext.RichTextViewerState
+import com.vitorpamplona.amethyst.commons.richtext.SchemelessUrlSegment
 import com.vitorpamplona.amethyst.commons.richtext.SecretEmoji
 import com.vitorpamplona.amethyst.commons.richtext.Segment
 import com.vitorpamplona.amethyst.commons.richtext.VideoSegment
@@ -168,6 +169,10 @@ fun RenderStrangeNamePreview() {
                     is RelayUrlSegment -> {
                         ClickableRelayUrl(word.segmentText, EmptyNav())
                     }
+
+                    is SchemelessUrlSegment -> {
+                        NoProtocolUrlRenderer(word.segmentText)
+                    }
                 }
             }
         }
@@ -225,6 +230,10 @@ fun RenderRegularPreview() {
                     is RegularTextSegment -> {
                         Text(word.segmentText)
                     }
+
+                    is SchemelessUrlSegment -> {
+                        NoProtocolUrlRenderer(word.segmentText)
+                    }
                 }
             }
         }
@@ -261,6 +270,8 @@ fun RenderRegularPreview2() {
                 is RegularTextSegment -> Text(word.segmentText)
 
                 is RelayUrlSegment -> ClickableRelayUrl(word.segmentText, EmptyNav())
+
+                is SchemelessUrlSegment -> NoProtocolUrlRenderer(word.segmentText)
             }
         }
     }
@@ -310,6 +321,8 @@ fun RenderRegularPreview3() {
                 is RegularTextSegment -> Text(word.segmentText)
 
                 is RelayUrlSegment -> ClickableRelayUrl(word.segmentText, EmptyNav())
+
+                is SchemelessUrlSegment -> NoProtocolUrlRenderer(word.segmentText)
             }
         }
     }
@@ -486,6 +499,8 @@ private fun RenderWordWithoutPreview(
         is RegularTextSegment -> Text(word.segmentText)
 
         is RelayUrlSegment -> ClickableRelayUrl(word.segmentText, nav)
+
+        is SchemelessUrlSegment -> NoProtocolUrlRenderer(word.segmentText)
     }
 }
 
@@ -517,6 +532,7 @@ private fun RenderWordWithPreview(
         is RegularTextSegment -> Text(word.segmentText)
         is Base64Segment -> ZoomableContentView(word.segmentText, state, accountViewModel)
         is RelayUrlSegment -> ClickableRelayUrl(word.segmentText, nav)
+        is SchemelessUrlSegment -> NoProtocolUrlRenderer(word.segmentText)
     }
 }
 
@@ -531,6 +547,11 @@ private fun ZoomableContentView(
             ZoomableContentView(it, state.imageList, roundedCorner = true, contentScale = ContentScale.FillWidth, accountViewModel)
         }
     }
+}
+
+@Composable
+private fun NoProtocolUrlRenderer(url: String) {
+    ClickableUrl(url, "https://$url")
 }
 
 @Composable

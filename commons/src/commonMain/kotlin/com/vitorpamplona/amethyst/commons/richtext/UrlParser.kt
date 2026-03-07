@@ -27,6 +27,8 @@ class Urls(
     val withScheme: Set<String> = emptySet(),
     val withoutScheme: Set<String> = emptySet(),
     val emails: Set<String> = emptySet(),
+    val bech32s: Set<String> = emptySet(),
+    val relayUrls: Set<String> = emptySet(),
 )
 
 class UrlParser {
@@ -45,7 +47,7 @@ class UrlParser {
         }
     }
 
-    fun Url.wroteWithSchema(): Boolean = originalUrl.startsWith(scheme)
+    fun Url.wroteWithSchema(): Boolean = urlMarker.hasScheme()
 
     fun Url.isEmail(): Boolean =
         urlMarker.hasUsernamePassword() &&
@@ -54,33 +56,24 @@ class UrlParser {
             originalUrl.contains('@') &&
             path == "/"
 
-    fun Char.isValidLastHostnameChar(): Boolean = (this in 'a'..'z' || this in 'A'..'Z' || this in '0'..'9')
-
-    fun Url.isValidLastHostnameChar(): Boolean = host[host.length - 1].isValidLastHostnameChar()
-
-    fun Url.endsWithHost(): Boolean = originalUrl.endsWith(host)
-
-    val notAHostNameChar = "[^a-zA-Z0-9.-]".toRegex()
-
     fun parseValidUrls(content: String): Urls {
         val urls = UrlDetector(content).detect()
 
         val completeUrls = mutableSetOf<String>()
         val urlsWithoutScheme = mutableSetOf<String>()
         val emails = mutableSetOf<String>()
+        val bech32 = mutableSetOf<String>()
+        val relays = mutableSetOf<String>()
 
         urls.forEach {
             if (it.isValidTopLevelDomain()) {
                 if (it.wroteWithSchema()) {
-                    if (it.isValidLastHostnameChar()) {
+                    if (it.originalUrl.startsWith("nostr")) {
+                        bech32.add(it.originalUrl)
+                    } else if (it.originalUrl.startsWith("ws")) {
+                        relays.add(it.originalUrl)
+                    } else {
                         completeUrls.add(it.originalUrl)
-                    } else if (it.endsWithHost()) {
-                        val match = notAHostNameChar.find(it.host)
-                        if (match != null) {
-                            completeUrls.add(it.originalUrl.substring(0, (it.originalUrl.length - it.host.length) + match.range.first))
-                        } else {
-                            completeUrls.add(it.originalUrl)
-                        }
                     }
                 } else {
                     // emails are understood as urls from the detector.
@@ -99,6 +92,8 @@ class UrlParser {
             withScheme = completeUrls,
             withoutScheme = urlsWithoutScheme,
             emails = emails,
+            bech32s = bech32,
+            relayUrls = relays,
         )
     }
 }

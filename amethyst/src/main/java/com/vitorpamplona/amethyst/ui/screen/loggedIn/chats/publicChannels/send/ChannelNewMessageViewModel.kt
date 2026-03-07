@@ -38,7 +38,7 @@ import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
-import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.commons.richtext.UrlParser
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -517,7 +517,7 @@ open class ChannelNewMessageViewModel :
         emojiSuggestions?.reset()
     }
 
-    open fun findUrlInMessage(): String? = RichTextParser().parseValidUrls(message.text).firstOrNull()
+    open fun findUrlInMessage(): String? = UrlParser().parseValidUrls(message.text).withScheme.firstOrNull()
 
     open fun addToMessage(it: String) {
         updateMessage(TextFieldValue(message.text + " " + it))

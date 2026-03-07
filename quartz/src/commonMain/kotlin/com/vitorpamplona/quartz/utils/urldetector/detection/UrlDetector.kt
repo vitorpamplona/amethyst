@@ -650,7 +650,9 @@ class UrlDetector(
         if (state == ReadEndState.ValidUrl && buffer.isNotEmpty()) {
             // Add the url to the list of good urls.
             if (buffer.isNotEmpty()) {
-                urlList.add(currentUrlMarker.createUrl(buffer.toString()))
+                var url = buffer.toString()
+                if (url.lastOrNull() in CANNOT_END_URLS_WITH) url = url.dropLast(1)
+                urlList.add(currentUrlMarker.createUrl(url))
             }
         }
 
@@ -669,7 +671,7 @@ class UrlDetector(
     }
 
     companion object {
-        private val VALID_SCHEMES_NO_SLASHES: List<String> =
+        val VALID_SCHEMES_NO_SLASHES: List<String> =
             listOf(
                 "http:",
                 "https:",
@@ -681,9 +683,42 @@ class UrlDetector(
                 "blossom:",
             )
 
-        private val VALID_SCHEMES =
+        val VALID_SCHEMES =
             VALID_SCHEMES_NO_SLASHES.map {
                 "$it//"
             }
+
+        val CANNOT_BEGIN_URLS_WITH =
+            setOf(
+                ',',
+                '.',
+                ';',
+                '?',
+                '!',
+                ')',
+                '}',
+                '(',
+                '{',
+                '\u3002',
+                '\uFF0E',
+                '\uFF61',
+            )
+
+        val CANNOT_END_URLS_WITH =
+            setOf(
+                ',',
+                '.',
+                ';',
+                '?',
+                '!',
+                ':',
+                ')',
+                '}',
+                '(',
+                '{',
+                '\u3002',
+                '\uFF0E',
+                '\uFF61',
+            )
     }
 }

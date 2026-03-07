@@ -161,7 +161,7 @@ class RichTextParser {
 
         val emojiMap = CustomEmoji.createEmojiMap(tags.lists)
 
-        val allUrls = urlSet.withScheme + urlSet.withoutScheme + urlSet.emails
+        val allUrls = urlSet.withScheme + urlSet.withoutScheme + urlSet.emails + urlSet.bech32s + urlSet.relayUrls
 
         val newContent = fixMissingSpaces(content, allUrls)
 
@@ -280,13 +280,17 @@ class RichTextParser {
             }
         }
 
-        if (word.startsWith("ws://") || word.startsWith("wss://")) return RelayUrlSegment(word)
+        if (urls.withoutScheme.contains(word)) return SchemelessUrlSegment(word)
 
-        if (urls.withoutScheme.contains(word)) {
-            return LinkSegment("https://$word")
-        } else if (urls.withScheme.contains(word)) {
-            return LinkSegment(word)
-        }
+        if (urls.withScheme.contains(word)) return LinkSegment(word)
+
+        if (urls.emails.contains(word)) return EmailSegment(word)
+
+        if (urls.bech32s.contains(word)) return BechSegment(word)
+
+        if (urls.relayUrls.contains(word)) return RelayUrlSegment(word)
+
+        if (startsWithNIP19Scheme(word)) return BechSegment(word)
 
         if (CustomEmoji.fastMightContainEmoji(word, emojis) && emojis.any { word.contains(it.key) }) return EmojiSegment(word)
 
@@ -299,10 +303,6 @@ class RichTextParser {
         if (word.startsWith('#')) return parseHash(word, tags)
 
         if (EmojiCoder.isCoded(word)) return SecretEmoji(word)
-
-        if (urls.emails.contains(word)) return EmailSegment(word)
-
-        if (startsWithNIP19Scheme(word)) return BechSegment(word)
 
         if (isPotentialPhoneNumber(word) && !isDate(word)) {
             if (Patterns.PHONE.matches(word)) return PhoneSegment(word)

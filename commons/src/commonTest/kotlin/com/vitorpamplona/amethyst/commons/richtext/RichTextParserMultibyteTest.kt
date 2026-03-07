@@ -70,7 +70,7 @@ class RichTextParserMultibyteTest {
                 .parseText(text, EmptyTagList, null)
 
         assertEquals(
-            "Vitor, você http://test.com? \uD83E\uDD7A",
+            "Vitor, você http://test.com ? \uD83E\uDD7A",
             state.paragraphs.joinToString("\n") { it.words.joinToString(" ") { it.segmentText } },
         )
     }
@@ -157,9 +157,9 @@ class RichTextParserMultibyteTest {
         val state = RichTextParser().parseText(text, EmptyTagList, null)
         val allSegments = state.paragraphs.flatMap { it.words }
 
-        val urlSegments = allSegments.filterIsInstance<LinkSegment>()
+        val urlSegments = allSegments.filterIsInstance<SchemelessUrlSegment>()
         assertTrue("Should have SchemelessUrlSegment", urlSegments.isNotEmpty())
-        assertTrue("URL should be example.com", urlSegments.any { it.segmentText == "https://example.com" })
+        assertTrue("URL should be example.com", urlSegments.any { it.segmentText == "example.com" })
 
         val textSegments = allSegments.filterIsInstance<RegularTextSegment>()
         assertTrue("Should have prefix ああ", textSegments.any { it.segmentText == "ああ" })
@@ -172,9 +172,9 @@ class RichTextParserMultibyteTest {
         val state = RichTextParser().parseText(text, EmptyTagList, null)
         val allSegments = state.paragraphs.flatMap { it.words }
 
-        val urlSegments = allSegments.filterIsInstance<LinkSegment>()
+        val urlSegments = allSegments.filterIsInstance<SchemelessUrlSegment>()
         assertTrue("Should have SchemelessUrlSegment", urlSegments.isNotEmpty())
-        assertTrue("URL should be example.com", urlSegments.any { it.segmentText == "https://example.com" })
+        assertTrue("URL should be example.com", urlSegments.any { it.segmentText == "example.com" })
 
         val textSegments = allSegments.filterIsInstance<RegularTextSegment>()
         assertTrue("Should have suffix ああ", textSegments.any { it.segmentText == "ああ" })

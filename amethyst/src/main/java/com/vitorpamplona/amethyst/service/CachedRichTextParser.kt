@@ -79,7 +79,7 @@ object CachedUrlParser {
             cached
         } else {
             val urlSet = UrlParser().parseValidUrls(content)
-            val newUrls = urlSet.withScheme.filter { it.startsWith("http") } + urlSet.withoutScheme.map { "http://$it" }
+            val newUrls = urlSet.withScheme.filter { it.startsWith("http") } + urlSet.withoutScheme.map { "http://$it" } + urlSet.bech32s.map { "http://$it" }
             parsedUrlsCache.put(key, newUrls)
             newUrls
         }

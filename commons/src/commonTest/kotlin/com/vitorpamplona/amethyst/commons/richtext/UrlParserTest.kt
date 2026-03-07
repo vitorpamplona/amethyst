@@ -166,7 +166,7 @@ class UrlParserTest {
     fun testNostrUrls() =
         test(
             "nostr:npub1aabbcc",
-            Urls(withScheme = setOf("nostr:npub1aabbcc")),
+            Urls(bech32s = setOf("nostr:npub1aabbcc")),
         )
 
     @Test
@@ -261,14 +261,14 @@ class UrlParserTest {
     fun testRelayUrl() =
         test(
             "wss://test.com",
-            Urls(withScheme = setOf("wss://test.com")),
+            Urls(relayUrls = setOf("wss://test.com")),
         )
 
     @Test
     fun testBech12() =
         test(
             "nostr:npub1aabbcc",
-            Urls(withScheme = setOf("nostr:npub1aabbcc")),
+            Urls(bech32s = setOf("nostr:npub1aabbcc")),
         )
 
     @Test
