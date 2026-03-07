@@ -735,6 +735,13 @@ class UriDetectionTest {
         runTest("I saw this on http://[::1]:3000 I think it is really cool", "http://[::1]:3000")
     }
 
+    @Test
+    fun testNoSchemaUrlMultibyteAscii() {
+        runTest("ほtest.com", "test.com")
+        runTest("test.comほ", "test.com")
+        runTest("ほtest.comほ", "test.com")
+    }
+
     private fun runTest(
         text: String,
         vararg expected: String?,

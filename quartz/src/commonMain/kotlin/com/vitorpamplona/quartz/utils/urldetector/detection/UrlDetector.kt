@@ -95,11 +95,12 @@ class UrlDetector(
                         val domain = buffer.substring(length)
                         if (!readDomainName(domain)) {
                             readEnd(ReadEndState.InvalidUrl)
+                        } else {
+                            readEnd(ReadEndState.InvalidUrl)
                         }
+                    } else {
+                        readEnd(ReadEndState.InvalidUrl)
                     }
-
-                    buffer.append(curr)
-                    readEnd(ReadEndState.InvalidUrl)
                     length = 0
                 }
 
@@ -649,17 +650,19 @@ class UrlDetector(
         if (state == ReadEndState.ValidUrl && buffer.isNotEmpty()) {
             // Add the url to the list of good urls.
             if (buffer.isNotEmpty()) {
-                currentUrlMarker.originalUrl = buffer.toString()
-                urlList.add(currentUrlMarker.createUrl())
+                urlList.add(currentUrlMarker.createUrl(buffer.toString()))
             }
         }
 
         // clear out the buffer.
-        buffer.deleteRange(0, buffer.length)
+        buffer.clear()
 
         // reset the state of internal objects.
         hasScheme = false
-        currentUrlMarker = UrlMarker()
+        isSingleLevelLabel = false
+        if (currentUrlMarker.hasChanged) {
+            currentUrlMarker = UrlMarker()
+        }
 
         // return true if valid.
         return state == ReadEndState.ValidUrl

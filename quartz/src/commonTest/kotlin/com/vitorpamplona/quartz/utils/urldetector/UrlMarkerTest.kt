@@ -37,9 +37,8 @@ class UrlMarkerTest {
         indices: IntArray,
     ) {
         val urlMarker = UrlMarker()
-        urlMarker.originalUrl = testString
         urlMarker.setIndices(indices)
-        val url = urlMarker.createUrl()
+        val url = urlMarker.createUrl(testString)
         assertEquals(url.host, host, "host, " + testString)
         assertEquals(url.path, path, "path, " + testString)
         assertEquals(url.scheme, scheme, "scheme, " + testString)

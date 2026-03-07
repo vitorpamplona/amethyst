@@ -35,6 +35,7 @@ package com.vitorpamplona.quartz.utils.urldetector
  */
 class Url(
     val urlMarker: UrlMarker,
+    val originalUrl: String,
 ) {
     private var _scheme: String? = null
     private var _username: String? = null
@@ -44,7 +45,6 @@ class Url(
     private var rawPath: String? = null
     private var _query: String? = null
     private var _fragment: String? = null
-    val originalUrl: String = urlMarker.originalUrl
 
     override fun toString(): String = this.fullUrl
 

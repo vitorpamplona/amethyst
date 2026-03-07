@@ -28,14 +28,17 @@ class UrlMarker {
     private var pathIndex = -1
     private var queryIndex = -1
     private var fragmentIndex = -1
-    var originalUrl: String = ""
 
-    fun createUrl(): Url = Url(this)
+    var hasChanged: Boolean = false
+        private set
+
+    fun createUrl(originalUrl: String): Url = Url(this, originalUrl)
 
     fun setIndex(
         urlPart: UrlPart,
         index: Int,
     ) {
+        hasChanged = true
         when (urlPart) {
             UrlPart.SCHEME -> schemeIndex = index
             UrlPart.USERNAME_PASSWORD -> usernamePasswordIndex = index
@@ -52,6 +55,10 @@ class UrlMarker {
     fun hasPort() = portIndex >= 0
 
     fun hasUsernamePassword() = usernamePasswordIndex >= 0
+
+    fun hasQuery() = queryIndex >= 0
+
+    fun hasFragment() = fragmentIndex >= 0
 
     /**
      * @param urlPart The part you want the index of

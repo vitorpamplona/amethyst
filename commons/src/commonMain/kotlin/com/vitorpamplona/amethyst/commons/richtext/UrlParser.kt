@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.richtext
 
-import com.vitorpamplona.amethyst.commons.richtext.RichTextParser.Companion.noProtocolUrlValidator
 import com.vitorpamplona.quartz.utils.urldetector.Url
 import com.vitorpamplona.quartz.utils.urldetector.detection.UrlDetector
 
@@ -48,7 +47,12 @@ class UrlParser {
 
     fun Url.wroteWithSchema(): Boolean = originalUrl.startsWith(scheme)
 
-    fun Url.isEmail(): Boolean = originalUrl.contains('@') && path == "/" && query.isEmpty() && fragment.isEmpty()
+    fun Url.isEmail(): Boolean =
+        urlMarker.hasUsernamePassword() &&
+            !urlMarker.hasQuery() &&
+            !urlMarker.hasFragment() &&
+            originalUrl.contains('@') &&
+            path == "/"
 
     fun Char.isValidLastHostnameChar(): Boolean = (this in 'a'..'z' || this in 'A'..'Z' || this in '0'..'9')
 
@@ -85,12 +89,7 @@ class UrlParser {
                             emails.add(it.value)
                         }
                     } else {
-                        noProtocolUrlValidator.findAll(it.originalUrl).forEach { components ->
-                            val url = components.groups[1]?.value
-                            if (url != null) {
-                                urlsWithoutScheme.add(url)
-                            }
-                        }
+                        urlsWithoutScheme.add(it.originalUrl)
                     }
                 }
             }

@@ -166,12 +166,17 @@ class DomainNameReader(
             var isAllHexSoFar =
                 length > 2 && (currArray[0] == '0' && (currArray[1] == 'x' || currArray[1] == 'X'))
 
+            var lastWasAscii = length > 0 && currArray[0].code < INTERNATIONAL_CHAR_START
+
             var index = if (isAllHexSoFar) 2 else 0
             var done = false
+            var isAscii = false
 
             while (index < length && !done) {
                 // get the current character and update length counts.
                 val curr = currArray[index]
+                isAscii = curr.code < INTERNATIONAL_CHAR_START
+
                 currentLabelLength++
                 topLevelLength = currentLabelLength
 
@@ -185,9 +190,7 @@ class DomainNameReader(
                 } else if (curr == '[') {
                     seenBracket = true
                     numeric = false
-                } else if (curr == '%' && index + 2 < length && isHex(currArray[index + 1]) &&
-                    isHex(currArray[index + 2])
-                ) {
+                } else if (curr == '%' && index + 2 < length && isHex(currArray[index + 1]) && isHex(currArray[index + 2])) {
                     // handle url encoded dot
                     if (currArray[index + 1] == '2' && currArray[index + 2] == 'e') {
                         dots++
@@ -203,8 +206,20 @@ class DomainNameReader(
                         isAllHexSoFar = false
                         index-- // backtrack to rerun last character knowing it isn't hex.
                     }
-                } else if (isAlpha(curr) || curr == '-' || curr.code >= INTERNATIONAL_CHAR_START) {
+                } else if (isAscii == lastWasAscii && (isAlpha(curr) || curr == '-' || !isAscii)) {
+                    // we don't  allow mixed domains: doesn't come here if it changed form ascii to not ascii.
                     numeric = false
+                    lastWasAscii = isAscii
+                } else if (isAscii != lastWasAscii) {
+                    // if its not _numeric and not alphabetical, then restart searching for a domain from this point.
+                    newStart = index
+                    currentLabelLength = 0
+                    topLevelLength = 0
+                    numeric = true
+                    dots = 0
+                    // done = true
+
+                    lastWasAscii = isAscii
                 }
                 index++
             }
@@ -216,7 +231,9 @@ class DomainNameReader(
                 // make sure the location is not at the end. Otherwise the thing is just invalid.
 
                 if (newStart < current.length) {
-                    buffer.replaceRange(0, buffer.length, current.substring(newStart))
+                    buffer.clear()
+                    buffer.append(current.substring(newStart))
+
 
                     // cut out the previous part, so now the domain name has to be from here.
                     startDomainName = 0
@@ -265,8 +282,16 @@ class DomainNameReader(
             topLevelLength = currentLabelLength
         }
 
+        var lastWasAscii: Boolean? = null
+        var isAscii = false
+
         while (!done && !reader.eof()) {
             val curr: Char = reader.read()
+            isAscii = curr.code < INTERNATIONAL_CHAR_START
+            if (lastWasAscii == null) {
+                lastWasAscii = isAscii
+            }
+
 
             if (curr == '/') {
                 // continue by reading the path
@@ -314,9 +339,7 @@ class DomainNameReader(
                         return ReaderNextState.InvalidDomainName
                     }
                 }
-            } else if (seenBracket && (isHex(curr) || curr == ':' || curr == '[' || curr == ']' || curr == '%') &&
-                !seenCompleteBracketSet
-            ) { // if this is an ipv6 address.
+            } else if (seenBracket && (isHex(curr) || curr == ':' || curr == '[' || curr == ']' || curr == '%') && !seenCompleteBracketSet) { // if this is an ipv6 address.
                 when (curr) {
                     ':' -> {
                         currentLabelLength = 0
@@ -359,12 +382,18 @@ class DomainNameReader(
                     if (!isAllHexSoFar && !isNumeric(curr)) {
                         numeric = false
                     }
-
-                    // append to the states.
-                    buffer.append(curr)
-                    currentLabelLength++
-                    topLevelLength = currentLabelLength
+                    if (isAscii != lastWasAscii) {
+                        reader.goBack()
+                        done = true
+                    } else {
+                        // append to the states.
+                        buffer.append(curr)
+                        currentLabelLength++
+                        topLevelLength = currentLabelLength
+                    }
                 }
+
+                lastWasAscii = isAscii
             } else if (curr == '[' && !seenBracket) {
                 seenBracket = true
                 numeric = false
@@ -372,9 +401,7 @@ class DomainNameReader(
             } else if (curr == '[' && seenCompleteBracketSet) { // Case where [::][ ...
                 reader.goBack()
                 done = true
-            } else if (curr == '%' && reader.canReadChars(2) && isHex(reader.peekChar(0)) &&
-                isHex(reader.peekChar(1))
-            ) {
+            } else if (curr == '%' && reader.canReadChars(2) && isHex(reader.peekChar(0)) && isHex(reader.peekChar(1))) {
                 // append to the states.
                 buffer.append(curr)
                 buffer.append(reader.read())
