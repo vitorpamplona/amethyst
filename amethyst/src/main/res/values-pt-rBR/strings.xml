@@ -1049,9 +1049,11 @@
     <string name="reactions_settings_reorder">Reordenar</string>
     <string name="reactions_settings_reply">Responder</string>
     <string name="reactions_settings_reply_description">Responder a esta nota</string>
+    <string name="reactions_settings_boost">Boost</string>
     <string name="reactions_settings_boost_description">Repostar ou citar esta nota</string>
     <string name="reactions_settings_like">Curtir</string>
     <string name="reactions_settings_like_description">Reagir a esta nota com um emoji</string>
+    <string name="reactions_settings_zap">Zap</string>
     <string name="reactions_settings_zap_description">Enviar um pagamento lightning ao autor</string>
     <string name="reactions_settings_share">Compartilhar</string>
     <string name="reactions_settings_share_description">Compartilhar esta nota externamente</string>
