@@ -221,7 +221,6 @@ class DomainNameReader(
 
                     lastWasAscii = isAscii
                 } else if (index == 0) {
-                    println("First Char: $curr ${curr in UrlDetector.CANNOT_BEGIN_URLS_WITH}")
                     if (curr in UrlDetector.CANNOT_BEGIN_URLS_WITH) {
                         newStart = index + 1
                         currentLabelLength = 0
@@ -242,7 +241,6 @@ class DomainNameReader(
                 if (newStart < current.length) {
                     buffer.clear()
                     buffer.append(current.substring(newStart))
-
 
                     // cut out the previous part, so now the domain name has to be from here.
                     startDomainName = 0
@@ -300,7 +298,6 @@ class DomainNameReader(
             if (lastWasAscii == null) {
                 lastWasAscii = isAscii
             }
-
 
             if (curr == '/') {
                 // continue by reading the path
@@ -496,8 +493,7 @@ class DomainNameReader(
                 buffer.substring(topStart, topStart + min(4, buffer.length - topStart))
 
             // There is no size restriction if the top level domain is international (starts with "xn--")
-            valid =
-                ((topLevelStart.isXn() || (topLevelLength in MIN_TOP_LEVEL_DOMAIN..MAX_TOP_LEVEL_DOMAIN)))
+            valid = (topLevelStart.isXn() || topLevelLength >= MIN_TOP_LEVEL_DOMAIN)
         }
 
         if (valid) {
@@ -740,11 +736,6 @@ class DomainNameReader(
          * The minimum length of a ascii based top level domain.
          */
         private const val MIN_TOP_LEVEL_DOMAIN = 2
-
-        /**
-         * The maximum length of a ascii based top level domain.
-         */
-        private const val MAX_TOP_LEVEL_DOMAIN = 22
 
         /**
          * The maximum number that the url can be in a url that looks like:
