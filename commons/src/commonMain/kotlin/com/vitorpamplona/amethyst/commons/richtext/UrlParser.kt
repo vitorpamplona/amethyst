@@ -20,9 +20,11 @@
  */
 package com.vitorpamplona.amethyst.commons.richtext
 
+import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.utils.urldetector.Url
 import com.vitorpamplona.quartz.utils.urldetector.detection.UrlDetector
 
+@Stable
 class Urls(
     val withScheme: Set<String> = emptySet(),
     val withoutScheme: Set<String> = emptySet(),
