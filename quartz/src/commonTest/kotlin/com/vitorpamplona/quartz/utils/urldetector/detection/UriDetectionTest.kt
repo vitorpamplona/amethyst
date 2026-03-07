@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.utils.urldetector.detection
 
 import com.vitorpamplona.quartz.utils.urldetector.Url
+import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -134,6 +135,7 @@ class UriDetectionTest {
             "Do newlines and tabs break? google.com/hello/\nworld www.yahoo.com\t/stuff/ yahoo.com/\thello news.ycombinator.com\u0000/hello world",
             "google.com/hello/",
             "www.yahoo.com",
+            "stuff/",
             "yahoo.com/",
             "news.ycombinator.com",
         )
@@ -335,6 +337,10 @@ class UriDetectionTest {
         )
         runTest(
             "browsers dont support this without a scheme look 0xC00002EB/bobo",
+            "0xC00002EB/bobo",
+        )
+        runTest(
+            "browsers dont support this without a scheme look test/bobo",
         )
     }
 
@@ -350,11 +356,19 @@ class UriDetectionTest {
         )
         runTest(
             "browsers dont support this without a scheme look 030000001353/bobo",
+            "030000001353/bobo",
+        )
+        runTest(
+            "browsers dont support this without a scheme look 1727123/bobo",
         )
     }
 
     @Test
     fun testUrlWithEmptyPort() {
+        runTest(
+            "http://wtfismyip.com:/foo.html",
+            "http://wtfismyip.com:/foo.html",
+        )
         runTest(
             "http://wtfismyip.com://foo.html",
             "http://wtfismyip.com://foo.html",
@@ -465,7 +479,9 @@ class UriDetectionTest {
         runTest("[b[::7f8e]:55]akjef[::]", "[::7f8e]:55", "[::]")
         runTest(
             "[bcad::kkkk:aaaa:3dd0[::7f8e]:57b7:34d5]akjef[::]",
+            "aaaa:3",
             "[::7f8e]:57",
+            "b7:34",
             "[::]",
         )
     }
@@ -550,6 +566,7 @@ class UriDetectionTest {
             "Do newlines and tabs break? [::2e80:0:0]/hello/\nworld [::BEEF:ADD:BEEF]\t/stuff/ [AAbb:AAbb:AAbb::]/\thello [::2e80:0:0\u0000]/hello world",
             "[::2e80:0:0]/hello/",
             "[::BEEF:ADD:BEEF]",
+            "stuff/",
             "[AAbb:AAbb:AAbb::]/",
         )
     }
@@ -622,15 +639,100 @@ class UriDetectionTest {
         val parser = UrlDetector("ftp:example.com")
         val found: List<Url> = parser.detect()
         for (url in found) {
-            assertEquals(url.scheme, "https")
+            assertEquals(url.scheme, "ftp")
             // Should be detected as a username now and set to default http://
             assertEquals(url.host, "example.com")
         }
     }
 
     @Test
+    fun testSingleLevelDomain() {
+        runTest("http://localhost:9000/lalala hehe", "http://localhost:9000/lalala")
+        runTest("localhost:9000/lalala hehe", "localhost:9000/lalala")
+        runTest("http://localhost lasdf", "http://localhost")
+        runTest("localhost:9000/lalala", "localhost:9000/lalala")
+        runTest("192.168.1.1/lalala", "192.168.1.1/lalala")
+        runTest("http://localhost", "http://localhost")
+        runTest("//localhost", "//localhost")
+        runTest("asf//localhost")
+        runTest("hello/", "hello/")
+        runTest("hello/ ", "hello/")
+        runTest("hello")
+        runTest("go/", "go/")
+        runTest("hello:password@go12//", "hello:password@go12//")
+        runTest("hello:password@go12", "hello:password@go12")
+        runTest("hello:password@go12 lala", "hello:password@go12")
+        runTest("hello.com..", "hello.com.")
+        runTest("a/")
+        runTest("4/5")
+        runTest("concerns/worries")
+        runTest("asdflocalhost aksdjfhads")
+        runTest("/")
+        runTest("////")
+        runTest("hi:")
+        runTest("hi: ")
+        runTest("hi:\n")
+        runTest("testing normal phrase")
+        runTest("testing normal/something phrase")
+        runTest("testing normal: phrase")
+    }
+
+    @Test
+    fun testLongSingleLabelDomain() {
+        runTest("user:password@localhost", "user:password@localhost")
+    }
+
+    @Test
+    fun testShortSingleLabelDomain() {
+        runTest("user:password@go12", "user:password@go12")
+    }
+
+    @Test
     fun testIssueUnderscore() {
         runTest("Neomobius_at_mstdn.jp@mostr.pub", "Neomobius_at_mstdn.jp@mostr.pub")
+    }
+
+    @Test
+    fun testNostr() {
+        runTest("Check this post nostr:somethingsomething . I think it is really cool", "nostr:somethingsomething")
+    }
+
+    @Test
+    fun testBlossom() {
+        runTest("Check this image blossom:somethingsomething . I think it is really cool", "blossom:somethingsomething")
+    }
+
+    @Test
+    fun testNostrSlashes() {
+        runTest("Check this post nostr://somethingsomething . I think it is really cool", "nostr://somethingsomething")
+    }
+
+    @Test
+    fun testBlossomWithSlashes() {
+        runTest("Check this image blossom://somethingsomething . I think it is really cool", "blossom://somethingsomething")
+    }
+
+    @Test
+    fun testNostr2() {
+        runTest("I saw this on nostr: somethingsomething. I think it is really cool")
+    }
+
+    @Test
+    fun testBlossom2() {
+        runTest("I saw this on blossom: somethingsomething. I think it is really cool")
+    }
+
+    @Test
+    fun testUnsupportedSchema() {
+        runTest("I saw this on hxxp://test.com I think it is really cool")
+    }
+
+    @Test
+    fun testBasicIPv6() {
+        runTest("I saw this on http://[2001:db8:1f70:0:999:de8:7648:6e8] I think it is really cool", "http://[2001:db8:1f70:0:999:de8:7648:6e8]")
+        runTest("I saw this on http://[2001:db8::1]:80 I think it is really cool", "http://[2001:db8::1]:80")
+        runTest("I saw this on http://[2a01:5cc0:1:2::4] I think it is really cool", "http://[2a01:5cc0:1:2::4]")
+        runTest("I saw this on http://[::1]:3000 I think it is really cool", "http://[::1]:3000")
     }
 
     private fun runTest(

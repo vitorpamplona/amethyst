@@ -65,10 +65,7 @@ class UrlParser {
         val urlsWithoutScheme = mutableSetOf<String>()
         val emails = mutableSetOf<String>()
 
-        println("AABBBCC parseValidUrls ${urls.size}")
-
         urls.forEach {
-            println("AABBBCC Testing ${it.originalUrl}")
             if (it.isValidTopLevelDomain()) {
                 if (it.wroteWithSchema()) {
                     if (it.isValidLastHostnameChar()) {

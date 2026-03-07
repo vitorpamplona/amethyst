@@ -47,6 +47,12 @@ class UrlMarker {
         }
     }
 
+    fun hasScheme() = schemeIndex >= 0
+
+    fun hasPort() = portIndex >= 0
+
+    fun hasUsernamePassword() = usernamePasswordIndex >= 0
+
     /**
      * @param urlPart The part you want the index of
      * @return Returns the index of the part

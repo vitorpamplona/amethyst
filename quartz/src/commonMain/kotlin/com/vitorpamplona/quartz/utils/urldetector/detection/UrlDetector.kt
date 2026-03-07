@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.utils.urldetector.Url
 import com.vitorpamplona.quartz.utils.urldetector.UrlMarker
 import com.vitorpamplona.quartz.utils.urldetector.UrlPart
 import kotlin.math.max
+import kotlin.text.deleteRange
 
 class UrlDetector(
     content: String,
@@ -44,9 +45,9 @@ class UrlDetector(
     private var hasScheme = false
 
     /**
-     * If the first character in the url is a quote, then look for matching quote at the end.
+     * has Multi-level labels
      */
-    private var quoteStart = false
+    private var isSingleLevelLabel = false
 
     /**
      * Stores the found urls.
@@ -62,14 +63,7 @@ class UrlDetector(
      * The states to use to continue writing or not.
      */
     enum class ReadEndState {
-        /**
-         * The current url is valid.
-         */
         ValidUrl,
-
-        /**
-         * The current url is invalid.
-         */
         InvalidUrl,
     }
 
@@ -95,6 +89,15 @@ class UrlDetector(
             // read the next char to process.
             when (val curr = reader.read()) {
                 ' ' -> {
+                    // space was found, check if it's a valid single level domain.
+                    if (buffer.isNotEmpty() && hasScheme) {
+                        reader.goBack()
+                        val domain = buffer.substring(length)
+                        if (!readDomainName(domain)) {
+                            readEnd(ReadEndState.InvalidUrl)
+                        }
+                    }
+
                     buffer.append(curr)
                     readEnd(ReadEndState.InvalidUrl)
                     length = 0
@@ -160,7 +163,7 @@ class UrlDetector(
                 '/' -> {
                     // "/" was found, then we either read a scheme, or if we already read a scheme, then
                     // we are reading a url in the format http://123123123/asdf
-                    if (hasScheme) {
+                    if (hasScheme || buffer.length > 1) {
                         // we already have the scheme, so then we already read:
                         // http://something/ <- if something is all numeric then its a valid url.
                         // OR we are searching for single level domains. We have buffer length > 1 condition
@@ -202,6 +205,13 @@ class UrlDetector(
 
             position = reader.position
         }
+
+        // check if it's a valid single level domain.
+        if (buffer.isNotEmpty() && hasScheme) {
+            if (!readDomainName(buffer.substring(length))) {
+                readEnd(ReadEndState.InvalidUrl)
+            }
+        }
     }
 
     /**
@@ -218,7 +228,7 @@ class UrlDetector(
                 reader.goBack()
 
                 // Check buffer length before clearing it; set length to 0 if buffer is empty
-                if (buffer.length > 0) {
+                if (buffer.isNotEmpty()) {
                     buffer.deleteRange(buffer.length - 1, buffer.length)
                 } else {
                     length = 0
@@ -237,6 +247,13 @@ class UrlDetector(
         } else if (readScheme() && buffer.isNotEmpty()) {
             hasScheme = true
             length = buffer.length // set length to be right after the scheme
+        } else if (buffer.isNotEmpty() && reader.canReadChars(1)) {
+            // takes care of case like hi:
+            reader.goBack() // unread the ":" so readDomainName can take care of the port
+            buffer.deleteAt(buffer.length - 1)
+            if (!readDomainName(buffer.toString())) {
+                readEnd(ReadEndState.InvalidUrl)
+            }
         } else {
             readEnd(ReadEndState.InvalidUrl)
             length = 0
@@ -302,6 +319,21 @@ class UrlDetector(
             } else if (curr == '[') { // if we're starting to see an ipv6 address
                 reader.goBack() // unread the '[', so that we can start looking for ipv6
                 return false
+            } else if (originalLength > 0 && numSlashes == 0 && CharUtils.isAlpha(curr)) {
+                // If we had already read something before the : and we are matching regardless of slashes, assume it's a scheme
+
+                // Add the slashes to the end of the scheme so it matches what's in the scheme list
+                val schemeStartIndex = findValidSchemeNoSlashesStartIndex(buffer.toString())
+                if (schemeStartIndex >= 0) {
+                    buffer.deleteRange(0, schemeStartIndex)
+                    currentUrlMarker.setIndex(UrlPart.SCHEME, 0)
+                    reader.goBack()
+                    return true
+                } else {
+                    reader.goBack()
+                    return readUserPass(0)
+                }
+                // If this didn't match a defined scheme, continue processing as usual
             } else if (originalLength > 0 || numSlashes > 0 || !CharUtils.isAlpha(curr)) {
                 // if it's not a character a-z or A-Z then assume we aren't matching scheme, but instead
                 // matching username and password.
@@ -316,6 +348,14 @@ class UrlDetector(
     private fun findValidSchemeStartIndex(optionalScheme: String): Int {
         val optionalSchemeLowercase = optionalScheme.lowercase()
         return VALID_SCHEMES
+            .filter(optionalSchemeLowercase::endsWith)
+            .map(optionalSchemeLowercase::lastIndexOf)
+            .firstOrNull() ?: -1
+    }
+
+    private fun findValidSchemeNoSlashesStartIndex(optionalScheme: String): Int {
+        val optionalSchemeLowercase = optionalScheme.lowercase()
+        return VALID_SCHEMES_NO_SLASHES
             .filter(optionalSchemeLowercase::endsWith)
             .map(optionalSchemeLowercase::lastIndexOf)
             .firstOrNull() ?: -1
@@ -390,6 +430,9 @@ class UrlDetector(
 
         // Try to read the dns and act on the response.
         val state = reader.readDomainName()
+
+        isSingleLevelLabel = reader.labelCount() <= 1 && !reader.isIpV4 && !reader.isIpV6
+
         return when (state) {
             DomainNameReader.ReaderNextState.ValidDomainName -> {
                 readEnd(ReadEndState.ValidUrl)
@@ -481,9 +524,27 @@ class UrlDetector(
         while (!reader.eof()) {
             // read the next one and remember the length
             val curr = reader.read()
+
+            // requires at least one number as port to
+            // better handle http://http://
+            if (portLen == 0 && isSingleLevelLabel) {
+                if (!CharUtils.isNumeric(curr)) {
+                    reader.goBack()
+
+                    currentUrlMarker.unsetIndex(UrlPart.PORT)
+                    return readEnd(ReadEndState.InvalidUrl)
+                }
+            }
+
             portLen++
 
-            if (curr == '/') {
+            if (curr == ':') {
+                // rejects a second port
+                reader.goBack()
+
+                currentUrlMarker.unsetIndex(UrlPart.PORT)
+                return readEnd(ReadEndState.InvalidUrl)
+            } else if (curr == '/') {
                 // continue to read path
                 buffer.append(curr)
                 return readPath()
@@ -522,13 +583,27 @@ class UrlDetector(
      */
     private fun readPath(): Boolean {
         currentUrlMarker.setIndex(UrlPart.PATH, buffer.length - 1)
+
+        var endsOnASlash = true
+
         while (!reader.eof()) {
             // read the next char
             val curr = reader.read()
 
             if (curr == ' ') {
-                // if end of state and we got here, then the url is valid.
-                return readEnd(ReadEndState.ValidUrl)
+                // if end of state and we got here, then the url is valid
+                // if it is not just a word/word
+                if (
+                    currentUrlMarker.hasScheme() ||
+                    currentUrlMarker.hasPort() ||
+                    currentUrlMarker.hasUsernamePassword() ||
+                    !isSingleLevelLabel ||
+                    endsOnASlash
+                ) {
+                    return readEnd(ReadEndState.ValidUrl)
+                } else {
+                    return readEnd(ReadEndState.InvalidUrl)
+                }
             }
 
             // append the char
@@ -542,10 +617,26 @@ class UrlDetector(
                 // if # read the fragment
                 return readFragment()
             }
+
+            endsOnASlash = curr == '/'
         }
 
         // end of input then this url is good.
-        return readEnd(ReadEndState.ValidUrl)
+        // if end of state and we got here, then the url is valid
+        // if it is not just a word/word
+        // no need to check for query and fragments
+        // here we accept urls that end in /
+        if (
+            currentUrlMarker.hasScheme() ||
+            currentUrlMarker.hasPort() ||
+            currentUrlMarker.hasUsernamePassword() ||
+            !isSingleLevelLabel ||
+            endsOnASlash
+        ) {
+            return readEnd(ReadEndState.ValidUrl)
+        } else {
+            return readEnd(ReadEndState.InvalidUrl)
+        }
     }
 
     /**
@@ -556,12 +647,6 @@ class UrlDetector(
     private fun readEnd(state: ReadEndState?): Boolean {
         // if the url is valid and greater then 0
         if (state == ReadEndState.ValidUrl && buffer.isNotEmpty()) {
-            // get the last character. if its a quote, cut it off.
-            val len: Int = buffer.length
-            if (quoteStart && buffer[len - 1] == '\"') {
-                buffer.deleteRange(len - 1, len)
-            }
-
             // Add the url to the list of good urls.
             if (buffer.isNotEmpty()) {
                 currentUrlMarker.originalUrl = buffer.toString()
@@ -573,7 +658,6 @@ class UrlDetector(
         buffer.deleteRange(0, buffer.length)
 
         // reset the state of internal objects.
-        quoteStart = false
         hasScheme = false
         currentUrlMarker = UrlMarker()
 
@@ -582,16 +666,21 @@ class UrlDetector(
     }
 
     companion object {
-        private val VALID_SCHEMES: List<String> =
+        private val VALID_SCHEMES_NO_SLASHES: List<String> =
             listOf(
-                "http://",
-                "https://",
-                "ftp://",
-                "ftps://",
-                "ws://",
-                "wss://",
-                // "nostr:",
-                // "blossom:",
+                "http:",
+                "https:",
+                "ftp:",
+                "ftps:",
+                "ws:",
+                "wss:",
+                "nostr:",
+                "blossom:",
             )
+
+        private val VALID_SCHEMES =
+            VALID_SCHEMES_NO_SLASHES.map {
+                "$it//"
+            }
     }
 }

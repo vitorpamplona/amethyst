@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.richtext
 
-import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -167,7 +166,7 @@ class UrlParserTest {
     fun testNostrUrls() =
         test(
             "nostr:npub1aabbcc",
-            Urls(),
+            Urls(withScheme = setOf("nostr:npub1aabbcc")),
         )
 
     @Test
@@ -259,7 +258,6 @@ class UrlParserTest {
         )
 
     @Test
-    @Ignore("We need to make this work")
     fun testRelayUrl() =
         test(
             "wss://test.com",
@@ -267,11 +265,10 @@ class UrlParserTest {
         )
 
     @Test
-    @Ignore("We need to make this work")
     fun testBech12() =
         test(
             "nostr:npub1aabbcc",
-            Urls(withScheme = setOf("wss://test.com")),
+            Urls(withScheme = setOf("nostr:npub1aabbcc")),
         )
 
     @Test

@@ -88,14 +88,6 @@ class DomainNameReader(
     }
 
     /**
-     * The interface that gets called for each character that's non-matching (to a valid domain name character) in to count
-     * the matching quotes and parenthesis correctly.
-     */
-    interface CharacterHandler {
-        fun addCharacter(character: Char)
-    }
-
-    /**
      * Keeps track the number of dots that were found in the domain name.
      */
     private var dots = 0
@@ -135,6 +127,12 @@ class DomainNameReader(
      * Keeps track if we have a zone index in the ipv6 address.
      */
     private var zoneIndex = false
+
+    var isIpV4 = false
+        private set
+
+    var isIpV6 = false
+        private set
 
     fun String.isDotPercent() = this == "%2e" || this == "%2E"
 
@@ -207,14 +205,6 @@ class DomainNameReader(
                     }
                 } else if (isAlpha(curr) || curr == '-' || curr.code >= INTERNATIONAL_CHAR_START) {
                     numeric = false
-                } else if (!isNumeric(curr)) {
-                    // if its not _numeric and not alphabetical, then restart searching for a domain from this point.
-                    newStart = index + 1
-                    currentLabelLength = 0
-                    topLevelLength = 0
-                    numeric = true
-                    dots = 0
-                    done = true
                 }
                 index++
             }
@@ -408,6 +398,8 @@ class DomainNameReader(
             this[2] == '-' &&
             this[3] == '-'
 
+    fun labelCount() = dots + (if (currentLabelLength > 0) 1 else 0)
+
     /**
      * Checks the current state of this object and returns if the valid state indicates that the
      * object has a valid domain name. If it does, it will return append the last character
@@ -440,15 +432,23 @@ class DomainNameReader(
         val domainLength: Int =
             buffer.length - startDomainName + (if (currentLabelLength > 0) lastDotLength else 0)
         val dotCount = dots + (if (currentLabelLength > 0) 1 else 0)
-        if (domainLength >= MAX_DOMAIN_LENGTH || (dotCount > MAX_NUMBER_LABELS)) {
+        if (domainLength >= MAX_DOMAIN_LENGTH || dotCount > MAX_NUMBER_LABELS) {
             valid = false
         } else if (numeric) {
             val testDomain = buffer.substring(startDomainName).lowercase()
             valid = isValidIpv4(testDomain)
+            if (valid) {
+                isIpV4 = true
+            }
         } else if (seenBracket) {
             val testDomain = buffer.substring(startDomainName).lowercase()
             valid = isValidIpv6(testDomain)
-        } else if ((currentLabelLength > 0 && dots >= 1) || (dots >= 2 && currentLabelLength == 0)) {
+            if (valid) {
+                isIpV6 = true
+            }
+        } else if (buffer.isNotEmpty() && buffer.last() == ':') {
+            valid = false
+        } else if ((currentLabelLength > 0 && dots >= 1) || (dots >= 2 && currentLabelLength == 0) || (dots == 0)) {
             var topStart: Int = buffer.length - topLevelLength
             if (currentLabelLength == 0) {
                 topStart--
@@ -471,10 +471,6 @@ class DomainNameReader(
             }
             return validState
         }
-
-        // Roll back one char if its invalid to handle: "00:41.<br />"
-        // This gets detected as 41.br otherwise.
-        reader.goBack()
 
         // return invalid state.
         return ReaderNextState.InvalidDomainName
