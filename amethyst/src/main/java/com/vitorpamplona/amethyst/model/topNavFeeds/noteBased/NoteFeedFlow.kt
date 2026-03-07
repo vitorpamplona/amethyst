@@ -62,7 +62,7 @@ class NoteFeedFlow(
     ): IFeedTopNavFilter =
         when (noteEvent) {
             is PeopleListEvent -> {
-                if (noteEvent.dTag() == PeopleListEvent.Companion.BLOCK_LIST_D_TAG) {
+                if (noteEvent.dTag() == PeopleListEvent.BLOCK_LIST_D_TAG) {
                     MutedAuthorsByOutboxTopNavFilter(caches.peopleListCache.cachedUserIdSet(noteEvent), blockedRelays)
                 } else {
                     AuthorsByOutboxTopNavFilter(caches.peopleListCache.cachedUserIdSet(noteEvent), blockedRelays)
@@ -109,7 +109,7 @@ class NoteFeedFlow(
     ) {
         when (noteEvent) {
             is PeopleListEvent -> {
-                if (noteEvent.dTag() == PeopleListEvent.Companion.BLOCK_LIST_D_TAG) {
+                if (noteEvent.dTag() == PeopleListEvent.BLOCK_LIST_D_TAG) {
                     emit(MutedAuthorsByOutboxTopNavFilter(caches.peopleListCache.userIdSet(noteEvent), blockedRelays))
                 } else {
                     emit(AuthorsByOutboxTopNavFilter(caches.peopleListCache.userIdSet(noteEvent), blockedRelays))
@@ -161,7 +161,7 @@ class NoteFeedFlow(
     ): IFeedTopNavFilter =
         when (noteEvent) {
             is PeopleListEvent -> {
-                if (noteEvent.dTag() == PeopleListEvent.Companion.BLOCK_LIST_D_TAG) {
+                if (noteEvent.dTag() == PeopleListEvent.BLOCK_LIST_D_TAG) {
                     MutedAuthorsByProxyTopNavFilter(caches.peopleListCache.cachedUserIdSet(noteEvent), proxyRelays)
                 } else {
                     AuthorsByProxyTopNavFilter(caches.peopleListCache.cachedUserIdSet(noteEvent), proxyRelays)
@@ -208,7 +208,7 @@ class NoteFeedFlow(
     ) {
         when (noteEvent) {
             is PeopleListEvent -> {
-                if (noteEvent.dTag() == PeopleListEvent.Companion.BLOCK_LIST_D_TAG) {
+                if (noteEvent.dTag() == PeopleListEvent.BLOCK_LIST_D_TAG) {
                     emit(MutedAuthorsByProxyTopNavFilter(caches.peopleListCache.userIdSet(noteEvent), proxyRelays))
                 } else {
                     emit(AuthorsByProxyTopNavFilter(caches.peopleListCache.userIdSet(noteEvent), proxyRelays))
@@ -272,7 +272,7 @@ class NoteFeedFlow(
     override fun startValue(): IFeedTopNavFilter {
         val noteEvent = metadataFlow.value?.note?.event
         return if (noteEvent == null) {
-            return AuthorsByOutboxTopNavFilter(emptySet(), blockedRelays)
+            AuthorsByOutboxTopNavFilter(emptySet(), blockedRelays)
         } else {
             if (proxyRelays.value.isEmpty()) {
                 processByOutbox(noteEvent, outboxRelays.value)

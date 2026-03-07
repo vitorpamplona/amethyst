@@ -65,14 +65,11 @@ class LightningAddressResolver {
         okHttpClient: (String) -> OkHttpClient,
         context: Context,
     ): String {
-        val url = assembleUrl(lnAddress)
-
-        if (url == null) {
-            throw LightningAddressError(
+        val url =
+            assembleUrl(lnAddress) ?: throw LightningAddressError(
                 stringRes(context, R.string.error_unable_to_fetch_invoice),
                 stringRes(context, R.string.could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup, lnAddress),
             )
-        }
 
         val client = okHttpClient(url)
 
@@ -126,12 +123,14 @@ class LightningAddressResolver {
         okHttpClient: (String) -> OkHttpClient,
         context: Context,
     ): String {
+        @Suppress("BlockingMethodInNonBlockingContext") // URLEncoder.encode is CPU-only, not I/O blocking
         val encodedMessage = URLEncoder.encode(message, "utf-8")
 
         val urlBinder = if (lnCallback.contains("?")) "&" else "?"
         var url = "$lnCallback${urlBinder}amount=$milliSats&comment=$encodedMessage"
 
         if (nostrRequest != null) {
+            @Suppress("BlockingMethodInNonBlockingContext") // URLEncoder.encode is CPU-only, not I/O blocking
             val encodedNostrRequest = URLEncoder.encode(nostrRequest.toJson(), "utf-8")
             url += "&nostr=$encodedNostrRequest"
         }

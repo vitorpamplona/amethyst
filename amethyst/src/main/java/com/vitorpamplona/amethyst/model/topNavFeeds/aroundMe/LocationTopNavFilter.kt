@@ -37,7 +37,7 @@ class LocationTopNavFilter(
     val geotags: Set<String>,
     val relayList: Set<NormalizedRelayUrl>,
 ) : IFeedTopNavFilter {
-    val geotagScopes: Set<String> = geotags.mapTo(mutableSetOf<String>()) { GeohashId.toScope(it) }
+    val geotagScopes: Set<String> = geotags.mapTo(mutableSetOf()) { GeohashId.toScope(it) }
 
     override fun matchAuthor(pubkey: HexKey): Boolean = true
 

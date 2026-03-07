@@ -65,7 +65,9 @@ class CompositionObserver(
     private val vmStore: StoreOwnerRegistry,
     private val key: Any,
 ) : RememberObserver {
-    override fun onRemembered() {}
+    override fun onRemembered() {
+        // No action needed when remembered — registration happens at construction time.
+    }
 
     override fun onForgotten() = vmStore.composableDetached(key)
 

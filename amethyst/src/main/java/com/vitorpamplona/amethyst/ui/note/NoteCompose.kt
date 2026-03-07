@@ -240,6 +240,7 @@ import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 
 @Composable
 fun NoteCompose(
@@ -536,7 +537,7 @@ fun ClickableNote(
 
                         nav.nav {
                             if (redirectToNote.event is DraftWrapEvent) {
-                                with(Dispatchers.IO) {
+                                withContext(Dispatchers.IO) {
                                     routeEditDraftTo(redirectToNote, accountViewModel.account)
                                 }
                             } else {

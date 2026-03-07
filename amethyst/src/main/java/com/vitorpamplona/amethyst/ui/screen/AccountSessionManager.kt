@@ -118,7 +118,7 @@ class AccountSessionManager(
         }
     }
 
-    private suspend fun requestLoginUI() = _accountContent.update { AccountState.LoggedOff }
+    private fun requestLoginUI() = _accountContent.update { AccountState.LoggedOff }
 
     suspend fun loginAndStartUI(
         key: String,

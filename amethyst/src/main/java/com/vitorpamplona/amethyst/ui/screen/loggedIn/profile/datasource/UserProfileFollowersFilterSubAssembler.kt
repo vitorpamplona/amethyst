@@ -32,7 +32,7 @@ class UserProfileFollowersFilterSubAssembler(
     override fun updateFilter(
         key: UserProfileQueryState,
         since: SincePerRelayMap?,
-    ): List<RelayBasedFilter>? = filterUserProfileFollowers(user(key), since)
+    ): List<RelayBasedFilter> = filterUserProfileFollowers(user(key), since)
 
     override fun user(key: UserProfileQueryState) = key.user
 }

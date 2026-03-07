@@ -92,7 +92,7 @@ fun pickRelaysToLoadUsers(
 
             val outbox = key.authorRelayList()?.writeRelaysNorm()
 
-            if (outbox != null && outbox.isNotEmpty()) {
+            if (!outbox.isNullOrEmpty()) {
                 // If there is a home, get from it.
 
                 // if it tried all outbox relays, stop.

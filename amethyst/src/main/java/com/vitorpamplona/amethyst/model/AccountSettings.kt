@@ -186,8 +186,8 @@ class AccountSettings(
     var backupEphemeralChatList: EphemeralChatListEvent? = null,
     var backupTrustProviderList: TrustProviderListEvent? = null,
     val lastReadPerRoute: MutableStateFlow<Map<String, MutableStateFlow<Long>>> = MutableStateFlow(mapOf()),
-    val hasDonatedInVersion: MutableStateFlow<Set<String>> = MutableStateFlow(setOf<String>()),
-    val pendingAttestations: MutableStateFlow<Map<HexKey, String>> = MutableStateFlow<Map<HexKey, String>>(mapOf()),
+    val hasDonatedInVersion: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
+    val pendingAttestations: MutableStateFlow<Map<HexKey, String>> = MutableStateFlow(mapOf()),
     var backupNipA3PaymentTargets: PaymentTargetsEvent? = null,
 ) : EphemeralChatRepository,
     PublicChatListRepository {
@@ -612,7 +612,7 @@ class AccountSettings(
         route: String,
         timestampInSecs: Long,
     ): MutableStateFlow<Long> =
-        MutableStateFlow<Long>(timestampInSecs).also { newFlow ->
+        MutableStateFlow(timestampInSecs).also { newFlow ->
             lastReadPerRoute.update { it + Pair(route, newFlow) }
             saveAccountSettings()
         }

@@ -238,7 +238,7 @@ fun LoadParticipants(
                     }
                 }
 
-            val hostsAuthor = hosts + (baseNote.author?.let { listOf(it) } ?: emptyList<User>())
+            val hostsAuthor = hosts + (baseNote.author?.let { listOf(it) } ?: emptyList())
 
             val topFilter = accountViewModel.account.liveDiscoveryFollowLists.value
 

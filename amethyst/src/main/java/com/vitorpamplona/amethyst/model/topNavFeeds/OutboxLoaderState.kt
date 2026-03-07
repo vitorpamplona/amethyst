@@ -48,7 +48,7 @@ class OutboxLoaderState(
             }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
-                SharingStarted.Companion.Eagerly,
+                SharingStarted.Eagerly,
                 UnknownTopNavPerRelayFilterSet,
             )
 }

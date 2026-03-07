@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -48,7 +47,7 @@ class RelaySuggestionState {
                         .sortedBy { it.url }
                         .take(20)
                 } else {
-                    emptyList<NormalizedRelayUrl>()
+                    emptyList()
                 }
             }.flowOn(Dispatchers.IO)
 

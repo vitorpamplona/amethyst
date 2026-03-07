@@ -34,9 +34,9 @@ data class LabeledBookmarkList(
     val privateBookmarks: Set<BookmarkIdTag> = emptySet(),
     val publicBookmarks: Set<BookmarkIdTag> = emptySet(),
 ) {
-    val privatePostBookmarks = privateBookmarks.filter { it is EventBookmark }.map { bookmarkIdTag -> bookmarkIdTag as EventBookmark }
-    val publicPostBookmarks = publicBookmarks.filter { it is EventBookmark }.map { bookmarkIdTag -> bookmarkIdTag as EventBookmark }
+    val privatePostBookmarks = privateBookmarks.filterIsInstance<EventBookmark>()
+    val publicPostBookmarks = publicBookmarks.filterIsInstance<EventBookmark>()
 
-    val privateArticleBookmarks = privateBookmarks.filter { it is AddressBookmark }.map { bookmarkIdTag -> bookmarkIdTag as AddressBookmark }
-    val publicArticleBookmarks = publicBookmarks.filter { it is AddressBookmark }.map { bookmarkIdTag -> bookmarkIdTag as AddressBookmark }
+    val privateArticleBookmarks = privateBookmarks.filterIsInstance<AddressBookmark>()
+    val publicArticleBookmarks = publicBookmarks.filterIsInstance<AddressBookmark>()
 }

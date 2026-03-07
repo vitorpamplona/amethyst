@@ -147,12 +147,14 @@ class AppModules(
     // Custom fetcher that considers tor settings and avoids forwarding.
     val nip05Fetcher = OkHttpNip05Fetcher(roleBasedHttpClientBuilder::okHttpClientForNip05)
 
+    val namecoinElectrumxClient =
+        ElectrumXClient(
+            socketFactory = { roleBasedHttpClientBuilder.socketFactoryForNip05() },
+        )
+
     val namecoinResolver =
         NamecoinNameResolver(
-            electrumxClient =
-                ElectrumXClient(
-                    socketFactory = { roleBasedHttpClientBuilder.socketFactoryForNip05() },
-                ),
+            electrumxClient = namecoinElectrumxClient,
             serverListProvider = {
                 if (roleBasedHttpClientBuilder.shouldUseTorForNIP05("https://electrumx.example.com")) {
                     TOR_ELECTRUMX_SERVERS
@@ -226,7 +228,7 @@ class AppModules(
     val relayStats = RelayStats(client)
 
     // Logs debug messages when needed
-    val detailedLogger = if (isDebug) RelayLogger(client, false, false) else null
+    val detailedLogger = if (isDebug) RelayLogger(client, debugSending = false, debugReceiving = false) else null
     val relayReqStats = if (isDebug) RelayReqStats(client) else null
     val logger = if (isDebug) RelaySpeedLogger(client) else null
 

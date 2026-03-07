@@ -170,7 +170,7 @@ class AntiSpamFilter {
         }
     }
 
-    val flowSpam = MutableStateFlow<AntiSpamState>(AntiSpamState(this))
+    val flowSpam = MutableStateFlow(AntiSpamState(this))
 }
 
 class AntiSpamState(

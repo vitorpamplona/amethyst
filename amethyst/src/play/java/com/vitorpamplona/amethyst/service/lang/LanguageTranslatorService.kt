@@ -33,6 +33,7 @@ import com.google.mlkit.nl.translate.TranslatorOptions
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.quartz.utils.urldetector.detection.UrlDetector
 import kotlinx.coroutines.CancellationException
+import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.regex.Pattern
 
@@ -44,7 +45,7 @@ data class ResultOrError(
 )
 
 object LanguageTranslatorService {
-    var executorService = Executors.newCachedThreadPool()
+    var executorService: ExecutorService = Executors.newCachedThreadPool()
 
     private val options =
         LanguageIdentificationOptions
@@ -53,8 +54,8 @@ object LanguageTranslatorService {
             .setConfidenceThreshold(0.6f)
             .build()
     private val languageIdentification = LanguageIdentification.getClient(options)
-    val lnRegex = Pattern.compile("\\blnbc[a-z0-9]+\\b", Pattern.CASE_INSENSITIVE)
-    val tagRegex =
+    val lnRegex: Pattern = Pattern.compile("\\blnbc[a-z0-9]+\\b", Pattern.CASE_INSENSITIVE)
+    val tagRegex: Pattern =
         Pattern.compile(
             "(nostr:)?@?(nsec1|npub1|nevent1|naddr1|note1|nprofile1|nrelay1)([qpzry9x8gf2tvdw0s3jn54khce6mua7l]+)",
             Pattern.CASE_INSENSITIVE,

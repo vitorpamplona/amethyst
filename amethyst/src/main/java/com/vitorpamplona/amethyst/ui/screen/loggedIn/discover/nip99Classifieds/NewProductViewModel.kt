@@ -142,7 +142,7 @@ open class NewProductViewModel :
     var price by mutableStateOf(TextFieldValue(""))
     var locationText by mutableStateOf(TextFieldValue(""))
     var category by mutableStateOf(TextFieldValue(""))
-    var condition by mutableStateOf<ConditionTag.CONDITION>(ConditionTag.CONDITION.USED_LIKE_NEW)
+    var condition by mutableStateOf(ConditionTag.CONDITION.USED_LIKE_NEW)
 
     // Invoices
     var canAddInvoice by mutableStateOf(false)

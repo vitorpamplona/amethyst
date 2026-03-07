@@ -73,14 +73,14 @@ fun NewChatroomSubjectDialog(
         Surface {
             val groupName =
                 remember {
-                    mutableStateOf<String>(
+                    mutableStateOf(
                         accountViewModel.account.chatroomList.rooms
                             .get(room)
                             ?.subject
                             ?.value ?: "",
                     )
                 }
-            val message = remember { mutableStateOf<String>("") }
+            val message = remember { mutableStateOf("") }
             val scope = rememberCoroutineScope()
 
             Column(

@@ -98,7 +98,7 @@ fun HiddenNotePreview() {
     ThemeComparisonColumn(
         toPreview = {
             HiddenNote(
-                reports = persistentSetOf<Note>(),
+                reports = persistentSetOf(),
                 isHiddenAuthor = true,
                 accountViewModel = mockAccountViewModel(),
                 nav = EmptyNav(),

@@ -67,12 +67,12 @@ class EncryptedDataStore(
             ?.get(key)
             ?.let { decrypt(it) }
 
-    suspend fun <T> getProperty(
+    fun <T> getProperty(
         key: Preferences.Key<String>,
         parser: (String) -> T,
         serializer: (T) -> String,
     ): UpdatablePropertyFlow<T> =
-        UpdatablePropertyFlow<T>(
+        UpdatablePropertyFlow(
             flow =
                 store.data
                     .catch { e ->

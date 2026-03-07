@@ -635,12 +635,12 @@ private fun FullBleedNoteCompose(
                 } else if (noteEvent is InteractiveStoryBaseEvent) {
                     RenderInteractiveStory(
                         baseNote,
-                        false,
-                        true,
-                        3,
-                        backgroundColor,
-                        accountViewModel,
-                        nav,
+                        makeItShort = false,
+                        canPreview = true,
+                        quotesLeft = 3,
+                        backgroundColor = backgroundColor,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
                     )
                 } else if (noteEvent is GitPatchEvent) {
                     RenderGitPatchEvent(baseNote, makeItShort = false, canPreview = true, quotesLeft = 3, backgroundColor = backgroundColor, accountViewModel = accountViewModel, nav = nav)
@@ -842,7 +842,7 @@ private fun RenderClassifiedsReaderForThread(
 
     Row(modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp)) {
         Column {
-            if (imageSet != null && imageSet.isNotEmpty()) {
+            if (!imageSet.isNullOrEmpty()) {
                 AutoNonlazyGrid(imageSet.size) {
                     ZoomableContentView(
                         content = imageSet[it],

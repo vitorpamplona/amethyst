@@ -103,7 +103,7 @@ fun ReactionsSettingsScreen(
 @Composable
 fun ReactionsSettingsContent(accountViewModel: AccountViewModel) {
     val reactionRowItems by accountViewModel.reactionRowItemsFlow().collectAsStateWithLifecycle()
-    var items by remember(reactionRowItems) { mutableStateOf(reactionRowItems.toMutableList()) }
+    var items by remember(reactionRowItems) { mutableStateOf(reactionRowItems.toList()) }
 
     fun save(newItems: List<ReactionRowItem>) {
         items = newItems.toMutableList()

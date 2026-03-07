@@ -35,6 +35,6 @@ class AllFollowsTopNavPerRelayFilter(
     val geotags: Set<String>? = null,
     val communities: Set<String>? = null,
 ) : IFeedTopNavPerRelayFilter {
-    val geotagScopes: Set<String>? = geotags?.mapTo(mutableSetOf<String>()) { GeohashId.toScope(it) }
-    val hashtagScopes: Set<String>? = hashtags?.mapTo(mutableSetOf<String>()) { HashtagId.toScope(it) }
+    val geotagScopes: Set<String>? = geotags?.mapTo(mutableSetOf()) { GeohashId.toScope(it) }
+    val hashtagScopes: Set<String>? = hashtags?.mapTo(mutableSetOf()) { HashtagId.toScope(it) }
 }

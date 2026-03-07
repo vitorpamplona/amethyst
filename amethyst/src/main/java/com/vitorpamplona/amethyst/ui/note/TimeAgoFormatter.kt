@@ -32,7 +32,7 @@ import kotlin.math.round
 private const val YEAR_DATE_FORMAT = "MMM dd, yyyy"
 private const val MONTH_DATE_FORMAT = "MMM dd"
 
-var locale = Locale.getDefault()
+var locale: Locale = Locale.getDefault()
 var yearFormatter = SimpleDateFormat(YEAR_DATE_FORMAT, locale)
 var monthFormatter = SimpleDateFormat(MONTH_DATE_FORMAT, locale)
 

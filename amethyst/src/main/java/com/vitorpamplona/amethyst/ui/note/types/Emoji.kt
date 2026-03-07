@@ -63,7 +63,7 @@ import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.taggedEmojis
 
 @Composable
-public fun RenderEmojiPack(
+fun RenderEmojiPack(
     baseNote: Note,
     actionable: Boolean,
     backgroundColor: MutableState<Color>,
@@ -86,7 +86,7 @@ public fun RenderEmojiPack(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-public fun RenderEmojiPack(
+fun RenderEmojiPack(
     noteEvent: EmojiPackEvent,
     baseNote: Note,
     actionable: Boolean,

@@ -35,7 +35,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.RenderUserAsClickableText
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
@@ -102,7 +101,7 @@ fun DisplayUncitedUsers(
     nav: INav,
 ) {
     @Suppress("ProduceStateDoesNotAssignValue")
-    val uncitedUsers by produceState(initialValue = emptyList<User>()) {
+    val uncitedUsers by produceState(initialValue = emptyList()) {
         val users = event.groupKeySetWithoutOwner() - event.citedUsers()
         if (users.isNotEmpty()) {
             val newUsers = accountViewModel.loadUsersSync(users.toList())
