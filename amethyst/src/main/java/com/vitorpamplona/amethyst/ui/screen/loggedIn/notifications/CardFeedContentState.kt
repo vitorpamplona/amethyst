@@ -165,13 +165,13 @@ class CardFeedContentState(
         val reactionsPerEvent = mutableMapOf<Note, MutableList<Note>>()
         notes
             .filter { it.event is ReactionEvent }
-            .forEach {
+            .forEach { note ->
                 val reactedPost =
-                    it.replyTo?.lastOrNull {
+                    note.replyTo?.lastOrNull {
                         it.event !is ChannelMetadataEvent && it.event !is ChannelCreateEvent
                     }
                 if (reactedPost != null) {
-                    reactionsPerEvent.getOrPut(reactedPost, { mutableListOf() }).add(it)
+                    reactionsPerEvent.getOrPut(reactedPost) { mutableListOf() }.add(note)
                 }
             }
 
@@ -192,7 +192,7 @@ class CardFeedContentState(
                         // var newZapRequestEvent = LocalCache.checkPrivateZap(zapRequest.event as Event)
                         // zapRequest.event = newZapRequestEvent
                         zapsPerEvent
-                            .getOrPut(zappedPost, { mutableListOf() })
+                            .getOrPut(zappedPost) { mutableListOf() }
                             .add(CombinedZap(zapRequest, zapEvent))
                     }
                 } else {
@@ -215,7 +215,7 @@ class CardFeedContentState(
                             val zapRequestNote = getNoteIfExists(zapRequest.id)
                             if (zapRequestNote != null) {
                                 zapsPerUser
-                                    .getOrPut(author, { mutableListOf() })
+                                    .getOrPut(author) { mutableListOf() }
                                     .add(CombinedZap(zapRequestNote, zapEvent))
                             }
                         }
@@ -226,13 +226,13 @@ class CardFeedContentState(
         val boostsPerEvent = mutableMapOf<Note, MutableList<Note>>()
         notes
             .filter { it.event is RepostEvent || it.event is GenericRepostEvent }
-            .forEach {
+            .forEach { note ->
                 val boostedPost =
-                    it.replyTo?.lastOrNull {
+                    note.replyTo?.lastOrNull {
                         it.event !is ChannelMetadataEvent && it.event !is ChannelCreateEvent
                     }
                 if (boostedPost != null) {
-                    boostsPerEvent.getOrPut(boostedPost, { mutableListOf() }).add(it)
+                    boostsPerEvent.getOrPut(boostedPost) { mutableListOf() }.add(note)
                 }
             }
 
@@ -240,42 +240,41 @@ class CardFeedContentState(
 
         val allBaseNotes = zapsPerEvent.keys + boostsPerEvent.keys + reactionsPerEvent.keys
         val multiCards =
-            allBaseNotes
-                .map { baseNote ->
-                    val boostsInCard = boostsPerEvent[baseNote] ?: emptyList()
-                    val reactionsInCard = reactionsPerEvent[baseNote] ?: emptyList()
-                    val zapsInCard = zapsPerEvent[baseNote] ?: emptyList()
+            allBaseNotes.flatMap { baseNote ->
+                val boostsInCard = boostsPerEvent[baseNote] ?: emptyList()
+                val reactionsInCard = reactionsPerEvent[baseNote] ?: emptyList()
+                val zapsInCard = zapsPerEvent[baseNote] ?: emptyList()
 
-                    val singleList =
-                        (boostsInCard + zapsInCard.map { it.response } + reactionsInCard).groupBy {
-                            sdf.format(
-                                Instant
-                                    .ofEpochSecond(it.createdAt() ?: 0L)
-                                    .atZone(ZoneId.systemDefault())
-                                    .toLocalDateTime(),
+                val singleList =
+                    (boostsInCard + zapsInCard.map { it.response } + reactionsInCard).groupBy {
+                        sdf.format(
+                            Instant
+                                .ofEpochSecond(it.createdAt() ?: 0L)
+                                .atZone(ZoneId.systemDefault())
+                                .toLocalDateTime(),
+                        )
+                    }
+
+                val days = singleList.keys.sortedBy { it }
+
+                days
+                    .mapNotNull { string ->
+                        val sortedList =
+                            singleList
+                                .get(string)
+                                ?.sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
+                                ?.reversed()
+
+                        sortedList?.chunked(30)?.map { chunk ->
+                            MultiSetCard(
+                                baseNote,
+                                boostsInCard.filter { it in chunk }.toImmutableList(),
+                                reactionsInCard.filter { it in chunk }.toImmutableList(),
+                                zapsInCard.filter { it.response in chunk }.toImmutableList(),
                             )
                         }
-
-                    val days = singleList.keys.sortedBy { it }
-
-                    days
-                        .mapNotNull {
-                            val sortedList =
-                                singleList
-                                    .get(it)
-                                    ?.sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
-                                    ?.reversed()
-
-                            sortedList?.chunked(30)?.map { chunk ->
-                                MultiSetCard(
-                                    baseNote,
-                                    boostsInCard.filter { it in chunk }.toImmutableList(),
-                                    reactionsInCard.filter { it in chunk }.toImmutableList(),
-                                    zapsInCard.filter { it.response in chunk }.toImmutableList(),
-                                )
-                            }
-                        }.flatten()
-                }.flatten()
+                    }.flatten()
+            }
 
         val userZaps =
             zapsPerUser
@@ -290,10 +289,10 @@ class CardFeedContentState(
                             )
                         }
 
-                    byDay.values.map {
+                    byDay.values.map { zaps ->
                         ZapUserSetCard(
                             user.key,
-                            it
+                            zaps
                                 .sortedWith(compareBy({ it.createdAt() }, { it.idHex() }))
                                 .reversed()
                                 .toImmutableList(),

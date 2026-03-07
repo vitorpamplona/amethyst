@@ -66,15 +66,15 @@ fun DisplayUncitedHashtags(
                 val tagsInContent =
                     state
                         .paragraphs
-                        .map {
-                            it.words.mapNotNull {
+                        .flatMap { paragraphState ->
+                            paragraphState.words.mapNotNull {
                                 if (it is HashTagSegment) {
                                     it.hashtag
                                 } else {
                                     null
                                 }
                             }
-                        }.flatten()
+                        }
 
                 val unusedHashtags =
                     tagsInEvent.filterNot { eventTag ->

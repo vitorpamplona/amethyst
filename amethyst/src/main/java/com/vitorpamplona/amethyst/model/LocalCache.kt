@@ -2770,10 +2770,9 @@ object LocalCache : ILocalCache, ICacheProvider {
         val childrenToBeRemoved = mutableListOf<Note>()
 
         val toBeRemoved =
-            account.hiddenUsers.flow.value.hiddenUsers
-                .map { userHex ->
-                    (notes.filter { _, it -> it.event?.pubKey == userHex } + addressables.filter { _, it -> it.event?.pubKey == userHex }).toSet()
-                }.flatten()
+            account.hiddenUsers.flow.value.hiddenUsers.flatMap { userHex ->
+                (notes.filter { _, it -> it.event?.pubKey == userHex } + addressables.filter { _, it -> it.event?.pubKey == userHex }).toSet()
+            }
 
         toBeRemoved.forEach {
             removeFromCache(it)

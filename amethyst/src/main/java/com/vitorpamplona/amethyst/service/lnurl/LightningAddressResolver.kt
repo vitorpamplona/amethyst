@@ -65,14 +65,11 @@ class LightningAddressResolver {
         okHttpClient: (String) -> OkHttpClient,
         context: Context,
     ): String {
-        val url = assembleUrl(lnAddress)
-
-        if (url == null) {
-            throw LightningAddressError(
+        val url =
+            assembleUrl(lnAddress) ?: throw LightningAddressError(
                 stringRes(context, R.string.error_unable_to_fetch_invoice),
                 stringRes(context, R.string.could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup, lnAddress),
             )
-        }
 
         val client = okHttpClient(url)
 

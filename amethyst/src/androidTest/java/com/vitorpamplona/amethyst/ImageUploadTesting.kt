@@ -127,7 +127,7 @@ class ImageUploadTesting {
         // assertEquals(server.baseUrl, "${server.baseUrl}/$initialHash", result.url?.removeSuffix(".png"))
 
         val imageData: ByteArray =
-            ImageDownloader().waitAndGetImage(result.url!!, { client })?.bytes
+            ImageDownloader().waitAndGetImage(result.url!!) { client }?.bytes
                 ?: run {
                     fail("${server.name}: Should not be null")
                     return
@@ -142,8 +142,7 @@ class ImageUploadTesting {
             ServerInfoRetriever()
                 .loadInfo(
                     server.baseUrl,
-                    { client },
-                )
+                ) { client }
 
         val payload = getBitmap()
         val inputStream = payload.inputStream()
@@ -172,7 +171,7 @@ class ImageUploadTesting {
         Assert.assertTrue("${server.name}: Invalid result url", url.startsWith("http"))
 
         val imageData: ByteArray =
-            ImageDownloader().waitAndGetImage(url, { client })?.bytes
+            ImageDownloader().waitAndGetImage(url) { client }?.bytes
                 ?: run {
                     fail("${server.name}: Should not be null")
                     return

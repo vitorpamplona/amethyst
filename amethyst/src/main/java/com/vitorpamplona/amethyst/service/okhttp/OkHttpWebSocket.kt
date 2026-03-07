@@ -48,8 +48,7 @@ class OkHttpWebSocket(
     override fun needsReconnect(): Boolean {
         if (socket == null) return true
 
-        val myUsingOkHttp = usingOkHttp
-        if (myUsingOkHttp == null) return true
+        val myUsingOkHttp = usingOkHttp ?: return true
 
         val currentOkHttp = httpClient(url)
 

@@ -70,7 +70,7 @@ fun filterBasicAccountInfoFromKeys(
     otherAccounts: List<HexKey>?,
     since: Long?,
 ): List<RelayBasedFilter> {
-    if (otherAccounts == null || otherAccounts.isEmpty()) return emptyList()
+    if (otherAccounts.isNullOrEmpty()) return emptyList()
 
     return listOf(
         RelayBasedFilter(

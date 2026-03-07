@@ -36,7 +36,7 @@ fun potentialRelaysToFindEvent(note: Note): Set<NormalizedRelayUrl> {
 
     LocalCache.getAnyChannel(note)?.relays()?.let { set.addAll(it) }
 
-    note.replyTo?.map { parentNote ->
+    note.replyTo?.forEach { parentNote ->
         set.addAll(parentNote.relays)
 
         LocalCache.getAnyChannel(parentNote)?.relays()?.let { set.addAll(it) }
@@ -44,7 +44,7 @@ fun potentialRelaysToFindEvent(note: Note): Set<NormalizedRelayUrl> {
         parentNote.author?.inboxRelays()?.let { set.addAll(it) }
     }
 
-    note.replies.map { childNote ->
+    note.replies.forEach { childNote ->
         set.addAll(childNote.relays)
 
         LocalCache.getAnyChannel(childNote)?.relays()?.let { set.addAll(it) }
@@ -59,7 +59,7 @@ fun potentialRelaysToFindEvent(note: Note): Set<NormalizedRelayUrl> {
         }
     }
 
-    note.boosts.map { childNote ->
+    note.boosts.forEach { childNote ->
         set.addAll(childNote.relays)
         childNote.author?.outboxRelays()?.let { set.addAll(it) }
     }
