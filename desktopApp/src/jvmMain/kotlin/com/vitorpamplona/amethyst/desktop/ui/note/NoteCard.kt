@@ -44,7 +44,8 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.commons.richtext.UrlParser
+import com.vitorpamplona.amethyst.commons.richtext.Urls
 import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
 import com.vitorpamplona.amethyst.commons.util.toTimeAgo
 
@@ -71,8 +72,7 @@ fun NoteCard(
     onClick: (() -> Unit)? = null,
     onAuthorClick: ((String) -> Unit)? = null,
 ) {
-    val richTextParser = remember { RichTextParser() }
-    val urls = remember(note.content) { richTextParser.parseValidUrls(note.content) }
+    val urls = remember(note.content) { UrlParser().parseValidUrls(note.content) }
 
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -154,11 +154,11 @@ fun NoteCard(
 @Composable
 fun RichTextContent(
     content: String,
-    urls: Set<String>,
+    urls: Urls,
     modifier: Modifier = Modifier,
     maxLines: Int = 10,
 ) {
-    if (urls.isEmpty()) {
+    if (urls.withScheme.isEmpty()) {
         Text(
             text = content,
             style = MaterialTheme.typography.bodyMedium,
@@ -171,7 +171,8 @@ fun RichTextContent(
         val annotatedText =
             buildAnnotatedString {
                 var lastIndex = 0
-                val sortedUrls = urls.sortedBy { content.indexOf(it) }
+                // TODO: User the other urls.
+                val sortedUrls = urls.withScheme.sortedBy { content.indexOf(it) }
 
                 for (url in sortedUrls) {
                     val startIndex = content.indexOf(url, lastIndex)
