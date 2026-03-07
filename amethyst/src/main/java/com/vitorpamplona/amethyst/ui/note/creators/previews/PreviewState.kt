@@ -39,8 +39,9 @@ class PreviewState {
     val results =
         source
             .debounce(500)
-            .map { CachedUrlParser.parseValidUrls(it.text) }
-            .distinctUntilChanged()
+            .map {
+                CachedUrlParser.parseValidUrls(it.text)
+            }.distinctUntilChanged()
             .flowOn(Dispatchers.IO)
 
     fun reset() {
