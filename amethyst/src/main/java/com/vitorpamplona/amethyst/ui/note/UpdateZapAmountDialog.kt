@@ -110,8 +110,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.SimpleQrCodeScanner
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
-import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
 import com.vitorpamplona.amethyst.ui.theme.SettingsCategoryFirstModifier
 import com.vitorpamplona.amethyst.ui.theme.SettingsCategorySpacingModifier
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
@@ -353,7 +353,6 @@ fun UpdateZapAmountContent(
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = RowColSpacing,
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -409,20 +408,19 @@ fun UpdateZapAmountContent(
 
         // Connect action buttons
         Row(
-            modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             // Primary "Connect Wallet" button — opens the NWC app deep link
             OutlinedButton(
                 modifier = Modifier.weight(1f),
                 shape = ButtonBorder,
                 onClick = {
-                    onClose()
                     try {
                         uri.openUri(
                             "nostrnwc://connect?appname=Amethyst&appicon=https%3A%2F%2Fraw.githubusercontent.com%2Fvitorpamplona%2Famethyst%2Frefs%2Fheads%2Fmain%2Ficon.png&callback=amethyst%2Bwalletconnect%3A%2F%2Fdlnwc",
                         )
+                        onClose()
                     } catch (_: IllegalArgumentException) {
                         accountViewModel.toastManager.toast(
                             R.string.couldnt_find_nwc_wallets,
@@ -439,6 +437,8 @@ fun UpdateZapAmountContent(
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(text = stringRes(R.string.wallet_connect_connect_app))
             }
+
+            Spacer(DoubleHorzSpacer)
 
             // Paste from clipboard
             IconButton(
