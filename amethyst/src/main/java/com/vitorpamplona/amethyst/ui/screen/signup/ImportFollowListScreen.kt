@@ -147,7 +147,7 @@ fun ImportFollowListSection(
         }
 
         Spacer(Modifier.height(16.dp))
-        BottomActions(state, onSkip, { viewModel.applySelectedFollows(onFollowsApplied) }, onDone)
+        BottomActions(state, onSkip, { viewModel.applySelectedFollows(onFollowsApplied) }, onDone, { viewModel.reset() })
     }
 }
 
@@ -494,19 +494,29 @@ private fun BottomActions(
     onSkip: () -> Unit,
     onApply: () -> Unit,
     onDone: () -> Unit,
+    onSearchAnother: () -> Unit,
 ) {
     when (state) {
         is ImportFollowState.Preview -> {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 TextButton(onClick = onSkip) { Text("Skip") }
-                Button(onClick = onApply, enabled = state.selectedCount > 0, shape = RoundedCornerShape(12.dp)) {
-                    Text("Follow ${state.selectedCount} accounts")
+                Row {
+                    OutlinedButton(onClick = onSearchAnother, shape = RoundedCornerShape(12.dp)) {
+                        Text("Search Another")
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Button(onClick = onApply, enabled = state.selectedCount > 0, shape = RoundedCornerShape(12.dp)) {
+                        Text("Follow ${state.selectedCount} accounts")
+                    }
                 }
             }
         }
 
         is ImportFollowState.Done -> {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                OutlinedButton(onClick = onSearchAnother, shape = RoundedCornerShape(12.dp)) {
+                    Text("Import More")
+                }
                 Button(onClick = onDone, shape = RoundedCornerShape(12.dp)) { Text("Continue") }
             }
         }
