@@ -38,6 +38,7 @@ sealed class AccountState {
     class LoggedIn(
         val account: Account,
         var route: Route? = null,
+        val isNewAccount: Boolean = false,
     ) : AccountState() {
         val currentViewModelStore = AccountCentricViewModelStore()
     }

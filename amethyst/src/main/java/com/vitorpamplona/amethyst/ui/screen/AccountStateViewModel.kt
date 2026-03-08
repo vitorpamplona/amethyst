@@ -163,10 +163,20 @@ class AccountStateViewModel : ViewModel() {
     fun startUI(
         accountSettings: AccountSettings,
         route: Route? = null,
+        isNewAccount: Boolean = false,
     ) {
         val account = Amethyst.instance.accountsCache.loadAccount(accountSettings)
         _accountContent.update {
-            AccountState.LoggedIn(account, route)
+            AccountState.LoggedIn(account, route, isNewAccount)
+        }
+    }
+
+    fun finishNewAccountSetup() {
+        val current = _accountContent.value
+        if (current is AccountState.LoggedIn && current.isNewAccount) {
+            _accountContent.update {
+                AccountState.LoggedIn(current.account, current.route, isNewAccount = false)
+            }
         }
     }
 
@@ -274,7 +284,7 @@ class AccountStateViewModel : ViewModel() {
 
             LocalPreferences.setDefaultAccount(accountSettings)
 
-            startUI(accountSettings)
+            startUI(accountSettings, isNewAccount = true)
 
             @OptIn(DelicateCoroutinesApi::class)
             GlobalScope.launch(Dispatchers.IO) {
