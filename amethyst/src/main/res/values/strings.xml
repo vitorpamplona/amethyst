@@ -448,7 +448,7 @@
     <string name="move_bookmark_to_private_label">Move to Private</string>
 
     <string name="wallet_connect_service">Wallet Connect Service</string>
-    <string name="wallet_connect_service_explainer">Authorizes a Nostr Secret to pay zaps without leaving the app. Keep the secret safe and use a private relay if possible</string>
+    <string name="wallet_connect_service_explainer">Authorizes Amethyst to pay zaps without leaving the app. Keep the secret safe.</string>
     <string name="wallet_connect_service_pubkey">Wallet Connect Pubkey</string>
     <string name="wallet_connect_service_relay">Wallet Connect Relay</string>
     <string name="wallet_connect_service_secret">Wallet Connect Secret</string>
@@ -458,7 +458,7 @@
     <string name="wallet_connect_status_not_connected">Not connected</string>
     <string name="wallet_connect_manual_config">Advanced: enter connection details manually</string>
     <string name="quick_zap_amounts">Quick Zap Amounts</string>
-    <string name="quick_zap_amounts_explainer">Shown when long-pressing the zap button. Tap an amount to remove it.</string>
+    <string name="quick_zap_amounts_explainer">Shown when pressing the zap button. Tap an amount to remove it. If you leave it empty, it will open the dialog to insert an amount every time.</string>
     <string name="zap_privacy_section">Zap Privacy</string>
     <string name="zap_type_section_explainer">Controls how your identity is shown when you send a zap.</string>
     <string name="wallet_connect_connect_app">Connect Wallet</string>
