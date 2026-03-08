@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.service.followimport
 
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinResolveOutcome
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -30,6 +32,15 @@ import org.junit.Test
 
 class FollowListImporterTest {
     private val importer = FollowListImporter()
+
+    // Importer with a Namecoin resolver that always returns ServersUnreachable
+    // (simulates no real ElectrumX servers in test env)
+    private val importerWithNamecoin =
+        FollowListImporter(
+            resolveNamecoin = { identifier ->
+                NamecoinResolveOutcome.ServersUnreachable("Test: no servers available")
+            },
+        )
 
     // ── Hex pubkey resolution ──────────────────────────────────────────
 
@@ -110,50 +121,26 @@ class FollowListImporterTest {
 
     @Test
     fun `identifies dot-bit as Namecoin`() {
-        assertTrue(
-            com.vitorpamplona.quartz.nip05.namecoin.NamecoinNameResolver
-                .isNamecoinIdentifier("example.bit"),
-        )
-        assertTrue(
-            com.vitorpamplona.quartz.nip05.namecoin.NamecoinNameResolver
-                .isNamecoinIdentifier("alice@example.bit"),
-        )
-        assertTrue(
-            com.vitorpamplona.quartz.nip05.namecoin.NamecoinNameResolver
-                .isNamecoinIdentifier("_@example.bit"),
-        )
+        assertTrue(NamecoinNameResolver.isNamecoinIdentifier("example.bit"))
+        assertTrue(NamecoinNameResolver.isNamecoinIdentifier("alice@example.bit"))
+        assertTrue(NamecoinNameResolver.isNamecoinIdentifier("_@example.bit"))
     }
 
     @Test
     fun `identifies d-slash as Namecoin`() {
-        assertTrue(
-            com.vitorpamplona.quartz.nip05.namecoin.NamecoinNameResolver
-                .isNamecoinIdentifier("d/example"),
-        )
+        assertTrue(NamecoinNameResolver.isNamecoinIdentifier("d/example"))
     }
 
     @Test
     fun `identifies id-slash as Namecoin`() {
-        assertTrue(
-            com.vitorpamplona.quartz.nip05.namecoin.NamecoinNameResolver
-                .isNamecoinIdentifier("id/alice"),
-        )
+        assertTrue(NamecoinNameResolver.isNamecoinIdentifier("id/alice"))
     }
 
     @Test
     fun `rejects non-Namecoin identifiers`() {
-        assertFalse(
-            com.vitorpamplona.quartz.nip05.namecoin.NamecoinNameResolver
-                .isNamecoinIdentifier("[email protected]"),
-        )
-        assertFalse(
-            com.vitorpamplona.quartz.nip05.namecoin.NamecoinNameResolver
-                .isNamecoinIdentifier("npub1abc"),
-        )
-        assertFalse(
-            com.vitorpamplona.quartz.nip05.namecoin.NamecoinNameResolver
-                .isNamecoinIdentifier(""),
-        )
+        assertFalse(NamecoinNameResolver.isNamecoinIdentifier("[email protected]"))
+        assertFalse(NamecoinNameResolver.isNamecoinIdentifier("npub1abc"))
+        assertFalse(NamecoinNameResolver.isNamecoinIdentifier(""))
     }
 
     // ── Kind 3 parsing ─────────────────────────────────────────────────
@@ -269,7 +256,7 @@ class FollowListImporterTest {
             // configured with real servers in a test environment. The importer
             // should give a Namecoin-specific error message.
             val result =
-                importer.fetchFollowList(
+                importerWithNamecoin.fetchFollowList(
                     identifier = "nonexistent.bit",
                     relayUrls = listOf("wss://test"),
                     fetchEvent = { _, _, _, _ -> AutoCloseable {} },

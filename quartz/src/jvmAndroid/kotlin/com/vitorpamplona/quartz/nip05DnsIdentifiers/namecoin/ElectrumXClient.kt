@@ -18,14 +18,16 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip05.namecoin
+package com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
@@ -40,38 +42,15 @@ import java.io.PrintWriter
 import java.net.InetSocketAddress
 import java.net.Socket
 import java.security.MessageDigest
+import java.security.SecureRandom
+import java.security.cert.X509Certificate
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import javax.net.SocketFactory
 import javax.net.ssl.SSLContext
 import javax.net.ssl.SSLSocketFactory
 import javax.net.ssl.TrustManager
 import javax.net.ssl.X509TrustManager
-
-/**
- * Result of an ElectrumX name_show query.
- *
- * Maps to the JSON fields returned by Namecoin Core / Electrum-NMC:
- *   { "name": "d/example", "value": "{...}", "txid": "abc...", "height": 12345, ... }
- */
-@Serializable
-data class NameShowResult(
-    val name: String,
-    val value: String,
-    val txid: String? = null,
-    val height: Int? = null,
-    val expiresIn: Int? = null,
-)
-
-/**
- * Represents a single ElectrumX server endpoint.
- */
-data class ElectrumxServer(
-    val host: String,
-    val port: Int,
-    val useSsl: Boolean = true,
-    /** If true, accept any certificate (self-signed, expired, etc.) */
-    val trustAllCerts: Boolean = false,
-)
 
 /**
  * Lightweight, query-only ElectrumX client for Namecoin name resolution.
@@ -87,42 +66,27 @@ data class ElectrumxServer(
  * 2. Compute the Electrum-style scripthash (reversed SHA-256)
  * 3. Query `blockchain.scripthash.get_history` to find the latest tx
  * 4. Fetch the raw transaction and parse the name value from the script
+ *
+ * Usage:
+ * ```
+ * val client = ElectrumxClient()
+ * val result = client.nameShow("d/example", server)
+ * ```
  */
-class ElectrumxClient(
+class ElectrumXClient(
     private val connectTimeoutMs: Long = 10_000L,
     private val readTimeoutMs: Long = 15_000L,
     private val socketFactory: () -> SocketFactory = { SocketFactory.getDefault() },
-) {
+) : IElectrumXClient {
     private val json =
         Json {
             ignoreUnknownKeys = true
             isLenient = true
         }
     private val requestId = AtomicInteger(0)
-    private val mutex = Mutex()
+    private val serverMutexes = ConcurrentHashMap<String, Mutex>()
 
     companion object {
-        /** Well-known public Namecoin ElectrumX servers (clearnet). */
-        val DEFAULT_SERVERS =
-            listOf(
-                ElectrumxServer("electrumx.testls.space", 50002, useSsl = true, trustAllCerts = true),
-                ElectrumxServer("nmc2.bitcoins.sk", 57002, useSsl = true, trustAllCerts = true),
-                ElectrumxServer("46.229.238.187", 57002, useSsl = true, trustAllCerts = true),
-            )
-
-        /** Tor-preferred server list: onion primary, clearnet fallback. */
-        val TOR_SERVERS =
-            listOf(
-                ElectrumxServer(
-                    "i665jpwsq46zlsdbnj4axgzd3s56uzey5uhotsnxzsknzbn36jaddsid.onion",
-                    50002,
-                    useSsl = true,
-                    trustAllCerts = true,
-                ),
-                ElectrumxServer("electrumx.testls.space", 50002, useSsl = true, trustAllCerts = true),
-                ElectrumxServer("nmc2.bitcoins.sk", 57002, useSsl = true, trustAllCerts = true),
-            )
-
         private const val PROTOCOL_VERSION = "1.4"
 
         /**
@@ -141,62 +105,65 @@ class ElectrumxClient(
         private const val OP_PUSHDATA2: Byte = 0x4d
     }
 
-    /** Outcome of a name lookup against a single server. */
-    sealed class LookupOutcome {
-        data class Found(
-            val result: NameShowResult,
-        ) : LookupOutcome()
-
-        /** Server was reachable but the name does not exist (or has expired). */
-        data class NameNotFound(
-            val name: String,
-        ) : LookupOutcome()
-
-        /** Could not connect / communicate with this server. */
-        data class ServerError(
-            val server: ElectrumxServer,
-            val message: String,
-        ) : LookupOutcome()
-    }
-
     /**
      * Perform a name_show lookup against the given ElectrumX server.
      *
      * Uses the scripthash-based approach: computes the name's canonical
      * index script hash, queries transaction history, and parses the
      * name value from the latest transaction's output script.
+     *
+     * @param identifier Full Namecoin name, e.g. "d/example" or "id/alice"
+     * @param server     ElectrumX server to query
+     * @return [NameShowResult] on success, null if the name does not exist
+     *         or the server is unreachable
      */
     suspend fun nameShow(
         identifier: String,
-        server: ElectrumxServer = DEFAULT_SERVERS.first(),
-    ): LookupOutcome =
+        server: ElectrumxServer = DEFAULT_ELECTRUMX_SERVERS.first(),
+    ): NameShowResult? =
         withContext(Dispatchers.IO) {
+            val mutex = serverMutexes.getOrPut("${server.host}:${server.port}") { Mutex() }
             mutex.withLock {
                 try {
                     connectAndQuery(identifier, server)
+                } catch (e: NamecoinLookupException) {
+                    // Propagate name-not-found and expired — these are definitive answers.
+                    throw e
                 } catch (e: Exception) {
-                    LookupOutcome.ServerError(server, e.message ?: e.javaClass.simpleName)
+                    // Log but don't crash — callers handle null gracefully.
+                    e.printStackTrace()
+                    null
                 }
             }
         }
 
     /**
      * Try each server in order until one succeeds.
+     *
+     * @param identifier Full Namecoin name, e.g. "d/example"
+     * @param servers    Ordered server list to try; defaults to [DEFAULT_ELECTRUMX_SERVERS]
+     * @throws NamecoinLookupException.NameNotFound if the name definitively doesn't exist
+     * @throws NamecoinLookupException.NameExpired if the name has expired
+     * @throws NamecoinLookupException.ServersUnreachable if all servers failed with connection errors
      */
-    suspend fun nameShowWithFallback(
+    override suspend fun nameShowWithFallback(
         identifier: String,
-        servers: List<ElectrumxServer> = DEFAULT_SERVERS,
-    ): LookupOutcome {
-        val serverErrors = mutableListOf<LookupOutcome.ServerError>()
+        servers: List<ElectrumxServer>,
+    ): NameShowResult? {
+        var lastError: Exception? = null
         for (server in servers) {
-            when (val outcome = nameShow(identifier, server)) {
-                is LookupOutcome.Found -> return outcome
-                is LookupOutcome.NameNotFound -> return outcome
-                is LookupOutcome.ServerError -> serverErrors.add(outcome)
+            try {
+                val result = nameShow(identifier, server)
+                if (result != null) return result
+            } catch (e: NamecoinLookupException.NameNotFound) {
+                throw e // Definitive answer from blockchain — no point trying other servers
+            } catch (e: NamecoinLookupException.NameExpired) {
+                throw e // Definitive answer
+            } catch (e: Exception) {
+                lastError = e // Server error — try next server
             }
         }
-        return serverErrors.firstOrNull()
-            ?: LookupOutcome.ServerError(DEFAULT_SERVERS.first(), "No servers configured")
+        throw NamecoinLookupException.ServersUnreachable(lastError)
     }
 
     // ── internals ──────────────────────────────────────────────────────
@@ -204,7 +171,7 @@ class ElectrumxClient(
     private fun connectAndQuery(
         identifier: String,
         server: ElectrumxServer,
-    ): LookupOutcome {
+    ): NameShowResult? {
         val socket = createSocket(server)
         socket.soTimeout = readTimeoutMs.toInt()
         val writer = PrintWriter(socket.getOutputStream(), true)
@@ -223,13 +190,9 @@ class ElectrumxClient(
             // 3. Get transaction history for this name
             val historyReq = buildRpcRequest("blockchain.scripthash.get_history", listOf(scriptHash))
             writer.println(historyReq)
-            val historyResponse =
-                reader.readLine()
-                    ?: return LookupOutcome.ServerError(server, "Empty response for history query")
-            val historyEntries =
-                parseHistoryResponse(historyResponse)
-                    ?: return LookupOutcome.ServerError(server, "Malformed history response")
-            if (historyEntries.isEmpty()) return LookupOutcome.NameNotFound(identifier)
+            val historyResponse = reader.readLine() ?: return null
+            val historyEntries = parseHistoryResponse(historyResponse) ?: return null
+            if (historyEntries.isEmpty()) throw NamecoinLookupException.NameNotFound(identifier)
 
             // 4. Get the latest transaction (last entry = most recent update)
             val latestEntry = historyEntries.last()
@@ -238,9 +201,7 @@ class ElectrumxClient(
 
             val txReq = buildRpcRequest("blockchain.transaction.get", listOf(txHash, true))
             writer.println(txReq)
-            val txResponse =
-                reader.readLine()
-                    ?: return LookupOutcome.ServerError(server, "Empty response for transaction query")
+            val txResponse = reader.readLine() ?: return null
 
             // 5. Get current block height to check name expiry
             val headersReq = buildRpcRequest("blockchain.headers.subscribe", emptyList<String>())
@@ -252,23 +213,18 @@ class ElectrumxClient(
             if (currentHeight != null && height > 0) {
                 val blocksSinceUpdate = currentHeight - height
                 if (blocksSinceUpdate >= NAME_EXPIRE_DEPTH) {
-                    return LookupOutcome.NameNotFound(identifier) // Name has expired
+                    throw NamecoinLookupException.NameExpired(identifier)
                 }
             }
 
             // 7. Parse the name value from the transaction
-            val result =
-                parseNameFromTransaction(identifier, txHash, height, txResponse)
-                    ?: return LookupOutcome.NameNotFound(identifier)
-
+            val result = parseNameFromTransaction(identifier, txHash, height, txResponse)
             // Populate expiresIn if we know the current height
-            val finalResult =
-                if (currentHeight != null && height > 0) {
-                    result.copy(expiresIn = NAME_EXPIRE_DEPTH - (currentHeight - height))
-                } else {
-                    result
-                }
-            return LookupOutcome.Found(finalResult)
+            return if (result != null && currentHeight != null && height > 0) {
+                result.copy(expiresIn = NAME_EXPIRE_DEPTH - (currentHeight - height))
+            } else {
+                result
+            }
         } finally {
             runCatching { writer.close() }
             runCatching { reader.close() }
@@ -326,6 +282,8 @@ class ElectrumxClient(
 
     /**
      * Parse the block height from a `blockchain.headers.subscribe` response.
+     *
+     * Response format: {"result": {"height": 814300, "hex": "..."}, ...}
      */
     private fun parseBlockHeight(raw: String?): Int? {
         if (raw == null) return null
@@ -344,7 +302,7 @@ class ElectrumxClient(
     private fun parseHistoryResponse(raw: String): List<Pair<String, Int>>? {
         val envelope = json.parseToJsonElement(raw).jsonObject
         val error = envelope["error"]
-        if (error != null && error !is kotlinx.serialization.json.JsonNull) return null
+        if (error != null && error !is JsonNull) return null
 
         val result = envelope["result"]?.jsonArray ?: return null
         return result.mapNotNull { entry ->
@@ -369,7 +327,7 @@ class ElectrumxClient(
     ): NameShowResult? {
         val envelope = json.parseToJsonElement(raw).jsonObject
         val error = envelope["error"]
-        if (error != null && error !is kotlinx.serialization.json.JsonNull) return null
+        if (error != null && error !is JsonNull) return null
 
         val result = envelope["result"]?.jsonObject ?: return null
         val vouts = result["vout"]?.jsonArray ?: return null
@@ -407,6 +365,8 @@ class ElectrumxClient(
      * Parse a NAME_UPDATE script to extract the name and value.
      *
      * Script format: OP_NAME_UPDATE <push(name)> <push(value)> OP_2DROP OP_DROP <address_script>
+     *
+     * @return Pair of (name, value) as strings, or null if parsing fails
      */
     private fun parseNameScript(script: ByteArray): Pair<String, String>? {
         if (script.isEmpty() || script[0] != OP_NAME_UPDATE) return null
@@ -427,6 +387,8 @@ class ElectrumxClient(
 
     /**
      * Read a push-data encoded byte sequence from the script at the given position.
+     *
+     * @return Pair of (data, nextPosition), or null if the script is malformed
      */
     private fun readPushData(
         script: ByteArray,
@@ -437,16 +399,19 @@ class ElectrumxClient(
         val opcode = script[pos].toInt() and 0xff
         return when {
             opcode == 0 -> {
+                // OP_0 / push empty
                 byteArrayOf() to (pos + 1)
             }
 
             opcode < 0x4c -> {
+                // Direct push: opcode is the length
                 val end = pos + 1 + opcode
                 if (end > script.size) return null
                 script.copyOfRange(pos + 1, end) to end
             }
 
             opcode == 0x4c -> {
+                // OP_PUSHDATA1: next byte is length
                 if (pos + 2 > script.size) return null
                 val len = script[pos + 1].toInt() and 0xff
                 val end = pos + 2 + len
@@ -455,6 +420,7 @@ class ElectrumxClient(
             }
 
             opcode == 0x4d -> {
+                // OP_PUSHDATA2: next 2 bytes are length (little-endian)
                 if (pos + 3 > script.size) return null
                 val len =
                     (script[pos + 1].toInt() and 0xff) or
@@ -484,6 +450,8 @@ class ElectrumxClient(
     }
 
     private fun createSocket(server: ElectrumxServer): Socket {
+        // Create the base socket through the injected factory, which
+        // may route through a SOCKS proxy (e.g. Tor) if configured.
         val baseSocket =
             socketFactory().createSocket().apply {
                 connect(InetSocketAddress(server.host, server.port), connectTimeoutMs.toInt())
@@ -491,6 +459,7 @@ class ElectrumxClient(
 
         if (!server.useSsl) return baseSocket
 
+        // Upgrade to TLS over the already-connected (possibly proxied) socket.
         val sslFactory =
             if (server.trustAllCerts) {
                 trustAllSslFactory()
@@ -500,25 +469,29 @@ class ElectrumxClient(
         return sslFactory.createSocket(baseSocket, server.host, server.port, true)
     }
 
+    /**
+     * Create an SSLSocketFactory that accepts any certificate.
+     * Used for servers with self-signed certificates.
+     */
     private fun trustAllSslFactory(): SSLSocketFactory {
         val trustAllCerts =
             arrayOf<TrustManager>(
                 object : X509TrustManager {
                     override fun checkClientTrusted(
-                        chain: Array<java.security.cert.X509Certificate>,
+                        chain: Array<X509Certificate>,
                         authType: String,
                     ) {}
 
                     override fun checkServerTrusted(
-                        chain: Array<java.security.cert.X509Certificate>,
+                        chain: Array<X509Certificate>,
                         authType: String,
                     ) {}
 
-                    override fun getAcceptedIssuers(): Array<java.security.cert.X509Certificate> = arrayOf()
+                    override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
                 },
             )
         val sslContext = SSLContext.getInstance("TLS")
-        sslContext.init(null, trustAllCerts, java.security.SecureRandom())
+        sslContext.init(null, trustAllCerts, SecureRandom())
         return sslContext.socketFactory
     }
 
@@ -535,8 +508,8 @@ class ElectrumxClient(
                 put(
                     "params",
                     json.encodeToJsonElement(
-                        kotlinx.serialization.builtins.ListSerializer(
-                            kotlinx.serialization.json.JsonElement
+                        ListSerializer(
+                            JsonElement
                                 .serializer(),
                         ),
                         params.map {

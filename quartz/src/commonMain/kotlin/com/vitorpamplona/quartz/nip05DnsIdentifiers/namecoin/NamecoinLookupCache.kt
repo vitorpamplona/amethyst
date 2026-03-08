@@ -18,43 +18,57 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip05.namecoin
+package com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin
 
+import androidx.collection.LruCache
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 data class CachedResult(
     val result: NamecoinNostrResult?,
-    val timestamp: Long = System.currentTimeMillis(),
+    val timestamp: Long = TimeUtils.now(),
 )
 
 class NamecoinLookupCache(
     private val maxEntries: Int = 500,
-    private val ttlMs: Long = 3_600_000L,
+    private val ttlSecs: Long = 3_600L, // 1 hour
 ) {
-    private val cache = LinkedHashMap<String, CachedResult>(maxEntries, 0.75f, true)
+    private val cache = LruCache<String, CachedResult>(maxEntries)
     private val mutex = Mutex()
 
-    private fun key(id: String) = id.trim().lowercase()
+    /**
+     * Normalised cache key from the user's raw input.
+     */
+    private fun cacheKey(identifier: String): String = identifier.trim().lowercase()
 
-    suspend fun get(id: String): CachedResult? =
+    suspend fun get(identifier: String): CachedResult? =
         mutex.withLock {
-            val e = cache[key(id)] ?: return null
-            if (System.currentTimeMillis() - e.timestamp > ttlMs) {
-                cache.remove(key(id))
+            val key = cacheKey(identifier)
+            val entry = cache[key] ?: return null
+            val age = TimeUtils.now() - entry.timestamp
+            if (age > ttlSecs) {
+                cache.remove(key)
                 return null
             }
-            e
+            return entry
         }
 
     suspend fun put(
-        id: String,
+        identifier: String,
         result: NamecoinNostrResult?,
     ) = mutex.withLock {
-        val k = key(id)
-        if (cache.size >= maxEntries) cache.entries.firstOrNull()?.let { cache.remove(it.key) }
-        cache[k] = CachedResult(result)
+        val key = cacheKey(identifier)
+        cache.put(key, CachedResult(result))
     }
 
-    suspend fun clear() = mutex.withLock { cache.clear() }
+    suspend fun invalidate(identifier: String) =
+        mutex.withLock {
+            cache.remove(cacheKey(identifier))
+        }
+
+    suspend fun clear() =
+        mutex.withLock {
+            cache.evictAll()
+        }
 }

@@ -20,9 +20,10 @@
  */
 package com.vitorpamplona.amethyst.service.followimport
 
-import com.vitorpamplona.amethyst.service.namecoin.NamecoinNameService
-import com.vitorpamplona.quartz.nip05.namecoin.NamecoinNameResolver
-import com.vitorpamplona.quartz.nip05.namecoin.NamecoinResolveOutcome
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinResolveOutcome
+import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -77,8 +78,13 @@ data class Kind3EventData(
  *   2. Hex pubkey (64 hex chars)
  *   3. npub1... (NIP-19 bech32)
  *   4. NIP-05 (user@domain) → HTTP /.well-known/nostr.json
+ *
+ * @param resolveNamecoin Optional Namecoin resolver. When provided, .bit/d//id/ identifiers
+ *   will be resolved via ElectrumX. Pass `namecoinNameResolver::resolveDetailed`.
  */
-class FollowListImporter {
+class FollowListImporter(
+    private val resolveNamecoin: (suspend (String) -> NamecoinResolveOutcome)? = null,
+) {
     companion object {
         const val KIND_CONTACT_LIST = 3
         const val DEFAULT_TIMEOUT_MS = 15_000L
@@ -98,8 +104,8 @@ class FollowListImporter {
         val trimmed = identifier.trim()
 
         // ── 1. Namecoin ────────────────────────────────────────────────
-        if (NamecoinNameResolver.isNamecoinIdentifier(trimmed)) {
-            val outcome = NamecoinNameService.getInstance().resolveDetailed(trimmed)
+        if (resolveNamecoin != null && NamecoinNameResolver.isNamecoinIdentifier(trimmed)) {
+            val outcome = resolveNamecoin.invoke(trimmed)
             return when (outcome) {
                 is NamecoinResolveOutcome.Success -> {
                     ResolvedIdentifier(outcome.result.pubkey, namecoinSource = trimmed)
@@ -107,7 +113,7 @@ class FollowListImporter {
 
                 else -> {
                     null
-                } // Detailed error handled by resolveIdentifierDetailed
+                }
             }
         }
 
@@ -118,9 +124,16 @@ class FollowListImporter {
 
         // ── 3. NIP-19 npub ────────────────────────────────────────────
         if (trimmed.startsWith(NPUB_PREFIX, ignoreCase = true)) {
-            val hex = Bech32Util.decodeNpub(trimmed)
-            if (hex != null) return ResolvedIdentifier(hex)
-            return null
+            return try {
+                val bytes = trimmed.bechToBytes()
+                if (bytes.size == 32) {
+                    ResolvedIdentifier(bytes.toHexKey())
+                } else {
+                    null
+                }
+            } catch (_: Exception) {
+                null
+            }
         }
 
         // ── 4. NIP-05 (HTTP) ──────────────────────────────────────────
@@ -153,9 +166,9 @@ class FollowListImporter {
             val resolved = resolveIdentifier(identifier, resolveNip05)
             if (resolved == null) {
                 val msg =
-                    if (NamecoinNameResolver.isNamecoinIdentifier(identifier)) {
+                    if (resolveNamecoin != null && NamecoinNameResolver.isNamecoinIdentifier(identifier)) {
                         // Get detailed outcome for specific error message
-                        val outcome = NamecoinNameService.getInstance().resolveDetailed(identifier)
+                        val outcome = resolveNamecoin.invoke(identifier)
                         when (outcome) {
                             is NamecoinResolveOutcome.NameNotFound -> {
                                 "Namecoin name \"$identifier\" does not exist on the blockchain. " +
@@ -242,52 +255,3 @@ data class ResolvedIdentifier(
     val pubkeyHex: String,
     val namecoinSource: String? = null,
 )
-
-/**
- * Minimal Bech32 utility for npub decoding.
- * In production, replace with Quartz's bechToBytes()/toHexKey().
- */
-internal object Bech32Util {
-    private const val CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l"
-
-    fun decodeNpub(npub: String): String? {
-        if (!npub.startsWith("npub1", ignoreCase = true)) return null
-        val lower = npub.lowercase()
-        val hrpEnd = lower.lastIndexOf('1')
-        if (hrpEnd < 1) return null
-        val data = lower.substring(hrpEnd + 1).map { CHARSET.indexOf(it) }
-        if (data.any { it == -1 }) return null
-        val payload = data.dropLast(6)
-        if (payload.isEmpty()) return null
-        val bytes = convertBits(payload, 5, 8, false) ?: return null
-        if (bytes.size != 32) return null
-        return bytes.joinToString("") { "%02x".format(it) }
-    }
-
-    private fun convertBits(
-        data: List<Int>,
-        from: Int,
-        to: Int,
-        pad: Boolean,
-    ): List<Int>? {
-        var acc = 0
-        var bits = 0
-        val result = mutableListOf<Int>()
-        val maxV = (1 shl to) - 1
-        for (v in data) {
-            if (v < 0 || v shr from != 0) return null
-            acc = (acc shl from) or v
-            bits += from
-            while (bits >= to) {
-                bits -= to
-                result.add((acc shr bits) and maxV)
-            }
-        }
-        if (pad) {
-            if (bits > 0) result.add((acc shl (to - bits)) and maxV)
-        } else if (bits >= from || (acc shl (to - bits)) and maxV != 0) {
-            return null
-        }
-        return result
-    }
-}

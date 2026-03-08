@@ -26,6 +26,8 @@ import com.vitorpamplona.amethyst.service.followimport.FollowEntry
 import com.vitorpamplona.amethyst.service.followimport.FollowListImporter
 import com.vitorpamplona.amethyst.service.followimport.FollowListResult
 import com.vitorpamplona.amethyst.service.followimport.Kind3EventData
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumXClient
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -67,7 +69,8 @@ sealed class ImportFollowState {
 }
 
 class ImportFollowListViewModel : ViewModel() {
-    private val importer = FollowListImporter()
+    private val namecoinResolver = NamecoinNameResolver(electrumxClient = ElectrumXClient())
+    private val importer = FollowListImporter(resolveNamecoin = namecoinResolver::resolveDetailed)
     private val _state = MutableStateFlow<ImportFollowState>(ImportFollowState.Idle)
     val state: StateFlow<ImportFollowState> = _state.asStateFlow()
 
