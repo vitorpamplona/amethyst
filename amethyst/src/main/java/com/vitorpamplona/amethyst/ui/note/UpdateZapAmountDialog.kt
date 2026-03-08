@@ -65,12 +65,11 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.AddCircle
 import androidx.compose.material.icons.outlined.ContentPaste
 import androidx.compose.material.icons.outlined.RadioButtonUnchecked
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -97,13 +96,16 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.keyBackup.getFragmentActivity
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.SimpleQrCodeScanner
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
@@ -112,10 +114,29 @@ import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
 import com.vitorpamplona.amethyst.ui.theme.SettingsCategoryFirstModifier
 import com.vitorpamplona.amethyst.ui.theme.SettingsCategorySpacingModifier
+import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size24Modifier
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import kotlinx.collections.immutable.toImmutableList
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+@Preview(device = "spec:width=1900px,height=2340px,dpi=440")
+fun UpdateZapAmountContentPreview() {
+    val accountViewModel = mockAccountViewModel()
+    val vm: UpdateZapAmountViewModel = viewModel()
+    vm.init(accountViewModel)
+
+    ThemeComparisonRow {
+        UpdateZapAmountContent(
+            postViewModel = vm,
+            onClose = {},
+            accountViewModel = accountViewModel,
+        )
+    }
+}
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -208,7 +229,7 @@ fun UpdateZapAmountContent(
             text = stringRes(R.string.quick_zap_amounts_explainer),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.placeholderText,
-            modifier = Modifier.padding(bottom = 12.dp),
+            modifier = Modifier.padding(bottom = 6.dp),
         )
 
         // Amount chips — animateContentSize gives a smooth expand/collapse when
@@ -247,7 +268,7 @@ fun UpdateZapAmountContent(
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(6.dp))
 
         // Add new amount
         Row(
@@ -270,26 +291,22 @@ fun UpdateZapAmountContent(
                         color = MaterialTheme.colorScheme.placeholderText,
                     )
                 },
+                trailingIcon = {
+                    IconButton(
+                        onClick = postViewModel::addAmount,
+                        shape = ButtonBorder,
+                        enabled = postViewModel.nextAmount.text.isNotBlank(),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.AddCircle,
+                            contentDescription = stringRes(R.string.add),
+                            modifier = Size20Modifier,
+                        )
+                    }
+                },
                 singleLine = true,
                 modifier = Modifier.weight(1f),
             )
-
-            Button(
-                onClick = { postViewModel.addAmount() },
-                shape = ButtonBorder,
-                colors =
-                    ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                    ),
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Add,
-                    contentDescription = stringRes(R.string.add),
-                    modifier = Modifier.size(18.dp),
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(text = stringRes(R.string.add), color = Color.White)
-            }
         }
 
         // ── Section 2: Zap Privacy ────────────────────────────────────────────
