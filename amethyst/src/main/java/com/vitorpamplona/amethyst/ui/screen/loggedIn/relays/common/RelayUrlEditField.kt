@@ -43,6 +43,10 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
@@ -55,12 +59,20 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 @Composable
 fun RelayUrlEditFieldPreview() {
     ThemeComparisonColumn {
-        RelayUrlEditField {}
+        RelayUrlEditField(
+            onNewRelay = {},
+            accountViewModel = mockAccountViewModel(),
+            nav = EmptyNav(),
+        )
     }
 }
 
 @Composable
-fun RelayUrlEditField(onNewRelay: (NormalizedRelayUrl) -> Unit) {
+fun RelayUrlEditField(
+    onNewRelay: (NormalizedRelayUrl) -> Unit,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
     var url by remember { mutableStateOf("") }
     val relaySuggestions = remember { RelaySuggestionState() }
 
@@ -129,6 +141,8 @@ fun RelayUrlEditField(onNewRelay: (NormalizedRelayUrl) -> Unit) {
                 url = relay.url
                 relaySuggestions.reset()
             },
+            accountViewModel = accountViewModel,
+            nav = nav,
         )
     }
 }

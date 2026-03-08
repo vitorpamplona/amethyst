@@ -228,7 +228,11 @@ private fun ChannelMetadataScaffold(
             }
 
             item {
-                RelayUrlEditField { postViewModel.addHomeRelay(relaySetupInfoBuilder(it)) }
+                RelayUrlEditField(
+                    onNewRelay = { postViewModel.addHomeRelay(relaySetupInfoBuilder(it)) },
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
 
                 Spacer(modifier = DoubleVertSpacer)
             }

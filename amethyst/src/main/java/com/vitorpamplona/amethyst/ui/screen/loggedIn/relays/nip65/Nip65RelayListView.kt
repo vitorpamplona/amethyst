@@ -118,7 +118,11 @@ fun LazyListScope.renderNip65HomeItems(
 
     item {
         Spacer(modifier = StdVertSpacer)
-        RelayUrlEditField { postViewModel.addHomeRelay(relaySetupInfoBuilder(it)) }
+        RelayUrlEditField(
+            onNewRelay = { postViewModel.addHomeRelay(relaySetupInfoBuilder(it)) },
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
     }
 }
 
@@ -139,6 +143,10 @@ fun LazyListScope.renderNip65NotifItems(
 
     item {
         Spacer(modifier = StdVertSpacer)
-        RelayUrlEditField { postViewModel.addNotifRelay(relaySetupInfoBuilder(it)) }
+        RelayUrlEditField(
+            onNewRelay = { postViewModel.addNotifRelay(relaySetupInfoBuilder(it)) },
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
     }
 }

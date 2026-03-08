@@ -75,6 +75,10 @@ fun LazyListScope.renderDMItems(
 
     item {
         Spacer(modifier = StdVertSpacer)
-        RelayUrlEditField { postViewModel.addRelay(relaySetupInfoBuilder(it)) }
+        RelayUrlEditField(
+            onNewRelay = { postViewModel.addRelay(relaySetupInfoBuilder(it)) },
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
     }
 }

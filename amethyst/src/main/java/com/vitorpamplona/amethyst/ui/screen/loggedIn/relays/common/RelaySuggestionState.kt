@@ -44,7 +44,8 @@ class RelaySuggestionState {
                     val lower = input.lowercase()
                     LocalCache.relayHints.relayDB
                         .filter { _, relay -> relay.url.contains(lower) }
-                        .sortedBy { it.url }
+                        .map { relaySetupInfoBuilder(it) }
+                        .sortedByDescending { it.relayStat.receivedBytes }
                         .take(20)
                 } else {
                     emptyList()
