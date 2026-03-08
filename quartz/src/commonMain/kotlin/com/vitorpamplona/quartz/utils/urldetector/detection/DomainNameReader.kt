@@ -145,7 +145,6 @@ class DomainNameReader(
     var isIpV6 = false
         private set
 
-
     /**
      * Reads and parses the current string to make sure the domain name started where it was supposed to,
      * and the current domain name is correct.
