@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumxServer
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinLookupCache
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNostrResult
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinResolveOutcome
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -76,6 +77,17 @@ class NamecoinNameService(
         cache.put(identifier, result)
         return result
     }
+
+    /**
+     * Resolve and return just the hex pubkey, or null.
+     * Convenience for follow-import integration.
+     */
+    suspend fun resolvePubkey(identifier: String): String? = resolve(identifier)?.pubkey
+
+    /**
+     * Resolve with detailed outcome for error reporting.
+     */
+    suspend fun resolveDetailed(identifier: String): NamecoinResolveOutcome = resolver.resolveDetailed(identifier)
 
     /**
      * Verify that a Namecoin name maps to the expected pubkey.
