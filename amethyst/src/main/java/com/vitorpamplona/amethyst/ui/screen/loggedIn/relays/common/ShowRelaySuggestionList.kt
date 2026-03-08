@@ -27,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.model.nip11RelayInfo.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
@@ -34,9 +35,10 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 @Composable
 fun ShowRelaySuggestionList(
-    relaySuggestions: RelaySuggestionState,
+    relaySuggestions: IRelaySuggestionState,
     onSelect: (NormalizedRelayUrl) -> Unit,
     modifier: Modifier = Modifier,
+    nip11CachedRetriever: Nip11CachedRetriever,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -51,6 +53,7 @@ fun ShowRelaySuggestionList(
                     loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
                     onClick = { onSelect(relayInfo.relay) },
                     onDelete = null,
+                    nip11CachedRetriever = nip11CachedRetriever,
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )

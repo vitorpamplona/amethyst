@@ -37,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.nip11RelayInfo.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.RenderRelayIcon
@@ -61,6 +62,7 @@ fun BasicRelaySetupInfoClickableRow(
     loadRobohash: Boolean,
     onDelete: ((BasicRelaySetupInfo) -> Unit)?,
     onClick: () -> Unit,
+    nip11CachedRetriever: Nip11CachedRetriever,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -79,7 +81,7 @@ fun BasicRelaySetupInfoClickableRow(
             verticalAlignment = Alignment.CenterVertically,
             modifier = HalfVertPadding,
         ) {
-            val iconUrlFromRelayInfoDoc by loadRelayInfo(item.relay)
+            val iconUrlFromRelayInfoDoc by loadRelayInfo(item.relay, nip11CachedRetriever)
 
             RenderRelayIcon(
                 iconUrlFromRelayInfoDoc.id ?: item.relay.displayUrl(),
