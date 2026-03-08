@@ -1117,6 +1117,9 @@ fun ZapReaction(
                                     nav.nav(Route.ManualZapSplitPayment(uid))
                                 }
                             },
+                            onCustomAmount = {
+                                wantsToSetCustomZap = true
+                            },
                         )
                     }
                 },
@@ -1248,6 +1251,7 @@ fun zapClick(
     onZapStarts: () -> Unit,
     onZappingProgress: (Float) -> Unit,
     onMultipleChoices: () -> Unit,
+    onCustomAmount: () -> Unit,
     onError: (String, String, User?) -> Unit,
     onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
 ) {
@@ -1262,10 +1266,7 @@ fun zapClick(
     val choices = accountViewModel.zapAmountChoices()
 
     if (choices.isEmpty()) {
-        accountViewModel.toastManager.toast(
-            R.string.error_dialog_zap_error,
-            R.string.no_zap_amount_setup_long_press_to_change,
-        )
+        onCustomAmount()
     } else if (!accountViewModel.isWriteable()) {
         accountViewModel.toastManager.toast(
             R.string.error_dialog_zap_error,
