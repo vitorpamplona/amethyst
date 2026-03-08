@@ -54,6 +54,8 @@ data class ElectrumxServer(
     val host: String,
     val port: Int,
     val useSsl: Boolean = true,
+    /** If true, accept any certificate (self-signed, expired, etc.) */
+    val trustAllCerts: Boolean = false,
 )
 
 class ElectrumxClient(
@@ -71,10 +73,25 @@ class ElectrumxClient(
     companion object {
         val DEFAULT_SERVERS =
             listOf(
-                ElectrumxServer("ulrichard.ch", 50006, useSsl = true),
-                ElectrumxServer("nmc2.lelux.fi", 50006, useSsl = true),
+                ElectrumxServer("electrumx.testls.space", 50002, useSsl = true, trustAllCerts = true),
+                ElectrumxServer("nmc2.bitcoins.sk", 57002, useSsl = true, trustAllCerts = true),
+                ElectrumxServer("46.229.238.187", 57002, useSsl = true, trustAllCerts = true),
             )
-        private const val PROTOCOL_VERSION = "1.4.3"
+
+        /** Tor-preferred server list: onion primary, clearnet fallback. */
+        val TOR_SERVERS =
+            listOf(
+                ElectrumxServer(
+                    "i665jpwsq46zlsdbnj4axgzd3s56uzey5uhotsnxzsknzbn36jaddsid.onion",
+                    50002,
+                    useSsl = true,
+                    trustAllCerts = true,
+                ),
+                ElectrumxServer("electrumx.testls.space", 50002, useSsl = true, trustAllCerts = true),
+                ElectrumxServer("nmc2.bitcoins.sk", 57002, useSsl = true, trustAllCerts = true),
+            )
+
+        private const val PROTOCOL_VERSION = "1.4"
     }
 
     /** Outcome of a name lookup against a single server. */
@@ -151,7 +168,12 @@ class ElectrumxClient(
 
     private fun createSocket(server: ElectrumxServer): Socket =
         if (server.useSsl) {
-            val factory = SSLSocketFactory.getDefault() as SSLSocketFactory
+            val factory =
+                if (server.trustAllCerts) {
+                    trustAllSslSocketFactory()
+                } else {
+                    SSLSocketFactory.getDefault() as SSLSocketFactory
+                }
             factory.createSocket().apply {
                 connect(InetSocketAddress(server.host, server.port), connectTimeoutMs.toInt())
             }
@@ -160,6 +182,30 @@ class ElectrumxClient(
                 connect(InetSocketAddress(server.host, server.port), connectTimeoutMs.toInt())
             }
         }
+
+    private fun trustAllSslSocketFactory(): SSLSocketFactory {
+        val trustAllCerts =
+            arrayOf<javax.net.ssl.TrustManager>(
+                object : javax.net.ssl.X509TrustManager {
+                    override fun checkClientTrusted(
+                        chain: Array<java.security.cert.X509Certificate>,
+                        authType: String,
+                    ) {}
+
+                    override fun checkServerTrusted(
+                        chain: Array<java.security.cert.X509Certificate>,
+                        authType: String,
+                    ) {}
+
+                    override fun getAcceptedIssuers(): Array<java.security.cert.X509Certificate> = arrayOf()
+                },
+            )
+        val sc =
+            javax.net.ssl.SSLContext
+                .getInstance("TLS")
+        sc.init(null, trustAllCerts, java.security.SecureRandom())
+        return sc.socketFactory
+    }
 
     private fun buildRpcRequest(
         method: String,
