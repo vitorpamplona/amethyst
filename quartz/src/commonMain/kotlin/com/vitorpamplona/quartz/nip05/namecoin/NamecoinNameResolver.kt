@@ -1,14 +1,22 @@
-/**
- * NamecoinNameResolver.kt
+/*
+ * Copyright (c) 2025 Vitor Pamplona
  *
- * Resolves Namecoin names in the d/ (domain) and id/ (identity) namespaces
- * to Nostr public keys (hex-encoded 32-byte Schnorr pubkeys).
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
  *
- * Value format in Namecoin:
- *   Simple:   {"nostr":"<hex-pubkey>"}
- *   Extended: {"nostr":{"names":{"_":"<hex>","alice":"<hex>"},"relays":{...}}}
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
  *
- * SPDX-License-Identifier: MIT
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 package com.vitorpamplona.quartz.nip05.namecoin
 
@@ -18,7 +26,6 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 
 data class NamecoinNostrResult(
     val pubkey: String,
@@ -31,7 +38,11 @@ class NamecoinNameResolver(
     private val electrumxClient: ElectrumxClient = ElectrumxClient(),
     private val lookupTimeoutMs: Long = 20_000L,
 ) {
-    private val json = Json { ignoreUnknownKeys = true; isLenient = true }
+    private val json =
+        Json {
+            ignoreUnknownKeys = true
+            isLenient = true
+        }
 
     companion object {
         private val HEX_PUBKEY_REGEX = Regex("^[0-9a-fA-F]{64}$")
@@ -49,15 +60,22 @@ class NamecoinNameResolver(
 
     // ── Parsing ────────────────────────────────────────────────────────
 
-    private data class ParsedId(val namecoinName: String, val localPart: String, val ns: NS)
+    private data class ParsedId(
+        val namecoinName: String,
+        val localPart: String,
+        val ns: NS,
+    )
+
     private enum class NS { DOMAIN, IDENTITY }
 
     private fun parseIdentifier(raw: String): ParsedId? {
         val input = raw.trim()
-        if (input.startsWith("d/", ignoreCase = true))
+        if (input.startsWith("d/", ignoreCase = true)) {
             return ParsedId(input.lowercase(), "_", NS.DOMAIN)
-        if (input.startsWith("id/", ignoreCase = true))
+        }
+        if (input.startsWith("id/", ignoreCase = true)) {
             return ParsedId(input.lowercase(), "_", NS.IDENTITY)
+        }
         if (input.contains("@") && input.endsWith(".bit", ignoreCase = true)) {
             val parts = input.split("@", limit = 2)
             if (parts.size != 2) return null
@@ -85,12 +103,16 @@ class NamecoinNameResolver(
         }
     }
 
-    private fun extractDomain(v: JsonObject, p: ParsedId): NamecoinNostrResult? {
+    private fun extractDomain(
+        v: JsonObject,
+        p: ParsedId,
+    ): NamecoinNostrResult? {
         val nf = v["nostr"] ?: return null
         if (nf is JsonPrimitive && nf.isString) {
             val pk = nf.content
-            if (p.localPart == "_" && isValid(pk))
+            if (p.localPart == "_" && isValid(pk)) {
                 return NamecoinNostrResult(pk.lowercase(), namecoinName = p.namecoinName)
+            }
             if (p.localPart != "_") return null
         }
         if (nf is JsonObject) {
@@ -103,7 +125,10 @@ class NamecoinNameResolver(
         return null
     }
 
-    private fun extractIdentity(v: JsonObject, p: ParsedId): NamecoinNostrResult? {
+    private fun extractIdentity(
+        v: JsonObject,
+        p: ParsedId,
+    ): NamecoinNostrResult? {
         val nf = v["nostr"] ?: return null
         if (nf is JsonPrimitive && nf.isString) {
             val pk = nf.content
@@ -112,27 +137,43 @@ class NamecoinNameResolver(
         if (nf is JsonObject) {
             val pk = (nf["pubkey"] as? JsonPrimitive)?.content
             if (pk != null && isValid(pk)) {
-                val relays = try {
-                    nf["relays"]?.jsonArray?.mapNotNull { (it as? JsonPrimitive)?.content } ?: emptyList()
-                } catch (_: Exception) { emptyList() }
+                val relays =
+                    try {
+                        nf["relays"]?.jsonArray?.mapNotNull { (it as? JsonPrimitive)?.content } ?: emptyList()
+                    } catch (_: Exception) {
+                        emptyList()
+                    }
                 return NamecoinNostrResult(pk.lowercase(), relays, p.namecoinName)
             }
             val names = nf["names"]?.jsonObject
             if (names != null) {
                 val rpk = (names["_"] as? JsonPrimitive)?.content
-                if (rpk != null && isValid(rpk))
+                if (rpk != null && isValid(rpk)) {
                     return NamecoinNostrResult(rpk.lowercase(), extractRelays(nf, rpk), p.namecoinName)
+                }
             }
         }
         return null
     }
 
-    private fun extractRelays(obj: JsonObject, pk: String): List<String> = try {
-        val m = obj["relays"]?.jsonObject ?: return emptyList()
-        val a = m[pk.lowercase()]?.jsonArray ?: m[pk]?.jsonArray ?: return emptyList()
-        a.mapNotNull { (it as? JsonPrimitive)?.content }
-    } catch (_: Exception) { emptyList() }
+    private fun extractRelays(
+        obj: JsonObject,
+        pk: String,
+    ): List<String> =
+        try {
+            val m = obj["relays"]?.jsonObject ?: return emptyList()
+            val a = m[pk.lowercase()]?.jsonArray ?: m[pk]?.jsonArray ?: return emptyList()
+            a.mapNotNull { (it as? JsonPrimitive)?.content }
+        } catch (_: Exception) {
+            emptyList()
+        }
 
-    private fun tryParseJson(raw: String): JsonObject? = try { json.parseToJsonElement(raw).jsonObject } catch (_: Exception) { null }
+    private fun tryParseJson(raw: String): JsonObject? =
+        try {
+            json.parseToJsonElement(raw).jsonObject
+        } catch (_: Exception) {
+            null
+        }
+
     private fun isValid(s: String) = HEX_PUBKEY_REGEX.matches(s)
 }

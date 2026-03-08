@@ -1,17 +1,22 @@
-/**
- * ImportFollowListScreen.kt
+/*
+ * Copyright (c) 2025 Vitor Pamplona
  *
- * Compose UI for the "follow everyone that X follows" feature.
- * Accepts npub, NIP-05, hex, AND Namecoin identifiers (.bit / d/ / id/).
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
  *
- * When a Namecoin identifier is used, the preview shows a chain-link
- * badge (⛓) indicating blockchain-verified resolution.
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
  *
- * Provides:
- *   ImportFollowListSection  — embeddable step for signup wizard
- *   ImportFollowListDialog   — standalone dialog for settings
- *
- * SPDX-License-Identifier: MIT
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 package com.vitorpamplona.amethyst.ui.screen.signup
 
@@ -92,9 +97,10 @@ fun ImportFollowListSection(
     val state by viewModel.state.collectAsState()
 
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(horizontal = 20.dp, vertical = 16.dp),
+        modifier =
+            modifier
+                .fillMaxSize()
+                .padding(horizontal = 20.dp, vertical = 16.dp),
     ) {
         ImportHeader()
         Spacer(Modifier.height(20.dp))
@@ -106,17 +112,37 @@ fun ImportFollowListSection(
 
         Box(modifier = Modifier.weight(1f)) {
             when (val s = state) {
-                is ImportFollowState.Idle -> IdleHint()
-                is ImportFollowState.Resolving -> LoadingIndicator("Resolving ${s.identifier}…")
-                is ImportFollowState.Fetching -> LoadingIndicator("Fetching follow list…")
-                is ImportFollowState.Preview -> PreviewList(
-                    state = s,
-                    onToggle = { viewModel.toggleSelection(it) },
-                    onSelectAll = { viewModel.setSelectAll(it) },
-                )
-                is ImportFollowState.Applying -> LoadingIndicator("Following ${s.count} accounts…")
-                is ImportFollowState.Done -> DoneMessage(s.count, onDone)
-                is ImportFollowState.Error -> ErrorMessage(s.message) { viewModel.reset() }
+                is ImportFollowState.Idle -> {
+                    IdleHint()
+                }
+
+                is ImportFollowState.Resolving -> {
+                    LoadingIndicator("Resolving ${s.identifier}…")
+                }
+
+                is ImportFollowState.Fetching -> {
+                    LoadingIndicator("Fetching follow list…")
+                }
+
+                is ImportFollowState.Preview -> {
+                    PreviewList(
+                        state = s,
+                        onToggle = { viewModel.toggleSelection(it) },
+                        onSelectAll = { viewModel.setSelectAll(it) },
+                    )
+                }
+
+                is ImportFollowState.Applying -> {
+                    LoadingIndicator("Following ${s.count} accounts…")
+                }
+
+                is ImportFollowState.Done -> {
+                    DoneMessage(s.count, onDone)
+                }
+
+                is ImportFollowState.Error -> {
+                    ErrorMessage(s.message) { viewModel.reset() }
+                }
             }
         }
 
@@ -156,7 +182,8 @@ private fun ImportHeader() {
     Column {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
-                Icons.Default.PersonAdd, contentDescription = null,
+                Icons.Default.PersonAdd,
+                contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(28.dp),
             )
@@ -177,7 +204,10 @@ private fun ImportHeader() {
 }
 
 @Composable
-private fun InputSection(enabled: Boolean, onLookup: (String) -> Unit) {
+private fun InputSection(
+    enabled: Boolean,
+    onLookup: (String) -> Unit,
+) {
     var identifier by rememberSaveable { mutableStateOf("") }
     val kb = LocalSoftwareKeyboardController.current
 
@@ -199,11 +229,18 @@ private fun InputSection(enabled: Boolean, onLookup: (String) -> Unit) {
                 )
             },
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
-            keyboardActions = KeyboardActions(onGo = { kb?.hide(); onLookup(identifier) }),
+            keyboardActions =
+                KeyboardActions(onGo = {
+                    kb?.hide()
+                    onLookup(identifier)
+                }),
         )
         Spacer(Modifier.height(8.dp))
         Button(
-            onClick = { kb?.hide(); onLookup(identifier) },
+            onClick = {
+                kb?.hide()
+                onLookup(identifier)
+            },
             enabled = enabled && identifier.isNotBlank(),
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
@@ -215,13 +252,17 @@ private fun InputSection(enabled: Boolean, onLookup: (String) -> Unit) {
 private fun IdleHint() {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(24.dp)) {
-            Text("Tip", style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
+            Text(
+                "Tip",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.primary,
+            )
             Spacer(Modifier.height(4.dp))
             Text(
                 "Enter the profile of a friend or community leader. " +
-                "You can use their npub, NIP-05 address, or a Namecoin name " +
-                "like alice@example.bit or id/alice for blockchain-verified identities.",
+                    "You can use their npub, NIP-05 address, or a Namecoin name " +
+                    "like alice@example.bit or id/alice for blockchain-verified identities.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -235,8 +276,11 @@ private fun LoadingIndicator(message: String) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             CircularProgressIndicator(Modifier.size(40.dp), strokeWidth = 3.dp)
             Spacer(Modifier.height(12.dp))
-            Text(message, style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
@@ -263,10 +307,16 @@ private fun PreviewList(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("${state.totalCount} accounts found",
-                style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-            Text("${state.selectedCount} selected",
-                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+            Text(
+                "${state.totalCount} accounts found",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                "${state.selectedCount} selected",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary,
+            )
         }
 
         // Select all
@@ -274,8 +324,10 @@ private fun PreviewList(
             Modifier.fillMaxWidth().clickable { onSelectAll(state.selectedCount < state.totalCount) }.padding(vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Checkbox(checked = state.selectedCount == state.totalCount,
-                onCheckedChange = { onSelectAll(it) })
+            Checkbox(
+                checked = state.selectedCount == state.totalCount,
+                onCheckedChange = { onSelectAll(it) },
+            )
             Spacer(Modifier.width(8.dp))
             Text("Select All", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
         }
@@ -296,17 +348,17 @@ private fun PreviewList(
 @Composable
 private fun NamecoinResolvedBadge(namecoinSource: String) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 6.dp)
-            .background(
-                color = Color(0xFF4A90D9).copy(alpha = 0.1f),
-                shape = RoundedCornerShape(8.dp),
-            )
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 6.dp)
+                .background(
+                    color = Color(0xFF4A90D9).copy(alpha = 0.1f),
+                    shape = RoundedCornerShape(8.dp),
+                ).padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text("\u26D3", fontSize = 16.sp)  // ⛓ chain link
+        Text("\u26D3", fontSize = 16.sp) // ⛓ chain link
         Spacer(Modifier.width(8.dp))
         Column {
             Text(
@@ -325,7 +377,11 @@ private fun NamecoinResolvedBadge(namecoinSource: String) {
 }
 
 @Composable
-private fun FollowEntryRow(entry: FollowEntry, isSelected: Boolean, onToggle: () -> Unit) {
+private fun FollowEntryRow(
+    entry: FollowEntry,
+    isSelected: Boolean,
+    onToggle: () -> Unit,
+) {
     Row(
         Modifier.fillMaxWidth().clickable(onClick = onToggle).padding(vertical = 6.dp, horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -333,8 +389,12 @@ private fun FollowEntryRow(entry: FollowEntry, isSelected: Boolean, onToggle: ()
         Icon(
             if (isSelected) Icons.Filled.CheckCircle else Icons.Outlined.Circle,
             contentDescription = null,
-            tint = if (isSelected) MaterialTheme.colorScheme.primary
-                   else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+            tint =
+                if (isSelected) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                },
             modifier = Modifier.size(22.dp),
         )
         Spacer(Modifier.width(10.dp))
@@ -342,8 +402,12 @@ private fun FollowEntryRow(entry: FollowEntry, isSelected: Boolean, onToggle: ()
             Modifier.size(32.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer),
             contentAlignment = Alignment.Center,
         ) {
-            Text(entry.pubkeyHex.take(2).uppercase(), fontSize = 12.sp,
-                fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+            Text(
+                entry.pubkeyHex.take(2).uppercase(),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
         }
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
@@ -351,43 +415,73 @@ private fun FollowEntryRow(entry: FollowEntry, isSelected: Boolean, onToggle: ()
                 entry.petname ?: shortPubkey(entry.pubkeyHex),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = if (entry.petname != null) FontWeight.Medium else FontWeight.Normal,
-                maxLines = 1, overflow = TextOverflow.Ellipsis,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
             if (entry.petname != null) {
-                Text(shortPubkey(entry.pubkeyHex), style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    shortPubkey(entry.pubkeyHex),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
             if (entry.relayHint != null) {
-                Text(entry.relayHint, style = MaterialTheme.typography.labelSmall,
+                Text(
+                    entry.relayHint,
+                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
     }
 }
 
 @Composable
-private fun DoneMessage(count: Int, onContinue: () -> Unit) {
+private fun DoneMessage(
+    count: Int,
+    onContinue: () -> Unit,
+) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(Icons.Filled.CheckCircle, contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(48.dp))
+            Icon(
+                Icons.Filled.CheckCircle,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(48.dp),
+            )
             Spacer(Modifier.height(12.dp))
-            Text("Now following $count accounts",
-                style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(
+                "Now following $count accounts",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
             Spacer(Modifier.height(6.dp))
-            Text("Your feed is ready.", style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                "Your feed is ready.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
 
 @Composable
-private fun ErrorMessage(message: String, onRetry: () -> Unit) {
+private fun ErrorMessage(
+    message: String,
+    onRetry: () -> Unit,
+) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(message, style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(horizontal = 16.dp))
+            Text(
+                message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(horizontal = 16.dp),
+            )
             Spacer(Modifier.height(12.dp))
             OutlinedButton(onClick = onRetry) { Text("Try Again") }
         }
@@ -396,29 +490,40 @@ private fun ErrorMessage(message: String, onRetry: () -> Unit) {
 
 @Composable
 private fun BottomActions(
-    state: ImportFollowState, onSkip: () -> Unit, onApply: () -> Unit, onDone: () -> Unit,
+    state: ImportFollowState,
+    onSkip: () -> Unit,
+    onApply: () -> Unit,
+    onDone: () -> Unit,
 ) {
     when (state) {
-        is ImportFollowState.Preview -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            TextButton(onClick = onSkip) { Text("Skip") }
-            Button(onClick = onApply, enabled = state.selectedCount > 0, shape = RoundedCornerShape(12.dp)) {
-                Text("Follow ${state.selectedCount} accounts")
+        is ImportFollowState.Preview -> {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                TextButton(onClick = onSkip) { Text("Skip") }
+                Button(onClick = onApply, enabled = state.selectedCount > 0, shape = RoundedCornerShape(12.dp)) {
+                    Text("Follow ${state.selectedCount} accounts")
+                }
             }
         }
-        is ImportFollowState.Done -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            Button(onClick = onDone, shape = RoundedCornerShape(12.dp)) { Text("Continue") }
+
+        is ImportFollowState.Done -> {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                Button(onClick = onDone, shape = RoundedCornerShape(12.dp)) { Text("Continue") }
+            }
         }
-        is ImportFollowState.Idle, is ImportFollowState.Error -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            TextButton(onClick = onSkip) { Text("Skip for now") }
+
+        is ImportFollowState.Idle, is ImportFollowState.Error -> {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                TextButton(onClick = onSkip) { Text("Skip for now") }
+            }
         }
+
         else -> {}
     }
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────
 
-private fun shortPubkey(hex: String): String =
-    if (hex.length < 12) hex else "npub:${hex.take(8)}…${hex.takeLast(4)}"
+private fun shortPubkey(hex: String): String = if (hex.length < 12) hex else "npub:${hex.take(8)}…${hex.takeLast(4)}"
 
 private fun formatNamecoinDisplay(source: String): String {
     val s = source.trim()

@@ -1,22 +1,22 @@
-/**
- * FollowListImporter.kt
+/*
+ * Copyright (c) 2025 Vitor Pamplona
  *
- * Fetches another user's follow list (kind 3 / ContactListEvent) from Nostr
- * relays. Supports all identifier types:
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
  *
- *   - npub1...           (NIP-19 bech32)
- *   - 64-char hex pubkey
- *   - alice@example.com  (NIP-05 → HTTP lookup)
- *   - alice@example.bit  (Namecoin d/ namespace → blockchain lookup)
- *   - example.bit        (Namecoin d/ namespace, root identity)
- *   - d/example          (Namecoin d/ namespace, direct)
- *   - id/alice           (Namecoin id/ namespace)
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
  *
- * The Namecoin path is tried FIRST for any identifier that
- * NamecoinNameResolver.isNamecoinIdentifier() recognises. If it doesn't
- * match, we fall through to npub → hex → NIP-05 (HTTP) in order.
- *
- * SPDX-License-Identifier: MIT
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 package com.vitorpamplona.amethyst.service.followimport
 
@@ -49,8 +49,14 @@ sealed class FollowListResult {
     ) : FollowListResult()
 
     data object NoFollowList : FollowListResult()
-    data class InvalidIdentifier(val reason: String) : FollowListResult()
-    data class Error(val message: String) : FollowListResult()
+
+    data class InvalidIdentifier(
+        val reason: String,
+    ) : FollowListResult()
+
+    data class Error(
+        val message: String,
+    ) : FollowListResult()
 }
 
 /**
@@ -72,7 +78,6 @@ data class Kind3EventData(
  *   4. NIP-05 (user@domain) → HTTP /.well-known/nostr.json
  */
 class FollowListImporter {
-
     companion object {
         const val KIND_CONTACT_LIST = 3
         const val DEFAULT_TIMEOUT_MS = 15_000L
@@ -139,56 +144,63 @@ class FollowListImporter {
         fetchEvent: suspend (kind: Int, author: String, limit: Int, onEvent: (Kind3EventData) -> Unit) -> AutoCloseable?,
         resolveNip05: (suspend (String) -> String?)? = null,
         timeoutMs: Long = DEFAULT_TIMEOUT_MS,
-    ): FollowListResult = withContext(Dispatchers.IO) {
-
-        // 1. Resolve identifier
-        val resolved = resolveIdentifier(identifier, resolveNip05)
-        if (resolved == null) {
-            // Give a Namecoin-aware error message
-            val msg = if (NamecoinNameResolver.isNamecoinIdentifier(identifier)) {
-                "Could not resolve Namecoin name \"$identifier\". " +
-                "Make sure the name exists and has a \"nostr\" field in its value."
-            } else {
-                "Could not resolve \"$identifier\" to a public key. " +
-                "Enter an npub, hex pubkey, NIP-05, or Namecoin name (.bit / d/ / id/)."
+    ): FollowListResult =
+        withContext(Dispatchers.IO) {
+            // 1. Resolve identifier
+            val resolved = resolveIdentifier(identifier, resolveNip05)
+            if (resolved == null) {
+                // Give a Namecoin-aware error message
+                val msg =
+                    if (NamecoinNameResolver.isNamecoinIdentifier(identifier)) {
+                        "Could not resolve Namecoin name \"$identifier\". " +
+                            "Make sure the name exists and has a \"nostr\" field in its value."
+                    } else {
+                        "Could not resolve \"$identifier\" to a public key. " +
+                            "Enter an npub, hex pubkey, NIP-05, or Namecoin name (.bit / d/ / id/)."
+                    }
+                return@withContext FollowListResult.InvalidIdentifier(msg)
             }
-            return@withContext FollowListResult.InvalidIdentifier(msg)
-        }
 
-        // 2. Fetch kind 3
-        val deferred = CompletableDeferred<Kind3EventData?>()
-        val sub = try {
-            fetchEvent(KIND_CONTACT_LIST, resolved.pubkeyHex, 1) { event ->
-                if (!deferred.isCompleted) deferred.complete(event)
+            // 2. Fetch kind 3
+            val deferred = CompletableDeferred<Kind3EventData?>()
+            val sub =
+                try {
+                    fetchEvent(KIND_CONTACT_LIST, resolved.pubkeyHex, 1) { event ->
+                        if (!deferred.isCompleted) deferred.complete(event)
+                    }
+                } catch (e: Exception) {
+                    return@withContext FollowListResult.Error("Failed to connect to relays: ${e.message}")
+                }
+
+            val event = withTimeoutOrNull(timeoutMs) { deferred.await() }
+            try {
+                sub?.close()
+            } catch (_: Exception) {
             }
-        } catch (e: Exception) {
-            return@withContext FollowListResult.Error("Failed to connect to relays: ${e.message}")
-        }
 
-        val event = withTimeoutOrNull(timeoutMs) { deferred.await() }
-        try { sub?.close() } catch (_: Exception) {}
+            if (event == null) return@withContext FollowListResult.NoFollowList
 
-        if (event == null) return@withContext FollowListResult.NoFollowList
+            // 3. Parse p-tags
+            val follows =
+                event.pTags
+                    .mapNotNull { tag ->
+                        if (tag.isEmpty()) return@mapNotNull null
+                        val pk = tag[0]
+                        if (!HEX_PUBKEY_REGEX.matches(pk)) return@mapNotNull null
+                        FollowEntry(
+                            pubkeyHex = pk.lowercase(),
+                            relayHint = tag.getOrNull(1)?.takeIf { it.isNotBlank() },
+                            petname = tag.getOrNull(2)?.takeIf { it.isNotBlank() },
+                        )
+                    }.distinctBy { it.pubkeyHex }
 
-        // 3. Parse p-tags
-        val follows = event.pTags.mapNotNull { tag ->
-            if (tag.isEmpty()) return@mapNotNull null
-            val pk = tag[0]
-            if (!HEX_PUBKEY_REGEX.matches(pk)) return@mapNotNull null
-            FollowEntry(
-                pubkeyHex = pk.lowercase(),
-                relayHint = tag.getOrNull(1)?.takeIf { it.isNotBlank() },
-                petname = tag.getOrNull(2)?.takeIf { it.isNotBlank() },
+            FollowListResult.Success(
+                sourcePubkeyHex = resolved.pubkeyHex,
+                follows = follows,
+                createdAt = event.createdAt,
+                resolvedViaNamecoin = resolved.namecoinSource,
             )
-        }.distinctBy { it.pubkeyHex }
-
-        FollowListResult.Success(
-            sourcePubkeyHex = resolved.pubkeyHex,
-            follows = follows,
-            createdAt = event.createdAt,
-            resolvedViaNamecoin = resolved.namecoinSource,
-        )
-    }
+        }
 }
 
 /**
@@ -220,15 +232,30 @@ internal object Bech32Util {
         return bytes.joinToString("") { "%02x".format(it) }
     }
 
-    private fun convertBits(data: List<Int>, from: Int, to: Int, pad: Boolean): List<Int>? {
-        var acc = 0; var bits = 0; val result = mutableListOf<Int>(); val maxV = (1 shl to) - 1
+    private fun convertBits(
+        data: List<Int>,
+        from: Int,
+        to: Int,
+        pad: Boolean,
+    ): List<Int>? {
+        var acc = 0
+        var bits = 0
+        val result = mutableListOf<Int>()
+        val maxV = (1 shl to) - 1
         for (v in data) {
             if (v < 0 || v shr from != 0) return null
-            acc = (acc shl from) or v; bits += from
-            while (bits >= to) { bits -= to; result.add((acc shr bits) and maxV) }
+            acc = (acc shl from) or v
+            bits += from
+            while (bits >= to) {
+                bits -= to
+                result.add((acc shr bits) and maxV)
+            }
         }
-        if (pad) { if (bits > 0) result.add((acc shl (to - bits)) and maxV) }
-        else if (bits >= from || (acc shl (to - bits)) and maxV != 0) return null
+        if (pad) {
+            if (bits > 0) result.add((acc shl (to - bits)) and maxV)
+        } else if (bits >= from || (acc shl (to - bits)) and maxV != 0) {
+            return null
+        }
         return result
     }
 }

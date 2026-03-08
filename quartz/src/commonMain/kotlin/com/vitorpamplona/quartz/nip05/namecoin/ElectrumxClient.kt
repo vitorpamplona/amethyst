@@ -1,11 +1,22 @@
-/**
- * ElectrumxClient.kt
+/*
+ * Copyright (c) 2025 Vitor Pamplona
  *
- * Lightweight ElectrumX protocol client for querying Namecoin name records.
- * Implements only the subset of the Electrum protocol needed for name_show
- * lookups — no wallet functionality.
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
  *
- * SPDX-License-Identifier: MIT
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 package com.vitorpamplona.quartz.nip05.namecoin
 
@@ -49,31 +60,37 @@ class ElectrumxClient(
     private val connectTimeoutMs: Long = 10_000L,
     private val readTimeoutMs: Long = 15_000L,
 ) {
-    private val json = Json { ignoreUnknownKeys = true; isLenient = true }
+    private val json =
+        Json {
+            ignoreUnknownKeys = true
+            isLenient = true
+        }
     private val requestId = AtomicInteger(0)
     private val mutex = Mutex()
 
     companion object {
-        val DEFAULT_SERVERS = listOf(
-            ElectrumxServer("ulrichard.ch", 50006, useSsl = true),
-            ElectrumxServer("nmc2.lelux.fi", 50006, useSsl = true),
-        )
+        val DEFAULT_SERVERS =
+            listOf(
+                ElectrumxServer("ulrichard.ch", 50006, useSsl = true),
+                ElectrumxServer("nmc2.lelux.fi", 50006, useSsl = true),
+            )
         private const val PROTOCOL_VERSION = "1.4.3"
     }
 
     suspend fun nameShow(
         identifier: String,
         server: ElectrumxServer = DEFAULT_SERVERS.first(),
-    ): NameShowResult? = withContext(Dispatchers.IO) {
-        mutex.withLock {
-            try {
-                connectAndQuery(identifier, server)
-            } catch (e: Exception) {
-                e.printStackTrace()
-                null
+    ): NameShowResult? =
+        withContext(Dispatchers.IO) {
+            mutex.withLock {
+                try {
+                    connectAndQuery(identifier, server)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    null
+                }
             }
         }
-    }
 
     suspend fun nameShowWithFallback(identifier: String): NameShowResult? {
         for (server in DEFAULT_SERVERS) {
@@ -83,7 +100,10 @@ class ElectrumxClient(
         return null
     }
 
-    private fun connectAndQuery(identifier: String, server: ElectrumxServer): NameShowResult? {
+    private fun connectAndQuery(
+        identifier: String,
+        server: ElectrumxServer,
+    ): NameShowResult? {
         val socket = createSocket(server)
         socket.soTimeout = readTimeoutMs.toInt()
         val writer = PrintWriter(socket.getOutputStream(), true)
@@ -104,8 +124,8 @@ class ElectrumxClient(
         }
     }
 
-    private fun createSocket(server: ElectrumxServer): Socket {
-        return if (server.useSsl) {
+    private fun createSocket(server: ElectrumxServer): Socket =
+        if (server.useSsl) {
             val factory = SSLSocketFactory.getDefault() as SSLSocketFactory
             factory.createSocket().apply {
                 connect(InetSocketAddress(server.host, server.port), connectTimeoutMs.toInt())
@@ -115,25 +135,35 @@ class ElectrumxClient(
                 connect(InetSocketAddress(server.host, server.port), connectTimeoutMs.toInt())
             }
         }
-    }
 
-    private fun buildRpcRequest(method: String, params: List<Any>): String {
+    private fun buildRpcRequest(
+        method: String,
+        params: List<Any>,
+    ): String {
         val id = requestId.incrementAndGet()
-        val obj = buildJsonObject {
-            put("jsonrpc", "2.0")
-            put("id", id)
-            put("method", method)
-            put("params", json.encodeToJsonElement(
-                kotlinx.serialization.builtins.ListSerializer(
-                    kotlinx.serialization.json.JsonElement.serializer()
-                ),
-                params.map { JsonPrimitive(it.toString()) }
-            ))
-        }
+        val obj =
+            buildJsonObject {
+                put("jsonrpc", "2.0")
+                put("id", id)
+                put("method", method)
+                put(
+                    "params",
+                    json.encodeToJsonElement(
+                        kotlinx.serialization.builtins.ListSerializer(
+                            kotlinx.serialization.json.JsonElement
+                                .serializer(),
+                        ),
+                        params.map { JsonPrimitive(it.toString()) },
+                    ),
+                )
+            }
         return json.encodeToString(JsonObject.serializer(), obj)
     }
 
-    private fun parseNameShowResponse(identifier: String, raw: String): NameShowResult? {
+    private fun parseNameShowResponse(
+        identifier: String,
+        raw: String,
+    ): NameShowResult? {
         val envelope = json.parseToJsonElement(raw).jsonObject
         val error = envelope["error"]
         if (error != null && error !is JsonNull) return null
@@ -148,8 +178,14 @@ class ElectrumxClient(
                     expiresIn = result["expires_in"]?.jsonPrimitive?.content?.toIntOrNull(),
                 )
             }
-            result is JsonPrimitive -> NameShowResult(name = identifier, value = result.content)
-            else -> null
+
+            result is JsonPrimitive -> {
+                NameShowResult(name = identifier, value = result.content)
+            }
+
+            else -> {
+                null
+            }
         }
     }
 }
