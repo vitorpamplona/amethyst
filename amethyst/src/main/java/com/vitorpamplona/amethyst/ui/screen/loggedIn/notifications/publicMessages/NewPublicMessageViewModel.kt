@@ -522,10 +522,12 @@ class NewPublicMessageViewModel :
         urlPreviews.update(newMessage)
 
         if (message.selection.collapsed) {
-            userSuggestionsMainMessage = UserSuggestionAnchor.MAIN_MESSAGE
+            val lastWord = newMessage.currentWord()
+            if (lastWord.startsWith("@")) {
+                userSuggestionsMainMessage = UserSuggestionAnchor.MAIN_MESSAGE
+                userSuggestions?.processCurrentWord(lastWord)
+            }
 
-            val lastWord = message.currentWord()
-            userSuggestions?.processCurrentWord(lastWord)
             emojiSuggestions?.processCurrentWord(lastWord)
         }
 

@@ -485,9 +485,10 @@ open class NewProductViewModel :
 
         if (message.selection.collapsed) {
             val lastWord = message.currentWord()
-
-            userSuggestionsMainMessage = UserSuggestionAnchor.MAIN_MESSAGE
-            userSuggestions?.processCurrentWord(lastWord)
+            if (lastWord.startsWith("@")) {
+                userSuggestionsMainMessage = UserSuggestionAnchor.MAIN_MESSAGE
+                userSuggestions?.processCurrentWord(lastWord)
+            }
 
             emojiSuggestions?.processCurrentWord(lastWord)
         }

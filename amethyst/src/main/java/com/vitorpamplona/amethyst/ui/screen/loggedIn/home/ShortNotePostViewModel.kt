@@ -930,10 +930,11 @@ open class ShortNotePostViewModel :
         urlPreviews.update(message)
 
         if (message.selection.collapsed) {
-            val lastWord = message.currentWord()
-
-            userSuggestionsMainMessage = UserSuggestionAnchor.MAIN_MESSAGE
-            userSuggestions?.processCurrentWord(lastWord)
+            val lastWord = newMessage.currentWord()
+            if (lastWord.startsWith("@")) {
+                userSuggestionsMainMessage = UserSuggestionAnchor.MAIN_MESSAGE
+                userSuggestions?.processCurrentWord(lastWord)
+            }
 
             emojiSuggestions?.processCurrentWord(lastWord)
         }

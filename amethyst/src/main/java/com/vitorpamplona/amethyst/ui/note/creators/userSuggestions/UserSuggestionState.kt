@@ -41,7 +41,6 @@ import kotlinx.coroutines.flow.update
 @Stable
 class UserSuggestionState(
     val account: Account,
-    val requireAtSymbol: Boolean = true,
 ) {
     val invalidations = MutableStateFlow(0)
     val currentWord = MutableStateFlow("")
@@ -81,18 +80,10 @@ class UserSuggestionState(
     }
 
     fun userSearchTermOrNull(currentWord: String): String? =
-        if (requireAtSymbol) {
-            if (currentWord.startsWith("@") && currentWord.length > 2) {
-                currentWord.removePrefix("@")
-            } else {
-                null
-            }
+        if (currentWord.length > 2) {
+            currentWord.removePrefix("@")
         } else {
-            if (currentWord.length > 1) {
-                currentWord
-            } else {
-                null
-            }
+            null
         }
 
     fun updateDataSource(searchTerm: String?) {

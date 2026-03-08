@@ -529,9 +529,10 @@ open class ChannelNewMessageViewModel :
 
         if (newMessage.selection.collapsed) {
             val lastWord = newMessage.currentWord()
-
-            userSuggestionsMainMessage = UserSuggestionAnchor.MAIN_MESSAGE
-            userSuggestions?.processCurrentWord(lastWord)
+            if (lastWord.startsWith("@")) {
+                userSuggestionsMainMessage = UserSuggestionAnchor.MAIN_MESSAGE
+                userSuggestions?.processCurrentWord(lastWord)
+            }
 
             emojiSuggestions?.processCurrentWord(lastWord)
         }

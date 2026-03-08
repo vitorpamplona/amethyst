@@ -71,7 +71,7 @@ class FollowPackViewModel : ViewModel() {
     ) {
         if (!this::account.isInitialized || this.account != account) {
             this.account = account
-            this.userSuggestions = UserSuggestionState(account, false)
+            this.userSuggestions = UserSuggestionState(account)
         }
 
         this.selectedDTag.tryEmit(selectedDTag)
