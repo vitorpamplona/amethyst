@@ -26,10 +26,11 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
@@ -38,9 +39,20 @@ import java.io.InputStreamReader
 import java.io.PrintWriter
 import java.net.InetSocketAddress
 import java.net.Socket
+import java.security.MessageDigest
 import java.util.concurrent.atomic.AtomicInteger
+import javax.net.SocketFactory
+import javax.net.ssl.SSLContext
 import javax.net.ssl.SSLSocketFactory
+import javax.net.ssl.TrustManager
+import javax.net.ssl.X509TrustManager
 
+/**
+ * Result of an ElectrumX name_show query.
+ *
+ * Maps to the JSON fields returned by Namecoin Core / Electrum-NMC:
+ *   { "name": "d/example", "value": "{...}", "txid": "abc...", "height": 12345, ... }
+ */
 @Serializable
 data class NameShowResult(
     val name: String,
@@ -50,6 +62,9 @@ data class NameShowResult(
     val expiresIn: Int? = null,
 )
 
+/**
+ * Represents a single ElectrumX server endpoint.
+ */
 data class ElectrumxServer(
     val host: String,
     val port: Int,
@@ -58,9 +73,25 @@ data class ElectrumxServer(
     val trustAllCerts: Boolean = false,
 )
 
+/**
+ * Lightweight, query-only ElectrumX client for Namecoin name resolution.
+ *
+ * Connects over TCP/TLS to a Namecoin ElectrumX server and resolves
+ * Namecoin names to their current values using the standard Electrum
+ * protocol (scripthash-based lookups). Works with both the Namecoin
+ * ElectrumX fork and stock ElectrumX pointed at a Namecoin node, as
+ * long as the server has a name index.
+ *
+ * Resolution strategy:
+ * 1. Build a canonical name index script for the identifier
+ * 2. Compute the Electrum-style scripthash (reversed SHA-256)
+ * 3. Query `blockchain.scripthash.get_history` to find the latest tx
+ * 4. Fetch the raw transaction and parse the name value from the script
+ */
 class ElectrumxClient(
     private val connectTimeoutMs: Long = 10_000L,
     private val readTimeoutMs: Long = 15_000L,
+    private val socketFactory: () -> SocketFactory = { SocketFactory.getDefault() },
 ) {
     private val json =
         Json {
@@ -71,6 +102,7 @@ class ElectrumxClient(
     private val mutex = Mutex()
 
     companion object {
+        /** Well-known public Namecoin ElectrumX servers (clearnet). */
         val DEFAULT_SERVERS =
             listOf(
                 ElectrumxServer("electrumx.testls.space", 50002, useSsl = true, trustAllCerts = true),
@@ -92,6 +124,21 @@ class ElectrumxClient(
             )
 
         private const val PROTOCOL_VERSION = "1.4"
+
+        /**
+         * Namecoin names expire this many blocks after their last update.
+         * From chainparams.cpp: consensus.nNameExpirationDepth = 36000
+         * (~250 days at ~10 min/block).
+         */
+        const val NAME_EXPIRE_DEPTH = 36_000
+
+        // Namecoin script opcodes
+        private const val OP_NAME_UPDATE: Byte = 0x53 // OP_3 repurposed by Namecoin
+        private const val OP_2DROP: Byte = 0x6d
+        private const val OP_DROP: Byte = 0x75
+        private const val OP_RETURN: Byte = 0x6a
+        private const val OP_PUSHDATA1: Byte = 0x4c
+        private const val OP_PUSHDATA2: Byte = 0x4d
     }
 
     /** Outcome of a name lookup against a single server. */
@@ -100,7 +147,7 @@ class ElectrumxClient(
             val result: NameShowResult,
         ) : LookupOutcome()
 
-        /** Server was reachable but the name does not exist. */
+        /** Server was reachable but the name does not exist (or has expired). */
         data class NameNotFound(
             val name: String,
         ) : LookupOutcome()
@@ -112,6 +159,13 @@ class ElectrumxClient(
         ) : LookupOutcome()
     }
 
+    /**
+     * Perform a name_show lookup against the given ElectrumX server.
+     *
+     * Uses the scripthash-based approach: computes the name's canonical
+     * index script hash, queries transaction history, and parses the
+     * name value from the latest transaction's output script.
+     */
     suspend fun nameShow(
         identifier: String,
         server: ElectrumxServer = DEFAULT_SERVERS.first(),
@@ -126,19 +180,26 @@ class ElectrumxClient(
             }
         }
 
-    suspend fun nameShowWithFallback(identifier: String): LookupOutcome {
+    /**
+     * Try each server in order until one succeeds.
+     */
+    suspend fun nameShowWithFallback(
+        identifier: String,
+        servers: List<ElectrumxServer> = DEFAULT_SERVERS,
+    ): LookupOutcome {
         val serverErrors = mutableListOf<LookupOutcome.ServerError>()
-        for (server in DEFAULT_SERVERS) {
+        for (server in servers) {
             when (val outcome = nameShow(identifier, server)) {
                 is LookupOutcome.Found -> return outcome
                 is LookupOutcome.NameNotFound -> return outcome
                 is LookupOutcome.ServerError -> serverErrors.add(outcome)
             }
         }
-        // All servers failed — return the first error as representative
         return serverErrors.firstOrNull()
             ?: LookupOutcome.ServerError(DEFAULT_SERVERS.first(), "No servers configured")
     }
+
+    // ── internals ──────────────────────────────────────────────────────
 
     private fun connectAndQuery(
         identifier: String,
@@ -148,17 +209,66 @@ class ElectrumxClient(
         socket.soTimeout = readTimeoutMs.toInt()
         val writer = PrintWriter(socket.getOutputStream(), true)
         val reader = BufferedReader(InputStreamReader(socket.getInputStream()))
+
         try {
+            // 1. Negotiate protocol version
             val versionReq = buildRpcRequest("server.version", listOf("AmethystNMC/0.1", PROTOCOL_VERSION))
             writer.println(versionReq)
-            reader.readLine()
+            reader.readLine() // consume version response
 
-            val nameReq = buildRpcRequest("blockchain.name.get_value_proof", listOf(identifier))
-            writer.println(nameReq)
-            val response =
+            // 2. Compute the canonical name index scripthash
+            val nameScript = buildNameIndexScript(identifier.toByteArray(Charsets.US_ASCII))
+            val scriptHash = electrumScriptHash(nameScript)
+
+            // 3. Get transaction history for this name
+            val historyReq = buildRpcRequest("blockchain.scripthash.get_history", listOf(scriptHash))
+            writer.println(historyReq)
+            val historyResponse =
                 reader.readLine()
-                    ?: return LookupOutcome.ServerError(server, "Empty response from server")
-            return parseNameShowResponse(identifier, response, server)
+                    ?: return LookupOutcome.ServerError(server, "Empty response for history query")
+            val historyEntries =
+                parseHistoryResponse(historyResponse)
+                    ?: return LookupOutcome.ServerError(server, "Malformed history response")
+            if (historyEntries.isEmpty()) return LookupOutcome.NameNotFound(identifier)
+
+            // 4. Get the latest transaction (last entry = most recent update)
+            val latestEntry = historyEntries.last()
+            val txHash = latestEntry.first
+            val height = latestEntry.second
+
+            val txReq = buildRpcRequest("blockchain.transaction.get", listOf(txHash, true))
+            writer.println(txReq)
+            val txResponse =
+                reader.readLine()
+                    ?: return LookupOutcome.ServerError(server, "Empty response for transaction query")
+
+            // 5. Get current block height to check name expiry
+            val headersReq = buildRpcRequest("blockchain.headers.subscribe", emptyList<String>())
+            writer.println(headersReq)
+            val headersResponse = reader.readLine()
+            val currentHeight = parseBlockHeight(headersResponse)
+
+            // 6. Check if the name has expired
+            if (currentHeight != null && height > 0) {
+                val blocksSinceUpdate = currentHeight - height
+                if (blocksSinceUpdate >= NAME_EXPIRE_DEPTH) {
+                    return LookupOutcome.NameNotFound(identifier) // Name has expired
+                }
+            }
+
+            // 7. Parse the name value from the transaction
+            val result =
+                parseNameFromTransaction(identifier, txHash, height, txResponse)
+                    ?: return LookupOutcome.NameNotFound(identifier)
+
+            // Populate expiresIn if we know the current height
+            val finalResult =
+                if (currentHeight != null && height > 0) {
+                    result.copy(expiresIn = NAME_EXPIRE_DEPTH - (currentHeight - height))
+                } else {
+                    result
+                }
+            return LookupOutcome.Found(finalResult)
         } finally {
             runCatching { writer.close() }
             runCatching { reader.close() }
@@ -166,27 +276,234 @@ class ElectrumxClient(
         }
     }
 
-    private fun createSocket(server: ElectrumxServer): Socket =
-        if (server.useSsl) {
-            val factory =
-                if (server.trustAllCerts) {
-                    trustAllSslSocketFactory()
-                } else {
-                    SSLSocketFactory.getDefault() as SSLSocketFactory
-                }
-            factory.createSocket().apply {
-                connect(InetSocketAddress(server.host, server.port), connectTimeoutMs.toInt())
+    /**
+     * Build the canonical script used by ElectrumX to index Namecoin names.
+     *
+     * Format: OP_NAME_UPDATE <push(name)> <push(empty)> OP_2DROP OP_DROP OP_RETURN
+     *
+     * This matches the `build_name_index_script` method in the Namecoin
+     * ElectrumX fork (electrumx/lib/coins.py).
+     */
+    private fun buildNameIndexScript(nameBytes: ByteArray): ByteArray {
+        val result = mutableListOf<Byte>()
+        result.add(OP_NAME_UPDATE)
+        result.addAll(pushData(nameBytes).toList())
+        result.addAll(pushData(byteArrayOf()).toList()) // empty value
+        result.add(OP_2DROP)
+        result.add(OP_DROP)
+        result.add(OP_RETURN)
+        return result.toByteArray()
+    }
+
+    /**
+     * Bitcoin-style push data encoding.
+     */
+    private fun pushData(data: ByteArray): ByteArray {
+        val len = data.size
+        return when {
+            len < 0x4c -> {
+                byteArrayOf(len.toByte()) + data
             }
-        } else {
-            Socket().apply {
-                connect(InetSocketAddress(server.host, server.port), connectTimeoutMs.toInt())
+
+            len <= 0xff -> {
+                byteArrayOf(OP_PUSHDATA1, len.toByte()) + data
+            }
+
+            else -> {
+                val lenBytes = byteArrayOf((len and 0xff).toByte(), ((len shr 8) and 0xff).toByte())
+                byteArrayOf(OP_PUSHDATA2) + lenBytes + data
+            }
+        }
+    }
+
+    /**
+     * Electrum protocol scripthash: SHA-256 of the script, byte-reversed, hex-encoded.
+     */
+    private fun electrumScriptHash(script: ByteArray): String {
+        val digest = MessageDigest.getInstance("SHA-256").digest(script)
+        return digest.reversedArray().joinToString("") { "%02x".format(it) }
+    }
+
+    /**
+     * Parse the block height from a `blockchain.headers.subscribe` response.
+     */
+    private fun parseBlockHeight(raw: String?): Int? {
+        if (raw == null) return null
+        return try {
+            val envelope = json.parseToJsonElement(raw).jsonObject
+            val result = envelope["result"]?.jsonObject ?: return null
+            result["height"]?.jsonPrimitive?.int
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    /**
+     * Parse the history response into a list of (txHash, height) pairs.
+     */
+    private fun parseHistoryResponse(raw: String): List<Pair<String, Int>>? {
+        val envelope = json.parseToJsonElement(raw).jsonObject
+        val error = envelope["error"]
+        if (error != null && error !is kotlinx.serialization.json.JsonNull) return null
+
+        val result = envelope["result"]?.jsonArray ?: return null
+        return result.mapNotNull { entry ->
+            val obj = entry.jsonObject
+            val txHash = obj["tx_hash"]?.jsonPrimitive?.content ?: return@mapNotNull null
+            val height = obj["height"]?.jsonPrimitive?.int ?: return@mapNotNull null
+            txHash to height
+        }
+    }
+
+    /**
+     * Parse a Namecoin name and value from a verbose transaction response.
+     *
+     * Scans each output for a NAME_UPDATE script (starts with OP_3 = 0x53),
+     * then extracts the name and value from the script's push data.
+     */
+    private fun parseNameFromTransaction(
+        identifier: String,
+        txHash: String,
+        height: Int,
+        raw: String,
+    ): NameShowResult? {
+        val envelope = json.parseToJsonElement(raw).jsonObject
+        val error = envelope["error"]
+        if (error != null && error !is kotlinx.serialization.json.JsonNull) return null
+
+        val result = envelope["result"]?.jsonObject ?: return null
+        val vouts = result["vout"]?.jsonArray ?: return null
+
+        for (vout in vouts) {
+            val scriptHex =
+                vout.jsonObject["scriptPubKey"]
+                    ?.jsonObject
+                    ?.get("hex")
+                    ?.jsonPrimitive
+                    ?.content
+                    ?: continue
+
+            // NAME_UPDATE scripts start with OP_3 (0x53)
+            if (!scriptHex.startsWith("53")) continue
+
+            val scriptBytes = hexToBytes(scriptHex)
+            val parsed = parseNameScript(scriptBytes) ?: continue
+
+            // Verify this is the name we're looking for
+            if (parsed.first == identifier) {
+                return NameShowResult(
+                    name = parsed.first,
+                    value = parsed.second,
+                    txid = txHash,
+                    height = height,
+                )
             }
         }
 
-    private fun trustAllSslSocketFactory(): SSLSocketFactory {
+        return null
+    }
+
+    /**
+     * Parse a NAME_UPDATE script to extract the name and value.
+     *
+     * Script format: OP_NAME_UPDATE <push(name)> <push(value)> OP_2DROP OP_DROP <address_script>
+     */
+    private fun parseNameScript(script: ByteArray): Pair<String, String>? {
+        if (script.isEmpty() || script[0] != OP_NAME_UPDATE) return null
+
+        var pos = 1
+
+        // Read name
+        val (nameBytes, newPos1) = readPushData(script, pos) ?: return null
+        pos = newPos1
+
+        // Read value
+        val (valueBytes, _) = readPushData(script, pos) ?: return null
+
+        val name = String(nameBytes, Charsets.US_ASCII)
+        val value = String(valueBytes, Charsets.UTF_8)
+        return name to value
+    }
+
+    /**
+     * Read a push-data encoded byte sequence from the script at the given position.
+     */
+    private fun readPushData(
+        script: ByteArray,
+        pos: Int,
+    ): Pair<ByteArray, Int>? {
+        if (pos >= script.size) return null
+
+        val opcode = script[pos].toInt() and 0xff
+        return when {
+            opcode == 0 -> {
+                byteArrayOf() to (pos + 1)
+            }
+
+            opcode < 0x4c -> {
+                val end = pos + 1 + opcode
+                if (end > script.size) return null
+                script.copyOfRange(pos + 1, end) to end
+            }
+
+            opcode == 0x4c -> {
+                if (pos + 2 > script.size) return null
+                val len = script[pos + 1].toInt() and 0xff
+                val end = pos + 2 + len
+                if (end > script.size) return null
+                script.copyOfRange(pos + 2, end) to end
+            }
+
+            opcode == 0x4d -> {
+                if (pos + 3 > script.size) return null
+                val len =
+                    (script[pos + 1].toInt() and 0xff) or
+                        ((script[pos + 2].toInt() and 0xff) shl 8)
+                val end = pos + 3 + len
+                if (end > script.size) return null
+                script.copyOfRange(pos + 3, end) to end
+            }
+
+            else -> {
+                null
+            }
+        }
+    }
+
+    private fun hexToBytes(hex: String): ByteArray {
+        val len = hex.length
+        val data = ByteArray(len / 2)
+        for (i in 0 until len step 2) {
+            data[i / 2] =
+                (
+                    (Character.digit(hex[i], 16) shl 4) +
+                        Character.digit(hex[i + 1], 16)
+                ).toByte()
+        }
+        return data
+    }
+
+    private fun createSocket(server: ElectrumxServer): Socket {
+        val baseSocket =
+            socketFactory().createSocket().apply {
+                connect(InetSocketAddress(server.host, server.port), connectTimeoutMs.toInt())
+            }
+
+        if (!server.useSsl) return baseSocket
+
+        val sslFactory =
+            if (server.trustAllCerts) {
+                trustAllSslFactory()
+            } else {
+                SSLSocketFactory.getDefault() as SSLSocketFactory
+            }
+        return sslFactory.createSocket(baseSocket, server.host, server.port, true)
+    }
+
+    private fun trustAllSslFactory(): SSLSocketFactory {
         val trustAllCerts =
-            arrayOf<javax.net.ssl.TrustManager>(
-                object : javax.net.ssl.X509TrustManager {
+            arrayOf<TrustManager>(
+                object : X509TrustManager {
                     override fun checkClientTrusted(
                         chain: Array<java.security.cert.X509Certificate>,
                         authType: String,
@@ -200,11 +517,9 @@ class ElectrumxClient(
                     override fun getAcceptedIssuers(): Array<java.security.cert.X509Certificate> = arrayOf()
                 },
             )
-        val sc =
-            javax.net.ssl.SSLContext
-                .getInstance("TLS")
-        sc.init(null, trustAllCerts, java.security.SecureRandom())
-        return sc.socketFactory
+        val sslContext = SSLContext.getInstance("TLS")
+        sslContext.init(null, trustAllCerts, java.security.SecureRandom())
+        return sslContext.socketFactory
     }
 
     private fun buildRpcRequest(
@@ -224,57 +539,16 @@ class ElectrumxClient(
                             kotlinx.serialization.json.JsonElement
                                 .serializer(),
                         ),
-                        params.map { JsonPrimitive(it.toString()) },
+                        params.map {
+                            when (it) {
+                                is Boolean -> JsonPrimitive(it)
+                                is Number -> JsonPrimitive(it)
+                                else -> JsonPrimitive(it.toString())
+                            }
+                        },
                     ),
                 )
             }
         return json.encodeToString(JsonObject.serializer(), obj)
-    }
-
-    private fun parseNameShowResponse(
-        identifier: String,
-        raw: String,
-        server: ElectrumxServer,
-    ): LookupOutcome {
-        val envelope =
-            try {
-                json.parseToJsonElement(raw).jsonObject
-            } catch (e: Exception) {
-                return LookupOutcome.ServerError(server, "Malformed JSON response")
-            }
-        val error = envelope["error"]
-        if (error != null && error !is JsonNull) {
-            val errorMsg =
-                when (error) {
-                    is JsonPrimitive -> error.content
-                    is JsonObject -> error["message"]?.jsonPrimitive?.content ?: error.toString()
-                    else -> error.toString()
-                }
-            // ElectrumX returns an error when the name doesn't exist
-            return LookupOutcome.NameNotFound(identifier)
-        }
-        val result = envelope["result"] ?: return LookupOutcome.NameNotFound(identifier)
-        val nameShowResult =
-            when {
-                result is JsonObject && result.containsKey("value") -> {
-                    val value = result["value"]?.jsonPrimitive?.content ?: return LookupOutcome.NameNotFound(identifier)
-                    NameShowResult(
-                        name = result["name"]?.jsonPrimitive?.content ?: identifier,
-                        value = value,
-                        txid = result["txid"]?.jsonPrimitive?.content,
-                        height = result["height"]?.jsonPrimitive?.content?.toIntOrNull(),
-                        expiresIn = result["expires_in"]?.jsonPrimitive?.content?.toIntOrNull(),
-                    )
-                }
-
-                result is JsonPrimitive -> {
-                    NameShowResult(name = identifier, value = result.content)
-                }
-
-                else -> {
-                    return LookupOutcome.NameNotFound(identifier)
-                }
-            }
-        return LookupOutcome.Found(nameShowResult)
     }
 }
