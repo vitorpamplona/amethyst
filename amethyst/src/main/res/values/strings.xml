@@ -454,6 +454,14 @@
     <string name="wallet_connect_service_secret">Wallet Connect Secret</string>
     <string name="wallet_connect_service_show_secret">Show secret key</string>
     <string name="wallet_connect_service_secret_placeholder">nsec / hex private key</string>
+    <string name="wallet_connect_status_connected">Connected</string>
+    <string name="wallet_connect_status_not_connected">Not connected</string>
+    <string name="wallet_connect_manual_config">Advanced: enter connection details manually</string>
+    <string name="quick_zap_amounts">Quick Zap Amounts</string>
+    <string name="quick_zap_amounts_explainer">Shown when long-pressing the zap button. Tap an amount to remove it.</string>
+    <string name="zap_privacy_section">Zap Privacy</string>
+    <string name="zap_type_section_explainer">Controls how your identity is shown when you send a zap.</string>
+    <string name="wallet_connect_connect_app">Connect Wallet</string>
 
     <string name="pledge_amount_in_sats">Pledge Amount in Sats</string>
     <string name="post_poll">Post Poll</string>
