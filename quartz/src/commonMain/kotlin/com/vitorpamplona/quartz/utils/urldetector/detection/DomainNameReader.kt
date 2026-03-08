@@ -30,6 +30,17 @@ import com.vitorpamplona.quartz.utils.urldetector.detection.CharUtils.splitByDot
 import kotlin.math.max
 import kotlin.math.min
 
+/** Returns true if the string is a percent-encoded dot (%2e or %2E). */
+private fun String.isDotPercent() = this == "%2e" || this == "%2E"
+
+/** Returns true if the string is an internationalized domain label using Punycode (xn-- prefix). */
+private fun String.isXn() =
+    this.length > 3 &&
+        (this[0] == 'x' || this[0] == 'X') &&
+        (this[1] == 'n' || this[1] == 'N') &&
+        this[2] == '-' &&
+        this[3] == '-'
+
 /**
  * The domain name reader reads input from a InputTextReader and validates if the content being read is a valid domain name.
  * After a domain name is read, the returning status is what to do next. If the domain is valid but a specific character is found,
@@ -134,7 +145,6 @@ class DomainNameReader(
     var isIpV6 = false
         private set
 
-    fun String.isDotPercent() = this == "%2e" || this == "%2E"
 
     /**
      * Reads and parses the current string to make sure the domain name started where it was supposed to,
@@ -424,13 +434,6 @@ class DomainNameReader(
         return checkDomainNameValid(ReaderNextState.ValidDomainName, null)
     }
 
-    fun String.isXn() =
-        this.length > 3 &&
-            (this[0] == 'x' || this[0] == 'X') &&
-            (this[1] == 'n' || this[1] == 'N') &&
-            this[2] == '-' &&
-            this[3] == '-'
-
     fun labelCount() = dots + (if (currentLabelLength > 0) 1 else 0)
 
     /**
@@ -700,7 +703,7 @@ class DomainNameReader(
                     hexSection = true // reset hex to true
                     hexDigits = 0 // reset count for hex digits
                     numSections++
-                    lastSection.deleteRange(0, lastSection.length) // clear last section
+                    lastSection.clear() // clear last section
                 }
 
                 else -> {
