@@ -52,7 +52,7 @@ class UrlDetector(
     /**
      * Stores the found urls.
      */
-    private val urlList: ArrayList<Url> = ArrayList<Url>()
+    private val urlList = mutableListOf<Url>()
 
     /**
      * Keeps track of certain indices to create a Url object.
@@ -89,18 +89,12 @@ class UrlDetector(
             // read the next char to process.
             when (val curr = reader.read()) {
                 ' ' -> {
-                    // space was found, check if it's a valid single level domain.
+                    // space found; if we have a scheme, attempt to read the domain before resetting
                     if (buffer.isNotEmpty() && hasScheme) {
                         reader.goBack()
-                        val domain = buffer.substring(length)
-                        if (!readDomainName(domain)) {
-                            readEnd(ReadEndState.InvalidUrl)
-                        } else {
-                            readEnd(ReadEndState.InvalidUrl)
-                        }
-                    } else {
-                        readEnd(ReadEndState.InvalidUrl)
+                        readDomainName(buffer.substring(length))
                     }
+                    readEnd(ReadEndState.InvalidUrl)
                     length = 0
                 }
 
@@ -220,8 +214,8 @@ class UrlDetector(
      * @param length first index of the previous part (could be beginning of the buffer, beginning of the username/password, or beginning
      * @return new index of where the domain starts
      */
-    private fun processColon(length: Int): Int {
-        var length = length
+    private fun processColon(startLength: Int): Int {
+        var length = startLength
         if (hasScheme) {
             // read it as username/password if it has scheme
             if (!readUserPass(length)) {
@@ -648,12 +642,9 @@ class UrlDetector(
     private fun readEnd(state: ReadEndState?): Boolean {
         // if the url is valid and greater then 0
         if (state == ReadEndState.ValidUrl && buffer.isNotEmpty()) {
-            // Add the url to the list of good urls.
-            if (buffer.isNotEmpty()) {
-                var url = buffer.toString()
-                if (url.lastOrNull() in CANNOT_END_URLS_WITH) url = url.dropLast(1)
-                urlList.add(currentUrlMarker.createUrl(url))
-            }
+            var url = buffer.toString()
+            if (url.lastOrNull() in CANNOT_END_URLS_WITH) url = url.dropLast(1)
+            urlList.add(currentUrlMarker.createUrl(url))
         }
 
         // clear out the buffer.
