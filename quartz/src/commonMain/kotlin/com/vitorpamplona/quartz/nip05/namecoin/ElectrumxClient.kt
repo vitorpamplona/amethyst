@@ -77,33 +77,56 @@ class ElectrumxClient(
         private const val PROTOCOL_VERSION = "1.4.3"
     }
 
+    /** Outcome of a name lookup against a single server. */
+    sealed class LookupOutcome {
+        data class Found(
+            val result: NameShowResult,
+        ) : LookupOutcome()
+
+        /** Server was reachable but the name does not exist. */
+        data class NameNotFound(
+            val name: String,
+        ) : LookupOutcome()
+
+        /** Could not connect / communicate with this server. */
+        data class ServerError(
+            val server: ElectrumxServer,
+            val message: String,
+        ) : LookupOutcome()
+    }
+
     suspend fun nameShow(
         identifier: String,
         server: ElectrumxServer = DEFAULT_SERVERS.first(),
-    ): NameShowResult? =
+    ): LookupOutcome =
         withContext(Dispatchers.IO) {
             mutex.withLock {
                 try {
                     connectAndQuery(identifier, server)
                 } catch (e: Exception) {
-                    e.printStackTrace()
-                    null
+                    LookupOutcome.ServerError(server, e.message ?: e.javaClass.simpleName)
                 }
             }
         }
 
-    suspend fun nameShowWithFallback(identifier: String): NameShowResult? {
+    suspend fun nameShowWithFallback(identifier: String): LookupOutcome {
+        val serverErrors = mutableListOf<LookupOutcome.ServerError>()
         for (server in DEFAULT_SERVERS) {
-            val result = nameShow(identifier, server)
-            if (result != null) return result
+            when (val outcome = nameShow(identifier, server)) {
+                is LookupOutcome.Found -> return outcome
+                is LookupOutcome.NameNotFound -> return outcome
+                is LookupOutcome.ServerError -> serverErrors.add(outcome)
+            }
         }
-        return null
+        // All servers failed — return the first error as representative
+        return serverErrors.firstOrNull()
+            ?: LookupOutcome.ServerError(DEFAULT_SERVERS.first(), "No servers configured")
     }
 
     private fun connectAndQuery(
         identifier: String,
         server: ElectrumxServer,
-    ): NameShowResult? {
+    ): LookupOutcome {
         val socket = createSocket(server)
         socket.soTimeout = readTimeoutMs.toInt()
         val writer = PrintWriter(socket.getOutputStream(), true)
@@ -115,8 +138,10 @@ class ElectrumxClient(
 
             val nameReq = buildRpcRequest("blockchain.name.get_value_proof", listOf(identifier))
             writer.println(nameReq)
-            val response = reader.readLine() ?: return null
-            return parseNameShowResponse(identifier, response)
+            val response =
+                reader.readLine()
+                    ?: return LookupOutcome.ServerError(server, "Empty response from server")
+            return parseNameShowResponse(identifier, response, server)
         } finally {
             runCatching { writer.close() }
             runCatching { reader.close() }
@@ -163,29 +188,47 @@ class ElectrumxClient(
     private fun parseNameShowResponse(
         identifier: String,
         raw: String,
-    ): NameShowResult? {
-        val envelope = json.parseToJsonElement(raw).jsonObject
+        server: ElectrumxServer,
+    ): LookupOutcome {
+        val envelope =
+            try {
+                json.parseToJsonElement(raw).jsonObject
+            } catch (e: Exception) {
+                return LookupOutcome.ServerError(server, "Malformed JSON response")
+            }
         val error = envelope["error"]
-        if (error != null && error !is JsonNull) return null
-        val result = envelope["result"] ?: return null
-        return when {
-            result is JsonObject && result.containsKey("value") -> {
-                NameShowResult(
-                    name = result["name"]?.jsonPrimitive?.content ?: identifier,
-                    value = result["value"]?.jsonPrimitive?.content ?: return null,
-                    txid = result["txid"]?.jsonPrimitive?.content,
-                    height = result["height"]?.jsonPrimitive?.content?.toIntOrNull(),
-                    expiresIn = result["expires_in"]?.jsonPrimitive?.content?.toIntOrNull(),
-                )
-            }
-
-            result is JsonPrimitive -> {
-                NameShowResult(name = identifier, value = result.content)
-            }
-
-            else -> {
-                null
-            }
+        if (error != null && error !is JsonNull) {
+            val errorMsg =
+                when (error) {
+                    is JsonPrimitive -> error.content
+                    is JsonObject -> error["message"]?.jsonPrimitive?.content ?: error.toString()
+                    else -> error.toString()
+                }
+            // ElectrumX returns an error when the name doesn't exist
+            return LookupOutcome.NameNotFound(identifier)
         }
+        val result = envelope["result"] ?: return LookupOutcome.NameNotFound(identifier)
+        val nameShowResult =
+            when {
+                result is JsonObject && result.containsKey("value") -> {
+                    val value = result["value"]?.jsonPrimitive?.content ?: return LookupOutcome.NameNotFound(identifier)
+                    NameShowResult(
+                        name = result["name"]?.jsonPrimitive?.content ?: identifier,
+                        value = value,
+                        txid = result["txid"]?.jsonPrimitive?.content,
+                        height = result["height"]?.jsonPrimitive?.content?.toIntOrNull(),
+                        expiresIn = result["expires_in"]?.jsonPrimitive?.content?.toIntOrNull(),
+                    )
+                }
+
+                result is JsonPrimitive -> {
+                    NameShowResult(name = identifier, value = result.content)
+                }
+
+                else -> {
+                    return LookupOutcome.NameNotFound(identifier)
+                }
+            }
+        return LookupOutcome.Found(nameShowResult)
     }
 }

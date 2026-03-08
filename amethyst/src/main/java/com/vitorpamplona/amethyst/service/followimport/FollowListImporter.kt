@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.service.followimport
 
 import com.vitorpamplona.amethyst.service.namecoin.NamecoinNameService
 import com.vitorpamplona.quartz.nip05.namecoin.NamecoinNameResolver
+import com.vitorpamplona.quartz.nip05.namecoin.NamecoinResolveOutcome
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -98,14 +99,16 @@ class FollowListImporter {
 
         // ── 1. Namecoin ────────────────────────────────────────────────
         if (NamecoinNameResolver.isNamecoinIdentifier(trimmed)) {
-            val pubkey = NamecoinNameService.getInstance().resolvePubkey(trimmed)
-            if (pubkey != null) {
-                return ResolvedIdentifier(pubkey, namecoinSource = trimmed)
+            val outcome = NamecoinNameService.getInstance().resolveDetailed(trimmed)
+            return when (outcome) {
+                is NamecoinResolveOutcome.Success -> {
+                    ResolvedIdentifier(outcome.result.pubkey, namecoinSource = trimmed)
+                }
+
+                else -> {
+                    null
+                } // Detailed error handled by resolveIdentifierDetailed
             }
-            // If Namecoin resolution fails, don't fall through — the user
-            // clearly intended a Namecoin lookup. Return null so the caller
-            // can show a specific error.
-            return null
         }
 
         // ── 2. Direct hex pubkey ───────────────────────────────────────
@@ -149,11 +152,40 @@ class FollowListImporter {
             // 1. Resolve identifier
             val resolved = resolveIdentifier(identifier, resolveNip05)
             if (resolved == null) {
-                // Give a Namecoin-aware error message
                 val msg =
                     if (NamecoinNameResolver.isNamecoinIdentifier(identifier)) {
-                        "Could not resolve Namecoin name \"$identifier\". " +
-                            "Make sure the name exists and has a \"nostr\" field in its value."
+                        // Get detailed outcome for specific error message
+                        val outcome = NamecoinNameService.getInstance().resolveDetailed(identifier)
+                        when (outcome) {
+                            is NamecoinResolveOutcome.NameNotFound -> {
+                                "Namecoin name \"$identifier\" does not exist on the blockchain. " +
+                                    "Check the spelling or register it with Electrum-NMC."
+                            }
+
+                            is NamecoinResolveOutcome.NoNostrField -> {
+                                "Namecoin name \"$identifier\" exists but has no \"nostr\" field. " +
+                                    "The owner needs to add a nostr pubkey to the name's value."
+                            }
+
+                            is NamecoinResolveOutcome.ServersUnreachable -> {
+                                "All Namecoin ElectrumX servers are unreachable. " +
+                                    "Check your internet connection and try again. (${outcome.message})"
+                            }
+
+                            is NamecoinResolveOutcome.Timeout -> {
+                                "Namecoin lookup for \"$identifier\" timed out. " +
+                                    "ElectrumX servers may be slow or unreachable — try again later."
+                            }
+
+                            is NamecoinResolveOutcome.InvalidIdentifier -> {
+                                "\"$identifier\" is not a valid Namecoin identifier. " +
+                                    "Use .bit domains, d/name, or id/name format."
+                            }
+
+                            is NamecoinResolveOutcome.Success -> {
+                                "Unexpected error resolving \"$identifier\"."
+                            }
+                        }
                     } else {
                         "Could not resolve \"$identifier\" to a public key. " +
                             "Enter an npub, hex pubkey, NIP-05, or Namecoin name (.bit / d/ / id/)."

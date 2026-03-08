@@ -34,6 +34,36 @@ data class NamecoinNostrResult(
     val localPart: String = "_",
 )
 
+/** Detailed outcome of a Namecoin resolution attempt. */
+sealed class NamecoinResolveOutcome {
+    data class Success(
+        val result: NamecoinNostrResult,
+    ) : NamecoinResolveOutcome()
+
+    /** The name does not exist on the Namecoin blockchain. */
+    data class NameNotFound(
+        val name: String,
+    ) : NamecoinResolveOutcome()
+
+    /** The name exists but has no valid "nostr" field in its value. */
+    data class NoNostrField(
+        val name: String,
+    ) : NamecoinResolveOutcome()
+
+    /** All ElectrumX servers were unreachable. */
+    data class ServersUnreachable(
+        val message: String,
+    ) : NamecoinResolveOutcome()
+
+    /** The identifier could not be parsed as a Namecoin name. */
+    data class InvalidIdentifier(
+        val identifier: String,
+    ) : NamecoinResolveOutcome()
+
+    /** Timed out waiting for a response. */
+    data object Timeout : NamecoinResolveOutcome()
+}
+
 class NamecoinNameResolver(
     private val electrumxClient: ElectrumxClient = ElectrumxClient(),
     private val lookupTimeoutMs: Long = 20_000L,
@@ -54,8 +84,17 @@ class NamecoinNameResolver(
     }
 
     suspend fun resolve(identifier: String): NamecoinNostrResult? {
-        val parsed = parseIdentifier(identifier) ?: return null
-        return withTimeoutOrNull(lookupTimeoutMs) { performLookup(parsed) }
+        val outcome = resolveDetailed(identifier)
+        return (outcome as? NamecoinResolveOutcome.Success)?.result
+    }
+
+    suspend fun resolveDetailed(identifier: String): NamecoinResolveOutcome {
+        val parsed =
+            parseIdentifier(identifier)
+                ?: return NamecoinResolveOutcome.InvalidIdentifier(identifier)
+        val result =
+            withTimeoutOrNull(lookupTimeoutMs) { performLookupDetailed(parsed) }
+        return result ?: NamecoinResolveOutcome.Timeout
     }
 
     // ── Parsing ────────────────────────────────────────────────────────
@@ -95,11 +134,47 @@ class NamecoinNameResolver(
     // ── Lookup ─────────────────────────────────────────────────────────
 
     private suspend fun performLookup(p: ParsedId): NamecoinNostrResult? {
-        val nr = electrumxClient.nameShowWithFallback(p.namecoinName) ?: return null
+        val outcome = electrumxClient.nameShowWithFallback(p.namecoinName)
+        val nr =
+            when (outcome) {
+                is ElectrumxClient.LookupOutcome.Found -> outcome.result
+                else -> return null
+            }
         val obj = tryParseJson(nr.value) ?: return null
         return when (p.ns) {
             NS.DOMAIN -> extractDomain(obj, p)
             NS.IDENTITY -> extractIdentity(obj, p)
+        }
+    }
+
+    private suspend fun performLookupDetailed(p: ParsedId): NamecoinResolveOutcome {
+        val outcome = electrumxClient.nameShowWithFallback(p.namecoinName)
+        return when (outcome) {
+            is ElectrumxClient.LookupOutcome.NameNotFound -> {
+                NamecoinResolveOutcome.NameNotFound(p.namecoinName)
+            }
+
+            is ElectrumxClient.LookupOutcome.ServerError -> {
+                NamecoinResolveOutcome.ServersUnreachable(
+                    "Could not reach any ElectrumX server (${outcome.server.host}: ${outcome.message})",
+                )
+            }
+
+            is ElectrumxClient.LookupOutcome.Found -> {
+                val obj =
+                    tryParseJson(outcome.result.value)
+                        ?: return NamecoinResolveOutcome.NoNostrField(p.namecoinName)
+                val nostrResult =
+                    when (p.ns) {
+                        NS.DOMAIN -> extractDomain(obj, p)
+                        NS.IDENTITY -> extractIdentity(obj, p)
+                    }
+                if (nostrResult != null) {
+                    NamecoinResolveOutcome.Success(nostrResult)
+                } else {
+                    NamecoinResolveOutcome.NoNostrField(p.namecoinName)
+                }
+            }
         }
     }
 
