@@ -61,6 +61,7 @@ import com.vitorpamplona.amethyst.commons.resources.login_button
 import com.vitorpamplona.amethyst.commons.resources.login_card_subtitle
 import com.vitorpamplona.amethyst.commons.resources.login_card_title
 import com.vitorpamplona.amethyst.commons.resources.login_generate_button
+import com.vitorpamplona.amethyst.desktop.account.LoginProgress
 import com.vitorpamplona.amethyst.desktop.account.validateBunkerUri
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -73,6 +74,7 @@ fun LoginCard(
     onGenerateNew: () -> Unit,
     onLoginBunker: (suspend (String) -> Result<Unit>)? = null,
     onLoginNostrConnect: (suspend (onUriGenerated: (String) -> Unit) -> Result<Unit>)? = null,
+    loginProgress: LoginProgress? = null,
     modifier: Modifier = Modifier,
     cardWidth: Dp = 400.dp,
     title: String = stringResource(Res.string.login_card_title),
@@ -119,8 +121,8 @@ fun LoginCard(
             }
 
             when (selectedTab) {
-                0 -> PasteKeyContent(onLogin, onGenerateNew, onLoginBunker, subtitle)
-                1 -> if (onLoginNostrConnect != null) NostrConnectContent(onLoginNostrConnect)
+                0 -> PasteKeyContent(onLogin, onGenerateNew, onLoginBunker, subtitle, loginProgress)
+                1 -> if (onLoginNostrConnect != null) NostrConnectContent(onLoginNostrConnect, loginProgress)
             }
         }
     }
@@ -132,6 +134,7 @@ private fun PasteKeyContent(
     onGenerateNew: () -> Unit,
     onLoginBunker: (suspend (String) -> Result<Unit>)?,
     subtitle: String,
+    loginProgress: LoginProgress? = null,
 ) {
     var keyInput by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -167,21 +170,25 @@ private fun PasteKeyContent(
     Spacer(Modifier.height(16.dp))
 
     if (isConnecting) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(20.dp),
-                strokeWidth = 2.dp,
-            )
-            Spacer(Modifier.width(12.dp))
-            Text(
-                "Connecting to remote signer...",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+        if (loginProgress != null) {
+            LoginProgressSteps(loginProgress)
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    strokeWidth = 2.dp,
+                )
+                Spacer(Modifier.width(12.dp))
+                Text(
+                    "Connecting to remote signer...",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     } else {
         Row(
@@ -234,7 +241,10 @@ private fun PasteKeyContent(
 }
 
 @Composable
-private fun NostrConnectContent(onLoginNostrConnect: suspend (onUriGenerated: (String) -> Unit) -> Result<Unit>) {
+private fun NostrConnectContent(
+    onLoginNostrConnect: suspend (onUriGenerated: (String) -> Unit) -> Result<Unit>,
+    loginProgress: LoginProgress? = null,
+) {
     var nostrConnectUri by remember { mutableStateOf<String?>(null) }
     var isConnecting by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -316,21 +326,25 @@ private fun NostrConnectContent(onLoginNostrConnect: suspend (onUriGenerated: (S
 
             Spacer(Modifier.height(12.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(16.dp),
-                    strokeWidth = 2.dp,
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    "Waiting for signer to connect...",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+            if (loginProgress != null) {
+                LoginProgressSteps(loginProgress)
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "Waiting for signer to connect...",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
         } else {
             Row(

@@ -41,6 +41,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -71,6 +72,7 @@ fun LoginScreen(
     var showNewKeyDialog by remember { mutableStateOf(false) }
     var generatedAccount by remember { mutableStateOf<AccountState.LoggedIn?>(null) }
     val scope = rememberCoroutineScope()
+    val loginProgress by accountManager.loginProgress.collectAsState()
 
     Column(
         modifier = Modifier.fillMaxSize().padding(32.dp),
@@ -116,6 +118,7 @@ fun LoginScreen(
                     onLoginSuccess()
                 }
             },
+            loginProgress = loginProgress,
         )
 
         val account = generatedAccount

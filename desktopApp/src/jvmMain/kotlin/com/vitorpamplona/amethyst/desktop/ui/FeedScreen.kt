@@ -84,6 +84,8 @@ import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 
 /**
  * Note card with action buttons.
@@ -159,6 +161,14 @@ fun FeedScreen(
     onZapFeedback: (ZapFeedback) -> Unit = {},
 ) {
     val connectedRelays by relayManager.connectedRelays.collectAsState()
+    // Configured relay URLs only — stabilized with distinctUntilChanged() to prevent
+    // subscription churn from relay status changes (pings, connect/disconnect).
+    // openReqSubscription connects relays on demand; no need to wait for connectedRelays.
+    val configuredRelays by remember {
+        relayManager.relayStatuses
+            .map { it.keys }
+            .distinctUntilChanged()
+    }.collectAsState(emptySet())
     val scope = rememberCoroutineScope()
     val eventState =
         remember {
@@ -190,17 +200,15 @@ fun FeedScreen(
     val initialLoadComplete = eoseReceivedCount > 0
 
     // Load followed users for Following feed mode
-    rememberSubscription(connectedRelays, account, feedMode, relayManager = relayManager) {
-        DebugConfig.log("contactList sub: relays=${connectedRelays.size}, account=${account?.pubKeyHex?.take(8)}, mode=$feedMode")
-        if (connectedRelays.isNotEmpty() && account != null && feedMode == FeedMode.FOLLOWING) {
+    rememberSubscription(configuredRelays, account, feedMode, relayManager = relayManager) {
+        if (configuredRelays.isNotEmpty() && account != null && feedMode == FeedMode.FOLLOWING) {
             createContactListSubscription(
-                relays = connectedRelays,
+                relays = configuredRelays,
                 pubKeyHex = account.pubKeyHex,
                 onEvent = { event, _, relay, _ ->
-                    DebugConfig.log("contactList event: kind=${event.kind}, isContactList=${event is ContactListEvent}, from=$relay")
                     if (event is ContactListEvent) {
                         val follows = event.verifiedFollowKeySet()
-                        DebugConfig.log("followedUsers: ${follows.size} users")
+                        DebugConfig.log("contactList: ${follows.size} follows from $relay")
                         followedUsers = follows
                     }
                 },
@@ -211,8 +219,8 @@ fun FeedScreen(
     }
 
     // Load user's bookmark list
-    rememberSubscription(connectedRelays, account, relayManager = relayManager) {
-        if (connectedRelays.isNotEmpty() && account != null) {
+    rememberSubscription(configuredRelays, account, relayManager = relayManager) {
+        if (configuredRelays.isNotEmpty() && account != null) {
             SubscriptionConfig(
                 subId = "bookmarks-${account.pubKeyHex.take(8)}",
                 filters =
@@ -223,7 +231,7 @@ fun FeedScreen(
                             limit = 1,
                         ),
                     ),
-                relays = connectedRelays,
+                relays = configuredRelays,
                 onEvent = { event, _, _, _ ->
                     if (event is BookmarkListEvent) {
                         bookmarkList = event
@@ -251,16 +259,16 @@ fun FeedScreen(
     }
 
     // Subscribe to feed based on mode
-    rememberSubscription(connectedRelays, feedMode, followedUsers, relayManager = relayManager) {
-        DebugConfig.log("feedSub: mode=$feedMode, relays=${connectedRelays.size}, followedUsers=${followedUsers.size}")
-        if (connectedRelays.isEmpty()) {
+    rememberSubscription(configuredRelays, feedMode, followedUsers, relayManager = relayManager) {
+        DebugConfig.log("feedSub: mode=$feedMode, relays=${configuredRelays.size}, followedUsers=${followedUsers.size}")
+        if (configuredRelays.isEmpty()) {
             return@rememberSubscription null
         }
 
         when (feedMode) {
             FeedMode.GLOBAL -> {
                 createGlobalFeedSubscription(
-                    relays = connectedRelays,
+                    relays = configuredRelays,
                     onEvent = { event, _, _, _ ->
                         // Store metadata events in cache
                         if (event is MetadataEvent) {
@@ -277,7 +285,7 @@ fun FeedScreen(
             FeedMode.FOLLOWING -> {
                 if (followedUsers.isNotEmpty()) {
                     createFollowingFeedSubscription(
-                        relays = connectedRelays,
+                        relays = configuredRelays,
                         followedUsers = followedUsers.toList(),
                         onEvent = { event, _, _, _ ->
                             // Store metadata events in cache
@@ -299,13 +307,13 @@ fun FeedScreen(
 
     // Subscribe to zaps for visible events
     val eventIds = events.map { it.id }
-    rememberSubscription(connectedRelays, eventIds, relayManager = relayManager) {
-        if (connectedRelays.isEmpty() || eventIds.isEmpty()) {
+    rememberSubscription(configuredRelays, eventIds, relayManager = relayManager) {
+        if (configuredRelays.isEmpty() || eventIds.isEmpty()) {
             return@rememberSubscription null
         }
 
         createZapsSubscription(
-            relays = connectedRelays,
+            relays = configuredRelays,
             eventIds = eventIds,
             onEvent = { event, _, _, _ ->
                 if (event is LnZapEvent) {
@@ -329,8 +337,8 @@ fun FeedScreen(
             .flatten()
             .map { it.senderPubKey }
             .distinct()
-    rememberSubscription(connectedRelays, zapSenderPubkeys, relayManager = relayManager) {
-        if (connectedRelays.isEmpty() || zapSenderPubkeys.isEmpty()) {
+    rememberSubscription(configuredRelays, zapSenderPubkeys, relayManager = relayManager) {
+        if (configuredRelays.isEmpty() || zapSenderPubkeys.isEmpty()) {
             return@rememberSubscription null
         }
 
@@ -348,7 +356,7 @@ fun FeedScreen(
         }
 
         createBatchMetadataSubscription(
-            relays = connectedRelays,
+            relays = configuredRelays,
             pubKeyHexList = missingPubkeys,
             onEvent = { event, _, _, _ ->
                 if (event is MetadataEvent) {
@@ -359,13 +367,13 @@ fun FeedScreen(
     }
 
     // Subscribe to reactions for visible events
-    rememberSubscription(connectedRelays, eventIds, relayManager = relayManager) {
-        if (connectedRelays.isEmpty() || eventIds.isEmpty()) {
+    rememberSubscription(configuredRelays, eventIds, relayManager = relayManager) {
+        if (configuredRelays.isEmpty() || eventIds.isEmpty()) {
             return@rememberSubscription null
         }
 
         createReactionsSubscription(
-            relays = connectedRelays,
+            relays = configuredRelays,
             eventIds = eventIds,
             onEvent = { event, _, _, _ ->
                 if (event is ReactionEvent) {
@@ -381,13 +389,13 @@ fun FeedScreen(
     }
 
     // Subscribe to replies for visible events
-    rememberSubscription(connectedRelays, eventIds, relayManager = relayManager) {
-        if (connectedRelays.isEmpty() || eventIds.isEmpty()) {
+    rememberSubscription(configuredRelays, eventIds, relayManager = relayManager) {
+        if (configuredRelays.isEmpty() || eventIds.isEmpty()) {
             return@rememberSubscription null
         }
 
         createRepliesSubscription(
-            relays = connectedRelays,
+            relays = configuredRelays,
             eventIds = eventIds,
             onEvent = { event, _, _, _ ->
                 // Find the event this is replying to
@@ -408,13 +416,13 @@ fun FeedScreen(
     }
 
     // Subscribe to reposts for visible events
-    rememberSubscription(connectedRelays, eventIds, relayManager = relayManager) {
-        if (connectedRelays.isEmpty() || eventIds.isEmpty()) {
+    rememberSubscription(configuredRelays, eventIds, relayManager = relayManager) {
+        if (configuredRelays.isEmpty() || eventIds.isEmpty()) {
             return@rememberSubscription null
         }
 
         createRepostsSubscription(
-            relays = connectedRelays,
+            relays = configuredRelays,
             eventIds = eventIds,
             onEvent = { event, _, _, _ ->
                 if (event is RepostEvent) {
@@ -440,13 +448,13 @@ fun FeedScreen(
     }
 
     // Fallback subscription if coordinator not available
-    rememberSubscription(connectedRelays, authorPubkeys, subscriptionsCoordinator, relayManager = relayManager) {
+    rememberSubscription(configuredRelays, authorPubkeys, subscriptionsCoordinator, relayManager = relayManager) {
         // Skip if using coordinator
         if (subscriptionsCoordinator != null) {
             return@rememberSubscription null
         }
 
-        if (connectedRelays.isEmpty() || authorPubkeys.isEmpty()) {
+        if (configuredRelays.isEmpty() || authorPubkeys.isEmpty()) {
             return@rememberSubscription null
         }
 
@@ -464,7 +472,7 @@ fun FeedScreen(
         }
 
         createBatchMetadataSubscription(
-            relays = connectedRelays,
+            relays = configuredRelays,
             pubKeyHexList = missingPubkeys,
             onEvent = { event, _, _, _ ->
                 if (event is MetadataEvent) {

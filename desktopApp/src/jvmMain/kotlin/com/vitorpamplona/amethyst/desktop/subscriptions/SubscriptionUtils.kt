@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.desktop.subscriptions
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
-import com.vitorpamplona.amethyst.desktop.DebugConfig
 import com.vitorpamplona.amethyst.desktop.network.RelayConnectionManager
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
@@ -75,7 +74,6 @@ fun rememberSubscription(
     DisposableEffect(*keys, subscription?.subId) {
         subscription?.let { cfg ->
             if (cfg.relays.isNotEmpty()) {
-                DebugConfig.log("SUB OPEN ${cfg.subId} relays=${cfg.relays.size}")
                 relayManager.subscribe(
                     subId = cfg.subId,
                     filters = cfg.filters,
@@ -104,7 +102,6 @@ fun rememberSubscription(
 
         onDispose {
             subscription?.let {
-                DebugConfig.log("SUB CLOSE ${it.subId}")
                 relayManager.unsubscribe(it.subId)
             }
         }
