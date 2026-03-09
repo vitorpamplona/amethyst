@@ -230,14 +230,22 @@ class NostrSignerRemote(
                         secret = secret,
                     )
                 },
-                parser = PubKeyResponse::parse,
+                parser = ConnectResponse::parse,
             )
 
-        if (result is SignerResult.RequestAddressed.Successful<PublicKeyResult>) {
-            return result.result.pubkey
-        }
+        return when (result) {
+            is SignerResult.RequestAddressed.Successful<ConnectResult> -> {
+                when (val r = result.result) {
+                    is ConnectResult.PubKey -> r.pubkey
+                    is ConnectResult.Ack -> getPublicKey()
+                    is ConnectResult.AlreadyConnected -> getPublicKey()
+                }
+            }
 
-        throw convertExceptions("Could not connect", result)
+            else -> {
+                throw convertExceptions("Could not connect", result)
+            }
+        }
     }
 
     suspend fun getPublicKey(): HexKey {

@@ -67,3 +67,13 @@ data class PingResult(
 data class PublicKeyResult(
     val pubkey: String,
 ) : IResult
+
+sealed interface ConnectResult : IResult {
+    data class PubKey(
+        val pubkey: String,
+    ) : ConnectResult
+
+    data object Ack : ConnectResult
+
+    data object AlreadyConnected : ConnectResult
+}
