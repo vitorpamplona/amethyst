@@ -68,6 +68,27 @@ fun String.containsIgnoreCase(
     return false
 }
 
+fun String.startsWithIgnoreCase(
+    whatLowercase: String,
+    whatUppercase: String,
+): Boolean {
+    val termLength = min(whatUppercase.length, whatLowercase.length)
+
+    // If the search term is longer than the string itself, it can't be a prefix
+    if (this.length < termLength) return false
+
+    var offset = 0
+    while (offset < termLength) {
+        val current = this[offset]
+        if (current != whatLowercase[offset] && current != whatUppercase[offset]) {
+            return false
+        }
+        offset++
+    }
+
+    return true
+}
+
 fun String.containsAny(terms: List<DualCase>): Boolean {
     if (terms.isEmpty()) return true // Empty string is contained
 
@@ -76,6 +97,16 @@ fun String.containsAny(terms: List<DualCase>): Boolean {
     }
 
     return terms.any { containsIgnoreCase(it.lowercase, it.uppercase) }
+}
+
+fun String.startsWithAny(terms: List<DualCase>): Boolean {
+    if (terms.isEmpty()) return true // Empty string is contained
+
+    if (terms.size == 1) {
+        return startsWithIgnoreCase(terms[0].lowercase, terms[0].uppercase)
+    }
+
+    return terms.any { startsWithIgnoreCase(it.lowercase, it.uppercase) }
 }
 
 class DualCase(

@@ -204,6 +204,7 @@ import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
+import com.vitorpamplona.quartz.utils.DualCase
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -2276,20 +2277,32 @@ object LocalCache : ILocalCache, ICacheProvider {
             }
         }
 
+        val dualCase =
+            listOf(
+                DualCase(username.lowercase(), username.uppercase()),
+            )
+
         val finds =
             users.filter { _, user: User ->
-                (
-                    (user.metadataOrNull()?.anyNameStartsWith(username) == true) ||
-                        user.pubkeyHex.startsWith(username, true) ||
+                val metadata = user.metadataOrNull()
+                if (metadata == null) {
+                    user.pubkeyHex.startsWith(username, true) ||
                         user.pubkeyNpub().startsWith(username, true)
-                ) &&
-                    (forAccount == null || (!forAccount.isHidden(user) && !user.containsAny(forAccount.hiddenUsers.flow.value.hiddenWordsCase)))
+                } else {
+                    (
+                        metadata.anyNameOrAddressContains(dualCase) ||
+                            user.pubkeyHex.startsWith(username, true) ||
+                            user.pubkeyNpub().startsWith(username, true)
+                    ) &&
+                        (forAccount == null || (!forAccount.isHidden(user) && !metadata.anyPropertyContains(forAccount.hiddenUsers.flow.value.hiddenWordsCase)))
+                }
             }
 
         return finds.sortedWith(
             compareBy(
                 { forAccount?.isFollowing(it) == false },
-                { !it.toBestDisplayName().startsWith(username, ignoreCase = true) },
+                { it.metadataOrNull()?.anyNameStartsWith(dualCase) == false },
+                { it.metadataOrNull()?.anyAddressStartsWith(dualCase) == false },
                 { it.toBestDisplayName().lowercase() },
                 { it.pubkeyHex },
             ),

@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentRequestEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentResponseEvent
+import com.vitorpamplona.quartz.utils.DualCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -85,15 +86,27 @@ class DesktopLocalCache : ICacheProvider {
             if (user != null) return listOf(user)
         }
 
+        val dualCase =
+            listOf(
+                DualCase(prefix.lowercase(), prefix.uppercase()),
+            )
+
         // Search by name/displayName/nip05/lud16
         return users.values
             .filter { user ->
-                user.metadataOrNull()?.anyNameStartsWith(prefix) == true ||
-                    user.pubkeyHex.startsWith(prefix, ignoreCase = true) ||
-                    user.pubkeyNpub().startsWith(prefix, ignoreCase = true)
+                val metadata = user.metadataOrNull()
+                if (metadata == null) {
+                    user.pubkeyHex.startsWith(prefix, true) ||
+                        user.pubkeyNpub().startsWith(prefix, true)
+                } else {
+                    metadata.anyNameOrAddressContains(dualCase) ||
+                        user.pubkeyHex.startsWith(prefix, true) ||
+                        user.pubkeyNpub().startsWith(prefix, true)
+                }
             }.sortedWith(
                 compareBy(
-                    { !it.toBestDisplayName().startsWith(prefix, ignoreCase = true) },
+                    { it.metadataOrNull()?.anyNameStartsWith(dualCase) == false },
+                    { it.metadataOrNull()?.anyAddressStartsWith(dualCase) == false },
                     { it.toBestDisplayName().lowercase() },
                     { it.pubkeyHex },
                 ),

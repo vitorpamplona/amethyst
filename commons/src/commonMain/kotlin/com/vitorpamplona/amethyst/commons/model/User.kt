@@ -36,7 +36,6 @@ import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
-import com.vitorpamplona.quartz.utils.DualCase
 import com.vitorpamplona.quartz.utils.Hex
 
 interface UserDependencies
@@ -141,8 +140,6 @@ class User(
     fun relayStateOrNull(): UserRelaysCache? = relays
 
     fun relayState(): UserRelaysCache = relays ?: UserRelaysCache().also { relays = it }
-
-    fun containsAny(hiddenWordsCase: List<DualCase>) = metadataOrNull()?.containsAny(hiddenWordsCase) == true
 }
 
 fun Set<User>.toHexSet() = mapTo(LinkedHashSet(size)) { it.pubkeyHex }
