@@ -1004,6 +1004,7 @@
     <string name="copy_stack_to_clipboard">Copy Stack</string>
 
     <string name="copy_to_clipboard">Copy to clipboard</string>
+    <string name="copy_nprofile_to_clipboard">Copy nprofile to clipboard</string>
     <string name="copy_npub_to_clipboard">Copy npub to clipboard</string>
     <string name="share_or_save">Share or Save</string>
     <string name="copy_url_to_clipboard">Copy URL to clipboard</string>
@@ -1282,6 +1283,7 @@
     <string name="add_content_warning">Add content warning</string>
     <string name="remove_content_warning">Remove content warning</string>
     <string name="show_npub_as_a_qr_code">Show npub as a QR code</string>
+    <string name="show_nprofile_as_a_qr_code">Show nprofile as a QR code</string>
 
     <string name="invalid_nip19_uri">Invalid address</string>
     <string name="invalid_nip19_uri_description">Amethyst received a URI to open but that uri was invalid: %1$s</string>
