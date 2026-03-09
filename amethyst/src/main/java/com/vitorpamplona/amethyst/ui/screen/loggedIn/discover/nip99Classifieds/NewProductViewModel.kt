@@ -488,6 +488,9 @@ open class NewProductViewModel :
             if (lastWord.startsWith("@")) {
                 userSuggestionsMainMessage = UserSuggestionAnchor.MAIN_MESSAGE
                 userSuggestions?.processCurrentWord(lastWord)
+            } else {
+                userSuggestionsMainMessage = null
+                userSuggestions?.reset()
             }
 
             emojiSuggestions?.processCurrentWord(lastWord)

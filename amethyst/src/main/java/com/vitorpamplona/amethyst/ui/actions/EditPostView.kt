@@ -96,6 +96,7 @@ import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightPage
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
@@ -344,7 +345,7 @@ fun EditPostView(
                                 it,
                                 postViewModel::autocompleteWithUser,
                                 accountViewModel,
-                                modifier = Modifier.heightIn(0.dp, 300.dp),
+                                modifier = SuggestionListDefaultHeightPage,
                             )
                         }
 

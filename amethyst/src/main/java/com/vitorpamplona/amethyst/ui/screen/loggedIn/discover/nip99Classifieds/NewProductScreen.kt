@@ -29,7 +29,6 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -79,6 +78,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
+import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightPage
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -314,7 +314,7 @@ private fun NewProductBody(
                 it,
                 postViewModel::autocompleteWithUser,
                 accountViewModel,
-                modifier = Modifier.heightIn(0.dp, 300.dp),
+                modifier = SuggestionListDefaultHeightPage,
             )
         }
 
@@ -323,7 +323,7 @@ private fun NewProductBody(
                 it,
                 postViewModel::autocompleteWithEmoji,
                 postViewModel::autocompleteWithEmojiUrl,
-                modifier = Modifier.heightIn(0.dp, 300.dp),
+                modifier = SuggestionListDefaultHeightPage,
             )
         }
 

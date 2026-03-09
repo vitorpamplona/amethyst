@@ -55,7 +55,7 @@ fun ShowUserSuggestionList(
     userSuggestions: UserSuggestionState,
     onSelect: (User) -> Unit,
     accountViewModel: AccountViewModel,
-    modifier: Modifier = Modifier.heightIn(0.dp, 200.dp),
+    modifier: Modifier = Modifier,
 ) {
     UserSearchDataSourceSubscription(userSuggestions, accountViewModel)
 

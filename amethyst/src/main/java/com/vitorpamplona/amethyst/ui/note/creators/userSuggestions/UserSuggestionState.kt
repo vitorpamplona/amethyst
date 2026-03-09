@@ -67,7 +67,9 @@ class UserSuggestionState(
         }.flowOn(Dispatchers.IO)
 
     fun reset() {
-        currentWord.tryEmit("")
+        if (!currentWord.value.isEmpty()) {
+            currentWord.tryEmit("")
+        }
     }
 
     fun processCurrentWord(word: String) {

@@ -24,7 +24,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement.spacedBy
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -55,7 +54,7 @@ fun ShowEmojiSuggestionList(
     emojiSuggestions: EmojiSuggestionState,
     onSelect: (EmojiPackState.EmojiMedia) -> Unit,
     onFullSize: (EmojiPackState.EmojiMedia) -> Unit,
-    modifier: Modifier = Modifier.heightIn(0.dp, 200.dp),
+    modifier: Modifier = Modifier,
 ) {
     val suggestions by emojiSuggestions.results.collectAsStateWithLifecycle(emptyList())
 

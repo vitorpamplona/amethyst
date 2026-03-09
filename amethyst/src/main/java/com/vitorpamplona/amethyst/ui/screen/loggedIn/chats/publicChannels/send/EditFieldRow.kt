@@ -50,6 +50,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.EditFieldBorder
 import com.vitorpamplona.amethyst.ui.theme.EditFieldModifier
 import com.vitorpamplona.amethyst.ui.theme.EditFieldTrailingIconModifier
+import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightChat
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.FlowPreview
 
@@ -96,6 +97,7 @@ fun EditFieldRow(
                 it,
                 channelScreenModel::autocompleteWithUser,
                 accountViewModel,
+                SuggestionListDefaultHeightChat,
             )
         }
 
@@ -104,6 +106,7 @@ fun EditFieldRow(
                 it,
                 channelScreenModel::autocompleteWithEmoji,
                 channelScreenModel::autocompleteWithEmojiUrl,
+                SuggestionListDefaultHeightChat,
             )
         }
 

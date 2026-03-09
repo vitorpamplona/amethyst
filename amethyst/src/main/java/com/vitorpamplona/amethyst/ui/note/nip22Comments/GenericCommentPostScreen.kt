@@ -30,7 +30,6 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -83,6 +82,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightPage
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -346,7 +346,7 @@ private fun GenericCommentPostBody(
                 it,
                 postViewModel::autocompleteWithUser,
                 accountViewModel,
-                modifier = Modifier.heightIn(0.dp, 300.dp),
+                modifier = SuggestionListDefaultHeightPage,
             )
         }
 
@@ -355,7 +355,7 @@ private fun GenericCommentPostBody(
                 it,
                 postViewModel::autocompleteWithEmoji,
                 postViewModel::autocompleteWithEmojiUrl,
-                modifier = Modifier.heightIn(0.dp, 300.dp),
+                modifier = SuggestionListDefaultHeightPage,
             )
         }
 

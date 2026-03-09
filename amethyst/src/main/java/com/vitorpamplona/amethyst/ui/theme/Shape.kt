@@ -383,4 +383,7 @@ val PopupUpEffect = RoundedCornerShape(0.dp, 0.dp, 15.dp, 15.dp)
 
 val Size50ModifierOffset10 = Modifier.size(50.dp).offset(y = (-10).dp)
 
+val SuggestionListDefaultHeightChat = Modifier.heightIn(0.dp, 200.dp)
+val SuggestionListDefaultHeightPage = Modifier.heightIn(0.dp, 300.dp)
+
 val FollowPackHeaderModifier = Modifier.fillMaxWidth().height(TopBarSize)

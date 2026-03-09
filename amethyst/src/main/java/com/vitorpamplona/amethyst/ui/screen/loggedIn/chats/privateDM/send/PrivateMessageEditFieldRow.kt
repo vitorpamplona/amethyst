@@ -57,6 +57,7 @@ import com.vitorpamplona.amethyst.ui.theme.EditFieldModifier
 import com.vitorpamplona.amethyst.ui.theme.EditFieldTrailingIconModifier
 import com.vitorpamplona.amethyst.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.ui.theme.PostKeyboard
+import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightChat
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
@@ -119,6 +120,7 @@ fun PrivateMessageEditFieldRow(
                 it,
                 channelScreenModel::autocompleteWithUser,
                 accountViewModel,
+                SuggestionListDefaultHeightChat,
             )
         }
 
@@ -127,6 +129,7 @@ fun PrivateMessageEditFieldRow(
                 it,
                 channelScreenModel::autocompleteWithEmoji,
                 channelScreenModel::autocompleteWithEmojiUrl,
+                SuggestionListDefaultHeightChat,
             )
         }
 
