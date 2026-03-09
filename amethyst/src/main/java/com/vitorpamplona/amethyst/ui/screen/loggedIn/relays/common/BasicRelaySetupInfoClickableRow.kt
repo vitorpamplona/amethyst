@@ -47,7 +47,6 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.HalfHalfVertPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfHorzPadding
-import com.vitorpamplona.amethyst.ui.theme.HalfVertPadding
 import com.vitorpamplona.amethyst.ui.theme.Height25Modifier
 import com.vitorpamplona.amethyst.ui.theme.LargeRelayIconModifier
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowHeightChatMaxWidth
@@ -63,6 +62,7 @@ fun BasicRelaySetupInfoClickableRow(
     onDelete: ((BasicRelaySetupInfo) -> Unit)?,
     onClick: () -> Unit,
     nip11CachedRetriever: Nip11CachedRetriever,
+    modifier: Modifier = Modifier,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -79,7 +79,7 @@ fun BasicRelaySetupInfoClickableRow(
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = HalfVertPadding,
+            modifier = modifier,
         ) {
             val iconUrlFromRelayInfoDoc by loadRelayInfo(item.relay, nip11CachedRetriever)
 

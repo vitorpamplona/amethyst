@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.model.nip11RelayInfo.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.HalfVertPadding
 
 @Composable
 fun BasicRelaySetupInfoDialog(
@@ -41,6 +42,7 @@ fun BasicRelaySetupInfoDialog(
         onDelete = onDelete,
         onClick = { nav.nav(Route.RelayInfo(item.relay.url)) },
         nip11CachedRetriever = nip11CachedRetriever,
+        modifier = HalfVertPadding,
         accountViewModel = accountViewModel,
         nav = nav,
     )

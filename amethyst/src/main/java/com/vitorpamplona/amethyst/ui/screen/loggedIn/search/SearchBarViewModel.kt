@@ -36,6 +36,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.SearchQueryState
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinLookupException
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
 import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
@@ -204,6 +205,24 @@ class SearchBarViewModel(
             invalidations,
         ) { term, version ->
             findHashtags(term)
+        }.flowOn(Dispatchers.IO)
+            .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
+
+    val relayResults =
+        combine(
+            searchValueFlow.debounce(100),
+            invalidations,
+        ) { term, version ->
+            if (term.length > 1) {
+                val lower = term.lowercase()
+                LocalCache.relayHints.relayDB
+                    .filter { _, relay -> relay.url.contains(lower) }
+                    .map { relaySetupInfoBuilder(it) }
+                    .sortedByDescending { it.relayStat.receivedBytes }
+                    .take(20)
+            } else {
+                emptyList()
+            }
         }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 

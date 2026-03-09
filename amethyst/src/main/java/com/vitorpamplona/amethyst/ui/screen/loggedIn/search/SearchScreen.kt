@@ -54,6 +54,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
@@ -70,6 +71,7 @@ import com.vitorpamplona.amethyst.ui.note.SearchIcon
 import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.ChannelName
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoClickableRow
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
@@ -242,6 +244,7 @@ private fun DisplaySearchResults(
     }
 
     val hashTags by searchBarViewModel.hashtagResults.collectAsStateWithLifecycle()
+    val relays by searchBarViewModel.relayResults.collectAsStateWithLifecycle()
     val users by searchBarViewModel.searchResultsUsers.collectAsStateWithLifecycle()
     val publicChatChannels by searchBarViewModel.searchResultsPublicChatChannels.collectAsStateWithLifecycle()
     val ephemeralChannels by searchBarViewModel.searchResultsEphemeralChannels.collectAsStateWithLifecycle()
@@ -262,6 +265,23 @@ private fun DisplaySearchResults(
             HorizontalDivider(
                 modifier = Modifier.padding(top = 10.dp),
                 thickness = DividerThickness,
+            )
+        }
+
+        itemsIndexed(
+            relays,
+            key = { _, item -> "relay${item.relay.url}" },
+        ) { _, relayInfo ->
+            BasicRelaySetupInfoClickableRow(
+                item = relayInfo,
+                loadProfilePicture = accountViewModel.settings.showProfilePictures(),
+                loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+                onClick = { nav.nav(Route.RelayInfo(relayInfo.relay.url)) },
+                onDelete = null,
+                nip11CachedRetriever = Amethyst.instance.nip11Cache,
+                modifier = Modifier.padding(vertical = 5.dp, horizontal = 10.dp),
+                accountViewModel = accountViewModel,
+                nav = nav,
             )
         }
 

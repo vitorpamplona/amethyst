@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.model.nip11RelayInfo.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.ui.theme.HalfVertPadding
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 @Composable
@@ -54,6 +55,7 @@ fun ShowRelaySuggestionList(
                     onClick = { onSelect(relayInfo.relay) },
                     onDelete = null,
                     nip11CachedRetriever = nip11CachedRetriever,
+                    modifier = HalfVertPadding,
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
