@@ -269,6 +269,17 @@ private fun DisplaySearchResults(
         }
 
         itemsIndexed(
+            users,
+            key = { _, item -> "u" + item.pubkeyHex },
+        ) { _, item ->
+            UserCompose(item, accountViewModel = accountViewModel, nav = nav)
+
+            HorizontalDivider(
+                thickness = DividerThickness,
+            )
+        }
+
+        itemsIndexed(
             relays,
             key = { _, item -> "relay${item.relay.url}" },
         ) { _, relayInfo ->
@@ -282,17 +293,6 @@ private fun DisplaySearchResults(
                 modifier = Modifier.padding(vertical = 5.dp, horizontal = 10.dp),
                 accountViewModel = accountViewModel,
                 nav = nav,
-            )
-        }
-
-        itemsIndexed(
-            users,
-            key = { _, item -> "u" + item.pubkeyHex },
-        ) { _, item ->
-            UserCompose(item, accountViewModel = accountViewModel, nav = nav)
-
-            HorizontalDivider(
-                thickness = DividerThickness,
             )
         }
 
