@@ -37,9 +37,11 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.SearchQueryState
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinLookupException
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
 import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
+import com.vitorpamplona.quartz.utils.Rfc3986
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -214,9 +216,20 @@ class SearchBarViewModel(
             invalidations,
         ) { term, version ->
             if (term.length > 1) {
+                val isTypingRelay = term.length > 7 && (term.startsWith("wss://") || term.startsWith("ws://"))
+                val relayUrl =
+                    if (isTypingRelay) {
+                        runCatching { NormalizedRelayUrl(Rfc3986.normalize(term)) }.getOrNull()
+                    } else {
+                        null
+                    }
                 val lower = term.lowercase()
-                LocalCache.relayHints.relayDB
-                    .filter { _, relay -> relay.url.contains(lower) }
+
+                val relays =
+                    listOfNotNull(relayUrl) +
+                        LocalCache.relayHints.relayDB.filter { _, relay -> relay.url.contains(lower) }
+
+                relays
                     .map { relaySetupInfoBuilder(it) }
                     .sortedByDescending { it.relayStat.receivedBytes }
                     .take(20)
