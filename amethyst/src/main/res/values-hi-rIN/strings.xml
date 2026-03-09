@@ -421,6 +421,14 @@
     <string name="wallet_connect_service_secret">धनकोष संयोजन रहस्य</string>
     <string name="wallet_connect_service_show_secret">गुप्त कुंचिका दिखाएँ</string>
     <string name="wallet_connect_service_secret_placeholder">एनसेक॰ / षोडशांकरूप निजी कुंचिका</string>
+    <string name="wallet_connect_status_connected">संयोजित</string>
+    <string name="wallet_connect_status_not_connected">असंयोजित</string>
+    <string name="wallet_connect_manual_config">उन्नत : संयोजन विवरणों को स्वयम प्रविष्ट करें</string>
+    <string name="quick_zap_amounts">शीघ्र ज्साप संख्याएँ</string>
+    <string name="quick_zap_amounts_explainer">ज्साप घुण्डी दबाने पर दिखाया जाता है। एक संख्या दबाएँ उसे हटाने के लिए। उसे रिक्त छोड दें तो प्रत्येक बार संख्या प्रविष्ट करने के लिए पूछेगा।</string>
+    <string name="zap_privacy_section">ज्साप गोपनीयता</string>
+    <string name="zap_type_section_explainer">नियन्त्रण करता है कि आपका परिचय कैसे दिखाया जाता है ज्साप भेजने पर।</string>
+    <string name="wallet_connect_connect_app">संयोजन धनकोष</string>
     <string name="pledge_amount_in_sats">प्रतिज्ञा मात्रा साट्स में</string>
     <string name="post_poll">मतदान प्रकाशित करें</string>
     <string name="poll_heading_required">अनिवार्य प्रपत्रस्थान :</string>
