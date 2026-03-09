@@ -44,6 +44,7 @@ import com.vitorpamplona.amethyst.service.playback.composable.controls.RenderCen
 import com.vitorpamplona.amethyst.service.playback.composable.controls.RenderTopButtons
 import com.vitorpamplona.amethyst.service.playback.composable.controls.TopGradientOverlay
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.LoadedMediaItem
+import com.vitorpamplona.amethyst.service.playback.composable.wavefront.AudioPlayingAnimation
 import com.vitorpamplona.amethyst.service.playback.composable.wavefront.Waveform
 import com.vitorpamplona.amethyst.service.playback.diskCache.isLiveStreaming
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -118,7 +119,12 @@ fun RenderVideoPlayer(
             contentScale = contentScale,
         )
 
-        mediaItem.src.waveformData?.let { Waveform(it, controllerState, Modifier.align(Alignment.Center)) }
+        val waveform = mediaItem.src.waveformData
+        if (waveform != null) {
+            Waveform(waveform, controllerState, Modifier.align(Alignment.Center))
+        } else if (mediaItem.src.mimeType?.startsWith("audio/") == true) {
+            AudioPlayingAnimation(controllerState, Modifier.align(Alignment.Center))
+        }
 
         if (showControls) {
             TopGradientOverlay(
