@@ -140,14 +140,14 @@ fun RenderVideoPlayer(
                 accountViewModel = accountViewModel,
             )
 
+            RenderAnimatedBottomInfo(controllerState, controllerVisible, Modifier.align(Alignment.BottomCenter))
+
             RenderCenterButtons(
                 controllerState = controllerState,
                 controllerVisible = controllerVisible,
                 modifier = Modifier.align(Alignment.Center),
                 isLiveStream = isLive,
             )
-
-            RenderAnimatedBottomInfo(controllerState, controllerVisible, Modifier.align(Alignment.BottomCenter))
         }
     }
 }
