@@ -772,6 +772,7 @@
     <string name="read_from_relay_description">The amount in bytes that was received from this relay, including filters and events</string>
     <string name="an_error_occurred_trying_to_get_relay_information">An error occurred trying to get relay information from %1$s</string>
     <string name="owner">Owner</string>
+    <string name="used_by">Used By</string>
     <string name="self">Service Key</string>
     <string name="running_software">Running %1$s</string>
     <string name="running_software_version">Running %1$s (%2$s)</string>

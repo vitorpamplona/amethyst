@@ -67,7 +67,7 @@ class UserReportsSubAssembler(
 
         val trustedAccountsPerRelay =
             mapOfSet {
-                accounts.map { it.declaredFollowsPerRelay.value }.forEach {
+                accounts.map { it.declaredFollowsPerOutboxRelay.value }.forEach {
                     add(it)
                 }
             }
