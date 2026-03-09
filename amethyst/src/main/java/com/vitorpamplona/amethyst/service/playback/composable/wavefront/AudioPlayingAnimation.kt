@@ -27,9 +27,9 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredHeight
-import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -47,12 +47,13 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import androidx.media3.common.Player
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
+import kotlin.math.abs
+import kotlin.math.cos
 import kotlin.math.sin
 
-private const val BAR_COUNT = 5
 private const val DEFAULT_GRAPHICS_LAYER_ALPHA = 0.99F
-private val MIN_BAR_FRACTION = 0.15f
-private val MAX_BAR_FRACTION = 0.85f
+private const val MIN_BAR_FRACTION = 0.08f
+private const val TWO_PI = 2f * Math.PI.toFloat()
 
 @Composable
 fun AudioPlayingAnimation(
@@ -74,15 +75,38 @@ fun AudioPlayingAnimation(
 
     val infiniteTransition = rememberInfiniteTransition(label = "audioAnimation")
 
-    val animationProgress by infiniteTransition.animateFloat(
+    // Three animation drivers at different speeds for organic layered motion
+    val phase1 by infiniteTransition.animateFloat(
         initialValue = 0f,
-        targetValue = 1f,
+        targetValue = TWO_PI,
         animationSpec =
             infiniteRepeatable(
-                animation = tween(durationMillis = 2000, easing = LinearEasing),
+                animation = tween(durationMillis = 1400, easing = LinearEasing),
                 repeatMode = RepeatMode.Restart,
             ),
-        label = "barAnimation",
+        label = "phase1",
+    )
+
+    val phase2 by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = TWO_PI,
+        animationSpec =
+            infiniteRepeatable(
+                animation = tween(durationMillis = 1900, easing = LinearEasing),
+                repeatMode = RepeatMode.Restart,
+            ),
+        label = "phase2",
+    )
+
+    val phase3 by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = TWO_PI,
+        animationSpec =
+            infiniteRepeatable(
+                animation = tween(durationMillis = 2700, easing = LinearEasing),
+                repeatMode = RepeatMode.Restart,
+            ),
+        label = "phase3",
     )
 
     val gradientOffset by infiniteTransition.animateFloat(
@@ -96,39 +120,51 @@ fun AudioPlayingAnimation(
         label = "gradientAnimation",
     )
 
-    val barBrush =
-        Brush.linearGradient(
-            colors = listOf(Color(0xff2598cf), Color(0xff652d80)),
-            start = Offset(gradientOffset * 128f, 0f),
-            end = Offset(gradientOffset * 128f + 128f, 0f),
-        )
-
     Canvas(
         modifier =
             modifier
-                .width(100.dp)
+                .fillMaxWidth()
                 .requiredHeight(48.dp)
-                .padding(horizontal = 10.dp)
+                .padding(start = 10.dp, end = 10.dp)
                 .graphicsLayer(alpha = DEFAULT_GRAPHICS_LAYER_ALPHA),
     ) {
         val barWidth = 3.dp.toPx()
         val barPadding = 2.dp.toPx()
         val barRadius = 2.dp.toPx()
         val totalBarWidth = barWidth + barPadding
-        val startX = (size.width - (BAR_COUNT * totalBarWidth - barPadding)) / 2f
+        val barCount = (size.width / totalBarWidth).toInt()
+        if (barCount <= 0) return@Canvas
 
-        for (i in 0 until BAR_COUNT) {
-            val phase = (i.toFloat() / BAR_COUNT) * 2f * Math.PI.toFloat()
+        val barBrush =
+            Brush.linearGradient(
+                colors = listOf(Color(0xff2598cf), Color(0xff652d80)),
+                start = Offset(gradientOffset * size.width, 0f),
+                end = Offset(gradientOffset * size.width + 128.dp.toPx(), 0f),
+            )
+
+        for (i in 0 until barCount) {
+            val normalized = i.toFloat() / barCount
+
+            // Bell-curve envelope: bars in the center are taller than edges
+            val distFromCenter = abs(normalized - 0.5f) * 2f // 0 at center, 1 at edges
+            val envelope = 1f - distFromCenter * distFromCenter * 0.6f
+
             val barFraction =
                 if (isPlaying) {
-                    val wave = sin(animationProgress * 2f * Math.PI.toFloat() + phase)
-                    MIN_BAR_FRACTION + (MAX_BAR_FRACTION - MIN_BAR_FRACTION) * ((wave + 1f) / 2f)
+                    // Combine three sine waves at different frequencies and phases
+                    // to produce organic, non-repeating-looking motion
+                    val w1 = sin(phase1 + normalized * 7f) * 0.4f
+                    val w2 = sin(phase2 + normalized * 11f) * 0.3f
+                    val w3 = cos(phase3 + normalized * 5f) * 0.3f
+                    val combined = (w1 + w2 + w3 + 1f) / 2f // normalize to 0..1
+                    (MIN_BAR_FRACTION + combined * envelope * (1f - MIN_BAR_FRACTION))
+                        .coerceIn(MIN_BAR_FRACTION, 1f)
                 } else {
                     MIN_BAR_FRACTION
                 }
 
             val barHeight = size.height * barFraction
-            val x = startX + i * totalBarWidth
+            val x = i * totalBarWidth
             val y = (size.height - barHeight) / 2f
 
             drawRoundRect(
