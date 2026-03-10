@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.note.creators.userSuggestions
 
-import android.R.attr.version
 import androidx.compose.runtime.Stable
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
@@ -77,7 +76,10 @@ class UserSuggestionState(
 
     @OptIn(FlowPreview::class)
     val nip05ResolutionFlow =
-        searchTerm
+        currentWord
+            .debounce(300)
+            .distinctUntilChanged()
+            .map(::userSearchTermOrNull)
             .map { prefix ->
                 if (prefix != null) {
                     if (prefix.contains('@')) {
