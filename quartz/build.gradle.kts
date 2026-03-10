@@ -6,12 +6,18 @@ import io.github.frankois944.spmForKmp.utils.ExperimentalSpmForKmpFeature
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeTest
 
+val iosEnabled = findProperty("amethyst.ios.enabled")?.toString()?.toBoolean() ?: false
+
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidKotlinMultiplatformLibrary)
     alias(libs.plugins.serialization)
     alias(libs.plugins.vanniktech.mavenPublish)
-    alias(libs.plugins.frankois944.spmForKmp)
+    alias(libs.plugins.frankois944.spmForKmp) apply false
+}
+
+if (iosEnabled) {
+    apply(plugin = libs.plugins.frankois944.spmForKmp.get().pluginId)
 }
 
 kotlin {
@@ -60,58 +66,60 @@ kotlin {
     // A step-by-step guide on how to include this library in an XCode
     // project can be found here:
     // https://developer.android.com/kotlin/multiplatform/migrate
-    val xcfName = "quartz-kmpKit"
+    if (iosEnabled) {
+        val xcfName = "quartz-kmpKit"
 
-    listOf(
-        iosArm64(),
-        iosX64(),
-        iosSimulatorArm64(),
-    ).forEach { target ->
-        target.swiftPackageConfig(cinteropName = "swiftbridge") {
-            minIos = "17"
-            minMacos = "14"
-            dependency {
-                remotePackageVersion(
-                    url = uri("https://github.com/swift-standards/swift-rfc-3986.git"),
-                    packageName = "swift-rfc-3986",
-                    products = {
-                        add("RFC 3986")
-                    },
-                    version = "0.1.0",
-                )
+        listOf(
+            iosArm64(),
+            iosX64(),
+            iosSimulatorArm64(),
+        ).forEach { target ->
+            target.swiftPackageConfig(cinteropName = "swiftbridge") {
+                minIos = "17"
+                minMacos = "14"
+                dependency {
+                    remotePackageVersion(
+                        url = uri("https://github.com/swift-standards/swift-rfc-3986.git"),
+                        packageName = "swift-rfc-3986",
+                        products = {
+                            add("RFC 3986")
+                        },
+                        version = "0.1.0",
+                    )
+                }
             }
         }
-    }
 
-    iosX64 {
-        binaries.framework {
-            baseName = xcfName
+        iosX64 {
+            binaries.framework {
+                baseName = xcfName
+            }
         }
-    }
 
-    iosArm64 {
-        binaries.framework {
-            baseName = xcfName
+        iosArm64 {
+            binaries.framework {
+                baseName = xcfName
+            }
         }
-    }
 
-    iosSimulatorArm64 {
-        binaries.framework {
-            baseName = xcfName
+        iosSimulatorArm64 {
+            binaries.framework {
+                baseName = xcfName
+            }
         }
-    }
 
-    // This makes sure that the resource file directory is visible for iOS tests.
-    val rootDir = "${rootProject.rootDir.path}/quartz/src/iosTest/resources"
+        // This makes sure that the resource file directory is visible for iOS tests.
+        val rootDir = "${rootProject.rootDir.path}/quartz/src/iosTest/resources"
 
-    tasks.withType<Test>().configureEach {
-        environment("TEST_RESOURCES_ROOT", rootDir)
-    }
+        tasks.withType<Test>().configureEach {
+            environment("TEST_RESOURCES_ROOT", rootDir)
+        }
 
-    tasks.withType<KotlinNativeTest>().configureEach {
-        environment("TEST_RESOURCES_ROOT", rootDir)
-        // This is necessary to have the variable propagated on iOS
-        environment("SIMCTL_CHILD_TEST_RESOURCES_ROOT", rootDir)
+        tasks.withType<KotlinNativeTest>().configureEach {
+            environment("TEST_RESOURCES_ROOT", rootDir)
+            // This is necessary to have the variable propagated on iOS
+            environment("SIMCTL_CHILD_TEST_RESOURCES_ROOT", rootDir)
+        }
     }
 
     // Source set declarations.
@@ -233,43 +241,45 @@ kotlin {
             }
         }
 
-        iosMain {
-            dependsOn(commonMain.get())
-            dependencies {
-                implementation(libs.charlietap.cachemap)
-                implementation(libs.net.thauvin.erik.urlencoder.lib)
-                implementation(libs.dev.whyoleg.cryptography.provider.apple.optimal)
+        if (iosEnabled) {
+            iosMain {
+                dependsOn(commonMain.get())
+                dependencies {
+                    implementation(libs.charlietap.cachemap)
+                    implementation(libs.net.thauvin.erik.urlencoder.lib)
+                    implementation(libs.dev.whyoleg.cryptography.provider.apple.optimal)
+                }
             }
-        }
 
-        val iosX64Main by getting {
-            dependsOn(iosMain.get())
-        }
-
-        val iosArm64Main by getting {
-            dependsOn(iosMain.get())
-        }
-
-        val iosSimulatorArm64Main by getting {
-            dependsOn(iosMain.get())
-        }
-
-        iosTest {
-            dependsOn(commonTest.get())
-            dependencies {
+            val iosX64Main by getting {
+                dependsOn(iosMain.get())
             }
-        }
 
-        val iosX64Test by getting {
-            dependsOn(iosTest.get())
-        }
+            val iosArm64Main by getting {
+                dependsOn(iosMain.get())
+            }
 
-        val iosArm64Test by getting {
-            dependsOn(iosTest.get())
-        }
+            val iosSimulatorArm64Main by getting {
+                dependsOn(iosMain.get())
+            }
 
-        val iosSimulatorArm64Test by getting {
-            dependsOn(iosTest.get())
+            iosTest {
+                dependsOn(commonTest.get())
+                dependencies {
+                }
+            }
+
+            val iosX64Test by getting {
+                dependsOn(iosTest.get())
+            }
+
+            val iosArm64Test by getting {
+                dependsOn(iosTest.get())
+            }
+
+            val iosSimulatorArm64Test by getting {
+                dependsOn(iosTest.get())
+            }
         }
     }
 }
