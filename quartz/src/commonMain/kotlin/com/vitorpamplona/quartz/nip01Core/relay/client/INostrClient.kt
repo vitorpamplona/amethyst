@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.relay.client
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
@@ -78,6 +79,12 @@ interface INostrClient {
     fun getReqFiltersOrNull(subId: String): Map<NormalizedRelayUrl, List<Filter>>?
 
     fun getCountFiltersOrNull(subId: String): Map<NormalizedRelayUrl, List<Filter>>?
+
+    fun activeRequests(url: NormalizedRelayUrl): Map<String, List<Filter>>
+
+    fun activeCounts(url: NormalizedRelayUrl): Map<String, List<Filter>>
+
+    fun activeOutboxCache(url: NormalizedRelayUrl): Set<HexKey>
 }
 
 object EmptyNostrClient : INostrClient {
@@ -123,4 +130,10 @@ object EmptyNostrClient : INostrClient {
     override fun getReqFiltersOrNull(subId: String): Map<NormalizedRelayUrl, List<Filter>>? = null
 
     override fun getCountFiltersOrNull(subId: String): Map<NormalizedRelayUrl, List<Filter>>? = null
+
+    override fun activeRequests(url: NormalizedRelayUrl): Map<String, List<Filter>> = emptyMap()
+
+    override fun activeCounts(url: NormalizedRelayUrl): Map<String, List<Filter>> = emptyMap()
+
+    override fun activeOutboxCache(url: NormalizedRelayUrl): Set<HexKey> = emptySet()
 }

@@ -145,7 +145,6 @@ import com.vitorpamplona.quartz.experimental.trustedAssertions.list.TrustProvide
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.ErrorDebugMessage
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.IRelayDebugMessage
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.NoticeDebugMessage
@@ -345,10 +344,9 @@ fun RelayInformationBody(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val nostrClient = remember { Amethyst.instance.client as? NostrClient }
-    val activeReqs = remember(relay) { nostrClient?.activeRequests(relay) ?: emptyMap() }
-    val activeCounts = remember(relay) { nostrClient?.activeCounts(relay) ?: emptyMap() }
-    val activeOutbox = remember(relay) { nostrClient?.activeOutboxCache(relay) ?: emptySet() }
+    val activeReqs = remember(relay) { accountViewModel.account.client.activeRequests(relay) }
+    val activeCounts = remember(relay) { accountViewModel.account.client.activeCounts(relay) }
+    val activeOutbox = remember(relay) { accountViewModel.account.client.activeOutboxCache(relay) }
 
     val usedBy =
         remember(relay) {
