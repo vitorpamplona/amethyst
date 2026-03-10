@@ -84,7 +84,7 @@ object QuerySerializer {
         return parts.joinToString(" ")
     }
 
-    internal fun timestampToDate(timestamp: Long): String {
+    fun timestampToDate(timestamp: Long): String {
         // Convert unix timestamp to YYYY-MM-DD
         var remaining = timestamp
         var year = 1970

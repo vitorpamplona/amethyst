@@ -280,7 +280,7 @@ object QueryParser {
         )
     }
 
-    internal fun parseDateToTimestamp(dateStr: String): Long? {
+    fun parseDateToTimestamp(dateStr: String): Long? {
         // ISO 8601 formats: YYYY, YYYY-MM, YYYY-MM-DD
         return try {
             val parts = dateStr.split("-")
