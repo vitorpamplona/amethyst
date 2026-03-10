@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip05DnsIdentifiers
 
+import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
 import kotlinx.coroutines.CancellationException
@@ -29,6 +30,7 @@ data class Nip05KeyInfo(
     val relays: List<String>,
 )
 
+@Stable
 class Nip05Client(
     val fetcher: Nip05Fetcher,
     val namecoinResolver: NamecoinNameResolver? = null,
