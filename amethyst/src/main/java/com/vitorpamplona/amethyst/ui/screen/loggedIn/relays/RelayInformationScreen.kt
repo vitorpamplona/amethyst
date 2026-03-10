@@ -70,6 +70,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
@@ -299,7 +300,16 @@ fun RelayInformationScreen(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                actions = {},
+                actions = {
+                    IconButton(
+                        onClick = { nav.nav(Route.RelayFeed(relay.url)) },
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Article,
+                            contentDescription = stringRes(R.string.global_feed),
+                        )
+                    }
+                },
                 title = {
                     Text(
                         relay.displayUrl(),
