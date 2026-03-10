@@ -25,7 +25,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -56,6 +55,7 @@ fun ShowUserSuggestionList(
     onSelect: (User) -> Unit,
     accountViewModel: AccountViewModel,
     modifier: Modifier = Modifier,
+    onEmpty: @Composable () -> Unit = {},
 ) {
     UserSearchDataSourceSubscription(userSuggestions, accountViewModel)
 
@@ -76,7 +76,7 @@ fun ShowUserSuggestionList(
         }
     }
 
-    WatchResponses(userSuggestions, listState, onSelect, accountViewModel, modifier)
+    WatchResponses(userSuggestions, listState, onSelect, accountViewModel, modifier, onEmpty)
 }
 
 @Composable
@@ -97,7 +97,8 @@ fun WatchResponses(
     listState: LazyListState,
     onSelect: (User) -> Unit,
     accountViewModel: AccountViewModel,
-    modifier: Modifier = Modifier.heightIn(0.dp, 200.dp),
+    modifier: Modifier = Modifier,
+    onEmpty: @Composable () -> Unit = {},
 ) {
     val suggestions by userSuggestions.results.collectAsStateWithLifecycle(emptyList())
 
@@ -114,6 +115,8 @@ fun WatchResponses(
                 )
             }
         }
+    } else {
+        onEmpty()
     }
 }
 

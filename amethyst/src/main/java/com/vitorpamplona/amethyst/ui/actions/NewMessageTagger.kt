@@ -252,5 +252,5 @@ interface Dao {
 
     suspend fun getOrCreateNote(hex: String): Note
 
-    suspend fun getOrCreateAddressableNote(address: Address): AddressableNote?
+    fun getOrCreateAddressableNote(address: Address): AddressableNote?
 }

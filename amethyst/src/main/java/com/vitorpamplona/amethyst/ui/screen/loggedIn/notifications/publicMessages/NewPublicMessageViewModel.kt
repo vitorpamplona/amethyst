@@ -191,7 +191,7 @@ class NewPublicMessageViewModel :
         this.canAddZapRaiser = hasLnAddress()
 
         this.userSuggestions?.reset()
-        this.userSuggestions = UserSuggestionState(accountVM.account)
+        this.userSuggestions = UserSuggestionState(accountVM.account, accountVM.nip05Client)
 
         this.emojiSuggestions?.reset()
         this.emojiSuggestions = EmojiSuggestionState(accountVM.account)

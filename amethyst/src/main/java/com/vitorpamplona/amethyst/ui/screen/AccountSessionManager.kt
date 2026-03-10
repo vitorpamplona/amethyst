@@ -278,7 +278,7 @@ class AccountSessionManager(
 
             localPreferences.setDefaultAccount(accountSettings)
 
-            startUI(accountSettings, route = Route.ImportFollows)
+            startUI(accountSettings, route = Route.ImportFollowsSelectUser)
 
             scope.launch(Dispatchers.IO) {
                 delay(2000) // waits for the new user to connect to the new relays.

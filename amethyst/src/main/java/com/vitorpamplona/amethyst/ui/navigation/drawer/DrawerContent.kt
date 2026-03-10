@@ -472,6 +472,14 @@ fun ListContent(
             route = Route.Chess,
         )
 
+        NavigationRow(
+            title = R.string.route_import_follows,
+            icon = Icons.Outlined.GroupAdd,
+            tint = MaterialTheme.colorScheme.onBackground,
+            nav = nav,
+            route = Route.ImportFollowsSelectUser,
+        )
+
         IconRowRelays(
             accountViewModel = accountViewModel,
             onClick = {

@@ -97,7 +97,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.list.ListOfPeopleList
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.list.metadata.FollowPackMetadataScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.list.metadata.PeopleListMetadataScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.memberEdit.FollowListAndPackAndUserScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.newUser.ImportFollowListScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.newUser.ImportFollowListPickFollowsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.newUser.ImportFollowListSelectUserScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NotificationScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.publicMessages.NewPublicMessageScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.privacy.PrivacyOptionsScreen
@@ -122,6 +123,7 @@ import com.vitorpamplona.amethyst.ui.uriToRoute
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -178,7 +180,14 @@ fun AppNavigation(
             composableFromEnd<Route.Settings> { SettingsScreen(accountViewModel, nav) }
             composableFromEnd<Route.UserSettings> { UserSettingsScreen(accountViewModel, nav) }
             composableFromEnd<Route.ReactionsSettings> { ReactionsSettingsScreen(accountViewModel, nav) }
-            composableFromEnd<Route.ImportFollows> { ImportFollowListScreen(accountViewModel, nav) }
+            composableFromEnd<Route.ImportFollowsSelectUser> { ImportFollowListSelectUserScreen(accountViewModel, nav) }
+            composableFromEndArgs<Route.ImportFollowsPickFollows> {
+                ImportFollowListPickFollowsScreen(
+                    accountViewModel.getOrCreateAddressableNote(ContactListEvent.createAddress(it.userHex)),
+                    accountViewModel,
+                    nav,
+                )
+            }
 
             composableFromEndArgs<Route.Nip47NWCSetup> { NIP47SetupScreen(accountViewModel, nav, it.nip47) }
             composableFromEndArgs<Route.UpdateZapAmount> { UpdateZapAmountScreen(accountViewModel, nav, it.nip47) }

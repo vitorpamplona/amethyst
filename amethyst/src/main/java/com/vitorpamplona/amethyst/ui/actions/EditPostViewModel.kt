@@ -111,7 +111,7 @@ open class EditPostViewModel : ViewModel() {
         this.editedFromNote = edit
 
         this.userSuggestions?.reset()
-        this.userSuggestions = UserSuggestionState(accountViewModel.account)
+        this.userSuggestions = UserSuggestionState(accountViewModel.account, accountViewModel.nip05Client)
     }
 
     fun sendPost() {

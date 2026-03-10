@@ -103,6 +103,9 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip03Timestamp.EmptyOtsResolverBuilder
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.EmptyNip05Client
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.INip05Client
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
@@ -164,6 +167,7 @@ class AccountViewModel(
     val torSettings: TorSettingsFlow,
     val dataSources: RelaySubscriptionsCoordinator,
     val httpClientBuilder: IRoleBasedHttpClientBuilder,
+    val nip05Client: INip05Client,
 ) : ViewModel(),
     Dao {
     var firstRoute: Route? = null
@@ -1101,7 +1105,7 @@ class AccountViewModel(
         }
     }
 
-    override suspend fun getOrCreateAddressableNote(address: Address): AddressableNote = LocalCache.getOrCreateAddressableNote(address)
+    override fun getOrCreateAddressableNote(address: Address): AddressableNote = LocalCache.getOrCreateAddressableNote(address)
 
     fun getAddressableNoteIfExists(key: String): AddressableNote? = LocalCache.getAddressableNoteIfExists(key)
 
@@ -1212,6 +1216,7 @@ class AccountViewModel(
         val torSettings: TorSettingsFlow,
         val dataSources: RelaySubscriptionsCoordinator,
         val okHttpClient: RoleBasedHttpClientBuilder,
+        val nip05Client: Nip05Client,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T =
@@ -1221,6 +1226,7 @@ class AccountViewModel(
                 torSettings,
                 dataSources,
                 okHttpClient,
+                nip05Client,
             ) as T
     }
 
@@ -1742,6 +1748,7 @@ fun mockAccountViewModel(): AccountViewModel {
         torSettings = TorSettingsFlow(torType = MutableStateFlow(TorType.OFF)),
         httpClientBuilder = EmptyRoleBasedHttpClientBuilder(),
         dataSources = RelaySubscriptionsCoordinator(LocalCache, client, authenticator, failureTracker, scope),
+        nip05Client = EmptyNip05Client(),
     ).also {
         mockedCache = it
     }
@@ -1792,6 +1799,7 @@ fun mockVitorAccountViewModel(): AccountViewModel {
         torSettings = TorSettingsFlow(torType = MutableStateFlow(TorType.OFF)),
         httpClientBuilder = EmptyRoleBasedHttpClientBuilder(),
         dataSources = RelaySubscriptionsCoordinator(LocalCache, client, authenticator, failureTracker, scope),
+        nip05Client = EmptyNip05Client(),
     ).also {
         vitorCache = it
     }

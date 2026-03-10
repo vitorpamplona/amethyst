@@ -1719,13 +1719,14 @@
     <string name="kind_wiki">Wiki</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Start with a great feed by following the same people as someone you trust.</string>
     <string name="import_follow_list">Import Follow List</string>
+    <string name="select_users_to_follow">Select Users to Follow</string>
     <string name="profile_to_import_from">Profile to import from</string>
-    <string name="name_search_npub1_alice_example_com">name search, npub1…, alice@example.com</string>
-    <string name="supports_npub_nip_05_hex_and_namecoin_bit_d_id">Supports npub, NIP-05, hex, and Namecoin (.bit / d/ / id/)</string>
+    <string name="name_search_npub1_alice_example_com">search, npub1…, alice@example.com</string>
+    <string name="supports_npub_nip_05_hex_and_namecoin_bit_d_id">Supports npub, nprofile, NIP-05, hex, and namecoin (.bit, d/, id/)</string>
     <string name="look_up_follow_list">Look Up Follow List</string>
     <string name="tip">Tip</string>
     <string name="accounts_found">%1$d accounts found</string>
-    <string name="selected">%1$d selected</string>
+    <string name="num_selected">%1$d selected</string>
     <string name="resolved_via_namecoin">Resolved via Namecoin</string>
     <string name="now_following_accounts">Now following %1$d accounts</string>
     <string name="your_feed_is_ready">Your feed is ready.</string>
@@ -1737,6 +1738,7 @@
     <string name="skip_for_now">Skip for now</string>
     <string name="resolving">Resolving %1$s…</string>
     <string name="fetching_follow_list">Fetching follow list…</string>
+    <string name="no_follows_found">No follows found</string>
     <string name="following_accounts">Following %1$d accounts…</string>
     <string name="import_follows_tips">"Enter the profile of a friend or community leader. You can use their npub, NIP-05 address, or a Namecoin name like alice@example.bit or id/alice for blockchain-verified identities."</string>
 </resources>

@@ -118,7 +118,7 @@ class Kind3FollowListState(
 
         val contacts =
             users.map {
-                ContactTag(user.pubkeyHex, user.bestRelayHint(), null)
+                ContactTag(it.pubkeyHex, it.bestRelayHint(), null)
             }
 
         return if (contactList != null) {

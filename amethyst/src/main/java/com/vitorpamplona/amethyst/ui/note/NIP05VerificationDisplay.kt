@@ -46,7 +46,6 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.hashtags.Tunestr
@@ -127,7 +126,7 @@ private fun VerifyAndDisplayNIP05OrStatusLine(
             if (nip05VerifState.isExpired()) {
                 LaunchedEffect(key1 = nip05VerifState) {
                     accountViewModel.runOnIO {
-                        nip05State.checkAndUpdate(Amethyst.instance.nip05Client)
+                        nip05State.checkAndUpdate(accountViewModel.nip05Client)
                     }
                 }
             }
@@ -393,7 +392,7 @@ fun ObserveAndRenderNIP05VerifiedSymbol(
     if (state.isExpired()) {
         LaunchedEffect(key1 = state) {
             accountViewModel.runOnIO {
-                nip05State.checkAndUpdate(Amethyst.instance.nip05Client)
+                nip05State.checkAndUpdate(accountViewModel.nip05Client)
             }
         }
     }
