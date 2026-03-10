@@ -112,4 +112,6 @@ fun String.startsWithAny(terms: List<DualCase>): Boolean {
 class DualCase(
     val lowercase: String,
     val uppercase: String,
-)
+) {
+    constructor(anyCase: String) : this(anyCase.lowercase(), anyCase.uppercase())
+}
