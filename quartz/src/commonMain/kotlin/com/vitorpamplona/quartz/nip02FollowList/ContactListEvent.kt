@@ -130,8 +130,6 @@ class ContactListEvent(
             val follows = earlierVersion.verifiedFollowKeySet()
             val toBeAdded = users.filter { it.pubKey !in follows }.distinctBy { it.pubKey }.map { it.toTagArray() }
 
-            println("AABBCC Adding ${toBeAdded.size} users from ${users.size} users with ${follows.size} already there")
-
             if (toBeAdded.isEmpty()) return earlierVersion
 
             return create(

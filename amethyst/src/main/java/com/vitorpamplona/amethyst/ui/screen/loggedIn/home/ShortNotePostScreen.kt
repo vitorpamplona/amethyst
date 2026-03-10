@@ -486,6 +486,14 @@ private fun BottomRowActions(postViewModel: ShortNotePostViewModel) {
             postViewModel.selectImage(it)
         }
 
+        SelectFromFiles(
+            isUploading = postViewModel.isUploadingImage,
+            tint = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier,
+        ) {
+            postViewModel.selectImage(it)
+        }
+
         TakePictureButton(
             onPictureTaken = {
                 postViewModel.selectImage(it)
@@ -504,14 +512,6 @@ private fun BottomRowActions(postViewModel: ShortNotePostViewModel) {
             },
             maxDurationSeconds = MAX_VOICE_RECORD_SECONDS,
         )
-
-        SelectFromFiles(
-            isUploading = postViewModel.isUploadingImage,
-            tint = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier,
-        ) {
-            postViewModel.selectImage(it)
-        }
 
         if (postViewModel.canUsePoll) {
             // These should be hashtag recommendations the user selects in the future.

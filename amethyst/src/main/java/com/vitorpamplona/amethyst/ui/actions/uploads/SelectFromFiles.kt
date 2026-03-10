@@ -83,7 +83,7 @@ private fun FileSelectButton(
             Icon(
                 imageVector = Icons.Default.AttachFile,
                 contentDescription = stringRes(id = R.string.upload_file),
-                modifier = Modifier.height(25.dp),
+                modifier = Modifier.height(20.dp),
                 tint = tint,
             )
         } else {
