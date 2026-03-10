@@ -1742,4 +1742,5 @@
     <string name="no_follows_found">No follows found</string>
     <string name="following_accounts">Following %1$d accounts…</string>
     <string name="import_follows_tips">"Enter the profile of a friend or community leader. You can use their npub, NIP-05 address, or a Namecoin name like alice@example.bit or id/alice for blockchain-verified identities."</string>
+    <string name="select_all">Select All</string>
 </resources>

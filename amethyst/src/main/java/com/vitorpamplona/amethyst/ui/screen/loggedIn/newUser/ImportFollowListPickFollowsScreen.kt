@@ -54,6 +54,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
@@ -176,7 +177,9 @@ private fun PreviewList(
 
         // Select all
         Row(
-            Modifier.fillMaxWidth().padding(vertical = 8.dp),
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Checkbox(
@@ -186,7 +189,7 @@ private fun PreviewList(
                 },
             )
             Spacer(Modifier.width(8.dp))
-            Text("Select All", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+            Text(stringResource(R.string.select_all), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
         }
 
         HorizontalDivider()
