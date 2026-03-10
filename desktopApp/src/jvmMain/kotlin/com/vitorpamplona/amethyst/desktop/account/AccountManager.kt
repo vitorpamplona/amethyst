@@ -21,22 +21,21 @@
 package com.vitorpamplona.amethyst.desktop.account
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.domain.nip46.BunkerLoginUseCase
+import com.vitorpamplona.amethyst.commons.domain.nip46.NostrConnectLoginUseCase
+import com.vitorpamplona.amethyst.commons.domain.nip46.SignerConnectionState
 import com.vitorpamplona.amethyst.commons.keystorage.SecureKeyStorage
 import com.vitorpamplona.amethyst.commons.keystorage.SecureStorageException
 import com.vitorpamplona.amethyst.desktop.network.DesktopHttpClient
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.req
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -46,17 +45,9 @@ import com.vitorpamplona.quartz.nip19Bech32.decodePrivateKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip19Bech32.toNsec
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerMessage
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequest
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestConnect
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponse
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseAck
-import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
 import com.vitorpamplona.quartz.nip46RemoteSigner.signer.NostrSignerRemote
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
-import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -72,7 +63,6 @@ import kotlinx.coroutines.withTimeout
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.attribute.PosixFilePermission
-import java.security.SecureRandom
 
 sealed class SignerType {
     data object Internal : SignerType()
@@ -80,14 +70,6 @@ sealed class SignerType {
     data class Remote(
         val bunkerUri: String,
     ) : SignerType()
-}
-
-sealed class SignerConnectionState {
-    data object NotRemote : SignerConnectionState()
-
-    data object Connected : SignerConnectionState()
-
-    data object Disconnected : SignerConnectionState()
 }
 
 sealed class AccountState {
@@ -119,7 +101,6 @@ class AccountManager internal constructor(
         internal const val HEARTBEAT_INTERVAL_MS = 60_000L
         internal const val MAX_CONSECUTIVE_FAILURES = 3
         internal const val BUNKER_EPHEMERAL_KEY_ALIAS = "bunker_ephemeral"
-        internal const val NOSTRCONNECT_TIMEOUT_MS = 120_000L
         internal const val NIP46_RELAY_CONNECT_TIMEOUT_MS = 15_000L
         internal val NIP46_RELAYS = listOf("wss://relay.nsec.app")
     }
@@ -136,6 +117,9 @@ class AccountManager internal constructor(
 
     private val _signerConnectionState = MutableStateFlow<SignerConnectionState>(SignerConnectionState.NotRemote)
     val signerConnectionState: StateFlow<SignerConnectionState> = _signerConnectionState.asStateFlow()
+
+    private val _lastPingTimeSec = MutableStateFlow<Long?>(null)
+    val lastPingTimeSec: StateFlow<Long?> = _lastPingTimeSec.asStateFlow()
 
     private val _forceLogoutReason = MutableStateFlow<String?>(null)
     val forceLogoutReason: StateFlow<String?> = _forceLogoutReason.asStateFlow()
@@ -326,31 +310,26 @@ class AccountManager internal constructor(
 
             val nip46Client = getOrCreateNip46Client()
             client = nip46Client
-            val remoteSigner = NostrSignerRemote.fromBunkerUri(bunkerUri, ephemeralSigner, nip46Client)
 
-            // Emit connecting with initial relay statuses
+            val relaysFromUri = parseBunkerRelays(bunkerUri)
             _loginProgress.value =
                 LoginProgress.ConnectingToRelays(
-                    remoteSigner.relays.associateWith { RelayLoginStatus.CONNECTING },
+                    relaysFromUri.associateWith { RelayLoginStatus.CONNECTING },
                 )
             nip46Client.subscribe(listener)
-
-            remoteSigner.openSubscription()
-
-            // Wait for websocket to be ready before sending connect request
-            awaitNip46RelayConnection(nip46Client, remoteSigner.relays)
 
             _loginProgress.value =
                 LoginProgress.WaitingForSigner(
                     relayStatuses = _loginProgress.value?.relayStatuses.orEmpty(),
                 )
-            val remotePubkey = remoteSigner.connect()
+
+            val result = BunkerLoginUseCase.execute(bunkerUri, ephemeralSigner, nip46Client)
 
             val state =
                 AccountState.LoggedIn(
-                    signer = remoteSigner,
-                    pubKeyHex = remotePubkey,
-                    npub = remotePubkey.hexToByteArray().toNpub(),
+                    signer = result.signer,
+                    pubKeyHex = result.pubKeyHex,
+                    npub = result.pubKeyHex.hexToByteArray().toNpub(),
                     nsec = null,
                     isReadOnly = false,
                     signerType = SignerType.Remote(bunkerUri),
@@ -358,7 +337,6 @@ class AccountManager internal constructor(
             _accountState.value = state
             _signerConnectionState.value = SignerConnectionState.Connected
 
-            // Save bunker account — strip secret param (no longer needed after connect)
             saveBunkerAccount(
                 bunkerUri = stripBunkerSecret(bunkerUri),
                 ephemeralPrivKeyHex = ephemeralKeyPair.privKey!!.toHexKey(),
@@ -389,61 +367,34 @@ class AccountManager internal constructor(
         var client: NostrClient? = null
         try {
             val ephemeralKeyPair = KeyPair()
-            val ephemeralSigner = NostrSignerInternal(ephemeralKeyPair)
-            val secret = generateNostrConnectSecret()
-            val ephemeralPubKey = ephemeralKeyPair.pubKey.toHexKey()
-
-            val relays = NIP46_RELAYS
-            val relayParams = relays.joinToString("&") { "relay=$it" }
-            val uri = "nostrconnect://$ephemeralPubKey?$relayParams&secret=$secret&name=Amethyst%20Desktop"
+            val uriData = NostrConnectLoginUseCase.generateUri(ephemeralKeyPair, NIP46_RELAYS, "Amethyst%20Desktop")
 
             val nip46Client = getOrCreateNip46Client()
             client = nip46Client
-            val normalizedRelays = relays.map { NormalizedRelayUrl(it) }.toSet()
 
-            // Emit connecting with initial relay statuses
             _loginProgress.value =
                 LoginProgress.ConnectingToRelays(
-                    normalizedRelays.associateWith { RelayLoginStatus.CONNECTING },
+                    uriData.relays.associateWith { RelayLoginStatus.CONNECTING },
                 )
             nip46Client.subscribe(listener)
 
-            onUriGenerated(uri)
+            onUriGenerated(uriData.uri)
 
             _loginProgress.value =
                 LoginProgress.WaitingForSigner(
                     relayStatuses = _loginProgress.value?.relayStatuses.orEmpty(),
                 )
-            val connectData = waitForConnectRequest(ephemeralSigner, ephemeralPubKey, normalizedRelays, secret, nip46Client)
 
-            if (connectData.requestId != null) {
-                _loginProgress.value =
-                    LoginProgress.SendingAck(
-                        relayStatuses = _loginProgress.value?.relayStatuses.orEmpty(),
-                    )
-                sendAckResponse(ephemeralSigner, connectData, normalizedRelays, nip46Client)
-            }
+            val result = NostrConnectLoginUseCase.awaitAndLogin(uriData, nip46Client)
 
-            val remoteSigner =
-                NostrSignerRemote(
-                    signer = ephemeralSigner,
-                    remotePubkey = connectData.signerPubkey,
-                    relays = normalizedRelays,
-                    client = nip46Client,
-                )
-            remoteSigner.openSubscription()
-
-            // Verify user pubkey via get_public_key — connect params may contain
-            // the wrong pubkey (e.g. ephemeral key echoed back by some signers)
-            val verifiedPubkey = remoteSigner.getPublicKey()
-
-            val syntheticBunkerUri = "bunker://${connectData.signerPubkey}?$relayParams"
+            val relayParams = NIP46_RELAYS.joinToString("&") { "relay=$it" }
+            val syntheticBunkerUri = "bunker://${result.signer.remotePubkey}?$relayParams"
 
             val state =
                 AccountState.LoggedIn(
-                    signer = remoteSigner,
-                    pubKeyHex = verifiedPubkey,
-                    npub = verifiedPubkey.hexToByteArray().toNpub(),
+                    signer = result.signer,
+                    pubKeyHex = result.pubKeyHex,
+                    npub = result.pubKeyHex.hexToByteArray().toNpub(),
                     nsec = null,
                     isReadOnly = false,
                     signerType = SignerType.Remote(syntheticBunkerUri),
@@ -467,116 +418,6 @@ class AccountManager internal constructor(
             client?.unsubscribe(listener)
         }
     }
-
-    private suspend fun waitForConnectRequest(
-        ephemeralSigner: NostrSignerInternal,
-        ephemeralPubKey: HexKey,
-        relays: Set<NormalizedRelayUrl>,
-        expectedSecret: String,
-        client: NostrClient,
-    ): ConnectRequestData {
-        val deferred = CompletableDeferred<NostrConnectEvent>()
-
-        val subscription =
-            client.req(
-                relays = relays.toList(),
-                filter =
-                    Filter(
-                        kinds = listOf(NostrConnectEvent.KIND),
-                        tags = mapOf("p" to listOf(ephemeralPubKey)),
-                        since = TimeUtils.now() - 60,
-                    ),
-            ) { event ->
-                if (event is NostrConnectEvent && !deferred.isCompleted) {
-                    deferred.complete(event)
-                }
-            }
-
-        try {
-            val event =
-                withTimeout(NOSTRCONNECT_TIMEOUT_MS) {
-                    deferred.await()
-                }
-
-            val signerPubkey = event.talkingWith(ephemeralSigner.pubKey)
-            val decryptedJson = ephemeralSigner.decrypt(event.content, signerPubkey)
-            val message = OptimizedJsonMapper.fromJsonTo<BunkerMessage>(decryptedJson)
-
-            return when (message) {
-                is BunkerRequest -> {
-                    if (message.method != BunkerRequestConnect.METHOD_NAME) {
-                        throw Exception("Expected 'connect' method, got '${message.method}'")
-                    }
-
-                    val userPubkey =
-                        message.params.getOrNull(0)
-                            ?: throw Exception("Missing user pubkey in connect request")
-                    val receivedSecret = message.params.getOrNull(1)
-
-                    if (receivedSecret != expectedSecret) {
-                        throw Exception("Secret mismatch in connect request")
-                    }
-
-                    ConnectRequestData(
-                        requestId = message.id,
-                        signerPubkey = signerPubkey,
-                        userPubkey = userPubkey,
-                    )
-                }
-
-                is BunkerResponse -> {
-                    if (message.error != null) {
-                        throw Exception("Signer rejected connection: ${message.error}")
-                    }
-
-                    val userPubkey =
-                        message.result
-                            ?.takeIf { it.length == 64 && Hex.isHex(it) }
-                            ?: signerPubkey
-
-                    ConnectRequestData(
-                        requestId = null,
-                        signerPubkey = signerPubkey,
-                        userPubkey = userPubkey,
-                    )
-                }
-
-                else -> {
-                    throw Exception("Unexpected NIP-46 message format")
-                }
-            }
-        } finally {
-            subscription.close()
-        }
-    }
-
-    private suspend fun sendAckResponse(
-        ephemeralSigner: NostrSignerInternal,
-        connectData: ConnectRequestData,
-        relays: Set<NormalizedRelayUrl>,
-        client: NostrClient,
-    ) {
-        val ackResponse = BunkerResponseAck(id = connectData.requestId!!)
-        val ackEvent =
-            NostrConnectEvent.create(
-                message = ackResponse,
-                remoteKey = connectData.signerPubkey,
-                signer = ephemeralSigner,
-            )
-        client.send(ackEvent, relays)
-    }
-
-    private fun generateNostrConnectSecret(): String {
-        val bytes = ByteArray(32)
-        SecureRandom().nextBytes(bytes)
-        return bytes.joinToString("") { "%02x".format(it) }
-    }
-
-    private data class ConnectRequestData(
-        val requestId: String?,
-        val signerPubkey: HexKey,
-        val userPubkey: HexKey,
-    )
 
     private suspend fun saveBunkerAccount(
         bunkerUri: String,
@@ -709,6 +550,7 @@ class AccountManager internal constructor(
         }
         disconnectNip46Client()
         _signerConnectionState.value = SignerConnectionState.NotRemote
+        _lastPingTimeSec.value = null
         _accountState.value = AccountState.LoggedOut
         // Cancel heartbeat LAST — may be called from within the heartbeat coroutine
         stopHeartbeat()
@@ -738,6 +580,7 @@ class AccountManager internal constructor(
                         remoteSigner.ping()
                         consecutiveFailures = 0
                         _signerConnectionState.value = SignerConnectionState.Connected
+                        _lastPingTimeSec.value = TimeUtils.now()
                     } catch (_: SignerExceptions.ManuallyUnauthorizedException) {
                         forceLogoutWithReason("Remote signer revoked access.")
                         return@launch
@@ -851,6 +694,17 @@ class AccountManager internal constructor(
     }
 
     private fun getBunkerFile(): File = File(amethystDir, "bunker_uri.txt")
+}
+
+internal fun parseBunkerRelays(uri: String): Set<NormalizedRelayUrl> {
+    val idx = uri.indexOf('?')
+    if (idx < 0) return emptySet()
+    return uri
+        .substring(idx + 1)
+        .split("&")
+        .filter { it.startsWith("relay=", ignoreCase = true) }
+        .map { NormalizedRelayUrl(it.removePrefix("relay=")) }
+        .toSet()
 }
 
 internal fun stripBunkerSecret(uri: String): String {

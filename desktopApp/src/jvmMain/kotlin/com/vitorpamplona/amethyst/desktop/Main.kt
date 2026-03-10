@@ -557,6 +557,8 @@ fun MainContent(
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val signerConnectionState by accountManager.signerConnectionState.collectAsState()
+    val lastPingTimeSec by accountManager.lastPingTimeSec.collectAsState()
 
     // DM infrastructure — hoisted here so it survives screen navigation
     val dmSendTracker =
@@ -678,6 +680,8 @@ fun MainContent(
                         onShowComposeDialog = onShowComposeDialog,
                         onShowReplyDialog = onShowReplyDialog,
                         onZapFeedback = onZapFeedback,
+                        signerConnectionState = signerConnectionState,
+                        lastPingTimeSec = lastPingTimeSec,
                         modifier = Modifier.weight(1f),
                     )
                 }
@@ -692,6 +696,8 @@ fun MainContent(
                                 deckState.addColumn(DeckColumnType.Settings)
                             }
                         },
+                        signerConnectionState = signerConnectionState,
+                        lastPingTimeSec = lastPingTimeSec,
                     )
 
                     VerticalDivider()
