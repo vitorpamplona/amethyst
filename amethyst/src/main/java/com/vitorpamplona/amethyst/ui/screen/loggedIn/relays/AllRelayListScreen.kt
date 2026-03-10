@@ -55,8 +55,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.connected.ConnectedR
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.connected.renderConnectedItems
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.dm.DMRelayListViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.dm.renderDMItems
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.favorites.FavoriteRelayListViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.favorites.renderFavoriteItems
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.feeds.RelayFeedsListViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.feeds.renderRelayFeedsItems
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.indexer.IndexerRelayListViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.indexer.renderIndexerItems
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.local.LocalRelayListViewModel
@@ -95,7 +95,7 @@ fun AllRelayListScreen(
     val broadcastViewModel: BroadcastRelayListViewModel = viewModel()
     val indexerViewModel: IndexerRelayListViewModel = viewModel()
     val proxyViewModel: ProxyRelayListViewModel = viewModel()
-    val favoriteViewModel: FavoriteRelayListViewModel = viewModel()
+    val relayFeedsViewModel: RelayFeedsListViewModel = viewModel()
 
     dmViewModel.init(accountViewModel)
     nip65ViewModel.init(accountViewModel)
@@ -108,7 +108,7 @@ fun AllRelayListScreen(
     broadcastViewModel.init(accountViewModel)
     indexerViewModel.init(accountViewModel)
     proxyViewModel.init(accountViewModel)
-    favoriteViewModel.init(accountViewModel)
+    relayFeedsViewModel.init(accountViewModel)
 
     LaunchedEffect(accountViewModel) {
         dmViewModel.load()
@@ -122,7 +122,7 @@ fun AllRelayListScreen(
         broadcastViewModel.load()
         indexerViewModel.load()
         proxyViewModel.load()
-        favoriteViewModel.load()
+        relayFeedsViewModel.load()
     }
 
     MappedAllRelayListView(
@@ -137,7 +137,7 @@ fun AllRelayListScreen(
         broadcastViewModel,
         indexerViewModel,
         proxyViewModel,
-        favoriteViewModel,
+        relayFeedsViewModel,
         accountViewModel,
         nav,
     )
@@ -157,7 +157,7 @@ fun MappedAllRelayListView(
     broadcastViewModel: BroadcastRelayListViewModel,
     indexerViewModel: IndexerRelayListViewModel,
     proxyViewModel: ProxyRelayListViewModel,
-    favoriteViewModel: FavoriteRelayListViewModel,
+    relayFeedsViewModel: RelayFeedsListViewModel,
     accountViewModel: AccountViewModel,
     newNav: INav,
 ) {
@@ -173,7 +173,7 @@ fun MappedAllRelayListView(
     val broadcastRelays by broadcastViewModel.relays.collectAsStateWithLifecycle()
     val indexerRelays by indexerViewModel.relays.collectAsStateWithLifecycle()
     val proxyRelays by proxyViewModel.relays.collectAsStateWithLifecycle()
-    val favoriteFeedState by favoriteViewModel.relays.collectAsStateWithLifecycle()
+    val relayFeedsFeedState by relayFeedsViewModel.relays.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -190,7 +190,7 @@ fun MappedAllRelayListView(
                     broadcastViewModel.clear()
                     indexerViewModel.clear()
                     proxyViewModel.clear()
-                    favoriteViewModel.clear()
+                    relayFeedsViewModel.clear()
                     newNav.popBack()
                 },
                 onPost = {
@@ -204,7 +204,7 @@ fun MappedAllRelayListView(
                     broadcastViewModel.create()
                     indexerViewModel.create()
                     proxyViewModel.create()
-                    favoriteViewModel.create()
+                    relayFeedsViewModel.create()
                     newNav.popBack()
                 },
             )
@@ -327,7 +327,7 @@ fun MappedAllRelayListView(
                     SettingsCategorySpacingModifier,
                 )
             }
-            renderFavoriteItems(favoriteFeedState, favoriteViewModel, accountViewModel, newNav)
+            renderRelayFeedsItems(relayFeedsFeedState, relayFeedsViewModel, accountViewModel, newNav)
 
             item {
                 SettingsCategory(

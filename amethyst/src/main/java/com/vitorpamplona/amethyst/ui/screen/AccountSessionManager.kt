@@ -60,8 +60,8 @@ import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
 import com.vitorpamplona.quartz.nip49PrivKeyEnc.Nip49
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
-import com.vitorpamplona.quartz.nip51Lists.relayLists.FavoriteRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayFeedsListEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
@@ -302,6 +302,7 @@ class AccountSessionManager(
                 accountSettings.backupDMRelayList?.let { client.send(it, toPost) }
                 accountSettings.backupSearchRelayList?.let { client.send(it, toPost) }
                 accountSettings.backupIndexRelayList?.let { client.send(it, toPost) }
+                accountSettings.backupRelayFeedsList?.let { client.send(it, toPost) }
             }
         }
     }
@@ -325,7 +326,7 @@ class AccountSessionManager(
             backupSearchRelayList = SearchRelayListEvent.create(DefaultSearchRelayList.toList(), tempSigner),
             backupIndexRelayList = IndexerRelayListEvent.create(DefaultIndexerRelayList.toList(), tempSigner),
             backupChannelList = ChannelListEvent.create(emptyList(), DefaultChannels, tempSigner),
-            backupFavoriteRelayList = FavoriteRelayListEvent.create(DefaultGlobalRelays, tempSigner),
+            backupRelayFeedsList = RelayFeedsListEvent.create(DefaultGlobalRelays, tempSigner),
         )
     }
 

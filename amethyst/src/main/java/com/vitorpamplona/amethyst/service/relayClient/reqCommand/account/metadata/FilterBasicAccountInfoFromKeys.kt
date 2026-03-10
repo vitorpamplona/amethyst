@@ -33,9 +33,9 @@ import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
 import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BroadcastRelayListEvent
-import com.vitorpamplona.quartz.nip51Lists.relayLists.FavoriteRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.ProxyRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip96FileStorage.config.FileServersEvent
@@ -62,7 +62,7 @@ val BasicAccountInfoKinds2 =
         HashtagListEvent.KIND,
         GeohashListEvent.KIND,
         TrustProviderListEvent.KIND,
-        FavoriteRelayListEvent.KIND,
+        RelayFeedsListEvent.KIND,
     )
 
 fun filterBasicAccountInfoFromKeys(

@@ -363,16 +363,16 @@ fun observeUserIsFollowingRelay(
 ): State<Boolean> {
     val flow =
         remember(accountViewModel) {
-            accountViewModel.account.favoriteRelayList.flowNoDefaults
+            accountViewModel.account.relayFeedsList.flowNoDefaults
                 .mapLatest { relays ->
                     relayUrl in relays
                 }.onStart {
-                    emit(relayUrl in accountViewModel.account.favoriteRelayList.flowNoDefaults.value)
+                    emit(relayUrl in accountViewModel.account.relayFeedsList.flowNoDefaults.value)
                 }.distinctUntilChanged()
                 .flowOn(Dispatchers.IO)
         }
 
-    return flow.collectAsStateWithLifecycle(relayUrl in accountViewModel.account.favoriteRelayList.flowNoDefaults.value)
+    return flow.collectAsStateWithLifecycle(relayUrl in accountViewModel.account.relayFeedsList.flowNoDefaults.value)
 }
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)

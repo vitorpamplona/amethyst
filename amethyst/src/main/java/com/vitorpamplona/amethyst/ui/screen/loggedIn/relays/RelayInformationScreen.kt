@@ -204,9 +204,9 @@ import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BroadcastRelayListEvent
-import com.vitorpamplona.quartz.nip51Lists.relayLists.FavoriteRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.ProxyRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relaySets.RelaySetEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
@@ -543,7 +543,7 @@ private fun kindDisplayName(kind: Int): Int =
         CalendarRSVPEvent.KIND -> R.string.kind_appt_rsvp
         ChessGameEvent.KIND -> R.string.kind_chess_games
         JesterEvent.KIND -> R.string.kind_chess_auth
-        FavoriteRelayListEvent.KIND -> R.string.kind_favorite_relays
+        RelayFeedsListEvent.KIND -> R.string.kind_favorite_relays
         LiveChessGameChallengeEvent.KIND -> R.string.kind_chess_challenges
         LiveChessGameAcceptEvent.KIND -> R.string.kind_chess_game_accept
         LiveChessMoveEvent.KIND -> R.string.kind_chess_move

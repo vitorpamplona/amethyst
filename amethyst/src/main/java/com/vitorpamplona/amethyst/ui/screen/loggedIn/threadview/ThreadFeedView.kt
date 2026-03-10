@@ -124,12 +124,12 @@ import com.vitorpamplona.amethyst.ui.note.types.BadgeDisplay
 import com.vitorpamplona.amethyst.ui.note.types.DisplayBlockedRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayBroadcastRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayDMRelayList
-import com.vitorpamplona.amethyst.ui.note.types.DisplayFavoriteRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayFollowList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayIndexerRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayNIP65RelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayPeopleList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayProxyRelayList
+import com.vitorpamplona.amethyst.ui.note.types.DisplayRelayFeedsList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayRelaySet
 import com.vitorpamplona.amethyst.ui.note.types.DisplaySearchRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayTrustedRelayList
@@ -222,9 +222,9 @@ import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BroadcastRelayListEvent
-import com.vitorpamplona.quartz.nip51Lists.relayLists.FavoriteRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.ProxyRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relaySets.RelaySetEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
@@ -622,8 +622,8 @@ private fun FullBleedNoteCompose(
                     DisplayProxyRelayList(baseNote, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is TrustedRelayListEvent) {
                     DisplayTrustedRelayList(baseNote, backgroundColor, accountViewModel, nav)
-                } else if (noteEvent is FavoriteRelayListEvent) {
-                    DisplayFavoriteRelayList(baseNote, backgroundColor, accountViewModel, nav)
+                } else if (noteEvent is RelayFeedsListEvent) {
+                    DisplayRelayFeedsList(baseNote, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is IndexerRelayListEvent) {
                     DisplayIndexerRelayList(baseNote, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is BroadcastRelayListEvent) {

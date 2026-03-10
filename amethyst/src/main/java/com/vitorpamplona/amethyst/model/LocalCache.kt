@@ -148,9 +148,9 @@ import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BroadcastRelayListEvent
-import com.vitorpamplona.quartz.nip51Lists.relayLists.FavoriteRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.ProxyRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relaySets.RelaySetEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
@@ -1214,7 +1214,7 @@ object LocalCache : ILocalCache, ICacheProvider {
     ) = consumeBaseReplaceable(event, relay, wasVerified)
 
     private fun consume(
-        event: FavoriteRelayListEvent,
+        event: RelayFeedsListEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
@@ -3096,7 +3096,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is GitPatchEvent -> consume(event, relay, wasVerified)
                 is GitRepositoryEvent -> consume(event, relay, wasVerified)
                 is ChessGameEvent -> consume(event, relay, wasVerified)
-                is FavoriteRelayListEvent -> consume(event, relay, wasVerified)
+                is RelayFeedsListEvent -> consume(event, relay, wasVerified)
                 is JesterEvent -> consume(event, relay, wasVerified)
                 is LiveChessGameChallengeEvent -> consume(event, relay, wasVerified)
                 is LiveChessGameAcceptEvent -> consume(event, relay, wasVerified)

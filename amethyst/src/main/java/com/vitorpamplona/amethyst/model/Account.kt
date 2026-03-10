@@ -61,8 +61,6 @@ import com.vitorpamplona.amethyst.model.nip51Lists.blockedRelays.BlockedRelayLis
 import com.vitorpamplona.amethyst.model.nip51Lists.blockedRelays.BlockedRelayListState
 import com.vitorpamplona.amethyst.model.nip51Lists.broadcastRelays.BroadcastRelayListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.broadcastRelays.BroadcastRelayListState
-import com.vitorpamplona.amethyst.model.nip51Lists.favoriteRelays.FavoriteRelayListDecryptionCache
-import com.vitorpamplona.amethyst.model.nip51Lists.favoriteRelays.FavoriteRelayListState
 import com.vitorpamplona.amethyst.model.nip51Lists.geohashLists.GeohashListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.geohashLists.GeohashListState
 import com.vitorpamplona.amethyst.model.nip51Lists.hashtagLists.HashtagListDecryptionCache
@@ -77,6 +75,8 @@ import com.vitorpamplona.amethyst.model.nip51Lists.peopleList.PeopleListDecrypti
 import com.vitorpamplona.amethyst.model.nip51Lists.peopleList.PeopleListsState
 import com.vitorpamplona.amethyst.model.nip51Lists.proxyRelays.ProxyRelayListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.proxyRelays.ProxyRelayListState
+import com.vitorpamplona.amethyst.model.nip51Lists.relayFeeds.RelayFeedListState
+import com.vitorpamplona.amethyst.model.nip51Lists.relayFeeds.RelayFeedsListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.searchRelays.SearchRelayListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.searchRelays.SearchRelayListState
 import com.vitorpamplona.amethyst.model.nip51Lists.trustedRelays.TrustedRelayListDecryptionCache
@@ -278,8 +278,8 @@ class Account(
     val indexerRelayListDecryptionCache = IndexerRelayListDecryptionCache(signer)
     val indexerRelayList = IndexerRelayListState(signer, cache, indexerRelayListDecryptionCache, scope, settings)
 
-    val favoriteRelayListDecryptionCache = FavoriteRelayListDecryptionCache(signer)
-    val favoriteRelayList = FavoriteRelayListState(signer, cache, favoriteRelayListDecryptionCache, scope, settings)
+    val relayFeedsListDecryptionCache = RelayFeedsListDecryptionCache(signer)
+    val relayFeedsList = RelayFeedListState(signer, cache, relayFeedsListDecryptionCache, scope, settings)
 
     val blockedRelayListDecryptionCache = BlockedRelayListDecryptionCache(signer)
     val blockedRelayList = BlockedRelayListState(signer, cache, blockedRelayListDecryptionCache, scope, settings)
@@ -1926,11 +1926,11 @@ class Account(
 
     suspend fun saveTrustedRelayList(trustedRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(trustedRelayList.saveRelayList(trustedRelays))
 
-    suspend fun saveFavoriteRelayList(trustedRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(favoriteRelayList.saveRelayList(trustedRelays))
+    suspend fun saveRelayFeedsList(trustedRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(relayFeedsList.saveRelayList(trustedRelays))
 
-    suspend fun followFavoriteRelay(url: NormalizedRelayUrl) = sendMyPublicAndPrivateOutbox(favoriteRelayList.addRelay(url))
+    suspend fun followRelayFeed(url: NormalizedRelayUrl) = sendMyPublicAndPrivateOutbox(relayFeedsList.addRelay(url))
 
-    suspend fun unfollowFavoriteRelay(url: NormalizedRelayUrl) = sendMyPublicAndPrivateOutbox(favoriteRelayList.removeRelay(url))
+    suspend fun unfollowRelayFeed(url: NormalizedRelayUrl) = sendMyPublicAndPrivateOutbox(relayFeedsList.removeRelay(url))
 
     suspend fun saveBlockedRelayList(blockedRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(blockedRelayList.saveRelayList(blockedRelays))
 

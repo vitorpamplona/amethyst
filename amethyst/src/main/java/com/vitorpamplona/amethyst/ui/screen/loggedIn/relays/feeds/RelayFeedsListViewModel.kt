@@ -18,12 +18,19 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.nip51Lists.favoriteRelays
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.feeds
 
-import com.vitorpamplona.amethyst.model.nip51Lists.relayLists.GenericRelayListCache
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip51Lists.relayLists.FavoriteRelayListEvent
+import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoModel
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
-class FavoriteRelayListDecryptionCache(
-    signer: NostrSigner,
-) : GenericRelayListCache<FavoriteRelayListEvent>(signer)
+@Stable
+class RelayFeedsListViewModel : BasicRelaySetupInfoModel() {
+    override fun getRelayList(): List<NormalizedRelayUrl> =
+        account.relayFeedsList.flow.value
+            .toList()
+
+    override suspend fun saveRelayList(urlList: List<NormalizedRelayUrl>) {
+        account.saveRelayFeedsList(urlList)
+    }
+}

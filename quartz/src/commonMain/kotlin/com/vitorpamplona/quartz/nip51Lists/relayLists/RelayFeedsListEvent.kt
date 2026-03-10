@@ -36,13 +36,13 @@ import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
 import com.vitorpamplona.quartz.nip51Lists.encryption.signNip51List
 import com.vitorpamplona.quartz.nip51Lists.relayLists.tags.RelayTag
-import com.vitorpamplona.quartz.nip51Lists.relayLists.tags.favoriteRelays
+import com.vitorpamplona.quartz.nip51Lists.relayLists.tags.relayFeeds
 import com.vitorpamplona.quartz.nip51Lists.relayLists.tags.relays
 import com.vitorpamplona.quartz.nip51Lists.remove
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
-class FavoriteRelayListEvent(
+class RelayFeedsListEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
@@ -58,7 +58,7 @@ class FavoriteRelayListEvent(
 
     companion object {
         const val KIND = 10012
-        const val ALT = "Favorite Relays"
+        const val ALT = "Relay Feeds"
         val TAGS = arrayOf(AltTag.assemble(ALT))
 
         fun createAddress(pubKey: HexKey): Address = Address(KIND, pubKey, "")
@@ -68,11 +68,11 @@ class FavoriteRelayListEvent(
         fun createAddressTag(pubKey: HexKey): String = Address.Companion.assemble(KIND, pubKey, "")
 
         suspend fun updateRelayList(
-            earlierVersion: FavoriteRelayListEvent,
+            earlierVersion: RelayFeedsListEvent,
             relays: List<NormalizedRelayUrl>,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-        ): FavoriteRelayListEvent {
+        ): RelayFeedsListEvent {
             val newRelayList = relays.map { RelayTag.assemble(it) }
             val privateTags = earlierVersion.privateTags(signer) ?: throw SignerExceptions.UnauthorizedDecryptionException()
 
@@ -86,7 +86,7 @@ class FavoriteRelayListEvent(
             relays: List<NormalizedRelayUrl>,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-        ): FavoriteRelayListEvent {
+        ): RelayFeedsListEvent {
             val privateTagArray = relays.map { RelayTag.assemble(it) }.toTypedArray()
             return signer.signNip51List(createdAt, KIND, TAGS, privateTagArray)
         }
@@ -95,7 +95,7 @@ class FavoriteRelayListEvent(
             relays: List<NormalizedRelayUrl>,
             signer: NostrSignerSync,
             createdAt: Long = TimeUtils.now(),
-        ): FavoriteRelayListEvent {
+        ): RelayFeedsListEvent {
             val privateTagArray = relays.map { RelayTag.assemble(it) }.toTypedArray()
             return signer.signNip51List(createdAt, KIND, TAGS, privateTagArray)
         }
@@ -105,14 +105,14 @@ class FavoriteRelayListEvent(
             privateRelays: List<NormalizedRelayUrl> = emptyList(),
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            initializer: TagArrayBuilder<FavoriteRelayListEvent>.() -> Unit = {},
-        ) = eventTemplate<FavoriteRelayListEvent>(
+            initializer: TagArrayBuilder<RelayFeedsListEvent>.() -> Unit = {},
+        ) = eventTemplate<RelayFeedsListEvent>(
             kind = KIND,
             description = PrivateTagsInContent.encryptNip44(privateRelays.map { RelayTag.assemble(it) }.toTypedArray(), signer),
             createdAt = createdAt,
         ) {
             alt(ALT)
-            favoriteRelays(publicRelays)
+            relayFeeds(publicRelays)
 
             initializer()
         }
