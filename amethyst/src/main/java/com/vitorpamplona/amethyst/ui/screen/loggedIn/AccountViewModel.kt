@@ -1572,6 +1572,18 @@ class AccountViewModel(
         mimeType: String?,
         localContext: Context,
     ) {
+        val (success, failure) =
+            when (MediaSaverToDisk.mediaTypeOf(mimeType)) {
+                MediaSaverToDisk.MediaType.IMAGE ->
+                    Pair(R.string.image_saved_to_the_gallery, R.string.failed_to_save_the_image)
+                MediaSaverToDisk.MediaType.VIDEO ->
+                    Pair(R.string.video_saved_to_the_gallery, R.string.failed_to_save_the_video)
+                MediaSaverToDisk.MediaType.AUDIO ->
+                    Pair(R.string.audio_saved_to_the_phone, R.string.failed_to_save_the_audio)
+                MediaSaverToDisk.MediaType.DOCUMENT ->
+                    Pair(R.string.document_saved_to_the_phone, R.string.failed_to_save_the_document)
+            }
+
         viewModelScope.launch {
             MediaSaverToDisk.saveDownloadingIfNeeded(
                 videoUri = videoUri,
@@ -1579,10 +1591,10 @@ class AccountViewModel(
                 mimeType = mimeType,
                 localContext = localContext,
                 onSuccess = {
-                    toastManager.toast(R.string.video_saved_to_the_gallery, R.string.video_saved_to_the_gallery)
+                    toastManager.toast(success, success)
                 },
                 onError = {
-                    toastManager.toast(R.string.failed_to_save_the_video, null, it)
+                    toastManager.toast(failure, null, it)
                 },
             )
         }

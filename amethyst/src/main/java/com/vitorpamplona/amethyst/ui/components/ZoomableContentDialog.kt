@@ -306,10 +306,26 @@ private suspend fun saveMediaToGallery(
     localContext: Context,
     accountViewModel: AccountViewModel,
 ) {
-    val isImage = content is MediaUrlImage || content is MediaLocalImage
+    val mimeType =
+        when (content) {
+            is MediaUrlContent -> content.mimeType
+            is MediaPreloadedContent -> content.mimeType
+            else -> null
+        }
 
-    val success = if (isImage) R.string.image_saved_to_the_gallery else R.string.video_saved_to_the_gallery
-    val failure = if (isImage) R.string.failed_to_save_the_image else R.string.failed_to_save_the_video
+    val (success, failure) =
+        when (MediaSaverToDisk.mediaTypeOf(mimeType)) {
+            MediaSaverToDisk.MediaType.IMAGE ->
+                Pair(R.string.image_saved_to_the_gallery, R.string.failed_to_save_the_image)
+            MediaSaverToDisk.MediaType.VIDEO ->
+                Pair(R.string.video_saved_to_the_gallery, R.string.failed_to_save_the_video)
+            MediaSaverToDisk.MediaType.AUDIO ->
+                Pair(R.string.audio_saved_to_the_phone, R.string.failed_to_save_the_audio)
+            MediaSaverToDisk.MediaType.DOCUMENT ->
+                Pair(R.string.document_saved_to_the_phone, R.string.failed_to_save_the_document)
+        }
+
+    val isImage = content is MediaUrlImage || content is MediaLocalImage
 
     if (content is MediaUrlContent) {
         MediaSaverToDisk.downloadAndSave(
