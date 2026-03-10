@@ -133,9 +133,9 @@ fun DisplayFollowList(
     val contacts = contactsState
 
     if (contacts == null) {
-        LoadingIndicator(stringRes(R.string.fetching_follow_list))
+        LoadingIndicator(stringRes(R.string.fetching_follow_list), modifier, nav)
     } else if (contacts.isEmpty()) {
-        ErrorMessage(stringRes(R.string.no_follows_found))
+        ErrorMessage(stringRes(R.string.no_follows_found), modifier, nav)
     } else {
         PreviewList(
             contacts,
@@ -222,30 +222,52 @@ private fun PreviewList(
 }
 
 @Composable
-private fun LoadingIndicator(message: String) {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            CircularProgressIndicator(Modifier.size(40.dp), strokeWidth = 3.dp)
-            Spacer(Modifier.height(12.dp))
-            Text(
-                message,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+private fun LoadingIndicator(
+    message: String,
+    modifier: Modifier,
+    nav: INav,
+) {
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                CircularProgressIndicator(Modifier.size(40.dp), strokeWidth = 3.dp)
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    message,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            TextButton(onClick = { nav.popUpTo(Route.Home, Route.Home::class) }) { Text(stringRes(R.string.skip_for_now)) }
         }
     }
 }
 
 @Composable
-private fun ErrorMessage(message: String) {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+private fun ErrorMessage(
+    message: String,
+    modifier: Modifier,
+    nav: INav,
+) {
+    Column(modifier) {
+        Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
             Text(
                 message,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.padding(horizontal = 16.dp),
             )
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            TextButton(onClick = { nav.popUpTo(Route.Home, Route.Home::class) }) { Text(stringRes(R.string.skip_for_now)) }
         }
     }
 }

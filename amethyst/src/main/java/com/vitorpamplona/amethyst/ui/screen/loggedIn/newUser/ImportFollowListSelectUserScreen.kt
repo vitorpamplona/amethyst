@@ -175,26 +175,7 @@ private fun InputSelectUserBody(
             },
             modifier = Modifier.weight(1f),
             accountViewModel = accountViewModel,
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-                modifier = Modifier.weight(1f).padding(24.dp),
-            ) {
-                Text(
-                    stringRes(R.string.tip),
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                Spacer(Modifier.height(5.dp))
-                Text(
-                    stringRes(R.string.import_follows_tips),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
+        )
 
         Spacer(Modifier.height(16.dp))
 
@@ -236,7 +217,6 @@ private fun CustomShowUserSuggestionList(
     onSelect: (User) -> Unit,
     accountViewModel: AccountViewModel,
     modifier: Modifier = Modifier,
-    onEmpty: @Composable () -> Unit = {},
 ) {
     UserSearchDataSourceSubscription(viewModel.userSuggestions, accountViewModel)
 
@@ -253,7 +233,7 @@ private fun CustomShowUserSuggestionList(
         }
     }
 
-    CustomWatchResponses(viewModel, onSelect, accountViewModel, modifier, onEmpty)
+    CustomWatchResponses(viewModel, onSelect, accountViewModel, modifier)
 }
 
 @Composable
@@ -262,7 +242,6 @@ fun CustomWatchResponses(
     onSelect: (User) -> Unit,
     accountViewModel: AccountViewModel,
     modifier: Modifier = Modifier,
-    onEmpty: @Composable () -> Unit = {},
 ) {
     val suggestions by viewModel.results.collectAsStateWithLifecycle()
 
@@ -280,6 +259,23 @@ fun CustomWatchResponses(
             }
         }
     } else {
-        onEmpty()
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = modifier.padding(24.dp),
+        ) {
+            Text(
+                stringRes(R.string.tip),
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(Modifier.height(5.dp))
+            Text(
+                stringRes(R.string.import_follows_tips),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
