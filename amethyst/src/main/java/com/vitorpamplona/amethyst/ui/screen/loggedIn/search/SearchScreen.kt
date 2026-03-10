@@ -33,7 +33,8 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
+import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
+import com.vitorpamplona.amethyst.ui.feeds.rememberForeverLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.HorizontalDivider
@@ -107,7 +108,7 @@ fun SearchScreen(
 ) {
     WatchLifecycleAndUpdateModel(searchBarViewModel)
 
-    val listState = rememberLazyListState()
+    val listState = rememberForeverLazyListState(ScrollStateKeys.SEARCH_SCREEN)
 
     LaunchedEffect(searchBarViewModel.focusRequester) {
         searchBarViewModel.focusRequester.requestFocus()
