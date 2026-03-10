@@ -34,6 +34,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
@@ -44,6 +45,7 @@ import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeaderBackground
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
@@ -226,5 +228,33 @@ private fun formatDateRange(
         "$start – $end"
     } else {
         start
+    }
+}
+
+@Composable
+@Preview
+fun RenderCalendarTimeSlotEventPreview() {
+    ThemeComparisonColumn {
+        CalendarHeader(
+            title = "Nostr Developer Meetup",
+            image = null,
+            summary = "Join us for an evening of lightning talks and open discussion on the latest Nostr protocol developments.",
+            location = "Berlin, Germany",
+            dateRange = "Mar 15, 2025, 7:00 PM – 10:00 PM",
+        )
+    }
+}
+
+@Composable
+@Preview
+fun RenderCalendarDateSlotEventPreview() {
+    ThemeComparisonColumn {
+        CalendarHeader(
+            title = "Bitcoin Conference 2025",
+            image = null,
+            summary = null,
+            location = null,
+            dateRange = "2025-05-01 – 2025-05-03",
+        )
     }
 }
