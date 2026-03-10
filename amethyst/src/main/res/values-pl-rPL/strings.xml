@@ -158,6 +158,7 @@
     <string name="video_saved_to_the_gallery">Film zapisany w galerii filmów</string>
     <string name="failed_to_save_the_video">Nie udało się zapisać filmu</string>
     <string name="upload_image">Dodaj zdjęcie</string>
+    <string name="upload_file">Prześlij plik</string>
     <string name="take_a_picture">Zrób zdjęcie</string>
     <string name="record_a_video">Nagraj film</string>
     <string name="record_a_message">Nagraj wiadomość</string>
@@ -419,6 +420,14 @@
     <string name="wallet_connect_service_show_secret">Pokaż tajny klucz</string>
     <string name="wallet_connect_service_secret_placeholder">klucz prywatny nsec / hex</string>
     <string name="wallet_connect_status_connected">Połączony</string>
+    <string name="wallet_connect_status_not_connected">Nie połączony</string>
+    <string name="wallet_connect_manual_config">Zaawansowane: wprowadź szczegóły połączenia ręcznie</string>
+    <string name="quick_zap_amounts">Kwoty Quick Zap</string>
+    <string name="quick_zap_amounts_explainer">Wyświetlane po naciśnięciu przycisku zap. Dotknij kwoty, aby ją usunąć. Jeśli pozostawisz to pole puste, za każdym razem otworzy się okno dialogowe umożliwiające wprowadzenie kwoty.</string>
+    <string name="zap_privacy_section">Prywatność Zap</string>
+    <string name="zap_type_section_explainer">Kontroluje sposób wyświetlania Twojej tożsamości podczas wysyłania zapa.</string>
+    <string name="wallet_connect_connect_app">Podłącz portfel</string>
+    <string name="see_relay_feed">Przejrzyj kanał transmitera</string>
     <string name="pledge_amount_in_sats">Kwota zobowiązania w Satach</string>
     <string name="post_poll">Wyślij Ankietę</string>
     <string name="poll_heading_required">Wymagane pola:</string>
@@ -660,6 +669,7 @@
     <string name="read_from_relay_description">Ilość w bajtach, która została otrzymana z tego transmitera, w tym filtry i wydarzenia</string>
     <string name="an_error_occurred_trying_to_get_relay_information">Wystąpił błąd podczas próby uzyskania informacji o transmiterze z %1$s</string>
     <string name="owner">Operator</string>
+    <string name="used_by">Używany przez</string>
     <string name="self">Klucz dostępu do usług</string>
     <string name="running_software">Uruchamianie %1$s</string>
     <string name="running_software_version">Uruchamianie %1$s (%2$s)</string>
@@ -856,6 +866,7 @@
     <string name="load_image_description">Kiedy załadować obrazki</string>
     <string name="copy_stack_to_clipboard">Skopiuj</string>
     <string name="copy_to_clipboard">Kopiuj do schowka</string>
+    <string name="copy_nprofile_to_clipboard">Skopiuj nprofile do schowka</string>
     <string name="copy_npub_to_clipboard">Kopiuj npub do schowka</string>
     <string name="share_or_save">Udostępnij lub Zapisz</string>
     <string name="copy_url_to_clipboard">Kopiuj adres URL do schowka</string>
@@ -1079,6 +1090,7 @@
     <string name="add_content_warning">Dodaj ostrzeżenie o treści</string>
     <string name="remove_content_warning">Usuń ostrzeżenie o treści</string>
     <string name="show_npub_as_a_qr_code">Pokaż npub jako QR kod</string>
+    <string name="show_nprofile_as_a_qr_code">Pokaż nprofile jako kod QR</string>
     <string name="invalid_nip19_uri">Nieprawidłowy adres</string>
     <string name="invalid_nip19_uri_description">Ametyst otrzymał URI do otwarcia, ale ten adres był nieprawidłowy: %1$s</string>
     <string name="dm_relays_title">Transmitery Skrzynki Odbiorczej</string>
