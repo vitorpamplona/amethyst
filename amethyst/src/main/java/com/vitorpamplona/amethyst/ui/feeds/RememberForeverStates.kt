@@ -54,6 +54,8 @@ object ScrollStateKeys {
     const val DISCOVER_LIVE = "DiscoverLiveFeed"
     const val DISCOVER_COMMUNITY = "DiscoverCommunitiesFeed"
     const val DISCOVER_CHATS = "DiscoverChatsFeed"
+
+    const val SEARCH_SCREEN = "SearchFeed"
 }
 
 object PagerStateKeys {
