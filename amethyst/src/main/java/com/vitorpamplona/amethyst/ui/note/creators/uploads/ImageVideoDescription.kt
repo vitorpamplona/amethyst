@@ -57,6 +57,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.ui.actions.uploads.ShowImageUploadGallery
@@ -92,14 +93,16 @@ fun ImageVideoDescription(
 
     var selectedServer by remember {
         mutableStateOf(
-            fileServers.firstOrNull { it == defaultServer } ?: fileServers[0],
+            fileServers.firstOrNull { it == defaultServer } ?: fileServers.firstOrNull() ?: DEFAULT_MEDIA_SERVERS[0],
         )
     }
     var message by remember { mutableStateOf("") }
     var sensitiveContent by remember { mutableStateOf(false) }
 
     // 0 = Low, 1 = Medium, 2 = High, 3=UNCOMPRESSED
-    var mediaQualitySlider by remember { mutableIntStateOf(1) }
+    var mediaQualitySlider by remember {
+        mutableIntStateOf(if (uris.hasNonMedia()) 3 else 1)
+    }
 
     // Codec selection: false = H264, true = H265
     var useH265Codec by remember { mutableStateOf(false) }
@@ -189,7 +192,8 @@ fun ImageVideoDescription(
                         fileServers
                             .firstOrNull { it == defaultServer }
                             ?.name
-                            ?: fileServers[0].name,
+                            ?: fileServers.firstOrNull()?.name
+                            ?: DEFAULT_MEDIA_SERVERS[0].name,
                     options = fileServerOptions,
                     onSelect = { selectedServer = fileServers[it] },
                     modifier =
@@ -270,27 +274,31 @@ fun ImageVideoDescription(
                 }
             }
 
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        text =
-                            when (mediaQualitySlider) {
-                                0 -> stringRes(R.string.media_compression_quality_low)
-                                1 -> stringRes(R.string.media_compression_quality_medium)
-                                2 -> stringRes(R.string.media_compression_quality_high)
-                                3 -> stringRes(R.string.media_compression_quality_uncompressed)
-                                else -> stringRes(R.string.media_compression_quality_medium)
-                            },
-                        modifier = Modifier.align(Alignment.Center),
+            val firstMedia = uris.first().media
+
+            if (firstMedia.isVideo() == true || firstMedia.isImage() == true || firstMedia.isAudio() == true) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            text =
+                                when (mediaQualitySlider) {
+                                    0 -> stringRes(R.string.media_compression_quality_low)
+                                    1 -> stringRes(R.string.media_compression_quality_medium)
+                                    2 -> stringRes(R.string.media_compression_quality_high)
+                                    3 -> stringRes(R.string.media_compression_quality_uncompressed)
+                                    else -> stringRes(R.string.media_compression_quality_medium)
+                                },
+                            modifier = Modifier.align(Alignment.Center),
+                        )
+                    }
+
+                    Slider(
+                        value = mediaQualitySlider.toFloat(),
+                        onValueChange = { mediaQualitySlider = it.toInt() },
+                        valueRange = 0f..3f,
+                        steps = 2,
                     )
                 }
-
-                Slider(
-                    value = mediaQualitySlider.toFloat(),
-                    onValueChange = { mediaQualitySlider = it.toInt() },
-                    valueRange = 0f..3f,
-                    steps = 2,
-                )
             }
 
             if (uris.first().media.isVideo() == true) {

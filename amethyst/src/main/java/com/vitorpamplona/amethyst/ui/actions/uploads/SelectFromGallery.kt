@@ -58,6 +58,11 @@ class SelectedMedia(
 
     fun isAudio() = mimeType?.startsWith("audio")
 
+    fun isNotMedia() =
+        mimeType?.let {
+            !(it.startsWith("image") || it.startsWith("video") || it.startsWith("audio"))
+        } ?: true
+
     fun isDocument() = mimeType == "application/pdf"
 }
 

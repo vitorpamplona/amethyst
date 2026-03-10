@@ -49,6 +49,8 @@ class MultiOrchestrator(
 
     fun hasVideo() = list.any { it.media.mimeType?.startsWith("video", ignoreCase = true) == true }
 
+    fun hasNonMedia() = list.any { it.media.isNotMedia() }
+
     suspend fun upload(
         alt: String?,
         contentWarningReason: String?,
