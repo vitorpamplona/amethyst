@@ -419,6 +419,15 @@
     <string name="wallet_connect_service_secret">Tajemství Wallet Connect</string>
     <string name="wallet_connect_service_show_secret">Zobrazit tajný klíč</string>
     <string name="wallet_connect_service_secret_placeholder">nsec / hex soukromý klíč</string>
+    <string name="wallet_connect_status_connected">Připojeno</string>
+    <string name="wallet_connect_status_not_connected">Nepřipojeno</string>
+    <string name="wallet_connect_manual_config">Pokročilé: zadejte podrobnosti připojení ručně</string>
+    <string name="quick_zap_amounts">Rychlé částky Zap</string>
+    <string name="quick_zap_amounts_explainer">Zobrazí se při stisknutí tlačítka zap. Klepnutím na částku ji odeberete. Pokud ponecháte prázdné, otevře se pokaždé dialog pro zadání částky.</string>
+    <string name="zap_privacy_section">Soukromí Zap</string>
+    <string name="zap_type_section_explainer">Určuje, jak je zobrazena vaše identita při odesílání zapsu.</string>
+    <string name="wallet_connect_connect_app">Připojit peněženku</string>
+    <string name="see_relay_feed">Zobrazit kanál relé</string>
     <string name="pledge_amount_in_sats">Částka záruky v sats</string>
     <string name="post_poll">Zveřejnit hlasování</string>
     <string name="poll_heading_required">Povinná pole:</string>
@@ -658,6 +667,7 @@
     <string name="read_from_relay_description">Množství bajtů, které bylo přijato z tohoto relé, včetně filtrů a událostí</string>
     <string name="an_error_occurred_trying_to_get_relay_information">Při pokusu o získání informací z Relay se vyskytla chyba z %1$s</string>
     <string name="owner">Vlastník</string>
+    <string name="used_by">Používáno</string>
     <string name="self">Servisní klíč</string>
     <string name="running_software">Spuštěno %1$s</string>
     <string name="running_software_version">Spuštěno %1$s (%2$s)</string>
@@ -853,6 +863,7 @@
     <string name="load_image_description">Kdy načíst obrázek</string>
     <string name="copy_stack_to_clipboard">Kopírovat zásobník</string>
     <string name="copy_to_clipboard">Kopírovat do schránky</string>
+    <string name="copy_nprofile_to_clipboard">Zkopírovat nprofile do schránky</string>
     <string name="copy_npub_to_clipboard">Kopírovat npub do schránky</string>
     <string name="share_or_save">Sdílet nebo Uložit</string>
     <string name="copy_url_to_clipboard">Kopírovat URL do schránky</string>
@@ -1076,6 +1087,7 @@
     <string name="add_content_warning">Přidat upozornění na obsah</string>
     <string name="remove_content_warning">Odstranit upozornění na obsah</string>
     <string name="show_npub_as_a_qr_code">Zobrazit npub jako QR kód</string>
+    <string name="show_nprofile_as_a_qr_code">Zobrazit nprofile jako QR kód</string>
     <string name="invalid_nip19_uri">Neplatná adresa</string>
     <string name="invalid_nip19_uri_description">Amethyst obdržel URI k otevření, ale tento URI byl neplatný: %1$s</string>
     <string name="dm_relays_title">Relé DM Schránky</string>
@@ -1458,16 +1470,4 @@
     <string name="kind_voice_msg">Hlasová zpráva</string>
     <string name="kind_voice_reply">Hlasová odpověď</string>
     <string name="kind_wiki">Wiki</string>
-    <string name="see_relay_feed">Zobrazit kanál relé</string>
-    <string name="used_by">Používáno</string>
-    <string name="copy_nprofile_to_clipboard">Zkopírovat nprofile do schránky</string>
-    <string name="show_nprofile_as_a_qr_code">Zobrazit nprofile jako QR kód</string>
-    <string name="quick_zap_amounts_explainer">Zobrazí se při stisknutí tlačítka zap. Klepnutím na částku ji odeberete. Pokud ponecháte prázdné, otevře se pokaždé dialog pro zadání částky.</string>
-    <string name="wallet_connect_status_connected">Připojeno</string>
-    <string name="wallet_connect_status_not_connected">Nepřipojeno</string>
-    <string name="wallet_connect_manual_config">Pokročilé: zadejte podrobnosti připojení ručně</string>
-    <string name="quick_zap_amounts">Rychlé částky Zap</string>
-    <string name="zap_privacy_section">Soukromí Zap</string>
-    <string name="zap_type_section_explainer">Určuje, jak je zobrazena vaše identita při odesílání zapsu.</string>
-    <string name="wallet_connect_connect_app">Připojit peněženku</string>
 </resources>

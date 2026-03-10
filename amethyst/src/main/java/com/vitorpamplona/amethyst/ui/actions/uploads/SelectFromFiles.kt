@@ -22,16 +22,14 @@ package com.vitorpamplona.amethyst.ui.actions.uploads
 
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddPhotoAlternate
+import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
-import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -47,66 +45,30 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import java.util.concurrent.atomic.AtomicBoolean
 
-@Stable
-class SelectedMedia(
-    val uri: Uri,
-    val mimeType: String?,
-) {
-    fun isImage() = mimeType?.startsWith("image")
-
-    fun isVideo() = mimeType?.startsWith("video")
-
-    fun isAudio() = mimeType?.startsWith("audio")
-
-    fun isDocument() = mimeType == "application/pdf"
-}
-
 @Composable
-fun SelectFromGallery(
+fun SelectFromFiles(
     isUploading: Boolean,
     tint: Color,
     modifier: Modifier,
-    onImageChosen: (ImmutableList<SelectedMedia>) -> Unit,
+    onFilesChosen: (ImmutableList<SelectedMedia>) -> Unit,
 ) {
-    var showGallerySelect by remember { mutableStateOf(false) }
-    if (showGallerySelect) {
-        GallerySelect(
-            onImageUri = { uri ->
-                showGallerySelect = false
-                if (uri.isNotEmpty()) {
-                    onImageChosen(uri)
+    var showFileSelect by remember { mutableStateOf(false) }
+    if (showFileSelect) {
+        FileSelect(
+            onFilesSelected = { files ->
+                showFileSelect = false
+                if (files.isNotEmpty()) {
+                    onFilesChosen(files)
                 }
             },
         )
     }
 
-    GallerySelectButton(isUploading, tint, modifier) { showGallerySelect = true }
+    FileSelectButton(isUploading, tint, modifier) { showFileSelect = true }
 }
 
 @Composable
-fun SelectSingleFromGallery(
-    isUploading: Boolean,
-    tint: Color,
-    modifier: Modifier,
-    onImageChosen: (SelectedMedia) -> Unit,
-) {
-    var showGallerySelect by remember { mutableStateOf(false) }
-    if (showGallerySelect) {
-        GallerySelectSingle(
-            onImageUri = { media ->
-                showGallerySelect = false
-                if (media != null) {
-                    onImageChosen(media)
-                }
-            },
-        )
-    }
-
-    GallerySelectButton(isUploading, tint, modifier) { showGallerySelect = true }
-}
-
-@Composable
-private fun GallerySelectButton(
+private fun FileSelectButton(
     isUploading: Boolean,
     tint: Color,
     modifier: Modifier,
@@ -119,8 +81,8 @@ private fun GallerySelectButton(
     ) {
         if (!isUploading) {
             Icon(
-                imageVector = Icons.Default.AddPhotoAlternate,
-                contentDescription = stringRes(id = R.string.upload_image),
+                imageVector = Icons.Default.AttachFile,
+                contentDescription = stringRes(id = R.string.upload_file),
                 modifier = Modifier.height(25.dp),
                 tint = tint,
             )
@@ -131,15 +93,15 @@ private fun GallerySelectButton(
 }
 
 @Composable
-fun GallerySelect(onImageUri: (ImmutableList<SelectedMedia>) -> Unit = {}) {
+fun FileSelect(onFilesSelected: (ImmutableList<SelectedMedia>) -> Unit = {}) {
     val hasLaunched by remember { mutableStateOf(AtomicBoolean(false)) }
     val resolver = LocalContext.current.contentResolver
 
     val launcher =
         rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.PickMultipleVisualMedia(10),
+            contract = ActivityResultContracts.OpenMultipleDocuments(),
             onResult = { uris: List<Uri> ->
-                onImageUri(
+                onFilesSelected(
                     uris
                         .map {
                             SelectedMedia(it, resolver.getType(it))
@@ -150,44 +112,18 @@ fun GallerySelect(onImageUri: (ImmutableList<SelectedMedia>) -> Unit = {}) {
         )
 
     @Composable
-    fun LaunchGallery() {
+    fun LaunchFilePicker() {
         SideEffect {
             if (!hasLaunched.getAndSet(true)) {
-                launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
+                launcher.launch(
+                    arrayOf(
+                        "audio/*",
+                        "application/pdf",
+                    ),
+                )
             }
         }
     }
 
-    LaunchGallery()
-}
-
-@Composable
-fun GallerySelectSingle(onImageUri: (SelectedMedia?) -> Unit = {}) {
-    val hasLaunched by remember { mutableStateOf(AtomicBoolean(false)) }
-    val resolver = LocalContext.current.contentResolver
-
-    val launcher =
-        rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.PickVisualMedia(),
-            onResult = { uri: Uri? ->
-                if (uri != null) {
-                    onImageUri(SelectedMedia(uri, resolver.getType(uri)))
-                } else {
-                    onImageUri(null)
-                }
-
-                hasLaunched.set(false)
-            },
-        )
-
-    @Composable
-    fun LaunchGallery() {
-        SideEffect {
-            if (!hasLaunched.getAndSet(true)) {
-                launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
-            }
-        }
-    }
-
-    LaunchGallery()
+    LaunchFilePicker()
 }

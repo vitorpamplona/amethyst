@@ -419,6 +419,15 @@
     <string name="wallet_connect_service_secret">Wallet Connect hemlighet</string>
     <string name="wallet_connect_service_show_secret">Visa secret key</string>
     <string name="wallet_connect_service_secret_placeholder">nsec / hex privat nyckel</string>
+    <string name="wallet_connect_status_connected">Ansluten</string>
+    <string name="wallet_connect_status_not_connected">Inte ansluten</string>
+    <string name="wallet_connect_manual_config">Avancerat: ange anslutningsinformation manuellt</string>
+    <string name="quick_zap_amounts">Snabba Zap-belopp</string>
+    <string name="quick_zap_amounts_explainer">Visas när du trycker på Zap-knappen. Tryck på ett belopp för att ta bort det. Om du lämnar det tomt öppnas en dialog för att ange ett belopp varje gång.</string>
+    <string name="zap_privacy_section">Zap-sekretess</string>
+    <string name="zap_type_section_explainer">Styr hur din identitet visas när du skickar ett Zap.</string>
+    <string name="wallet_connect_connect_app">Anslut plånbok</string>
+    <string name="see_relay_feed">Visa relä-flöde</string>
     <string name="pledge_amount_in_sats">Pantbelopp i Sats</string>
     <string name="post_poll">Dela Poll</string>
     <string name="poll_heading_required">Obligatoriska fält:</string>
@@ -657,6 +666,7 @@
     <string name="read_from_relay_description">Mängden data i byte som mottogs från detta relä, inklusive filter och händelser</string>
     <string name="an_error_occurred_trying_to_get_relay_information">Ett fel inträffade vid försök att hämta information från Relay %1$s</string>
     <string name="owner">Ägare</string>
+    <string name="used_by">Används av</string>
     <string name="self">Service-nyckel</string>
     <string name="running_software">Kör %1$s</string>
     <string name="running_software_version">Kör %1$s (%2$s)</string>
@@ -852,6 +862,7 @@
     <string name="load_image_description">När bilder ska laddas</string>
     <string name="copy_stack_to_clipboard">Kopiera stacken</string>
     <string name="copy_to_clipboard">Kopiera till Urklipp</string>
+    <string name="copy_nprofile_to_clipboard">Kopiera nprofile till urklipp</string>
     <string name="copy_npub_to_clipboard">Kopiera npub till urklipp</string>
     <string name="share_or_save">Dela eller Spara</string>
     <string name="copy_url_to_clipboard">Kopiera URL till urklipp</string>
@@ -1075,6 +1086,7 @@
     <string name="add_content_warning">Lägg till varning för innehåll</string>
     <string name="remove_content_warning">Ta bort varning för innehåll</string>
     <string name="show_npub_as_a_qr_code">Visa npub som en QR-kod</string>
+    <string name="show_nprofile_as_a_qr_code">Visa nprofile som QR-kod</string>
     <string name="invalid_nip19_uri">Ogiltig adress</string>
     <string name="invalid_nip19_uri_description">Amethyst fick en URI att öppna men den URI var ogiltig: %1$s</string>
     <string name="dm_relays_title">DM Inkorg Reläer</string>
@@ -1457,16 +1469,4 @@
     <string name="kind_voice_msg">Röstmeddelande</string>
     <string name="kind_voice_reply">Röstsvar</string>
     <string name="kind_wiki">Wiki</string>
-    <string name="see_relay_feed">Visa relä-flöde</string>
-    <string name="used_by">Används av</string>
-    <string name="copy_nprofile_to_clipboard">Kopiera nprofile till urklipp</string>
-    <string name="show_nprofile_as_a_qr_code">Visa nprofile som QR-kod</string>
-    <string name="quick_zap_amounts_explainer">Visas när du trycker på Zap-knappen. Tryck på ett belopp för att ta bort det. Om du lämnar det tomt öppnas en dialog för att ange ett belopp varje gång.</string>
-    <string name="wallet_connect_status_connected">Ansluten</string>
-    <string name="wallet_connect_status_not_connected">Inte ansluten</string>
-    <string name="wallet_connect_manual_config">Avancerat: ange anslutningsinformation manuellt</string>
-    <string name="quick_zap_amounts">Snabba Zap-belopp</string>
-    <string name="zap_privacy_section">Zap-sekretess</string>
-    <string name="zap_type_section_explainer">Styr hur din identitet visas när du skickar ett Zap.</string>
-    <string name="wallet_connect_connect_app">Anslut plånbok</string>
 </resources>

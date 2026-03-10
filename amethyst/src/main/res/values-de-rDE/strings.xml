@@ -425,6 +425,15 @@ anz der Bedingungen ist erforderlich</string>
     <string name="wallet_connect_service_secret">Wallet-Verbindungs-Geheimnis</string>
     <string name="wallet_connect_service_show_secret">Geheimen Schlüssel anzeigen</string>
     <string name="wallet_connect_service_secret_placeholder">nsec / hexadezimaler privater Schlüssel</string>
+    <string name="wallet_connect_status_connected">Verbunden</string>
+    <string name="wallet_connect_status_not_connected">Nicht verbunden</string>
+    <string name="wallet_connect_manual_config">Erweitert: Verbindungsdetails manuell eingeben</string>
+    <string name="quick_zap_amounts">Schnelle Zap-Beträge</string>
+    <string name="quick_zap_amounts_explainer">Wird beim Drücken der Zap-Schaltfläche angezeigt. Tippe auf einen Betrag, um ihn zu entfernen. Wenn du es leer lässt, wird jedes Mal ein Dialog zur Eingabe eines Betrags geöffnet.</string>
+    <string name="zap_privacy_section">Zap-Datenschutz</string>
+    <string name="zap_type_section_explainer">Legt fest, wie deine Identität beim Senden eines Zaps angezeigt wird.</string>
+    <string name="wallet_connect_connect_app">Wallet verbinden</string>
+    <string name="see_relay_feed">Relay-Feed anzeigen</string>
     <string name="pledge_amount_in_sats">Spendenbetrag in Sats</string>
     <string name="post_poll">Umfrage veröffentlichen</string>
     <string name="poll_heading_required">Erforderliche Felder:</string>
@@ -663,6 +672,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="read_from_relay_description">Die Menge in Bytes, die von diesem Relais empfangen wurde, einschließlich Filter und Ereignisse</string>
     <string name="an_error_occurred_trying_to_get_relay_information">Ein Fehler ist beim Abrufen von Relay-Informationen von %1$s aufgetreten</string>
     <string name="owner">Inhaber</string>
+    <string name="used_by">Verwendet von</string>
     <string name="self">Service-Schlüssel</string>
     <string name="running_software">%1$s wird ausgeführt</string>
     <string name="running_software_version">%1$s wird ausgeführt (%2$s)</string>
@@ -858,6 +868,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="load_image_description">Wann Bilder geladen werden sollen</string>
     <string name="copy_stack_to_clipboard">Stapel kopieren</string>
     <string name="copy_to_clipboard">In Zwischenablage kopieren</string>
+    <string name="copy_nprofile_to_clipboard">nprofile in die Zwischenablage kopieren</string>
     <string name="copy_npub_to_clipboard">Npub in Zwischenablage kopieren</string>
     <string name="share_or_save">Teilen oder Speichern</string>
     <string name="copy_url_to_clipboard">URL in die Zwischenablage kopieren</string>
@@ -1081,6 +1092,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="add_content_warning">Inhaltswarnung hinzufügen</string>
     <string name="remove_content_warning">Inhaltswarnung entfernen</string>
     <string name="show_npub_as_a_qr_code">Npub als QR-Code anzeigen</string>
+    <string name="show_nprofile_as_a_qr_code">nprofile als QR-Code anzeigen</string>
     <string name="invalid_nip19_uri">Ungültige Adresse</string>
     <string name="invalid_nip19_uri_description">Amethyst hat eine URI zum Öffnen erhalten, aber diese URI war ungültig: %1$s</string>
     <string name="dm_relays_title">DM Posteingangs-Relais</string>
@@ -1463,16 +1475,4 @@ anz der Bedingungen ist erforderlich</string>
     <string name="kind_voice_msg">Sprachnachricht</string>
     <string name="kind_voice_reply">Sprachantwort</string>
     <string name="kind_wiki">Wiki</string>
-    <string name="see_relay_feed">Relay-Feed anzeigen</string>
-    <string name="used_by">Verwendet von</string>
-    <string name="copy_nprofile_to_clipboard">nprofile in die Zwischenablage kopieren</string>
-    <string name="show_nprofile_as_a_qr_code">nprofile als QR-Code anzeigen</string>
-    <string name="quick_zap_amounts_explainer">Wird beim Drücken der Zap-Schaltfläche angezeigt. Tippe auf einen Betrag, um ihn zu entfernen. Wenn du es leer lässt, wird jedes Mal ein Dialog zur Eingabe eines Betrags geöffnet.</string>
-    <string name="wallet_connect_status_connected">Verbunden</string>
-    <string name="wallet_connect_status_not_connected">Nicht verbunden</string>
-    <string name="wallet_connect_manual_config">Erweitert: Verbindungsdetails manuell eingeben</string>
-    <string name="quick_zap_amounts">Schnelle Zap-Beträge</string>
-    <string name="zap_privacy_section">Zap-Datenschutz</string>
-    <string name="zap_type_section_explainer">Legt fest, wie deine Identität beim Senden eines Zaps angezeigt wird.</string>
-    <string name="wallet_connect_connect_app">Wallet verbinden</string>
 </resources>

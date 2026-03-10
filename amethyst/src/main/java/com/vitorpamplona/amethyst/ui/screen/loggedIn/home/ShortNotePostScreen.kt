@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.FileServerSelectionRow
 import com.vitorpamplona.amethyst.ui.actions.uploads.MAX_VOICE_RECORD_SECONDS
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordVoiceButton
+import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromFiles
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakePictureButton
@@ -503,6 +504,14 @@ private fun BottomRowActions(postViewModel: ShortNotePostViewModel) {
             },
             maxDurationSeconds = MAX_VOICE_RECORD_SECONDS,
         )
+
+        SelectFromFiles(
+            isUploading = postViewModel.isUploadingImage,
+            tint = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier,
+        ) {
+            postViewModel.selectImage(it)
+        }
 
         if (postViewModel.canUsePoll) {
             // These should be hashtag recommendations the user selects in the future.
