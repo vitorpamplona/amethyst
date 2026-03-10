@@ -27,6 +27,36 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 
+/** Detailed outcome of a Namecoin resolution attempt. */
+sealed class NamecoinResolveOutcome {
+    data class Success(
+        val result: NamecoinNostrResult,
+    ) : NamecoinResolveOutcome()
+
+    /** The name does not exist on the Namecoin blockchain. */
+    data class NameNotFound(
+        val name: String,
+    ) : NamecoinResolveOutcome()
+
+    /** The name exists but has no valid "nostr" field in its value. */
+    data class NoNostrField(
+        val name: String,
+    ) : NamecoinResolveOutcome()
+
+    /** All ElectrumX servers were unreachable. */
+    data class ServersUnreachable(
+        val message: String,
+    ) : NamecoinResolveOutcome()
+
+    /** The identifier could not be parsed as a Namecoin name. */
+    data class InvalidIdentifier(
+        val identifier: String,
+    ) : NamecoinResolveOutcome()
+
+    /** Timed out waiting for a response. */
+    data object Timeout : NamecoinResolveOutcome()
+}
+
 /**
  * Result of resolving a Namecoin name to Nostr identity data.
  */
@@ -86,6 +116,18 @@ class NamecoinNameResolver(
         return withTimeoutOrNull(lookupTimeoutMs) {
             performLookup(parsed)
         }
+    }
+
+    /**
+     * Resolve with detailed outcome for error reporting in UI flows.
+     */
+    suspend fun resolveDetailed(identifier: String): NamecoinResolveOutcome {
+        val parsed =
+            parseIdentifier(identifier)
+                ?: return NamecoinResolveOutcome.InvalidIdentifier(identifier)
+        val result =
+            withTimeoutOrNull(lookupTimeoutMs) { performLookupDetailed(parsed) }
+        return result ?: NamecoinResolveOutcome.Timeout
     }
 
     // ── Identifier Parsing ─────────────────────────────────────────────
@@ -172,6 +214,39 @@ class NamecoinNameResolver(
         return when (parsed.namespace) {
             Namespace.DOMAIN -> extractFromDomainValue(valueJson, parsed)
             Namespace.IDENTITY -> extractFromIdentityValue(valueJson, parsed)
+        }
+    }
+
+    private suspend fun performLookupDetailed(parsed: ParsedIdentifier): NamecoinResolveOutcome {
+        val nameResult: NameShowResult
+        try {
+            nameResult =
+                electrumxClient.nameShowWithFallback(parsed.namecoinName, serverListProvider())
+                    ?: return NamecoinResolveOutcome.NameNotFound(parsed.namecoinName)
+        } catch (e: NamecoinLookupException.NameNotFound) {
+            return NamecoinResolveOutcome.NameNotFound(parsed.namecoinName)
+        } catch (e: NamecoinLookupException.NameExpired) {
+            return NamecoinResolveOutcome.NameNotFound(parsed.namecoinName)
+        } catch (e: NamecoinLookupException.ServersUnreachable) {
+            return NamecoinResolveOutcome.ServersUnreachable(
+                e.message ?: "All ElectrumX servers unreachable",
+            )
+        }
+
+        val valueJson =
+            tryParseJson(nameResult.value)
+                ?: return NamecoinResolveOutcome.NoNostrField(parsed.namecoinName)
+
+        val nostrResult =
+            when (parsed.namespace) {
+                Namespace.DOMAIN -> extractFromDomainValue(valueJson, parsed)
+                Namespace.IDENTITY -> extractFromIdentityValue(valueJson, parsed)
+            }
+
+        return if (nostrResult != null) {
+            NamecoinResolveOutcome.Success(nostrResult)
+        } else {
+            NamecoinResolveOutcome.NoNostrField(parsed.namecoinName)
         }
     }
 
