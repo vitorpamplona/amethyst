@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.signup
 
+import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.service.followimport.FollowEntry
@@ -68,6 +69,7 @@ sealed class ImportFollowState {
     ) : ImportFollowState()
 }
 
+@Stable
 class ImportFollowListViewModel : ViewModel() {
     private val namecoinResolver = NamecoinNameResolver(electrumxClient = ElectrumXClient())
     private val importer = FollowListImporter(resolveNamecoin = namecoinResolver::resolveDetailed)
