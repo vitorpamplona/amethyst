@@ -7,8 +7,8 @@
     <string name="scan_qr">Skenovat QR kód</string>
     <string name="show_anyway">Přesto zobrazit</string>
     <string name="post_was_hidden">Tento příspěvek byl skryt, protože zmiňuje vaše skryté uživatele nebo slova</string>
-    <string name="post_was_flagged_as_inappropriate_by">Příspěvek byl označen jako nevhodný uživatelem</string>
-    <string name="post_not_found">Příspěvek nenalezen</string>
+    <string name="post_was_flagged_as_inappropriate_by">Příspěvek byl ztlumený nebo nahlášen</string>
+    <string name="post_not_found">Příspěvek se načítá nebo nemůže být nalezena ve vašem seznamu relací</string>
     <string name="post_not_found_short">👀</string>
     <string name="channel_image">Obrázek kanálu</string>
     <string name="referenced_event_not_found">Odkazovaná událost nebyla nalezena</string>
@@ -158,6 +158,7 @@
     <string name="video_saved_to_the_gallery">Video uloženo do video galerie telefonu</string>
     <string name="failed_to_save_the_video">Nepodařilo se uložit video</string>
     <string name="upload_image">Nahrát obrázek</string>
+    <string name="upload_file">Nahrát soubor</string>
     <string name="take_a_picture">Pořiďte fotografii</string>
     <string name="record_a_video">Nahrát video</string>
     <string name="record_a_message">Nahrajte zprávu</string>

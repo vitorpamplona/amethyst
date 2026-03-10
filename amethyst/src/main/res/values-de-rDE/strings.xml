@@ -160,6 +160,7 @@ erie gespeichert</string>
     <string name="video_saved_to_the_gallery">Video in der Videogalerie des Telefons gespeichert</string>
     <string name="failed_to_save_the_video">Video konnte nicht gespeichert werden</string>
     <string name="upload_image">Bild hochladen</string>
+    <string name="upload_file">Datei hochladen</string>
     <string name="take_a_picture">Ein Foto aufnehmen</string>
     <string name="record_a_video">Video aufnehmen</string>
     <string name="record_a_message">Eine Nachricht aufnehmen</string>
