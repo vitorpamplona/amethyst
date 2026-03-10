@@ -58,7 +58,6 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.state.EventCollectionState
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
-import com.vitorpamplona.amethyst.desktop.DebugConfig
 import com.vitorpamplona.amethyst.desktop.DesktopPreferences
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
@@ -208,7 +207,6 @@ fun FeedScreen(
                 onEvent = { event, _, relay, _ ->
                     if (event is ContactListEvent) {
                         val follows = event.verifiedFollowKeySet()
-                        DebugConfig.log("contactList: ${follows.size} follows from $relay")
                         followedUsers = follows
                     }
                 },
@@ -260,7 +258,6 @@ fun FeedScreen(
 
     // Subscribe to feed based on mode
     rememberSubscription(configuredRelays, feedMode, followedUsers, relayManager = relayManager) {
-        DebugConfig.log("feedSub: mode=$feedMode, relays=${configuredRelays.size}, followedUsers=${followedUsers.size}")
         if (configuredRelays.isEmpty()) {
             return@rememberSubscription null
         }

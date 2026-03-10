@@ -49,6 +49,9 @@ dependencies {
     // Collections
     implementation(libs.kotlinx.collections.immutable)
 
+    // SLF4J no-op — silence "No SLF4J providers" warnings from transitive deps
+    implementation("org.slf4j:slf4j-nop:2.0.16")
+
     // QR code generation (ZXing core)
     implementation(libs.zxing)
 
