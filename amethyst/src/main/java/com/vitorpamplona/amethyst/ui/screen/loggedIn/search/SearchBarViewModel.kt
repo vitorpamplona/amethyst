@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.search
 
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -87,8 +88,10 @@ class SearchBarViewModel(
 
     val searchDataSourceState = SearchQueryState(MutableStateFlow(searchValue), account)
 
+    val listState: LazyListState = LazyListState(0, 0)
+
     val directNip05Resolver: Flow<User?> =
-        searchValueFlow
+        searchTerm
             .debounce(400)
             .mapLatest { term ->
                 if (term.contains('@')) {
@@ -248,11 +251,12 @@ class SearchBarViewModel(
 
     fun clear() = updateSearchValue("")
 
-    fun updateDataSource(searchTerm: String) {
+    suspend fun updateDataSource(searchTerm: String) {
         if (searchTerm.isBlank()) {
             searchDataSourceState.searchQuery.tryEmit("")
         } else {
             searchDataSourceState.searchQuery.tryEmit(searchTerm)
+            listState.scrollToItem(0, 0)
         }
     }
 
