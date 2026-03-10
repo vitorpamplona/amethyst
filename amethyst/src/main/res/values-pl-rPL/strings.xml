@@ -418,6 +418,7 @@
     <string name="wallet_connect_service_secret">Klucz dostępu do portfela</string>
     <string name="wallet_connect_service_show_secret">Pokaż tajny klucz</string>
     <string name="wallet_connect_service_secret_placeholder">klucz prywatny nsec / hex</string>
+    <string name="wallet_connect_status_connected">Połączony</string>
     <string name="pledge_amount_in_sats">Kwota zobowiązania w Satach</string>
     <string name="post_poll">Wyślij Ankietę</string>
     <string name="poll_heading_required">Wymagane pola:</string>
