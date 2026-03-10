@@ -82,6 +82,8 @@ val DefaultNIP65List =
         AdvertisedRelayInfo(Constants.bitcoiner, AdvertisedRelayType.BOTH),
     )
 
+val DefaultGlobalRelays = listOf(Constants.wine, Constants.news)
+
 val DefaultDMRelayList = listOf(Constants.auth, Constants.oxchat, Constants.nos)
 
 val DefaultSearchRelayList = setOf(Constants.wine, Constants.where, Constants.nostoday, Constants.antiprimal, Constants.ditto)
