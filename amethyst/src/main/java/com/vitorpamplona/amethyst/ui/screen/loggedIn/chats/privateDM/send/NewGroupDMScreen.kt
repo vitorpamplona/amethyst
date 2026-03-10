@@ -81,6 +81,7 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
+import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromFiles
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakePictureButton
@@ -375,6 +376,14 @@ private fun BottomRowActions(
     ) {
         if (postViewModel.room != null) {
             SelectFromGallery(
+                isUploading = postViewModel.isUploadingImage,
+                tint = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier,
+            ) {
+                postViewModel.pickedMedia(it)
+            }
+
+            SelectFromFiles(
                 isUploading = postViewModel.isUploadingImage,
                 tint = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier,
