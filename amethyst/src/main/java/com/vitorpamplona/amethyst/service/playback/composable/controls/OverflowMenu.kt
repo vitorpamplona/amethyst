@@ -159,7 +159,7 @@ fun OverflowMenuButton(
 
             if (showSave) {
                 DropdownMenuItem(
-                    text = { Text(stringRes(R.string.save_to_gallery), color = Color.White) },
+                    text = { Text(stringRes(R.string.download_to_phone), color = Color.White) },
                     onClick = {
                         menuExpanded.value = false
                         onSaveClick()

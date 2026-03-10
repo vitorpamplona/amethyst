@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayCircleOutline
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -227,7 +228,7 @@ fun UrlImageView(
                                 imageVector = Icons.Default.PlayCircleOutline,
                                 contentDescription = stringRes(id = R.string.play),
                                 modifier = Size50Modifier,
-                                tint = Color.White,
+                                tint = MaterialTheme.colorScheme.onBackground,
                             )
                         }
                     }
