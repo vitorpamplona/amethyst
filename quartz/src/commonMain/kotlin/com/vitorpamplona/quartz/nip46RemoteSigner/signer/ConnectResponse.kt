@@ -21,33 +21,23 @@
 package com.vitorpamplona.quartz.nip46RemoteSigner.signer
 
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponse
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseAck
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseError
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponsePublicKey
 
 class ConnectResponse {
     companion object {
-        fun parse(response: BunkerResponse): SignerResult.RequestAddressed<ConnectResult> =
-            when (response) {
-                is BunkerResponsePublicKey -> {
-                    SignerResult.RequestAddressed.Successful(ConnectResult.PubKey(response.pubkey))
-                }
-
-                is BunkerResponseAck -> {
-                    SignerResult.RequestAddressed.Successful(ConnectResult.Ack)
-                }
-
-                is BunkerResponseError -> {
-                    if (response.error?.contains("already connected", ignoreCase = true) == true) {
-                        SignerResult.RequestAddressed.Successful(ConnectResult.AlreadyConnected)
-                    } else {
-                        SignerResult.RequestAddressed.Rejected()
-                    }
-                }
-
-                else -> {
-                    SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
+        fun parse(response: BunkerResponse): SignerResult.RequestAddressed<ConnectResult> {
+            if (response.error != null) {
+                return if (response.error.contains("already connected", ignoreCase = true)) {
+                    SignerResult.RequestAddressed.Successful(ConnectResult.AlreadyConnected)
+                } else {
+                    SignerResult.RequestAddressed.Rejected()
                 }
             }
+
+            if (response.result != null) {
+                return SignerResult.RequestAddressed.Successful(ConnectResult.Ack)
+            }
+
+            return SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
+        }
     }
 }

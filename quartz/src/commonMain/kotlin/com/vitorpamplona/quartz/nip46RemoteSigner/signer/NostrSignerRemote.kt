@@ -220,7 +220,7 @@ class NostrSignerRemote(
         throw convertExceptions("Could not ping", result)
     }
 
-    suspend fun connect(): HexKey {
+    suspend fun connect() {
         val result =
             manager.launchWaitAndParse(
                 bunkerRequestBuilder = {
@@ -233,19 +233,11 @@ class NostrSignerRemote(
                 parser = ConnectResponse::parse,
             )
 
-        return when (result) {
-            is SignerResult.RequestAddressed.Successful<ConnectResult> -> {
-                when (val r = result.result) {
-                    is ConnectResult.PubKey -> r.pubkey
-                    is ConnectResult.Ack -> getPublicKey()
-                    is ConnectResult.AlreadyConnected -> getPublicKey()
-                }
-            }
-
-            else -> {
-                throw convertExceptions("Could not connect", result)
-            }
+        if (result is SignerResult.RequestAddressed.Successful<ConnectResult>) {
+            return
         }
+
+        throw convertExceptions("Could not connect", result)
     }
 
     suspend fun getPublicKey(): HexKey {

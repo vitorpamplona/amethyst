@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip46RemoteSigner.signer
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponse
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseAck
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseDecrypt
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseEncrypt
@@ -37,20 +38,20 @@ import kotlin.test.assertIs
 
 class ResponseParserTest {
     // --- ConnectResponse ---
-
-    @Test
-    fun connectParsePubKey() {
-        val hex = "a".repeat(64)
-        val response = BunkerResponsePublicKey("req-0", hex)
-        val result = ConnectResponse.parse(response)
-        assertIs<SignerResult.RequestAddressed.Successful<ConnectResult>>(result)
-        assertIs<ConnectResult.PubKey>(result.result)
-        assertEquals(hex, (result.result as ConnectResult.PubKey).pubkey)
-    }
+    // connect never returns a pubkey — it's "ack" or the secret string.
+    // Tests use base BunkerResponse to match production deserialization behavior.
 
     @Test
     fun connectParseAck() {
-        val response = BunkerResponseAck("req-0")
+        val response = BunkerResponse("req-0", "ack", null)
+        val result = ConnectResponse.parse(response)
+        assertIs<SignerResult.RequestAddressed.Successful<ConnectResult>>(result)
+        assertIs<ConnectResult.Ack>(result.result)
+    }
+
+    @Test
+    fun connectParseSecret() {
+        val response = BunkerResponse("req-0", "my-secret-token", null)
         val result = ConnectResponse.parse(response)
         assertIs<SignerResult.RequestAddressed.Successful<ConnectResult>>(result)
         assertIs<ConnectResult.Ack>(result.result)
@@ -58,7 +59,7 @@ class ResponseParserTest {
 
     @Test
     fun connectParseAlreadyConnected() {
-        val response = BunkerResponseError("req-0", "already connected")
+        val response = BunkerResponse("req-0", null, "already connected")
         val result = ConnectResponse.parse(response)
         assertIs<SignerResult.RequestAddressed.Successful<ConnectResult>>(result)
         assertIs<ConnectResult.AlreadyConnected>(result.result)
@@ -66,7 +67,7 @@ class ResponseParserTest {
 
     @Test
     fun connectParseAlreadyConnectedCaseInsensitive() {
-        val response = BunkerResponseError("req-0", "Already Connected")
+        val response = BunkerResponse("req-0", null, "Already Connected")
         val result = ConnectResponse.parse(response)
         assertIs<SignerResult.RequestAddressed.Successful<ConnectResult>>(result)
         assertIs<ConnectResult.AlreadyConnected>(result.result)
@@ -74,14 +75,14 @@ class ResponseParserTest {
 
     @Test
     fun connectParseRealError() {
-        val response = BunkerResponseError("req-0", "unauthorized")
+        val response = BunkerResponse("req-0", null, "unauthorized")
         val result = ConnectResponse.parse(response)
         assertIs<SignerResult.RequestAddressed.Rejected<ConnectResult>>(result)
     }
 
     @Test
-    fun connectParseUnexpected() {
-        val response = BunkerResponsePong("req-0")
+    fun connectParseNoResultNoError() {
+        val response = BunkerResponse("req-0", null, null)
         val result = ConnectResponse.parse(response)
         assertIs<SignerResult.RequestAddressed.ReceivedButCouldNotPerform<ConnectResult>>(result)
     }
