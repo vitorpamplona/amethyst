@@ -94,6 +94,7 @@ fun SearchScreen(
             factory =
                 SearchBarViewModel.Factory(
                     accountViewModel.account,
+                    accountViewModel.nip05Client,
                 ),
         )
 

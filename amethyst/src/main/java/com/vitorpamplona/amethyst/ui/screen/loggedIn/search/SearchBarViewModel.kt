@@ -29,30 +29,37 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.ui.feeds.InvalidatableContent
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.SearchQueryState
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
+import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.userUriPrefixes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinLookupException
-import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrlOrNull
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.INip05Client
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Id
 import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
+import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
+import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
+import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
+import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
+import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Rfc3986
+import com.vitorpamplona.quartz.utils.startsWithAny
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.SharingStarted.Companion.WhileSubscribed
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
@@ -62,6 +69,7 @@ import kotlinx.coroutines.flow.update
 @OptIn(FlowPreview::class)
 class SearchBarViewModel(
     val account: Account,
+    val nip05Client: INip05Client,
 ) : ViewModel(),
     InvalidatableContent {
     val focusRequester = FocusRequester()
@@ -79,86 +87,73 @@ class SearchBarViewModel(
 
     val searchDataSourceState = SearchQueryState(MutableStateFlow(searchValue), account)
 
-    /**
-     * Observable state for Namecoin resolution in the search bar.
-     * Allows the UI to show loading spinners, resolved profiles, and
-     * specific error messages ("name not found" vs "servers unreachable").
-     */
-    sealed class NamecoinSearchState {
-        data object Idle : NamecoinSearchState()
-
-        data object Loading : NamecoinSearchState()
-
-        data class Resolved(
-            val user: User,
-        ) : NamecoinSearchState()
-
-        data class NotFound(
-            val name: String,
-        ) : NamecoinSearchState()
-
-        data class Expired(
-            val name: String,
-        ) : NamecoinSearchState()
-
-        data object ServersUnreachable : NamecoinSearchState()
-    }
-
-    /**
-     * Resolves Namecoin identifiers (.bit / d/ / id/) via ElectrumX.
-     * Emits typed state so the UI can show loading, resolved profile, or
-     * specific error messages.
-     */
-    val namecoinSearchState: StateFlow<NamecoinSearchState> =
+    val directNip05Resolver: Flow<User?> =
         searchValueFlow
             .debounce(400)
-            .distinctUntilChanged()
             .mapLatest { term ->
-                if (!NamecoinNameResolver.isNamecoinIdentifier(term)) {
-                    return@mapLatest NamecoinSearchState.Idle
-                }
-                try {
-                    val result = Amethyst.instance.namecoinResolver.resolve(term)
-                    if (result != null) {
-                        NamecoinSearchState.Resolved(LocalCache.getOrCreateUser(result.pubkey))
-                    } else {
-                        NamecoinSearchState.NotFound(term)
-                    }
-                } catch (e: kotlinx.coroutines.CancellationException) {
-                    throw e
-                } catch (e: NamecoinLookupException.NameNotFound) {
-                    NamecoinSearchState.NotFound(e.name)
-                } catch (e: NamecoinLookupException.NameExpired) {
-                    NamecoinSearchState.Expired(e.name)
-                } catch (e: NamecoinLookupException.ServersUnreachable) {
-                    NamecoinSearchState.ServersUnreachable
-                } catch (_: Exception) {
-                    NamecoinSearchState.ServersUnreachable
+                if (term.contains('@')) {
+                    runCatching {
+                        Nip05Id.parse(term)?.let { nip05 ->
+                            nip05Client.get(nip05)?.let { info ->
+                                val user = account.cache.checkGetOrCreateUser(info.pubkey)
+                                if (user != null) {
+                                    info.relays.forEach {
+                                        it.normalizeRelayUrlOrNull()?.let { relay ->
+                                            account.cache.relayHints.addKey(user.pubkey(), relay)
+                                        }
+                                    }
+                                }
+                                user
+                            }
+                        }
+                    }.getOrNull()
+                } else if (term.startsWithAny(userUriPrefixes)) {
+                    runCatching {
+                        Nip19Parser.uriToRoute(term)?.entity?.let { parsed ->
+                            when (parsed) {
+                                is NSec -> {
+                                    account.cache.getOrCreateUser(parsed.toPubKey().toHexKey())
+                                }
+
+                                is NPub -> {
+                                    account.cache.getOrCreateUser(parsed.hex)
+                                }
+
+                                is NProfile -> {
+                                    val user = account.cache.getOrCreateUser(parsed.hex)
+                                    parsed.relay.forEach { relay ->
+                                        account.cache.relayHints.addKey(user.pubkey(), relay)
+                                    }
+                                    user
+                                }
+
+                                else -> {
+                                    null
+                                }
+                            }
+                        }
+                    }.getOrNull()
+                } else if (term.length == 64 && Hex.isHex64(term)) {
+                    account.cache.getOrCreateUser(term)
+                } else {
+                    null
                 }
             }.flowOn(Dispatchers.IO)
-            .stateIn(viewModelScope, WhileSubscribed(5000), NamecoinSearchState.Idle)
-
-    /** Convenience: the resolved user (or null) for combining with local search results. */
-    private val namecoinResolvedUser =
-        namecoinSearchState
-            .map { state ->
-                when (state) {
-                    is NamecoinSearchState.Resolved -> state.user
-                    else -> null
-                }
-            }.stateIn(viewModelScope, WhileSubscribed(5000), null)
 
     val searchResultsUsers =
         combine(
             searchValueFlow.debounce(100),
             invalidations.debounce(100),
-            namecoinResolvedUser,
-        ) { term, version, namecoinUser ->
-            val localResults = LocalCache.findUsersStartingWith(term, account)
-            if (namecoinUser != null && localResults.none { it.pubkeyHex == namecoinUser.pubkeyHex }) {
-                listOf(namecoinUser) + localResults
+            directNip05Resolver,
+        ) { term, version, nip05Resolver ->
+            if (nip05Resolver != null) {
+                return@combine listOf(nip05Resolver)
+            }
+
+            if (term.isNotBlank()) {
+                LocalCache.findUsersStartingWith(term, account)
             } else {
-                localResults
+                emptyList()
             }
         }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
@@ -265,8 +260,9 @@ class SearchBarViewModel(
 
     class Factory(
         val account: Account,
+        val nip05: INip05Client,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = SearchBarViewModel(account) as T
+        override fun <T : ViewModel> create(modelClass: Class<T>): T = SearchBarViewModel(account, nip05) as T
     }
 }
