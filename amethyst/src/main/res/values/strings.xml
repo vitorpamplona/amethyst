@@ -463,6 +463,8 @@
     <string name="zap_type_section_explainer">Controls how your identity is shown when you send a zap.</string>
     <string name="wallet_connect_connect_app">Connect Wallet</string>
 
+    <string name="see_relay_feed">See Relay Feed</string>
+
     <string name="pledge_amount_in_sats">Pledge Amount in Sats</string>
     <string name="post_poll">Post Poll</string>
     <string name="poll_heading_required">Required fields:</string>

@@ -43,6 +43,7 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.automirrored.filled.ContactSupport
+import androidx.compose.material.icons.automirrored.filled.Feed
 import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.automirrored.filled.Message
@@ -71,6 +72,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SuggestionChip
@@ -116,9 +118,11 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.BackButton
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.Height25Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size100dp
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
+import com.vitorpamplona.amethyst.ui.theme.SpacedBy10dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
@@ -366,7 +370,7 @@ fun RelayInformationBody(
     ) {
         // 1. Header Section
         item {
-            RelayHeader(relay, relayStats, relayInfo, accountViewModel)
+            RelayHeader(relay, relayStats, relayInfo, accountViewModel, nav)
         }
 
         val targetAudience =
@@ -1062,9 +1066,11 @@ private fun RelayHeader(
     relayStats: RelayStat,
     relayInfo: Nip11RelayInformation,
     accountViewModel: AccountViewModel,
+    nav: INav,
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = SpacedBy10dp,
         modifier =
             Modifier
                 .fillMaxWidth()
@@ -1081,13 +1087,25 @@ private fun RelayHeader(
                     .size(Size100dp)
                     .clip(shape = CircleShape),
         )
-        Spacer(modifier = Modifier.height(12.dp))
         Text(
             text = relayInfo.description ?: relay.displayUrl(),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
+        OutlinedButton(
+            modifier = Modifier.padding(horizontal = 30.dp),
+            shape = ButtonBorder,
+            onClick = { nav.nav(Route.RelayFeed(url = relay.url)) },
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.Feed,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(text = stringRes(R.string.see_relay_feed))
+        }
     }
 }
 
