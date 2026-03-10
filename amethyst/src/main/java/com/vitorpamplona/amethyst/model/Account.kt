@@ -935,6 +935,8 @@ class Account(
 
     fun upgradeAttestations() = otsState.upgradeAttestationsIfNeeded(::sendAutomatic)
 
+    suspend fun follow(users: List<User>) = sendMyPublicAndPrivateOutbox(kind3FollowList.follow(users))
+
     suspend fun follow(user: User) = sendMyPublicAndPrivateOutbox(kind3FollowList.follow(user))
 
     suspend fun unfollow(user: User) = sendMyPublicAndPrivateOutbox(kind3FollowList.unfollow(user))

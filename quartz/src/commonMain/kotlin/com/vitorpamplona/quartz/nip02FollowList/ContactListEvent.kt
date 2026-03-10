@@ -123,6 +123,25 @@ class ContactListEvent(
             )
         }
 
+        suspend fun followUsers(
+            earlierVersion: ContactListEvent,
+            users: List<ContactTag>,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+        ): ContactListEvent {
+            val follows = earlierVersion.verifiedFollowKeySet()
+            val toBeAdded = users.filter { it.pubKey !in follows }.distinctBy { it.pubKey }.map { it.toTagArray() }
+
+            if (toBeAdded.isEmpty()) return earlierVersion
+
+            return create(
+                content = earlierVersion.content,
+                tags = earlierVersion.tags + toBeAdded,
+                signer = signer,
+                createdAt = createdAt,
+            )
+        }
+
         suspend fun unfollowUser(
             earlierVersion: ContactListEvent,
             pubKeyHex: String,

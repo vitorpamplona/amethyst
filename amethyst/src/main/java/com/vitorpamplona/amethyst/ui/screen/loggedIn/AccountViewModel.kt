@@ -914,6 +914,8 @@ class AccountViewModel(
 
     fun unfollow(channel: EphemeralChatChannel) = launchSigner { account.unfollow(channel) }
 
+    fun follow(users: List<User>) = launchSigner { account.follow(users) }
+
     fun follow(user: User) = launchSigner { account.follow(user) }
 
     fun unfollow(user: User) = launchSigner { account.unfollow(user) }
