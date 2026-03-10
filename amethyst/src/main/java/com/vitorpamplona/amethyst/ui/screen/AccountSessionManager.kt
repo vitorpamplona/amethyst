@@ -87,7 +87,6 @@ sealed class AccountState {
     class LoggedIn(
         val account: Account,
         var route: Route? = null,
-        val isNewAccount: Boolean = false,
     ) : AccountState()
 }
 
@@ -184,20 +183,10 @@ class AccountSessionManager(
     fun startUI(
         accountSettings: AccountSettings,
         route: Route? = null,
-        isNewAccount: Boolean = false,
     ) {
         val account = accountsCache.loadAccount(accountSettings)
         _accountContent.update {
-            AccountState.LoggedIn(account, route, isNewAccount = isNewAccount)
-        }
-    }
-
-    fun finishNewAccountSetup() {
-        val current = _accountContent.value
-        if (current is AccountState.LoggedIn && current.isNewAccount) {
-            _accountContent.update {
-                AccountState.LoggedIn(current.account, current.route, isNewAccount = false)
-            }
+            AccountState.LoggedIn(account, route)
         }
     }
 
@@ -289,7 +278,7 @@ class AccountSessionManager(
 
             localPreferences.setDefaultAccount(accountSettings)
 
-            startUI(accountSettings, isNewAccount = true)
+            startUI(accountSettings, route = Route.ImportFollows)
 
             scope.launch(Dispatchers.IO) {
                 delay(2000) // waits for the new user to connect to the new relays.

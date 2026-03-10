@@ -1229,6 +1229,7 @@
     <string name="route_video">Shorts</string>
     <string name="route_chess">Chess</string>
     <string name="route_security_filters">Security Filters</string>
+    <string name="route_import_follows">Import Follows</string>
 
     <string name="new_post">New Post</string>
     <string name="new_short">New Shorts: images or videos</string>
@@ -1715,4 +1716,26 @@
     <string name="kind_voice_msg">Voice Msg</string>
     <string name="kind_voice_reply">Voice Reply</string>
     <string name="kind_wiki">Wiki</string>
+    <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Start with a great feed by following the same people as someone you trust.</string>
+    <string name="import_follow_list">Import Follow List</string>
+    <string name="profile_to_import_from">Profile to import from</string>
+    <string name="name_search_npub1_alice_example_com">name search, npub1…, alice@example.com</string>
+    <string name="supports_npub_nip_05_hex_and_namecoin_bit_d_id">Supports npub, NIP-05, hex, and Namecoin (.bit / d/ / id/)</string>
+    <string name="look_up_follow_list">Look Up Follow List</string>
+    <string name="tip">Tip</string>
+    <string name="accounts_found">%1$d accounts found</string>
+    <string name="selected">%1$d selected</string>
+    <string name="resolved_via_namecoin">Resolved via Namecoin</string>
+    <string name="now_following_accounts">Now following %1$d accounts</string>
+    <string name="your_feed_is_ready">Your feed is ready.</string>
+    <string name="skip">Skip</string>
+    <string name="search_another">Search Another</string>
+    <string name="follow_accounts">Follow %1$d accounts</string>
+    <string name="import_more">Import More</string>
+    <string name="continue_txt">Continue</string>
+    <string name="skip_for_now">Skip for now</string>
+    <string name="resolving">Resolving %1$s…</string>
+    <string name="fetching_follow_list">Fetching follow list…</string>
+    <string name="following_accounts">Following %1$d accounts…</string>
+    <string name="import_follows_tips">"Enter the profile of a friend or community leader. You can use their npub, NIP-05 address, or a Namecoin name like alice@example.bit or id/alice for blockchain-verified identities."</string>
 </resources>

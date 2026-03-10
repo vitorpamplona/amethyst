@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.signup
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.newUser
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
@@ -50,8 +50,6 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.outlined.Circle
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
@@ -59,6 +57,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -72,20 +71,59 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.followimport.FollowEntry
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
-// ── Public entry points ────────────────────────────────────────────────
+@Composable
+fun ImportFollowListScreen(
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val importViewModel: ImportFollowListViewModel = viewModel()
 
-/**
- * Embeddable section for the signup wizard.
- */
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        topBar = {
+            TopBarExtensibleWithBackButton(
+                title = {},
+                popBack = nav::popBack,
+            )
+        },
+    ) { padding ->
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(padding),
+        ) {
+            ImportFollowListSection(
+                onFollowsApplied = { entries ->
+                    withContext(Dispatchers.IO) {
+                        for (entry in entries) {
+                            val user = accountViewModel.getOrCreateUser(entry.pubkeyHex)
+                            accountViewModel.follow(user)
+                        }
+                    }
+                },
+                onSkip = nav::popBack,
+                onDone = nav::popBack,
+                viewModel = importViewModel,
+            )
+        }
+    }
+}
+
 @Composable
 fun ImportFollowListSection(
     onFollowsApplied: suspend (List<FollowEntry>) -> Unit,
@@ -117,11 +155,11 @@ fun ImportFollowListSection(
                 }
 
                 is ImportFollowState.Resolving -> {
-                    LoadingIndicator("Resolving ${s.identifier}…")
+                    LoadingIndicator(stringResource(R.string.resolving, s.identifier))
                 }
 
                 is ImportFollowState.Fetching -> {
-                    LoadingIndicator("Fetching follow list…")
+                    LoadingIndicator(stringResource(R.string.fetching_follow_list))
                 }
 
                 is ImportFollowState.Preview -> {
@@ -133,7 +171,7 @@ fun ImportFollowListSection(
                 }
 
                 is ImportFollowState.Applying -> {
-                    LoadingIndicator("Following ${s.count} accounts…")
+                    LoadingIndicator(stringResource(R.string.following_accounts, s.count))
                 }
 
                 is ImportFollowState.Done -> {
@@ -151,30 +189,6 @@ fun ImportFollowListSection(
     }
 }
 
-/**
- * Standalone dialog for post-signup use (settings / profile screen).
- */
-@Composable
-fun ImportFollowListDialog(
-    onDismiss: () -> Unit,
-    onFollowsApplied: suspend (List<FollowEntry>) -> Unit,
-) {
-    Dialog(onDismissRequest = onDismiss) {
-        Card(
-            modifier = Modifier.fillMaxWidth().padding(8.dp),
-            shape = RoundedCornerShape(16.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-        ) {
-            ImportFollowListSection(
-                onFollowsApplied = onFollowsApplied,
-                onSkip = onDismiss,
-                onDone = onDismiss,
-                modifier = Modifier.height(600.dp),
-            )
-        }
-    }
-}
-
 // ── Internal composables ───────────────────────────────────────────────
 
 @Composable
@@ -189,14 +203,14 @@ private fun ImportHeader() {
             )
             Spacer(Modifier.width(10.dp))
             Text(
-                "Import Follow List",
+                stringResource(R.string.import_follow_list),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
             )
         }
         Spacer(Modifier.height(8.dp))
         Text(
-            "Start with a great feed by following the same people as someone you trust.",
+            stringResource(R.string.start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -215,15 +229,15 @@ private fun InputSection(
         OutlinedTextField(
             value = identifier,
             onValueChange = { identifier = it },
-            label = { Text("Profile to import from") },
-            placeholder = { Text("npub1…, alice@example.com, or example.bit") },
+            label = { Text(stringResource(R.string.profile_to_import_from)) },
+            placeholder = { Text(stringResource(R.string.name_search_npub1_alice_example_com)) },
             singleLine = true,
             enabled = enabled,
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
             supportingText = {
                 Text(
-                    "Supports npub, NIP-05, hex, and Namecoin (.bit / d/ / id/)",
+                    stringResource(R.string.supports_npub_nip_05_hex_and_namecoin_bit_d_id),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                 )
@@ -244,7 +258,7 @@ private fun InputSection(
             enabled = enabled && identifier.isNotBlank(),
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
-        ) { Text("Look Up Follow List") }
+        ) { Text(stringResource(R.string.look_up_follow_list)) }
     }
 }
 
@@ -253,16 +267,14 @@ private fun IdleHint() {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(24.dp)) {
             Text(
-                "Tip",
+                stringResource(R.string.tip),
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.primary,
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                "Enter the profile of a friend or community leader. " +
-                    "You can use their npub, NIP-05 address, or a Namecoin name " +
-                    "like alice@example.bit or id/alice for blockchain-verified identities.",
+                stringResource(R.string.import_follows_tips),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -303,17 +315,19 @@ private fun PreviewList(
 
         // Summary
         Row(
-            Modifier.fillMaxWidth().padding(vertical = 4.dp),
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                "${state.totalCount} accounts found",
+                stringResource(R.string.accounts_found, state.totalCount),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
-                "${state.selectedCount} selected",
+                stringResource(R.string.selected, state.selectedCount),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.primary,
             )
@@ -321,7 +335,10 @@ private fun PreviewList(
 
         // Select all
         Row(
-            Modifier.fillMaxWidth().clickable { onSelectAll(state.selectedCount < state.totalCount) }.padding(vertical = 8.dp),
+            Modifier
+                .fillMaxWidth()
+                .clickable { onSelectAll(state.selectedCount < state.totalCount) }
+                .padding(vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Checkbox(
@@ -362,7 +379,7 @@ private fun NamecoinResolvedBadge(namecoinSource: String) {
         Spacer(Modifier.width(8.dp))
         Column {
             Text(
-                "Resolved via Namecoin",
+                stringResource(R.string.resolved_via_namecoin),
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = Color(0xFF4A90D9),
@@ -383,7 +400,10 @@ private fun FollowEntryRow(
     onToggle: () -> Unit,
 ) {
     Row(
-        Modifier.fillMaxWidth().clickable(onClick = onToggle).padding(vertical = 6.dp, horizontal = 4.dp),
+        Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onToggle)
+            .padding(vertical = 6.dp, horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
@@ -399,7 +419,10 @@ private fun FollowEntryRow(
         )
         Spacer(Modifier.width(10.dp))
         Box(
-            Modifier.size(32.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer),
+            Modifier
+                .size(32.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primaryContainer),
             contentAlignment = Alignment.Center,
         ) {
             Text(
@@ -455,13 +478,13 @@ private fun DoneMessage(
             )
             Spacer(Modifier.height(12.dp))
             Text(
-                "Now following $count accounts",
+                stringResource(R.string.now_following_accounts, count),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
             Spacer(Modifier.height(6.dp))
             Text(
-                "Your feed is ready.",
+                stringResource(R.string.your_feed_is_ready),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -499,14 +522,14 @@ private fun BottomActions(
     when (state) {
         is ImportFollowState.Preview -> {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                TextButton(onClick = onSkip) { Text("Skip") }
+                TextButton(onClick = onSkip) { Text(stringResource(R.string.skip)) }
                 Row {
                     OutlinedButton(onClick = onSearchAnother, shape = RoundedCornerShape(12.dp)) {
-                        Text("Search Another")
+                        Text(stringResource(R.string.search_another))
                     }
                     Spacer(Modifier.width(8.dp))
                     Button(onClick = onApply, enabled = state.selectedCount > 0, shape = RoundedCornerShape(12.dp)) {
-                        Text("Follow ${state.selectedCount} accounts")
+                        Text(stringResource(R.string.follow_accounts, state.selectedCount))
                     }
                 }
             }
@@ -515,15 +538,15 @@ private fun BottomActions(
         is ImportFollowState.Done -> {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 OutlinedButton(onClick = onSearchAnother, shape = RoundedCornerShape(12.dp)) {
-                    Text("Import More")
+                    Text(stringResource(R.string.import_more))
                 }
-                Button(onClick = onDone, shape = RoundedCornerShape(12.dp)) { Text("Continue") }
+                Button(onClick = onDone, shape = RoundedCornerShape(12.dp)) { Text(stringResource(R.string.continue_txt)) }
             }
         }
 
         is ImportFollowState.Idle, is ImportFollowState.Error -> {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                TextButton(onClick = onSkip) { Text("Skip for now") }
+                TextButton(onClick = onSkip) { Text(stringResource(R.string.skip_for_now)) }
             }
         }
 

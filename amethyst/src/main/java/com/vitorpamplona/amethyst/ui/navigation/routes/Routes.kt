@@ -53,6 +53,8 @@ sealed class Route {
 
     @Serializable object BookmarkGroups : Route()
 
+    @Serializable object ImportFollows : Route()
+
     @Serializable data class BookmarkGroupView(
         val dTag: String,
         val bookmarkType: BookmarkType,

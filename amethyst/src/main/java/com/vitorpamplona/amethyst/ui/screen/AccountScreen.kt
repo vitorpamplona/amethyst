@@ -29,27 +29,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.service.followimport.Kind3EventData
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.LoggedInPage
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.LoginOrSignupScreen
-import com.vitorpamplona.amethyst.ui.screen.signup.ImportFollowListSection
-import com.vitorpamplona.amethyst.ui.screen.signup.ImportFollowListViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
-import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.utils.Log
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 @Composable
 fun AccountScreen(accountSessionManager: AccountSessionManager) {
@@ -75,11 +64,7 @@ fun AccountScreen(accountSessionManager: AccountSessionManager) {
             }
 
             is AccountState.LoggedIn -> {
-                if (state.isNewAccount) {
-                    NewAccountImportFollowsSetup(state.account, accountSessionManager)
-                } else {
-                    LoggedInSetup(state, accountSessionManager)
-                }
+                LoggedInSetup(state, accountSessionManager)
             }
         }
     }
@@ -136,83 +121,6 @@ fun LoggedInSetup(
             account = state.account,
             route = state.route,
             accountSessionManager = accountSessionManager,
-        )
-    }
-}
-
-@Composable
-fun NewAccountImportFollowsSetup(
-    account: Account,
-    accountSessionManager: AccountSessionManager,
-) {
-    val importViewModel: ImportFollowListViewModel = viewModel()
-
-    LaunchedEffect(account) {
-        importViewModel.configure(
-            fetchEvent = { kind, author, limit, onEvent ->
-                val filter =
-                    Filter(
-                        kinds = listOf(kind),
-                        authors = listOf(author),
-                        limit = limit,
-                    )
-                val relayUrls =
-                    listOf(
-                        "wss://relay.damus.io",
-                        "wss://nos.lol",
-                        "wss://relay.nostr.band",
-                        "wss://purplepag.es",
-                    )
-                val filterMap =
-                    relayUrls.associate { url ->
-                        RelayUrlNormalizer.normalize(url) to listOf(filter)
-                    }
-                val listener =
-                    object : com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener {
-                        override fun onEvent(
-                            event: com.vitorpamplona.quartz.nip01Core.core.Event,
-                            isLive: Boolean,
-                            relay: com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl,
-                            forFilters: List<Filter>?,
-                        ) {
-                            if (event is ContactListEvent) {
-                                onEvent(
-                                    Kind3EventData(
-                                        pTags =
-                                            event.tags
-                                                .filter { it.size >= 2 && it[0] == "p" }
-                                                .map { it.drop(1) },
-                                        createdAt = event.createdAt,
-                                    ),
-                                )
-                            }
-                        }
-                    }
-                val subId =
-                    com.vitorpamplona.quartz.nip01Core.relay.client.single
-                        .newSubId()
-                Amethyst.instance.client.openReqSubscription(subId, filterMap, listener)
-                AutoCloseable { Amethyst.instance.client.close(subId) }
-            },
-        )
-    }
-
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background,
-    ) {
-        ImportFollowListSection(
-            onFollowsApplied = { entries ->
-                withContext(Dispatchers.IO) {
-                    for (entry in entries) {
-                        val user = account.cache.getOrCreateUser(entry.pubkeyHex)
-                        account.follow(user)
-                    }
-                }
-            },
-            onSkip = { accountSessionManager.finishNewAccountSetup() },
-            onDone = { accountSessionManager.finishNewAccountSetup() },
-            viewModel = importViewModel,
         )
     }
 }
