@@ -1463,4 +1463,16 @@ anz der Bedingungen ist erforderlich</string>
     <string name="kind_voice_msg">Sprachnachricht</string>
     <string name="kind_voice_reply">Sprachantwort</string>
     <string name="kind_wiki">Wiki</string>
+    <string name="see_relay_feed">Relay-Feed anzeigen</string>
+    <string name="used_by">Verwendet von</string>
+    <string name="copy_nprofile_to_clipboard">nprofile in die Zwischenablage kopieren</string>
+    <string name="show_nprofile_as_a_qr_code">nprofile als QR-Code anzeigen</string>
+    <string name="quick_zap_amounts_explainer">Wird beim Drücken der Zap-Schaltfläche angezeigt. Tippe auf einen Betrag, um ihn zu entfernen. Wenn du es leer lässt, wird jedes Mal ein Dialog zur Eingabe eines Betrags geöffnet.</string>
+    <string name="wallet_connect_status_connected">Verbunden</string>
+    <string name="wallet_connect_status_not_connected">Nicht verbunden</string>
+    <string name="wallet_connect_manual_config">Erweitert: Verbindungsdetails manuell eingeben</string>
+    <string name="quick_zap_amounts">Schnelle Zap-Beträge</string>
+    <string name="zap_privacy_section">Zap-Datenschutz</string>
+    <string name="zap_type_section_explainer">Legt fest, wie deine Identität beim Senden eines Zaps angezeigt wird.</string>
+    <string name="wallet_connect_connect_app">Wallet verbinden</string>
 </resources>

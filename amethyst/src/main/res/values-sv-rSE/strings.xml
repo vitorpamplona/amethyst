@@ -1457,4 +1457,16 @@
     <string name="kind_voice_msg">Röstmeddelande</string>
     <string name="kind_voice_reply">Röstsvar</string>
     <string name="kind_wiki">Wiki</string>
+    <string name="see_relay_feed">Visa relä-flöde</string>
+    <string name="used_by">Används av</string>
+    <string name="copy_nprofile_to_clipboard">Kopiera nprofile till urklipp</string>
+    <string name="show_nprofile_as_a_qr_code">Visa nprofile som QR-kod</string>
+    <string name="quick_zap_amounts_explainer">Visas när du trycker på Zap-knappen. Tryck på ett belopp för att ta bort det. Om du lämnar det tomt öppnas en dialog för att ange ett belopp varje gång.</string>
+    <string name="wallet_connect_status_connected">Ansluten</string>
+    <string name="wallet_connect_status_not_connected">Inte ansluten</string>
+    <string name="wallet_connect_manual_config">Avancerat: ange anslutningsinformation manuellt</string>
+    <string name="quick_zap_amounts">Snabba Zap-belopp</string>
+    <string name="zap_privacy_section">Zap-sekretess</string>
+    <string name="zap_type_section_explainer">Styr hur din identitet visas när du skickar ett Zap.</string>
+    <string name="wallet_connect_connect_app">Anslut plånbok</string>
 </resources>
