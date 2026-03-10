@@ -68,7 +68,10 @@ class PeopleListsState(
 ) {
     val user = cache.getOrCreateUser(signer.pubKey)
 
-    fun existingPeopleListNotes() = cache.addressables.filter(PeopleListEvent.KIND, user.pubkeyHex)
+    fun existingPeopleListNotes() =
+        cache.addressables
+            .filter(PeopleListEvent.KIND, user.pubkeyHex)
+            .filter { it.dTag() != PeopleListEvent.BLOCK_LIST_D_TAG || it.event != null }
 
     val peopleListVersions = MutableStateFlow(0)
 
