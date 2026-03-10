@@ -36,22 +36,29 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -62,15 +69,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.search.AdvancedSearchBarState
+import com.vitorpamplona.amethyst.commons.search.QuerySerializer
 import com.vitorpamplona.amethyst.commons.search.SearchResult
 import com.vitorpamplona.amethyst.commons.search.SearchResultFilter
 import com.vitorpamplona.amethyst.commons.search.parseSearchInput
+import com.vitorpamplona.amethyst.desktop.SearchHistoryStore
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
@@ -204,12 +218,44 @@ fun SearchScreen(
         }
     }
 
+    // Save to history when search completes
+    LaunchedEffect(isSearching, debouncedQuery) {
+        if (!isSearching && !debouncedQuery.isEmpty) {
+            SearchHistoryStore.addToHistory(debouncedQuery)
+        }
+    }
+
+    // History state
+    val historyItems by SearchHistoryStore.history.collectAsState()
+    val savedSearches by SearchHistoryStore.savedSearches.collectAsState()
+
     // Auto-focus
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
     }
 
-    Column(modifier = modifier.fillMaxSize()) {
+    Column(
+        modifier =
+            modifier
+                .fillMaxSize()
+                .onPreviewKeyEvent { event ->
+                    if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                    when (event.key) {
+                        Key.Escape -> {
+                            if (panelExpanded) {
+                                state.togglePanel()
+                            } else if (displayText.isNotEmpty()) {
+                                state.clearSearch()
+                            }
+                            true
+                        }
+
+                        else -> {
+                            false
+                        }
+                    }
+                },
+    ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -347,40 +393,150 @@ fun SearchScreen(
                 style = MaterialTheme.typography.bodyMedium,
             )
         } else {
-            // Empty state with operator hints
-            EmptySearchHints()
+            // Empty state: show history + saved searches + operator hints
+            SearchEmptyState(
+                historyItems = historyItems,
+                savedSearches = savedSearches,
+                onLoadQuery = { query -> state.updateFromText(QuerySerializer.serialize(query)) },
+                onDeleteSaved = { id -> SearchHistoryStore.deleteSavedSearch(id) },
+                onClearHistory = { SearchHistoryStore.clearHistory() },
+            )
         }
     }
 }
 
 @Composable
-private fun EmptySearchHints() {
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(top = 32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
+private fun SearchEmptyState(
+    historyItems: List<com.vitorpamplona.amethyst.commons.search.SearchQuery>,
+    savedSearches: List<com.vitorpamplona.amethyst.desktop.SavedSearch>,
+    onLoadQuery: (com.vitorpamplona.amethyst.commons.search.SearchQuery) -> Unit,
+    onDeleteSaved: (String) -> Unit,
+    onClearHistory: () -> Unit,
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Text(
-            "Search for users, notes, or content",
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(Modifier.height(8.dp))
-        Text(
-            "Use operators to refine your search:",
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.bodyMedium,
-        )
-        Spacer(Modifier.height(16.dp))
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            SearchHint("from:npub1...", "Filter by author")
-            SearchHint("kind:article", "Long-form content")
-            SearchHint("since:2025-01", "After January 2025")
-            SearchHint("#bitcoin", "Hashtag search")
-            SearchHint("\"exact phrase\"", "Exact match")
-            SearchHint("bitcoin OR nostr", "Either term")
-            SearchHint("-spam", "Exclude term")
-            SearchHint("lang:en", "Language filter")
+        // Saved searches
+        if (savedSearches.isNotEmpty()) {
+            item {
+                Text(
+                    "Saved Searches",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(vertical = 4.dp),
+                )
+            }
+            items(savedSearches, key = { "saved-${it.id}" }) { saved ->
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable { onLoadQuery(saved.query) }
+                            .padding(vertical = 6.dp, horizontal = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Icon(
+                        Icons.Default.Star,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            saved.label,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Text(
+                            QuerySerializer.serialize(saved.query),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontFamily = FontFamily.Monospace,
+                        )
+                    }
+                    IconButton(onClick = { onDeleteSaved(saved.id) }) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = "Delete",
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+            item { HorizontalDivider(Modifier.padding(vertical = 8.dp)) }
         }
+
+        // Recent history
+        if (historyItems.isNotEmpty()) {
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        "Recent",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    TextButton(onClick = onClearHistory) {
+                        Text("Clear", style = MaterialTheme.typography.labelSmall)
+                    }
+                }
+            }
+            items(historyItems.take(10), key = { "history-${QuerySerializer.serialize(it)}" }) { query ->
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable { onLoadQuery(query) }
+                            .padding(vertical = 6.dp, horizontal = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Icon(
+                        Icons.Default.History,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        QuerySerializer.serialize(query),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontFamily = FontFamily.Monospace,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+            item { HorizontalDivider(Modifier.padding(vertical = 8.dp)) }
+        }
+
+        // Operator hints
+        item {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(top = if (historyItems.isEmpty() && savedSearches.isEmpty()) 32.dp else 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    "Search operators",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(8.dp))
+            }
+        }
+        item { SearchHint("from:npub1...", "Filter by author") }
+        item { SearchHint("kind:article", "Long-form content") }
+        item { SearchHint("since:2025-01", "After January 2025") }
+        item { SearchHint("#bitcoin", "Hashtag search") }
+        item { SearchHint("\"exact phrase\"", "Exact match") }
+        item { SearchHint("bitcoin OR nostr", "Either term") }
+        item { SearchHint("-spam", "Exclude term") }
+        item { SearchHint("lang:en", "Language filter") }
     }
 }
 
