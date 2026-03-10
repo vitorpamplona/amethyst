@@ -1458,4 +1458,16 @@
     <string name="kind_voice_msg">Hlasová zpráva</string>
     <string name="kind_voice_reply">Hlasová odpověď</string>
     <string name="kind_wiki">Wiki</string>
+    <string name="see_relay_feed">Zobrazit kanál relé</string>
+    <string name="used_by">Používáno</string>
+    <string name="copy_nprofile_to_clipboard">Zkopírovat nprofile do schránky</string>
+    <string name="show_nprofile_as_a_qr_code">Zobrazit nprofile jako QR kód</string>
+    <string name="quick_zap_amounts_explainer">Zobrazí se při stisknutí tlačítka zap. Klepnutím na částku ji odeberete. Pokud ponecháte prázdné, otevře se pokaždé dialog pro zadání částky.</string>
+    <string name="wallet_connect_status_connected">Připojeno</string>
+    <string name="wallet_connect_status_not_connected">Nepřipojeno</string>
+    <string name="wallet_connect_manual_config">Pokročilé: zadejte podrobnosti připojení ručně</string>
+    <string name="quick_zap_amounts">Rychlé částky Zap</string>
+    <string name="zap_privacy_section">Soukromí Zap</string>
+    <string name="zap_type_section_explainer">Určuje, jak je zobrazena vaše identita při odesílání zapsu.</string>
+    <string name="wallet_connect_connect_app">Připojit peněženku</string>
 </resources>

@@ -1458,4 +1458,16 @@
     <string name="kind_voice_msg">Mensagem de voz</string>
     <string name="kind_voice_reply">Resposta de voz</string>
     <string name="kind_wiki">Wiki</string>
+    <string name="see_relay_feed">Ver feed do Relay</string>
+    <string name="used_by">Usado por</string>
+    <string name="copy_nprofile_to_clipboard">Copiar nprofile para a área de transferência</string>
+    <string name="show_nprofile_as_a_qr_code">Mostrar nprofile como QR code</string>
+    <string name="quick_zap_amounts_explainer">Exibido ao pressionar o botão de zap. Toque em um valor para removê-lo. Se deixar vazio, abrirá o diálogo para inserir um valor todas as vezes.</string>
+    <string name="wallet_connect_status_connected">Conectado</string>
+    <string name="wallet_connect_status_not_connected">Não conectado</string>
+    <string name="wallet_connect_manual_config">Avançado: inserir detalhes de conexão manualmente</string>
+    <string name="quick_zap_amounts">Valores Rápidos de Zap</string>
+    <string name="zap_privacy_section">Privacidade do Zap</string>
+    <string name="zap_type_section_explainer">Controla como sua identidade é exibida ao enviar um Zap.</string>
+    <string name="wallet_connect_connect_app">Conectar Carteira</string>
 </resources>
