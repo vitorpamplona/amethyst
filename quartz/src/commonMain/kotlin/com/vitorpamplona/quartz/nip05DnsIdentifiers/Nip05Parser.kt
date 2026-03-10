@@ -22,17 +22,10 @@ package com.vitorpamplona.quartz.nip05DnsIdentifiers
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.text
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-
-@Serializable
-data class KeyInfoSet(
-    val names: Map<String, String>,
-    val relays: Map<String, List<String>>,
-)
 
 class Nip05Parser {
     fun toJson(keyInfo: KeyInfoSet) = Json.encodeToString(keyInfo)

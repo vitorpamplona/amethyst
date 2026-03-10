@@ -25,19 +25,14 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
 import kotlinx.coroutines.CancellationException
 
-data class Nip05KeyInfo(
-    val pubkey: HexKey,
-    val relays: List<String>,
-)
-
 @Stable
 class Nip05Client(
     val fetcher: Nip05Fetcher,
     val namecoinResolver: NamecoinNameResolver? = null,
-) {
+) : INip05Client {
     val parser = Nip05Parser()
 
-    suspend fun verify(
+    override suspend fun verify(
         nip05: Nip05Id,
         hexKey: HexKey,
     ): Boolean {
@@ -64,7 +59,7 @@ class Nip05Client(
         }
     }
 
-    suspend fun get(nip05: Nip05Id): Nip05KeyInfo? {
+    override suspend fun get(nip05: Nip05Id): Nip05KeyInfo? {
         // Namecoin: route .bit domains to blockchain resolution
         if (namecoinResolver != null && NamecoinNameResolver.isNamecoinIdentifier(nip05.toValue())) {
             val result = namecoinResolver.resolve(nip05.toValue()) ?: return null
@@ -74,9 +69,9 @@ class Nip05Client(
         return parser.parseHexKeyAndRelays(nip05, fetchNip05Data(nip05))
     }
 
-    suspend fun load(nip05: Nip05Id) = parser.parse(fetchNip05Data(nip05))
+    override suspend fun load(nip05: Nip05Id) = parser.parse(fetchNip05Data(nip05))
 
-    suspend fun list(domain: String) = parser.parse(fetchNip05Data(domain))
+    override suspend fun list(domain: String) = parser.parse(fetchNip05Data(domain))
 
     suspend fun fetchNip05Data(nip05: Nip05Id): String {
         val url = nip05.toUserUrl()
