@@ -1361,7 +1361,7 @@
     <string name="kind_blossom_auth">Blossom-hitelesítés</string>
     <string name="kind_broadcast_relays">Közvetítési átjátszók</string>
     <string name="kind_bookmark_list">Könyvjelzőlista</string>
-    <string name="kind_day_appointment">Napi időpont</string>
+    <string name="kind_day_appointment">Napi bejegyzés</string>
     <string name="kind_calendar">Naptár</string>
     <string name="kind_appointment">Találkozó</string>
     <string name="kind_appt_rsvp">Időpont-visszaigazolás</string>
