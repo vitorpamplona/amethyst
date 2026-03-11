@@ -1471,38 +1471,4 @@
     <string name="kind_voice_msg">Hlasová zpráva</string>
     <string name="kind_voice_reply">Hlasová odpověď</string>
     <string name="kind_wiki">Wiki</string>
-
-    <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Začněte se skvělým feedem tím, že budete sledovat stejné lidi jako někdo, komu důvěřujete.</string>
-    <string name="import_follow_list">Importovat seznam sledovaných</string>
-    <string name="profile_to_import_from">Profil, ze kterého importovat</string>
-    <string name="name_search_npub1_alice_example_com">hledání jména, npub1…, alice@example.com</string>
-    <string name="supports_npub_nip_05_hex_and_namecoin_bit_d_id">Podporuje npub, NIP-05, hex a Namecoin (.bit / d/ / id/)</string>
-    <string name="look_up_follow_list">Vyhledat seznam sledovaných</string>
-    <string name="tip">Tip</string>
-    <string name="accounts_found">Nalezeno účtů: %1$d</string>
-    <string name="resolved_via_namecoin">Přeloženo přes Namecoin</string>
-    <string name="now_following_accounts">Nyní sledujete %1$d účtů</string>
-    <string name="your_feed_is_ready">Váš feed je připraven.</string>
-    <string name="skip">Přeskočit</string>
-    <string name="search_another">Hledat jiný</string>
-    <string name="follow_accounts">Sledovat %1$d účtů</string>
-    <string name="import_more">Importovat více</string>
-    <string name="continue_txt">Pokračovat</string>
-    <string name="skip_for_now">Prozatím přeskočit</string>
-    <string name="resolving">Překládám %1$s…</string>
-    <string name="fetching_follow_list">Načítám seznam sledovaných…</string>
-    <string name="following_accounts">Sleduji %1$d účtů…</string>
-    <string name="import_follows_tips">"Zadejte profil přítele nebo lídra komunity. Můžete použít jejich npub, NIP-05 adresu nebo Namecoin jméno jako alice@example.bit nebo id/alice pro identity ověřené blockchainem."</string>
-    <string name="route_import_follows">Importovat sledované</string>
-    <string name="select_users_to_follow">Vybrat uživatele ke sledování</string>
-    <string name="num_selected">Vybráno: %1$d</string>
-    <string name="no_follows_found">Žádní sledovaní nenalezeni</string>
-    <string name="download_to_phone">Uložit do telefonu</string>
-    <string name="select_all">Vybrat vše</string>
-    <string name="connection_success_rate_description">Procento úspěšných připojení k relé</string>
-    <string name="uptime">%1$d%% dostupnost</string>
-    <string name="namecoin_settings">Nastavení Namecoin</string>
-    <string name="add_sensitive_content_description_placeholder">Důvod (volitelné)</string>
-    <string name="content_warning_with_reason">Upozornění: %1$s</string>
-
 </resources>
