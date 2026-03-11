@@ -177,15 +177,12 @@ private suspend fun publishNote(
     replyTo: com.vitorpamplona.quartz.nip01Core.core.Event?,
 ) {
     withContext(Dispatchers.IO) {
-        // Check read-only mode
         if (account.isReadOnly) {
             throw IllegalStateException("Cannot post in read-only mode")
         }
 
-        // Use shared PublishAction from commons
         val signedEvent = PublishAction.publishTextNote(content, account.signer, replyTo)
 
-        // Broadcast to all configured relays
         relayManager.broadcastToAll(signedEvent)
     }
 }

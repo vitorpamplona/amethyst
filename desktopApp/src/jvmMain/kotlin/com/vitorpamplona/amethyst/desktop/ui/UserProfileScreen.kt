@@ -109,7 +109,6 @@ fun UserProfileScreen(
     onZapFeedback: (ZapFeedback) -> Unit = {},
 ) {
     val connectedRelays by relayManager.connectedRelays.collectAsState()
-    val relayStatuses by relayManager.relayStatuses.collectAsState()
 
     // User metadata
     var displayName by remember { mutableStateOf<String?>(null) }
@@ -154,11 +153,10 @@ fun UserProfileScreen(
     var eoseReceivedCount by remember(account) { mutableStateOf(0) }
 
     // Load current user's contact list (for follow state)
-    rememberSubscription(relayStatuses, account, relayManager = relayManager) {
-        val configuredRelays = relayStatuses.keys
-        if (configuredRelays.isNotEmpty() && account != null) {
+    rememberSubscription(connectedRelays, account, relayManager = relayManager) {
+        if (connectedRelays.isNotEmpty() && account != null) {
             createContactListSubscription(
-                relays = configuredRelays,
+                relays = connectedRelays,
                 pubKeyHex = account.pubKeyHex,
                 onEvent = { event, _, _, _ ->
                     if (event is ContactListEvent) {
@@ -175,7 +173,7 @@ fun UserProfileScreen(
                     eoseReceivedCount++
 
                     // Wait for EOSE from at least 2 relays or all relays before enabling button
-                    val minEoseCount = minOf(2, configuredRelays.size)
+                    val minEoseCount = minOf(2, connectedRelays.size)
                     if (eoseReceivedCount >= minEoseCount && !contactListLoaded) {
                         contactListLoaded = true
                     }
@@ -194,11 +192,10 @@ fun UserProfileScreen(
     }
 
     // Subscribe to user metadata
-    rememberSubscription(relayStatuses, pubKeyHex, retryTrigger, relayManager = relayManager) {
-        val configuredRelays = relayStatuses.keys
-        if (configuredRelays.isNotEmpty()) {
+    rememberSubscription(connectedRelays, pubKeyHex, retryTrigger, relayManager = relayManager) {
+        if (connectedRelays.isNotEmpty()) {
             createMetadataSubscription(
-                relays = configuredRelays,
+                relays = connectedRelays,
                 pubKeyHex = pubKeyHex,
                 onEvent = { event, _, _, _ ->
                     if (event is MetadataEvent) {
@@ -229,11 +226,10 @@ fun UserProfileScreen(
     }
 
     // Subscribe to profile user's contact list (for following count)
-    rememberSubscription(relayStatuses, pubKeyHex, retryTrigger, relayManager = relayManager) {
-        val configuredRelays = relayStatuses.keys
-        if (configuredRelays.isNotEmpty()) {
+    rememberSubscription(connectedRelays, pubKeyHex, retryTrigger, relayManager = relayManager) {
+        if (connectedRelays.isNotEmpty()) {
             createContactListSubscription(
-                relays = configuredRelays,
+                relays = connectedRelays,
                 pubKeyHex = pubKeyHex,
                 onEvent = { event, _, _, _ ->
                     if (event is ContactListEvent) {
@@ -252,9 +248,8 @@ fun UserProfileScreen(
     val followerAuthors = remember(pubKeyHex) { mutableSetOf<String>() }
 
     // Subscribe to followers (contact lists that tag this user)
-    rememberSubscription(relayStatuses, pubKeyHex, retryTrigger, relayManager = relayManager) {
-        val configuredRelays = relayStatuses.keys
-        if (configuredRelays.isNotEmpty()) {
+    rememberSubscription(connectedRelays, pubKeyHex, retryTrigger, relayManager = relayManager) {
+        if (connectedRelays.isNotEmpty()) {
             // Clear previous followers when subscription restarts
             followerAuthors.clear()
             followersCount = 0
@@ -269,7 +264,7 @@ fun UserProfileScreen(
                             limit = 500,
                         ),
                     ),
-                relays = configuredRelays,
+                relays = connectedRelays,
                 onEvent = { event, _, _, _ ->
                     // Count unique authors who follow this user
                     if (followerAuthors.add(event.pubKey)) {
@@ -284,13 +279,12 @@ fun UserProfileScreen(
     }
 
     // Subscribe to user posts
-    rememberSubscription(relayStatuses, pubKeyHex, retryTrigger, relayManager = relayManager) {
-        val configuredRelays = relayStatuses.keys
-        if (configuredRelays.isNotEmpty()) {
+    rememberSubscription(connectedRelays, pubKeyHex, retryTrigger, relayManager = relayManager) {
+        if (connectedRelays.isNotEmpty()) {
             postsLoading = true
             postsError = null
             createUserPostsSubscription(
-                relays = configuredRelays,
+                relays = connectedRelays,
                 pubKeyHex = pubKeyHex,
                 onEvent = { event, _, _, _ ->
                     eventState.addItem(event)

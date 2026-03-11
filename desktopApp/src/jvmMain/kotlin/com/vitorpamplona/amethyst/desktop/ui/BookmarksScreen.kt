@@ -76,7 +76,7 @@ fun BookmarksScreen(
     onNavigateToThread: (String) -> Unit = {},
     onZapFeedback: (ZapFeedback) -> Unit = {},
 ) {
-    val relayStatuses by relayManager.relayStatuses.collectAsState()
+    val connectedRelays by relayManager.connectedRelays.collectAsState()
     val scope = rememberCoroutineScope()
 
     // Tab state
@@ -121,9 +121,8 @@ fun BookmarksScreen(
     }
 
     // Subscribe to user's bookmark list (kind 30001)
-    rememberSubscription(relayStatuses, account.pubKeyHex, relayManager = relayManager) {
-        val configuredRelays = relayStatuses.keys
-        if (configuredRelays.isNotEmpty()) {
+    rememberSubscription(connectedRelays, account.pubKeyHex, relayManager = relayManager) {
+        if (connectedRelays.isNotEmpty()) {
             SubscriptionConfig(
                 subId = "bookmarks-list-${account.pubKeyHex.take(8)}",
                 filters =
@@ -134,7 +133,7 @@ fun BookmarksScreen(
                             limit = 1,
                         ),
                     ),
-                relays = configuredRelays,
+                relays = connectedRelays,
                 onEvent = { event, _, _, _ ->
                     if (event is BookmarkListEvent) {
                         bookmarkList = event
@@ -179,9 +178,8 @@ fun BookmarksScreen(
     }
 
     // Subscribe to fetch the actual public bookmarked events
-    rememberSubscription(relayStatuses, publicBookmarkIds, relayManager = relayManager) {
-        val configuredRelays = relayStatuses.keys
-        if (configuredRelays.isNotEmpty() && publicBookmarkIds.isNotEmpty()) {
+    rememberSubscription(connectedRelays, publicBookmarkIds, relayManager = relayManager) {
+        if (connectedRelays.isNotEmpty() && publicBookmarkIds.isNotEmpty()) {
             publicEventState.clear()
             SubscriptionConfig(
                 subId = "public-bookmarked-events-${System.currentTimeMillis()}",
@@ -189,7 +187,7 @@ fun BookmarksScreen(
                     listOf(
                         FilterBuilders.byIds(publicBookmarkIds),
                     ),
-                relays = configuredRelays,
+                relays = connectedRelays,
                 onEvent = { event, _, _, _ ->
                     publicEventState.addItem(event)
                 },
@@ -201,9 +199,8 @@ fun BookmarksScreen(
     }
 
     // Subscribe to fetch the actual private bookmarked events
-    rememberSubscription(relayStatuses, privateBookmarkIds, relayManager = relayManager) {
-        val configuredRelays = relayStatuses.keys
-        if (configuredRelays.isNotEmpty() && privateBookmarkIds.isNotEmpty()) {
+    rememberSubscription(connectedRelays, privateBookmarkIds, relayManager = relayManager) {
+        if (connectedRelays.isNotEmpty() && privateBookmarkIds.isNotEmpty()) {
             privateEventState.clear()
             SubscriptionConfig(
                 subId = "private-bookmarked-events-${System.currentTimeMillis()}",
@@ -211,7 +208,7 @@ fun BookmarksScreen(
                     listOf(
                         FilterBuilders.byIds(privateBookmarkIds),
                     ),
-                relays = configuredRelays,
+                relays = connectedRelays,
                 onEvent = { event, _, _, _ ->
                     privateEventState.addItem(event)
                 },

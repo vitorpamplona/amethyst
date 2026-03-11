@@ -96,7 +96,6 @@ fun ThreadScreen(
     onReply: (Event) -> Unit = {},
 ) {
     val connectedRelays by relayManager.connectedRelays.collectAsState()
-    val relayStatuses by relayManager.relayStatuses.collectAsState()
     val scope = rememberCoroutineScope()
 
     // State for the root note
@@ -149,9 +148,8 @@ fun ThreadScreen(
     }
 
     // Subscribe to user's bookmark list
-    rememberSubscription(relayStatuses, account, relayManager = relayManager) {
-        val configuredRelays = relayStatuses.keys
-        if (configuredRelays.isNotEmpty() && account != null) {
+    rememberSubscription(connectedRelays, account, relayManager = relayManager) {
+        if (connectedRelays.isNotEmpty() && account != null) {
             SubscriptionConfig(
                 subId = "thread-bookmarks-${account.pubKeyHex.take(8)}",
                 filters =
@@ -162,7 +160,7 @@ fun ThreadScreen(
                             limit = 1,
                         ),
                     ),
-                relays = configuredRelays,
+                relays = connectedRelays,
                 onEvent = { event, _, _, _ ->
                     if (event is BookmarkListEvent) {
                         bookmarkList = event
@@ -183,11 +181,10 @@ fun ThreadScreen(
     }
 
     // Subscribe to the root note
-    rememberSubscription(relayStatuses, noteId, relayManager = relayManager) {
-        val configuredRelays = relayStatuses.keys
-        if (configuredRelays.isNotEmpty()) {
+    rememberSubscription(connectedRelays, noteId, relayManager = relayManager) {
+        if (connectedRelays.isNotEmpty()) {
             createNoteSubscription(
-                relays = configuredRelays,
+                relays = connectedRelays,
                 noteId = noteId,
                 onEvent = { event, _, _, _ ->
                     if (event.id == noteId) {
@@ -205,11 +202,10 @@ fun ThreadScreen(
     }
 
     // Subscribe to replies
-    rememberSubscription(relayStatuses, noteId, relayManager = relayManager) {
-        val configuredRelays = relayStatuses.keys
-        if (configuredRelays.isNotEmpty()) {
+    rememberSubscription(connectedRelays, noteId, relayManager = relayManager) {
+        if (connectedRelays.isNotEmpty()) {
             createThreadRepliesSubscription(
-                relays = configuredRelays,
+                relays = connectedRelays,
                 noteId = noteId,
                 onEvent = { event, _, _, _ ->
                     replyEventState.addItem(event)
@@ -225,14 +221,13 @@ fun ThreadScreen(
 
     // Subscribe to zaps for thread events
     val allEventIds = listOf(noteId) + replyEvents.map { it.id }
-    rememberSubscription(relayStatuses, allEventIds, relayManager = relayManager) {
-        val configuredRelays = relayStatuses.keys
-        if (configuredRelays.isEmpty() || allEventIds.isEmpty()) {
+    rememberSubscription(connectedRelays, allEventIds, relayManager = relayManager) {
+        if (connectedRelays.isEmpty() || allEventIds.isEmpty()) {
             return@rememberSubscription null
         }
 
         createZapsSubscription(
-            relays = configuredRelays,
+            relays = connectedRelays,
             eventIds = allEventIds,
             onEvent = { event, _, _, _ ->
                 if (event is LnZapEvent) {
@@ -251,14 +246,13 @@ fun ThreadScreen(
     }
 
     // Subscribe to reactions for thread events
-    rememberSubscription(relayStatuses, allEventIds, relayManager = relayManager) {
-        val configuredRelays = relayStatuses.keys
-        if (configuredRelays.isEmpty() || allEventIds.isEmpty()) {
+    rememberSubscription(connectedRelays, allEventIds, relayManager = relayManager) {
+        if (connectedRelays.isEmpty() || allEventIds.isEmpty()) {
             return@rememberSubscription null
         }
 
         createReactionsSubscription(
-            relays = configuredRelays,
+            relays = connectedRelays,
             eventIds = allEventIds,
             onEvent = { event, _, _, _ ->
                 if (event is ReactionEvent) {
@@ -274,14 +268,13 @@ fun ThreadScreen(
     }
 
     // Subscribe to replies for thread events (for counts)
-    rememberSubscription(relayStatuses, allEventIds, relayManager = relayManager) {
-        val configuredRelays = relayStatuses.keys
-        if (configuredRelays.isEmpty() || allEventIds.isEmpty()) {
+    rememberSubscription(connectedRelays, allEventIds, relayManager = relayManager) {
+        if (connectedRelays.isEmpty() || allEventIds.isEmpty()) {
             return@rememberSubscription null
         }
 
         createRepliesSubscription(
-            relays = configuredRelays,
+            relays = connectedRelays,
             eventIds = allEventIds,
             onEvent = { event, _, _, _ ->
                 val replyToId =
@@ -301,14 +294,13 @@ fun ThreadScreen(
     }
 
     // Subscribe to reposts for thread events
-    rememberSubscription(relayStatuses, allEventIds, relayManager = relayManager) {
-        val configuredRelays = relayStatuses.keys
-        if (configuredRelays.isEmpty() || allEventIds.isEmpty()) {
+    rememberSubscription(connectedRelays, allEventIds, relayManager = relayManager) {
+        if (connectedRelays.isEmpty() || allEventIds.isEmpty()) {
             return@rememberSubscription null
         }
 
         createRepostsSubscription(
-            relays = configuredRelays,
+            relays = connectedRelays,
             eventIds = allEventIds,
             onEvent = { event, _, _, _ ->
                 if (event is RepostEvent) {

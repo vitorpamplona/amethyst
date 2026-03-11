@@ -113,7 +113,6 @@ fun NotificationsScreen(
     subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator? = null,
 ) {
     val connectedRelays by relayManager.connectedRelays.collectAsState()
-    val relayStatuses by relayManager.relayStatuses.collectAsState()
     val scope = rememberCoroutineScope()
     val notificationState =
         remember {
@@ -139,11 +138,10 @@ fun NotificationsScreen(
     val initialLoadComplete = eoseReceivedCount > 0
 
     // Subscribe to notifications
-    rememberSubscription(relayStatuses, account.pubKeyHex, relayManager = relayManager) {
-        val configuredRelays = relayStatuses.keys
-        if (configuredRelays.isNotEmpty()) {
+    rememberSubscription(connectedRelays, account.pubKeyHex, relayManager = relayManager) {
+        if (connectedRelays.isNotEmpty()) {
             createNotificationsSubscription(
-                relays = configuredRelays,
+                relays = connectedRelays,
                 pubKeyHex = account.pubKeyHex,
                 onEvent = { event, _, _, _ ->
                     // Skip events from the user themselves (except zaps)

@@ -62,6 +62,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.domain.nip46.SignerConnectionState
+import com.vitorpamplona.amethyst.commons.ui.components.BunkerHeartbeatIndicator
 import com.vitorpamplona.amethyst.desktop.DesktopScreen
 import com.vitorpamplona.amethyst.desktop.account.AccountManager
 import com.vitorpamplona.amethyst.desktop.account.AccountState
@@ -103,6 +105,8 @@ fun SinglePaneLayout(
     onShowComposeDialog: () -> Unit,
     onShowReplyDialog: (com.vitorpamplona.quartz.nip01Core.core.Event) -> Unit,
     onZapFeedback: (ZapFeedback) -> Unit,
+    signerConnectionState: SignerConnectionState,
+    lastPingTimeSec: Long?,
     modifier: Modifier = Modifier,
 ) {
     var currentColumnType by remember { mutableStateOf<DeckColumnType>(DeckColumnType.HomeFeed) }
@@ -139,6 +143,14 @@ fun SinglePaneLayout(
                     },
                 )
             }
+
+            Spacer(Modifier.weight(1f))
+
+            BunkerHeartbeatIndicator(
+                signerConnectionState = signerConnectionState,
+                lastPingTimeSec = lastPingTimeSec,
+                modifier = Modifier.padding(bottom = 12.dp),
+            )
         }
 
         VerticalDivider()

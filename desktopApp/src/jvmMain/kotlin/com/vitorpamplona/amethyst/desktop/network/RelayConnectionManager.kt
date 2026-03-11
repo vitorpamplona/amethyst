@@ -221,6 +221,6 @@ open class RelayConnectionManager(
         cmd: Command,
         success: Boolean,
     ) {
-        // Command send tracking
+        // Command send tracking — no-op for now
     }
 }

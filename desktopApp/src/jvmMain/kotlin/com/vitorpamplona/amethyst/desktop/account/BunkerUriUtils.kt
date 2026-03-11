@@ -18,33 +18,25 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.desktop.network
+package com.vitorpamplona.amethyst.desktop.account
 
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+private val HEX_64_REGEX = Regex("^[0-9a-fA-F]{64}$")
 
-/**
- * Represents the connection status of a Nostr relay.
- * Used by both Android and Desktop apps.
- */
-data class RelayStatus(
-    val url: NormalizedRelayUrl,
-    val connected: Boolean,
-    val pingMs: Int? = null,
-    val compressed: Boolean = false,
-    val error: String? = null,
-)
+fun validateBunkerUri(input: String): String? {
+    val trimmed = input.trim()
+    if (!trimmed.startsWith("bunker://", ignoreCase = true)) return "Not a bunker URI"
 
-/**
- * Default relay URLs for Nostr connectivity.
- */
-object DefaultRelays {
-    val RELAYS =
-        listOf(
-            "wss://relay.damus.io",
-            "wss://relay.nostr.band",
-            "wss://nos.lol",
-            "wss://relay.snort.social",
-            "wss://nostr.wine",
-            "wss://relay.primal.net",
-        )
+    val afterScheme = trimmed.substring("bunker://".length)
+    val parts = afterScheme.split("?", limit = 2)
+    val pubkeyPart = parts[0]
+
+    if (pubkeyPart.length != 64 || !pubkeyPart.matches(HEX_64_REGEX)) {
+        return "Invalid bunker URI. Expected: bunker://<64-hex-chars>?relay=wss://..."
+    }
+
+    if (parts.size < 2 || !parts[1].contains("relay=wss://", ignoreCase = true)) {
+        return "Bunker URI must include at least one relay parameter (relay=wss://...)"
+    }
+
+    return null // valid
 }

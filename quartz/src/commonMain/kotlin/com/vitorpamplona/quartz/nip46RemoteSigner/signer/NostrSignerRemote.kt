@@ -42,6 +42,11 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.utils.Hex
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 
 class NostrSignerRemote(
     val signer: NostrSignerInternal,
@@ -51,6 +56,8 @@ class NostrSignerRemote(
     val permissions: String? = null,
     val secret: String? = null,
 ) : NostrSigner(signer.pubKey) {
+    private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+
     private val manager =
         RemoteSignerManager(
             signer = signer,
@@ -69,7 +76,9 @@ class NostrSignerRemote(
                 ),
         ) { event ->
             if (event is NostrConnectEvent) {
-                manager.newResponse(event)
+                scope.launch {
+                    manager.newResponse(event)
+                }
             }
         }
 
@@ -79,6 +88,7 @@ class NostrSignerRemote(
 
     fun closeSubscription() {
         subscription.close()
+        scope.cancel()
     }
 
     override fun isWriteable(): Boolean = true
