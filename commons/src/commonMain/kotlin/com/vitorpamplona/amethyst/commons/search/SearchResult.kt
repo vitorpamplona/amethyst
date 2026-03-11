@@ -20,8 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.search
 
-import com.vitorpamplona.amethyst.commons.model.User
-
 /**
  * Represents a parsed search result from Bech32/hex input.
  * Shared between Android and Desktop for consistent search behavior.
@@ -33,13 +31,6 @@ sealed class SearchResult {
     data class UserResult(
         val pubKeyHex: String,
         val displayId: String,
-    ) : SearchResult()
-
-    /**
-     * User from local cache with full metadata.
-     */
-    data class CachedUserResult(
-        val user: User,
     ) : SearchResult()
 
     /**

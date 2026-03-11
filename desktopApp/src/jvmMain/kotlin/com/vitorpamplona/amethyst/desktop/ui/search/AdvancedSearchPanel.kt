@@ -56,7 +56,9 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.search.DateUtils
 import com.vitorpamplona.amethyst.commons.search.KindRegistry
+import com.vitorpamplona.amethyst.commons.search.QueryParser
 import com.vitorpamplona.amethyst.commons.search.SearchQuery
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -243,16 +245,14 @@ private fun DateRangeFields(
     var sinceText by remember(since) {
         mutableStateOf(
             since?.let {
-                com.vitorpamplona.amethyst.commons.search.QuerySerializer
-                    .timestampToDate(it)
+                DateUtils.timestampToDate(it)
             } ?: "",
         )
     }
     var untilText by remember(until) {
         mutableStateOf(
             until?.let {
-                com.vitorpamplona.amethyst.commons.search.QuerySerializer
-                    .timestampToDate(it)
+                DateUtils.timestampToDate(it)
             } ?: "",
         )
     }
@@ -272,8 +272,7 @@ private fun DateRangeFields(
                 onValueChange = {
                     sinceText = it
                     val ts =
-                        com.vitorpamplona.amethyst.commons.search.QueryParser
-                            .parseDateToTimestamp(it)
+                        QueryParser.parseDateToTimestamp(it)
                     onChanged(ts, until)
                 },
                 modifier = Modifier.fillMaxWidth(),
@@ -292,8 +291,7 @@ private fun DateRangeFields(
                 onValueChange = {
                     untilText = it
                     val ts =
-                        com.vitorpamplona.amethyst.commons.search.QueryParser
-                            .parseDateToTimestamp(it)
+                        QueryParser.parseDateToTimestamp(it)
                     onChanged(since, ts)
                 },
                 modifier = Modifier.fillMaxWidth(),

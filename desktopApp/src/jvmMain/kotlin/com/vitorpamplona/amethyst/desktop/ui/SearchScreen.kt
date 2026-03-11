@@ -81,6 +81,8 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.search.AdvancedSearchBarState
 import com.vitorpamplona.amethyst.commons.search.QuerySerializer
+import com.vitorpamplona.amethyst.commons.search.SavedSearch
+import com.vitorpamplona.amethyst.commons.search.SearchQuery
 import com.vitorpamplona.amethyst.commons.search.SearchResult
 import com.vitorpamplona.amethyst.commons.search.SearchResultFilter
 import com.vitorpamplona.amethyst.commons.search.parseSearchInput
@@ -121,7 +123,6 @@ fun SearchScreen(
         }
     }
 
-    val relayStatuses by relayManager.relayStatuses.collectAsState()
     val connectedRelays by relayManager.connectedRelays.collectAsState()
     val displayText by state.displayText.collectAsState()
     val query by state.query.collectAsState()
@@ -149,8 +150,7 @@ fun SearchScreen(
             relays = connectedRelays,
             searchQuery =
                 debouncedQuery.text.ifBlank {
-                    com.vitorpamplona.amethyst.commons.search.QuerySerializer
-                        .serialize(debouncedQuery)
+                    QuerySerializer.serialize(debouncedQuery)
                 },
             limit = 20,
             onEvent = { event, _, _, _ ->
@@ -185,7 +185,7 @@ fun SearchScreen(
             relays = connectedRelays,
             onEvent = { event, _, _, _ ->
                 // Skip metadata events (handled by people search)
-                if (event.kind == 0) return@SubscriptionConfig
+                if (event.kind == MetadataEvent.KIND) return@SubscriptionConfig
                 val filtered = SearchResultFilter.filter(listOf(event), debouncedQuery)
                 if (filtered.isNotEmpty()) {
                     state.addNoteResults(filtered)
@@ -407,9 +407,9 @@ fun SearchScreen(
 
 @Composable
 private fun SearchEmptyState(
-    historyItems: List<com.vitorpamplona.amethyst.commons.search.SearchQuery>,
-    savedSearches: List<com.vitorpamplona.amethyst.commons.search.SavedSearch>,
-    onLoadQuery: (com.vitorpamplona.amethyst.commons.search.SearchQuery) -> Unit,
+    historyItems: List<SearchQuery>,
+    savedSearches: List<SavedSearch>,
+    onLoadQuery: (SearchQuery) -> Unit,
     onDeleteSaved: (String) -> Unit,
     onClearHistory: () -> Unit,
 ) {
@@ -542,7 +542,7 @@ private fun SearchEmptyState(
 
 @Composable
 private fun SearchHint(
-    identifier: String,
+    example: String,
     description: String,
 ) {
     Row(
@@ -550,7 +550,7 @@ private fun SearchHint(
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Text(
-            identifier,
+            example,
             style = MaterialTheme.typography.bodySmall,
             fontFamily = FontFamily.Monospace,
             color = MaterialTheme.colorScheme.primary,
@@ -578,7 +578,6 @@ private fun SearchResultCard(
                 .clickable {
                     when (result) {
                         is SearchResult.UserResult -> onNavigateToProfile(result.pubKeyHex)
-                        is SearchResult.CachedUserResult -> onNavigateToProfile(result.user.pubkeyHex)
                         is SearchResult.NoteResult -> onNavigateToThread(result.noteIdHex)
                         is SearchResult.AddressResult -> onNavigateToThread("${result.kind}:${result.pubKeyHex}:${result.dTag}")
                         is SearchResult.HashtagResult -> onNavigateToHashtag(result.hashtag)
@@ -598,7 +597,6 @@ private fun SearchResultCard(
                 imageVector =
                     when (result) {
                         is SearchResult.UserResult -> Icons.Default.Person
-                        is SearchResult.CachedUserResult -> Icons.Default.Person
                         is SearchResult.NoteResult -> Icons.Default.Description
                         is SearchResult.AddressResult -> Icons.Default.Description
                         is SearchResult.HashtagResult -> Icons.Default.Tag
@@ -612,7 +610,6 @@ private fun SearchResultCard(
                 Text(
                     when (result) {
                         is SearchResult.UserResult -> "User Profile"
-                        is SearchResult.CachedUserResult -> result.user.toBestDisplayName()
                         is SearchResult.NoteResult -> "Note"
                         is SearchResult.AddressResult -> "Event (kind ${result.kind})"
                         is SearchResult.HashtagResult -> "#${result.hashtag}"
@@ -623,7 +620,6 @@ private fun SearchResultCard(
                 Text(
                     when (result) {
                         is SearchResult.UserResult -> result.displayId
-                        is SearchResult.CachedUserResult -> result.user.pubkeyDisplayHex()
                         is SearchResult.NoteResult -> result.displayId
                         is SearchResult.AddressResult -> result.displayId
                         is SearchResult.HashtagResult -> "Search posts with this hashtag"

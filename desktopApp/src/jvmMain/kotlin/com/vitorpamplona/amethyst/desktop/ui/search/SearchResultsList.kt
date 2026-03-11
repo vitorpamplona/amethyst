@@ -118,7 +118,6 @@ fun SearchResultsList(
                 item(key = "people-expand") {
                     ExpandableSection(
                         remaining = people.drop(5),
-                        key = { "person-more-${it.pubkeyHex}" },
                     ) { user ->
                         UserSearchCard(
                             user = user,
@@ -145,7 +144,6 @@ fun SearchResultsList(
                 item(key = "notes-expand") {
                     ExpandableSection(
                         remaining = textNotes.drop(5),
-                        key = { "note-more-${it.id}" },
                     ) { event ->
                         NotePreviewCard(event = event, onClick = { onNavigateToThread(event.id) })
                     }
@@ -168,7 +166,6 @@ fun SearchResultsList(
                 item(key = "articles-expand") {
                     ExpandableSection(
                         remaining = articles.drop(5),
-                        key = { "article-more-${it.id}" },
                     ) { event ->
                         NotePreviewCard(event = event, onClick = { onNavigateToThread(event.id) })
                     }
@@ -277,7 +274,6 @@ private fun NotePreviewCard(
 @Composable
 private fun <T> ExpandableSection(
     remaining: List<T>,
-    key: (T) -> String,
     content: @Composable (T) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
