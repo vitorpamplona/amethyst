@@ -32,6 +32,8 @@ class RelayStat(
     var errorCounter: Int = 0,
     var pingInMs: Int = 0,
     var compression: Boolean = false,
+    var connectionTentatives: Int = 0,
+    var connectionCompleted: Int = 0,
 ) {
     val messages = LruCache<IRelayDebugMessage, IRelayDebugMessage>(100)
 
@@ -61,6 +63,14 @@ class RelayStat(
 
     fun addBytesSent(bytesUsedInMemory: Int) {
         sentBytes += bytesUsedInMemory
+    }
+
+    fun newConnection() {
+        connectionTentatives++
+    }
+
+    fun connectionCompleted() {
+        connectionCompleted++
     }
 
     fun newSpam(

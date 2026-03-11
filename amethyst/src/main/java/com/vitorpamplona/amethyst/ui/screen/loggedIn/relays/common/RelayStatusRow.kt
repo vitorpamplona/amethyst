@@ -33,6 +33,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.stringResource
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.countToHumanReadable
 import com.vitorpamplona.amethyst.service.countToHumanReadableBytes
@@ -43,6 +44,7 @@ import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.ui.theme.allGoodColor
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.ui.theme.redColorOnSecondSurface
 import com.vitorpamplona.amethyst.ui.theme.warningColor
 
 @Composable
@@ -126,18 +128,22 @@ fun RelayStatusRow(
                     onLongPress = {
                         accountViewModel.toastManager.toast(
                             R.string.errors,
-                            R.string.errors_description,
+                            R.string.connection_success_rate_description,
                         )
                     },
                 )
             },
     ) {
+        val successRate = ((item.relayStat.connectionCompleted / item.relayStat.connectionTentatives.toFloat()) * 100).toInt()
+
         Icon(
             imageVector = Icons.Default.SyncProblem,
             stringRes(R.string.errors),
             modifier = Size15Modifier,
             tint =
-                if (item.relayStat.errorCounter > 0) {
+                if (successRate < 0.1) {
+                    MaterialTheme.colorScheme.redColorOnSecondSurface
+                } else if (successRate < 0.60) {
                     MaterialTheme.colorScheme.warningColor
                 } else {
                     MaterialTheme.colorScheme.allGoodColor
@@ -145,7 +151,7 @@ fun RelayStatusRow(
         )
 
         Text(
-            text = countToHumanReadable(item.relayStat.errorCounter, "errors"),
+            text = stringResource(R.string.uptime, successRate),
             maxLines = 1,
             fontSize = Font12SP,
             modifier = HalfStartPadding,
