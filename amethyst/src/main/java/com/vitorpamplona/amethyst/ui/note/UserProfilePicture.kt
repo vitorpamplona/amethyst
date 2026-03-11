@@ -498,7 +498,7 @@ fun ScoreTag55Preview() {
             size = 18.dp
             Box(Modifier.size(size), contentAlignment = Alignment.TopEnd) {
                 InnerUserPicture(
-                    userHex = "AABBCC",
+                    userHex = "460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c",
                     userPicture = PREVIEW_PICTURE_URL,
                     userName = PREVIEW_USER_NAME,
                     size = size,
