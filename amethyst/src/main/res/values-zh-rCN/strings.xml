@@ -125,6 +125,7 @@
     <string name="bytes">字节</string>
     <string name="error">错误</string>
     <string name="errors">错误</string>
+    <string name="connection_success_rate_description">中继成功连接的百分比</string>
     <string name="errors_description">该会话中产生的连接错误数量</string>
     <string name="home_feed">主页</string>
     <string name="private_message_feed">私信</string>
@@ -150,6 +151,7 @@
     <string name="pronouns">称谓代词</string>
     <string name="ln_address">闪电地址</string>
     <string name="ln_url_outdated">LN链接（过期）</string>
+    <string name="download_to_phone">保存到手机</string>
     <string name="save_to_gallery">保存到相册</string>
     <string name="image_saved_to_the_gallery">图片已保存到相册</string>
     <string name="video_download_has_started_toast">视频下载已开始…</string>
@@ -158,6 +160,7 @@
     <string name="video_saved_to_the_gallery">视频已保存到媒体库</string>
     <string name="failed_to_save_the_video">保存视频失败</string>
     <string name="upload_image">上传图片</string>
+    <string name="upload_file">上传文件</string>
     <string name="take_a_picture">拍照</string>
     <string name="record_a_video">录制视频</string>
     <string name="record_a_message">录制消息</string>
@@ -421,6 +424,15 @@
     <string name="wallet_connect_service_secret">钱包绑定私钥</string>
     <string name="wallet_connect_service_show_secret">显示私钥</string>
     <string name="wallet_connect_service_secret_placeholder">nsec / 十六进制私钥</string>
+    <string name="wallet_connect_status_connected">已连接</string>
+    <string name="wallet_connect_status_not_connected">未连接</string>
+    <string name="wallet_connect_manual_config">高级：手动输入连接详情</string>
+    <string name="quick_zap_amounts">快速打闪金额</string>
+    <string name="quick_zap_amounts_explainer">按下打闪按钮时显示。点击接即可删除它。 如果留空，每次都会打开对话框来插入金融。</string>
+    <string name="zap_privacy_section">打闪隐私</string>
+    <string name="zap_type_section_explainer">控制发送打闪时如何显示您的身份。</string>
+    <string name="wallet_connect_connect_app">连接钱包</string>
+    <string name="see_relay_feed">查看中继源</string>
     <string name="pledge_amount_in_sats">承诺聪金额</string>
     <string name="post_poll">发布投票</string>
     <string name="poll_heading_required">必填字段：</string>
@@ -662,6 +674,7 @@
     <string name="read_from_relay_description">从该中继接收事件和过滤响应所使用的数据量</string>
     <string name="an_error_occurred_trying_to_get_relay_information">尝试从 %1$s 获取中继器信息时出错</string>
     <string name="owner">机主</string>
+    <string name="used_by">使用者</string>
     <string name="self">服务密钥</string>
     <string name="running_software">正在运行 %1$s</string>
     <string name="running_software_version">正在运行 %1$s (%2$s)</string>
@@ -858,6 +871,7 @@
     <string name="load_image_description">何时加载图像</string>
     <string name="copy_stack_to_clipboard">复制 Stack</string>
     <string name="copy_to_clipboard">复制到剪贴板</string>
+    <string name="copy_nprofile_to_clipboard">复制 nprofile 到剪贴板</string>
     <string name="copy_npub_to_clipboard">复制 npub 到剪贴板</string>
     <string name="share_or_save">分享或保存</string>
     <string name="copy_url_to_clipboard">复制链接到剪贴板</string>
@@ -1035,6 +1049,7 @@
     <string name="route_video">短篇</string>
     <string name="route_chess">国际象棋</string>
     <string name="route_security_filters">安全滤镜</string>
+    <string name="route_import_follows">导入关注</string>
     <string name="new_post">新帖子</string>
     <string name="new_short">新短篇媒体：图像或视频</string>
     <string name="new_community_note">新社区笔记</string>
@@ -1081,6 +1096,7 @@
     <string name="add_content_warning">添加内容警告</string>
     <string name="remove_content_warning">移除内容警告</string>
     <string name="show_npub_as_a_qr_code">将 npub 显示为二维码</string>
+    <string name="show_nprofile_as_a_qr_code">以二维码显示 nprofile</string>
     <string name="invalid_nip19_uri">地址无效</string>
     <string name="invalid_nip19_uri_description">Amethyst 收到了要打开的 URI，但该 uri 无效：%1$s</string>
     <string name="dm_relays_title">私信收件箱中继</string>
@@ -1463,4 +1479,30 @@
     <string name="kind_voice_msg">语音消息</string>
     <string name="kind_voice_reply">语音回复</string>
     <string name="kind_wiki">维基</string>
+    <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">关注你信任的人所关注的人来开启优质的源。</string>
+    <string name="import_follow_list">导入关注列表</string>
+    <string name="select_users_to_follow">选择要关注的用户</string>
+    <string name="profile_to_import_from">要导入的配置文件</string>
+    <string name="name_search_npub1_alice_example_com">搜索, npub1…, alice@example.com</string>
+    <string name="supports_npub_nip_05_hex_and_namecoin_bit_d_id">支持npub, nprofile, NIP-05, hex, and namecoin (.bit, d, id/)</string>
+    <string name="look_up_follow_list">查找关注列表</string>
+    <string name="tip">提示</string>
+    <string name="accounts_found">找到 %1$d 个账户</string>
+    <string name="num_selected">选中了 %1$d 项</string>
+    <string name="resolved_via_namecoin">通过 Namecoin 解析</string>
+    <string name="now_following_accounts">正在关注 %1$d 个账户</string>
+    <string name="your_feed_is_ready">您的源已经就绪。</string>
+    <string name="skip">跳过</string>
+    <string name="search_another">搜索另一个</string>
+    <string name="follow_accounts">关注 %1$d 账户</string>
+    <string name="import_more">导入更多</string>
+    <string name="continue_txt">继续</string>
+    <string name="skip_for_now">暂时跳过</string>
+    <string name="resolving">正在解析 %1$s…</string>
+    <string name="fetching_follow_list">正在获取关注列表…</string>
+    <string name="no_follows_found">未找到关注项</string>
+    <string name="following_accounts">正在关注 %1$d 个账户…</string>
+    <string name="import_follows_tips">"输入好友或社区领袖的配置文件。您可以使用他们的 npub、NIP-05地址或Namecoin 名称，例如alice@example.bit 或区块链验证的地址 id/alice。"</string>
+    <string name="select_all">全选</string>
+    <string name="uptime">%1$d%% 运行时间</string>
 </resources>
