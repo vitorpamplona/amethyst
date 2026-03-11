@@ -30,7 +30,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
-import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -96,6 +95,12 @@ private class TrackingNostrClient : INostrClient {
     override fun getReqFiltersOrNull(subId: String): Map<NormalizedRelayUrl, List<Filter>>? = null
 
     override fun getCountFiltersOrNull(subId: String): Map<NormalizedRelayUrl, List<Filter>>? = null
+
+    override fun activeRequests(url: NormalizedRelayUrl): Map<String, List<Filter>> = emptyMap()
+
+    override fun activeCounts(url: NormalizedRelayUrl): Map<String, List<Filter>> = emptyMap()
+
+    override fun activeOutboxCache(url: NormalizedRelayUrl): Set<String> = emptySet()
 }
 
 /**
@@ -201,15 +206,12 @@ class NostrSignerRemoteIsolationTest {
     }
 
     /**
-     * TDD RED TEST — will fail until Step 8 adds `since` filter.
-     *
-     * Reproduces Bug 3 mitigation: stale NIP-46 responses from previous
-     * sessions should be filtered out via `since` timestamp.
+     * Verify subscription filter does NOT use a `since` timestamp,
+     * matching upstream behavior (PR #1789 removed it).
      */
     @Test
-    fun subscriptionFilterHasSinceTimestamp() {
+    fun subscriptionFilterHasNoSinceTimestamp() {
         val trackingClient = TrackingNostrClient()
-        val beforeTime = TimeUtils.now()
 
         NostrSignerRemote(
             signer = NostrSignerInternal(KeyPair()),
@@ -223,20 +225,9 @@ class NostrSignerRemoteIsolationTest {
         assertTrue(allFilters.isNotEmpty())
 
         allFilters.forEach { filter ->
-            val since =
-                assertNotNull(
-                    filter.since,
-                    "Filter missing 'since' timestamp — stale responses won't be filtered",
-                )
-            // since should be roughly now - 60s (with tolerance)
-            val expectedMin = beforeTime - 120 // extra tolerance for test execution time
             assertTrue(
-                since >= expectedMin,
-                "since too old: $since (expected >= $expectedMin)",
-            )
-            assertTrue(
-                since <= beforeTime,
-                "since in the future: $since",
+                filter.since == null,
+                "Filter should not have a 'since' timestamp",
             )
         }
     }
