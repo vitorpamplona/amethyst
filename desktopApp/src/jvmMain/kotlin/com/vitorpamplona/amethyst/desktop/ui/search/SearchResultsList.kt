@@ -76,19 +76,8 @@ fun SearchResultsList(
 ) {
     val people by state.peopleResults.collectAsState()
     val notes by state.noteResults.collectAsState()
-    val isSearching by state.isSearching.collectAsState()
 
     val hasResults = people.isNotEmpty() || notes.isNotEmpty()
-
-    if (!hasResults && isSearching) {
-        Text(
-            "Searching relays...",
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = modifier.padding(vertical = 8.dp),
-        )
-        return
-    }
 
     if (!hasResults) return
 

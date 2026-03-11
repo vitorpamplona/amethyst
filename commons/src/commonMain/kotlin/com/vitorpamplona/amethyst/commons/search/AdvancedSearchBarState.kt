@@ -33,7 +33,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 
 enum class ChangeSource {
     TEXT,
@@ -77,8 +79,11 @@ class AdvancedSearchBarState(
     private val _noteResults = MutableStateFlow<ImmutableList<Event>>(persistentListOf())
     val noteResults: StateFlow<ImmutableList<Event>> = _noteResults.asStateFlow()
 
-    private val _isSearching = MutableStateFlow(false)
-    val isSearching: StateFlow<Boolean> = _isSearching.asStateFlow()
+    private val activeSubscriptionCount = MutableStateFlow(0)
+    val isSearching: StateFlow<Boolean> =
+        activeSubscriptionCount
+            .map { it > 0 }
+            .stateIn(scope, SharingStarted.Eagerly, false)
 
     // Expanded panel state
     private val _panelExpanded = MutableStateFlow(false)
@@ -176,16 +181,16 @@ class AdvancedSearchBarState(
         _query.value = SearchQuery.EMPTY
         _peopleResults.value = persistentListOf()
         _noteResults.value = persistentListOf()
-        _isSearching.value = false
+        activeSubscriptionCount.value = 0
     }
 
     // Results management (called from subscription callbacks)
     fun startSearching() {
-        _isSearching.value = true
+        activeSubscriptionCount.update { it + 1 }
     }
 
     fun stopSearching() {
-        _isSearching.value = false
+        activeSubscriptionCount.update { maxOf(0, it - 1) }
     }
 
     fun clearResults() {

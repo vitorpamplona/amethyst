@@ -27,6 +27,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -55,6 +56,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -65,8 +67,10 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.Key
@@ -124,6 +128,8 @@ fun SearchScreen(
     }
 
     val connectedRelays by relayManager.connectedRelays.collectAsState()
+    val relayStatuses by relayManager.relayStatuses.collectAsState()
+    val allRelayUrls = remember(relayStatuses) { relayStatuses.keys }
     val displayText by state.displayText.collectAsState()
     val query by state.query.collectAsState()
     val debouncedQuery by state.debouncedQuery.collectAsState()
@@ -135,19 +141,24 @@ fun SearchScreen(
     // Bech32 parsing (immediate, no debounce)
     val bech32Results = remember(displayText) { parseSearchInput(displayText) }
 
-    // NIP-50 people search subscription
+    // Clear results and start loading when query changes
+    LaunchedEffect(debouncedQuery) {
+        if (!debouncedQuery.isEmpty && bech32Results.isEmpty()) {
+            state.clearResults()
+            state.startSearching()
+            state.startSearching()
+        }
+    }
+
+    // NIP-50 people search subscription (use allRelayUrls — openReqSubscription will connect)
     rememberSubscription(connectedRelays, debouncedQuery, relayManager = relayManager) {
-        if (connectedRelays.isEmpty() || debouncedQuery.isEmpty) {
+        if (allRelayUrls.isEmpty() || debouncedQuery.isEmpty) {
             return@rememberSubscription null
         }
-        // Skip if bech32 detected
         if (bech32Results.isNotEmpty()) return@rememberSubscription null
 
-        state.startSearching()
-        state.clearResults()
-
         createSearchPeopleSubscription(
-            relays = connectedRelays,
+            relays = allRelayUrls,
             searchQuery =
                 debouncedQuery.text.ifBlank {
                     QuerySerializer.serialize(debouncedQuery)
@@ -169,9 +180,9 @@ fun SearchScreen(
         )
     }
 
-    // NIP-50 advanced note search subscription (kinds beyond people)
+    // NIP-50 advanced note search subscription (use allRelayUrls)
     rememberSubscription(connectedRelays, debouncedQuery, relayManager = relayManager) {
-        if (connectedRelays.isEmpty() || debouncedQuery.isEmpty) {
+        if (allRelayUrls.isEmpty() || debouncedQuery.isEmpty) {
             return@rememberSubscription null
         }
         if (bech32Results.isNotEmpty()) return@rememberSubscription null
@@ -182,9 +193,8 @@ fun SearchScreen(
         SubscriptionConfig(
             subId = generateSubId("adv-search"),
             filters = filters,
-            relays = connectedRelays,
+            relays = allRelayUrls,
             onEvent = { event, _, _, _ ->
-                // Skip metadata events (handled by people search)
                 if (event.kind == MetadataEvent.KIND) return@SubscriptionConfig
                 val filtered = SearchResultFilter.filter(listOf(event), debouncedQuery)
                 if (filtered.isNotEmpty()) {
@@ -218,11 +228,14 @@ fun SearchScreen(
         }
     }
 
-    // Save to history when search completes
-    LaunchedEffect(isSearching, debouncedQuery) {
-        if (!isSearching && !debouncedQuery.isEmpty) {
-            SearchHistoryStore.addToHistory(debouncedQuery)
-        }
+    // Save to history when search completes (snapshotFlow avoids LaunchedEffect race)
+    LaunchedEffect(Unit) {
+        snapshotFlow { isSearching to debouncedQuery }
+            .collect { (searching, query) ->
+                if (!searching && !query.isEmpty) {
+                    SearchHistoryStore.addToHistory(query)
+                }
+            }
     }
 
     // History state
@@ -281,39 +294,53 @@ fun SearchScreen(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            OutlinedTextField(
-                value =
-                    TextFieldValue(
-                        text = displayText,
-                        selection = TextRange(displayText.length),
-                    ),
-                onValueChange = { state.updateFromText(it.text) },
-                modifier =
-                    Modifier
-                        .weight(1f)
-                        .focusRequester(focusRequester),
-                placeholder = { Text("Search notes, people, tags... or use operators") },
-                leadingIcon = {
-                    Icon(
-                        Icons.Default.Search,
-                        contentDescription = "Search",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                },
-                trailingIcon = {
-                    if (displayText.isNotEmpty()) {
-                        IconButton(onClick = { state.clearSearch() }) {
-                            Icon(
-                                Icons.Default.Clear,
-                                contentDescription = "Clear",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+            Box(modifier = Modifier.weight(1f)) {
+                OutlinedTextField(
+                    value =
+                        TextFieldValue(
+                            text = displayText,
+                            selection = TextRange(displayText.length),
+                        ),
+                    onValueChange = { state.updateFromText(it.text) },
+                    modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
+                    placeholder = { Text("Search notes, people, tags... or use operators") },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.Search,
+                            contentDescription = "Search",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    },
+                    trailingIcon = {
+                        if (displayText.isNotEmpty()) {
+                            IconButton(onClick = { state.clearSearch() }) {
+                                Icon(
+                                    Icons.Default.Clear,
+                                    contentDescription = "Clear",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
                         }
-                    }
-                },
-                singleLine = true,
-                shape = RoundedCornerShape(12.dp),
-            )
+                    },
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                )
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = isSearching,
+                    modifier =
+                        Modifier
+                            .align(Alignment.BottomCenter)
+                            .fillMaxWidth()
+                            .padding(horizontal = 1.dp)
+                            .clip(RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp)),
+                ) {
+                    LinearProgressIndicator(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.primary,
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                    )
+                }
+            }
             IconButton(onClick = { state.togglePanel() }) {
                 Icon(
                     Icons.Default.Tune,
@@ -386,13 +413,7 @@ fun SearchScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodyMedium,
             )
-        } else if (isSearching) {
-            Text(
-                "Searching relays...",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        } else {
+        } else if (!isSearching) {
             // Empty state: show history + saved searches + operator hints
             SearchEmptyState(
                 historyItems = historyItems,
