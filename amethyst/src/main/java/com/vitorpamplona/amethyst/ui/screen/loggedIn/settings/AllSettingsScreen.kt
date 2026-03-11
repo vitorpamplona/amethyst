@@ -147,6 +147,13 @@ fun AllSettingsScreen(
             )
             HorizontalDivider()
             SettingsNavigationRow(
+                title = R.string.namecoin_settings,
+                icon = Icons.Outlined.Security,
+                tint = tint,
+                onClick = { nav.nav(Route.NamecoinSettings) },
+            )
+            HorizontalDivider()
+            SettingsNavigationRow(
                 title = R.string.ui_preferences,
                 icon = Icons.Outlined.Settings,
                 tint = tint,
