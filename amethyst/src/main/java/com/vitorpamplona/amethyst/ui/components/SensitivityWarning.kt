@@ -60,6 +60,7 @@ import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
 import com.vitorpamplona.amethyst.ui.theme.PaddingHorizontal12Modifier
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarningReason
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
 
 @Composable
@@ -79,17 +80,9 @@ fun SensitivityWarning(
 ) {
     val hasSensitiveContent = remember(event) { event.isSensitiveOrNSFW() }
 
-    SensitivityWarning(hasSensitiveContent, accountViewModel, content)
-}
-
-@Composable
-fun SensitivityWarning(
-    hasSensitiveContent: Boolean,
-    accountViewModel: AccountViewModel,
-    content: @Composable () -> Unit,
-) {
     if (hasSensitiveContent) {
-        SensitivityWarning(accountViewModel, content)
+        val reason = remember(event) { event.contentWarningReason() }
+        ObserveSensitivityWarning(reason, accountViewModel, content)
     } else {
         content()
     }
@@ -97,6 +90,20 @@ fun SensitivityWarning(
 
 @Composable
 fun SensitivityWarning(
+    reason: String?,
+    accountViewModel: AccountViewModel,
+    content: @Composable () -> Unit,
+) {
+    if (reason != null) {
+        ObserveSensitivityWarning(reason, accountViewModel, content)
+    } else {
+        content()
+    }
+}
+
+@Composable
+fun ObserveSensitivityWarning(
+    reason: String?,
     accountViewModel: AccountViewModel,
     content: @Composable () -> Unit,
 ) {
@@ -106,7 +113,7 @@ fun SensitivityWarning(
 
     CrossfadeIfEnabled(targetState = showContentWarningNote, accountViewModel = accountViewModel) {
         if (it) {
-            ContentWarningNote { showContentWarningNote = false }
+            ContentWarningNote(reason) { showContentWarningNote = false }
         } else {
             content()
         }
@@ -117,12 +124,31 @@ fun SensitivityWarning(
 @Composable
 fun ContentWarningNotePreview() {
     ThemeComparisonColumn {
-        ContentWarningNote {}
+        ContentWarningNote(null) {}
+    }
+}
+
+@Preview
+@Composable
+fun ContentWarningNoteWithReasonPreview() {
+    ThemeComparisonColumn {
+        ContentWarningNote("Spoilers") {}
+    }
+}
+
+@Preview
+@Composable
+fun ContentWarningNoteWithBigReasonPreview() {
+    ThemeComparisonColumn {
+        ContentWarningNote("Spoilers, monkeys, bannanas, and other things") {}
     }
 }
 
 @Composable
-fun ContentWarningNote(onDismiss: () -> Unit) {
+fun ContentWarningNote(
+    reason: String?,
+    onDismiss: () -> Unit,
+) {
     Column {
         Row(modifier = PaddingHorizontal12Modifier) {
             Column(modifier = Modifier.padding(start = 10.dp)) {
@@ -155,19 +181,28 @@ fun ContentWarningNote(onDismiss: () -> Unit) {
 
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
                     Text(
-                        text = stringRes(R.string.content_warning),
+                        text =
+                            if (reason.isNullOrBlank()) {
+                                stringRes(R.string.content_warning)
+                            } else {
+                                stringRes(R.string.content_warning_with_reason, reason)
+                            },
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp,
+                        softWrap = true,
+                        textAlign = TextAlign.Center,
                     )
                 }
 
-                Row {
-                    Text(
-                        text = stringRes(R.string.content_warning_explanation),
-                        color = Color.Gray,
-                        modifier = Modifier.padding(top = 10.dp),
-                        textAlign = TextAlign.Center,
-                    )
+                if (reason.isNullOrBlank()) {
+                    Row {
+                        Text(
+                            text = stringRes(R.string.content_warning_explanation),
+                            color = Color.Gray,
+                            modifier = Modifier.padding(top = 10.dp),
+                            textAlign = TextAlign.Center,
+                        )
+                    }
                 }
 
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {

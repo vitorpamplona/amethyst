@@ -171,10 +171,13 @@ fun GalleryContentView(
     AutoNonlazyGrid(contentList.size, modifier = Modifier.fillMaxSize()) { contentIndex ->
         when (val content = contentList[contentIndex]) {
             is MediaUrlContent -> {
-                val hasSensitiveContent =
-                    (content is MediaUrlVideo && content.contentWarning != null) ||
-                        (content is MediaUrlImage && content.contentWarning != null)
-                SensitivityWarning(hasSensitiveContent, accountViewModel) {
+                val sensitivityReason =
+                    when (content) {
+                        is MediaUrlVideo -> content.contentWarning
+                        is MediaUrlImage -> content.contentWarning
+                        else -> null
+                    }
+                SensitivityWarning(sensitivityReason, accountViewModel) {
                     UrlImageView(content, accountViewModel)
                 }
             }

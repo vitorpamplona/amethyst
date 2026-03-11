@@ -743,6 +743,7 @@
     <string name="today">Today</string>
 
     <string name="content_warning">Content warning</string>
+    <string name="content_warning_with_reason">Warning: %1$s</string>
     <string name="content_warning_explanation">This post contains sensitive content which some people may find offensive or disturbing</string>
     <string name="content_warning_hide_all_sensitive_content">Always hide sensitive content</string>
     <string name="content_warning_show_all_sensitive_content">Always show sensitive content</string>

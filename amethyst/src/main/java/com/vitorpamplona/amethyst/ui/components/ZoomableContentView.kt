@@ -140,7 +140,7 @@ fun ZoomableContentView(
 
     when (content) {
         is MediaUrlImage -> {
-            SensitivityWarning(content.contentWarning != null, accountViewModel) {
+            SensitivityWarning(content.contentWarning, accountViewModel) {
                 TwoSecondController(content) { controllerVisible ->
                     val mainImageModifier =
                         Modifier
@@ -153,7 +153,7 @@ fun ZoomableContentView(
         }
 
         is MediaUrlVideo -> {
-            SensitivityWarning(content.contentWarning != null, accountViewModel) {
+            SensitivityWarning(content.contentWarning, accountViewModel) {
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     VideoView(
                         videoUri = content.url,

@@ -29,4 +29,4 @@ fun TagArray.isSensitive() = this.any(ContentWarningTag::isTag)
 
 fun TagArray.isSensitiveOrNSFW() = this.any { ContentWarningTag.isTag(it) || HashtagTag.isAnyTagged(it, nsfwTags) }
 
-fun TagArray.contentWarningReason() = this.firstOrNull(ContentWarningTag::isTag)?.getOrNull(1)
+fun TagArray.contentWarningReason() = this.firstNotNullOfOrNull(ContentWarningTag::parse)?.reason
