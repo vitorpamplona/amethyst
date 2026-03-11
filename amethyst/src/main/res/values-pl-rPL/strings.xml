@@ -125,6 +125,7 @@
     <string name="bytes">Bajtów</string>
     <string name="error">Błąd</string>
     <string name="errors">Błędy</string>
+    <string name="connection_success_rate_description">Odsetek udanych połączeń z transmiterem</string>
     <string name="errors_description">Liczba błędów połączenia w tej sesji</string>
     <string name="home_feed">Główny kanał</string>
     <string name="private_message_feed">Kanał wiadomości prywatnych</string>
@@ -150,6 +151,7 @@
     <string name="pronouns">Zaimki</string>
     <string name="ln_address">LN Adres</string>
     <string name="ln_url_outdated">Adres URL LN (nieaktualny)</string>
+    <string name="download_to_phone">Zapisz w telefonie</string>
     <string name="save_to_gallery">Zapisz w galerii</string>
     <string name="image_saved_to_the_gallery">Zdjęcie zostało zapisane w galerii</string>
     <string name="video_download_has_started_toast">Rozpoczęto pobieranie wideo…</string>
@@ -641,6 +643,7 @@
     <string name="channel_list_join_channel">Dołącz</string>
     <string name="today">Dzisiaj</string>
     <string name="content_warning">Ostrzeżenie o zawartości</string>
+    <string name="content_warning_with_reason">Ostrzeżenie: %1$s</string>
     <string name="content_warning_explanation">Ten post zawiera wrażliwe treści, które niektóre osoby mogą uznać za obraźliwe lub niepokojące</string>
     <string name="content_warning_hide_all_sensitive_content">Zawsze ukrywaj wrażliwe treści</string>
     <string name="content_warning_show_all_sensitive_content">Zawsze pokazuj wrażliwą zawartość</string>
@@ -828,6 +831,7 @@
     <string name="loading_location">Pobieranie lokalizacji</string>
     <string name="lack_location_permissions">Brak dostępu do lokalizacji</string>
     <string name="add_sensitive_content_explainer">Dodaje ostrzeżenie o wrażliwych treściach przed wyświetleniem treści. Jest to idealne dla dowolnych treści NSFW lub treści, które niektóre osoby mogą uznać za obraźliwe lub przeszkadzające</string>
+    <string name="add_sensitive_content_description_placeholder">Powód (Opcjonalne)</string>
     <string name="new_feature_nip17_might_not_be_available_title">Nowa Funkcjonalność</string>
     <string name="new_feature_nip17_might_not_be_available_description">Aktywacja tego trybu wymaga wysłania wiadomości NIP-17 przez Ametyst. (Prezent, Zapieczętowane wiadomości bezpośrednie i grupowe). NIP-17 jest nowy, a większość klientów jeszcze go nie zaimplementowała. Upewnij się, że odbiorca używa kompatybilnego klienta.</string>
     <string name="new_feature_nip17_activate">Aktywuj</string>
@@ -1044,6 +1048,7 @@
     <string name="route_video">Filmiki</string>
     <string name="route_chess">Szachy</string>
     <string name="route_security_filters">Filtry bezpieczeństwa</string>
+    <string name="route_import_follows">Importuj Obserwujących</string>
     <string name="new_post">Nowy post</string>
     <string name="new_short">Nowe Króciaki: zdjęcia lub filmiki</string>
     <string name="new_community_note">Nowy wpis w społeczności</string>
@@ -1448,4 +1453,18 @@
     <string name="kind_voice_msg">Wiadomość głosowa</string>
     <string name="kind_voice_reply">Odpowiedź głosowa</string>
     <string name="kind_wiki">Wiki</string>
+    <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Stwórz świetny kanał, obserwując te same osoby, które obserwuje zaufana osoba.</string>
+    <string name="import_follow_list">Importuj listę obserwowanych</string>
+    <string name="select_users_to_follow">Wybierz profile, które chcesz obserwować</string>
+    <string name="profile_to_import_from">Profil do wczytania z</string>
+    <string name="name_search_npub1_alice_example_com">wyszukaj, npub1…, alicja@domena.pl</string>
+    <string name="supports_npub_nip_05_hex_and_namecoin_bit_d_id">Obsługuje npub, nprofile, NIP-05, hex, i namecoin (.bit, d/, id/)</string>
+    <string name="look_up_follow_list">Sprawdź listę obserwowanych</string>
+    <string name="num_selected">Wybrano: %1$d</string>
+    <string name="your_feed_is_ready">Twój kanał jest gotowy.</string>
+    <string name="skip">Pomiń</string>
+    <string name="import_more">Pobierz więcej</string>
+    <string name="continue_txt">Kontynuuj</string>
+    <string name="skip_for_now">Na razie pomiń</string>
+    <string name="select_all">Wybierz Wszystkie</string>
 </resources>
