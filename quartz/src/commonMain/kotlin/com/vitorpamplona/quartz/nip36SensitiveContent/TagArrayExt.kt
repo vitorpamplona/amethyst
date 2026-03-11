@@ -28,3 +28,5 @@ val nsfwTags = setOf("nsfw", "nude", "NSFW", "NUDE", "Nsfw", "Nude")
 fun TagArray.isSensitive() = this.any(ContentWarningTag::isTag)
 
 fun TagArray.isSensitiveOrNSFW() = this.any { ContentWarningTag.isTag(it) || HashtagTag.isAnyTagged(it, nsfwTags) }
+
+fun TagArray.contentWarningReason() = this.firstOrNull(ContentWarningTag::isTag)?.getOrNull(1)

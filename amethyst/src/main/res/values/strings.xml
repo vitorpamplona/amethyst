@@ -962,6 +962,7 @@
     <string name="lack_location_permissions">No Location Permissions</string>
 
     <string name="add_sensitive_content_explainer">Adds sensitive content warning before showing your content. This is ideal for any NSFW content or content some people may find offensive or disturbing</string>
+    <string name="add_sensitive_content_description_placeholder">Reason (optional)</string>
 
     <string name="new_feature_nip17_might_not_be_available_title">New Feature</string>
     <string name="new_feature_nip17_might_not_be_available_description">Activating this mode requires Amethyst to send a NIP-17 message (GiftWrapped, Sealed Direct and Group Messages). NIP-17 is new and most clients have not implemented it yet. Make sure the receiver is using a compatible client.</string>
