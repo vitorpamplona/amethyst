@@ -131,4 +131,24 @@ class BlossomUriTest {
         assertNotNull(result)
         assertEquals(listOf(authorPubkey, author2), result.authors)
     }
+
+    @Test
+    fun handlesMultipleAuthorsMultipleServers() {
+        val author1 = "781208004e09102d7da3b7345e64fd193cd1bc3fce8fdae6008d77f9cabcd036"
+        val author2 = "b53185b9f27962ebdf76b8a9b0a84cd8b27f9f3d4abd59f715788a3bf9e7f75e"
+        val server1 = "cdn.example.com"
+        val server2 = "media.nostr.build"
+        val fileHex = "a7b3c2d1e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1"
+        val fileExt = "png"
+        val size = 2547831L
+        val uri = "blossom:$fileHex.$fileExt?xs=$server1&xs=$server2&as=$author1&as=$author2&sz=$size"
+        val result = BlossomUri.parse(uri)
+
+        assertNotNull(result)
+        assertEquals(fileHex, result.sha256)
+        assertEquals(fileExt, result.extension)
+        assertEquals(listOf(author1, author2), result.authors)
+        assertEquals(listOf(server1, server2), result.servers)
+        assertEquals(size, result.size)
+    }
 }

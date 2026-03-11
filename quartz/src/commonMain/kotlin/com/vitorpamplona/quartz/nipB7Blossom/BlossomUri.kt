@@ -55,7 +55,7 @@ data class BlossomUri(
                 buildList {
                     servers.forEach { add("xs=${percentEncodeQueryValue(it)}") }
                     authors.forEach { add("as=$it") }
-                    size?.let { add("sz=$it") }
+                    this@BlossomUri.size?.let { add("sz=$it") }
                 }
             if (params.isNotEmpty()) {
                 append('?')
