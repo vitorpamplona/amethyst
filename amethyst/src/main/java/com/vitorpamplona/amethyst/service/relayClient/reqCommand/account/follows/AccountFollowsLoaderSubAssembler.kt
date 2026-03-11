@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.IEoseManager
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.LocalCache.users
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.BundledUpdate
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountQueryState
@@ -150,7 +151,10 @@ class AccountFollowsLoaderSubAssembler(
             }
         }
 
-        if (users.isEmpty()) return null
+        if (users.isEmpty()) {
+            hasTried.removeEveryoneBut(emptySet())
+            return null
+        }
 
         val connectedRelays = client.connectedRelaysFlow().value
 
