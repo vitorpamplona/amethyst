@@ -336,7 +336,7 @@ object LocalPreferences {
                     putOrRemove(PrefKeys.LATEST_NIP65_RELAY_LIST, settings.backupNIP65RelayList)
                     putOrRemove(PrefKeys.LATEST_SEARCH_RELAY_LIST, settings.backupSearchRelayList)
                     putOrRemove(PrefKeys.LATEST_INDEX_RELAY_LIST, settings.backupIndexRelayList)
-                    putOrRemove(PrefKeys.LATEST_RELAY_FEEDS_LIST, settings.backupIndexRelayList)
+                    putOrRemove(PrefKeys.LATEST_RELAY_FEEDS_LIST, settings.backupRelayFeedsList)
                     putOrRemove(PrefKeys.LATEST_BLOCKED_RELAY_LIST, settings.backupBlockedRelayList)
                     putOrRemove(PrefKeys.LATEST_TRUSTED_RELAY_LIST, settings.backupTrustedRelayList)
 
