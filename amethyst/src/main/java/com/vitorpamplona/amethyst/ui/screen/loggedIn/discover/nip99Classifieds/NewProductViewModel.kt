@@ -76,6 +76,7 @@ import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
+import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarningReason
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitive
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplits
@@ -157,6 +158,7 @@ open class NewProductViewModel :
 
     // NSFW, Sensitive
     var wantsToMarkAsSensitive by mutableStateOf(false)
+    var contentWarningDescription by mutableStateOf("")
 
     // GeoHash
     var wantsToAddGeoHash by mutableStateOf(false)
@@ -250,6 +252,7 @@ open class NewProductViewModel :
         wantsForwardZapTo = localfowardZapTo.isNotEmpty()
 
         wantsToMarkAsSensitive = draftEvent.isSensitive()
+        contentWarningDescription = draftEvent.contentWarningReason() ?: ""
 
         val geohash = draftEvent.getGeoHash()
         wantsToAddGeoHash = geohash != null
@@ -329,7 +332,7 @@ open class NewProductViewModel :
 
         val zapReceiver = if (wantsForwardZapTo) forwardZapTo.value.toZapSplitSetup() else null
         val localZapRaiserAmount = if (wantsZapraiser) zapRaiserAmount.value else null
-        val contentWarningReason = if (wantsToMarkAsSensitive) "" else null
+        val contentWarningReason = if (wantsToMarkAsSensitive) contentWarningDescription else null
 
         val quotes = findNostrUris(tagger.message)
 
@@ -450,6 +453,7 @@ open class NewProductViewModel :
 
         wantsForwardZapTo = false
         wantsToMarkAsSensitive = false
+        contentWarningDescription = ""
         wantsToAddGeoHash = false
         wantsSecretEmoji = false
 

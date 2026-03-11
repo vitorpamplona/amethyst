@@ -83,6 +83,7 @@ import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
+import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarningReason
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitive
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
@@ -168,6 +169,7 @@ class NewPublicMessageViewModel :
 
     // NSFW, Sensitive
     var wantsToMarkAsSensitive by mutableStateOf(false)
+    var contentWarningDescription by mutableStateOf("")
 
     // GeoHash
     var wantsToAddGeoHash by mutableStateOf(false)
@@ -266,6 +268,7 @@ class NewPublicMessageViewModel :
         wantsForwardZapTo = localForwardZapTo.isNotEmpty()
 
         wantsToMarkAsSensitive = draftEvent.isSensitive()
+        contentWarningDescription = draftEvent.contentWarningReason() ?: ""
 
         val geohash = draftEvent.getGeoHash()
         wantsToAddGeoHash = geohash != null
@@ -364,7 +367,7 @@ class NewPublicMessageViewModel :
         val urls = findURLs(tagger.message)
         val usedAttachments = iMetaAttachments.filterIsIn(urls.toSet())
 
-        val contentWarningReason = if (wantsToMarkAsSensitive) "" else null
+        val contentWarningReason = if (wantsToMarkAsSensitive) contentWarningDescription else null
 
         return PublicMessageEvent.build(
             to = toUsers.toList(),
@@ -493,6 +496,7 @@ class NewPublicMessageViewModel :
 
         wantsForwardZapTo = false
         wantsToMarkAsSensitive = false
+        contentWarningDescription = ""
         wantsToAddGeoHash = false
         wantsSecretEmoji = false
 
