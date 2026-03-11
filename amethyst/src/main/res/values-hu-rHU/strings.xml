@@ -150,6 +150,7 @@
     <string name="pronouns">Megszólítás</string>
     <string name="ln_address">LN-cím</string>
     <string name="ln_url_outdated">LN-webcím (elavult)</string>
+    <string name="download_to_phone">Mentés a telefonra</string>
     <string name="save_to_gallery">Mentés a galériába</string>
     <string name="image_saved_to_the_gallery">Kép mentve a képgalériába</string>
     <string name="video_download_has_started_toast">A videó letöltése megkezdődött…</string>
@@ -158,6 +159,7 @@
     <string name="video_saved_to_the_gallery">Videó mentve a videógalériába</string>
     <string name="failed_to_save_the_video">Nem sikerült menteni a videót</string>
     <string name="upload_image">Kép feltöltése</string>
+    <string name="upload_file">Fájl feltöltése</string>
     <string name="take_a_picture">Kép készítése</string>
     <string name="record_a_video">Videó rögzítése</string>
     <string name="record_a_message">Hangüzenet rögzítése</string>
@@ -1046,6 +1048,7 @@
     <string name="route_video">Rövidek</string>
     <string name="route_chess">Sakk</string>
     <string name="route_security_filters">Biztonsági szűrők</string>
+    <string name="route_import_follows">Követettek importálása</string>
     <string name="new_post">Új bejegyzés</string>
     <string name="new_short">Új rövidek: képek vagy videók</string>
     <string name="new_community_note">Új közösségi bejegyzés</string>
@@ -1475,4 +1478,29 @@
     <string name="kind_voice_msg">Hangüzenet</string>
     <string name="kind_voice_reply">Hangos válasz</string>
     <string name="kind_wiki">Wiki</string>
+    <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Kezdje egy remek hírfolyammal, követve azokat az embereket, akikben megbízik.</string>
+    <string name="import_follow_list">Követési lista importálása</string>
+    <string name="select_users_to_follow">Felhasználók kiválasztása a követéshez</string>
+    <string name="profile_to_import_from">Importálandó profil</string>
+    <string name="name_search_npub1_alice_example_com">keresés, npub1…, aliz@pelda.hu</string>
+    <string name="supports_npub_nip_05_hex_and_namecoin_bit_d_id">Támogatja az npub, nprofile, NIP-05, hex és namecoin (.bit, d/, id/) formátumokat</string>
+    <string name="look_up_follow_list">Követési lista keresése</string>
+    <string name="tip">Borravaló</string>
+    <string name="accounts_found">%1$d felhasználói fiók megtalálva</string>
+    <string name="num_selected">%1$d kiválasztva</string>
+    <string name="resolved_via_namecoin">Feloldva a Namecoinon keresztül</string>
+    <string name="now_following_accounts">Most %1$d fiókot követ</string>
+    <string name="your_feed_is_ready">A hírfolyam elkészült.</string>
+    <string name="skip">Kihagyás</string>
+    <string name="search_another">Másik keresése</string>
+    <string name="follow_accounts">%1$d felhasználói fiók követése</string>
+    <string name="import_more">Továbbiak importálása</string>
+    <string name="continue_txt">Folytatás</string>
+    <string name="skip_for_now">Kihagyás csak most</string>
+    <string name="resolving">%1$s feloldása…</string>
+    <string name="fetching_follow_list">Követési lista lekérdezése…</string>
+    <string name="no_follows_found">Nem találhatók követések</string>
+    <string name="following_accounts">%1$d felhasználói fiók követése…</string>
+    <string name="import_follows_tips">"Írja be egy barátja vagy közösségi vezető profilját. Használhatja az npub, NIP-05 címüket, vagy egy Namecoin nevet, például aliz@pelda.bit vagy id/aliz a blokklánc által ellenőrzött azonosítókhoz."</string>
+    <string name="select_all">Összes kijelölése</string>
 </resources>
