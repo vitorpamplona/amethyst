@@ -1744,5 +1744,5 @@
     <string name="following_accounts">Following %1$d accounts…</string>
     <string name="import_follows_tips">"Enter the profile of a friend or community leader. You can use their npub, NIP-05 address, or a Namecoin name like alice@example.bit or id/alice for blockchain-verified identities."</string>
     <string name="select_all">Select All</string>
-    <string name="uptime">%1$d% uptime</string>
+    <string name="uptime">%1$d%% uptime</string>
 </resources>

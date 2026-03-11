@@ -104,17 +104,12 @@ fun BasicRelaySetupInfoClickableRow(
 
                 UsedBy(item, accountViewModel, nav)
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
+                RelayStatusRow(
+                    item = item,
+                    onClick = onClick,
                     modifier = ReactionRowHeightChatMaxWidth,
-                ) {
-                    RelayStatusRow(
-                        item = item,
-                        onClick = onClick,
-                        modifier = Modifier.weight(1f),
-                        accountViewModel = accountViewModel,
-                    )
-                }
+                    accountViewModel = accountViewModel,
+                )
             }
         }
 
