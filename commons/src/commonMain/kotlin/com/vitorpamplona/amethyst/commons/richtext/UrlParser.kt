@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.commons.richtext
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.quartz.utils.DualCase
+import com.vitorpamplona.quartz.utils.startsWithAny
 import com.vitorpamplona.quartz.utils.urldetector.Url
 import com.vitorpamplona.quartz.utils.urldetector.detection.UrlDetector
 
@@ -32,6 +34,10 @@ class Urls(
     val bech32s: Set<String> = emptySet(),
     val relayUrls: Set<String> = emptySet(),
 )
+
+val websocketScheme = listOf(DualCase("ws"))
+val nostrScheme = listOf(DualCase("nostr"))
+val blossomScheme = listOf(DualCase("blossom"))
 
 class UrlParser {
     fun Char.isAsciiLetter(): Boolean = (this in 'a'..'z' || this in 'A'..'Z')
@@ -70,9 +76,9 @@ class UrlParser {
         urls.forEach {
             if (it.isValidTopLevelDomain()) {
                 if (it.wroteWithSchema()) {
-                    if (it.originalUrl.startsWith("nostr")) {
+                    if (it.originalUrl.startsWithAny(nostrScheme)) {
                         bech32.add(it.originalUrl)
-                    } else if (it.originalUrl.startsWith("ws")) {
+                    } else if (it.originalUrl.startsWithAny(websocketScheme)) {
                         relays.add(it.originalUrl)
                     } else {
                         completeUrls.add(it.originalUrl)
