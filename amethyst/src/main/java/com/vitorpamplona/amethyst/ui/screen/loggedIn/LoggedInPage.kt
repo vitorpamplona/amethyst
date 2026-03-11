@@ -29,6 +29,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.compose.LifecycleResumeEffect
@@ -98,10 +99,22 @@ fun LoggedInPage(
     // Register token with the Push Notification Provider.
     NotificationRegistration(accountViewModel)
 
+    WatchLocationPermissions()
+
     AppNavigation(
         accountViewModel = accountViewModel,
         accountSessionManager = accountSessionManager,
     )
+}
+
+@OptIn(ExperimentalPermissionsApi::class)
+@Composable
+fun WatchLocationPermissions() {
+    val locationPermissionState = rememberPermissionState(Manifest.permission.ACCESS_COARSE_LOCATION)
+
+    LaunchedEffect(locationPermissionState.status.isGranted) {
+        Amethyst.instance.locationManager.setLocationPermission(locationPermissionState.status.isGranted)
+    }
 }
 
 @Composable

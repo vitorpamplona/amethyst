@@ -113,12 +113,6 @@ fun FeedFilterSpinner(
             }
         }
 
-    val locationPermissionState = rememberPermissionState(Manifest.permission.ACCESS_COARSE_LOCATION)
-
-    LaunchedEffect(locationPermissionState.status.isGranted) {
-        Amethyst.instance.locationManager.setLocationPermission(locationPermissionState.status.isGranted)
-    }
-
     val accessibilityDescription =
         if (selected != null) {
             stringRes(R.string.feed_filter_selected, currentText)
@@ -137,6 +131,7 @@ fun FeedFilterSpinner(
                 Text(currentText)
 
                 if (selected?.code is TopFilter.AroundMe) {
+                    val locationPermissionState = rememberPermissionState(Manifest.permission.ACCESS_COARSE_LOCATION)
                     if (!locationPermissionState.status.isGranted) {
                         LaunchedEffect(locationPermissionState) { locationPermissionState.launchPermissionRequest() }
 
