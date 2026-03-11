@@ -770,7 +770,7 @@ class DomainNameReader(
         /**
          * The maximum length of each label in the domain name.
          */
-        private const val MAX_LABEL_LENGTH = 64
+        private const val MAX_LABEL_LENGTH = 1000
 
         /**
          * The maximum number of labels in a single domain name.
@@ -780,6 +780,6 @@ class DomainNameReader(
         /**
          * The maximum domain name length.
          */
-        private const val MAX_DOMAIN_LENGTH = 255
+        private const val MAX_DOMAIN_LENGTH = 1000
     }
 }

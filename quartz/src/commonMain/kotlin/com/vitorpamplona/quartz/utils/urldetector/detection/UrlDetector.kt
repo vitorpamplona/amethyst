@@ -211,7 +211,7 @@ class UrlDetector(
 
     /**
      * We found a ":" and is now trying to read either scheme, username/password
-     * @param length first index of the previous part (could be beginning of the buffer, beginning of the username/password, or beginning
+     * @param startLength first index of the previous part (could be beginning of the buffer, beginning of the username/password, or beginning
      * @return new index of where the domain starts
      */
     private fun processColon(startLength: Int): Int {
@@ -320,7 +320,9 @@ class UrlDetector(
                 // Add the slashes to the end of the scheme so it matches what's in the scheme list
                 val schemeStartIndex = findValidSchemeNoSlashesStartIndex(buffer.toString())
                 if (schemeStartIndex >= 0) {
-                    buffer.deleteRange(0, schemeStartIndex)
+                    if (schemeStartIndex > 0) {
+                        buffer.deleteRange(0, schemeStartIndex)
+                    }
                     currentUrlMarker.setIndex(UrlPart.SCHEME, 0)
                     reader.goBack()
                     return true

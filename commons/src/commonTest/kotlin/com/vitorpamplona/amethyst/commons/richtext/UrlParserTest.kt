@@ -165,8 +165,8 @@ class UrlParserTest {
     @Test
     fun testNostrUrls() =
         test(
-            "nostr:npub1aabbcc",
-            Urls(bech32s = setOf("nostr:npub1aabbcc")),
+            "nostr:npub142gywvjkq0dv6nupggyn2euhx4nduwc7yz5f24ah9rpmunr2s39se3xrj0",
+            Urls(bech32s = setOf("nostr:npub142gywvjkq0dv6nupggyn2euhx4nduwc7yz5f24ah9rpmunr2s39se3xrj0")),
         )
 
     @Test
@@ -267,8 +267,8 @@ class UrlParserTest {
     @Test
     fun testBech12() =
         test(
-            "nostr:npub1aabbcc",
-            Urls(bech32s = setOf("nostr:npub1aabbcc")),
+            "nostr:npub142gywvjkq0dv6nupggyn2euhx4nduwc7yz5f24ah9rpmunr2s39se3xrj0",
+            Urls(bech32s = setOf("nostr:npub142gywvjkq0dv6nupggyn2euhx4nduwc7yz5f24ah9rpmunr2s39se3xrj0")),
         )
 
     @Test
@@ -283,5 +283,12 @@ class UrlParserTest {
         test(
             "10.00hr,",
             Urls(withScheme = emptySet()),
+        )
+
+    @Test
+    fun testBlossom() =
+        test(
+            "blossom:b1674191a88ec5cdd733e4240a81803105dc412d6c6708d53ab94fc248f4f553.pdf?xs=cdn.satellite.earth",
+            Urls(withScheme = setOf("blossom:b1674191a88ec5cdd733e4240a81803105dc412d6c6708d53ab94fc248f4f553.pdf?xs=cdn.satellite.earth")),
         )
 }
