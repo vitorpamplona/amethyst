@@ -62,6 +62,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.search.AdvancedSearchBarState
 import com.vitorpamplona.amethyst.commons.search.KindRegistry
 import com.vitorpamplona.amethyst.commons.ui.components.UserSearchCard
+import com.vitorpamplona.amethyst.commons.util.toTimeAgo
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 
@@ -255,7 +256,7 @@ private fun NotePreviewCard(
                 Spacer(Modifier.weight(1f))
                 // Timestamp
                 Text(
-                    formatTimestamp(event.createdAt),
+                    event.createdAt.toTimeAgo(withDot = false),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -293,35 +294,6 @@ private fun <T> ExpandableSection(
         ) {
             Icon(Icons.Default.ExpandMore, contentDescription = null, modifier = Modifier.size(16.dp))
             Text("Show all ${remaining.size} more")
-        }
-    }
-}
-
-private fun formatTimestamp(ts: Long): String {
-    val now = System.currentTimeMillis() / 1000
-    val diff = now - ts
-    return when {
-        diff < 60 -> {
-            "just now"
-        }
-
-        diff < 3600 -> {
-            "${diff / 60}m ago"
-        }
-
-        diff < 86400 -> {
-            "${diff / 3600}h ago"
-        }
-
-        diff < 604800 -> {
-            "${diff / 86400}d ago"
-        }
-
-        else -> {
-            // Simple date format
-            val days = ts / 86400
-            val year = 1970 + (days / 365).toInt()
-            "$year"
         }
     }
 }

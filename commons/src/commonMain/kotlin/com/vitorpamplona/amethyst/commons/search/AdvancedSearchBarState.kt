@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.commons.search
 
 import com.vitorpamplona.amethyst.commons.model.User
-import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -44,7 +43,6 @@ enum class ChangeSource {
 
 @OptIn(FlowPreview::class)
 class AdvancedSearchBarState(
-    private val cache: ICacheProvider,
     private val scope: CoroutineScope,
     private val debounceMs: Long = 300L,
 ) {
@@ -81,10 +79,6 @@ class AdvancedSearchBarState(
 
     private val _isSearching = MutableStateFlow(false)
     val isSearching: StateFlow<Boolean> = _isSearching.asStateFlow()
-
-    // Author name suggestions for autocomplete
-    private val _authorSuggestions = MutableStateFlow<ImmutableList<User>>(persistentListOf())
-    val authorSuggestions: StateFlow<ImmutableList<User>> = _authorSuggestions.asStateFlow()
 
     // Expanded panel state
     private val _panelExpanded = MutableStateFlow(false)
@@ -213,16 +207,5 @@ class AdvancedSearchBarState(
         if (newEvents.isNotEmpty()) {
             _noteResults.value = (current + newEvents).sortedByDescending { it.createdAt }.toImmutableList()
         }
-    }
-
-    // Name resolution for autocomplete
-    @Suppress("UNCHECKED_CAST")
-    fun resolveAuthorName(name: String) {
-        if (name.length < 2) {
-            _authorSuggestions.value = persistentListOf()
-            return
-        }
-        val results = cache.findUsersStartingWith(name, 5) as List<User>
-        _authorSuggestions.value = results.toImmutableList()
     }
 }

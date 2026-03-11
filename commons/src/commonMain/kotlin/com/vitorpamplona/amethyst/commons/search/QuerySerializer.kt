@@ -84,30 +84,5 @@ object QuerySerializer {
         return parts.joinToString(" ")
     }
 
-    fun timestampToDate(timestamp: Long): String {
-        // Convert unix timestamp to YYYY-MM-DD
-        var remaining = timestamp
-        var year = 1970
-        while (true) {
-            val daysInYear = if (isLeapYear(year)) 366L else 365L
-            val secondsInYear = daysInYear * 86400L
-            if (remaining < secondsInYear) break
-            remaining -= secondsInYear
-            year++
-        }
-
-        val daysInMonth = intArrayOf(0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
-        if (isLeapYear(year)) daysInMonth[2] = 29
-
-        var dayOfYear = (remaining / 86400).toInt() + 1
-        var month = 1
-        while (month <= 12 && dayOfYear > daysInMonth[month]) {
-            dayOfYear -= daysInMonth[month]
-            month++
-        }
-
-        return "$year-${month.toString().padStart(2, '0')}-${dayOfYear.toString().padStart(2, '0')}"
-    }
-
-    private fun isLeapYear(year: Int): Boolean = (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)
+    fun timestampToDate(timestamp: Long): String = DateUtils.timestampToDate(timestamp)
 }

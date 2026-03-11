@@ -111,7 +111,7 @@ fun SearchScreen(
     modifier: Modifier = Modifier,
 ) {
     val scope = rememberCoroutineScope()
-    val state = remember { AdvancedSearchBarState(localCache, scope) }
+    val state = remember { AdvancedSearchBarState(scope) }
     val focusRequester = remember { FocusRequester() }
 
     // Pre-fill initial query
@@ -408,7 +408,7 @@ fun SearchScreen(
 @Composable
 private fun SearchEmptyState(
     historyItems: List<com.vitorpamplona.amethyst.commons.search.SearchQuery>,
-    savedSearches: List<com.vitorpamplona.amethyst.desktop.SavedSearch>,
+    savedSearches: List<com.vitorpamplona.amethyst.commons.search.SavedSearch>,
     onLoadQuery: (com.vitorpamplona.amethyst.commons.search.SearchQuery) -> Unit,
     onDeleteSaved: (String) -> Unit,
     onClearHistory: () -> Unit,

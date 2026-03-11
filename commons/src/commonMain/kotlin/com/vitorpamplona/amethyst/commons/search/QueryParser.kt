@@ -319,28 +319,5 @@ object QueryParser {
         year: Int,
         month: Int,
         day: Int,
-    ): Long {
-        // Simple UTC date to unix timestamp calculation
-        // Days from epoch (1970-01-01) to the given date
-        var totalDays = 0L
-
-        // Add days for full years
-        for (y in 1970 until year) {
-            totalDays += if (isLeapYear(y)) 366 else 365
-        }
-
-        // Add days for full months in target year
-        val daysInMonth = intArrayOf(0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
-        if (isLeapYear(year)) daysInMonth[2] = 29
-        for (m in 1 until month) {
-            totalDays += daysInMonth[m]
-        }
-
-        // Add remaining days
-        totalDays += (day - 1)
-
-        return totalDays * 86400L
-    }
-
-    private fun isLeapYear(year: Int): Boolean = (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)
+    ): Long = DateUtils.dateToUnix(year, month, day)
 }

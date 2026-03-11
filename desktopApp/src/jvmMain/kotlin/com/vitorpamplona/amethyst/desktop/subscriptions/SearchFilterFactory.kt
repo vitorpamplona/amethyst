@@ -128,19 +128,6 @@ object SearchFilterFactory {
         }
     }
 
-    fun createOrFilters(
-        query: SearchQuery,
-        limit: Int = 100,
-    ): List<List<Filter>> {
-        if (query.orTerms.isEmpty()) return listOf(createFilters(query, limit))
-
-        // Each OR term gets its own set of filters
-        return query.orTerms.take(3).map { term ->
-            val termQuery = query.copy(text = term, orTerms = kotlinx.collections.immutable.persistentListOf())
-            createFilters(termQuery, limit)
-        }
-    }
-
     private fun buildSearchString(query: SearchQuery): String? {
         val parts = mutableListOf<String>()
 

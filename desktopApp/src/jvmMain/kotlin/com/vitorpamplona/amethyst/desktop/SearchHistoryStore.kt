@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.desktop
 
 import com.vitorpamplona.amethyst.commons.search.QueryParser
 import com.vitorpamplona.amethyst.commons.search.QuerySerializer
+import com.vitorpamplona.amethyst.commons.search.SavedSearch
 import com.vitorpamplona.amethyst.commons.search.SearchQuery
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -134,10 +135,3 @@ object SearchHistoryStore {
         prefs.put(KEY_SAVED, raw)
     }
 }
-
-data class SavedSearch(
-    val id: String,
-    val label: String,
-    val query: SearchQuery,
-    val createdAt: Long,
-)
