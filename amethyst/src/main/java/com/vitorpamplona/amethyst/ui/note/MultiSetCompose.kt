@@ -71,12 +71,14 @@ import com.vitorpamplona.amethyst.service.CachedRichTextParser
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserContactCardsScore
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserPicture
 import com.vitorpamplona.amethyst.ui.components.AnimatedBorderTextCornerRadius
+import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.CoreSecretMessage
 import com.vitorpamplona.amethyst.ui.components.ExpandableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.authorRouteFor
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.elements.NoteDropDownMenu
@@ -88,6 +90,8 @@ import com.vitorpamplona.amethyst.ui.theme.HalfTopPadding
 import com.vitorpamplona.amethyst.ui.theme.NotificationIconModifier
 import com.vitorpamplona.amethyst.ui.theme.NotificationIconModifierSmaller
 import com.vitorpamplona.amethyst.ui.theme.Size10Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size14Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size19dp
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
@@ -417,6 +421,7 @@ data class ZapAmountCommentNotification(
     val user: User?,
     val comment: String?,
     val amount: String?,
+    val zapEventNote: Note? = null,
 )
 
 @Composable
@@ -462,16 +467,58 @@ private fun RenderState(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    Row(
-        modifier = Modifier.clickable { click(content, nav) },
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        DisplayAuthorCommentAndAmount(
-            authorComment = content,
-            backgroundColor = backgroundColor,
-            nav = nav,
-            accountViewModel = accountViewModel,
-        )
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Row(
+            modifier = Modifier.clickable { click(content, nav) },
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            DisplayAuthorCommentAndAmount(
+                authorComment = content,
+                backgroundColor = backgroundColor,
+                nav = nav,
+                accountViewModel = accountViewModel,
+            )
+        }
+        content.zapEventNote?.let { zapNote ->
+            ZapEventInteractionRow(zapNote, accountViewModel, nav)
+        }
+    }
+}
+
+@Composable
+private fun ZapEventInteractionRow(
+    zapNote: Note,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val grayTint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.32f)
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        ObserveLikeIcon(zapNote, accountViewModel) { reactionType ->
+            ClickableBox(
+                modifier = Size16Modifier,
+                onClick = {
+                    if (accountViewModel.isWriteable()) {
+                        accountViewModel.reactToOrDelete(zapNote)
+                    }
+                },
+            ) {
+                if (reactionType != null) {
+                    LikedIcon(Size14Modifier)
+                } else {
+                    LikeIcon(Size14Modifier, grayTint)
+                }
+            }
+        }
+        ClickableBox(
+            modifier = Size16Modifier,
+            onClick = {
+                if (accountViewModel.isWriteable()) {
+                    nav.nav(Route.GenericCommentPost(replyTo = zapNote.idHex))
+                }
+            },
+        ) {
+            CommentIcon(Size14Modifier, grayTint)
+        }
     }
 }
 

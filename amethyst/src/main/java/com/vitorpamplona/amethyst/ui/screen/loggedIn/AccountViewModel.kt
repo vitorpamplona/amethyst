@@ -511,6 +511,7 @@ class AccountViewModel(
                                     ?.content
                                     ?.ifBlank { null },
                                 showAmountInteger((it.response.event as? LnZapEvent)?.amount),
+                                zapEventNote = it.response,
                             )
                     }.toMutableMap()
 
@@ -526,7 +527,9 @@ class AccountViewModel(
                     }
                 }
 
-            results.forEach { decrypted -> initialResults[decrypted.zapRequest] = decrypted.info }
+            results.forEach { decrypted ->
+                initialResults[decrypted.zapRequest] = decrypted.info.copy(zapEventNote = decrypted.zapEvent)
+            }
 
             onNewState(initialResults.values.toImmutableList())
         }
@@ -543,6 +546,7 @@ class AccountViewModel(
                             LocalCache.getUserIfExists(cachedPrivateRequest.pubKey) ?: it.request.author,
                             cachedPrivateRequest.content.ifBlank { null },
                             showAmountInteger((it.response.event as? LnZapEvent)?.amount),
+                            zapEventNote = it.response,
                         )
                     } else {
                         ZapAmountCommentNotification(
@@ -551,6 +555,7 @@ class AccountViewModel(
                                 ?.content
                                 ?.ifBlank { null },
                             showAmountInteger((it.response.event as? LnZapEvent)?.amount),
+                            zapEventNote = it.response,
                         )
                     }
                 } else {
@@ -560,6 +565,7 @@ class AccountViewModel(
                             ?.content
                             ?.ifBlank { null },
                         showAmountInteger((it.response.event as? LnZapEvent)?.amount),
+                        zapEventNote = it.response,
                     )
                 }
             }.toImmutableList()
