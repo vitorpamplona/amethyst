@@ -18,33 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.desktop.network
+package com.vitorpamplona.amethyst.commons.domain.nip46
 
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip46RemoteSigner.signer.NostrSignerRemote
 
-/**
- * Represents the connection status of a Nostr relay.
- * Used by both Android and Desktop apps.
- */
-data class RelayStatus(
-    val url: NormalizedRelayUrl,
-    val connected: Boolean,
-    val pingMs: Int? = null,
-    val compressed: Boolean = false,
-    val error: String? = null,
+data class BunkerLoginResult(
+    val signer: NostrSignerRemote,
+    val pubKeyHex: HexKey,
 )
-
-/**
- * Default relay URLs for Nostr connectivity.
- */
-object DefaultRelays {
-    val RELAYS =
-        listOf(
-            "wss://relay.damus.io",
-            "wss://relay.nostr.band",
-            "wss://nos.lol",
-            "wss://relay.snort.social",
-            "wss://nostr.wine",
-            "wss://relay.primal.net",
-        )
-}

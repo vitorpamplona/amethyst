@@ -41,8 +41,9 @@ class RemoteSignerManager(
 ) {
     private val awaitingRequests = LargeCache<String, Continuation<BunkerResponse>>()
 
-    fun newResponse(responseEvent: NostrConnectEvent) {
-        val bunkerResponse = OptimizedJsonMapper.fromJsonTo<BunkerResponse>(responseEvent.content)
+    suspend fun newResponse(responseEvent: NostrConnectEvent) {
+        val decryptedJson = signer.decrypt(responseEvent.content, remoteKey)
+        val bunkerResponse = OptimizedJsonMapper.fromJsonTo<BunkerResponse>(decryptedJson)
         awaitingRequests.get(bunkerResponse.id)?.resume(bunkerResponse)
     }
 

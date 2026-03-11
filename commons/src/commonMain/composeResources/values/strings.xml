@@ -5,14 +5,14 @@
     <string name="login_subtitle">Sign in to your Nostr account</string>
     <string name="login_subtitle_desktop">A Nostr client for desktop</string>
     <string name="login_card_title">Login with your Nostr key</string>
-    <string name="login_card_subtitle">Use nsec for full access or npub for read-only</string>
+    <string name="login_card_subtitle">nsec for full access, bunker:// for remote signer, or npub for read-only</string>
     <string name="login_with_key">Login with Key</string>
     <string name="login_button">Login</string>
     <string name="login_generate_new">Generate New Key</string>
     <string name="login_generate_button">Generate New</string>
     <string name="login_key_hint">Enter your private key (nsec) or public key (npub)</string>
-    <string name="login_key_label">nsec or npub</string>
-    <string name="login_key_placeholder">nsec1... or npub1...</string>
+    <string name="login_key_label">nsec, bunker://, or npub</string>
+    <string name="login_key_placeholder">nsec1… / bunker://… / npub1…</string>
     <string name="login_show_key">Show key</string>
     <string name="login_hide_key">Hide key</string>
 

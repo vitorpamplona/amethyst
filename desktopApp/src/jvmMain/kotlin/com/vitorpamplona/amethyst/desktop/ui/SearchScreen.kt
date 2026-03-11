@@ -94,7 +94,7 @@ fun SearchScreen(
             searchState.updateSearchText(initialQuery)
         }
     }
-    val relayStatuses by relayManager.relayStatuses.collectAsState()
+    val connectedRelays by relayManager.connectedRelays.collectAsState()
 
     // Collect state from SearchBarState
     val searchText by searchState.searchText.collectAsState()
@@ -104,15 +104,14 @@ fun SearchScreen(
     val isSearchingRelays by searchState.isSearchingRelays.collectAsState()
 
     // NIP-50 relay search when local cache has few/no results
-    rememberSubscription(relayStatuses, searchText, cachedUserResults.size, relayManager = relayManager) {
-        val configuredRelays = relayStatuses.keys
-        if (configuredRelays.isEmpty()) return@rememberSubscription null
+    rememberSubscription(connectedRelays, searchText, cachedUserResults.size, relayManager = relayManager) {
+        if (connectedRelays.isEmpty()) return@rememberSubscription null
 
         // Only search relays if we have a real query and limited local results
         if (searchState.shouldSearchRelays) {
             searchState.startRelaySearch()
             createSearchPeopleSubscription(
-                relays = configuredRelays,
+                relays = connectedRelays,
                 searchQuery = searchText,
                 limit = 20,
                 onEvent = { event, _, _, _ ->
@@ -134,9 +133,8 @@ fun SearchScreen(
     }
 
     // Subscribe to metadata for searched users (to populate cache)
-    rememberSubscription(relayStatuses, searchText, relayManager = relayManager) {
-        val configuredRelays = relayStatuses.keys
-        if (configuredRelays.isEmpty() || searchText.length < 2) {
+    rememberSubscription(connectedRelays, searchText, relayManager = relayManager) {
+        if (connectedRelays.isEmpty() || searchText.length < 2) {
             return@rememberSubscription null
         }
 
@@ -144,7 +142,7 @@ fun SearchScreen(
         val pubkeyHex = decodePublicKeyAsHexOrNull(searchText)
         if (pubkeyHex != null) {
             createMetadataSubscription(
-                relays = configuredRelays,
+                relays = connectedRelays,
                 pubKeyHex = pubkeyHex,
                 onEvent = { event, _, _, _ ->
                     if (event is MetadataEvent) {

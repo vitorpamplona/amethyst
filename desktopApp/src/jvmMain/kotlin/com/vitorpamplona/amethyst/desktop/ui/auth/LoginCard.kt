@@ -28,20 +28,32 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -49,29 +61,27 @@ import com.vitorpamplona.amethyst.commons.resources.login_button
 import com.vitorpamplona.amethyst.commons.resources.login_card_subtitle
 import com.vitorpamplona.amethyst.commons.resources.login_card_title
 import com.vitorpamplona.amethyst.commons.resources.login_generate_button
+import com.vitorpamplona.amethyst.desktop.account.LoginProgress
+import com.vitorpamplona.amethyst.desktop.account.validateBunkerUri
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.stringResource
 
-/**
- * Login card with Nostr key input field and action buttons.
- *
- * @param onLogin Callback when login is attempted with the key input
- * @param onGenerateNew Callback when "Generate New" is clicked
- * @param modifier Modifier for the card
- * @param cardWidth Width of the card (default 400.dp)
- * @param title Card title
- * @param subtitle Subtitle/hint text
- */
 @Composable
 fun LoginCard(
     onLogin: (String) -> Result<Unit>,
     onGenerateNew: () -> Unit,
+    onLoginBunker: (suspend (String) -> Result<Unit>)? = null,
+    onLoginNostrConnect: (suspend (onUriGenerated: (String) -> Unit) -> Result<Unit>)? = null,
+    loginProgress: LoginProgress? = null,
     modifier: Modifier = Modifier,
     cardWidth: Dp = 400.dp,
     title: String = stringResource(Res.string.login_card_title),
     subtitle: String = stringResource(Res.string.login_card_subtitle),
 ) {
-    var keyInput by remember { mutableStateOf("") }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var selectedTab by remember { mutableIntStateOf(0) }
+    val tabs = listOf("Paste Key", "Connect")
 
     Card(
         modifier = modifier.width(cardWidth),
@@ -92,48 +102,266 @@ fun LoginCard(
 
             Spacer(Modifier.height(16.dp))
 
-            KeyInputField(
-                value = keyInput,
-                onValueChange = {
-                    keyInput = it
-                    errorMessage = null
-                },
-                errorMessage = errorMessage,
-            )
+            if (onLoginNostrConnect != null) {
+                @Suppress("DEPRECATION")
+                PrimaryTabRow(
+                    selectedTabIndex = selectedTab,
+                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)),
+                ) {
+                    tabs.forEachIndexed { index, title ->
+                        Tab(
+                            selected = selectedTab == index,
+                            onClick = { selectedTab = index },
+                            text = { Text(title) },
+                        )
+                    }
+                }
 
-            Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(16.dp))
+            }
 
-            Text(
-                subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            when (selectedTab) {
+                0 -> PasteKeyContent(onLogin, onGenerateNew, onLoginBunker, subtitle, loginProgress)
+                1 -> if (onLoginNostrConnect != null) NostrConnectContent(onLoginNostrConnect, loginProgress)
+            }
+        }
+    }
+}
 
-            Spacer(Modifier.height(16.dp))
+@Composable
+private fun PasteKeyContent(
+    onLogin: (String) -> Result<Unit>,
+    onGenerateNew: () -> Unit,
+    onLoginBunker: (suspend (String) -> Result<Unit>)?,
+    subtitle: String,
+    loginProgress: LoginProgress? = null,
+) {
+    var keyInput by remember { mutableStateOf("") }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var isConnecting by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val isBunker = keyInput.trim().startsWith("bunker://", ignoreCase = true)
 
+    KeyInputField(
+        value = keyInput,
+        onValueChange = {
+            keyInput = it
+            errorMessage = null
+        },
+        errorMessage = errorMessage,
+    )
+
+    Spacer(Modifier.height(8.dp))
+
+    if (isBunker) {
+        Text(
+            "This URI connects to your remote signer. Treat it like a password.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.primary,
+        )
+    } else {
+        Text(
+            subtitle,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+
+    Spacer(Modifier.height(16.dp))
+
+    if (isConnecting) {
+        if (loginProgress != null) {
+            LoginProgressSteps(loginProgress)
+        } else {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Button(
-                    onClick = {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    strokeWidth = 2.dp,
+                )
+                Spacer(Modifier.width(12.dp))
+                Text(
+                    "Connecting to remote signer...",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    } else {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Button(
+                onClick = {
+                    if (isBunker && onLoginBunker != null) {
+                        val validationError = validateBunkerUri(keyInput)
+                        if (validationError != null) {
+                            errorMessage = validationError
+                            return@Button
+                        }
+                        isConnecting = true
+                        errorMessage = null
+                        scope.launch(Dispatchers.IO) {
+                            val result = onLoginBunker(keyInput.trim())
+                            withContext(Dispatchers.Main) {
+                                result.fold(
+                                    onSuccess = { isConnecting = false },
+                                    onFailure = {
+                                        errorMessage = it.message
+                                        isConnecting = false
+                                    },
+                                )
+                            }
+                        }
+                    } else {
                         onLogin(keyInput).fold(
                             onSuccess = { /* handled by caller */ },
                             onFailure = { errorMessage = it.message },
                         )
-                    },
-                    modifier = Modifier.weight(1f),
-                    enabled = keyInput.isNotBlank(),
-                ) {
-                    Text(stringResource(Res.string.login_button))
-                }
+                    }
+                },
+                modifier = Modifier.weight(1f),
+                enabled = keyInput.isNotBlank(),
+            ) {
+                Text(if (isBunker) "Connect to Signer" else stringResource(Res.string.login_button))
+            }
 
-                OutlinedButton(
-                    onClick = onGenerateNew,
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Text(stringResource(Res.string.login_generate_button))
+            OutlinedButton(
+                onClick = onGenerateNew,
+                modifier = Modifier.weight(1f),
+            ) {
+                Text(stringResource(Res.string.login_generate_button))
+            }
+        }
+    }
+}
+
+@Composable
+private fun NostrConnectContent(
+    onLoginNostrConnect: suspend (onUriGenerated: (String) -> Unit) -> Result<Unit>,
+    loginProgress: LoginProgress? = null,
+) {
+    var nostrConnectUri by remember { mutableStateOf<String?>(null) }
+    var isConnecting by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
+
+    @Suppress("DEPRECATION")
+    val clipboardManager = LocalClipboardManager.current
+
+    if (errorMessage != null) {
+        Text(
+            errorMessage!!,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error,
+        )
+        Spacer(Modifier.height(12.dp))
+        Button(onClick = {
+            errorMessage = null
+            nostrConnectUri = null
+        }) {
+            Text("Try Again")
+        }
+    } else if (!isConnecting) {
+        Text(
+            "Show a QR code for your signer app (e.g. Amber) to scan.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(16.dp))
+        Button(
+            onClick = {
+                isConnecting = true
+                errorMessage = null
+                scope.launch(Dispatchers.IO) {
+                    val result =
+                        onLoginNostrConnect { uri ->
+                            scope.launch(Dispatchers.Main) { nostrConnectUri = uri }
+                        }
+                    withContext(Dispatchers.Main) {
+                        result.onFailure {
+                            errorMessage = it.message
+                            isConnecting = false
+                            nostrConnectUri = null
+                        }
+                    }
                 }
+            },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text("Start Connection")
+        }
+    } else {
+        val uri = nostrConnectUri
+        if (uri != null) {
+            QrCodeCanvas(
+                data = uri,
+                size = 200.dp,
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            Text(
+                uri,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            Spacer(Modifier.height(8.dp))
+
+            OutlinedButton(
+                onClick = { clipboardManager.setText(AnnotatedString(uri)) },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Copy URI")
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            if (loginProgress != null) {
+                LoginProgressSteps(loginProgress)
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "Waiting for signer to connect...",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    strokeWidth = 2.dp,
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    "Generating connection...",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }

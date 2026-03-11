@@ -72,11 +72,14 @@ import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.model.DesktopDmRelayState
 import com.vitorpamplona.amethyst.desktop.model.DesktopIAccount
+import com.vitorpamplona.amethyst.desktop.network.DefaultRelays
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.desktop.ui.ComposeNoteDialog
+import com.vitorpamplona.amethyst.desktop.ui.ConnectingRelaysScreen
 import com.vitorpamplona.amethyst.desktop.ui.LoginScreen
 import com.vitorpamplona.amethyst.desktop.ui.ZapFeedback
+import com.vitorpamplona.amethyst.desktop.ui.auth.ForceLogoutDialog
 import com.vitorpamplona.amethyst.desktop.ui.chats.DmSendTracker
 import com.vitorpamplona.amethyst.desktop.ui.deck.AddColumnDialog
 import com.vitorpamplona.amethyst.desktop.ui.deck.DeckColumnType
@@ -86,12 +89,15 @@ import com.vitorpamplona.amethyst.desktop.ui.deck.DeckState
 import com.vitorpamplona.amethyst.desktop.ui.deck.SinglePaneLayout
 import com.vitorpamplona.amethyst.desktop.ui.profile.ProfileInfoCard
 import com.vitorpamplona.amethyst.desktop.ui.relay.RelayStatusCard
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 
 private val isMacOS = System.getProperty("os.name").lowercase().contains("mac")
 
@@ -104,21 +110,21 @@ enum class LayoutMode {
  * Desktop navigation state — used for in-column navigation (drill-down).
  */
 sealed class DesktopScreen {
-    object Feed : DesktopScreen()
+    data object Feed : DesktopScreen()
 
-    object Reads : DesktopScreen()
+    data object Reads : DesktopScreen()
 
-    object Search : DesktopScreen()
+    data object Search : DesktopScreen()
 
-    object Bookmarks : DesktopScreen()
+    data object Bookmarks : DesktopScreen()
 
-    object Messages : DesktopScreen()
+    data object Messages : DesktopScreen()
 
-    object Notifications : DesktopScreen()
+    data object Notifications : DesktopScreen()
 
-    object Chess : DesktopScreen()
+    data object Chess : DesktopScreen()
 
-    object MyProfile : DesktopScreen()
+    data object MyProfile : DesktopScreen()
 
     data class UserProfile(
         val pubKeyHex: String,
@@ -128,7 +134,7 @@ sealed class DesktopScreen {
         val noteId: String,
     ) : DesktopScreen()
 
-    object Settings : DesktopScreen()
+    data object Settings : DesktopScreen()
 }
 
 fun main() =
@@ -143,6 +149,8 @@ fun main() =
         var replyToNote by remember { mutableStateOf<com.vitorpamplona.quartz.nip01Core.core.Event?>(null) }
         val deckScope = rememberCoroutineScope()
         val deckState = remember { DeckState(deckScope).also { it.load() } }
+        val accountManager = remember { AccountManager.create() }
+        val accountState by accountManager.accountState.collectAsState()
         var showAddColumnDialog by remember { mutableStateOf(false) }
         var layoutMode by remember {
             mutableStateOf(
@@ -187,6 +195,16 @@ fun main() =
                                 deckState.addColumn(DeckColumnType.Settings)
                             }
                         },
+                    )
+                    Separator()
+                    Item(
+                        "Logout",
+                        onClick = {
+                            deckScope.launch {
+                                accountManager.logout(deleteKey = true)
+                            }
+                        },
+                        enabled = accountState is AccountState.LoggedIn,
                     )
                     Separator()
                     Item(
@@ -348,6 +366,7 @@ fun main() =
             App(
                 layoutMode = layoutMode,
                 deckState = deckState,
+                accountManager = accountManager,
                 showComposeDialog = showComposeDialog,
                 showAddColumnDialog = showAddColumnDialog,
                 onShowComposeDialog = { showComposeDialog = true },
@@ -370,6 +389,7 @@ fun main() =
 fun App(
     layoutMode: LayoutMode,
     deckState: DeckState,
+    accountManager: AccountManager,
     showComposeDialog: Boolean,
     showAddColumnDialog: Boolean,
     onShowComposeDialog: () -> Unit,
@@ -381,37 +401,54 @@ fun App(
 ) {
     val relayManager = remember { DesktopRelayConnectionManager() }
     val localCache = remember { DesktopLocalCache() }
-    val accountManager = remember { AccountManager.create() }
     val accountState by accountManager.accountState.collectAsState()
     val scope = remember { CoroutineScope(SupervisorJob() + Dispatchers.Main) }
 
-    // Subscriptions coordinator for metadata/reactions loading
+    // Subscriptions coordinator — uses default relay URLs for metadata indexing.
+    // Feed subscriptions (inside MainContent) drive actual relay pool connections.
     val subscriptionsCoordinator =
         remember(relayManager, localCache) {
             DesktopRelaySubscriptionsCoordinator(
                 client = relayManager.client,
                 scope = scope,
-                indexRelays = relayManager.availableRelays.value,
+                indexRelays =
+                    DefaultRelays.RELAYS
+                        .mapNotNull {
+                            RelayUrlNormalizer.normalizeOrNull(it)
+                        }.toSet(),
                 localCache = localCache,
             )
         }
 
     // Try to load saved account on startup
     DisposableEffect(Unit) {
-        scope.launch(Dispatchers.IO) {
-            // Load account on IO dispatcher to avoid blocking UI with password prompt (readLine)
-            accountManager.loadSavedAccount()
-        }
-
         relayManager.addDefaultRelays()
         relayManager.connect()
-
-        // Start subscriptions coordinator
         subscriptionsCoordinator.start()
 
+        scope.launch(Dispatchers.IO) {
+            if (accountManager.hasBunkerAccount()) {
+                // Show connecting UI while dedicated NIP-46 client connects
+                accountManager.setConnectingRelays()
+            }
+            val result = accountManager.loadSavedAccount()
+            if (result.isSuccess) {
+                val current = accountManager.currentAccount()
+                if (current?.signerType is com.vitorpamplona.amethyst.desktop.account.SignerType.Remote) {
+                    accountManager.startHeartbeat(scope)
+                }
+            } else if (accountManager.hasBunkerAccount()) {
+                // Corrupt bunker state — fall back to login screen
+                accountManager.logout(deleteKey = true)
+            }
+        }
+
         onDispose {
+            accountManager.stopHeartbeat()
+            runBlocking { accountManager.disconnectNip46Client() }
             subscriptionsCoordinator.clear()
             relayManager.disconnect()
+            scope.cancel()
         }
     }
 
@@ -426,7 +463,21 @@ fun App(
                 is AccountState.LoggedOut -> {
                     LoginScreen(
                         accountManager = accountManager,
-                        onLoginSuccess = { },
+                        onLoginSuccess = {
+                            // Start heartbeat if bunker account
+                            val current = accountManager.currentAccount()
+                            if (current?.signerType is com.vitorpamplona.amethyst.desktop.account.SignerType.Remote) {
+                                accountManager.startHeartbeat(scope)
+                            }
+                        },
+                    )
+                }
+
+                is AccountState.ConnectingRelays -> {
+                    val relays by relayManager.relayStatuses.collectAsState()
+                    ConnectingRelaysScreen(
+                        subtitle = "Restoring remote signer session",
+                        relayStatuses = relays,
                     )
                 }
 
@@ -476,6 +527,15 @@ fun App(
                     }
                 }
             }
+
+            // Force logout dialog overlay
+            val forceLogoutReason by accountManager.forceLogoutReason.collectAsState()
+            forceLogoutReason?.let { reason ->
+                ForceLogoutDialog(
+                    reason = reason,
+                    onDismiss = { accountManager.clearForceLogoutReason() },
+                )
+            }
         }
     }
 }
@@ -497,6 +557,8 @@ fun MainContent(
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val signerConnectionState by accountManager.signerConnectionState.collectAsState()
+    val lastPingTimeSec by accountManager.lastPingTimeSec.collectAsState()
 
     // DM infrastructure — hoisted here so it survives screen navigation
     val dmSendTracker =
@@ -618,6 +680,8 @@ fun MainContent(
                         onShowComposeDialog = onShowComposeDialog,
                         onShowReplyDialog = onShowReplyDialog,
                         onZapFeedback = onZapFeedback,
+                        signerConnectionState = signerConnectionState,
+                        lastPingTimeSec = lastPingTimeSec,
                         modifier = Modifier.weight(1f),
                     )
                 }
@@ -632,6 +696,8 @@ fun MainContent(
                                 deckState.addColumn(DeckColumnType.Settings)
                             }
                         },
+                        signerConnectionState = signerConnectionState,
+                        lastPingTimeSec = lastPingTimeSec,
                     )
 
                     VerticalDivider()
@@ -686,7 +752,7 @@ fun ProfileScreen(
         Spacer(Modifier.height(24.dp))
 
         OutlinedButton(
-            onClick = { scope.launch { accountManager.logout() } },
+            onClick = { scope.launch { accountManager.logout(deleteKey = true) } },
             colors =
                 androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
                     contentColor = Color.Red,
@@ -888,6 +954,19 @@ fun RelaySettingsScreen(
             OutlinedButton(onClick = { relayManager.addDefaultRelays() }) {
                 Text("Reset to Defaults")
             }
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        val logoutScope = rememberCoroutineScope()
+        OutlinedButton(
+            onClick = { logoutScope.launch { accountManager.logout(deleteKey = true) } },
+            colors =
+                ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.error,
+                ),
+        ) {
+            Text("Logout")
         }
     }
 }
