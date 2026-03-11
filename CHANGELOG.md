@@ -1,3 +1,185 @@
+Adds support for creating and rendering NIP-85 Polls
+
+Adds support for Relay Feeds
+- Adds support for NIP-51 favorite relay feeds
+- Shows favorite relays in the top navigation filter
+- Clicking wss:// links shows the global feed for that relay.
+- New user account adds nostr.wine to favorite relay feeds
+
+Redesigns Media Player
+- Redesigned player controls for videos, audios, and picture-in-picture.
+- Adds our own buttons and indicators for the video playback
+- Adds Music support with waveform animations
+- Migrates to new Media3 content view frames
+- Improved Picture in Picture actions
+- Turn video controller creation into a flow to fix playback lifecycle issues
+- Adds support for uploading audio
+
+Adds support for NIP events (kind 30817)
+
+Adds support for NIP-52 Calendar appointments
+
+Adds support for NIP-39 External Identities with kind 10011
+
+Adds support for NIP-66 Relay Monitor and discovery support to Quartz
+
+Adds support for NIP-C0 Code Snippets to Quartz
+
+Adds support for NIP-A3 Payment targets (PayTo: 10133) by @npub1w4uswmv6lu9yel005l3qgheysmr7tk9uvwluddznju3nuxalevvs2d0jr5
+
+Adds support for Namecoin .bit urls to NIP-05
+- Adds choice of ElectrumX server to resolve namecoins.
+
+Adds basic support for Chess with Jester protocol
+
+Adds NIP-46 support to Quartz and Amethyst Desktop
+
+Adds a Broadcasting feedback pop-up in the Complete UI mode
+
+Adds support for rendering Zap events when quoted inside of posts.
+
+Removes support for NIP-96 and updates Blossom recommendations
+
+Adds support to upload Documents to all new post screens.
+
+Redesigns and reorganizes Setting pages
+- Consolidate drawer settings into a single Settings hub screen
+- Redesigns Zap Amount and NWC setup screens
+- Redesigns Custom zap amount screens
+- Add reactions row settings (enable/disable, order, show/hide counters) by @npub1w4uswmv6lu9yel005l3qgheysmr7tk9uvwluddznju3nuxalevvs2d0jr5
+- Tapping on Zap without any pre-configured amount opens the custom dialog
+
+URL/URI parser rewrite in Kotlin multiplatform (KMP)
+- Fixes characters attached to URLs or nostr URLs without a space
+- Massively increases parsing performance
+- Treat multibyte characters as URL terminators in RichTextParser by @npub1k0jrarx8um0lyw3nmysn50539ky4k8p7gfgzgrsvn8d7lccx3d0s38dczd
+- Adds a parser for blossom: uris
+
+Minimizes parent thread rendering in quoted notes by @npub1aeh2zw4elewy5682lxc6xnlqzjnxksq303gwu2npfaxd49vmde6qcq4nwx
+
+Fixes bug on Show More calculations for very long texts without spaces
+
+Relay Management:
+- Adds relay search tooltip when adding relays
+- Adds the list of keys using each relay to the relay information
+- Adds active subscriptions and outbox event in the queue to relay information
+- Adds a complete list of event kind names to the subscription card to relay information
+- Tracks and displays connection success rate on relay settings
+
+Search fixes
+- Breaks the search filter into two subscriptions to prioritize Metadata without punishing content.
+- Fixes the need to start user searches with @ in user fields
+- Fixes the stability of the search feed when the user navigates away and back.
+- Replaces about me for NIP-05 in the user search results
+- Adds relay URL search to the search page
+- Forces returning one user when searching by nip-05
+- Removes outdated versions of addressables from the search results
+
+Profiles:
+- Adds a profile picture upload button when the user has no picture
+- Groups received zap amounts by sending the user in the profile tab
+- Increases the limit of Zap downloads for profiles to 1000
+- Simplifies profile edit screen layout by @npub1aeh2zw4elewy5682lxc6xnlqzjnxksq303gwu2npfaxd49vmde6qcq4nwx
+- Migrates profile galleries to display a thumbnail for videos
+- Fixes profile galleries' aspect ratios
+
+Bulk Follow onboarding
+- Adds screens to search for a user and to copy his/her follow list
+
+Voice message support by @npub1e2yuky03caw4ke3zy68lg0fz3r4gkt94hx4fjmlelacyljgyk79svn3eef
+- Adds voice anonymization
+- Change from "hold to record" to "click to start, click to stop"
+- Display kind 1 voice replies as an audio waveform
+- Increases max voice record duration to 600 seconds
+- Switches the public message event to use quoted posts for replies
+
+Fixes:
+- Fixes "forked from" label rendering over the name
+- Avoids crashing when the `k` tag cannot be parsed to a number
+- Only use Voice Reply events when replying to voice notes. Others just receive a URL.
+- Fixes the lack of update in the follow count on the UserProfile page
+- Fixes out of memory when downloading large videos
+- Fixes Jackson deserialization for empty Filters and add regression test by @npub1w4uswmv6lu9yel005l3qgheysmr7tk9uvwluddznju3nuxalevvs2d0jr5
+- Fixes NullPointerException when the filter contains tags
+- Fixes download cancellations when screen components disappear
+- Migrates to use "title" instead of "name" tags for NIP-51 lists
+- Adds a longer crop for npubs so that we can see vanity keys better
+- Fixes the need to have tags and kinds for inbox.nostr.wine to work
+- Blocks the size of Relay Auth Status arrays from growing forever with auth messages
+- Fixes crash when getting OpenGraph tags of invalid URLs
+- Fixes NIP-44 key mutation in NIP-46 connect
+- Location permission watcher moved outside screens to avoid recreation
+
+AI:
+- Add SKILL.md for AI agent customization
+
+Defaults:
+- Switches wss://nostr.band to wss://antiprimal.net, wss://relay.ditto.pub on app defaults
+- Adds wss://nostr.wine, wss://news.utxo.one as favorite relay feeds
+- Adds wss://directory.yabu.me and wss://profiles.nostr1.com as index relays
+- Adds electrumx.testls.space, nmc2.bitcoins.sk, 46.229.238.187 and i665jpwsq46zlsdbnj4axgzd3s56uzey5uhotsnxzsknzbn36jaddsid.onion as ElectrumX servers
+
+Adds complete support for iOS to Quartz by @npub1a3tx8wcrt789skl6gg7rqwj4wey0j53eesr4z6asd4h4jwrd62jq0wkq4k
+- Provide implementation for Rfc3986 on iOS, using the Swift Rfc3986UriBridge.
+- Provide implementation for LargeCache, using a CacheMap.
+- Provide implementation for fastFindURLs()
+- Provide implementation for makeAbsoluteIfRelativeUrl() in ServerInfoParser.ios.kt
+- Provide implementation for UrlEncoder.
+- Provide implementation for UnicodeNormalizer.
+- Provide implementation for GZip compression/decompression. Some small fixes in URLs.ios.kt
+- Provide implementation for AESCBC.
+- Provide implementation for AESGCM.
+- Provide implementation for DigestInstance.
+- Adds a reqUntilEoseAsFlow extension to the Nostr Client
+
+Amethyst Desktop by @npub12cfje6nl2nuxplcqfvhg7ljt89fmpj0n0fd24zxsukja5qm9wmtqd7y76c
+- Adds NIP-46 Bunker Login
+- Adds Support for Chess
+- Adds Thread Screens
+- Adds encrypted DMs (NIP-04/NIP-17)
+- Adds proper empty states with EOSE tracking
+- Adds multi-column deck layout
+- Clear stored credentials on logout
+- Adds bunker heartbeat indicator
+- Adds QR-based signer pairing
+- Migrates lifecycle-viewmodel KMP dependencies to KMP/Commons
+- Migrates drawReplyLevel modifier to KMP/Commons
+- Migrates ThreadFilter to KMP/Commons
+- Migrates Card interface and CardFeedState to KMP/Commons
+- Migrates Channels (public chats, ephemeral channels, and live streams) Account modules to KMP/Commons
+- Migrates private chatroom models to KMP/Commons
+- Migrates reports states to KMP/Commons
+- Migrates Emoji State to KMP/Commons
+- Migrates lud06 to lud16 mapping to KMP/Quartz
+- Migrates the new LocalCache observables to KMP/Commons
+- Migrates rich text parser from JVM to KMP/Commons
+
+Code Quality
+- Migrates to AGP 9.0
+- Removes the in-app memory counter methods
+- Refactors the old NIP-05 code on Quartz
+- Migrates contact list management to addressable notes
+- Creates new observable flows for LocalCache.
+- Moves metadata methods from User to UserCache objects
+- Separate Addressable vs Replaceable event class bases
+- Avoid dependency on AccountSettings for NwcSignerState
+- Finishes the transition to EventHint objects for building events.
+- Lots of code review fixes by @npub1e2yuky03caw4ke3zy68lg0fz3r4gkt94hx4fjmlelacyljgyk79svn3eef
+- Large accessibility review by @npub1e2yuky03caw4ke3zy68lg0fz3r4gkt94hx4fjmlelacyljgyk79svn3eef
+- Moves Top Nav Filter markers from Strings to full objects.
+- Removes support for feed definitions
+- AccountState refactoring
+
+Updated translations:
+- Czech, German, Swedish, and Portuguese by @npub1e2yuky03caw4ke3zy68lg0fz3r4gkt94hx4fjmlelacyljgyk79svn3eef
+- Hungarian by @npub1dnvslq0vvrs8d603suykc4harv94yglcxwna9sl2xu8grt2afm3qgfh0tp
+- French by @npub106efcyntxc5qwl3w8krrhyt626m59ya2nk9f40px5s968u5xdwhsjsr8fz
+- Polish by @npub16gjyljum0ksrrm28zzvejydgxwfm7xse98zwc4hlgq8epxeuggushqwyrm
+- Hindi by @npub1ww6huwu3xye6r05n3qkjeq62wds5pq0jswhl7uc59lchc0n0ns4sdtw5e6
+- Slovenian by @npub1qqqqqqz7nhdqz3uuwmzlflxt46lyu7zkuqhcapddhgz66c4ddynswreecw
+- Bengali by @npub13qtw3yu0uc9r4yj5x0rhgy8nj5q0uyeq0pavkgt9ly69uuzxgkfqwvx23t
+- Chinese by hypnotichemionus4
+
 <a id="v1.05.1"></a>
 # [Release v1.05.1: BugFixes](https://github.com/vitorpamplona/amethyst/releases/tag/v1.05.0) - 2025-01-08
 
