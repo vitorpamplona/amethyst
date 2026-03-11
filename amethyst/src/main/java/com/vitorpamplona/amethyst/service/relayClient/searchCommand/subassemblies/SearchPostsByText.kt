@@ -42,6 +42,8 @@ import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
+import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
+import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip58Badges.BadgeDefinitionEvent
@@ -50,6 +52,7 @@ import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
+import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
 
 val SearchPostsByTextKinds1 =
     listOf(
@@ -87,6 +90,9 @@ val SearchPostsByTextKinds3 =
         NipTextEvent.KIND,
         PollEvent.KIND,
         PollResponseEvent.KIND,
+        CalendarTimeSlotEvent.KIND,
+        CalendarDateSlotEvent.KIND,
+        CodeSnippetEvent.KIND,
     )
 
 fun searchPostsByText(
