@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.namecoin
 
+import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumxServer
 import kotlinx.serialization.Serializable
 
@@ -31,6 +32,7 @@ import kotlinx.serialization.Serializable
  * control over which ElectrumX servers observe their name lookups.
  */
 @Serializable
+@Stable
 data class NamecoinSettings(
     /** Whether Namecoin resolution is enabled at all. */
     val enabled: Boolean = true,

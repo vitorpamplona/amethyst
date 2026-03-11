@@ -21,9 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -63,8 +61,6 @@ fun NamecoinSettingsScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 10.dp),
         ) {
-            Spacer(Modifier.height(16.dp))
-
             NamecoinSettingsSection(
                 settings = namecoinSettings,
                 onToggleEnabled = { enabled ->
@@ -80,8 +76,6 @@ fun NamecoinSettingsScreen(
                     scope.launch { namecoinPrefs.reset() }
                 },
             )
-
-            Spacer(Modifier.height(16.dp))
         }
     }
 }

@@ -41,8 +41,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -91,77 +89,64 @@ fun NamecoinSettingsSection(
     onReset: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Card(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-        colors =
-            CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-            ),
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            // ── Section header ─────────────────────────────────────────
-            SectionHeader(enabled = settings.enabled, onToggle = onToggleEnabled)
+    Column(modifier = modifier.padding(16.dp)) {
+        // ── Section header ─────────────────────────────────────────
+        SectionHeader(enabled = settings.enabled, onToggle = onToggleEnabled)
 
-            AnimatedVisibility(
-                visible = settings.enabled,
-                enter = expandVertically(),
-                exit = shrinkVertically(),
-            ) {
-                Column {
-                    Spacer(Modifier.height(12.dp))
+        AnimatedVisibility(
+            visible = settings.enabled,
+            enter = expandVertically(),
+            exit = shrinkVertically(),
+        ) {
+            Column {
+                Spacer(Modifier.height(12.dp))
 
-                    // ── Explanation ─────────────────────────────────────
-                    Text(
-                        "Namecoin names (.bit, d/, id/) are resolved via ElectrumX servers. " +
-                            "By default, public community servers are used. " +
-                            "For maximum privacy, add your own server below — when custom " +
-                            "servers are set, the defaults are completely ignored.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                // ── Explanation ─────────────────────────────────────
+                Text(
+                    "Namecoin names (.bit, d/, id/) are resolved via ElectrumX servers. " +
+                        "By default, public community servers are used. " +
+                        "For maximum privacy, add your own server below — when custom " +
+                        "servers are set, the defaults are completely ignored.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
 
-                    Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(16.dp))
 
-                    // ── Active servers display ─────────────────────────
-                    ActiveServersDisplay(settings = settings)
+                // ── Active servers display ─────────────────────────
+                ActiveServersDisplay(settings = settings)
 
-                    Spacer(Modifier.height(12.dp))
-                    HorizontalDivider(
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                    )
-                    Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(12.dp))
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                )
+                Spacer(Modifier.height(12.dp))
 
-                    // ── Custom servers list ────────────────────────────
-                    CustomServersList(
-                        servers = settings.customServers,
-                        onRemove = onRemoveServer,
-                    )
+                // ── Custom servers list ────────────────────────────
+                CustomServersList(
+                    servers = settings.customServers,
+                    onRemove = onRemoveServer,
+                )
 
-                    // ── Add server input ───────────────────────────────
-                    AddServerInput(onAdd = onAddServer)
+                // ── Add server input ───────────────────────────────
+                AddServerInput(onAdd = onAddServer)
 
-                    Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(8.dp))
 
-                    // ── Reset button ───────────────────────────────────
-                    if (settings.hasCustomServers) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.End,
-                        ) {
-                            TextButton(onClick = onReset) {
-                                Icon(
-                                    Icons.Default.Refresh,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp),
-                                )
-                                Spacer(Modifier.width(4.dp))
-                                Text("Reset to defaults")
-                            }
+                // ── Reset button ───────────────────────────────────
+                if (settings.hasCustomServers) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End,
+                    ) {
+                        TextButton(onClick = onReset) {
+                            Icon(
+                                Icons.Default.Refresh,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Text("Reset to defaults")
                         }
                     }
                 }
