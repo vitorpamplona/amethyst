@@ -255,7 +255,10 @@ private fun GenericCommentPostBody(
                         verticalAlignment = CenterVertically,
                         modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
                     ) {
-                        ContentSensitivityExplainer()
+                        ContentSensitivityExplainer(
+                            description = postViewModel.contentWarningDescription,
+                            onDescriptionChange = { postViewModel.contentWarningDescription = it },
+                        )
                     }
                 }
 

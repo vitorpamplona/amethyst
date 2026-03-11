@@ -238,7 +238,10 @@ fun GroupDMScreenContent(
                 DisplayPreviews(postViewModel, accountViewModel, nav)
 
                 if (postViewModel.wantsToMarkAsSensitive) {
-                    ContentSensitivityExplainer()
+                    ContentSensitivityExplainer(
+                        description = postViewModel.contentWarningDescription,
+                        onDescriptionChange = { postViewModel.contentWarningDescription = it },
+                    )
                 }
 
                 if (postViewModel.wantsToAddGeoHash) {
