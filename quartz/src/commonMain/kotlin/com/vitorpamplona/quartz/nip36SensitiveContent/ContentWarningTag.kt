@@ -36,7 +36,7 @@ class ContentWarningTag(
 
         fun parse(tags: Array<String>): ContentWarningTag? {
             ensure(tags[0] == TAG_NAME) { return null }
-            return ContentWarningTag(tags.getOrNull(1).ifBlank { null })
+            return ContentWarningTag(tags.getOrNull(1)?.ifBlank { null })
         }
 
         fun assemble() = arrayOfNotNull(TAG_NAME)
