@@ -138,6 +138,8 @@ import com.vitorpamplona.amethyst.ui.note.types.FileHeaderDisplay
 import com.vitorpamplona.amethyst.ui.note.types.FileStorageHeaderDisplay
 import com.vitorpamplona.amethyst.ui.note.types.PictureDisplay
 import com.vitorpamplona.amethyst.ui.note.types.RenderAppDefinition
+import com.vitorpamplona.amethyst.ui.note.types.RenderCalendarDateSlotEvent
+import com.vitorpamplona.amethyst.ui.note.types.RenderCalendarTimeSlotEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderChannelMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderChatMessageEncryptedFile
 import com.vitorpamplona.amethyst.ui.note.types.RenderEmojiPack
@@ -227,6 +229,8 @@ import com.vitorpamplona.quartz.nip51Lists.relayLists.ProxyRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relaySets.RelaySetEvent
+import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
+import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
@@ -654,6 +658,10 @@ private fun FullBleedNoteCompose(
                     RenderHighlight(baseNote, false, canPreview, quotesLeft = 3, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is PublicMessageEvent) {
                     RenderPublicMessage(baseNote, false, canPreview, quotesLeft = 3, backgroundColor, accountViewModel, nav)
+                } else if (noteEvent is CalendarTimeSlotEvent) {
+                    RenderCalendarTimeSlotEvent(baseNote, accountViewModel, nav)
+                } else if (noteEvent is CalendarDateSlotEvent) {
+                    RenderCalendarDateSlotEvent(baseNote, accountViewModel, nav)
                 } else if (noteEvent is CommentEvent) {
                     RenderTextEvent(
                         baseNote,
