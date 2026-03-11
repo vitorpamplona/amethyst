@@ -18,33 +18,17 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.desktop.network
+package com.vitorpamplona.amethyst.commons.search
 
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+class EventDeduplicator {
+    private val lock = Any()
+    private val seenIds = mutableSetOf<String>()
 
-/**
- * Represents the connection status of a Nostr relay.
- * Used by both Android and Desktop apps.
- */
-data class RelayStatus(
-    val url: NormalizedRelayUrl,
-    val connected: Boolean,
-    val pingMs: Int? = null,
-    val compressed: Boolean = false,
-    val error: String? = null,
-)
+    fun tryAdd(id: String): Boolean = synchronized(lock) { seenIds.add(id) }
 
-/**
- * Default relay URLs for Nostr connectivity.
- */
-object DefaultRelays {
-    val RELAYS =
-        listOf(
-            "wss://relay.damus.io",
-            "wss://relay.nostr.band",
-            "wss://nos.lol",
-            "wss://relay.snort.social",
-            "wss://nostr.wine",
-            "wss://relay.noswhere.com",
-        )
+    fun contains(id: String): Boolean = synchronized(lock) { id in seenIds }
+
+    fun clear() = synchronized(lock) { seenIds.clear() }
+
+    val size: Int get() = synchronized(lock) { seenIds.size }
 }

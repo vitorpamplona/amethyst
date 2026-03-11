@@ -20,8 +20,12 @@
  */
 package com.vitorpamplona.amethyst.commons.search
 
+import com.vitorpamplona.amethyst.commons.chess.RelaySyncState
+import com.vitorpamplona.amethyst.commons.chess.RelaySyncStatus
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -79,15 +83,21 @@ class AdvancedSearchBarState(
     private val _noteResults = MutableStateFlow<ImmutableList<Event>>(persistentListOf())
     val noteResults: StateFlow<ImmutableList<Event>> = _noteResults.asStateFlow()
 
-    private val activeSubscriptionCount = MutableStateFlow(0)
+    private val activeSubIds = MutableStateFlow<Set<String>>(emptySet())
     val isSearching: StateFlow<Boolean> =
-        activeSubscriptionCount
-            .map { it > 0 }
+        activeSubIds
+            .map { it.isNotEmpty() }
             .stateIn(scope, SharingStarted.Eagerly, false)
+
+    private val eventDeduplicator = EventDeduplicator()
 
     // Expanded panel state
     private val _panelExpanded = MutableStateFlow(false)
     val panelExpanded: StateFlow<Boolean> = _panelExpanded.asStateFlow()
+
+    // Per-relay sync status
+    private val _relayStates = MutableStateFlow<ImmutableList<RelaySyncState>>(persistentListOf())
+    val relayStates: StateFlow<ImmutableList<RelaySyncState>> = _relayStates.asStateFlow()
 
     // Text bar input
     fun updateFromText(rawText: String) {
@@ -171,6 +181,49 @@ class AdvancedSearchBarState(
         _query.value = _query.value.copy(language = lang)
     }
 
+    fun initRelayStates(relays: Set<NormalizedRelayUrl>) {
+        _relayStates.value =
+            relays
+                .map {
+                    RelaySyncState(
+                        url = it.url,
+                        displayName = it.displayUrl(),
+                        status = RelaySyncStatus.WAITING,
+                    )
+                }.toImmutableList()
+    }
+
+    fun updateRelayState(
+        relayUrl: String,
+        status: RelaySyncStatus,
+        eventsDelta: Int = 0,
+    ) {
+        _relayStates.update { states ->
+            states
+                .map {
+                    if (it.url == relayUrl) {
+                        it.copy(status = status, eventsReceived = it.eventsReceived + eventsDelta)
+                    } else {
+                        it
+                    }
+                }.toImmutableList()
+        }
+    }
+
+    fun timeoutWaitingRelays() {
+        _relayStates.update { states ->
+            states
+                .map {
+                    if (it.status == RelaySyncStatus.WAITING || it.status == RelaySyncStatus.CONNECTING) {
+                        it.copy(status = RelaySyncStatus.FAILED)
+                    } else {
+                        it
+                    }
+                }.toImmutableList()
+        }
+        activeSubIds.value = emptySet()
+    }
+
     fun togglePanel() {
         _panelExpanded.value = !_panelExpanded.value
     }
@@ -181,21 +234,35 @@ class AdvancedSearchBarState(
         _query.value = SearchQuery.EMPTY
         _peopleResults.value = persistentListOf()
         _noteResults.value = persistentListOf()
-        activeSubscriptionCount.value = 0
+        _relayStates.value = persistentListOf()
+        activeSubIds.value = emptySet()
+        eventDeduplicator.clear()
     }
 
     // Results management (called from subscription callbacks)
-    fun startSearching() {
-        activeSubscriptionCount.update { it + 1 }
+    fun startSearching(subId: String) {
+        activeSubIds.update { it + subId }
     }
 
-    fun stopSearching() {
-        activeSubscriptionCount.update { maxOf(0, it - 1) }
+    fun stopSearching(subId: String) {
+        activeSubIds.update { it - subId }
+    }
+
+    fun trackRelayEvent(
+        relayUrl: String,
+        eventId: String,
+    ): Boolean {
+        val isNew = eventDeduplicator.tryAdd(eventId)
+        if (isNew) {
+            updateRelayState(relayUrl, RelaySyncStatus.RECEIVING, eventsDelta = 1)
+        }
+        return isNew
     }
 
     fun clearResults() {
         _peopleResults.value = persistentListOf()
         _noteResults.value = persistentListOf()
+        eventDeduplicator.clear()
     }
 
     fun addPeopleResult(user: User) {
@@ -206,11 +273,9 @@ class AdvancedSearchBarState(
     }
 
     fun addNoteResults(events: List<Event>) {
-        val current = _noteResults.value
-        val existingIds = current.map { it.id }.toSet()
-        val newEvents = events.filter { it.id !in existingIds }
-        if (newEvents.isNotEmpty()) {
-            _noteResults.value = (current + newEvents).sortedByDescending { it.createdAt }.toImmutableList()
+        if (events.isNotEmpty()) {
+            val current = _noteResults.value
+            _noteResults.value = (current + events).sortedByDescending { it.createdAt }.toImmutableList()
         }
     }
 }

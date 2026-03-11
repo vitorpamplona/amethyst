@@ -27,7 +27,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -70,7 +69,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.Key
@@ -82,6 +80,7 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.chess.RelaySyncStatus
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.search.AdvancedSearchBarState
 import com.vitorpamplona.amethyst.commons.search.QuerySerializer
@@ -102,6 +101,7 @@ import com.vitorpamplona.amethyst.desktop.subscriptions.generateSubId
 import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
 import com.vitorpamplona.amethyst.desktop.ui.search.AdvancedSearchPanel
 import com.vitorpamplona.amethyst.desktop.ui.search.SearchResultsList
+import com.vitorpamplona.amethyst.desktop.ui.search.SearchSyncBanner
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 
@@ -137,6 +137,7 @@ fun SearchScreen(
     val isSearching by state.isSearching.collectAsState()
     val peopleResults by state.peopleResults.collectAsState()
     val noteResults by state.noteResults.collectAsState()
+    val relayStates by state.relayStates.collectAsState()
 
     // Bech32 parsing (immediate, no debounce)
     val bech32Results = remember(displayText) { parseSearchInput(displayText) }
@@ -145,8 +146,12 @@ fun SearchScreen(
     LaunchedEffect(debouncedQuery) {
         if (!debouncedQuery.isEmpty && bech32Results.isEmpty()) {
             state.clearResults()
-            state.startSearching()
-            state.startSearching()
+            state.initRelayStates(allRelayUrls)
+            state.startSearching("people-search")
+            state.startSearching("adv-search")
+            // Timeout relays that silently ignore NIP-50 (e.g. strfry)
+            kotlinx.coroutines.delay(10_000L)
+            state.timeoutWaitingRelays()
         }
     }
 
@@ -164,18 +169,25 @@ fun SearchScreen(
                     QuerySerializer.serialize(debouncedQuery)
                 },
             limit = 20,
-            onEvent = { event, _, _, _ ->
-                if (event is MetadataEvent) {
-                    localCache.consumeMetadata(event)
-                    @Suppress("UNCHECKED_CAST")
-                    val user = localCache.getUserIfExists(event.pubKey) as? User
-                    if (user != null) {
-                        state.addPeopleResult(user)
+            onEvent = { event, _, relay, _ ->
+                if (state.trackRelayEvent(relay.url, event.id)) {
+                    if (event is MetadataEvent) {
+                        localCache.consumeMetadata(event)
+                        @Suppress("UNCHECKED_CAST")
+                        val user = localCache.getUserIfExists(event.pubKey) as? User
+                        if (user != null) {
+                            state.addPeopleResult(user)
+                        }
                     }
                 }
             },
-            onEose = { _, _ ->
-                state.stopSearching()
+            onEose = { relay, _ ->
+                state.updateRelayState(relay.url, RelaySyncStatus.EOSE_RECEIVED)
+                state.stopSearching("people-search")
+            },
+            onClosed = { relay, _, _ ->
+                state.updateRelayState(relay.url, RelaySyncStatus.FAILED)
+                state.stopSearching("people-search")
             },
         )
     }
@@ -194,15 +206,22 @@ fun SearchScreen(
             subId = generateSubId("adv-search"),
             filters = filters,
             relays = allRelayUrls,
-            onEvent = { event, _, _, _ ->
+            onEvent = { event, _, relay, _ ->
                 if (event.kind == MetadataEvent.KIND) return@SubscriptionConfig
-                val filtered = SearchResultFilter.filter(listOf(event), debouncedQuery)
-                if (filtered.isNotEmpty()) {
-                    state.addNoteResults(filtered)
+                if (state.trackRelayEvent(relay.url, event.id)) {
+                    val filtered = SearchResultFilter.filter(listOf(event), debouncedQuery)
+                    if (filtered.isNotEmpty()) {
+                        state.addNoteResults(filtered)
+                    }
                 }
             },
-            onEose = { _, _ ->
-                state.stopSearching()
+            onEose = { relay, _ ->
+                state.updateRelayState(relay.url, RelaySyncStatus.EOSE_RECEIVED)
+                state.stopSearching("adv-search")
+            },
+            onClosed = { relay, _, _ ->
+                state.updateRelayState(relay.url, RelaySyncStatus.FAILED)
+                state.stopSearching("adv-search")
             },
         )
     }
@@ -269,6 +288,26 @@ fun SearchScreen(
                     }
                 },
     ) {
+        // Progress bar at very top
+        AnimatedVisibility(
+            visible = isSearching,
+            enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
+            exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut(),
+        ) {
+            LinearProgressIndicator(
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+            )
+        }
+
+        // Relay status banner
+        SearchSyncBanner(
+            relayStates = relayStates,
+            isSearching = isSearching,
+        )
+
+        // Title row
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -294,53 +333,36 @@ fun SearchScreen(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Box(modifier = Modifier.weight(1f)) {
-                OutlinedTextField(
-                    value =
-                        TextFieldValue(
-                            text = displayText,
-                            selection = TextRange(displayText.length),
-                        ),
-                    onValueChange = { state.updateFromText(it.text) },
-                    modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
-                    placeholder = { Text("Search notes, people, tags... or use operators") },
-                    leadingIcon = {
-                        Icon(
-                            Icons.Default.Search,
-                            contentDescription = "Search",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    },
-                    trailingIcon = {
-                        if (displayText.isNotEmpty()) {
-                            IconButton(onClick = { state.clearSearch() }) {
-                                Icon(
-                                    Icons.Default.Clear,
-                                    contentDescription = "Clear",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                        }
-                    },
-                    singleLine = true,
-                    shape = RoundedCornerShape(12.dp),
-                )
-                androidx.compose.animation.AnimatedVisibility(
-                    visible = isSearching,
-                    modifier =
-                        Modifier
-                            .align(Alignment.BottomCenter)
-                            .fillMaxWidth()
-                            .padding(horizontal = 1.dp)
-                            .clip(RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp)),
-                ) {
-                    LinearProgressIndicator(
-                        modifier = Modifier.fillMaxWidth(),
-                        color = MaterialTheme.colorScheme.primary,
-                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
+            OutlinedTextField(
+                value =
+                    TextFieldValue(
+                        text = displayText,
+                        selection = TextRange(displayText.length),
+                    ),
+                onValueChange = { state.updateFromText(it.text) },
+                modifier = Modifier.weight(1f).focusRequester(focusRequester),
+                placeholder = { Text("Search notes, people, tags... or use operators") },
+                leadingIcon = {
+                    Icon(
+                        Icons.Default.Search,
+                        contentDescription = "Search",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                }
-            }
+                },
+                trailingIcon = {
+                    if (displayText.isNotEmpty()) {
+                        IconButton(onClick = { state.clearSearch() }) {
+                            Icon(
+                                Icons.Default.Clear,
+                                contentDescription = "Clear",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                },
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+            )
             IconButton(onClick = { state.togglePanel() }) {
                 Icon(
                     Icons.Default.Tune,
