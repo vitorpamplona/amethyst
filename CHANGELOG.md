@@ -1,3 +1,71 @@
+<a id="v1.06.0"></a>
+# [Release v1.06.0: Relay Search, Namecoin, Calendar Events](https://github.com/vitorpamplona/amethyst/releases/tag/v1.06.0) - 2026-03-11
+
+This release brings relay-aware search, Namecoin NIP-05 resolution, NIP-52 calendar event rendering,
+improved file uploads, drag-and-drop reaction row customization, and a wide range of UX and performance improvements.
+
+New Features:
+- Relay Search: Search for relays directly from the search page; relay results appear after user results
+- Relay Information: Added a user list and a direct "view feed" button inside the relay information dialog
+- Default Relay Feeds: Added curated default relay feeds to get started quickly
+- Calendar Events (NIP-52): Renders CalendarTimeSlotEvent and CalendarDateSlotEvent inline in feeds
+- Audio & PDF Upload: Audio files and PDFs can now be uploaded from the short-note post screen
+- Upload Any File: Upload any supported file type from any new post screen
+- Bulk Follow: Added ability to follow a large group of users at once
+- Drag-and-Drop Reactions: Reaction row items can now be reordered via drag-and-drop in settings
+- Namecoin NIP-05: Import follow lists with Namecoin-based NIP-05 resolution during signup
+- Custom ElectrumX Server: Configure a custom ElectrumX server for Namecoin resolution in settings
+- Account Import Route: Account import is now a full navigation route instead of an overlay dialog
+
+Improvements:
+- Search UX: Scroll position is preserved when navigating back to the search screen
+- Search UX: User search no longer requires the @ prefix anywhere in the app
+- Search UX: Typing a relay URL in search adds it to the relay results list
+- Search UX: NIP-05 identifiers and npubs are evaluated directly in the user suggestion search
+- Search UX: Import follows screen split into two focused steps
+- Relay UX: Adding a relay now shows its full information dialog first
+- Relay UX: Relay dropdown display improved when selecting/adding relays
+- Relay feeds renamed: "Favorites" label replaced with the more accurate "Relay Feeds"
+- Zap UX: Pressing the zap button without a wallet configured now opens the amount dialog directly
+- Zap Settings: New sectioned layout with chips and animation
+- Zap Dialog: ZapCustomDialog redesigned with chip-style amount selection and cleaner layout
+- URL Detection: Switched to a custom URL detector supporting `nostr:` URIs, single-label domains, ASCII/non-ASCII transitions, and Latin-1 characters
+- URL Detection: Removed top-level-domain character length limit so `nostr:` URIs parse correctly
+- URL Detection: Only HTTP/HTTPS URLs trigger link preview cards
+- Video Player: Renders a fake waveform for audio-only (music) files with no video frames
+- Video Player: Seek buttons repositioned closer to center; playback controls always on top
+- Video Player: Minimum player height adjusted to align with gradient overlays
+- Profile Page: Various layout and alignment improvements
+- NIP-05 Search: Uses NIP-05 identifier as primary display field instead of About-me bio
+- Show More: Fixed calculation bug for very long texts
+- Reaction Settings: Improved UI description and layout; state management optimised
+- Mute Lists: Removed stale null mute-list entries from the top nav bar
+- Account State: Refactored to a richer state object beyond a plain ViewModel
+- Removed default coroutine scope from AppModules; callers now own their scope
+- Inbox relay (inbox.nostr.wine): Fixed missing tag/kind filter requirement
+- Navigation: Fixed route-equality check causing incorrect same-route detection
+- Navigation: Fixed animation for settings pages
+- Key Backup screen: Switched from Surface to Scaffold for consistency
+- AGP updated to latest version
+
+Bug Fixes:
+- NIP-46 (Nostr Connect): Fixed `connect()` return type; caller now retrieves public key separately
+- NIP-44/NIP-46: Fixed key mutation bug and connect-response handling in Quartz
+- Namecoin NIP-05: Fixed race conditions in resolution and propagated distinct error types to UI
+- URL parser: Protected against invalid/malformed URLs crashing the parser
+- AccountViewModels: Fixed overly broad clearing that could drop active view models
+- NoteCompose: Fixed potential bug identified in `withContext` usage
+- Chess (Quartz JVM): Fixed failing JVM chess test cases; moved tests to `commonTest`
+
+Code Quality:
+- Created `INIP05Client` interface enabling testable, injectable NIP-05 resolution
+- Namecoin: Removed dead `namecoinNameService` declaration and unused singleton companion object
+- URLDetector: Refactored for readability and test coverage
+- Kotlin lint fixes: Elvis operators, `filterIsInstance`, `flatMap`, `forEach`, inferred type args, redundant modifiers
+- Moved Nostr test cases from Android-only to `commonTest` for cross-platform coverage
+
+---
+
 <a id="v1.05.1"></a>
 # [Release v1.05.1: BugFixes](https://github.com/vitorpamplona/amethyst/releases/tag/v1.05.0) - 2025-01-08
 
