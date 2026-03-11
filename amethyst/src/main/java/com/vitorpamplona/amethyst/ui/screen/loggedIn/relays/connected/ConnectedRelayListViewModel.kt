@@ -23,8 +23,10 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.connected
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.LocalCache.users
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoModel
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 @Stable
@@ -34,16 +36,27 @@ class ConnectedRelayListViewModel : BasicRelaySetupInfoModel() {
 
         return relayList
             .map {
+                val reqs = Amethyst.instance.client.activeRequests(it)
+
+                val users = mutableSetOf<HexKey>()
+                reqs.forEach { id, filters ->
+                    filters.forEach { filter ->
+                        filter.authors?.forEach { pubkey ->
+                            users.add(pubkey)
+                        }
+                        filter.tags?.get("p")?.forEach { pubkey ->
+                            users.add(pubkey)
+                        }
+                    }
+                }
+
                 BasicRelaySetupInfo(
                     relay = it,
                     relayStat = Amethyst.instance.relayStats.get(it),
                     forcesTor =
                         Amethyst.instance.torEvaluatorFlow.flow.value
                             .useTor(it),
-                    users =
-                        account.declaredFollowsPerUsingRelay.value[it]?.mapNotNull { hex ->
-                            LocalCache.checkGetOrCreateUser(hex)
-                        } ?: emptyList(),
+                    users = users.mapNotNull { hex -> LocalCache.checkGetOrCreateUser(hex) },
                 )
             }.distinctBy { it.relay }
             .sortedBy { it.relayStat.receivedBytes }
