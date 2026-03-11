@@ -49,6 +49,8 @@ sealed class Route {
 
     @Serializable object PrivacyOptions : Route()
 
+    @Serializable object NamecoinSettings : Route()
+
     @Serializable object Bookmarks : Route()
 
     @Serializable object BookmarkGroups : Route()
