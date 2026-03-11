@@ -34,6 +34,7 @@ import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -48,7 +49,10 @@ import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
 @Composable
-fun ContentSensitivityExplainer() {
+fun ContentSensitivityExplainer(
+    description: String,
+    onDescriptionChange: (String) -> Unit,
+) {
     Column(Modifier.fillMaxWidth()) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -96,6 +100,19 @@ fun ContentSensitivityExplainer() {
             text = stringRes(R.string.add_sensitive_content_explainer),
             color = MaterialTheme.colorScheme.placeholderText,
             modifier = Modifier.padding(vertical = 10.dp),
+        )
+
+        OutlinedTextField(
+            value = description,
+            onValueChange = onDescriptionChange,
+            modifier = Modifier.fillMaxWidth(),
+            placeholder = {
+                Text(
+                    text = stringRes(R.string.add_sensitive_content_description_placeholder),
+                    color = MaterialTheme.colorScheme.placeholderText,
+                )
+            },
+            singleLine = true,
         )
     }
 }
