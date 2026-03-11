@@ -106,7 +106,7 @@ height="70">](https://github.com/vitorpamplona/amethyst/releases)
 - [x] Request to Vanish (NIP-62)
 - [x] Chess (NIP-64)
 - [x] Relay List Metadata (NIP-65)
-- [ ] Relay Discovery and Monitoring (NIP-66)
+- [x] Relay Discovery and Monitoring (NIP-66)
 - [x] Picture-first feeds (NIP-68)
 - [ ] Peer-to-peer Orders (NIP-69)
 - [o] Protected Events (NIP-70)
@@ -136,7 +136,7 @@ height="70">](https://github.com/vitorpamplona/amethyst/releases)
 - [ ] Web Bookmarks
 - [x] Blossom (NIP-B7)
 - [ ] Nostr BLE Communications Protocol (NIP-BE)
-- [ ] Code Snippets (NIP-C0)
+- [x] Code Snippets (NIP-C0)
 - [ ] NIP-29 Chats (NIP-C7)
 - [ ] MLS Protocol (NIP-EE)
 - [x] Audio Tracks (zapstr.live) (kind:31337)
@@ -151,6 +151,7 @@ height="70">](https://github.com/vitorpamplona/amethyst/releases)
 - [x] Medical Data (NIP-xx/Draft)
 - [x] Embed events (NIP-xx/Draft)
 - [x] Edit Short Notes (NIP-xx/Draft)
+- [x] NIP Events (NIP-xx/Draft)
 - [ ] Relationship Status (NIP-xx/Draft)
 - [ ] Signed Filters (NIP-xx/Draft)
 - [ ] Key Migration (NIP-xx/Draft)
@@ -158,7 +159,6 @@ height="70">](https://github.com/vitorpamplona/amethyst/releases)
 - [x] Video Capture in the app
 - [ ] Local Database
 - [ ] Workspaces
-- [ ] Infinity Scroll
 
 ## Privacy and Information Permanence
 
