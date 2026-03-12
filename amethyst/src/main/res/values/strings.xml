@@ -1500,6 +1500,11 @@
 
     <string name="dont_translate_from">Don\'t Translate From</string>
     <string name="dont_translate_from_description">Languages shown here will not be translated. Select a language to remove it and have it translated again.</string>
+    <string name="translate_to">Translate To</string>
+    <string name="translate_to_description">Choose the language to translate content into.</string>
+    <string name="language_preferences">Language Display Preferences</string>
+    <string name="language_preferences_description">For each translated language pair, choose which language to show first.</string>
+    <string name="language_preference_pair">%1$s → %2$s</string>
     <string name="pause">Pause</string>
     <string name="play">Play</string>
     <string name="open_dropdown_menu">Open dropdown menu</string>
