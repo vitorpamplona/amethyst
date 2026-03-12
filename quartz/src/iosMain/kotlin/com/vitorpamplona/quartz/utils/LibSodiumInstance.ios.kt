@@ -36,17 +36,18 @@ actual object LibSodiumInstance {
         nPub: ByteArray,
         k: ByteArray,
     ): Boolean {
-        val returnCode = Clibsodium.crypto_aead_xchacha20poly1305_ietf_decrypt(
-            m = message.uRefTo(0),
-            mlen_p = ulongArrayOf(message.size.toULong()).refTo(0),
-            nsec = nSec.uRefTo(0),
-            c = ciphertext.uRefTo(0),
-            clen = ciphertext.size.toULong(),
-            ad = ad.uRefTo(0),
-            adlen = ad.size.toULong(),
-            npub = nPub.uRefTo(0),
-            k = k.uRefTo(0)
-        )
+        val returnCode =
+            Clibsodium.crypto_aead_xchacha20poly1305_ietf_decrypt(
+                m = message.uRefTo(0),
+                mlen_p = ulongArrayOf(message.size.toULong()).refTo(0),
+                nsec = nSec.uRefTo(0),
+                c = ciphertext.uRefTo(0),
+                clen = ciphertext.size.toULong(),
+                ad = ad.uRefTo(0),
+                adlen = ad.size.toULong(),
+                npub = nPub.uRefTo(0),
+                k = k.uRefTo(0),
+            )
         return returnCode == 0
     }
 
@@ -59,17 +60,18 @@ actual object LibSodiumInstance {
         nPub: ByteArray,
         k: ByteArray,
     ): Boolean {
-        val retCode = Clibsodium.crypto_aead_xchacha20poly1305_ietf_encrypt(
-            c = ciphertext.uRefTo(0),
-            clen_p = ulongArrayOf(ciphertext.size.toULong()).refTo(0),
-            m = message.uRefTo(0),
-            mlen = message.size.toULong(),
-            ad = ad.uRefTo(0),
-            adlen = ad.size.toULong(),
-            nsec = nSec.uRefTo(0),
-            npub = nPub.uRefTo(0),
-            k = k.uRefTo(0)
-        )
+        val retCode =
+            Clibsodium.crypto_aead_xchacha20poly1305_ietf_encrypt(
+                c = ciphertext.uRefTo(0),
+                clen_p = ulongArrayOf(ciphertext.size.toULong()).refTo(0),
+                m = message.uRefTo(0),
+                mlen = message.size.toULong(),
+                ad = ad.uRefTo(0),
+                adlen = ad.size.toULong(),
+                nsec = nSec.uRefTo(0),
+                npub = nPub.uRefTo(0),
+                k = k.uRefTo(0),
+            )
 
         return retCode == 0
     }
@@ -86,7 +88,7 @@ actual object LibSodiumInstance {
             m = message.uRefTo(0),
             mlen = message.size.toULong(),
             n = nonce?.uRefTo(0),
-            k = key?.uRefTo(0)
+            k = key?.uRefTo(0),
         )
         return ciphertext
     }
@@ -107,17 +109,18 @@ actual object LibSodiumInstance {
             out = k2.uRefTo(0),
             nonce.uRefTo(0),
             k = key.uRefTo(0),
-            c = null
+            c = null,
         )
 
-        val resultCode = Clibsodium.crypto_stream_chacha20_xor_ic(
-            c = cipher.uRefTo(0),
-            m = messageBytes.uRefTo(0),
-            mlen = messageBytes.size.toULong(),
-            n = nonceChaCha.uRefTo(0),
-            ic = 0L.toULong(),
-            k = k2.uRefTo(0)
-        )
+        val resultCode =
+            Clibsodium.crypto_stream_chacha20_xor_ic(
+                c = cipher.uRefTo(0),
+                m = messageBytes.uRefTo(0),
+                mlen = messageBytes.size.toULong(),
+                n = nonceChaCha.uRefTo(0),
+                ic = 0L.toULong(),
+                k = k2.uRefTo(0),
+            )
         return if (resultCode == 0) cipher else throw IllegalStateException("Could not decrypt message")
     }
 }
