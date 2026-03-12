@@ -5,7 +5,6 @@ import io.github.frankois944.spmForKmp.swiftPackageConfig
 import io.github.frankois944.spmForKmp.utils.ExperimentalSpmForKmpFeature
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeTest
-import org.jetbrains.kotlin.gradle.tasks.KotlinNativeCompile
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -62,7 +61,24 @@ kotlin {
     // project can be found here:
     // https://developer.android.com/kotlin/multiplatform/migrate
     val xcfName = "quartz-kmpKit"
-    val libsodiumPath = project.file("src/nativeInterop/libsodium").toString()
+    val libsodiumPath = project.file("src/nativeInterop/libsodium")
+    val libsodiumHeaderFilesPath = project.file("$libsodiumPath/include/sodium")
+
+    // This generates the Libsodium definition file, necessary for creating native bindings(a Kotlin API) for libsodium(for iOS).
+//    val headersTask = tasks.register<Exec>("ExtractLibsodiumHeaders") {
+//        val unpackDirectory = "$libsodiumPath/include"
+//        unzipTo(
+//            project.file(unpackDirectory),
+//            project.file("$unpackDirectory/sodium.zip")
+//        )
+//    }
+
+    val libsodiumDefFileGeneration = tasks.register<Exec>("GenerateSodiumCinteropFile") {
+        val definitionFile = project.file("src/nativeInterop/cinterop/Clibsodium.def")
+        definitionFile.writeText("package = Clibsodium")
+        definitionFile.appendText("\n" + "staticLibraries = libsodium.a libsodium-simulator.a")
+        definitionFile.appendText("\n" + "libraryPaths = ${libsodiumPath}/ios/lib ${libsodiumPath}/ios-simulators/lib")
+    }
 
     listOf(
         iosArm64(),
@@ -71,17 +87,18 @@ kotlin {
     ).forEach { target ->
 
         target.compilations.getByName("main") {
-            val headerFilesPath = "$libsodiumPath/include/sodium"
+//            headersTask.get()
+            libsodiumDefFileGeneration.get()
             val Clibsodium by cinterops.creating {
+                assert(project.file("Clibsodium.def").exists())
                 definitionFile.set(project.file("Clibsodium.def"))
                 includeDirs("${libsodiumPath}/ios-simulators/lib")
                 //compilerOpts("-I${libsodiumPath}/ios-simulators/lib")
 
-
                 headers(
-                    "$headerFilesPath/crypto_aead_xchacha20poly1305.h",
-                    "$headerFilesPath/crypto_core_hchacha20.h",
-                    "$headerFilesPath/crypto_stream_chacha20.h"
+                    "$libsodiumHeaderFilesPath/crypto_aead_xchacha20poly1305.h",
+                    "$libsodiumHeaderFilesPath/crypto_core_hchacha20.h",
+                    "$libsodiumHeaderFilesPath/crypto_stream_chacha20.h"
                 )
             }
         }
@@ -118,23 +135,6 @@ kotlin {
         binaries.framework {
             baseName = xcfName
         }
-    }
-    // This generates the Libsodium definition file, necessary for creating native bindings(a Kotlin API) for libsodium(for iOS).
-    val libsodiumDefFileGeneration = tasks.register<Exec>("GenerateSodiumCinteropFile") {
-        val libsodiumPath = project.file("src/nativeInterop/libsodium").toString()
-        val definitionFile = project.file("src/nativeInterop/cinterop/Clibsodium.def")
-        definitionFile.writeText("package = Clibsodium")
-        definitionFile.appendText("\n" + "staticLibraries = libsodium.a libsodium-simulator.a")
-        definitionFile.appendText("\n" + "libraryPaths = ${libsodiumPath}/ios/lib ${libsodiumPath}/ios-simulators/lib")
-
-        doLast {
-            executionResult.get().assertNormalExitValue()
-        }
-    }
-
-    tasks.withType<KotlinNativeCompile>().configureEach {
-//        doFirst { libsodiumDefFileGeneration.get() }
-        dependsOn(libsodiumDefFileGeneration)
     }
 
     // This makes sure that the resource file directory is visible for iOS tests.
