@@ -78,6 +78,8 @@ import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.creators.contentWarning.ContentSensitivityExplainer
 import com.vitorpamplona.amethyst.ui.note.creators.contentWarning.MarkAsSensitiveButton
+import com.vitorpamplona.amethyst.ui.note.creators.expiration.ExpirationDateButton
+import com.vitorpamplona.amethyst.ui.note.creators.expiration.ExpirationDatePicker
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.WatchAndLoadMyEmojiList
 import com.vitorpamplona.amethyst.ui.note.creators.invoice.AddLnInvoiceButton
@@ -311,6 +313,15 @@ private fun NewPostScreenBody(
                     }
                 }
 
+                if (postViewModel.wantsExpirationDate) {
+                    Row(
+                        verticalAlignment = CenterVertically,
+                        modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
+                    ) {
+                        ExpirationDatePicker(postViewModel)
+                    }
+                }
+
                 if (postViewModel.wantsToAddGeoHash) {
                     Row(
                         verticalAlignment = CenterVertically,
@@ -537,6 +548,10 @@ private fun BottomRowActions(postViewModel: ShortNotePostViewModel) {
 
         MarkAsSensitiveButton(postViewModel.wantsToMarkAsSensitive) {
             postViewModel.toggleMarkAsSensitive()
+        }
+
+        ExpirationDateButton(postViewModel.wantsExpirationDate) {
+            postViewModel.toggleExpirationDate()
         }
 
         AddGeoHashButton(postViewModel.wantsToAddGeoHash) {

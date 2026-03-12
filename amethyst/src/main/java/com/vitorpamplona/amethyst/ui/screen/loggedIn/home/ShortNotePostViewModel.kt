@@ -97,6 +97,7 @@ import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarningReason
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitive
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
+import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
 import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetupLnAddress
@@ -238,6 +239,10 @@ open class ShortNotePostViewModel :
     // NSFW, Sensitive
     var wantsToMarkAsSensitive by mutableStateOf(false)
     var contentWarningDescription by mutableStateOf("")
+
+    // Expiration Date (NIP-40)
+    var wantsExpirationDate by mutableStateOf(false)
+    var expirationDate by mutableLongStateOf(TimeUtils.oneDayAhead())
 
     // GeoHash
     var wantsToAddGeoHash by mutableStateOf(false)
@@ -427,6 +432,10 @@ open class ShortNotePostViewModel :
         wantsToMarkAsSensitive = draftEvent.isSensitive()
         contentWarningDescription = draftEvent.contentWarningReason() ?: ""
 
+        val draftExpiration = draftEvent.tags.expiration()
+        wantsExpirationDate = draftExpiration != null
+        expirationDate = draftExpiration ?: TimeUtils.oneDayAhead()
+
         val geohash = draftEvent.getGeoHash()
         wantsToAddGeoHash = geohash != null
         if (geohash != null) {
@@ -506,6 +515,10 @@ open class ShortNotePostViewModel :
 
         wantsToMarkAsSensitive = draftEvent.isSensitive()
         contentWarningDescription = draftEvent.contentWarningReason() ?: ""
+
+        val draftExpiration = draftEvent.tags.expiration()
+        wantsExpirationDate = draftExpiration != null
+        expirationDate = draftExpiration ?: TimeUtils.oneDayAhead()
 
         val geohash = draftEvent.getGeoHash()
         wantsToAddGeoHash = geohash != null
@@ -690,6 +703,7 @@ open class ShortNotePostViewModel :
         val usedAttachments = iMetaAttachments.filterIsIn(urls.toSet())
 
         val contentWarningReason = if (wantsToMarkAsSensitive) contentWarningDescription else null
+        val localExpirationDate = if (wantsExpirationDate) expirationDate else null
 
         return if (wantsPoll) {
             val options = pollOptions.map { it.value }
@@ -710,6 +724,7 @@ open class ShortNotePostViewModel :
                 localZapRaiserAmount?.let { zapraiser(it) }
                 zapReceiver?.let { zapSplits(it) }
                 contentWarningReason?.let { contentWarning(it) }
+                localExpirationDate?.let { expiration(it) }
 
                 emojis(emojis)
                 imetas(usedAttachments)
@@ -765,6 +780,7 @@ open class ShortNotePostViewModel :
                 localZapRaiserAmount?.let { zapraiser(it) }
                 zapReceiver?.let { zapSplits(it) }
                 contentWarningReason?.let { contentWarning(it) }
+                localExpirationDate?.let { expiration(it) }
 
                 emojis(emojis)
                 imetas(usedAttachments)
@@ -1234,6 +1250,14 @@ open class ShortNotePostViewModel :
 
     fun toggleMarkAsSensitive() {
         wantsToMarkAsSensitive = !wantsToMarkAsSensitive
+        draftTag.newVersion()
+    }
+
+    fun toggleExpirationDate() {
+        wantsExpirationDate = !wantsExpirationDate
+        if (wantsExpirationDate) {
+            expirationDate = TimeUtils.oneDayAhead()
+        }
         draftTag.newVersion()
     }
 
