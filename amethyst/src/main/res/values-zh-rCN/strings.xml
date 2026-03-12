@@ -646,6 +646,7 @@
     <string name="channel_list_join_channel">加入</string>
     <string name="today">今天</string>
     <string name="content_warning">内容警告</string>
+    <string name="content_warning_with_reason">警告: %1$s</string>
     <string name="content_warning_explanation">这个帖子包含敏感内容，一些人可能会觉得有冒犯性或令人不安</string>
     <string name="content_warning_hide_all_sensitive_content">始终隐藏敏感内容</string>
     <string name="content_warning_show_all_sensitive_content">始终显示敏感内容</string>
@@ -833,6 +834,7 @@
     <string name="loading_location">加载位置中</string>
     <string name="lack_location_permissions">没有位置信息权限</string>
     <string name="add_sensitive_content_explainer">在显示你的内容之前添加敏感的内容警告。针对任何 NSFW 内容或一些人可能觉得有冒犯性或令人不安的内容。</string>
+    <string name="add_sensitive_content_description_placeholder">原因 (可选)</string>
     <string name="new_feature_nip17_might_not_be_available_title">新功能</string>
     <string name="new_feature_nip17_might_not_be_available_description">启用此模式需要 Amethyst 发送一条 NIP-17 消息（包装的、密封的私信和群聊消息）。因为 NIP-17 是新的，大多数客户端尚未执行。请确保接收方正在使用兼容的客户端。</string>
     <string name="new_feature_nip17_activate">启用</string>
@@ -1505,4 +1507,5 @@
     <string name="import_follows_tips">"输入好友或社区领袖的配置文件。您可以使用他们的 npub、NIP-05地址或Namecoin 名称，例如alice@example.bit 或区块链验证的地址 id/alice。"</string>
     <string name="select_all">全选</string>
     <string name="uptime">%1$d%% 运行时间</string>
+    <string name="namecoin_settings">Namecoin 设置</string>
 </resources>
