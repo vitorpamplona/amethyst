@@ -62,12 +62,30 @@ kotlin {
     // project can be found here:
     // https://developer.android.com/kotlin/multiplatform/migrate
     val xcfName = "quartz-kmpKit"
+    val libsodiumPath = project.file("src/nativeInterop/libsodium").toString()
 
     listOf(
         iosArm64(),
         iosX64(),
         iosSimulatorArm64(),
     ).forEach { target ->
+
+        target.compilations.getByName("main") {
+            val headerFilesPath = "$libsodiumPath/include/sodium"
+            val Clibsodium by cinterops.creating {
+                definitionFile.set(project.file("Clibsodium.def"))
+                includeDirs("${libsodiumPath}/ios-simulators/lib")
+                //compilerOpts("-I${libsodiumPath}/ios-simulators/lib")
+
+
+                headers(
+                    "$headerFilesPath/crypto_aead_xchacha20poly1305.h",
+                    "$headerFilesPath/crypto_core_hchacha20.h",
+                    "$headerFilesPath/crypto_stream_chacha20.h"
+                )
+            }
+        }
+
         target.swiftPackageConfig(cinteropName = "swiftbridge") {
             minIos = "17"
             minMacos = "14"
@@ -84,74 +102,39 @@ kotlin {
         }
     }
 
-    val libsodiumPath = project.file("src/nativeInterop/libsodium").toString()
-
     iosX64 {
-        compilations.getByName("main") {
-            val headerFilesPath = "$libsodiumPath/include/sodium"
-            val Clibsodium by cinterops.creating {
-                definitionFile.set(project.file("Clibsodium.def"))
-                includeDirs("$libsodiumPath/include/sodium")
-
-                headers(
-                    "$headerFilesPath/crypto_aead_xchacha20poly1305.h",
-                    "$headerFilesPath/crypto_core_hchacha20.h",
-                    "$headerFilesPath/crypto_stream_chacha20.h"
-                )
-            }
-        }
-        binaries.all {
-            //linkerOpts("-L${libsodiumPath}/ios/lib", "-llibsodium")
-        }
         binaries.framework {
             baseName = xcfName
         }
     }
 
     iosArm64 {
-        compilations.getByName("main") {
-            val headerFilesPath = "$libsodiumPath/include/sodium"
-            val Clibsodium by cinterops.creating {
-                definitionFile.set(project.file("Clibsodium.def"))
-                includeDirs("$libsodiumPath/include/sodium")
-
-                headers(
-                    "$headerFilesPath/crypto_aead_xchacha20poly1305.h",
-                    "$headerFilesPath/crypto_core_hchacha20.h",
-                    "$headerFilesPath/crypto_stream_chacha20.h"
-                )
-            }
-        }
-        binaries.all {
-            //linkerOpts("-L${libsodiumPath}/ios/lib", "-llibsodium")
-        }
         binaries.framework {
             baseName = xcfName
         }
     }
 
     iosSimulatorArm64 {
-        compilations.getByName("main") {
-            val headerFilesPath = "$libsodiumPath/include/sodium"
-            val Clibsodium by cinterops.creating {
-                definitionFile.set(project.file("Clibsodium.def"))
-                includeDirs("${libsodiumPath}/ios-simulators/lib")
-                //compilerOpts("-I${libsodiumPath}/ios-simulators/lib")
-
-
-                headers(
-                    "$headerFilesPath/crypto_aead_xchacha20poly1305.h",
-                    "$headerFilesPath/crypto_core_hchacha20.h",
-                    "$headerFilesPath/crypto_stream_chacha20.h"
-                )
-            }
-        }
-        binaries.all {
-            //linkerOpts("-L${libsodiumPath}/ios-simulators/lib", "-llibsodium-simulator")
-        }
         binaries.framework {
             baseName = xcfName
         }
+    }
+    // This generates the Libsodium definition file, necessary for creating native bindings(a Kotlin API) for libsodium(for iOS).
+    val libsodiumDefFileGeneration = tasks.register<Exec>("GenerateSodiumCinteropFile") {
+        val libsodiumPath = project.file("src/nativeInterop/libsodium").toString()
+        val definitionFile = project.file("src/nativeInterop/cinterop/Clibsodium.def")
+        definitionFile.writeText("package = Clibsodium")
+        definitionFile.appendText("\n" + "staticLibraries = libsodium.a libsodium-simulator.a")
+        definitionFile.appendText("\n" + "libraryPaths = ${libsodiumPath}/ios/lib ${libsodiumPath}/ios-simulators/lib")
+
+        doLast {
+            executionResult.get().assertNormalExitValue()
+        }
+    }
+
+    tasks.withType<KotlinNativeCompile>().configureEach {
+//        doFirst { libsodiumDefFileGeneration.get() }
+        dependsOn(libsodiumDefFileGeneration)
     }
 
     // This makes sure that the resource file directory is visible for iOS tests.
@@ -373,24 +356,5 @@ mavenPublishing {
             url = "https://github.com/vitorpamplona/amethyst/"
             connection = "https://github.com/vitorpamplona/amethyst/.git"
         }
-    }
-}
-
-tasks.register<Exec>("GenerateSodiumCinteropFile") {
-    val libsodiumPath = project.file("src/nativeInterop/libsodium").toString()
-    val definitionFile = project.file("src/nativeInterop/cinterop/Clibsodium.def")
-    definitionFile.writeText("package = Clibsodium")
-    definitionFile.appendText("\n" + "staticLibraries = libsodium.a libsodium-simulator.a")
-    definitionFile.appendText("\n" + "libraryPaths = ${libsodiumPath}/ios/lib ${libsodiumPath}/ios-simulators/lib")
-
-    doLast {
-        executionResult.get().assertNormalExitValue()
-    }
-}
-
-tasks.withType<KotlinNativeCompile>().configureEach {
-    val fileDefinition = project.file("src/nativeInterop/cinterop/Clibsodium.def")
-    if (!fileDefinition.exists()) {
-        dependsOn("GenerateSodiumCinteropFile")
     }
 }
