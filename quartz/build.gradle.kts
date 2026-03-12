@@ -94,8 +94,6 @@ kotlin {
             val Clibsodium by cinterops.creating {
                 assert(project.file("Clibsodium.def").exists())
                 definitionFile.set(project.file("Clibsodium.def"))
-                includeDirs("${libsodiumPath}/ios-simulators/lib")
-                //compilerOpts("-I${libsodiumPath}/ios-simulators/lib")
 
                 headers(
                     "$libsodiumHeaderFilesPath/crypto_aead_xchacha20poly1305.h",
