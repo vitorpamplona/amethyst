@@ -5,6 +5,7 @@ import io.github.frankois944.spmForKmp.swiftPackageConfig
 import io.github.frankois944.spmForKmp.utils.ExperimentalSpmForKmpFeature
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeTest
+import org.jetbrains.kotlin.gradle.tasks.KotlinNativeCompile
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -83,19 +84,71 @@ kotlin {
         }
     }
 
+    val libsodiumPath = project.file("src/nativeInterop/libsodium").toString()
+
     iosX64 {
+        compilations.getByName("main") {
+            val headerFilesPath = "$libsodiumPath/include/sodium"
+            val Clibsodium by cinterops.creating {
+                definitionFile.set(project.file("Clibsodium.def"))
+                includeDirs("$libsodiumPath/include/sodium")
+
+                headers(
+                    "$headerFilesPath/crypto_aead_xchacha20poly1305.h",
+                    "$headerFilesPath/crypto_core_hchacha20.h",
+                    "$headerFilesPath/crypto_stream_chacha20.h"
+                )
+            }
+        }
+        binaries.all {
+            //linkerOpts("-L${libsodiumPath}/ios/lib", "-llibsodium")
+        }
         binaries.framework {
             baseName = xcfName
         }
     }
 
     iosArm64 {
+        compilations.getByName("main") {
+            val headerFilesPath = "$libsodiumPath/include/sodium"
+            val Clibsodium by cinterops.creating {
+                definitionFile.set(project.file("Clibsodium.def"))
+                includeDirs("$libsodiumPath/include/sodium")
+
+                headers(
+                    "$headerFilesPath/crypto_aead_xchacha20poly1305.h",
+                    "$headerFilesPath/crypto_core_hchacha20.h",
+                    "$headerFilesPath/crypto_stream_chacha20.h"
+                )
+            }
+        }
+        binaries.all {
+            //linkerOpts("-L${libsodiumPath}/ios/lib", "-llibsodium")
+        }
         binaries.framework {
             baseName = xcfName
         }
     }
 
     iosSimulatorArm64 {
+        compilations.getByName("main") {
+            val headerFilesPath = "$libsodiumPath/include/sodium"
+            val Clibsodium by cinterops.creating {
+                definitionFile.set(project.file("Clibsodium.def"))
+                includeDirs("${libsodiumPath}/ios-simulators/lib")
+                //compilerOpts("-I${libsodiumPath}/ios-simulators/lib")
+
+
+                headers(
+                    "$headerFilesPath/crypto_aead_xchacha20poly1305.h",
+                    "$headerFilesPath/crypto_core_hchacha20.h",
+                    "$headerFilesPath/crypto_stream_chacha20.h"
+                )
+            }
+        }
+        binaries.all {
+            //linkerOpts("-L${libsodiumPath}/ios-simulators/lib", "-llibsodium-simulator")
+        }
         binaries.framework {
             baseName = xcfName
         }
@@ -239,6 +292,8 @@ kotlin {
                 implementation(libs.charlietap.cachemap)
                 implementation(libs.net.thauvin.erik.urlencoder.lib)
                 implementation(libs.dev.whyoleg.cryptography.provider.apple.optimal)
+//                implementation("io.github.andreypfau:kotlinx-crypto-hmac:0.0.4")
+//                implementation("io.github.andreypfau:kotlinx-crypto-sha2:0.0.4")
             }
         }
 
@@ -318,5 +373,24 @@ mavenPublishing {
             url = "https://github.com/vitorpamplona/amethyst/"
             connection = "https://github.com/vitorpamplona/amethyst/.git"
         }
+    }
+}
+
+tasks.register<Exec>("GenerateSodiumCinteropFile") {
+    val libsodiumPath = project.file("src/nativeInterop/libsodium").toString()
+    val definitionFile = project.file("src/nativeInterop/cinterop/Clibsodium.def")
+    definitionFile.writeText("package = Clibsodium")
+    definitionFile.appendText("\n" + "staticLibraries = libsodium.a libsodium-simulator.a")
+    definitionFile.appendText("\n" + "libraryPaths = ${libsodiumPath}/ios/lib ${libsodiumPath}/ios-simulators/lib")
+
+    doLast {
+        executionResult.get().assertNormalExitValue()
+    }
+}
+
+tasks.withType<KotlinNativeCompile>().configureEach {
+    val fileDefinition = project.file("src/nativeInterop/cinterop/Clibsodium.def")
+    if (!fileDefinition.exists()) {
+        dependsOn("GenerateSodiumCinteropFile")
     }
 }
