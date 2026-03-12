@@ -125,6 +125,7 @@
     <string name="bytes">Bájt</string>
     <string name="error">Hiba</string>
     <string name="errors">Hibák</string>
+    <string name="connection_success_rate_description">Az átjátszóhoz való sikeres kapcsolatok százalékos aránya</string>
     <string name="errors_description">Ebben a munkamenetben lévő kapcsolati hibák száma</string>
     <string name="home_feed">Fő hírfolyam</string>
     <string name="private_message_feed">Privát üzenethírfolyam</string>
@@ -645,6 +646,7 @@
     <string name="channel_list_join_channel">Csatlakozás</string>
     <string name="today">Ma</string>
     <string name="content_warning">Tartalomra vonatkozó figyelmeztetés</string>
+    <string name="content_warning_with_reason">Figyelmeztetés: %1$s</string>
     <string name="content_warning_explanation">Ez a bejegyzés érzékeny tartalmat tartalmaz, amelyet egyesek sértőnek vagy zavarónak találhatnak</string>
     <string name="content_warning_hide_all_sensitive_content">Az érzékeny tartalmat mindig rejtse el</string>
     <string name="content_warning_show_all_sensitive_content">Az érzékeny tartalmat mindig jelenítse meg</string>
@@ -832,6 +834,7 @@
     <string name="loading_location">Helyszín betöltése…</string>
     <string name="lack_location_permissions">A helyszín-meghatározás nincs engedélyezve</string>
     <string name="add_sensitive_content_explainer">Hozzáadja az érzékeny tartalomra vonatkozó figyelmeztetést a tartalom megjelenítése előtt. Ez ideális bármilyen NSFW tartalom vagy olyan tartalom esetén, amelyet egyesek sértőnek vagy zavarónak találhatnak</string>
+    <string name="add_sensitive_content_description_placeholder">Indoklás (nem kötelező)</string>
     <string name="new_feature_nip17_might_not_be_available_title">Új funkció</string>
     <string name="new_feature_nip17_might_not_be_available_description">Ennek az üzemmódnak az aktiválásához az Amethystnek NIP-17 üzenetet kell küldenie (GiftWrapped, Sealed Direct és csoport-üzenetek). A NIP-17 új, és a legtöbb kliens még nem implementálta. Győződjön meg arról is, hogy a kedvezményezett kompatibilis klienst használ.</string>
     <string name="new_feature_nip17_activate">Aktiválás</string>
@@ -1503,4 +1506,6 @@
     <string name="following_accounts">%1$d felhasználói fiók követése…</string>
     <string name="import_follows_tips">"Írja be egy barátja vagy közösségi vezető profilját. Használhatja az npub, NIP-05 címüket, vagy egy Namecoin nevet, például aliz@pelda.bit vagy id/aliz a blokklánc által ellenőrzött azonosítókhoz."</string>
     <string name="select_all">Összes kijelölése</string>
+    <string name="uptime">Üzemidő: %1$d%%</string>
+    <string name="namecoin_settings">Namecoin-beállítások</string>
 </resources>
