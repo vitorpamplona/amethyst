@@ -59,9 +59,8 @@ class BlossomServersEvent(
 
         fun createTagArray(servers: List<String>): Array<Array<String>> =
             servers
-                .map {
-                    arrayOf("server", it)
-                }.plusElement(AltTag.assemble(ALT))
+                .map { arrayOf("server", it) }
+                .plusElement(AltTag.assemble(ALT))
                 .toTypedArray()
 
         suspend fun updateRelayList(

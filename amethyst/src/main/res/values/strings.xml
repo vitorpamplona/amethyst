@@ -1081,6 +1081,9 @@
     <string name="no_wallet_found_with_error">No Wallets found to pay a lightning invoice (Error: %1$s). Please install a Lightning wallet to use zaps</string>
     <string name="no_wallet_found">No Wallets found to pay a lightning invoice. Please install a Lightning wallet to use zaps</string>
 
+    <string name="no_blossom_apps_found_title">Can\'t open Blossom links</string>
+    <string name="no_blossom_apps_found_description">Blossom apps were not found. Please install a local Blossom app to see this file</string>
+
     <string name="hidden_words">Hidden Words</string>
     <string name="hide_new_word_label">Hide new word or sentence</string>
     <string name="automatically_show_profile_picture">Profile Picture</string>

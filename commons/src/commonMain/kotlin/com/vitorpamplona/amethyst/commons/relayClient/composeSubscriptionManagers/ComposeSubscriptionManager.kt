@@ -21,17 +21,20 @@
 package com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers
 
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.collections.forEach
 
 /**
  *  This allows composables to directly register their queries
  *  to relays. There may be multiple duplications in these
  *  subscriptions since we do not control when screens are removed.
  */
-abstract class ComposeSubscriptionManager<T> : ComposeSubscriptionManagerControls {
+abstract class ComposeSubscriptionManager<T> :
+    ComposeSubscriptionManagerControls,
+    Subscribable<T> {
     private var composeSubscriptions: ConcurrentHashMap<T, T> = ConcurrentHashMap()
 
     // This is called by main. Keep it really fast.
-    fun subscribe(query: T?) {
+    override fun subscribe(query: T?) {
         if (query == null) return
 
         composeSubscriptions.put(query, query)
@@ -40,7 +43,7 @@ abstract class ComposeSubscriptionManager<T> : ComposeSubscriptionManagerControl
     }
 
     // This is called by main. Keep it really fast.
-    fun unsubscribe(query: T?) {
+    override fun unsubscribe(query: T?) {
         if (query == null) return
 
         composeSubscriptions.remove(query)
@@ -48,5 +51,37 @@ abstract class ComposeSubscriptionManager<T> : ComposeSubscriptionManagerControl
         invalidateKeys()
     }
 
+    override fun subscribe(query: List<T>) {
+        if (query.isEmpty()) return
+
+        query.forEach {
+            composeSubscriptions.put(it, it)
+        }
+
+        invalidateKeys()
+    }
+
+    // This is called by main. Keep it really fast.
+    override fun unsubscribe(query: List<T>) {
+        if (query.isEmpty()) return
+
+        query.forEach {
+            composeSubscriptions.remove(it)
+        }
+
+        invalidateKeys()
+    }
+
     fun allKeys() = composeSubscriptions.keys
+}
+
+interface Subscribable<T> {
+    // This is called by main. Keep it really fast.
+    fun subscribe(query: T?)
+
+    fun unsubscribe(query: T?)
+
+    fun subscribe(query: List<T>)
+
+    fun unsubscribe(query: List<T>)
 }

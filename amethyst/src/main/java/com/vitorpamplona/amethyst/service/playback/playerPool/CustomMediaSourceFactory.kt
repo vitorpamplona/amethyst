@@ -22,28 +22,26 @@ package com.vitorpamplona.amethyst.service.playback.playerPool
 
 import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.datasource.okhttp.OkHttpDataSource
+import androidx.media3.datasource.DataSource
 import androidx.media3.exoplayer.drm.DrmSessionManagerProvider
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
-import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCache
 import com.vitorpamplona.amethyst.service.playback.diskCache.isLiveStreaming
-import okhttp3.OkHttpClient
 
 /**
  * HLS LiveStreams cannot use cache.
  */
 @UnstableApi
 class CustomMediaSourceFactory(
-    okHttpClient: OkHttpClient,
+    videoCache: VideoCache,
+    dataSourceFactory: DataSource.Factory,
 ) : MediaSource.Factory {
     private var cachingFactory: MediaSource.Factory =
-        DefaultMediaSourceFactory(
-            Amethyst.instance.videoCache.get(okHttpClient),
-        )
+        DefaultMediaSourceFactory(videoCache.get(dataSourceFactory))
     private var nonCachingFactory: MediaSource.Factory =
-        DefaultMediaSourceFactory(OkHttpDataSource.Factory(okHttpClient))
+        DefaultMediaSourceFactory(dataSourceFactory)
 
     override fun setDrmSessionManagerProvider(drmSessionManagerProvider: DrmSessionManagerProvider): MediaSource.Factory {
         cachingFactory.setDrmSessionManagerProvider(drmSessionManagerProvider)

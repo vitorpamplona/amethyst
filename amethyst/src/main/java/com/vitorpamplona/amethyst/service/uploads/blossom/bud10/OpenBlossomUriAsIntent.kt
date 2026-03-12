@@ -18,36 +18,26 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.components
+package com.vitorpamplona.amethyst.service.uploads.blossom.bud10
 
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.text.style.TextOverflow
-import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.openBlossomUriAsIntent
+import android.content.Context
+import android.content.Intent
+import androidx.core.net.toUri
+import com.vitorpamplona.amethyst.R
+import kotlin.coroutines.cancellation.CancellationException
 
-@Composable
-fun ClickableUrl(
-    urlText: String,
-    url: String,
-    onError: (Int, Int) -> Unit = { _, _ -> },
+fun openBlossomUriAsIntent(
+    context: Context,
+    blossomUri: String,
+    onError: (Int, Int) -> Unit,
 ) {
-    val uri = LocalUriHandler.current
-    val context = LocalContext.current
+    try {
+        val intent = Intent(Intent.ACTION_VIEW, blossomUri.toUri())
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
 
-    ClickableTextPrimary(
-        text = urlText,
-        maxLines = 1,
-        overflow = TextOverflow.MiddleEllipsis,
-        onClick = {
-            if (url.startsWith("blossom:")) {
-                openBlossomUriAsIntent(context, url, onError)
-            } else {
-                runCatching {
-                    val doubleCheckedUrl = if (url.contains("://")) url else "https://$url"
-                    uri.openUri(doubleCheckedUrl)
-                }
-            }
-        },
-    )
+        context.startActivity(intent)
+    } catch (e: Exception) {
+        if (e is CancellationException) throw e
+        onError(R.string.no_blossom_apps_found_title, R.string.no_blossom_apps_found_description)
+    }
 }

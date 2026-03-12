@@ -25,6 +25,8 @@ import android.content.Context
 import androidx.security.crypto.EncryptedSharedPreferences
 import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
+import com.vitorpamplona.amethyst.commons.model.NoteState
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.accountsCache.AccountCacheState
 import com.vitorpamplona.amethyst.model.nip03Timestamp.IncomingOtsEventVerifier
@@ -45,6 +47,7 @@ import com.vitorpamplona.amethyst.service.images.ImageLoaderSetup
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.notifications.PokeyReceiver
 import com.vitorpamplona.amethyst.service.okhttp.DualHttpClientManager
+import com.vitorpamplona.amethyst.service.okhttp.DualHttpClientManagerForRelays
 import com.vitorpamplona.amethyst.service.okhttp.EncryptionKeyCache
 import com.vitorpamplona.amethyst.service.okhttp.OkHttpWebSocket
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCache
@@ -54,11 +57,15 @@ import com.vitorpamplona.amethyst.service.relayClient.RelayProxyClientConnector
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.AuthCoordinator
 import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.model.NotifyCoordinator
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.RelaySubscriptionsCoordinator
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderQueryState
 import com.vitorpamplona.amethyst.service.relayClient.speedLogger.RelaySpeedLogger
+import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.BlossomServerResolver
 import com.vitorpamplona.amethyst.service.uploads.nip95.Nip95CacheFactory
 import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.screen.UiSettingsState
 import com.vitorpamplona.amethyst.ui.tor.TorManager
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayLogger
@@ -73,6 +80,7 @@ import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.DEFAULT_ELECTRUMX_S
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumXClient
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.TOR_ELECTRUMX_SERVERS
+import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -80,6 +88,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.onCompletion
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.transform
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -137,16 +149,6 @@ class AppModules(
             scope = applicationIOScope,
         )
 
-    // manages all relay connections
-    val okHttpClientForRelays =
-        DualHttpClientManager(
-            userAgent = appAgent,
-            proxyPortProvider = torManager.activePortOrNull,
-            isMobileDataProvider = connManager.isMobileOrNull,
-            keyCache = keyCache,
-            scope = applicationIOScope,
-        )
-
     // Offers easy methods to know when connections are happening through Tor or not
     val roleBasedHttpClientBuilder = RoleBasedHttpClientBuilder(okHttpClients, torPrefs.value)
 
@@ -189,6 +191,15 @@ class AppModules(
             okHttpClients,
             torPrefs.value,
             applicationIOScope,
+        )
+
+    // manages all relay connections
+    val okHttpClientForRelays =
+        DualHttpClientManagerForRelays(
+            userAgent = appAgent,
+            proxyPortProvider = torManager.activePortOrNull,
+            isMobileDataProvider = connManager.isMobileOrNull,
+            scope = applicationIOScope,
         )
 
     // Connects the NostrClient class with okHttp
@@ -268,6 +279,44 @@ class AppModules(
             scope = applicationIOScope,
         )
 
+    fun subscribedFlow(
+        address: Address,
+        account: Account,
+    ): Flow<NoteState> {
+        val note = cache.getOrCreateAddressableNote(address)
+
+        val userSub = UserFinderQueryState(note.author ?: cache.getOrCreateUser(address.pubKeyHex), account)
+        val noteSub = EventFinderQueryState(note, account)
+
+        return note
+            .flow()
+            .metadata.stateFlow
+            .onStart {
+                sources.userFinder.subscribe(userSub)
+                sources.eventFinder.subscribe(noteSub)
+            }.onCompletion {
+                sources.eventFinder.unsubscribe(noteSub)
+                sources.userFinder.unsubscribe(userSub)
+            }
+    }
+
+    val blossomResolver =
+        BlossomServerResolver(
+            loggedInUsers = { listOfNotNull(sessionManager.loggedInAccount()?.pubKey) },
+            blossomServers = { addressesToSubscribe ->
+                val account = sessionManager.loggedInAccount() ?: return@BlossomServerResolver listOf()
+                addressesToSubscribe.map { address ->
+                    subscribedFlow(address, account).transform {
+                        val event = it.note.event as? BlossomServersEvent
+                        if (event != null) {
+                            emit(event)
+                        }
+                    }
+                }
+            },
+            httpClientBuilder = roleBasedHttpClientBuilder,
+        )
+
     // Organizes cache clearing
     val trimmingService = MemoryTrimmingService(cache)
 
@@ -298,7 +347,12 @@ class AppModules(
     fun contentResolverFn(): ContentResolver = appContext.contentResolver
 
     fun setImageLoader() {
-        ImageLoaderSetup.setup(appContext, { diskCache }, { memoryCache }) { url ->
+        ImageLoaderSetup.setup(
+            app = appContext,
+            diskCache = { diskCache },
+            memoryCache = { memoryCache },
+            blossomServerResolver = blossomResolver,
+        ) { url ->
             okHttpClients.getHttpClient(roleBasedHttpClientBuilder.shouldUseTorForImageDownload(url))
         }
     }

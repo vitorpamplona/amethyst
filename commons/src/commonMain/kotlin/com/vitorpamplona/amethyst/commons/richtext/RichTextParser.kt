@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.richtext
 
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.richtext.mimeTypeMap
 import com.vitorpamplona.quartz.experimental.inlineMetadata.Nip54InlineMetadata
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import com.vitorpamplona.quartz.nip31Alts.AltTag
@@ -161,27 +162,35 @@ class RichTextParser {
 
         val emojiMap = CustomEmoji.createEmojiMap(tags.lists)
 
-        val allUrls = urlSet.withScheme + urlSet.withoutScheme + urlSet.emails + urlSet.bech32s + urlSet.relayUrls
+        val allUrls = urlSet.withScheme + urlSet.withoutScheme + urlSet.emails + urlSet.bech32s + urlSet.relayUrls + urlSet.blossomUris
 
         val newContent = fixMissingSpaces(content, allUrls)
 
         val segments = findTextSegments(newContent, imageUrls, videoUrls, urlSet, emojiMap, tags)
 
-        val base64Images = segments.flatMap { it.words.filterIsInstance<Base64Segment>() }
-
         val mediaForPagerWithBase64 =
             mediaForPager +
-                base64Images
-                    .mapNotNull { createMediaContent(it.segmentText, emptyMap(), content, callbackUri) }
-                    .associateBy { it.url }
+                segments
+                    .flatMap { paragraph ->
+                        paragraph.words
+                            .mapNotNull {
+                                if (it is Base64Segment) {
+                                    createMediaContent(it.segmentText, emptyMap(), content, callbackUri)
+                                } else if (it is BlossomUriSegment) {
+                                    createMediaContent(it.segmentText, emptyMap(), content, callbackUri)
+                                } else {
+                                    null
+                                }
+                            }
+                    }.associateBy { it.url }
 
         return RichTextViewerState(
-            urlSet,
-            mediaForPagerWithBase64.toImmutableMap(),
-            mediaForPagerWithBase64.values.toImmutableList(),
-            emojiMap.toImmutableMap(),
-            segments,
-            tags,
+            urlSet = urlSet,
+            mediaForPager = mediaForPagerWithBase64.toImmutableMap(),
+            mediaList = mediaForPagerWithBase64.values.toImmutableList(),
+            customEmoji = emojiMap.toImmutableMap(),
+            paragraphs = segments,
+            tags = tags,
         )
     }
 
@@ -290,6 +299,8 @@ class RichTextParser {
 
         if (urls.relayUrls.contains(word)) return RelayUrlSegment(word)
 
+        if (urls.blossomUris.contains(word)) return BlossomUriSegment(word)
+
         if (startsWithNIP19Scheme(word)) return BechSegment(word)
 
         if (CustomEmoji.fastMightContainEmoji(word, emojis) && emojis.any { word.contains(it.key) }) return EmojiSegment(word)
@@ -359,24 +370,11 @@ class RichTextParser {
     companion object {
         val longDatePattern: Regex = Regex("^\\d{4}-\\d{2}-\\d{2}$")
         val shortDatePattern: Regex = Regex("^\\d{2}-\\d{2}-\\d{2}$")
-        val numberPattern: Regex = Regex("^(-?[\\d.]+)([a-zA-Z%]*)$")
 
         val noProtocolUrlValidator =
             Regex(
                 "(([a-zA-Z0-9_-]+@)?([a-zA-Z0-9_-]+\\.)*[a-zA-Z0-9_-]+[\\.\\:][a-zA-Z0-9_]+([\\/ \\?\\=\\&\\#\\.]?[a-zA-Z0-9_-]+)*\\/?)(.*)",
             )
-
-        // Splits at spaces AND at ASCII/multibyte character boundaries
-        // e.g. "ああexample.com" -> ["ああ", "example.com"]
-        val wordBoundaryRegex = Regex("(?<=[\\u0000-\\u00FF])(?=[\\u0100-\\uFFFF])|(?<=[\\u0100-\\uFFFF])(?=[\\u0000-\\u00FF])| +")
-
-        val additionalUrlSchema =
-            """^([A-Za-z0-9-_]+(\.[A-Za-z0-9-_]+)+)(:[0-9]+)?(/[^?#]*)?(\?[^#]*)?(#.*)?"""
-                .toRegex(RegexOption.IGNORE_CASE)
-
-        val HTTPRegex =
-            "^((http|https)://)?([A-Za-z0-9-_]+(\\.[A-Za-z0-9-_]+)+)(:[0-9]+)?(/[^?#]*)?(\\?[^#]*)?(#.*)?"
-                .toRegex(RegexOption.IGNORE_CASE)
 
         val imageExt = listOf("png", "jpg", "gif", "bmp", "jpeg", "webp", "svg", "avif")
         val videoExt = listOf("mp4", "avi", "wmv", "mpg", "amv", "webm", "mov", "mp3", "m3u8", "ogg", "wav", "flac", "aac", "opus", "m4a")
@@ -402,6 +400,10 @@ class RichTextParser {
             } else {
                 fullUrl
             }
+
+        fun isImageExtension(ext: String) = imageExtensions.any { it == ext }
+
+        fun isImageOrVideoExtension(ext: String) = imageExtensions.any { it == ext } || videoExtensions.any { it == ext }
 
         fun isImageOrVideoUrl(url: String): Boolean {
             val removedParamsFromUrl = removeQueryParamsForExtensionComparison(url)
@@ -462,3 +464,31 @@ class RichTextParser {
         fun isUrlWithoutScheme(url: String) = noProtocolUrlValidator.matches(url)
     }
 }
+
+val mimeTypeMap: Map<String, String> =
+    mapOf(
+        // Images
+        "png" to "image/png",
+        "jpg" to "image/jpeg",
+        "jpeg" to "image/jpeg",
+        "gif" to "image/gif",
+        "bmp" to "image/bmp",
+        "webp" to "image/webp",
+        "svg" to "image/svg+xml",
+        "avif" to "image/avif",
+        "tiff" to "image/tiff",
+        // Video
+        "mp4" to "video/mp4",
+        "webm" to "video/webm",
+        "ogg" to "video/ogg",
+        "mov" to "video/quicktime",
+        "avi" to "video/x-msvideo",
+        "mkv" to "video/x-matroska",
+        // Audio
+        "mp3" to "audio/mpeg",
+        "wav" to "audio/wav",
+        "ogg" to "audio/ogg",
+        "m4a" to "audio/mp4",
+        "aac" to "audio/aac",
+        "flac" to "audio/flac",
+    )

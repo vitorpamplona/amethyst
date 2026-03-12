@@ -23,13 +23,12 @@ package com.vitorpamplona.amethyst.service.playback.diskCache
 import android.annotation.SuppressLint
 import android.content.Context
 import androidx.media3.database.StandaloneDatabaseProvider
+import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
 import androidx.media3.datasource.cache.SimpleCache
-import androidx.media3.datasource.okhttp.OkHttpDataSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
 import java.io.File
 
 @SuppressLint("UnsafeOptInUsageError")
@@ -60,18 +59,18 @@ class VideoCache {
     }
 
     // This method should be called when proxy setting changes.
-    fun renewCacheFactory(client: OkHttpClient) {
+    fun renewCacheFactory(dataSourceFactory: DataSource.Factory) {
         cacheDataSourceFactory =
             CacheDataSource
                 .Factory()
                 .setCache(simpleCache)
-                .setUpstreamDataSourceFactory(OkHttpDataSource.Factory(client))
+                .setUpstreamDataSourceFactory(dataSourceFactory)
                 .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
     }
 
-    fun get(client: OkHttpClient): CacheDataSource.Factory {
+    fun get(dataSourceFactory: DataSource.Factory): CacheDataSource.Factory {
         // Renews the factory because OkHttpMight have changed.
-        renewCacheFactory(client)
+        renewCacheFactory(dataSourceFactory)
 
         return cacheDataSourceFactory
     }

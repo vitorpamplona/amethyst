@@ -292,7 +292,7 @@ private fun MyLoadUrlPreviewDirectFillWidth(
 
             is UrlPreviewState.Loading -> {
                 WaitAndDisplay {
-                    DisplayUrlWithLoadingSymbol(url)
+                    DisplayUrlWithLoadingSymbol(url, accountViewModel.toastManager::toast)
                 }
             }
 
