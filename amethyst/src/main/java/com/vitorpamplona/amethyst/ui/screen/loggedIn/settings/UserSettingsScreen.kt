@@ -63,6 +63,8 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
+import com.vitorpamplona.amethyst.ui.theme.SpacedBy10dp
+import com.vitorpamplona.amethyst.ui.theme.SpacedBy5dp
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import java.util.Locale as JavaLocale
 
@@ -93,6 +95,7 @@ fun UserSettingsScreen(
                     .padding(top = Size10dp, start = Size20dp, end = Size20dp)
                     .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = SpacedBy10dp,
             ) {
                 DontTranslateFromSetting(accountViewModel)
                 TranslateToSetting(accountViewModel)
@@ -219,7 +222,7 @@ fun LanguagePreferencesSetting(accountViewModel: AccountViewModel) {
 
     if (languagePreferences.isEmpty()) return
 
-    Column {
+    Column(verticalArrangement = SpacedBy5dp) {
         SettingsRow(
             name = R.string.language_preferences,
             description = R.string.language_preferences_description,
