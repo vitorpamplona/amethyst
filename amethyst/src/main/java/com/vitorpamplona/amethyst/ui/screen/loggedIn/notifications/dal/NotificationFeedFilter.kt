@@ -163,7 +163,7 @@ class NotificationFeedFilter(
         val cards = user.cardsOrNull() ?: return false
         return cards.receivedCards.value.entries.any {
             it.key.pubkeyHex == rankProvider.pubkey &&
-                (it.value.event as? ContactCardEvent)?.rank() != null
+                ((it.value.event as? ContactCardEvent)?.rank() ?: 0) > 0
         }
     }
 
