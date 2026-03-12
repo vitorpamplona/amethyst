@@ -34,6 +34,9 @@ class UrlParserTest {
         assertEquals(expected.withScheme, urlSet.withScheme)
         assertEquals(expected.withoutScheme, urlSet.withoutScheme)
         assertEquals(expected.emails, urlSet.emails)
+        assertEquals(expected.bech32s, urlSet.bech32s)
+        assertEquals(expected.blossomUris, urlSet.blossomUris)
+        assertEquals(expected.relayUrls, urlSet.relayUrls)
     }
 
     @Test
