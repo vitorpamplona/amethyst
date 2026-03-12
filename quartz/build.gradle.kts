@@ -75,9 +75,11 @@ kotlin {
 
     val libsodiumDefFileGeneration = tasks.register<Exec>("GenerateSodiumCinteropFile") {
         val definitionFile = project.file("src/nativeInterop/cinterop/Clibsodium.def")
-        definitionFile.writeText("package = Clibsodium")
-        definitionFile.appendText("\n" + "staticLibraries = libsodium.a libsodium-simulator.a")
-        definitionFile.appendText("\n" + "libraryPaths = ${libsodiumPath}/ios/lib ${libsodiumPath}/ios-simulators/lib")
+        if (!definitionFile.exists()){
+            definitionFile.writeText("package = Clibsodium")
+            definitionFile.appendText("\n" + "staticLibraries = libsodium.a libsodium-simulator.a")
+            definitionFile.appendText("\n" + "libraryPaths = ${libsodiumPath}/ios/lib ${libsodiumPath}/ios-simulators/lib")
+        }
     }
 
     listOf(
