@@ -20,18 +20,23 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
+import android.content.res.Resources
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
@@ -47,6 +52,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.os.ConfigurationCompat
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -54,6 +60,7 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
@@ -88,6 +95,8 @@ fun UserSettingsScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 DontTranslateFromSetting(accountViewModel)
+                TranslateToSetting(accountViewModel)
+                LanguagePreferencesSetting(accountViewModel)
             }
         }
     }
@@ -140,6 +149,177 @@ fun DontTranslateFromSetting(accountViewModel: AccountViewModel) {
                     }
                 }
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TranslateToSetting(accountViewModel: AccountViewModel) {
+    var expanded by remember { mutableStateOf(false) }
+    val currentTranslateTo = accountViewModel.translateTo()
+    val languageList = ConfigurationCompat.getLocales(Resources.getSystem().configuration)
+
+    Column {
+        SettingsRow(
+            name = R.string.translate_to,
+            description = R.string.translate_to_description,
+        ) {
+            ExposedDropdownMenuBox(
+                expanded = expanded,
+                onExpandedChange = { expanded = !expanded },
+            ) {
+                OutlinedTextField(
+                    value = JavaLocale(currentTranslateTo).displayName,
+                    onValueChange = {},
+                    readOnly = true,
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                    modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryEditable),
+                )
+
+                ExposedDropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false },
+                ) {
+                    for (i in 0 until languageList.size()) {
+                        languageList.get(i)?.let { lang ->
+                            DropdownMenuItem(
+                                text = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        if (accountViewModel.account.settings.translateToContains(lang)) {
+                                            Icon(
+                                                imageVector = Icons.Default.Check,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(24.dp),
+                                            )
+                                        } else {
+                                            Spacer(modifier = Modifier.size(24.dp))
+                                        }
+                                        Spacer(modifier = Modifier.size(10.dp))
+                                        Text(text = lang.displayName)
+                                    }
+                                },
+                                onClick = {
+                                    accountViewModel.updateTranslateTo(lang)
+                                    expanded = false
+                                },
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun LanguagePreferencesSetting(accountViewModel: AccountViewModel) {
+    val languagePreferences = accountViewModel.account.settings.syncedSettings.languages.languagePreferences
+
+    if (languagePreferences.isEmpty()) return
+
+    Column {
+        SettingsRow(
+            name = R.string.language_preferences,
+            description = R.string.language_preferences_description,
+        ) {}
+
+        languagePreferences.forEach { (key, preference) ->
+            val parts = key.split(",")
+            if (parts.size == 2) {
+                LanguagePreferenceItem(
+                    source = parts[0],
+                    target = parts[1],
+                    preference = preference,
+                    accountViewModel = accountViewModel,
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun LanguagePreferenceItem(
+    source: String,
+    target: String,
+    preference: String,
+    accountViewModel: AccountViewModel,
+) {
+    val sourceName = JavaLocale(source).displayName
+    val targetName = JavaLocale(target).displayName
+    var expanded by remember { mutableStateOf(false) }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded },
+        modifier = Modifier.padding(vertical = 4.dp),
+    ) {
+        OutlinedTextField(
+            value = stringRes(R.string.language_preference_pair, sourceName, targetName),
+            onValueChange = {},
+            readOnly = true,
+            label = {
+                Text(
+                    if (preference == source) {
+                        stringRes(R.string.translations_show_in_lang_first, sourceName)
+                    } else {
+                        stringRes(R.string.translations_show_in_lang_first, targetName)
+                    },
+                )
+            },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryEditable),
+        )
+
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
+            DropdownMenuItem(
+                text = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (preference == source) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp),
+                            )
+                        } else {
+                            Spacer(modifier = Modifier.size(24.dp))
+                        }
+                        Spacer(modifier = Modifier.size(10.dp))
+                        Text(stringRes(R.string.translations_show_in_lang_first, sourceName))
+                    }
+                },
+                onClick = {
+                    accountViewModel.prefer(source, target, source)
+                    expanded = false
+                },
+            )
+            HorizontalDivider(thickness = DividerThickness)
+            DropdownMenuItem(
+                text = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (preference == target) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp),
+                            )
+                        } else {
+                            Spacer(modifier = Modifier.size(24.dp))
+                        }
+                        Spacer(modifier = Modifier.size(10.dp))
+                        Text(stringRes(R.string.translations_show_in_lang_first, targetName))
+                    }
+                },
+                onClick = {
+                    accountViewModel.prefer(source, target, target)
+                    expanded = false
+                },
+            )
         }
     }
 }
