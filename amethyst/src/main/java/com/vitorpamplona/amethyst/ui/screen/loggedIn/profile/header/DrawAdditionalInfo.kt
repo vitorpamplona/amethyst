@@ -45,6 +45,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -54,6 +55,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.Nip05State
+import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.commons.util.toShortDisplay
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
@@ -200,6 +202,8 @@ fun DrawAdditionalInfo(
             }
         }
 
+        DisplayLastSeen(baseUser)
+
         DisplayNip05ProfileStatus(baseUser, accountViewModel)
 
         val lud16 =
@@ -314,6 +318,21 @@ fun DisplayNip05ProfileStatus(
         }
 
         else -> { }
+    }
+}
+
+@Composable
+fun DisplayLastSeen(user: User) {
+    val lastSeen by user.lastSeenFlow().collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    lastSeen?.let { timestamp ->
+        Text(
+            text = stringRes(R.string.last_seen, timeAgo(timestamp, context)),
+            color = MaterialTheme.colorScheme.placeholderText,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 

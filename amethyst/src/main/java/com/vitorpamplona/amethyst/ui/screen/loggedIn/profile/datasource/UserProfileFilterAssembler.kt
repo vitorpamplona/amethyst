@@ -34,12 +34,13 @@ class UserProfileFilterAssembler(
 ) : ComposeSubscriptionManager<UserProfileQueryState>() {
     val group =
         listOf(
-            // 5 subs per visible user profile screen.
+            // 6 subs per visible user profile screen.
             UserProfileMetadataFilterSubAssembler(client, ::allKeys),
             UserProfilePostsFilterSubAssembler(client, ::allKeys),
             UserProfileMediaFilterSubAssembler(client, ::allKeys),
             UserProfileFollowersFilterSubAssembler(client, ::allKeys),
             UserProfileZapsFilterSubAssembler(client, ::allKeys),
+            UserProfileLastSeenFilterSubAssembler(client, ::allKeys),
         )
 
     override fun invalidateFilters() = group.forEach { it.invalidateFilters() }

@@ -1014,6 +1014,7 @@
     <string name="copy_to_clipboard">Copy to clipboard</string>
     <string name="copy_nprofile_to_clipboard">Copy nprofile to clipboard</string>
     <string name="copy_npub_to_clipboard">Copy npub to clipboard</string>
+    <string name="last_seen">Last seen %1$s</string>
     <string name="share_or_save">Share or Save</string>
     <string name="copy_url_to_clipboard">Copy URL to clipboard</string>
     <string name="copy_the_note_id_to_the_clipboard">Copy Note ID to clipboard</string>
