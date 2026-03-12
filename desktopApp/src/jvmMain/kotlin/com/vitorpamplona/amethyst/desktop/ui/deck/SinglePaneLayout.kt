@@ -43,6 +43,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
@@ -152,37 +153,42 @@ fun SinglePaneLayout(
             Box(
                 modifier = Modifier.fillMaxSize().padding(12.dp),
             ) {
+                // Always keep RootContent composed so state (e.g. search results) survives navigation
+                RootContent(
+                    columnType = currentColumnType,
+                    relayManager = relayManager,
+                    localCache = localCache,
+                    accountManager = accountManager,
+                    account = account,
+                    nwcConnection = nwcConnection,
+                    subscriptionsCoordinator = subscriptionsCoordinator,
+                    appScope = appScope,
+                    onShowComposeDialog = onShowComposeDialog,
+                    onShowReplyDialog = onShowReplyDialog,
+                    onZapFeedback = onZapFeedback,
+                    onNavigateToProfile = { navState.push(DesktopScreen.UserProfile(it)) },
+                    onNavigateToThread = { navState.push(DesktopScreen.Thread(it)) },
+                )
                 if (currentOverlay != null) {
-                    OverlayContent(
-                        screen = currentOverlay,
-                        relayManager = relayManager,
-                        localCache = localCache,
-                        account = account,
-                        nwcConnection = nwcConnection,
-                        subscriptionsCoordinator = subscriptionsCoordinator,
-                        onShowComposeDialog = onShowComposeDialog,
-                        onShowReplyDialog = onShowReplyDialog,
-                        onZapFeedback = onZapFeedback,
-                        onNavigateToProfile = { navState.push(DesktopScreen.UserProfile(it)) },
-                        onNavigateToThread = { navState.push(DesktopScreen.Thread(it)) },
-                        onBack = { navState.pop() },
-                    )
-                } else {
-                    RootContent(
-                        columnType = currentColumnType,
-                        relayManager = relayManager,
-                        localCache = localCache,
-                        accountManager = accountManager,
-                        account = account,
-                        nwcConnection = nwcConnection,
-                        subscriptionsCoordinator = subscriptionsCoordinator,
-                        appScope = appScope,
-                        onShowComposeDialog = onShowComposeDialog,
-                        onShowReplyDialog = onShowReplyDialog,
-                        onZapFeedback = onZapFeedback,
-                        onNavigateToProfile = { navState.push(DesktopScreen.UserProfile(it)) },
-                        onNavigateToThread = { navState.push(DesktopScreen.Thread(it)) },
-                    )
+                    Surface(
+                        color = MaterialTheme.colorScheme.background,
+                        modifier = Modifier.fillMaxSize(),
+                    ) {
+                        OverlayContent(
+                            screen = currentOverlay,
+                            relayManager = relayManager,
+                            localCache = localCache,
+                            account = account,
+                            nwcConnection = nwcConnection,
+                            subscriptionsCoordinator = subscriptionsCoordinator,
+                            onShowComposeDialog = onShowComposeDialog,
+                            onShowReplyDialog = onShowReplyDialog,
+                            onZapFeedback = onZapFeedback,
+                            onNavigateToProfile = { navState.push(DesktopScreen.UserProfile(it)) },
+                            onNavigateToThread = { navState.push(DesktopScreen.Thread(it)) },
+                            onBack = { navState.pop() },
+                        )
+                    }
                 }
             }
         }
