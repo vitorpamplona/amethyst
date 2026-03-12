@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
+import com.vitorpamplona.quartz.experimental.relationshipStatus.ContactCardEvent
 import com.vitorpamplona.quartz.experimental.forks.IForkableEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.publicMessages.PublicMessageEvent
@@ -156,6 +157,16 @@ class NotificationFeedFilter(
         return collection.filterTo(HashSet()) { acceptableEvent(it, filterParams) }
     }
 
+    fun authorHasWotRank(authorHex: String): Boolean {
+        val rankProvider = account.trustProviderList.liveUserRankProvider.value ?: return false
+        val user = LocalCache.getUserIfExists(authorHex) ?: return false
+        val cards = user.cardsOrNull() ?: return false
+        return cards.receivedCards.value.entries.any {
+            it.key.pubkeyHex == rankProvider.pubkey &&
+                (it.value.event as? ContactCardEvent)?.rank() != null
+        }
+    }
+
     fun acceptableEvent(
         it: Note,
         filterParams: FilterByListParams,
@@ -183,9 +194,18 @@ class NotificationFeedFilter(
                 }
             }
 
+        val isWoTFilter = account.settings.defaultNotificationFollowList.value is TopFilter.WoT
+
+        val authorPassesFilter =
+            if (isWoTFilter) {
+                notifAuthor != null && authorHasWotRank(notifAuthor)
+            } else {
+                filterParams.isGlobal(it.relays) || notifAuthor == null || filterParams.isAuthorInFollows(notifAuthor)
+            }
+
         return noteEvent?.kind in NOTIFICATION_KINDS &&
             (noteEvent is LnZapEvent || notifAuthor != loggedInUserHex) &&
-            (filterParams.isGlobal(it.relays) || notifAuthor == null || filterParams.isAuthorInFollows(notifAuthor)) &&
+            authorPassesFilter &&
             noteEvent?.isTaggedUser(loggedInUserHex) ?: false &&
             (filterParams.isHiddenList || notifAuthor == null || !account.isHidden(notifAuthor)) &&
             (noteEvent !is PrivateDmEvent || !account.isDecryptedContentHidden(noteEvent)) &&

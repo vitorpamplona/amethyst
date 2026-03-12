@@ -96,6 +96,12 @@ class TopNavFilterState(
             name = ResourceName(R.string.follow_list_chess),
         )
 
+    val wotFollow =
+        FeedDefinition(
+            code = TopFilter.WoT,
+            name = ResourceName(R.string.follow_list_wot),
+        )
+
     val defaultLists = persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow, muteListFollow)
 
     fun mergePeopleLists(
@@ -220,7 +226,7 @@ class TopNavFilterState(
             checkNotInMainThread()
             emit(
                 listOf(
-                    listOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow),
+                    listOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow, wotFollow),
                     peopleLists,
                     listOf(muteListFollow),
                 ).flatten().toImmutableList(),

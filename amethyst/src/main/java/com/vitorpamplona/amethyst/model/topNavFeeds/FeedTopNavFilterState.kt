@@ -138,6 +138,10 @@ class FeedTopNavFilterState(
             is TopFilter.Relay -> {
                 UnknownFeedFlow(listName)
             }
+
+            TopFilter.WoT -> {
+                GlobalFeedFlow(followsRelays, proxyRelays)
+            }
         }
 
     @OptIn(ExperimentalCoroutinesApi::class)
