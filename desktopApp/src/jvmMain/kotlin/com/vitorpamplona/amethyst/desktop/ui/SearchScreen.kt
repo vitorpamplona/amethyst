@@ -64,8 +64,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -131,6 +133,14 @@ fun SearchScreen(
     val relayStatuses by relayManager.relayStatuses.collectAsState()
     val allRelayUrls = remember(relayStatuses) { relayStatuses.keys }
     val displayText by state.displayText.collectAsState()
+    // Track TextFieldValue locally to preserve cursor position
+    var textFieldValue by remember { mutableStateOf(TextFieldValue(displayText)) }
+    // Sync from flow only when text changes externally (form-driven updates)
+    LaunchedEffect(displayText) {
+        if (textFieldValue.text != displayText) {
+            textFieldValue = TextFieldValue(text = displayText, selection = TextRange(displayText.length))
+        }
+    }
     val query by state.query.collectAsState()
     val debouncedQuery by state.debouncedQuery.collectAsState()
     val panelExpanded by state.panelExpanded.collectAsState()
@@ -142,12 +152,19 @@ fun SearchScreen(
     // Bech32 parsing (immediate, no debounce)
     val bech32Results = remember(displayText) { parseSearchInput(displayText) }
 
+    // Skip people search when query specifies kinds that don't include profile (kind 0)
+    val shouldSearchPeople =
+        (debouncedQuery.kinds.isEmpty() && debouncedQuery.pseudoKinds.isEmpty()) ||
+            debouncedQuery.kinds.contains(MetadataEvent.KIND)
+
     // Clear results and start loading when query changes
     LaunchedEffect(debouncedQuery) {
         if (!debouncedQuery.isEmpty && bech32Results.isEmpty()) {
             state.clearResults()
             state.initRelayStates(allRelayUrls)
-            state.startSearching("people-search")
+            if (shouldSearchPeople) {
+                state.startSearching("people-search")
+            }
             state.startSearching("adv-search")
             // Timeout relays that silently ignore NIP-50 (e.g. strfry)
             kotlinx.coroutines.delay(10_000L)
@@ -161,6 +178,10 @@ fun SearchScreen(
             return@rememberSubscription null
         }
         if (bech32Results.isNotEmpty()) return@rememberSubscription null
+        if (!shouldSearchPeople) {
+            state.stopSearching("people-search")
+            return@rememberSubscription null
+        }
 
         createSearchPeopleSubscription(
             relays = allRelayUrls,
@@ -334,12 +355,11 @@ fun SearchScreen(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             OutlinedTextField(
-                value =
-                    TextFieldValue(
-                        text = displayText,
-                        selection = TextRange(displayText.length),
-                    ),
-                onValueChange = { state.updateFromText(it.text) },
+                value = textFieldValue,
+                onValueChange = {
+                    textFieldValue = it
+                    state.updateFromText(it.text)
+                },
                 modifier = Modifier.weight(1f).focusRequester(focusRequester),
                 placeholder = { Text("Search notes, people, tags... or use operators") },
                 leadingIcon = {
@@ -386,6 +406,7 @@ fun SearchScreen(
             AdvancedSearchPanel(
                 query = query,
                 onKindsChanged = { state.updateKinds(it) },
+                onPseudoKindsChanged = { state.updatePseudoKinds(it) },
                 onAuthorAdded = { state.addAuthor(it) },
                 onAuthorRemoved = { state.removeAuthor(it) },
                 onDateRangeChanged = { since, until -> state.updateDateRange(since, until) },

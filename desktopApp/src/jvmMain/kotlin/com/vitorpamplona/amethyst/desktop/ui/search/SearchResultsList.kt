@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui.search
 
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -41,6 +42,8 @@ import androidx.compose.material.icons.filled.Forum
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -50,17 +53,20 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.search.AdvancedSearchBarState
 import com.vitorpamplona.amethyst.commons.search.KindRegistry
+import com.vitorpamplona.amethyst.commons.search.SearchSortOrder
 import com.vitorpamplona.amethyst.commons.ui.components.UserSearchCard
 import com.vitorpamplona.amethyst.commons.util.toTimeAgo
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -74,8 +80,10 @@ fun SearchResultsList(
     modifier: Modifier = Modifier,
     listState: LazyListState = rememberLazyListState(),
 ) {
-    val people by state.peopleResults.collectAsState()
-    val notes by state.noteResults.collectAsState()
+    val people by state.sortedPeopleResults.collectAsState()
+    val notes by state.sortedNoteResults.collectAsState()
+    val eventSortOrder by state.eventSortOrder.collectAsState()
+    val peopleSortOrder by state.peopleSortOrder.collectAsState()
 
     val hasResults = people.isNotEmpty() || notes.isNotEmpty()
 
@@ -86,6 +94,9 @@ fun SearchResultsList(
     val articles = notes.filter { it.kind == LongTextNoteEvent.KIND }
     val otherNotes = notes.filter { it.kind != 1 && it.kind != LongTextNoteEvent.KIND }
 
+    // Per-section collapsed state (absent = expanded)
+    val collapsedSections = remember { mutableStateMapOf<String, Boolean>() }
+
     LazyColumn(
         state = listState,
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -93,25 +104,37 @@ fun SearchResultsList(
     ) {
         // People section
         if (people.isNotEmpty()) {
+            val collapsed = collapsedSections["people"] == true
             stickyHeader(key = "header-people") {
-                SectionHeader("People", people.size, Icons.Default.Person)
-            }
-            val displayPeople = people.take(5)
-            items(displayPeople, key = { "person-${it.pubkeyHex}" }) { user ->
-                UserSearchCard(
-                    user = user,
-                    onClick = { onNavigateToProfile(user.pubkeyHex) },
+                SortableHeader(
+                    title = "People",
+                    count = people.size,
+                    icon = Icons.Default.Person,
+                    options = SearchSortOrder.PEOPLE_OPTIONS,
+                    selected = peopleSortOrder,
+                    onSelect = { state.updatePeopleSortOrder(it) },
+                    collapsed = collapsed,
+                    onToggleCollapse = { collapsedSections["people"] = !collapsed },
                 )
             }
-            if (people.size > 5) {
-                item(key = "people-expand") {
-                    ExpandableSection(
-                        remaining = people.drop(5),
-                    ) { user ->
-                        UserSearchCard(
-                            user = user,
-                            onClick = { onNavigateToProfile(user.pubkeyHex) },
-                        )
+            if (!collapsed) {
+                val displayPeople = people.take(5)
+                items(displayPeople, key = { "person-${it.pubkeyHex}" }) { user ->
+                    UserSearchCard(
+                        user = user,
+                        onClick = { onNavigateToProfile(user.pubkeyHex) },
+                    )
+                }
+                if (people.size > 5) {
+                    item(key = "people-expand") {
+                        ExpandableSection(
+                            remaining = people.drop(5),
+                        ) { user ->
+                            UserSearchCard(
+                                user = user,
+                                onClick = { onNavigateToProfile(user.pubkeyHex) },
+                            )
+                        }
                     }
                 }
             }
@@ -122,19 +145,31 @@ fun SearchResultsList(
             if (people.isNotEmpty()) {
                 item(key = "divider-notes") { HorizontalDivider(Modifier.padding(vertical = 4.dp)) }
             }
+            val collapsed = collapsedSections["notes"] == true
             stickyHeader(key = "header-notes") {
-                SectionHeader("Notes", textNotes.size, Icons.Default.Description)
+                SortableHeader(
+                    title = "Notes",
+                    count = textNotes.size,
+                    icon = Icons.Default.Description,
+                    options = SearchSortOrder.EVENT_OPTIONS,
+                    selected = eventSortOrder,
+                    onSelect = { state.updateEventSortOrder(it) },
+                    collapsed = collapsed,
+                    onToggleCollapse = { collapsedSections["notes"] = !collapsed },
+                )
             }
-            val displayNotes = textNotes.take(5)
-            items(displayNotes, key = { "note-${it.id}" }) { event ->
-                NotePreviewCard(event = event, onClick = { onNavigateToThread(event.id) })
-            }
-            if (textNotes.size > 5) {
-                item(key = "notes-expand") {
-                    ExpandableSection(
-                        remaining = textNotes.drop(5),
-                    ) { event ->
-                        NotePreviewCard(event = event, onClick = { onNavigateToThread(event.id) })
+            if (!collapsed) {
+                val displayNotes = textNotes.take(5)
+                items(displayNotes, key = { "note-${it.id}" }) { event ->
+                    NotePreviewCard(event = event, onClick = { onNavigateToThread(event.id) })
+                }
+                if (textNotes.size > 5) {
+                    item(key = "notes-expand") {
+                        ExpandableSection(
+                            remaining = textNotes.drop(5),
+                        ) { event ->
+                            NotePreviewCard(event = event, onClick = { onNavigateToThread(event.id) })
+                        }
                     }
                 }
             }
@@ -145,18 +180,30 @@ fun SearchResultsList(
             if (people.isNotEmpty() || textNotes.isNotEmpty()) {
                 item(key = "divider-articles") { HorizontalDivider(Modifier.padding(vertical = 4.dp)) }
             }
+            val collapsed = collapsedSections["articles"] == true
             stickyHeader(key = "header-articles") {
-                SectionHeader("Articles", articles.size, Icons.Default.Article)
+                SortableHeader(
+                    title = "Articles",
+                    count = articles.size,
+                    icon = Icons.Default.Article,
+                    options = SearchSortOrder.EVENT_OPTIONS,
+                    selected = eventSortOrder,
+                    onSelect = { state.updateEventSortOrder(it) },
+                    collapsed = collapsed,
+                    onToggleCollapse = { collapsedSections["articles"] = !collapsed },
+                )
             }
-            items(articles.take(5), key = { "article-${it.id}" }) { event ->
-                NotePreviewCard(event = event, onClick = { onNavigateToThread(event.id) })
-            }
-            if (articles.size > 5) {
-                item(key = "articles-expand") {
-                    ExpandableSection(
-                        remaining = articles.drop(5),
-                    ) { event ->
-                        NotePreviewCard(event = event, onClick = { onNavigateToThread(event.id) })
+            if (!collapsed) {
+                items(articles.take(5), key = { "article-${it.id}" }) { event ->
+                    NotePreviewCard(event = event, onClick = { onNavigateToThread(event.id) })
+                }
+                if (articles.size > 5) {
+                    item(key = "articles-expand") {
+                        ExpandableSection(
+                            remaining = articles.drop(5),
+                        ) { event ->
+                            NotePreviewCard(event = event, onClick = { onNavigateToThread(event.id) })
+                        }
                     }
                 }
             }
@@ -165,11 +212,23 @@ fun SearchResultsList(
         // Other section
         if (otherNotes.isNotEmpty()) {
             item(key = "divider-other") { HorizontalDivider(Modifier.padding(vertical = 4.dp)) }
+            val collapsed = collapsedSections["other"] == true
             stickyHeader(key = "header-other") {
-                SectionHeader("Other", otherNotes.size, Icons.Default.Forum)
+                SortableHeader(
+                    title = "Other",
+                    count = otherNotes.size,
+                    icon = Icons.Default.Forum,
+                    options = SearchSortOrder.EVENT_OPTIONS,
+                    selected = eventSortOrder,
+                    onSelect = { state.updateEventSortOrder(it) },
+                    collapsed = collapsed,
+                    onToggleCollapse = { collapsedSections["other"] = !collapsed },
+                )
             }
-            items(otherNotes.take(5), key = { "other-${it.id}" }) { event ->
-                NotePreviewCard(event = event, onClick = { onNavigateToThread(event.id) })
+            if (!collapsed) {
+                items(otherNotes.take(5), key = { "other-${it.id}" }) { event ->
+                    NotePreviewCard(event = event, onClick = { onNavigateToThread(event.id) })
+                }
             }
         }
 
@@ -179,31 +238,67 @@ fun SearchResultsList(
 }
 
 @Composable
-private fun SectionHeader(
+private fun SortableHeader(
     title: String,
     count: Int,
     icon: ImageVector,
+    options: List<SearchSortOrder>,
+    selected: SearchSortOrder,
+    onSelect: (SearchSortOrder) -> Unit,
+    collapsed: Boolean = false,
+    onToggleCollapse: () -> Unit = {},
 ) {
+    val chevronRotation by animateFloatAsState(if (collapsed) -90f else 0f)
+
     Surface(
         color = MaterialTheme.colorScheme.background,
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.padding(vertical = 8.dp),
+            modifier = Modifier.clickable(onClick = onToggleCollapse).padding(vertical = 4.dp),
         ) {
+            Icon(
+                Icons.Default.ExpandMore,
+                contentDescription = if (collapsed) "Expand $title" else "Collapse $title",
+                modifier = Modifier.size(18.dp).rotate(chevronRotation),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             Icon(
                 icon,
                 contentDescription = null,
-                modifier = Modifier.size(18.dp),
+                modifier = Modifier.padding(start = 4.dp).size(18.dp),
                 tint = MaterialTheme.colorScheme.primary,
             )
             Text(
                 "$title ($count)",
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 8.dp),
             )
+            Spacer(Modifier.weight(1f))
+            if (!collapsed) {
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    options.forEach { option ->
+                        FilterChip(
+                            selected = option == selected,
+                            onClick = { onSelect(option) },
+                            label = {
+                                Text(
+                                    option.label,
+                                    style = MaterialTheme.typography.labelSmall,
+                                )
+                            },
+                            colors =
+                                FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                ),
+                            modifier = Modifier.height(28.dp),
+                        )
+                    }
+                }
+            }
         }
     }
 }

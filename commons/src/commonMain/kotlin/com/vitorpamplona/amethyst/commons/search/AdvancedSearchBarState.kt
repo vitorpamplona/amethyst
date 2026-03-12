@@ -83,6 +83,24 @@ class AdvancedSearchBarState(
     private val _noteResults = MutableStateFlow<ImmutableList<Event>>(persistentListOf())
     val noteResults: StateFlow<ImmutableList<Event>> = _noteResults.asStateFlow()
 
+    // Sort orders
+    private val _eventSortOrder = MutableStateFlow(SearchSortOrder.DEFAULT_EVENT)
+    val eventSortOrder: StateFlow<SearchSortOrder> = _eventSortOrder.asStateFlow()
+
+    private val _peopleSortOrder = MutableStateFlow(SearchSortOrder.DEFAULT_PEOPLE)
+    val peopleSortOrder: StateFlow<SearchSortOrder> = _peopleSortOrder.asStateFlow()
+
+    // Derived sorted results
+    val sortedNoteResults: StateFlow<ImmutableList<Event>> =
+        combine(_noteResults, _eventSortOrder, _rawText) { notes, order, text ->
+            SearchResultSorter.sortEvents(notes, order, text).toImmutableList()
+        }.stateIn(scope, SharingStarted.Eagerly, persistentListOf())
+
+    val sortedPeopleResults: StateFlow<ImmutableList<User>> =
+        combine(_peopleResults, _peopleSortOrder) { people, order ->
+            SearchResultSorter.sortPeople(people, order).toImmutableList()
+        }.stateIn(scope, SharingStarted.Eagerly, persistentListOf())
+
     private val activeSubIds = MutableStateFlow<Set<String>>(emptySet())
     val isSearching: StateFlow<Boolean> =
         activeSubIds
@@ -110,6 +128,11 @@ class AdvancedSearchBarState(
     fun updateKinds(kinds: List<Int>) {
         _changeSource = ChangeSource.FORM
         _query.value = _query.value.copy(kinds = kinds.toImmutableList())
+    }
+
+    fun updatePseudoKinds(pseudoKinds: List<String>) {
+        _changeSource = ChangeSource.FORM
+        _query.value = _query.value.copy(pseudoKinds = pseudoKinds.toImmutableList())
     }
 
     fun addAuthor(hexOrName: String) {
@@ -228,6 +251,14 @@ class AdvancedSearchBarState(
         _panelExpanded.value = !_panelExpanded.value
     }
 
+    fun updateEventSortOrder(order: SearchSortOrder) {
+        _eventSortOrder.value = order
+    }
+
+    fun updatePeopleSortOrder(order: SearchSortOrder) {
+        _peopleSortOrder.value = order
+    }
+
     fun clearSearch() {
         _changeSource = ChangeSource.INIT
         _rawText.value = ""
@@ -235,6 +266,8 @@ class AdvancedSearchBarState(
         _peopleResults.value = persistentListOf()
         _noteResults.value = persistentListOf()
         _relayStates.value = persistentListOf()
+        _eventSortOrder.value = SearchSortOrder.DEFAULT_EVENT
+        _peopleSortOrder.value = SearchSortOrder.DEFAULT_PEOPLE
         activeSubIds.value = emptySet()
         eventDeduplicator.clear()
     }
@@ -275,7 +308,7 @@ class AdvancedSearchBarState(
     fun addNoteResults(events: List<Event>) {
         if (events.isNotEmpty()) {
             val current = _noteResults.value
-            _noteResults.value = (current + events).sortedByDescending { it.createdAt }.toImmutableList()
+            _noteResults.value = (current + events).toImmutableList()
         }
     }
 }

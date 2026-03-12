@@ -56,6 +56,7 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.search.ContentPreset
 import com.vitorpamplona.amethyst.commons.search.DateUtils
 import com.vitorpamplona.amethyst.commons.search.KindRegistry
 import com.vitorpamplona.amethyst.commons.search.QueryParser
@@ -66,6 +67,7 @@ import com.vitorpamplona.amethyst.commons.search.SearchQuery
 fun AdvancedSearchPanel(
     query: SearchQuery,
     onKindsChanged: (List<Int>) -> Unit,
+    onPseudoKindsChanged: (List<String>) -> Unit,
     onAuthorAdded: (String) -> Unit,
     onAuthorRemoved: (String) -> Unit,
     onDateRangeChanged: (Long?, Long?) -> Unit,
@@ -99,10 +101,10 @@ fun AdvancedSearchPanel(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                KindRegistry.presets.forEach { (name, kinds) ->
+                KindRegistry.presets.forEach { (name, preset) ->
                     FilterChip(
-                        selected = query.kinds.toList().containsAll(kinds),
-                        onClick = { onKindsChanged(toggleKinds(query.kinds.toList(), kinds)) },
+                        selected = preset.isSelected(query.kinds.toList(), query.pseudoKinds.toList()),
+                        onClick = { togglePreset(preset, query, onKindsChanged, onPseudoKindsChanged) },
                         label = { Text(name) },
                     )
                 }
@@ -161,15 +163,29 @@ fun AdvancedSearchPanel(
     }
 }
 
-private fun toggleKinds(
-    current: List<Int>,
-    toggle: List<Int>,
-): List<Int> =
-    if (current.containsAll(toggle)) {
-        current - toggle.toSet()
+private fun togglePreset(
+    preset: ContentPreset,
+    query: SearchQuery,
+    onKindsChanged: (List<Int>) -> Unit,
+    onPseudoKindsChanged: (List<String>) -> Unit,
+) {
+    val pseudo = preset.pseudoKind
+    if (pseudo != null) {
+        val current = query.pseudoKinds.toList()
+        if (pseudo in current) {
+            onPseudoKindsChanged(current - pseudo)
+        } else {
+            onPseudoKindsChanged(current + pseudo)
+        }
     } else {
-        (current + toggle).distinct()
+        val current = query.kinds.toList()
+        if (current.containsAll(preset.kinds)) {
+            onKindsChanged(current - preset.kinds.toSet())
+        } else {
+            onKindsChanged((current + preset.kinds).distinct())
+        }
     }
+}
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -242,19 +258,21 @@ private fun DateRangeFields(
     until: Long?,
     onChanged: (Long?, Long?) -> Unit,
 ) {
-    var sinceText by remember(since) {
-        mutableStateOf(
-            since?.let {
-                DateUtils.timestampToDate(it)
-            } ?: "",
-        )
+    // Local text is source of truth while typing.
+    // Only propagate valid timestamps (or null when cleared).
+    // Only sync from external when the timestamp changes to something we didn't produce.
+    var sinceText by remember { mutableStateOf(since?.let { DateUtils.timestampToDate(it) } ?: "") }
+    var lastSince by remember { mutableStateOf(since) }
+    if (since != lastSince) {
+        sinceText = since?.let { DateUtils.timestampToDate(it) } ?: ""
+        lastSince = since
     }
-    var untilText by remember(until) {
-        mutableStateOf(
-            until?.let {
-                DateUtils.timestampToDate(it)
-            } ?: "",
-        )
+
+    var untilText by remember { mutableStateOf(until?.let { DateUtils.timestampToDate(it) } ?: "") }
+    var lastUntil by remember { mutableStateOf(until) }
+    if (until != lastUntil) {
+        untilText = until?.let { DateUtils.timestampToDate(it) } ?: ""
+        lastUntil = until
     }
 
     Row(
@@ -271,9 +289,11 @@ private fun DateRangeFields(
                 value = sinceText,
                 onValueChange = {
                     sinceText = it
-                    val ts =
-                        QueryParser.parseDateToTimestamp(it)
-                    onChanged(ts, until)
+                    val ts = QueryParser.parseDateToTimestamp(it)
+                    if (ts != null || it.isBlank()) {
+                        lastSince = ts
+                        onChanged(ts, until)
+                    }
                 },
                 modifier = Modifier.fillMaxWidth(),
                 placeholder = { Text("YYYY-MM-DD") },
@@ -290,9 +310,11 @@ private fun DateRangeFields(
                 value = untilText,
                 onValueChange = {
                     untilText = it
-                    val ts =
-                        QueryParser.parseDateToTimestamp(it)
-                    onChanged(since, ts)
+                    val ts = QueryParser.parseDateToTimestamp(it)
+                    if (ts != null || it.isBlank()) {
+                        lastUntil = ts
+                        onChanged(since, ts)
+                    }
                 },
                 modifier = Modifier.fillMaxWidth(),
                 placeholder = { Text("YYYY-MM-DD") },

@@ -32,6 +32,22 @@ import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefiniti
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 
+data class ContentPreset(
+    val kinds: List<Int> = emptyList(),
+    val pseudoKind: String? = null,
+) {
+    /** Check if this preset is active given current query state. */
+    fun isSelected(
+        queryKinds: List<Int>,
+        queryPseudoKinds: List<String>,
+    ): Boolean =
+        if (pseudoKind != null) {
+            pseudoKind in queryPseudoKinds
+        } else {
+            kinds.isNotEmpty() && queryKinds.containsAll(kinds)
+        }
+}
+
 object KindRegistry {
     val aliases: Map<String, List<Int>> =
         mapOf(
@@ -49,14 +65,14 @@ object KindRegistry {
 
     val pseudoKinds: Set<String> = setOf("reply", "media")
 
-    val presets: Map<String, List<Int>> =
+    val presets: Map<String, ContentPreset> =
         mapOf(
-            "Notes" to listOf(TextNoteEvent.KIND),
-            "Articles" to listOf(LongTextNoteEvent.KIND),
-            "Media" to listOf(TextNoteEvent.KIND),
-            "Channels" to listOf(ChannelCreateEvent.KIND, ChannelMetadataEvent.KIND),
-            "Communities" to listOf(CommunityDefinitionEvent.KIND),
-            "Wiki" to listOf(WikiNoteEvent.KIND),
+            "Notes" to ContentPreset(kinds = listOf(TextNoteEvent.KIND)),
+            "Articles" to ContentPreset(kinds = listOf(LongTextNoteEvent.KIND)),
+            "Media" to ContentPreset(pseudoKind = "media"),
+            "Channels" to ContentPreset(kinds = listOf(ChannelCreateEvent.KIND, ChannelMetadataEvent.KIND)),
+            "Communities" to ContentPreset(kinds = listOf(CommunityDefinitionEvent.KIND)),
+            "Wiki" to ContentPreset(kinds = listOf(WikiNoteEvent.KIND)),
         )
 
     fun resolve(alias: String): List<Int>? = aliases[alias.lowercase()]
