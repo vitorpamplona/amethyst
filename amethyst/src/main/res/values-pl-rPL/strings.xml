@@ -1368,6 +1368,7 @@
     <string name="kind_calendar">Kalendarz</string>
     <string name="kind_appointment">Spotkanie</string>
     <string name="kind_appt_rsvp">RSVP Spotkania</string>
+    <string name="kind_chess_games">Szachy</string>
     <string name="kind_favorite_relays">Ulubione Transmitery</string>
     <string name="kind_channel_definition">Określenie kanału</string>
     <string name="kind_channel_hide_msg">Ukryta wiadomość kanału</string>
@@ -1460,11 +1461,16 @@
     <string name="name_search_npub1_alice_example_com">wyszukaj, npub1…, alicja@domena.pl</string>
     <string name="supports_npub_nip_05_hex_and_namecoin_bit_d_id">Obsługuje npub, nprofile, NIP-05, hex, i namecoin (.bit, d/, id/)</string>
     <string name="look_up_follow_list">Sprawdź listę obserwowanych</string>
+    <string name="accounts_found">Znaleziono %1$d kont(a)</string>
     <string name="num_selected">Wybrano: %1$d</string>
+    <string name="now_following_accounts">Teraz obserwujesz %1$d kont(a)</string>
     <string name="your_feed_is_ready">Twój kanał jest gotowy.</string>
     <string name="skip">Pomiń</string>
     <string name="import_more">Pobierz więcej</string>
     <string name="continue_txt">Kontynuuj</string>
     <string name="skip_for_now">Na razie pomiń</string>
+    <string name="no_follows_found">Nie znaleziono obserwowanych</string>
+    <string name="following_accounts">Obserwujesz %1$d kont(a)…</string>
+    <string name="import_follows_tips">"Wprowadź profil znajomego lub lidera społeczności. Możesz użyć ich npub-u, adresu NIP-05 lub nazwy jak alicja@domena.pl lub id/alicja dla zweryfikowanych przez blockchain tożsamości."</string>
     <string name="select_all">Wybierz Wszystkie</string>
 </resources>

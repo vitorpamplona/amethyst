@@ -125,6 +125,7 @@
     <string name="bytes">Bytes</string>
     <string name="error">Erro</string>
     <string name="errors">Erros</string>
+    <string name="connection_success_rate_description">Porcentagem de conexões bem-sucedidas ao relay</string>
     <string name="errors_description">O número de erros de conexão nesta sessão</string>
     <string name="home_feed">Feed principal</string>
     <string name="private_message_feed">Feed de mensagens privadas</string>
@@ -150,6 +151,7 @@
     <string name="pronouns">Pronomes</string>
     <string name="ln_address">Endereço LN</string>
     <string name="ln_url_outdated">LN URL (desatualizado)</string>
+    <string name="download_to_phone">Salvar no celular</string>
     <string name="save_to_gallery">Salvar na Galeria</string>
     <string name="image_saved_to_the_gallery">Imagem salva para a galeria</string>
     <string name="video_download_has_started_toast">O download do vídeo foi iniciado…</string>
@@ -640,6 +642,7 @@
     <string name="channel_list_join_channel">Entrar</string>
     <string name="today">Hoje</string>
     <string name="content_warning">Aviso de conteúdo</string>
+    <string name="content_warning_with_reason">Aviso: %1$s</string>
     <string name="content_warning_explanation">Esta nota contém conteúdo sensível que algumas pessoas podem achar ofensivo ou perturbador</string>
     <string name="content_warning_hide_all_sensitive_content">Sempre ocultar conteúdo sensível</string>
     <string name="content_warning_show_all_sensitive_content">Sempre mostrar conteúdo sensível</string>
@@ -827,6 +830,7 @@
     <string name="loading_location">Carregando localização</string>
     <string name="lack_location_permissions">Sem permissões para localização</string>
     <string name="add_sensitive_content_explainer">Adiciona aviso de conteúdo sensível antes de mostrar seu conteúdo. Isso é ideal para qualquer conteúdo NSFW ou conteúdo que algumas pessoas possam considerar ofensivo ou perturbador</string>
+    <string name="add_sensitive_content_description_placeholder">Motivo (opcional)</string>
     <string name="new_feature_nip17_might_not_be_available_title">Novo recurso</string>
     <string name="new_feature_nip17_might_not_be_available_description">Ativando este modo requer o Amethyst para enviar uma mensagem de NIP-17 (GiftWrapped, Sealed Direct and Group Messages). NIP-17 é novo e a maioria dos clientes ainda não o implementaram. Certifique-se de que o destinatário está usando um cliente compatível.</string>
     <string name="new_feature_nip17_activate">Ativar</string>
@@ -1042,6 +1046,7 @@
     <string name="route_video">Vídeos Curtos</string>
     <string name="route_chess">Xadrez</string>
     <string name="route_security_filters">Filtros de Segurança</string>
+    <string name="route_import_follows">Importar Seguidos</string>
     <string name="new_post">Novo Post</string>
     <string name="new_short">Novos Vídeos Curtos: imagens ou vídeos</string>
     <string name="new_community_note">Nova Nota da Comunidade</string>
@@ -1471,4 +1476,31 @@
     <string name="kind_voice_msg">Mensagem de voz</string>
     <string name="kind_voice_reply">Resposta de voz</string>
     <string name="kind_wiki">Wiki</string>
+    <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Comece com um ótimo feed seguindo as mesmas pessoas que alguém em quem você confia.</string>
+    <string name="import_follow_list">Importar lista de seguidos</string>
+    <string name="select_users_to_follow">Selecionar usuários para seguir</string>
+    <string name="profile_to_import_from">Perfil para importar</string>
+    <string name="name_search_npub1_alice_example_com">busca por nome, npub1…, alice@example.com</string>
+    <string name="supports_npub_nip_05_hex_and_namecoin_bit_d_id">Suporta npub, NIP-05, hex e Namecoin (.bit / d/ / id/)</string>
+    <string name="look_up_follow_list">Buscar lista de seguidos</string>
+    <string name="tip">Dica</string>
+    <string name="accounts_found">%1$d contas encontradas</string>
+    <string name="num_selected">%1$d selecionados</string>
+    <string name="resolved_via_namecoin">Resolvido via Namecoin</string>
+    <string name="now_following_accounts">Seguindo %1$d contas agora</string>
+    <string name="your_feed_is_ready">Seu feed está pronto.</string>
+    <string name="skip">Pular</string>
+    <string name="search_another">Buscar outro</string>
+    <string name="follow_accounts">Seguir %1$d contas</string>
+    <string name="import_more">Importar mais</string>
+    <string name="continue_txt">Continuar</string>
+    <string name="skip_for_now">Pular por agora</string>
+    <string name="resolving">Resolvendo %1$s…</string>
+    <string name="fetching_follow_list">Buscando lista de seguidos…</string>
+    <string name="no_follows_found">Nenhum seguido encontrado</string>
+    <string name="following_accounts">Seguindo %1$d contas…</string>
+    <string name="import_follows_tips">"Digite o perfil de um amigo ou líder de comunidade. Você pode usar o npub, endereço NIP-05 ou um nome Namecoin como alice@example.bit ou id/alice para identidades verificadas por blockchain."</string>
+    <string name="select_all">Selecionar tudo</string>
+    <string name="uptime">%1$d%% de disponibilidade</string>
+    <string name="namecoin_settings">Configurações do Namecoin</string>
 </resources>
