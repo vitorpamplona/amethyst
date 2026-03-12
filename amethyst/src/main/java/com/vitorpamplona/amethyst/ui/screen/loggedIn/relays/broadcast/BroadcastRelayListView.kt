@@ -29,6 +29,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.navs.rememberExtendedNav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -70,12 +71,17 @@ fun LazyListScope.renderBroadcastItems(
             item,
             onDelete = { postViewModel.deleteRelay(item) },
             accountViewModel = accountViewModel,
-            nav,
+            nip11CachedRetriever = Amethyst.instance.nip11Cache,
+            nav = nav,
         )
     }
 
     item {
         Spacer(modifier = StdVertSpacer)
-        RelayUrlEditField { postViewModel.addRelay(relaySetupInfoBuilder(it)) }
+        RelayUrlEditField(
+            onNewRelay = { postViewModel.addRelay(relaySetupInfoBuilder(it)) },
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
     }
 }

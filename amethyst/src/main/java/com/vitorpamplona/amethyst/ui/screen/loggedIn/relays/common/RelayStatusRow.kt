@@ -20,8 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common
 
+import android.R.attr.onClick
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Download
@@ -31,19 +34,55 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.LocalCache.users
 import com.vitorpamplona.amethyst.service.countToHumanReadable
 import com.vitorpamplona.amethyst.service.countToHumanReadableBytes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.ui.theme.allGoodColor
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.ui.theme.redColorOnSecondSurface
 import com.vitorpamplona.amethyst.ui.theme.warningColor
+import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStat
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
+
+@Composable
+@Preview
+fun RelayStatusRowPreview() {
+    RelayStatusRow(
+        BasicRelaySetupInfo(
+            "nos.lol".normalizeRelayUrl(),
+            relayStat =
+                RelayStat(
+                    receivedBytes = 10000,
+                    sentBytes = 10000,
+                    spamCounter = 3,
+                    errorCounter = 4,
+                    pingInMs = 300,
+                    compression = true,
+                    connectionTentatives = 20,
+                    connectionCompleted = 10,
+                ),
+            paidRelay = true,
+            forcesTor = true,
+            users = listOf(),
+        ),
+        onClick = {},
+        modifier = Modifier,
+        accountViewModel = mockAccountViewModel(),
+    )
+}
 
 @Composable
 fun RelayStatusRow(
@@ -53,140 +92,151 @@ fun RelayStatusRow(
     accountViewModel: AccountViewModel,
 ) {
     Row(
-        modifier =
-            modifier.pointerInput(Unit) {
-                detectTapGestures(
-                    onTap = {
-                        onClick()
-                    },
-                    onLongPress = {
-                        accountViewModel.toastManager.toast(
-                            R.string.read_from_relay,
-                            R.string.read_from_relay_description,
-                        )
-                    },
-                )
-            },
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        modifier = modifier,
     ) {
-        Icon(
-            imageVector = Icons.Default.Download,
-            contentDescription = stringRes(R.string.read_from_relay),
-            modifier = Size15Modifier,
-            tint = MaterialTheme.colorScheme.allGoodColor,
-        )
-
-        Text(
-            text = countToHumanReadableBytes(item.relayStat.receivedBytes),
-            maxLines = 1,
-            fontSize = Font12SP,
-            modifier = HalfStartPadding,
-            color = MaterialTheme.colorScheme.placeholderText,
-        )
-    }
-
-    Row(
-        modifier =
-            modifier.pointerInput(Unit) {
-                detectTapGestures(
-                    onTap = {
-                        onClick()
-                    },
-                    onLongPress = {
-                        accountViewModel.toastManager.toast(
-                            R.string.write_to_relay,
-                            R.string.write_to_relay_description,
-                        )
-                    },
-                )
-            },
-    ) {
-        Icon(
-            imageVector = Icons.Default.Upload,
-            stringRes(R.string.write_to_relay),
-            modifier = Size15Modifier,
-            tint = MaterialTheme.colorScheme.allGoodColor,
-        )
-
-        Text(
-            text = countToHumanReadableBytes(item.relayStat.sentBytes),
-            maxLines = 1,
-            fontSize = Font12SP,
-            modifier = HalfStartPadding,
-            color = MaterialTheme.colorScheme.placeholderText,
-        )
-    }
-
-    Row(
-        modifier =
-            modifier.pointerInput(Unit) {
-                detectTapGestures(
-                    onTap = {
-                        onClick()
-                    },
-                    onLongPress = {
-                        accountViewModel.toastManager.toast(
-                            R.string.errors,
-                            R.string.errors_description,
-                        )
-                    },
-                )
-            },
-    ) {
-        Icon(
-            imageVector = Icons.Default.SyncProblem,
-            stringRes(R.string.errors),
-            modifier = Size15Modifier,
-            tint =
-                if (item.relayStat.errorCounter > 0) {
-                    MaterialTheme.colorScheme.warningColor
-                } else {
-                    MaterialTheme.colorScheme.allGoodColor
+        Row(
+            modifier =
+                Modifier.weight(1f).pointerInput(Unit) {
+                    detectTapGestures(
+                        onTap = {
+                            onClick()
+                        },
+                        onLongPress = {
+                            accountViewModel.toastManager.toast(
+                                R.string.read_from_relay,
+                                R.string.read_from_relay_description,
+                            )
+                        },
+                    )
                 },
-        )
+        ) {
+            Icon(
+                imageVector = Icons.Default.Download,
+                contentDescription = stringRes(R.string.read_from_relay),
+                modifier = Size15Modifier,
+                tint = MaterialTheme.colorScheme.allGoodColor,
+            )
 
-        Text(
-            text = countToHumanReadable(item.relayStat.errorCounter, "errors"),
-            maxLines = 1,
-            fontSize = Font12SP,
-            modifier = HalfStartPadding,
-            color = MaterialTheme.colorScheme.placeholderText,
-        )
-    }
+            Text(
+                text = countToHumanReadableBytes(item.relayStat.receivedBytes),
+                maxLines = 1,
+                fontSize = Font12SP,
+                modifier = HalfStartPadding,
+                color = MaterialTheme.colorScheme.placeholderText,
+            )
+        }
 
-    Row(
-        modifier =
-            modifier.pointerInput(Unit) {
-                detectTapGestures(
-                    onTap = {
-                        onClick()
-                    },
-                    onLongPress = {
-                        accountViewModel.toastManager.toast(
-                            R.string.spam,
-                            R.string.spam_description,
-                        )
-                    },
-                )
-            },
-    ) {
-        Icon(
-            imageVector = Icons.Default.DeleteSweep,
-            stringRes(R.string.spam),
-            modifier = Size15Modifier,
-            tint =
-                if (item.relayStat.spamCounter > 0) {
-                    MaterialTheme.colorScheme.warningColor
-                } else {
-                    MaterialTheme.colorScheme.allGoodColor
+        Row(
+            modifier =
+                Modifier.weight(1f).pointerInput(Unit) {
+                    detectTapGestures(
+                        onTap = {
+                            onClick()
+                        },
+                        onLongPress = {
+                            accountViewModel.toastManager.toast(
+                                R.string.write_to_relay,
+                                R.string.write_to_relay_description,
+                            )
+                        },
+                    )
                 },
-        )
+        ) {
+            Icon(
+                imageVector = Icons.Default.Upload,
+                stringRes(R.string.write_to_relay),
+                modifier = Size15Modifier,
+                tint = MaterialTheme.colorScheme.allGoodColor,
+            )
 
-        Text(
-            text = countToHumanReadable(item.relayStat.spamCounter, "spam"),
-            maxLines = 1,
-            fontSize = Font12SP,
-            modifier = HalfStartPadding,
-            color = MaterialTheme.colorScheme.placeholderText,
-        )
+            Text(
+                text = countToHumanReadableBytes(item.relayStat.sentBytes),
+                maxLines = 1,
+                fontSize = Font12SP,
+                modifier = HalfStartPadding,
+                color = MaterialTheme.colorScheme.placeholderText,
+            )
+        }
+
+        Row(
+            modifier =
+                Modifier.weight(1.3f).pointerInput(Unit) {
+                    detectTapGestures(
+                        onTap = {
+                            onClick()
+                        },
+                        onLongPress = {
+                            accountViewModel.toastManager.toast(
+                                R.string.errors,
+                                R.string.connection_success_rate_description,
+                            )
+                        },
+                    )
+                },
+        ) {
+            val successRate = ((item.relayStat.connectionCompleted / item.relayStat.connectionTentatives.toFloat()) * 100).toInt()
+
+            Icon(
+                imageVector = Icons.Default.SyncProblem,
+                stringRes(R.string.errors),
+                modifier = Size15Modifier,
+                tint =
+                    if (successRate < 0.1) {
+                        MaterialTheme.colorScheme.redColorOnSecondSurface
+                    } else if (successRate < 0.60) {
+                        MaterialTheme.colorScheme.warningColor
+                    } else {
+                        MaterialTheme.colorScheme.allGoodColor
+                    },
+            )
+
+            Text(
+                text = stringResource(R.string.uptime, successRate),
+                maxLines = 1,
+                fontSize = Font12SP,
+                modifier = HalfStartPadding,
+                color = MaterialTheme.colorScheme.placeholderText,
+            )
+        }
+
+        Row(
+            modifier =
+                Modifier.weight(0.9f).padding(end = 5.dp).pointerInput(Unit) {
+                    detectTapGestures(
+                        onTap = {
+                            onClick()
+                        },
+                        onLongPress = {
+                            accountViewModel.toastManager.toast(
+                                R.string.spam,
+                                R.string.spam_description,
+                            )
+                        },
+                    )
+                },
+            horizontalArrangement = Arrangement.End,
+        ) {
+            Icon(
+                imageVector = Icons.Default.DeleteSweep,
+                stringRes(R.string.spam),
+                modifier = Size15Modifier,
+                tint =
+                    if (item.relayStat.spamCounter > 0) {
+                        MaterialTheme.colorScheme.warningColor
+                    } else {
+                        MaterialTheme.colorScheme.allGoodColor
+                    },
+            )
+
+            Text(
+                text = countToHumanReadable(item.relayStat.spamCounter, "spam"),
+                maxLines = 1,
+                fontSize = Font12SP,
+                modifier = HalfStartPadding,
+                color = MaterialTheme.colorScheme.placeholderText,
+            )
+        }
     }
 }

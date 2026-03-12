@@ -22,6 +22,9 @@ package com.vitorpamplona.quartz.nip01Core.metadata
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.lightning.Lud06
+import com.vitorpamplona.quartz.utils.DualCase
+import com.vitorpamplona.quartz.utils.containsAny
+import com.vitorpamplona.quartz.utils.startsWithAny
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -46,11 +49,6 @@ class UserMetadata {
     var twitter: String? = null
 
     fun anyName(): String? = displayName ?: name
-
-    fun anyNameStartsWith(prefix: String): Boolean =
-        listOfNotNull(name, displayName, nip05, lud06, lud16).any {
-            it.contains(prefix, true)
-        }
 
     fun lnAddress(): String? = lud16 ?: lud06
 
@@ -103,6 +101,33 @@ class UserMetadata {
         if (domain?.isBlank() == true) domain = null
         if (pronouns?.isBlank() == true) pronouns = null
     }
+
+    fun anyNameOrAddressContains(terms: List<DualCase>): Boolean =
+        name?.containsAny(terms) == true ||
+            displayName?.containsAny(terms) == true ||
+            lud16?.containsAny(terms) == true ||
+            nip05?.containsAny(terms) == true ||
+            website?.containsAny(terms) == true
+
+    fun anyNameStartsWith(terms: List<DualCase>): Boolean =
+        name?.startsWithAny(terms) == true ||
+            displayName?.startsWithAny(terms) == true
+
+    fun anyAddressStartsWith(terms: List<DualCase>): Boolean =
+        lud16?.startsWithAny(terms) == true ||
+            nip05?.startsWithAny(terms) == true ||
+            website?.startsWithAny(terms) == true
+
+    fun anyPropertyContains(terms: List<DualCase>): Boolean =
+        name?.containsAny(terms) == true ||
+            displayName?.containsAny(terms) == true ||
+            picture?.containsAny(terms) == true ||
+            banner?.containsAny(terms) == true ||
+            about?.containsAny(terms) == true ||
+            lud06?.containsAny(terms) == true ||
+            lud16?.containsAny(terms) == true ||
+            nip05?.containsAny(terms) == true ||
+            website?.containsAny(terms) == true
 
     fun convertLud06toLud16IfNeeded() {
         if (lud16.isNullOrBlank()) {

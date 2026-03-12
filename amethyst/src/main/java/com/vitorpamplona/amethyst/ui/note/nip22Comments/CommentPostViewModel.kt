@@ -81,6 +81,7 @@ import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
+import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarningReason
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitive
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplits
@@ -166,6 +167,7 @@ open class CommentPostViewModel :
 
     // NSFW, Sensitive
     var wantsToMarkAsSensitive by mutableStateOf(false)
+    var contentWarningDescription by mutableStateOf("")
 
     // GeoHash
     var wantsToAddGeoHash by mutableStateOf(false)
@@ -189,7 +191,7 @@ open class CommentPostViewModel :
         this.canAddZapRaiser = hasLnAddress()
 
         this.userSuggestions?.reset()
-        this.userSuggestions = UserSuggestionState(accountVM.account)
+        this.userSuggestions = UserSuggestionState(accountVM.account, accountVM.nip05Client)
 
         this.emojiSuggestions?.reset()
         this.emojiSuggestions = EmojiSuggestionState(accountVM.account)
@@ -270,6 +272,7 @@ open class CommentPostViewModel :
         wantsForwardZapTo = localForwardZapTo.isNotEmpty()
 
         wantsToMarkAsSensitive = draftEvent.isSensitive()
+        contentWarningDescription = draftEvent.contentWarningReason() ?: ""
 
         val zapraiser = draftEvent.zapraiserAmount()
         wantsZapraiser = zapraiser != null
@@ -359,7 +362,7 @@ open class CommentPostViewModel :
 
         val zapReceiver = if (wantsForwardZapTo) forwardZapTo.value.toZapSplitSetup() else null
         val localZapRaiserAmount = if (wantsZapraiser) zapRaiserAmount.value else null
-        val contentWarningReason = if (wantsToMarkAsSensitive) "" else null
+        val contentWarningReason = if (wantsToMarkAsSensitive) contentWarningDescription else null
 
         val replyingTo = replyingTo
         val replyingToEvent = replyingTo?.event
@@ -474,7 +477,7 @@ open class CommentPostViewModel :
                 myMultiOrchestrator.upload(
                     alt,
                     contentWarningReason,
-                    MediaCompressor.Companion.intToCompressorQuality(mediaQuality),
+                    MediaCompressor.intToCompressorQuality(mediaQuality),
                     server,
                     account,
                     context,
@@ -555,6 +558,7 @@ open class CommentPostViewModel :
 
         wantsForwardZapTo = false
         wantsToMarkAsSensitive = false
+        contentWarningDescription = ""
         wantsToAddGeoHash = false
         wantsSecretEmoji = false
 
@@ -585,9 +589,13 @@ open class CommentPostViewModel :
 
         if (message.selection.collapsed) {
             val lastWord = message.currentWord()
-
-            userSuggestionsMainMessage = UserSuggestionAnchor.MAIN_MESSAGE
-            userSuggestions?.processCurrentWord(lastWord)
+            if (lastWord.startsWith("@")) {
+                userSuggestionsMainMessage = UserSuggestionAnchor.MAIN_MESSAGE
+                userSuggestions?.processCurrentWord(lastWord)
+            } else {
+                userSuggestionsMainMessage = null
+                userSuggestions?.reset()
+            }
 
             emojiSuggestions?.processCurrentWord(lastWord)
         }
@@ -703,5 +711,5 @@ open class CommentPostViewModel :
         return location!!
     }
 
-    override fun locationManager(): LocationState = Amethyst.Companion.instance.locationManager
+    override fun locationManager(): LocationState = Amethyst.instance.locationManager
 }

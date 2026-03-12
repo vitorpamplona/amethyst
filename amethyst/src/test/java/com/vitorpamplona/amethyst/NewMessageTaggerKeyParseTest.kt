@@ -52,7 +52,7 @@ class NewMessageTaggerKeyParseTest {
                 com.vitorpamplona.amethyst.model
                     .Note(hex)
 
-            override suspend fun getOrCreateAddressableNote(address: Address) =
+            override fun getOrCreateAddressableNote(address: Address) =
                 com.vitorpamplona.amethyst.model
                     .AddressableNote(address)
         }

@@ -37,9 +37,7 @@ class UserProfileBookmarksFeedFilter(
 
     override fun feed(): List<Note> {
         val note = LocalCache.getOrCreateAddressableNote(BookmarkListEvent.createBookmarkAddress(user.pubkeyHex))
-        val noteEvent = note.event as? BookmarkListEvent
-
-        if (noteEvent == null) return emptyList()
+        val noteEvent = note.event as? BookmarkListEvent ?: return emptyList()
 
         val notes =
             noteEvent.publicBookmarks().mapNotNull {

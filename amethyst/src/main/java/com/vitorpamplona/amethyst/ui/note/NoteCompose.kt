@@ -81,12 +81,12 @@ import com.vitorpamplona.amethyst.ui.note.types.BadgeDisplay
 import com.vitorpamplona.amethyst.ui.note.types.DisplayBlockedRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayBroadcastRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayDMRelayList
-import com.vitorpamplona.amethyst.ui.note.types.DisplayFavoriteRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayFollowList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayIndexerRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayNIP65RelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayPeopleList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayProxyRelayList
+import com.vitorpamplona.amethyst.ui.note.types.DisplayRelayFeedsList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayRelaySet
 import com.vitorpamplona.amethyst.ui.note.types.DisplaySearchRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayTrustedRelayList
@@ -99,11 +99,14 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderAppDefinition
 import com.vitorpamplona.amethyst.ui.note.types.RenderAudioHeader
 import com.vitorpamplona.amethyst.ui.note.types.RenderAudioTrack
 import com.vitorpamplona.amethyst.ui.note.types.RenderBadgeAward
+import com.vitorpamplona.amethyst.ui.note.types.RenderCalendarDateSlotEvent
+import com.vitorpamplona.amethyst.ui.note.types.RenderCalendarTimeSlotEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderChannelMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderChatMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderChatMessageEncryptedFile
 import com.vitorpamplona.amethyst.ui.note.types.RenderChessGame
 import com.vitorpamplona.amethyst.ui.note.types.RenderClassifieds
+import com.vitorpamplona.amethyst.ui.note.types.RenderCodeSnippetEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderCommunity
 import com.vitorpamplona.amethyst.ui.note.types.RenderEmojiPack
 import com.vitorpamplona.amethyst.ui.note.types.RenderFhirResource
@@ -204,11 +207,13 @@ import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BroadcastRelayListEvent
-import com.vitorpamplona.quartz.nip51Lists.relayLists.FavoriteRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.ProxyRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relaySets.RelaySetEvent
+import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
+import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
@@ -238,8 +243,10 @@ import com.vitorpamplona.quartz.nip90Dvms.NIP90StatusEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
+import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 
 @Composable
 fun NoteCompose(
@@ -536,7 +543,7 @@ fun ClickableNote(
 
                         nav.nav {
                             if (redirectToNote.event is DraftWrapEvent) {
-                                with(Dispatchers.IO) {
+                                withContext(Dispatchers.IO) {
                                     routeEditDraftTo(redirectToNote, accountViewModel.account)
                                 }
                             } else {
@@ -785,6 +792,10 @@ private fun RenderNoteRow(
             RenderLongFormContent(baseNote, accountViewModel, nav)
         }
 
+        is CodeSnippetEvent -> {
+            RenderCodeSnippetEvent(baseNote)
+        }
+
         is WikiNoteEvent -> {
             RenderWikiContent(baseNote, accountViewModel, nav)
         }
@@ -837,8 +848,8 @@ private fun RenderNoteRow(
             DisplayTrustedRelayList(baseNote, backgroundColor, accountViewModel, nav)
         }
 
-        is FavoriteRelayListEvent -> {
-            DisplayFavoriteRelayList(baseNote, backgroundColor, accountViewModel, nav)
+        is RelayFeedsListEvent -> {
+            DisplayRelayFeedsList(baseNote, backgroundColor, accountViewModel, nav)
         }
 
         is IndexerRelayListEvent -> {
@@ -965,6 +976,14 @@ private fun RenderNoteRow(
                 accountViewModel,
                 nav,
             )
+        }
+
+        is CalendarTimeSlotEvent -> {
+            RenderCalendarTimeSlotEvent(baseNote, accountViewModel, nav)
+        }
+
+        is CalendarDateSlotEvent -> {
+            RenderCalendarDateSlotEvent(baseNote, accountViewModel, nav)
         }
 
         is HighlightEvent -> {

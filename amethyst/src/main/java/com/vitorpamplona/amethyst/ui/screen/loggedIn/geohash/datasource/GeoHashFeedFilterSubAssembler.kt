@@ -32,7 +32,7 @@ class GeoHashFeedFilterSubAssembler(
     override fun updateFilter(
         key: GeohashQueryState,
         since: SincePerRelayMap?,
-    ): List<RelayBasedFilter>? = filterPostsByGeohash(key.geohash, key.relays, since)
+    ): List<RelayBasedFilter> = filterPostsByGeohash(key.geohash, key.relays, since)
 
     /**
      * Only one key per hashtag.

@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -66,12 +67,12 @@ class FollowPackViewModel : ViewModel() {
     fun selectedNote() = account.cache.getOrCreateAddressableNote(selectedAddress())
 
     fun init(
-        account: Account,
+        accountVM: AccountViewModel,
         selectedDTag: String,
     ) {
-        if (!this::account.isInitialized || this.account != account) {
-            this.account = account
-            this.userSuggestions = UserSuggestionState(account, false)
+        if (!this::account.isInitialized || this.account != accountVM.account) {
+            this.account = accountVM.account
+            this.userSuggestions = UserSuggestionState(accountVM.account, accountVM.nip05Client)
         }
 
         this.selectedDTag.tryEmit(selectedDTag)

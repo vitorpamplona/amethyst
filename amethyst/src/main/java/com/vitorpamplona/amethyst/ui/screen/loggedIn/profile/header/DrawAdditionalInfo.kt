@@ -20,8 +20,12 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header
 
+import android.content.ClipData
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -35,12 +39,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -48,15 +54,18 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.Nip05State
+import com.vitorpamplona.amethyst.commons.util.toShortDisplay
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.components.ClickableTextPrimary
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
+import com.vitorpamplona.amethyst.ui.components.appendLink
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.DrawPlayName
 import com.vitorpamplona.amethyst.ui.note.ObserveAndRenderNIP05VerifiedSymbol
+import com.vitorpamplona.amethyst.ui.note.toShortDisplay
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.apps.DisplayAppRecommendations
@@ -65,8 +74,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.badges.Displ
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.identity.UserExternalIdentitiesViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
-import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
-import com.vitorpamplona.amethyst.ui.theme.Size25Modifier
+import com.vitorpamplona.amethyst.ui.theme.SpacedBy3dp
 import com.vitorpamplona.amethyst.ui.theme.SpacedBy5dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -75,9 +83,11 @@ import com.vitorpamplona.quartz.nip39ExtIdentities.IdentityClaimTag
 import com.vitorpamplona.quartz.nip39ExtIdentities.MastodonIdentity
 import com.vitorpamplona.quartz.nip39ExtIdentities.TelegramIdentity
 import com.vitorpamplona.quartz.nip39ExtIdentities.TwitterIdentity
+import kotlinx.coroutines.launch
 
 private const val IDENTITY_ICON_CACHE_KEY = 0
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun DrawAdditionalInfo(
     baseUser: User,
@@ -89,147 +99,186 @@ fun DrawAdditionalInfo(
     val userState by observeUserInfo(baseUser, accountViewModel)
     val user = userState ?: return
     val uri = LocalUriHandler.current
-    val clipboardManager = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
     val identities by externalIdentities.identities.collectAsStateWithLifecycle()
 
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 7.dp)) {
-        CreateTextWithEmoji(
-            text = user.info.bestName() ?: baseUser.pubkeyDisplayHex(),
-            tags = user.tags,
-            fontWeight = FontWeight.Bold,
-            fontSize = 25.sp,
-        )
-        Spacer(StdHorzSpacer)
-        user.info.pronouns?.let {
+    val displayName = user.info.bestName()
+
+    Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = SpacedBy3dp) {
+        if (displayName != null) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(top = 7.dp),
+            ) {
+                CreateTextWithEmoji(
+                    text = displayName,
+                    tags = user.tags,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 22.sp,
+                )
+                Spacer(StdHorzSpacer)
+                user.info.pronouns?.let {
+                    Text(
+                        text = "($it)",
+                        color = MaterialTheme.colorScheme.placeholderText,
+                        fontSize = 14.sp,
+                    )
+                    Spacer(StdHorzSpacer)
+                }
+
+                DrawPlayName(displayName)
+            }
+        }
+
+        if (displayName != user.info.name && !user.info.name.isNullOrBlank()) {
             Text(
-                text = "($it)",
-            )
-            Spacer(StdHorzSpacer)
-        }
-
-        user.info.bestName()?.let {
-            DrawPlayName(it)
-        }
-    }
-
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(
-            text = baseUser.pubkeyDisplayHex(),
-            modifier = Modifier.padding(top = 1.dp, bottom = 1.dp),
-            color = MaterialTheme.colorScheme.placeholderText,
-        )
-
-        IconButton(
-            modifier =
-                Modifier
-                    .size(25.dp)
-                    .padding(start = 5.dp),
-            onClick = { clipboardManager.setText(AnnotatedString(baseUser.pubkeyNpub())) },
-        ) {
-            Icon(
-                imageVector = Icons.Default.ContentCopy,
-                contentDescription = stringRes(id = R.string.copy_npub_to_clipboard),
-                modifier = Size15Modifier,
-                tint = MaterialTheme.colorScheme.placeholderText,
+                color = MaterialTheme.colorScheme.placeholderText,
+                text = "@" + user.info.name,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
 
-        IconButton(
-            modifier = Size25Modifier,
-            onClick = { nav.nav(Route.QRDisplay(baseUser.pubkeyHex)) },
-        ) {
-            Icon(
-                painter = painterRes(R.drawable.ic_qrcode, 1),
-                contentDescription = stringRes(id = R.string.show_npub_as_a_qr_code),
-                modifier = Size15Modifier,
-                tint = MaterialTheme.colorScheme.placeholderText,
-            )
-        }
-    }
-
-    DisplayBadges(baseUser, accountViewModel, nav)
-
-    DisplayNip05ProfileStatus(baseUser, accountViewModel)
-
-    val website = user.info.website
-    if (!website.isNullOrEmpty()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                tint = MaterialTheme.colorScheme.placeholderText,
-                imageVector = Icons.Default.Link,
-                contentDescription = stringRes(R.string.website),
-                modifier = Modifier.size(16.dp),
+            Text(
+                text = baseUser.pubkeyDisplayHex(),
+                color = MaterialTheme.colorScheme.placeholderText,
+                maxLines = 1,
             )
 
-            ClickableTextPrimary(
-                text = website.removePrefix("https://"),
+            IconButton(
+                modifier = Modifier.size(23.dp).padding(start = 5.dp),
                 onClick = {
-                    website.let {
-                        runCatching {
-                            if (it.contains("://")) {
-                                uri.openUri(it)
-                            } else {
-                                uri.openUri("http://$it")
-                            }
-                        }
+                    scope.launch {
+                        clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("npub", baseUser.pubkeyNpub())))
                     }
                 },
-                modifier = Modifier.padding(top = 1.dp, bottom = 1.dp, start = 5.dp),
-            )
-        }
-    }
-
-    val lud16 =
-        remember(userState) {
-            userState?.info?.lud16?.trim()
-                ?: userState?.info?.lud06?.trim()
-        }
-    DisplayLNAddress(lud16, baseUser, accountViewModel, nav)
-
-    val displayIdentities = identities.ifEmpty { user.identities }
-    if (displayIdentities.isNotEmpty()) {
-        displayIdentities.forEach { identity: IdentityClaimTag ->
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            ) {
                 Icon(
-                    tint = Color.Unspecified,
-                    painter = painterRes(resourceId = getIdentityClaimIcon(identity), IDENTITY_ICON_CACHE_KEY),
-                    contentDescription = stringRes(getIdentityClaimDescription(identity)),
-                    modifier = Modifier.size(16.dp),
-                )
-
-                ClickableTextPrimary(
-                    text = identity.identity,
-                    onClick = { runCatching { uri.openUri(identity.toProofUrl()) } },
-                    modifier =
-                        Modifier
-                            .padding(top = 1.dp, bottom = 1.dp, start = 5.dp)
-                            .weight(1f),
+                    imageVector = Icons.Default.ContentCopy,
+                    contentDescription = stringRes(id = R.string.copy_npub_to_clipboard),
+                    modifier = Size15Modifier,
+                    tint = MaterialTheme.colorScheme.placeholderText,
                 )
             }
         }
-    }
 
-    user.info.about?.let {
-        Row(
-            modifier = Modifier.padding(top = 5.dp, bottom = 5.dp),
-        ) {
-            val defaultBackground = MaterialTheme.colorScheme.background
-            val background = remember { mutableStateOf(defaultBackground) }
-
-            TranslatableRichTextViewer(
-                content = it,
-                canPreview = false,
-                quotesLeft = 1,
-                tags = user.tags,
-                backgroundColor = background,
-                id = it,
-                accountViewModel = accountViewModel,
-                nav = nav,
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = baseUser.toNProfile().toShortDisplay(6),
+                color = MaterialTheme.colorScheme.placeholderText,
+                maxLines = 1,
             )
-        }
-    }
 
-    DisplayAppRecommendations(appRecommendations, accountViewModel, nav)
+            IconButton(
+                modifier = Modifier.size(23.dp).padding(start = 5.dp),
+                onClick = {
+                    scope.launch {
+                        clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("nprofile", baseUser.toNProfile())))
+                    }
+                },
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ContentCopy,
+                    contentDescription = stringRes(id = R.string.copy_nprofile_to_clipboard),
+                    modifier = Size15Modifier,
+                    tint = MaterialTheme.colorScheme.placeholderText,
+                )
+            }
+
+            IconButton(
+                modifier = Modifier.size(23.dp),
+                onClick = { nav.nav(Route.QRDisplay(baseUser.pubkeyHex)) },
+            ) {
+                Icon(
+                    painter = painterRes(R.drawable.ic_qrcode, 1),
+                    contentDescription = stringRes(id = R.string.show_nprofile_as_a_qr_code),
+                    modifier = Size15Modifier,
+                    tint = MaterialTheme.colorScheme.placeholderText,
+                )
+            }
+        }
+
+        DisplayNip05ProfileStatus(baseUser, accountViewModel)
+
+        val lud16 =
+            remember(userState) {
+                userState?.info?.lud16?.trim()
+                    ?: userState?.info?.lud06?.trim()
+            }
+        DisplayLNAddress(lud16, baseUser, accountViewModel, nav)
+
+        val website = user.info.website
+        if (!website.isNullOrEmpty()) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    tint = MaterialTheme.colorScheme.placeholderText,
+                    imageVector = Icons.Default.Link,
+                    contentDescription = stringRes(R.string.website),
+                    modifier = Modifier.size(18.dp),
+                )
+
+                ClickableTextPrimary(
+                    text = website.removePrefix("https://").removePrefix("http://").removeSuffix("/"),
+                    onClick = {
+                        runCatching {
+                            if (website.contains("://")) {
+                                uri.openUri(website)
+                            } else {
+                                uri.openUri("http://$website")
+                            }
+                        }
+                    },
+                    modifier = Modifier.padding(vertical = 1.dp, horizontal = 5.dp),
+                )
+            }
+        }
+
+        val displayIdentities = identities.ifEmpty { user.identities }
+        if (displayIdentities.isNotEmpty()) {
+            displayIdentities.forEach { identity: IdentityClaimTag ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        tint = Color.Unspecified,
+                        painter = painterRes(resourceId = getIdentityClaimIcon(identity), IDENTITY_ICON_CACHE_KEY),
+                        contentDescription = stringRes(getIdentityClaimDescription(identity)),
+                        modifier = Modifier.size(18.dp),
+                    )
+
+                    ClickableTextPrimary(
+                        text = identity.identity,
+                        onClick = { runCatching { uri.openUri(identity.toProofUrl()) } },
+                        modifier = Modifier.padding(horizontal = 5.dp),
+                    )
+                }
+            }
+        }
+
+        DisplayBadges(baseUser, accountViewModel, nav)
+
+        user.info.about?.let {
+            Row(
+                modifier = Modifier.padding(top = 10.dp, bottom = 5.dp),
+            ) {
+                val defaultBackground = MaterialTheme.colorScheme.background
+                val background = remember { mutableStateOf(defaultBackground) }
+
+                TranslatableRichTextViewer(
+                    content = it,
+                    canPreview = false,
+                    quotesLeft = 1,
+                    tags = user.tags,
+                    backgroundColor = background,
+                    id = it,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
+        }
+
+        DisplayAppRecommendations(appRecommendations, accountViewModel, nav)
+    }
 }
 
 @Composable
@@ -242,24 +291,22 @@ fun DisplayNip05ProfileStatus(
     when (val nip05State = nip05StateMetadata) {
         is Nip05State.Exists -> {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = SpacedBy5dp) {
-                ObserveAndRenderNIP05VerifiedSymbol(nip05State, 2, Size16Modifier, accountViewModel)
-
-                if (nip05State.nip05.name != "_") {
-                    Text(
-                        text = "${nip05State.nip05.name}@",
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(top = 1.dp, bottom = 1.dp),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
+                ObserveAndRenderNIP05VerifiedSymbol(nip05State, 2, Size15Modifier, accountViewModel)
 
                 val uri = LocalUriHandler.current
+                val color = MaterialTheme.colorScheme.primary
 
-                ClickableTextPrimary(
-                    text = nip05State.nip05.domain,
-                    onClick = { runCatching { uri.openUri("https://${nip05State.nip05.domain}") } },
+                Text(
+                    text =
+                        remember(nip05State) {
+                            buildAnnotatedString {
+                                appendLink(nip05State.nip05.toValue(), color) {
+                                    runCatching { uri.openUri("https://${nip05State.nip05.domain}") }
+                                }
+                            }
+                        },
                     modifier = Modifier.padding(top = 1.dp, bottom = 1.dp),
+                    softWrap = true,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )

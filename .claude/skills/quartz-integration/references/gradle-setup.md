@@ -92,7 +92,6 @@ dependencies {
 ### JVM + Android (`jvmAndroid`)
 - `com.github.anthonynsimon:rfc3986-normalizer` (URL normalization)
 - `com.fasterxml.jackson.module:jackson-module-kotlin` (JSON)
-- `com.linkedin.urls:url-detector` (URL extraction)
 - `com.squareup.okhttp3:okhttp` (WebSocket)
 - `ru.gildor.coroutines:kotlin-coroutines-okhttp`
 - `nl.bommber:kchesslib` (NIP-64 chess, version pinned to 1.0.0)

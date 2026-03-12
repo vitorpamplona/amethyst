@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.model.accountsCache.AccountCacheState
 import com.vitorpamplona.amethyst.model.nip03Timestamp.IncomingOtsEventVerifier
 import com.vitorpamplona.amethyst.model.nip03Timestamp.TorAwareOkHttpOtsResolverBuilder
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.Nip11CachedRetriever
+import com.vitorpamplona.amethyst.model.preferences.NamecoinSharedPreferences
 import com.vitorpamplona.amethyst.model.preferences.TorSharedPreferences
 import com.vitorpamplona.amethyst.model.preferences.UiSharedPreferences
 import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilder
@@ -105,6 +106,11 @@ class AppModules(
         TorSharedPreferences(appContext, applicationIOScope)
     }
 
+    // Namecoin ElectrumX server preferences (global, like Tor settings)
+    val namecoinPrefs by lazy {
+        NamecoinSharedPreferences(appContext, applicationIOScope)
+    }
+
     // App services that should be run as soon as there are subscribers to their flows
     val locationManager = LocationState(appContext, applicationIOScope)
     val connManager = ConnectivityManager(appContext, applicationIOScope)
@@ -154,11 +160,13 @@ class AppModules(
                     socketFactory = { roleBasedHttpClientBuilder.socketFactoryForNip05() },
                 ),
             serverListProvider = {
-                if (roleBasedHttpClientBuilder.shouldUseTorForNIP05("https://electrumx.example.com")) {
-                    TOR_ELECTRUMX_SERVERS
-                } else {
-                    DEFAULT_ELECTRUMX_SERVERS
-                }
+                // User-configured custom servers take priority
+                namecoinPrefs.customServersOrNull
+                    ?: if (roleBasedHttpClientBuilder.shouldUseTorForNIP05("https://electrumx.example.com")) {
+                        TOR_ELECTRUMX_SERVERS
+                    } else {
+                        DEFAULT_ELECTRUMX_SERVERS
+                    }
             },
         )
     val nip05Client = Nip05Client(nip05Fetcher, namecoinResolver)
@@ -226,7 +234,7 @@ class AppModules(
     val relayStats = RelayStats(client)
 
     // Logs debug messages when needed
-    val detailedLogger = if (isDebug) RelayLogger(client, false, false) else null
+    val detailedLogger = if (isDebug) RelayLogger(client, debugSending = false, debugReceiving = false) else null
     val relayReqStats = if (isDebug) RelayReqStats(client) else null
     val logger = if (isDebug) RelaySpeedLogger(client) else null
 

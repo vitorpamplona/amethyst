@@ -20,8 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.richtext
 
-import com.linkedin.urls.detection.UrlDetector
-import com.linkedin.urls.detection.UrlDetectorOptions
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.quartz.experimental.inlineMetadata.Nip54InlineMetadata
@@ -39,7 +37,6 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
-import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.collections.immutable.toPersistentList
 import java.net.MalformedURLException
 import java.net.URISyntaxException
@@ -101,27 +98,43 @@ class RichTextParser {
         }
     }
 
-    fun parseValidUrls(content: String): LinkedHashSet<String> {
-        val urls = UrlDetector(content, UrlDetectorOptions.Default).detect()
+    fun fixMissingSpaces(
+        input: String,
+        urlList: Set<String>,
+    ): String {
+        if (urlList.isEmpty()) return input
 
-        return urls.mapNotNullTo(LinkedHashSet(urls.size)) {
-            if (it.originalUrl.contains("@")) {
-                if (Patterns.EMAIL_ADDRESS.matches(it.originalUrl)) {
-                    null
-                } else {
-                    it.originalUrl
-                }
-            } else if (isNumber(it.originalUrl)) {
-                null // avoids urls that look like 123.22
-            } else if (it.originalUrl.contains("。")) {
-                null // avoids Japanese characters as fake urls
-            } else {
-                if (HTTPRegex.matches(it.originalUrl)) {
-                    it.originalUrl
-                } else {
-                    null
-                }
+        // Escape and join words: (word1|word2)
+        val wordsPattern = urlList.sortedByDescending { it.length }.joinToString("|") { Regex.escape(it) }
+
+        // Regex breakdown:
+        // ([^ ])?          -> Group 1: Optional character that is NOT a space or new line (Prefix)
+        // ($wordsPattern)  -> Group 2: One of your target words
+        // ([^ ])?          -> Group 3: Optional character that is NOT a space or new line (Suffix)
+        val regex = Regex("([^ \n])?($wordsPattern)([^ \n])?")
+
+        return regex.replace(input) { match ->
+            val prefix = match.groups[1]?.value ?: ""
+            val word = match.groups[2]?.value ?: ""
+            val suffix = match.groups[3]?.value ?: ""
+
+            val result = StringBuilder()
+
+            // Add prefix + space if the prefix exists
+            if (prefix.isNotEmpty()) {
+                result.append(prefix)
+                result.append(" ")
             }
+
+            result.append(word)
+
+            // Add space + suffix if the suffix exists
+            if (suffix.isNotEmpty()) {
+                result.append(" ")
+                result.append(suffix)
+            }
+
+            result.toString()
         }
     }
 
@@ -131,30 +144,41 @@ class RichTextParser {
         callbackUri: String?,
     ): RichTextViewerState {
         val imetas = tags.lists.imetasByUrl()
-        val urlSet = parseValidUrls(content)
+        val urlSet = UrlParser().parseValidUrls(content)
 
-        val imagesForPager =
-            urlSet.mapNotNull { fullUrl -> createMediaContent(fullUrl, imetas, content, callbackUri) }.associateBy { it.url }
+        val mediaContents =
+            urlSet.withScheme.mapNotNull { fullUrl ->
+                createMediaContent(fullUrl, imetas, content, callbackUri)
+            } +
+                urlSet.withoutScheme.mapNotNull { fullUrl ->
+                    createMediaContent(fullUrl, imetas, content, callbackUri)
+                }
 
-        val imageUrls = imagesForPager.filterValues { it is MediaUrlImage }.keys
-        val videoUrls = imagesForPager.filterValues { it is MediaUrlVideo }.keys
+        val mediaForPager = mediaContents.associateBy { it.url }
+
+        val imageUrls = mediaForPager.filterValues { it is MediaUrlImage }.keys
+        val videoUrls = mediaForPager.filterValues { it is MediaUrlVideo }.keys
 
         val emojiMap = CustomEmoji.createEmojiMap(tags.lists)
 
-        val segments = findTextSegments(content, imageUrls, videoUrls, urlSet, emojiMap, tags)
+        val allUrls = urlSet.withScheme + urlSet.withoutScheme + urlSet.emails + urlSet.bech32s + urlSet.relayUrls
 
-        val base64Images = segments.map { it.words.filterIsInstance<Base64Segment>() }.flatten()
+        val newContent = fixMissingSpaces(content, allUrls)
 
-        val imagesForPagerWithBase64 =
-            imagesForPager +
+        val segments = findTextSegments(newContent, imageUrls, videoUrls, urlSet, emojiMap, tags)
+
+        val base64Images = segments.flatMap { it.words.filterIsInstance<Base64Segment>() }
+
+        val mediaForPagerWithBase64 =
+            mediaForPager +
                 base64Images
                     .mapNotNull { createMediaContent(it.segmentText, emptyMap(), content, callbackUri) }
                     .associateBy { it.url }
 
         return RichTextViewerState(
-            urlSet.toImmutableSet(),
-            imagesForPagerWithBase64.toImmutableMap(),
-            imagesForPagerWithBase64.values.toImmutableList(),
+            urlSet,
+            mediaForPagerWithBase64.toImmutableMap(),
+            mediaForPagerWithBase64.values.toImmutableList(),
             emojiMap.toImmutableMap(),
             segments,
             tags,
@@ -165,7 +189,7 @@ class RichTextParser {
         content: String,
         images: Set<String>,
         videos: Set<String>,
-        urls: Set<String>,
+        urls: Urls,
         emojis: Map<String, String>,
         tags: ImmutableListOfLists<String>,
     ): ImmutableList<ParagraphState> {
@@ -175,18 +199,14 @@ class RichTextParser {
         lines.forEach { paragraph ->
             val isRTL = isArabic(paragraph)
 
-            val wordList = paragraph.trimEnd().split(wordBoundaryRegex).filter { it.isNotEmpty() }
+            val wordList = paragraph.trimEnd().split(' ')
 
-            if (wordList.isEmpty()) {
-                paragraphSegments.add(ParagraphState(persistentListOf(RegularTextSegment("")), isRTL))
-            } else {
-                val segments = ArrayList<Segment>(wordList.size)
-                wordList.forEach { word ->
-                    segments.add(wordIdentifier(word, images, videos, urls, emojis, tags))
-                }
-
-                paragraphSegments.add(ParagraphState(segments.toPersistentList(), isRTL))
+            val segments = ArrayList<Segment>(wordList.size)
+            wordList.forEach { word ->
+                segments.add(wordIdentifier(word, images, videos, urls, emojis, tags))
             }
+
+            paragraphSegments.add(ParagraphState(segments.toPersistentList(), isRTL))
         }
 
         val segmentsWithGalleries = GalleryParser().processParagraphs(paragraphSegments)
@@ -203,8 +223,6 @@ class RichTextParser {
                 }
             }.toImmutableList()
     }
-
-    private fun isNumber(word: String) = numberPattern.matches(word)
 
     private fun isPhoneNumberChar(c: Char): Boolean =
         when (c) {
@@ -236,7 +254,7 @@ class RichTextParser {
         word: String,
         images: Set<String>,
         videos: Set<String>,
-        urls: Set<String>,
+        urls: Urls,
         emojis: Map<String, String>,
         tags: ImmutableListOfLists<String>,
     ): Segment {
@@ -246,13 +264,33 @@ class RichTextParser {
             if (Patterns.BASE64_IMAGE.matches(word)) return Base64Segment(word)
         }
 
-        if (images.contains(word)) return ImageSegment(word)
+        if (images.contains(word)) {
+            return if (urls.withoutScheme.contains(word)) {
+                ImageSegment("https://$word")
+            } else {
+                ImageSegment(word)
+            }
+        }
 
-        if (videos.contains(word)) return VideoSegment(word)
+        if (videos.contains(word)) {
+            return if (urls.withoutScheme.contains(word)) {
+                VideoSegment("https://$word")
+            } else {
+                VideoSegment(word)
+            }
+        }
 
-        if (word.startsWith("ws://") || word.startsWith("wss://")) return RelayUrlSegment(word)
+        if (urls.withoutScheme.contains(word)) return SchemelessUrlSegment(word)
 
-        if (urls.contains(word)) return LinkSegment(word)
+        if (urls.withScheme.contains(word)) return LinkSegment(word)
+
+        if (urls.emails.contains(word)) return EmailSegment(word)
+
+        if (urls.bech32s.contains(word)) return BechSegment(word)
+
+        if (urls.relayUrls.contains(word)) return RelayUrlSegment(word)
+
+        if (startsWithNIP19Scheme(word)) return BechSegment(word)
 
         if (CustomEmoji.fastMightContainEmoji(word, emojis) && emojis.any { word.contains(it.key) }) return EmojiSegment(word)
 
@@ -262,30 +300,12 @@ class RichTextParser {
 
         if (word.startsWith("cashuA", true) || word.startsWith("cashuB", true)) return CashuSegment(word)
 
-        if (word.startsWith("#")) return parseHash(word, tags)
+        if (word.startsWith('#')) return parseHash(word, tags)
 
         if (EmojiCoder.isCoded(word)) return SecretEmoji(word)
 
-        if (word.contains("@")) {
-            if (Patterns.EMAIL_ADDRESS.matches(word)) return EmailSegment(word)
-        }
-
-        if (startsWithNIP19Scheme(word)) return BechSegment(word)
-
         if (isPotentialPhoneNumber(word) && !isDate(word)) {
             if (Patterns.PHONE.matches(word)) return PhoneSegment(word)
-        }
-
-        val indexOfPeriod = word.indexOf(".")
-        if (indexOfPeriod > 0 && indexOfPeriod < word.length - 1) { // periods cannot be the last one
-            val schemelessMatcher = noProtocolUrlValidator.find(word)
-            if (schemelessMatcher != null) {
-                val url = schemelessMatcher.groups[1]?.value // url
-                val additionalChars = schemelessMatcher.groups[4]?.value?.ifEmpty { null } // additional chars
-                if (additionalUrlSchema.find(word) != null && url != null) {
-                    return SchemelessUrlSegment(word, url, additionalChars)
-                }
-            }
         }
 
         return RegularTextSegment(word)
@@ -343,7 +363,7 @@ class RichTextParser {
 
         val noProtocolUrlValidator =
             Regex(
-                "(([a-zA-Z0-9_-]+\\.)*[a-zA-Z][a-zA-Z0-9_-]+[\\.\\:][a-zA-Z0-9_]+([\\/ \\?\\=\\&\\#\\.]?[a-zA-Z0-9_-]+)*\\/?)(.*)",
+                "(([a-zA-Z0-9_-]+@)?([a-zA-Z0-9_-]+\\.)*[a-zA-Z0-9_-]+[\\.\\:][a-zA-Z0-9_]+([\\/ \\?\\=\\&\\#\\.]?[a-zA-Z0-9_-]+)*\\/?)(.*)",
             )
 
         // Splits at spaces AND at ASCII/multibyte character boundaries

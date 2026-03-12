@@ -313,11 +313,11 @@ class NostrClient(
         listeners = listeners.minus(listener)
     }
 
-    fun activeRequests(url: NormalizedRelayUrl): Map<String, List<Filter>> = activeRequests.activeFiltersFor(url)
+    override fun activeRequests(url: NormalizedRelayUrl): Map<String, List<Filter>> = activeRequests.activeFiltersFor(url)
 
-    fun activeCounts(url: NormalizedRelayUrl): Map<String, List<Filter>> = activeCounts.activeFiltersFor(url)
+    override fun activeCounts(url: NormalizedRelayUrl): Map<String, List<Filter>> = activeCounts.activeFiltersFor(url)
 
-    fun activeOutboxCache(url: NormalizedRelayUrl): Set<HexKey> = eventOutbox.activeOutboxCacheFor(url)
+    override fun activeOutboxCache(url: NormalizedRelayUrl): Set<HexKey> = eventOutbox.activeOutboxCacheFor(url)
 
     override fun getReqFiltersOrNull(subId: String): Map<NormalizedRelayUrl, List<Filter>>? = activeRequests.getSubscriptionFiltersOrNull(subId)
 

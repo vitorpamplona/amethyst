@@ -55,7 +55,7 @@ class LocationState(
         object Loading : LocationResult()
     }
 
-    private var hasLocationPermission = MutableStateFlow<Boolean>(false)
+    private var hasLocationPermission = MutableStateFlow(false)
     private var latestLocation: LocationResult = LocationResult.Loading
 
     fun setLocationPermission(newValue: Boolean) {

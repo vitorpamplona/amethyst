@@ -28,14 +28,21 @@ import android.os.Build
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AudioFile
+import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProgressIndicatorDefaults
@@ -116,6 +123,16 @@ fun ShowImageGallery(
                 Modifier
                     .fillMaxWidth()
                     .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
+        )
+    } else if (media.isAudio() == true) {
+        FilePreviewPlaceholder(
+            icon = Icons.Default.AudioFile,
+            label = media.mimeType ?: "audio/*",
+        )
+    } else if (media.isDocument()) {
+        FilePreviewPlaceholder(
+            icon = Icons.Default.PictureAsPdf,
+            label = media.mimeType ?: "application/pdf",
         )
     } else if (media.isVideo() == true && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
         var bitmap by remember { mutableStateOf<Bitmap?>(null) }
@@ -219,38 +236,76 @@ fun UploadingState(
     progress: Double,
     progressState: UploadingState,
 ) {
-    Box(Modifier.size(55.dp), contentAlignment = Alignment.Center) {
-        val animatedProgress by animateFloatAsState(
-            targetValue = progress.toFloat(),
-            animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec,
-        )
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier.fillMaxSize(),
+    ) {
+        Box(Modifier.size(55.dp), contentAlignment = Alignment.Center) {
+            val animatedProgress by animateFloatAsState(
+                targetValue = progress.toFloat(),
+                animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec,
+            )
 
-        CircularProgressIndicator(
-            progress = { animatedProgress },
-            modifier =
-                Size55Modifier
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.background),
-            strokeWidth = 5.dp,
-        )
+            CircularProgressIndicator(
+                progress = { animatedProgress },
+                modifier =
+                    Size55Modifier
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.background),
+                strokeWidth = 5.dp,
+            )
 
-        val txt =
-            when (progressState) {
-                is UploadingState.Ready -> stringRes(R.string.uploading_state_ready)
-                is UploadingState.Compressing -> stringRes(R.string.uploading_state_compressing)
-                is UploadingState.Uploading -> stringRes(R.string.uploading_state_uploading)
-                is UploadingState.ServerProcessing -> stringRes(R.string.uploading_state_server_processing)
-                is UploadingState.Downloading -> stringRes(R.string.uploading_state_downloading)
-                is UploadingState.Hashing -> stringRes(R.string.uploading_state_hashing)
-                is UploadingState.Finished -> stringRes(R.string.uploading_state_finished)
-                is UploadingState.Error -> stringRes(R.string.uploading_state_error)
-            }
+            val txt =
+                when (progressState) {
+                    is UploadingState.Ready -> stringRes(R.string.uploading_state_ready)
+                    is UploadingState.Compressing -> stringRes(R.string.uploading_state_compressing)
+                    is UploadingState.Uploading -> stringRes(R.string.uploading_state_uploading)
+                    is UploadingState.ServerProcessing -> stringRes(R.string.uploading_state_server_processing)
+                    is UploadingState.Downloading -> stringRes(R.string.uploading_state_downloading)
+                    is UploadingState.Hashing -> stringRes(R.string.uploading_state_hashing)
+                    is UploadingState.Finished -> stringRes(R.string.uploading_state_finished)
+                    is UploadingState.Error -> stringRes(R.string.uploading_state_error)
+                }
 
-        Text(
-            txt,
-            color = MaterialTheme.colorScheme.onSurface,
-            fontSize = 10.sp,
-            textAlign = TextAlign.Center,
-        )
+            Text(
+                txt,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontSize = 10.sp,
+                textAlign = TextAlign.Center,
+            )
+        }
+    }
+}
+
+@Composable
+fun FilePreviewPlaceholder(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+) {
+    Box(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.padding(8.dp),
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                modifier = Modifier.size(40.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = label,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 10.sp,
+                textAlign = TextAlign.Center,
+            )
+        }
     }
 }

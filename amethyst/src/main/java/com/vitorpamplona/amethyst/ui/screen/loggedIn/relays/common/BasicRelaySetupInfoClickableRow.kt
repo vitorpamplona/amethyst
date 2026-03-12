@@ -37,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.nip11RelayInfo.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.RenderRelayIcon
@@ -46,7 +47,6 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.HalfHalfVertPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfHorzPadding
-import com.vitorpamplona.amethyst.ui.theme.HalfVertPadding
 import com.vitorpamplona.amethyst.ui.theme.Height25Modifier
 import com.vitorpamplona.amethyst.ui.theme.LargeRelayIconModifier
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowHeightChatMaxWidth
@@ -61,6 +61,8 @@ fun BasicRelaySetupInfoClickableRow(
     loadRobohash: Boolean,
     onDelete: ((BasicRelaySetupInfo) -> Unit)?,
     onClick: () -> Unit,
+    nip11CachedRetriever: Nip11CachedRetriever,
+    modifier: Modifier = Modifier,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -77,9 +79,9 @@ fun BasicRelaySetupInfoClickableRow(
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = HalfVertPadding,
+            modifier = modifier,
         ) {
-            val iconUrlFromRelayInfoDoc by loadRelayInfo(item.relay)
+            val iconUrlFromRelayInfoDoc by loadRelayInfo(item.relay, nip11CachedRetriever)
 
             RenderRelayIcon(
                 iconUrlFromRelayInfoDoc.id ?: item.relay.displayUrl(),
@@ -102,17 +104,12 @@ fun BasicRelaySetupInfoClickableRow(
 
                 UsedBy(item, accountViewModel, nav)
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
+                RelayStatusRow(
+                    item = item,
+                    onClick = onClick,
                     modifier = ReactionRowHeightChatMaxWidth,
-                ) {
-                    RelayStatusRow(
-                        item = item,
-                        onClick = onClick,
-                        modifier = Modifier.weight(1f),
-                        accountViewModel = accountViewModel,
-                    )
-                }
+                    accountViewModel = accountViewModel,
+                )
             }
         }
 

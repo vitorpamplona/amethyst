@@ -88,8 +88,6 @@ class ContactListEvent(
 
         fun createAddressTag(pubKey: HexKey): String = Address.assemble(KIND, pubKey)
 
-        fun blockListFor(pubKeyHex: HexKey): String = "3:$pubKeyHex:"
-
         suspend fun createFromScratch(
             followUsers: List<ContactTag>,
             relayUse: Map<String, ReadWrite>?,
@@ -118,6 +116,25 @@ class ContactListEvent(
             return create(
                 content = earlierVersion.content,
                 tags = earlierVersion.tags.plus(element = arrayOf("p", pubKeyHex)),
+                signer = signer,
+                createdAt = createdAt,
+            )
+        }
+
+        suspend fun followUsers(
+            earlierVersion: ContactListEvent,
+            users: List<ContactTag>,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+        ): ContactListEvent {
+            val follows = earlierVersion.verifiedFollowKeySet()
+            val toBeAdded = users.filter { it.pubKey !in follows }.distinctBy { it.pubKey }.map { it.toTagArray() }
+
+            if (toBeAdded.isEmpty()) return earlierVersion
+
+            return create(
+                content = earlierVersion.content,
+                tags = earlierVersion.tags + toBeAdded,
                 signer = signer,
                 createdAt = createdAt,
             )

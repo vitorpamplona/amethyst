@@ -21,12 +21,10 @@
 package com.vitorpamplona.amethyst.ui.note.creators.userSuggestions
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -42,11 +40,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.UserSearchDataSourceSubscription
-import com.vitorpamplona.amethyst.ui.note.AboutDisplay
+import com.vitorpamplona.amethyst.ui.layouts.listItem.SlimListItem
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.WatchAndDisplayNip05Row
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -55,7 +55,8 @@ fun ShowUserSuggestionList(
     userSuggestions: UserSuggestionState,
     onSelect: (User) -> Unit,
     accountViewModel: AccountViewModel,
-    modifier: Modifier = Modifier.heightIn(0.dp, 200.dp),
+    modifier: Modifier = Modifier,
+    onEmpty: @Composable () -> Unit = {},
 ) {
     UserSearchDataSourceSubscription(userSuggestions, accountViewModel)
 
@@ -76,7 +77,7 @@ fun ShowUserSuggestionList(
         }
     }
 
-    WatchResponses(userSuggestions, listState, onSelect, accountViewModel, modifier)
+    WatchResponses(userSuggestions, listState, onSelect, accountViewModel, modifier, onEmpty)
 }
 
 @Composable
@@ -97,7 +98,8 @@ fun WatchResponses(
     listState: LazyListState,
     onSelect: (User) -> Unit,
     accountViewModel: AccountViewModel,
-    modifier: Modifier = Modifier.heightIn(0.dp, 200.dp),
+    modifier: Modifier = Modifier,
+    onEmpty: @Composable () -> Unit = {},
 ) {
     val suggestions by userSuggestions.results.collectAsStateWithLifecycle(emptyList())
 
@@ -114,6 +116,8 @@ fun WatchResponses(
                 )
             }
         }
+    } else {
+        onEmpty()
     }
 }
 
@@ -123,31 +127,21 @@ fun UserLine(
     accountViewModel: AccountViewModel,
     onClick: () -> Unit,
 ) {
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onClick)
-                .padding(
-                    start = 12.dp,
-                    end = 12.dp,
-                    top = 10.dp,
-                    bottom = 10.dp,
-                ),
-    ) {
-        ClickableUserPicture(baseUser, 55.dp, accountViewModel, Modifier, null)
-
-        Column(
-            modifier = Modifier.padding(start = 10.dp).weight(1f),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                UsernameDisplay(
-                    baseUser,
-                    accountViewModel = accountViewModel,
-                )
+    SlimListItem(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        leadingContent = {
+            ClickableUserPicture(baseUser, Size55dp, accountViewModel = accountViewModel, onClick = null)
+        },
+        headlineContent = {
+            UsernameDisplay(baseUser, accountViewModel = accountViewModel)
+        },
+        supportingContent = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+            ) {
+                WatchAndDisplayNip05Row(baseUser, accountViewModel)
             }
-
-            AboutDisplay(baseUser, accountViewModel)
-        }
-    }
+        },
+    )
 }

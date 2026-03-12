@@ -32,7 +32,6 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
@@ -82,6 +81,7 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
+import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromFiles
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakePictureButton
@@ -121,6 +121,7 @@ import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
+import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightPage
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
@@ -237,7 +238,10 @@ fun GroupDMScreenContent(
                 DisplayPreviews(postViewModel, accountViewModel, nav)
 
                 if (postViewModel.wantsToMarkAsSensitive) {
-                    ContentSensitivityExplainer()
+                    ContentSensitivityExplainer(
+                        description = postViewModel.contentWarningDescription,
+                        onDescriptionChange = { postViewModel.contentWarningDescription = it },
+                    )
                 }
 
                 if (postViewModel.wantsToAddGeoHash) {
@@ -299,7 +303,7 @@ fun GroupDMScreenContent(
                 it,
                 postViewModel::autocompleteWithUser,
                 accountViewModel,
-                Modifier.heightIn(0.dp, 300.dp),
+                SuggestionListDefaultHeightPage,
             )
         }
 
@@ -308,7 +312,7 @@ fun GroupDMScreenContent(
                 it,
                 postViewModel::autocompleteWithEmoji,
                 postViewModel::autocompleteWithEmojiUrl,
-                Modifier.heightIn(0.dp, 300.dp),
+                SuggestionListDefaultHeightPage,
             )
         }
 
@@ -375,6 +379,14 @@ private fun BottomRowActions(
     ) {
         if (postViewModel.room != null) {
             SelectFromGallery(
+                isUploading = postViewModel.isUploadingImage,
+                tint = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier,
+            ) {
+                postViewModel.pickedMedia(it)
+            }
+
+            SelectFromFiles(
                 isUploading = postViewModel.isUploadingImage,
                 tint = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier,

@@ -48,6 +48,30 @@ data class ElectrumxServer(
     val trustAllCerts: Boolean = false,
 )
 
+/**
+ * Specific exception types for Namecoin resolution failures.
+ * Allows callers to distinguish "name doesn't exist" from "servers unreachable".
+ */
+sealed class NamecoinLookupException(
+    message: String,
+    cause: Throwable? = null,
+) : Exception(message, cause) {
+    /** The name was queried successfully but does not exist on the blockchain. */
+    class NameNotFound(
+        val name: String,
+    ) : NamecoinLookupException("Name not found: $name")
+
+    /** The name has expired (>36000 blocks since last update). */
+    class NameExpired(
+        val name: String,
+    ) : NamecoinLookupException("Name expired: $name")
+
+    /** All ElectrumX servers were unreachable or returned errors. */
+    class ServersUnreachable(
+        val lastError: Throwable? = null,
+    ) : NamecoinLookupException("All ElectrumX servers unreachable", lastError)
+}
+
 /** Well-known public Namecoin ElectrumX servers (clearnet). */
 val DEFAULT_ELECTRUMX_SERVERS =
     listOf(

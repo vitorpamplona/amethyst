@@ -35,7 +35,7 @@ import okhttp3.OkHttpClient
 class ExoPlayerBuilder(
     val okHttp: OkHttpClient,
 ) {
-    fun build(context: Context) =
+    fun build(context: Context): ExoPlayer =
         ExoPlayer
             .Builder(context)
             .apply {

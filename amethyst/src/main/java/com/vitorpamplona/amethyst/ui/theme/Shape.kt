@@ -97,6 +97,7 @@ val HalfDoubleVertSpacer = Modifier.height(7.dp)
 
 val Size0dp = 0.dp
 val Size2dp = 2.dp
+val Size3dp = 3.dp
 val Size5dp = 5.dp
 val Size6dp = 6.dp
 val Size8dp = 8.dp
@@ -125,6 +126,7 @@ val Size100dp = 100.dp
 val Size110dp = 110.dp
 val Size165dp = 165.dp
 
+val StdEndPadding = Modifier.padding(end = 10.dp)
 val HalfEndPadding = Modifier.padding(end = 5.dp)
 val HalfStartPadding = Modifier.padding(start = 5.dp)
 val StdStartPadding = Modifier.padding(start = 10.dp)
@@ -374,6 +376,7 @@ val PaddingHorizontal12Modifier = Modifier.padding(horizontal = 12.dp)
 val QuickActionPopupShadow = Modifier.shadow(elevation = Size6dp, shape = SmallestBorder)
 
 val SpacedBy2dp = Arrangement.spacedBy(Size2dp)
+val SpacedBy3dp = Arrangement.spacedBy(Size3dp)
 val SpacedBy5dp = Arrangement.spacedBy(Size5dp)
 val SpacedBy10dp = Arrangement.spacedBy(Size10dp)
 val SpacedBy55dp = Arrangement.spacedBy(Size55dp)
@@ -381,5 +384,8 @@ val SpacedBy55dp = Arrangement.spacedBy(Size55dp)
 val PopupUpEffect = RoundedCornerShape(0.dp, 0.dp, 15.dp, 15.dp)
 
 val Size50ModifierOffset10 = Modifier.size(50.dp).offset(y = (-10).dp)
+
+val SuggestionListDefaultHeightChat = Modifier.heightIn(0.dp, 200.dp)
+val SuggestionListDefaultHeightPage = Modifier.heightIn(0.dp, 300.dp)
 
 val FollowPackHeaderModifier = Modifier.fillMaxWidth().height(TopBarSize)

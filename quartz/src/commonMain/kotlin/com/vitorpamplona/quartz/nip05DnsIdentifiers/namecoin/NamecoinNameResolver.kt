@@ -27,6 +27,36 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 
+/** Detailed outcome of a Namecoin resolution attempt. */
+sealed class NamecoinResolveOutcome {
+    data class Success(
+        val result: NamecoinNostrResult,
+    ) : NamecoinResolveOutcome()
+
+    /** The name does not exist on the Namecoin blockchain. */
+    data class NameNotFound(
+        val name: String,
+    ) : NamecoinResolveOutcome()
+
+    /** The name exists but has no valid "nostr" field in its value. */
+    data class NoNostrField(
+        val name: String,
+    ) : NamecoinResolveOutcome()
+
+    /** All ElectrumX servers were unreachable. */
+    data class ServersUnreachable(
+        val message: String,
+    ) : NamecoinResolveOutcome()
+
+    /** The identifier could not be parsed as a Namecoin name. */
+    data class InvalidIdentifier(
+        val identifier: String,
+    ) : NamecoinResolveOutcome()
+
+    /** Timed out waiting for a response. */
+    data object Timeout : NamecoinResolveOutcome()
+}
+
 /**
  * Result of resolving a Namecoin name to Nostr identity data.
  */
@@ -86,6 +116,18 @@ class NamecoinNameResolver(
         return withTimeoutOrNull(lookupTimeoutMs) {
             performLookup(parsed)
         }
+    }
+
+    /**
+     * Resolve with detailed outcome for error reporting in UI flows.
+     */
+    suspend fun resolveDetailed(identifier: String): NamecoinResolveOutcome {
+        val parsed =
+            parseIdentifier(identifier)
+                ?: return NamecoinResolveOutcome.InvalidIdentifier(identifier)
+        val result =
+            withTimeoutOrNull(lookupTimeoutMs) { performLookupDetailed(parsed) }
+        return result ?: NamecoinResolveOutcome.Timeout
     }
 
     // ── Identifier Parsing ─────────────────────────────────────────────
@@ -175,6 +217,39 @@ class NamecoinNameResolver(
         }
     }
 
+    private suspend fun performLookupDetailed(parsed: ParsedIdentifier): NamecoinResolveOutcome {
+        val nameResult: NameShowResult
+        try {
+            nameResult =
+                electrumxClient.nameShowWithFallback(parsed.namecoinName, serverListProvider())
+                    ?: return NamecoinResolveOutcome.NameNotFound(parsed.namecoinName)
+        } catch (e: NamecoinLookupException.NameNotFound) {
+            return NamecoinResolveOutcome.NameNotFound(parsed.namecoinName)
+        } catch (e: NamecoinLookupException.NameExpired) {
+            return NamecoinResolveOutcome.NameNotFound(parsed.namecoinName)
+        } catch (e: NamecoinLookupException.ServersUnreachable) {
+            return NamecoinResolveOutcome.ServersUnreachable(
+                e.message ?: "All ElectrumX servers unreachable",
+            )
+        }
+
+        val valueJson =
+            tryParseJson(nameResult.value)
+                ?: return NamecoinResolveOutcome.NoNostrField(parsed.namecoinName)
+
+        val nostrResult =
+            when (parsed.namespace) {
+                Namespace.DOMAIN -> extractFromDomainValue(valueJson, parsed)
+                Namespace.IDENTITY -> extractFromIdentityValue(valueJson, parsed)
+            }
+
+        return if (nostrResult != null) {
+            NamecoinResolveOutcome.Success(nostrResult)
+        } else {
+            NamecoinResolveOutcome.NoNostrField(parsed.namecoinName)
+        }
+    }
+
     /**
      * Extract Nostr data from a `d/` domain value.
      *
@@ -206,16 +281,43 @@ class NamecoinNameResolver(
         // Extended form: "nostr": { "names": {...}, "relays": {...} }
         if (nostrField is JsonObject) {
             val names = nostrField["names"]?.jsonObject ?: return null
-            val pubkeyElem = names[parsed.localPart] ?: names["_"] // fall back to root
-            val pubkey = (pubkeyElem as? JsonPrimitive)?.content ?: return null
-            if (!isValidPubkey(pubkey)) return null
+
+            // Resolve: exact match → "_" root → first entry (root lookups only)
+            val resolvedLocalPart: String
+            val pubkey: String
+
+            val exactMatch = names[parsed.localPart]
+            val rootMatch = names["_"]
+            val firstEntry = if (parsed.localPart == "_") names.entries.firstOrNull() else null
+
+            when {
+                exactMatch is JsonPrimitive && isValidPubkey(exactMatch.content) -> {
+                    resolvedLocalPart = parsed.localPart
+                    pubkey = exactMatch.content
+                }
+
+                rootMatch is JsonPrimitive && isValidPubkey(rootMatch.content) -> {
+                    resolvedLocalPart = "_"
+                    pubkey = rootMatch.content
+                }
+
+                firstEntry != null && firstEntry.value is JsonPrimitive &&
+                    isValidPubkey((firstEntry.value as JsonPrimitive).content) -> {
+                    resolvedLocalPart = firstEntry.key
+                    pubkey = (firstEntry.value as JsonPrimitive).content
+                }
+
+                else -> {
+                    return null
+                }
+            }
 
             val relays = extractRelays(nostrField, pubkey)
             return NamecoinNostrResult(
                 pubkey = pubkey.lowercase(),
                 relays = relays,
                 namecoinName = parsed.namecoinName,
-                localPart = parsed.localPart,
+                localPart = resolvedLocalPart,
             )
         }
 

@@ -73,6 +73,7 @@ fun pickRelaysToLoadUsers(
         searchRelays - cannotConnectRelays,
         connected,
         commonRelays - cannotConnectRelays,
+        cannotConnectRelays,
         hasTried,
     )
 }
@@ -84,15 +85,16 @@ fun pickRelaysToLoadUsers(
     searchRelays: Set<NormalizedRelayUrl>,
     connected: Set<NormalizedRelayUrl>,
     commonRelays: Set<NormalizedRelayUrl>,
+    cannotConnectRelays: Set<NormalizedRelayUrl>,
     hasTried: EOSEAccountFast<User>,
 ): Map<NormalizedRelayUrl, Set<HexKey>> =
     mapOfSet {
         users.forEachIndexed { idx, key ->
-            val tried = hasTried.since(key)?.keys ?: emptySet()
+            val tried = (hasTried.since(key)?.keys ?: emptySet()) + cannotConnectRelays
 
             val outbox = key.authorRelayList()?.writeRelaysNorm()
 
-            if (outbox != null && outbox.isNotEmpty()) {
+            if (!outbox.isNullOrEmpty()) {
                 // If there is a home, get from it.
 
                 // if it tried all outbox relays, stop.

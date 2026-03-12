@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header
 
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -92,15 +93,14 @@ fun DisplayLNAddress(
                 onClick = { zapExpanded = !zapExpanded },
                 modifier =
                     Modifier
-                        .padding(top = 1.dp, bottom = 1.dp, start = 5.dp)
-                        .weight(1f),
+                        .padding(top = 1.dp, bottom = 1.dp, start = 5.dp),
             )
         }
 
         if (zapExpanded) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(vertical = 5.dp),
+                modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
             ) {
                 InvoiceRequestCard(
                     lud16,

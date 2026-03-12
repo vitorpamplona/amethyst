@@ -130,7 +130,7 @@ fun DisplayAccount(
     accountSessionManager: AccountSessionManager,
 ) {
     var baseUser by remember(acc) {
-        mutableStateOf<User?>(
+        mutableStateOf(
             decodePublicKeyAsHexOrNull(acc.npub)?.let {
                 LocalCache.getUserIfExists(it)
             },

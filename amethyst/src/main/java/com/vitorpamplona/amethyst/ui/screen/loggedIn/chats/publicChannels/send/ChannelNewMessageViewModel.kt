@@ -38,7 +38,7 @@ import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
-import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.commons.richtext.UrlParser
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -81,6 +81,8 @@ import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
+import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
+import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarningReason
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitive
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
@@ -145,6 +147,7 @@ open class ChannelNewMessageViewModel :
 
     // NSFW, Sensitive
     var wantsToMarkAsSensitive by mutableStateOf(false)
+    var contentWarningDescription by mutableStateOf("")
 
     // GeoHash
     var wantsToAddGeoHash by mutableStateOf(false)
@@ -168,7 +171,7 @@ open class ChannelNewMessageViewModel :
         this.canAddZapRaiser = hasLnAddress()
 
         this.userSuggestions?.reset()
-        this.userSuggestions = UserSuggestionState(accountVM.account)
+        this.userSuggestions = UserSuggestionState(accountVM.account, accountVM.nip05Client)
 
         this.emojiSuggestions?.reset()
         this.emojiSuggestions = EmojiSuggestionState(accountVM.account)
@@ -224,6 +227,7 @@ open class ChannelNewMessageViewModel :
         wantsForwardZapTo = localForwardZapTo.isNotEmpty()
 
         wantsToMarkAsSensitive = draftEvent.isSensitive()
+        contentWarningDescription = draftEvent.contentWarningReason() ?: ""
 
         val geohash = draftEvent.getGeoHash()
         wantsToAddGeoHash = geohash != null
@@ -383,6 +387,8 @@ open class ChannelNewMessageViewModel :
         val channelRelays = channel.relays()
         val geoHash = if (wantsToAddGeoHash) (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString() else null
 
+        val contentWarningReason = if (wantsToMarkAsSensitive) contentWarningDescription else null
+
         return if (channel is PublicChatChannel) {
             val replyingToEvent = replyTo.value?.toEventHint<ChannelMessageEvent>()
             val channelEvent = channel.event
@@ -394,6 +400,7 @@ open class ChannelNewMessageViewModel :
                     hashtags(findHashtags(tagger.message))
                     references(findURLs(tagger.message))
                     quotes(findNostrUris(tagger.message))
+                    contentWarningReason?.let { contentWarning(it) }
 
                     geoHash?.let { geohash(it) }
 
@@ -406,6 +413,7 @@ open class ChannelNewMessageViewModel :
                     hashtags(findHashtags(tagger.message))
                     references(findURLs(tagger.message))
                     quotes(findNostrUris(tagger.message))
+                    contentWarningReason?.let { contentWarning(it) }
 
                     geoHash?.let { geohash(it) }
 
@@ -417,6 +425,7 @@ open class ChannelNewMessageViewModel :
                     hashtags(findHashtags(tagger.message))
                     references(findURLs(tagger.message))
                     quotes(findNostrUris(tagger.message))
+                    contentWarningReason?.let { contentWarning(it) }
 
                     geoHash?.let { geohash(it) }
 
@@ -435,6 +444,7 @@ open class ChannelNewMessageViewModel :
                     hashtags(findHashtags(tagger.message))
                     references(findURLs(tagger.message))
                     quotes(findNostrUris(tagger.message))
+                    contentWarningReason?.let { contentWarning(it) }
 
                     emojis(emojis)
                     imetas(usedAttachments)
@@ -446,6 +456,7 @@ open class ChannelNewMessageViewModel :
                     hashtags(findHashtags(tagger.message))
                     references(findURLs(tagger.message))
                     quotes(findNostrUris(tagger.message))
+                    contentWarningReason?.let { contentWarning(it) }
 
                     emojis(emojis)
                     imetas(usedAttachments)
@@ -455,6 +466,7 @@ open class ChannelNewMessageViewModel :
                     hashtags(findHashtags(tagger.message))
                     references(findURLs(tagger.message))
                     quotes(findNostrUris(tagger.message))
+                    contentWarningReason?.let { contentWarning(it) }
 
                     emojis(emojis)
                     imetas(usedAttachments)
@@ -469,6 +481,7 @@ open class ChannelNewMessageViewModel :
                 hashtags(findHashtags(tagger.message))
                 references(findURLs(tagger.message))
                 quotes(findNostrUris(tagger.message))
+                contentWarningReason?.let { contentWarning(it) }
 
                 emojis(emojis)
                 imetas(usedAttachments)
@@ -503,7 +516,7 @@ open class ChannelNewMessageViewModel :
 
         wantsForwardZapTo = false
         wantsToMarkAsSensitive = false
-
+        contentWarningDescription = ""
         wantsToAddGeoHash = false
 
         forwardZapTo = SplitBuilder()
@@ -517,7 +530,7 @@ open class ChannelNewMessageViewModel :
         emojiSuggestions?.reset()
     }
 
-    open fun findUrlInMessage(): String? = RichTextParser().parseValidUrls(message.text).firstOrNull()
+    open fun findUrlInMessage(): String? = UrlParser().parseValidUrls(message.text).withScheme.firstOrNull()
 
     open fun addToMessage(it: String) {
         updateMessage(TextFieldValue(message.text + " " + it))
@@ -529,9 +542,13 @@ open class ChannelNewMessageViewModel :
 
         if (newMessage.selection.collapsed) {
             val lastWord = newMessage.currentWord()
-
-            userSuggestionsMainMessage = UserSuggestionAnchor.MAIN_MESSAGE
-            userSuggestions?.processCurrentWord(lastWord)
+            if (lastWord.startsWith("@")) {
+                userSuggestionsMainMessage = UserSuggestionAnchor.MAIN_MESSAGE
+                userSuggestions?.processCurrentWord(lastWord)
+            } else {
+                userSuggestionsMainMessage = null
+                userSuggestions?.reset()
+            }
 
             emojiSuggestions?.processCurrentWord(lastWord)
         }

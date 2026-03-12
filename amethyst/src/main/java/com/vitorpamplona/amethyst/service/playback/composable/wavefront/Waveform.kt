@@ -42,6 +42,7 @@ import com.vitorpamplona.amethyst.ui.components.AudioWaveformReadOnly
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.onStart
 
 @Composable
 fun Waveform(
@@ -73,22 +74,18 @@ fun Waveform(
     }
 
     LaunchedEffect(key1 = restartFlow.intValue) {
-        pollCurrentDuration(mediaControllerState.controller).collect { value -> waveformProgress.floatValue = value }
-    }
-
-    LaunchedEffect(Unit) {
-        delay(500)
-        val position = mediaControllerState.controller?.let { it.currentPosition / it.duration.toFloat() } ?: 0f
-        waveformProgress.floatValue = position
+        pollCurrentRelativePosition(mediaControllerState.controller).collect { value -> waveformProgress.floatValue = value }
     }
 }
 
-private fun pollCurrentDuration(controller: Player) =
+fun pollCurrentRelativePosition(controller: Player) =
     flow {
         while (controller.currentPosition <= controller.duration) {
             emit(controller.currentPosition / controller.duration.toFloat())
             delay(100)
         }
+    }.onStart {
+        emit(controller.currentPosition / controller.duration.toFloat())
     }.conflate()
 
 @Composable

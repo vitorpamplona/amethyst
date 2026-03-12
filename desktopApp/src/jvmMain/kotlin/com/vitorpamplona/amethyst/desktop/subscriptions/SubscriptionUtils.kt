@@ -110,7 +110,9 @@ fun rememberSubscription(
         }
 
         onDispose {
-            subscription?.let { relayManager.unsubscribe(it.subId) }
+            subscription?.let {
+                relayManager.unsubscribe(it.subId)
+            }
         }
     }
 

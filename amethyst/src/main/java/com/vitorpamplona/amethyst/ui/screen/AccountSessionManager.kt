@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.DefaultChannels
 import com.vitorpamplona.amethyst.model.DefaultDMRelayList
+import com.vitorpamplona.amethyst.model.DefaultGlobalRelays
 import com.vitorpamplona.amethyst.model.DefaultIndexerRelayList
 import com.vitorpamplona.amethyst.model.DefaultNIP65List
 import com.vitorpamplona.amethyst.model.DefaultNIP65RelaySet
@@ -60,6 +61,7 @@ import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
 import com.vitorpamplona.quartz.nip49PrivKeyEnc.Nip49
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayFeedsListEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
@@ -118,7 +120,7 @@ class AccountSessionManager(
         }
     }
 
-    private suspend fun requestLoginUI() = _accountContent.update { AccountState.LoggedOff }
+    private fun requestLoginUI() = _accountContent.update { AccountState.LoggedOff }
 
     suspend fun loginAndStartUI(
         key: String,
@@ -276,7 +278,7 @@ class AccountSessionManager(
 
             localPreferences.setDefaultAccount(accountSettings)
 
-            startUI(accountSettings)
+            startUI(accountSettings, route = Route.ImportFollowsSelectUser)
 
             scope.launch(Dispatchers.IO) {
                 delay(2000) // waits for the new user to connect to the new relays.
@@ -289,6 +291,7 @@ class AccountSessionManager(
                 accountSettings.backupDMRelayList?.let { client.send(it, toPost) }
                 accountSettings.backupSearchRelayList?.let { client.send(it, toPost) }
                 accountSettings.backupIndexRelayList?.let { client.send(it, toPost) }
+                accountSettings.backupRelayFeedsList?.let { client.send(it, toPost) }
             }
         }
     }
@@ -312,6 +315,7 @@ class AccountSessionManager(
             backupSearchRelayList = SearchRelayListEvent.create(DefaultSearchRelayList.toList(), tempSigner),
             backupIndexRelayList = IndexerRelayListEvent.create(DefaultIndexerRelayList.toList(), tempSigner),
             backupChannelList = ChannelListEvent.create(emptyList(), DefaultChannels, tempSigner),
+            backupRelayFeedsList = RelayFeedsListEvent.create(DefaultGlobalRelays, tempSigner),
         )
     }
 

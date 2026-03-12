@@ -20,11 +20,13 @@
  */
 package com.vitorpamplona.amethyst.service.namecoin
 
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.DEFAULT_ELECTRUMX_SERVERS
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumXClient
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumxServer
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinLookupCache
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNostrResult
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinResolveOutcome
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -43,11 +45,16 @@ class NamecoinNameService(
 ) {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    private val resolver = NamecoinNameResolver(electrumxClient)
-    private val cache = NamecoinLookupCache()
-
     // Custom server list (user-configurable)
+    @Volatile
     private var customServers: List<ElectrumxServer> = emptyList()
+
+    private val resolver =
+        NamecoinNameResolver(
+            electrumxClient = electrumxClient,
+            serverListProvider = { customServers.ifEmpty { DEFAULT_ELECTRUMX_SERVERS } },
+        )
+    private val cache = NamecoinLookupCache()
 
     // ── Public API ─────────────────────────────────────────────────────
 
@@ -70,6 +77,17 @@ class NamecoinNameService(
         cache.put(identifier, result)
         return result
     }
+
+    /**
+     * Resolve and return just the hex pubkey, or null.
+     * Convenience for follow-import integration.
+     */
+    suspend fun resolvePubkey(identifier: String): String? = resolve(identifier)?.pubkey
+
+    /**
+     * Resolve with detailed outcome for error reporting.
+     */
+    suspend fun resolveDetailed(identifier: String): NamecoinResolveOutcome = resolver.resolveDetailed(identifier)
 
     /**
      * Verify that a Namecoin name maps to the expected pubkey.
@@ -97,7 +115,10 @@ class NamecoinNameService(
      *
      * Useful for composable UIs that observe resolution state.
      */
-    fun resolveLive(identifier: String): StateFlow<NamecoinResolveState> {
+    fun resolveLive(
+        identifier: String,
+        scope: CoroutineScope = this.scope,
+    ): StateFlow<NamecoinResolveState> {
         val state = MutableStateFlow<NamecoinResolveState>(NamecoinResolveState.Loading)
         scope.launch {
             try {

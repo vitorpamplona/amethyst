@@ -79,7 +79,7 @@ class BlossomServerListState(
                 emptyList(),
             )
 
-    fun mergeServerList(blossom: List<String>?): List<ServerName> = blossom?.map { ServerName(host(it), it, ServerType.Blossom) } ?: emptyList()
+    fun mergeServerList(blossom: List<String>?): List<ServerName> = blossom?.map { ServerName(host(it), it, ServerType.Blossom) }?.ifEmpty { DEFAULT_MEDIA_SERVERS } ?: DEFAULT_MEDIA_SERVERS
 
     val hostNameFlow: StateFlow<List<ServerName>> =
         flow
@@ -120,5 +120,5 @@ class BlossomServerListState(
     suspend fun createBlossomDeleteAuth(
         hash: HexKey,
         alt: String,
-    ): BlossomAuthorizationEvent? = BlossomAuthorizationEvent.createDeleteAuth(hash, alt, signer)
+    ): BlossomAuthorizationEvent = BlossomAuthorizationEvent.createDeleteAuth(hash, alt, signer)
 }

@@ -46,8 +46,8 @@ import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
 import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
-import com.vitorpamplona.quartz.nip51Lists.relayLists.FavoriteRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.CommandType
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.permission.Permission
@@ -81,6 +81,8 @@ val DefaultNIP65List =
         AdvertisedRelayInfo(Constants.nos, AdvertisedRelayType.BOTH),
         AdvertisedRelayInfo(Constants.bitcoiner, AdvertisedRelayType.BOTH),
     )
+
+val DefaultGlobalRelays = listOf(Constants.wine, Constants.news)
 
 val DefaultDMRelayList = listOf(Constants.auth, Constants.oxchat, Constants.nos)
 
@@ -173,7 +175,7 @@ class AccountSettings(
     var backupNIP65RelayList: AdvertisedRelayListEvent? = null,
     var backupSearchRelayList: SearchRelayListEvent? = null,
     var backupIndexRelayList: IndexerRelayListEvent? = null,
-    var backupFavoriteRelayList: FavoriteRelayListEvent? = null,
+    var backupRelayFeedsList: RelayFeedsListEvent? = null,
     var backupBlockedRelayList: BlockedRelayListEvent? = null,
     var backupTrustedRelayList: TrustedRelayListEvent? = null,
     var backupMuteList: MuteListEvent? = null,
@@ -186,8 +188,8 @@ class AccountSettings(
     var backupEphemeralChatList: EphemeralChatListEvent? = null,
     var backupTrustProviderList: TrustProviderListEvent? = null,
     val lastReadPerRoute: MutableStateFlow<Map<String, MutableStateFlow<Long>>> = MutableStateFlow(mapOf()),
-    val hasDonatedInVersion: MutableStateFlow<Set<String>> = MutableStateFlow(setOf<String>()),
-    val pendingAttestations: MutableStateFlow<Map<HexKey, String>> = MutableStateFlow<Map<HexKey, String>>(mapOf()),
+    val hasDonatedInVersion: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
+    val pendingAttestations: MutableStateFlow<Map<HexKey, String>> = MutableStateFlow(mapOf()),
     var backupNipA3PaymentTargets: PaymentTargetsEvent? = null,
 ) : EphemeralChatRepository,
     PublicChatListRepository {
@@ -425,12 +427,12 @@ class AccountSettings(
         }
     }
 
-    fun updateFavoriteRelayList(newFavoriteRelayList: FavoriteRelayListEvent?) {
-        if (newFavoriteRelayList == null || newFavoriteRelayList.tags.isEmpty()) return
+    fun updateRelayFeedList(newRelayFeedList: RelayFeedsListEvent?) {
+        if (newRelayFeedList == null || newRelayFeedList.tags.isEmpty()) return
 
         // Events might be different objects, we have to compare their ids.
-        if (backupFavoriteRelayList?.id != newFavoriteRelayList.id) {
-            backupFavoriteRelayList = newFavoriteRelayList
+        if (backupRelayFeedsList?.id != newRelayFeedList.id) {
+            backupRelayFeedsList = newRelayFeedList
             saveAccountSettings()
         }
     }
@@ -612,7 +614,7 @@ class AccountSettings(
         route: String,
         timestampInSecs: Long,
     ): MutableStateFlow<Long> =
-        MutableStateFlow<Long>(timestampInSecs).also { newFlow ->
+        MutableStateFlow(timestampInSecs).also { newFlow ->
             lastReadPerRoute.update { it + Pair(route, newFlow) }
             saveAccountSettings()
         }

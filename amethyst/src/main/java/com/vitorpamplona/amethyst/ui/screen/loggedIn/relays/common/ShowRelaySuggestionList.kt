@@ -20,59 +20,49 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common
 
-import androidx.compose.foundation.clickable
+import android.R.attr.onClick
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.model.nip11RelayInfo.Nip11CachedRetriever
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.ui.theme.HalfVertPadding
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 
 @Composable
 fun ShowRelaySuggestionList(
-    relaySuggestions: RelaySuggestionState,
+    relaySuggestions: IRelaySuggestionState,
     onSelect: (NormalizedRelayUrl) -> Unit,
     modifier: Modifier = Modifier,
+    nip11CachedRetriever: Nip11CachedRetriever,
+    accountViewModel: AccountViewModel,
+    nav: INav,
 ) {
     val suggestions by relaySuggestions.results.collectAsStateWithLifecycle(emptyList())
 
     if (suggestions.isNotEmpty()) {
         Column(modifier = modifier) {
-            suggestions.forEachIndexed { index, relay ->
-                RelayUrlLine(relay) { onSelect(relay) }
+            suggestions.forEachIndexed { index, relayInfo ->
+                BasicRelaySetupInfoClickableRow(
+                    item = relayInfo,
+                    loadProfilePicture = accountViewModel.settings.showProfilePictures(),
+                    loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+                    onClick = { onSelect(relayInfo.relay) },
+                    onDelete = null,
+                    nip11CachedRetriever = nip11CachedRetriever,
+                    modifier = HalfVertPadding,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
                 if (index < suggestions.lastIndex) {
                     HorizontalDivider(thickness = DividerThickness)
                 }
             }
         }
     }
-}
-
-@Composable
-fun RelayUrlLine(
-    relay: NormalizedRelayUrl,
-    onClick: () -> Unit,
-) {
-    Text(
-        text = relay.displayUrl(),
-        fontWeight = FontWeight.Bold,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-        style = MaterialTheme.typography.bodyMedium,
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onClick)
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-    )
 }

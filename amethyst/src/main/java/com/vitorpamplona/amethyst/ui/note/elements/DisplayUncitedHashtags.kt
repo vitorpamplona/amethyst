@@ -58,7 +58,7 @@ fun DisplayUncitedHashtags(
     nav: INav,
 ) {
     val unusedHashtags by
-        produceState(initialValue = emptyList<String>()) {
+        produceState(initialValue = emptyList()) {
             val tagsInEvent = event.hashtags()
             if (tagsInEvent.isNotEmpty()) {
                 val state = CachedRichTextParser.parseText(content, event.tags.toImmutableListOfLists(), callbackUri)
@@ -66,15 +66,15 @@ fun DisplayUncitedHashtags(
                 val tagsInContent =
                     state
                         .paragraphs
-                        .map {
-                            it.words.mapNotNull {
+                        .flatMap { paragraphState ->
+                            paragraphState.words.mapNotNull {
                                 if (it is HashTagSegment) {
                                     it.hashtag
                                 } else {
                                     null
                                 }
                             }
-                        }.flatten()
+                        }
 
                 val unusedHashtags =
                     tagsInEvent.filterNot { eventTag ->

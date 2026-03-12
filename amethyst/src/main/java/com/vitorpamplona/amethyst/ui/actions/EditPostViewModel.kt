@@ -111,7 +111,7 @@ open class EditPostViewModel : ViewModel() {
         this.editedFromNote = edit
 
         this.userSuggestions?.reset()
-        this.userSuggestions = UserSuggestionState(accountViewModel.account)
+        this.userSuggestions = UserSuggestionState(accountViewModel.account, accountViewModel.nip05Client)
     }
 
     fun sendPost() {
@@ -275,8 +275,13 @@ open class EditPostViewModel : ViewModel() {
 
         if (it.selection.collapsed) {
             val lastWord = message.currentWord()
-            userSuggestionsMainMessage = UserSuggestionAnchor.MAIN_MESSAGE
-            userSuggestions?.processCurrentWord(lastWord)
+            if (lastWord.startsWith("@")) {
+                userSuggestionsMainMessage = UserSuggestionAnchor.MAIN_MESSAGE
+                userSuggestions?.processCurrentWord(lastWord)
+            } else {
+                userSuggestionsMainMessage = null
+                userSuggestions?.reset()
+            }
         }
     }
 

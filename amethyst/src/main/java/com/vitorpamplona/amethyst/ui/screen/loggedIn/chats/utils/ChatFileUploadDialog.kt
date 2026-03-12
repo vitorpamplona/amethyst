@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.uploads.ShowImageUploadGallery
 import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge
 import com.vitorpamplona.amethyst.ui.components.TextSpinner
@@ -196,7 +197,8 @@ private fun ImageVideoPostChat(
                 fileServers
                     .firstOrNull { it == accountViewModel.account.settings.defaultFileServer }
                     ?.name
-                    ?: fileServers[0].name,
+                    ?: fileServers.firstOrNull()?.name
+                    ?: DEFAULT_MEDIA_SERVERS[0].name,
             options = fileServerOptions,
             onSelect = { fileUploadState.selectedServer = fileServers[it] },
         )

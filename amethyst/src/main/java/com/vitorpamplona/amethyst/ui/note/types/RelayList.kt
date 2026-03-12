@@ -235,14 +235,14 @@ fun DisplayTrustedRelayList(
 }
 
 @Composable
-fun DisplayFavoriteRelayList(
+fun DisplayRelayFeedsList(
     baseNote: Note,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val relays by accountViewModel.account.favoriteRelayListDecryptionCache.observeDecryptedRelayList(baseNote).collectAsStateWithLifecycle(
-        accountViewModel.account.favoriteRelayListDecryptionCache.fastStartValueForRelayList(baseNote),
+    val relays by accountViewModel.account.relayFeedsListDecryptionCache.observeDecryptedRelayList(baseNote).collectAsStateWithLifecycle(
+        accountViewModel.account.relayFeedsListDecryptionCache.fastStartValueForRelayList(baseNote),
     )
 
     DisplayRelaySet(

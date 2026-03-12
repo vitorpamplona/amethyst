@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.home
 import android.content.Context
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -93,6 +94,7 @@ import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
+import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarningReason
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitive
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
@@ -220,7 +222,7 @@ open class ShortNotePostViewModel :
     var canUsePoll by mutableStateOf(false)
     var wantsPoll by mutableStateOf(false)
     var pollOptions: SnapshotStateMap<Int, OptionTag> = newStateMapPollOptions()
-    var closedAt by mutableStateOf(TimeUtils.oneDayAhead())
+    var closedAt by mutableLongStateOf(TimeUtils.oneDayAhead())
 
     // Invoices
     var canAddInvoice by mutableStateOf(false)
@@ -235,6 +237,7 @@ open class ShortNotePostViewModel :
 
     // NSFW, Sensitive
     var wantsToMarkAsSensitive by mutableStateOf(false)
+    var contentWarningDescription by mutableStateOf("")
 
     // GeoHash
     var wantsToAddGeoHash by mutableStateOf(false)
@@ -259,7 +262,7 @@ open class ShortNotePostViewModel :
         this.canAddZapRaiser = hasLnAddress()
 
         this.userSuggestions?.reset()
-        this.userSuggestions = UserSuggestionState(accountVM.account)
+        this.userSuggestions = UserSuggestionState(accountVM.account, accountVM.nip05Client)
 
         this.emojiSuggestions?.reset()
         this.emojiSuggestions = EmojiSuggestionState(accountVM.account)
@@ -422,6 +425,7 @@ open class ShortNotePostViewModel :
         wantsForwardZapTo = localForwardZapTo.isNotEmpty()
 
         wantsToMarkAsSensitive = draftEvent.isSensitive()
+        contentWarningDescription = draftEvent.contentWarningReason() ?: ""
 
         val geohash = draftEvent.getGeoHash()
         wantsToAddGeoHash = geohash != null
@@ -501,6 +505,7 @@ open class ShortNotePostViewModel :
         wantsForwardZapTo = localForwardZapTo.isNotEmpty()
 
         wantsToMarkAsSensitive = draftEvent.isSensitive()
+        contentWarningDescription = draftEvent.contentWarningReason() ?: ""
 
         val geohash = draftEvent.getGeoHash()
         wantsToAddGeoHash = geohash != null
@@ -554,8 +559,8 @@ open class ShortNotePostViewModel :
             val serverToUse = voiceSelectedServer ?: accountViewModel.account.settings.defaultFileServer
             uploadVoiceMessageSync(
                 serverToUse,
-                { _, _ -> }, // Error handling is done by checking voiceMetadata below
-            )
+            ) { _, _ -> } // Error handling is done by checking voiceMetadata below
+
             // Abort if upload failed - don't post without voice data
             if (voiceMetadata == null) {
                 Log.w("ShortNotePostViewModel", "Voice upload failed, aborting post")
@@ -684,7 +689,7 @@ open class ShortNotePostViewModel :
         val urls = findURLs(tagger.message)
         val usedAttachments = iMetaAttachments.filterIsIn(urls.toSet())
 
-        val contentWarningReason = if (wantsToMarkAsSensitive) "" else null
+        val contentWarningReason = if (wantsToMarkAsSensitive) contentWarningDescription else null
 
         return if (wantsPoll) {
             val options = pollOptions.map { it.value }
@@ -895,6 +900,7 @@ open class ShortNotePostViewModel :
 
         wantsForwardZapTo = false
         wantsToMarkAsSensitive = false
+        contentWarningDescription = ""
         wantsToAddGeoHash = false
         wantsExclusiveGeoPost = false
         wantsSecretEmoji = false
@@ -929,10 +935,14 @@ open class ShortNotePostViewModel :
         urlPreviews.update(message)
 
         if (message.selection.collapsed) {
-            val lastWord = message.currentWord()
-
-            userSuggestionsMainMessage = UserSuggestionAnchor.MAIN_MESSAGE
-            userSuggestions?.processCurrentWord(lastWord)
+            val lastWord = newMessage.currentWord()
+            if (lastWord.startsWith("@")) {
+                userSuggestionsMainMessage = UserSuggestionAnchor.MAIN_MESSAGE
+                userSuggestions?.processCurrentWord(lastWord)
+            } else {
+                userSuggestionsMainMessage = null
+                userSuggestions?.reset()
+            }
 
             emojiSuggestions?.processCurrentWord(lastWord)
         }

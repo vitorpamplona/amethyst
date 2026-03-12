@@ -24,6 +24,7 @@ import android.util.LruCache
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.richtext.RichTextViewerState
+import com.vitorpamplona.amethyst.commons.richtext.UrlParser
 
 object CachedRichTextParser {
     private val richTextCache = LruCache<Int, RichTextViewerState>(50)
@@ -77,7 +78,8 @@ object CachedUrlParser {
         return if (cached != null) {
             cached
         } else {
-            val newUrls = RichTextParser().parseValidUrls(content).toList()
+            val urlSet = UrlParser().parseValidUrls(content)
+            val newUrls = urlSet.withScheme.filter { it.startsWith("http") } + urlSet.withoutScheme.map { "http://$it" } + urlSet.bech32s.map { "http://$it" }
             parsedUrlsCache.put(key, newUrls)
             newUrls
         }

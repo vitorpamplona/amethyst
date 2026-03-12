@@ -108,7 +108,7 @@ fun PeopleListScreen(
     nav: INav,
 ) {
     val viewModel: PeopleListViewModel = viewModel()
-    viewModel.init(accountViewModel.account, selectedDTag)
+    viewModel.init(accountViewModel, selectedDTag)
 
     val pagerState = rememberPagerState { 2 }
 

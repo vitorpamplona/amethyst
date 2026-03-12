@@ -148,9 +148,9 @@ import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BroadcastRelayListEvent
-import com.vitorpamplona.quartz.nip51Lists.relayLists.FavoriteRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.ProxyRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relaySets.RelaySetEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
@@ -204,6 +204,7 @@ import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
+import com.vitorpamplona.quartz.utils.DualCase
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -1213,7 +1214,7 @@ object LocalCache : ILocalCache, ICacheProvider {
     ) = consumeBaseReplaceable(event, relay, wasVerified)
 
     private fun consume(
-        event: FavoriteRelayListEvent,
+        event: RelayFeedsListEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
@@ -2276,20 +2277,32 @@ object LocalCache : ILocalCache, ICacheProvider {
             }
         }
 
+        val dualCase =
+            listOf(
+                DualCase(username.lowercase(), username.uppercase()),
+            )
+
         val finds =
             users.filter { _, user: User ->
-                (
-                    (user.metadataOrNull()?.anyNameStartsWith(username) == true) ||
-                        user.pubkeyHex.startsWith(username, true) ||
+                val metadata = user.metadataOrNull()
+                if (metadata == null) {
+                    user.pubkeyHex.startsWith(username, true) ||
                         user.pubkeyNpub().startsWith(username, true)
-                ) &&
-                    (forAccount == null || (!forAccount.isHidden(user) && !user.containsAny(forAccount.hiddenUsers.flow.value.hiddenWordsCase)))
+                } else {
+                    (
+                        metadata.anyNameOrAddressContains(dualCase) ||
+                            user.pubkeyHex.startsWith(username, true) ||
+                            user.pubkeyNpub().startsWith(username, true)
+                    ) &&
+                        (forAccount == null || (!forAccount.isHidden(user) && !metadata.anyPropertyContains(forAccount.hiddenUsers.flow.value.hiddenWordsCase)))
+                }
             }
 
         return finds.sortedWith(
             compareBy(
                 { forAccount?.isFollowing(it) == false },
-                { !it.toBestDisplayName().startsWith(username, ignoreCase = true) },
+                { it.metadataOrNull()?.anyNameStartsWith(dualCase) == false },
+                { it.metadataOrNull()?.anyAddressStartsWith(dualCase) == false },
                 { it.toBestDisplayName().lowercase() },
                 { it.pubkeyHex },
             ),
@@ -2770,10 +2783,9 @@ object LocalCache : ILocalCache, ICacheProvider {
         val childrenToBeRemoved = mutableListOf<Note>()
 
         val toBeRemoved =
-            account.hiddenUsers.flow.value.hiddenUsers
-                .map { userHex ->
-                    (notes.filter { _, it -> it.event?.pubKey == userHex } + addressables.filter { _, it -> it.event?.pubKey == userHex }).toSet()
-                }.flatten()
+            account.hiddenUsers.flow.value.hiddenUsers.flatMap { userHex ->
+                (notes.filter { _, it -> it.event?.pubKey == userHex } + addressables.filter { _, it -> it.event?.pubKey == userHex }).toSet()
+            }
 
         toBeRemoved.forEach {
             removeFromCache(it)
@@ -3084,7 +3096,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is GitPatchEvent -> consume(event, relay, wasVerified)
                 is GitRepositoryEvent -> consume(event, relay, wasVerified)
                 is ChessGameEvent -> consume(event, relay, wasVerified)
-                is FavoriteRelayListEvent -> consume(event, relay, wasVerified)
+                is RelayFeedsListEvent -> consume(event, relay, wasVerified)
                 is JesterEvent -> consume(event, relay, wasVerified)
                 is LiveChessGameChallengeEvent -> consume(event, relay, wasVerified)
                 is LiveChessGameAcceptEvent -> consume(event, relay, wasVerified)

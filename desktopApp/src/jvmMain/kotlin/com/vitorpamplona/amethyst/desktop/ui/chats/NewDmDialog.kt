@@ -80,18 +80,17 @@ fun NewDmDialog(
     val cachedUsers by searchState.cachedUserResults.collectAsState()
     val relaySearchResults by searchState.relaySearchResults.collectAsState()
     val isSearchingRelays by searchState.isSearchingRelays.collectAsState()
-    val relayStatuses by relayManager.relayStatuses.collectAsState()
+    val connectedRelays by relayManager.connectedRelays.collectAsState()
     val focusRequester = remember { FocusRequester() }
 
     // NIP-50 relay search when local cache has few/no results
-    rememberSubscription(relayStatuses, searchText, cachedUsers.size, relayManager = relayManager) {
-        val configuredRelays = relayStatuses.keys
-        if (configuredRelays.isEmpty()) return@rememberSubscription null
+    rememberSubscription(connectedRelays, searchText, cachedUsers.size, relayManager = relayManager) {
+        if (connectedRelays.isEmpty()) return@rememberSubscription null
 
         if (searchState.shouldSearchRelays) {
             searchState.startRelaySearch()
             createSearchPeopleSubscription(
-                relays = configuredRelays,
+                relays = connectedRelays,
                 searchQuery = searchText,
                 limit = 20,
                 onEvent = { event, _, _, _ ->
@@ -113,16 +112,15 @@ fun NewDmDialog(
     }
 
     // Bech32 npub metadata loading
-    rememberSubscription(relayStatuses, searchText, relayManager = relayManager) {
-        val configuredRelays = relayStatuses.keys
-        if (configuredRelays.isEmpty() || searchText.length < 2) {
+    rememberSubscription(connectedRelays, searchText, relayManager = relayManager) {
+        if (connectedRelays.isEmpty() || searchText.length < 2) {
             return@rememberSubscription null
         }
 
         val pubkeyHex = decodePublicKeyAsHexOrNull(searchText)
         if (pubkeyHex != null) {
             createMetadataSubscription(
-                relays = configuredRelays,
+                relays = connectedRelays,
                 pubKeyHex = pubkeyHex,
                 onEvent = { event, _, _, _ ->
                     if (event is MetadataEvent) {

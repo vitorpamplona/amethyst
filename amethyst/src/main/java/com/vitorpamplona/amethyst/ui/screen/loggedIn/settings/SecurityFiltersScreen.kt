@@ -376,7 +376,7 @@ fun MutedWordActionOptions(
 ) {
     val isMutedWord by observeAccountIsHiddenWord(accountViewModel.account, word)
 
-    if (isMutedWord == true) {
+    if (isMutedWord) {
         ShowWordButton {
             if (!accountViewModel.isWriteable()) {
                 accountViewModel.toastManager.toast(

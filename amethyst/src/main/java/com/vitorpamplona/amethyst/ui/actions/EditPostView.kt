@@ -78,6 +78,7 @@ import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
+import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromFiles
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.components.BechLink
 import com.vitorpamplona.amethyst.ui.components.LoadUrlPreview
@@ -96,6 +97,7 @@ import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightPage
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
@@ -344,7 +346,7 @@ fun EditPostView(
                                 it,
                                 postViewModel::autocompleteWithUser,
                                 accountViewModel,
-                                modifier = Modifier.heightIn(0.dp, 300.dp),
+                                modifier = SuggestionListDefaultHeightPage,
                             )
                         }
 
@@ -369,6 +371,14 @@ private fun BottomRowActions(postViewModel: EditPostViewModel) {
         verticalAlignment = CenterVertically,
     ) {
         SelectFromGallery(
+            isUploading = postViewModel.isUploadingImage,
+            tint = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier,
+        ) {
+            postViewModel.selectImage(it)
+        }
+
+        SelectFromFiles(
             isUploading = postViewModel.isUploadingImage,
             tint = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier,

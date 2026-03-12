@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.favorites
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.feeds
 
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -29,6 +29,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.navs.rememberExtendedNav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -40,8 +41,8 @@ import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 
 @Composable
-fun FavoriteRelayList(
-    postViewModel: FavoriteRelayListViewModel,
+fun RelayFeedsList(
+    postViewModel: RelayFeedsListViewModel,
     accountViewModel: AccountViewModel,
     onClose: () -> Unit,
     nav: INav,
@@ -54,28 +55,33 @@ fun FavoriteRelayList(
         LazyColumn(
             contentPadding = FeedPadding,
         ) {
-            renderFavoriteItems(feedState, postViewModel, accountViewModel, newNav)
+            renderRelayFeedsItems(feedState, postViewModel, accountViewModel, newNav)
         }
     }
 }
 
-fun LazyListScope.renderFavoriteItems(
+fun LazyListScope.renderRelayFeedsItems(
     feedState: List<BasicRelaySetupInfo>,
-    postViewModel: FavoriteRelayListViewModel,
+    postViewModel: RelayFeedsListViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    itemsIndexed(feedState, key = { _, item -> "Favorite" + item.relay.url }) { index, item ->
+    itemsIndexed(feedState, key = { _, item -> "RelayFeeds" + item.relay.url }) { index, item ->
         BasicRelaySetupInfoDialog(
             item,
             onDelete = { postViewModel.deleteRelay(item) },
+            nip11CachedRetriever = Amethyst.instance.nip11Cache,
             accountViewModel = accountViewModel,
-            nav,
+            nav = nav,
         )
     }
 
     item {
         Spacer(modifier = StdVertSpacer)
-        RelayUrlEditField { postViewModel.addRelay(relaySetupInfoBuilder(it)) }
+        RelayUrlEditField(
+            onNewRelay = { postViewModel.addRelay(relaySetupInfoBuilder(it)) },
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
     }
 }

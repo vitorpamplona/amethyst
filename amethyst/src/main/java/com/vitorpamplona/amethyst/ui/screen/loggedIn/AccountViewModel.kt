@@ -103,6 +103,9 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip03Timestamp.EmptyOtsResolverBuilder
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.EmptyNip05Client
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.INip05Client
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
@@ -164,6 +167,7 @@ class AccountViewModel(
     val torSettings: TorSettingsFlow,
     val dataSources: RelaySubscriptionsCoordinator,
     val httpClientBuilder: IRoleBasedHttpClientBuilder,
+    val nip05Client: INip05Client,
 ) : ViewModel(),
     Dao {
     var firstRoute: Route? = null
@@ -357,10 +361,10 @@ class AccountViewModel(
 
         return if (isPostHidden || isDecryptedPostHidden) {
             // Spam + Blocked Users + Hidden Words + Sensitive Content
-            NoteComposeReportState(isPostHidden, false, false, isHiddenAuthor)
+            NoteComposeReportState(isPostHidden, isAcceptable = false, canPreview = false, isHiddenAuthor = isHiddenAuthor)
         } else if (isFromLoggedIn || isFromLoggedInFollow) {
             // No need to process if from trusted people
-            NoteComposeReportState(isPostHidden, true, true, isHiddenAuthor)
+            NoteComposeReportState(isPostHidden, isAcceptable = true, canPreview = true, isHiddenAuthor = isHiddenAuthor)
         } else {
             val newCanPreview = !note.hasAnyReports()
 
@@ -368,7 +372,7 @@ class AccountViewModel(
 
             if (newCanPreview && newIsAcceptable) {
                 // No need to process reports if nothing is wrong
-                NoteComposeReportState(isPostHidden, true, true, false)
+                NoteComposeReportState(isPostHidden, isAcceptable = true, canPreview = true, isHiddenAuthor = false)
             } else {
                 NoteComposeReportState(
                     isPostHidden,
@@ -511,7 +515,7 @@ class AccountViewModel(
                     }.toMutableMap()
 
             val results =
-                mapNotNullAsync<CombinedZap, DecryptedInfo>(
+                mapNotNullAsync(
                     zaps.filter { (it.request.event as? LnZapRequestEvent)?.isPrivateZap() == true },
                 ) { next ->
                     val info = innerDecryptAmountMessage(next.request, next.response)
@@ -914,6 +918,8 @@ class AccountViewModel(
 
     fun unfollow(channel: EphemeralChatChannel) = launchSigner { account.unfollow(channel) }
 
+    fun follow(users: List<User>) = launchSigner { account.follow(users) }
+
     fun follow(user: User) = launchSigner { account.follow(user) }
 
     fun unfollow(user: User) = launchSigner { account.unfollow(user) }
@@ -926,9 +932,9 @@ class AccountViewModel(
 
     fun unfollowHashtag(tag: String) = launchSigner { account.unfollowHashtag(tag) }
 
-    fun followFavoriteRelay(url: NormalizedRelayUrl) = launchSigner { account.followFavoriteRelay(url) }
+    fun followRelayFeed(url: NormalizedRelayUrl) = launchSigner { account.followRelayFeed(url) }
 
-    fun unfollowFavoriteRelay(url: NormalizedRelayUrl) = launchSigner { account.unfollowFavoriteRelay(url) }
+    fun unfollowRelayFeed(url: NormalizedRelayUrl) = launchSigner { account.unfollowRelayFeed(url) }
 
     fun showWord(word: String) = launchSigner { account.showWord(word) }
 
@@ -1099,7 +1105,7 @@ class AccountViewModel(
         }
     }
 
-    override suspend fun getOrCreateAddressableNote(address: Address): AddressableNote = LocalCache.getOrCreateAddressableNote(address)
+    override fun getOrCreateAddressableNote(address: Address): AddressableNote = LocalCache.getOrCreateAddressableNote(address)
 
     fun getAddressableNoteIfExists(key: String): AddressableNote? = LocalCache.getAddressableNoteIfExists(key)
 
@@ -1210,6 +1216,7 @@ class AccountViewModel(
         val torSettings: TorSettingsFlow,
         val dataSources: RelaySubscriptionsCoordinator,
         val okHttpClient: RoleBasedHttpClientBuilder,
+        val nip05Client: Nip05Client,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T =
@@ -1219,6 +1226,7 @@ class AccountViewModel(
                 torSettings,
                 dataSources,
                 okHttpClient,
+                nip05Client,
             ) as T
     }
 
@@ -1609,7 +1617,7 @@ class AccountViewModel(
             }.stateIn(
                 viewModelScope,
                 SharingStarted.WhileSubscribed(5000),
-                emptySet<HexKey>(),
+                emptySet(),
             )
 
     val draftNoteCache = CachedDraftNotes(this)
@@ -1740,6 +1748,7 @@ fun mockAccountViewModel(): AccountViewModel {
         torSettings = TorSettingsFlow(torType = MutableStateFlow(TorType.OFF)),
         httpClientBuilder = EmptyRoleBasedHttpClientBuilder(),
         dataSources = RelaySubscriptionsCoordinator(LocalCache, client, authenticator, failureTracker, scope),
+        nip05Client = EmptyNip05Client(),
     ).also {
         mockedCache = it
     }
@@ -1790,6 +1799,7 @@ fun mockVitorAccountViewModel(): AccountViewModel {
         torSettings = TorSettingsFlow(torType = MutableStateFlow(TorType.OFF)),
         httpClientBuilder = EmptyRoleBasedHttpClientBuilder(),
         dataSources = RelaySubscriptionsCoordinator(LocalCache, client, authenticator, failureTracker, scope),
+        nip05Client = EmptyNip05Client(),
     ).also {
         vitorCache = it
     }

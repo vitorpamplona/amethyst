@@ -27,6 +27,17 @@ import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.SearchQueryState
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrlOrNull
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.INip05Client
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Id
+import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
+import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
+import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
+import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
+import com.vitorpamplona.quartz.utils.DualCase
+import com.vitorpamplona.quartz.utils.Hex
+import com.vitorpamplona.quartz.utils.startsWithAny
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,12 +49,20 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 
+val userUriPrefixes =
+    listOf(
+        DualCase("npub"),
+        DualCase("nprofile"),
+        DualCase("nostr:npub"),
+        DualCase("nostr:nprofile"),
+    )
+
 @Stable
 class UserSuggestionState(
     val account: Account,
-    val requireAtSymbol: Boolean = true,
+    val nip05Client: INip05Client,
 ) {
-    val invalidations = MutableStateFlow<Int>(0)
+    val invalidations = MutableStateFlow(0)
     val currentWord = MutableStateFlow("")
     val searchDataSourceState = SearchQueryState(MutableStateFlow(""), account)
 
@@ -56,8 +75,71 @@ class UserSuggestionState(
             .onEach(::updateDataSource)
 
     @OptIn(FlowPreview::class)
+    val nip05ResolutionFlow =
+        currentWord
+            .debounce(300)
+            .distinctUntilChanged()
+            .map(::userSearchTermOrNull)
+            .map { prefix ->
+                if (prefix != null) {
+                    if (prefix.contains('@')) {
+                        runCatching {
+                            Nip05Id.parse(prefix)?.let { nip05 ->
+                                nip05Client.get(nip05)?.let { info ->
+                                    val user = account.cache.checkGetOrCreateUser(info.pubkey)
+                                    if (user != null) {
+                                        info.relays.forEach {
+                                            it.normalizeRelayUrlOrNull()?.let { relay ->
+                                                account.cache.relayHints.addKey(user.pubkey(), relay)
+                                            }
+                                        }
+                                    }
+                                    user
+                                }
+                            }
+                        }.getOrNull()
+                    } else if (prefix.startsWithAny(userUriPrefixes)) {
+                        runCatching {
+                            Nip19Parser.uriToRoute(prefix)?.entity?.let { parsed ->
+                                when (parsed) {
+                                    is NSec -> {
+                                        account.cache.getOrCreateUser(parsed.toPubKey().toHexKey())
+                                    }
+
+                                    is NPub -> {
+                                        account.cache.getOrCreateUser(parsed.hex)
+                                    }
+
+                                    is NProfile -> {
+                                        val user = account.cache.getOrCreateUser(parsed.hex)
+                                        parsed.relay.forEach { relay ->
+                                            account.cache.relayHints.addKey(user.pubkey(), relay)
+                                        }
+                                        user
+                                    }
+
+                                    else -> {
+                                        null
+                                    }
+                                }
+                            }
+                        }.getOrNull()
+                    } else if (prefix.length == 64 && Hex.isHex64(prefix)) {
+                        account.cache.getOrCreateUser(prefix)
+                    } else {
+                        null
+                    }
+                } else {
+                    null
+                }
+            }.flowOn(Dispatchers.IO)
+
+    @OptIn(FlowPreview::class)
     val results =
-        combine(searchTerm, invalidations.debounce(100)) { prefix, version ->
+        combine(searchTerm, nip05ResolutionFlow, invalidations.debounce(100)) { prefix, nip05, version ->
+            if (nip05 != null) {
+                return@combine listOf(nip05)
+            }
             if (prefix != null) {
                 logTime("UserSuggestionState Search $prefix version $version") {
                     account.cache.findUsersStartingWith(prefix, account)
@@ -68,7 +150,9 @@ class UserSuggestionState(
         }.flowOn(Dispatchers.IO)
 
     fun reset() {
-        currentWord.tryEmit("")
+        if (!currentWord.value.isEmpty()) {
+            currentWord.tryEmit("")
+        }
     }
 
     fun processCurrentWord(word: String) {
@@ -81,18 +165,10 @@ class UserSuggestionState(
     }
 
     fun userSearchTermOrNull(currentWord: String): String? =
-        if (requireAtSymbol) {
-            if (currentWord.startsWith("@") && currentWord.length > 2) {
-                currentWord.removePrefix("@")
-            } else {
-                null
-            }
+        if (currentWord.length > 2) {
+            currentWord.removePrefix("@")
         } else {
-            if (currentWord.length > 1) {
-                currentWord
-            } else {
-                null
-            }
+            null
         }
 
     fun updateDataSource(searchTerm: String?) {

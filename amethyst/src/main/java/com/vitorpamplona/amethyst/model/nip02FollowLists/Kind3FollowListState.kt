@@ -113,6 +113,25 @@ class Kind3FollowListState(
         )
     }
 
+    suspend fun follow(users: List<User>): ContactListEvent {
+        val contactList = getFollowListEvent()
+
+        val contacts =
+            users.map {
+                ContactTag(it.pubkeyHex, it.bestRelayHint(), null)
+            }
+
+        return if (contactList != null) {
+            ContactListEvent.followUsers(contactList, contacts, signer)
+        } else {
+            ContactListEvent.createFromScratch(
+                followUsers = contacts,
+                relayUse = emptyMap(),
+                signer = signer,
+            )
+        }
+    }
+
     suspend fun follow(user: User): ContactListEvent {
         val contactList = getFollowListEvent()
 

@@ -31,9 +31,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.HorizontalDivider
@@ -54,6 +52,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
@@ -70,6 +69,7 @@ import com.vitorpamplona.amethyst.ui.note.SearchIcon
 import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.ChannelName
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoClickableRow
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
@@ -91,6 +91,7 @@ fun SearchScreen(
             factory =
                 SearchBarViewModel.Factory(
                     accountViewModel.account,
+                    accountViewModel.nip05Client,
                 ),
         )
 
@@ -105,16 +106,16 @@ fun SearchScreen(
 ) {
     WatchLifecycleAndUpdateModel(searchBarViewModel)
 
-    val listState = rememberLazyListState()
-
     LaunchedEffect(searchBarViewModel.focusRequester) {
-        searchBarViewModel.focusRequester.requestFocus()
+        if (searchBarViewModel.listState.firstVisibleItemIndex == 0) {
+            searchBarViewModel.focusRequester.requestFocus()
+        }
     }
 
     DisappearingScaffold(
         isInvertedLayout = false,
         topBar = {
-            SearchBar(searchBarViewModel, listState, accountViewModel, nav)
+            SearchBar(searchBarViewModel, accountViewModel, nav)
         },
         bottomBar = {
             AppBottomBar(Route.Search, accountViewModel) { route ->
@@ -127,7 +128,7 @@ fun SearchScreen(
             modifier = Modifier.padding(it).consumeWindowInsets(it),
         ) {
             ObserveRelayListForSearchAndDisplayIfNotFound(accountViewModel, nav)
-            DisplaySearchResults(searchBarViewModel, listState, nav, accountViewModel)
+            DisplaySearchResults(searchBarViewModel, nav, accountViewModel)
         }
     }
 }
@@ -136,7 +137,6 @@ fun SearchScreen(
 @Composable
 private fun SearchBar(
     searchBarViewModel: SearchBarViewModel,
-    listState: LazyListState,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -160,21 +160,7 @@ private fun SearchBar(
         }
     }
 
-    AnimateOnNewSearch(searchBarViewModel, listState)
-
     SearchTextField(searchBarViewModel, Modifier.statusBarsPadding())
-}
-
-@Composable
-fun AnimateOnNewSearch(
-    searchBarViewModel: SearchBarViewModel,
-    listState: LazyListState,
-) {
-    val searchTerm by searchBarViewModel.searchTerm.collectAsStateWithLifecycle()
-
-    LaunchedEffect(searchTerm) {
-        listState.animateScrollToItem(0)
-    }
 }
 
 @Composable
@@ -233,7 +219,6 @@ private fun SearchTextField(
 @Composable
 private fun DisplaySearchResults(
     searchBarViewModel: SearchBarViewModel,
-    listState: LazyListState,
     nav: INav,
     accountViewModel: AccountViewModel,
 ) {
@@ -242,6 +227,7 @@ private fun DisplaySearchResults(
     }
 
     val hashTags by searchBarViewModel.hashtagResults.collectAsStateWithLifecycle()
+    val relays by searchBarViewModel.relayResults.collectAsStateWithLifecycle()
     val users by searchBarViewModel.searchResultsUsers.collectAsStateWithLifecycle()
     val publicChatChannels by searchBarViewModel.searchResultsPublicChatChannels.collectAsStateWithLifecycle()
     val ephemeralChannels by searchBarViewModel.searchResultsEphemeralChannels.collectAsStateWithLifecycle()
@@ -251,7 +237,7 @@ private fun DisplaySearchResults(
     LazyColumn(
         modifier = Modifier.fillMaxHeight(),
         contentPadding = FeedPadding,
-        state = listState,
+        state = searchBarViewModel.listState,
     ) {
         itemsIndexed(
             hashTags,
@@ -273,6 +259,23 @@ private fun DisplaySearchResults(
 
             HorizontalDivider(
                 thickness = DividerThickness,
+            )
+        }
+
+        itemsIndexed(
+            relays,
+            key = { _, item -> "relay${item.relay.url}" },
+        ) { _, relayInfo ->
+            BasicRelaySetupInfoClickableRow(
+                item = relayInfo,
+                loadProfilePicture = accountViewModel.settings.showProfilePictures(),
+                loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+                onClick = { nav.nav(Route.RelayInfo(relayInfo.relay.url)) },
+                onDelete = null,
+                nip11CachedRetriever = Amethyst.instance.nip11Cache,
+                modifier = Modifier.padding(vertical = 5.dp, horizontal = 10.dp),
+                accountViewModel = accountViewModel,
+                nav = nav,
             )
         }
 

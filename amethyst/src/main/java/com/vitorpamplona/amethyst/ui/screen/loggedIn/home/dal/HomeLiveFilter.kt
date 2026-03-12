@@ -160,10 +160,8 @@ class HomeLiveFilter(
         val noteEvent = note.event
 
         if (noteEvent is LiveActivitiesChatMessageEvent) {
-            val stream = noteEvent.activityAddress()
-            if (stream == null) return false
-            val streamChannel = LocalCache.getLiveActivityChannelIfExists(stream)
-            if (streamChannel == null) return false
+            val stream = noteEvent.activityAddress() ?: return false
+            val streamChannel = LocalCache.getLiveActivityChannelIfExists(stream) ?: return false
 
             if (streamChannel.info?.status() != StatusTag.STATUS.LIVE) return false
         }
@@ -194,7 +192,7 @@ class HomeLiveFilter(
 
         return collection.sortedWith(
             compareByDescending<Channel> { followCounts[it] }
-                .thenByDescending<Channel> { it.lastNote?.createdAt() ?: 0L }
+                .thenByDescending { it.lastNote?.createdAt() ?: 0L }
                 .thenBy { it.hashCode() },
         )
     }

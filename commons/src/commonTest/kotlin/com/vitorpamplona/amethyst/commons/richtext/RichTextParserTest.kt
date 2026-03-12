@@ -20,14 +20,13 @@
  */
 package com.vitorpamplona.amethyst.commons.richtext
 
-import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
-import junit.framework.TestCase.assertEquals
-import org.junit.Test
-import org.junit.runner.RunWith
+import junit.framework.TestCase
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
-@RunWith(AndroidJUnit4::class)
 class RichTextParserTest {
     private val textToParse =
         """
@@ -685,16 +684,33 @@ class RichTextParserTest {
         """.trimIndent()
 
     @Test
+    fun testUrlsToParse() {
+        val state =
+            RichTextParser()
+                .parseText(textToParse, EmptyTagList, null)
+        TestCase.assertEquals(
+            "relay.shitforce.one, relayable.org, universe.nostrich.land, nos.lol, universe.nostrich.land?lang=zh, universe.nostrich.land?lang=en, relay.damus.io, relay.nostr.wirednet.jp, offchain.pub, nostr.rocks, relay.wellorder.net, nostr.oxtr.dev, universe.nostrich.land?lang=ja, relay.mostr.pub, nostr.bitcoiner.social, Nostr-Check.com, MR.Rabbit, Ancap.su, miceliomad@miceliomad.github.io/nostr/, zapper.lol, smies.me, baller.hodl",
+            state.urlSet.withoutScheme.joinToString(", "),
+        )
+
+        TestCase.assertEquals(
+            "jb55@jb55.com, Snowden@Nostr-Check.com, cameri@elder.nostr.land, natalie@NostrVerified.com, alanbwt@nostrplebs.com, rick@no.str.cr, shawn@shawnyeager.com, 0xtr@oxtr.dev, pavol@rusnak.io, caitlin@nostrverified.com, ralf@snort.social, stacksats@nostrplebs.com, MrHodl@nostrpurple.com, _@mikedilger.com, jascha@relayable.org, Nakadaimon@nostrplebs.com, KeithMukai@nostr.seedsigner.com, theguyswann@NostrVerified.com, dk@stacker.news, npub1z7eqn5603ltuxr77w70t3sasep8hyngzr6lxqpa9hfcqjwe9wmdqhw0qhv@nost.vip, miljan@primal.net, jared@nostrplebs.com, radii@orangepill.dev, _@katieannbaker.com, giacomozucco@BitcoinNostr.com, kr@stacker.news, phil@nostrpurple.com, angela@nostr.world, mason@lacosanostr.com, lau@nostr.report, damascusrex@iris.to, nym@nostr.fan, nico@nostrplebs.com, seekerdreamer1@stacker.news, thesamecat@iris.to, nitesh@noderunner.wtf, gpt3@jb55.com, byzantine@stacker.news, wealththeory@nostrplebs.com, gug@nostrplebs.com, lana@b.tc, shevacai@nostrplebs.com, joe@nostrpurple.com, simplestbitcoinbook@nostrplebs.com, knutsvanholm@iris.to, rs@zbd.ai, GRANTGILLIAM@grantgilliam.com, lifeloveliberty@iris.to, npub1s9c53smfq925qx6fgkqgw8as2e99l2hmj32gz0hjjhe8q67fxdvs3ga9je@nost.vip, arbedout@granddecentral.com, glowleaf@nostrplebs.com, modus@lacosanostr.com, anil@bitcoinnostr.com, documentingbtc@uselessshit.co, wolfbearclaw@nostr.messagepush.io, _@amboss.space, k3tan@k3tan.com, wolzie@BitcoinNostr.com, trey@nostrplebs.com, woody@fountain.fm, cosmicdimension@nostrplebs.com, mirbtc@getalby.com, marks@nostrplebs.com, barrensatin40@walletofsatoshi.com, alexemidio@alexemidio.github.io, Jenn@mintgreen.co, spacemonkey@nostrich.love, ishak@nostrplebs.com, GrassFedBitcoin@start9.com, ninoholds@nostrplebs.com, satcap@nostr.satcap.io, tpmoreira@nostrplebs.com, force2b@nostrplebs.com, hendrix@nostrplebs.com, TXMC@alphabetasoup.tv, pipleb@iris.to, reallhex@terranostr.com, nicb@nicb.me, NabismoPrime@BostonBTC.com, paco@iris.to, globalstatesmen@nostrplebs.com, _@NostrNet.work, crayonsmell@habel.net, ToxiKat27@Bitcoiner.social, jtrag@BitcoinNostr.com, joemartinmusic@nostrplebs.com, ph@nostrplebs.com, horse@iris.to, kp@no.str.cr, rebornbitcoiner@getalby.com, toshi@nostr-check.com, freeborn@nostrplebs.com, blee@bitcoiner.social, SatsTonight@BitcoinNostr.com, freeverification@Nostr-Check.com, cowmaster@getalby.com, hacker818@iris.to, amandabitcasa@nostrplebs.com, tiago@nostrplebs.com, sepehr@nostribe.com, gfy@stacker.news, cryptojournaal@iris.to, bon@nostrplebs.com, bot@binarywatch.org, moritz@getalby.com, hodlish@Nostr-Check.com, HolgerHatGarKeineNode@nip05.easify.de, joe@jaxo.github.io, hahattpro@iris.to, bensima@simatime.com, satan@nostrcheck.me, radvladdy@nostrplebs.com, yidneth@getalby.com, bellatrix@iris.to, securecoop@iris.to, charliesurf@ln.tips, bitcoinatm@Nostr-Check.com, lnstallone@allmysats.com, L0laL33tz@cashu.me, Lommy@nostrplebs.com, jgmontoya@nostrplebs.com, bavarianledger@iris.to, operator@brb.io, tiotito@nostriches.net, javi@www.javiergonzalez.io, geekigai@nostrplebs.com, Mr.Rabbit@BitcoinNostr.com, kilicl@nostr-check.com, alexbit@nostrbr.online, william@nostrplebs.com, oneezra@nostrplebs.com, iceandfirebtc@nostrplebs.com, nostrgang@nostrplebs.com, npub1vez5zekuzc3qk989q5gtly2zg9k2gz4l3wuplv5xs8y3se09yussg4vp7p@carteclip.com, Sqvaznyak@uselessshit.co, braj@nostrplebs.com, libertus@getalby.com, ZoeBoudreault@id.nostrfy.me, dnilso@iris.to, shroom@nostrplebs.com, olegaba@olegaba.com, wasabi@nostrplebs.com, artur@getalby.com, ihsanmd@getalby.com, satoshee@vida.page, ancapsu@getalby.com, niceaction@www.niceaction.com, seak@nostrplebs.com, andy@nodeless.io, pinkyjay@nostrplebs.com, criptobastardo@nostrplebs.com, lacosanostr@lacosanostr.com, teejem@nostrplebs.com, mewj@elder.nostr.land, thetonewrecker@nostrplebs.com, yodatravels@iris.to, bitcoin69@iris.to, Zzar@nostrplebs.com, vidalbidi@getalby.com, juangalt@current.ninja, dean@nostrplebs.com, alex2@nostrverified.com, trooper@iris.to, satscoinsv@getalby.com, aarbtc@iris.to, _@gue.yogsite.com, nostrmemes@iris.to, btcpavao@iris.to, Anonymous@BitcoinNostr.com, zoltanab@iris.to, katsu@onsats.org, bryan@nonni.io, pedromvpg@pedromvpg.com, sonicstudio@getalby.com, kounsellor@nostrplebs.com, katieross@nostrplebs.com, iamlj@iris.to, Zach@BitcoinNostr.com, amouranth@nostrcheck.me, hss5qy@getalby.com, dpcpw@iris.to, bitcoinfinity@nostrplebs.com, TonySeries@BitcoinNostr.com, kuobano@nostrplebs.com, kitakripto@BitcoinNostr.com, _@localhost.re, alxc@uselessshit.co, kukryr@orangepill.dev, saidah@nostrplebs.com, sharon21m@nostr.fan, dmn@noderunners.org, nela_at_nostrica2023@Nostr-Check.com, xbologg@nanostr.deno.dev, btcurenas@nostr.fan, amaluenda@getalby.com, queenb@nostrplebs.com, ezekiel@Nostr-Check.com, marakesh@getalby.com, storm@reddirtmining.io, _b_o_n_e_s_@stacker.news, bdichdbd@stacker.news, j9@nostrplebs.com, nokyctranslate@iris.to, Neomobius_at_mstdn.jp@mostr.pub, paddepadde@getcurrent.io, val@nostrplebs.com, dishwasher_iot@wlvs.space, 1@justinrezvani.com, sshh@nostrplebs.com, mk05@iris.to, herald@bitcoin-herald.org, nostr@pos.btcpayserver.it, thumpgofast@NostrVerified.com, neo@elder.nostr.land, alchemist@electronalchemy.com, timp@iris.to, ken@BitcoinNostr.com, irebus@nostr.red, stim4444@no.str.cr, layerlnw@nostr.fan, enhickman@enhickman.net, LiveFreeBTC@livefreebtc.org, aptx4869@aptx4869.app, khalil@klouche.com, nsec@ittybitty.tips, bigfish@iris.to, oldschool@iris.to, danton@nostrplebs.com, bitcoinzavior@nostrplebs.com, BitcoinSermons@BitcoinNostr.com, uknwlinux@plebs.place, satoshism@nostrplebs.com, jon@nostrplebs.com, hobozakki@nostrplebs.com, sirgalahodl@satstream.me, victor@lnmarkets.com, jacksmies@iris.to, chemaclass@snort.social, jayson@tautic.com, jesterhodl@jesterhodl.com, Bitcoin_Gamer_21@bitcoin-21.org, water-bot@gourcetools.github.io, w3crypto@iris.to, makaveli@nostrplebs.com, jamieanders@ln.tips, cball@nostrplebs.com, laura@nostrich.zone, kaz@reddirtmining.io, verismus@nostrplebs.com, bitpetro@nostrplebs.com, nossence@nossence.xyz, manbearpig@nostrplebs.com, johnsmith@nostrplebs.com, bitcoin@bitcoinedu.com, knggolf@nostrplebs.com, nighthaven@iris.to, xbt_fi@iris.to, gencarlosq17@iris.to, rotciv@plebs.place, Merlin@bitcoinnostr.com, yeg0rpetrov@iris.to, baloo@nostrpurple.com, jamesgospodyn@nostr.theorangepillapp.com, carl@armadalabs.studio, btcportal@nostrplebs.com, mjb@nostrplebs.com, esbewolkt@nostr.fan, koukos@iris.to, davekrock@NostrVerified.com, Bitcoinlovelife@BitcoinNostr.com, xolagl2@getalby.com, remoney@nostrplebs.com, roberto@bitcoiner.chat, cryptolazyninja@stacker.news, kimymt@getalby.com, benderlogic@rogue.earth, MAESTRO@BitcoinNostr.com, travis@west.report, coffeelover@nostrplebs.com, shadowysuperstore@shadowysuperstore.com, npub1wg2dsjnh0g7phheq23v288k0mj8x75fffmq7rghtkhv53027hnassf4w8t@nost.vip, eynhaender@nostrplebs.com, b1ackswan@nostrplebs.com, mrbitc0in@nostrplebs.com, jedi@nostrplebs.com, cloudnull@nostrplebs.com, Mrwh0@Mrwh0.github.io, shinohai@iris.to, awoi@iris.to, jcope101@nostrplebs.com, murmur@nostrplebs.com, dario@nostrplebs.com, leonawankum@BitcoinNostr.com, phil@iris.to, thatirdude@nostrplebs.com, K_hole@ketamine.com, 2@lokuyow.github.io, hazey@iris.to, HeineNon@tomottodx.github.io, titan@nostrplebs.com",
+            state.urlSet.emails.joinToString(", "),
+        )
+
+        TestCase.assertEquals(
+            "",
+            state.urlSet.withScheme.joinToString(", "),
+        )
+    }
+
+    @Test
     fun testTextToParse() {
         val state =
             RichTextParser()
                 .parseText(textToParse, EmptyTagList, null)
-        assertEquals(
-            "relay.shitforce.one, relayable.org, universe.nostrich.land, nos.lol, universe.nostrich.land?lang=zh, universe.nostrich.land?lang=en, relay.damus.io, relay.nostr.wirednet.jp, offchain.pub, nostr.rocks, relay.wellorder.net, nostr.oxtr.dev, universe.nostrich.land?lang=ja, relay.mostr.pub, nostr.bitcoiner.social, Nostr-Check.com, MR.Rabbit, Ancap.su, ⚡\uFE0Fsatscoinsv@getalby.com, miceliomad@miceliomad.github.io/nostr/, zapper.lol, smies.me, baller.hodl",
-            state.urlSet.joinToString(", "),
-        )
 
-        printStateForDebug(state)
+        // printStateForDebug(state)
 
         val expectedResult =
             listOf(
@@ -733,52 +749,52 @@ class RichTextParserTest {
                 "RegularText(Events (%) Relay)",
                 "RegularText(33.4K)",
                 "RegularText((4.6%))",
-                "Link(relay.shitforce.one)",
+                "SchemelessUrl(relay.shitforce.one)",
                 "RegularText(32.9K)",
                 "RegularText((4.6%))",
-                "Link(relayable.org)",
+                "SchemelessUrl(relayable.org)",
                 "RegularText(26.6K)",
                 "RegularText((3.7%))",
-                "Link(universe.nostrich.land)",
+                "SchemelessUrl(universe.nostrich.land)",
                 "RegularText(22.8K)",
                 "RegularText((3.2%))",
-                "Link(nos.lol)",
+                "SchemelessUrl(nos.lol)",
                 "RegularText(22.7K)",
                 "RegularText((3.1%))",
-                "Link(universe.nostrich.land?lang=zh)",
+                "SchemelessUrl(universe.nostrich.land?lang=zh)",
                 "RegularText(22.5K)",
                 "RegularText((3.1%))",
-                "Link(universe.nostrich.land?lang=en)",
+                "SchemelessUrl(universe.nostrich.land?lang=en)",
                 "RegularText(21.2K)",
                 "RegularText((2.9%))",
-                "Link(relay.damus.io)",
+                "SchemelessUrl(relay.damus.io)",
                 "RegularText(20.6K)",
                 "RegularText((2.9%))",
-                "Link(relay.nostr.wirednet.jp)",
+                "SchemelessUrl(relay.nostr.wirednet.jp)",
                 "RegularText(20.1K)",
                 "RegularText((2.8%))",
-                "Link(offchain.pub)",
+                "SchemelessUrl(offchain.pub)",
                 "RegularText(19.9K)",
                 "RegularText((2.8%))",
-                "Link(nostr.rocks)",
+                "SchemelessUrl(nostr.rocks)",
                 "RegularText(19.5K)",
                 "RegularText((2.7%))",
-                "Link(relay.wellorder.net)",
+                "SchemelessUrl(relay.wellorder.net)",
                 "RegularText(19.4K)",
                 "RegularText((2.7%))",
-                "Link(nostr.oxtr.dev)",
+                "SchemelessUrl(nostr.oxtr.dev)",
                 "RegularText(19K)",
                 "RegularText((2.6%))",
-                "Link(universe.nostrich.land?lang=ja)",
+                "SchemelessUrl(universe.nostrich.land?lang=ja)",
                 "RegularText(18.4K)",
                 "RegularText((2.6%))",
-                "Link(relay.mostr.pub)",
+                "SchemelessUrl(relay.mostr.pub)",
                 "RegularText(17.5K)",
                 "RegularText((2.4%))",
-                "Link(universe.nostrich.land?lang=zh)",
+                "SchemelessUrl(universe.nostrich.land?lang=zh)",
                 "RegularText(16.3K)",
                 "RegularText((2.3%))",
-                "Link(nostr.bitcoiner.social)",
+                "SchemelessUrl(nostr.bitcoiner.social)",
                 "RegularText()",
                 "RegularText(30 day global new events)",
                 "RegularText()",
@@ -1617,7 +1633,8 @@ class RichTextParserTest {
                 "RegularText(eb3b94533dafeb8ebd58a4947a3dce11d83a9931c622bdf30a4257d3347ee1bf)",
                 "HashTag(#109)",
                 "RegularText(3%)",
-                "SchemelessUrl(Nostr-Check.com,)",
+                "SchemelessUrl(Nostr-Check.com)",
+                "RegularText(,)",
                 "Email(freeverification@Nostr-Check.com)",
                 "RegularText(-)",
                 "RegularText(ddfbb06a722e51933cd37e4ecdb30b1864f262f9bb5bd6c2d95cbeefc728f096)",
@@ -1893,7 +1910,8 @@ class RichTextParserTest {
                 "RegularText(d162a53c3b0bfb5c3ebd787d7b08feab206b112362eca25aa291251cd70fe225)",
                 "HashTag(#154)",
                 "RegularText(3%)",
-                "SchemelessUrl(MR.Rabbit,)",
+                "SchemelessUrl(MR.Rabbit)",
+                "RegularText(,)",
                 "Email(Mr.Rabbit@BitcoinNostr.com)",
                 "RegularText(-)",
                 "RegularText(42af69b2384071f31e55cb2d368c8a3351c8f2da03207e1fb6885991ac2522bf)",
@@ -2069,7 +2087,8 @@ class RichTextParserTest {
                 "RegularText(39ed0aea2338477103e0b5a820532ded27dbfe4f203e7270392d55f63e60271a)",
                 "HashTag(#183)",
                 "RegularText(2%)",
-                "SchemelessUrl(Ancap.su,)",
+                "SchemelessUrl(Ancap.su)",
+                "RegularText(,)",
                 "Email(ancapsu@getalby.com)",
                 "RegularText(-)",
                 "RegularText(2fe5292a2df25047a392fceead75458875c775c31cc28f4be04cef3e8db15291)",
@@ -2258,7 +2277,8 @@ class RichTextParserTest {
                 "HashTag(#214)",
                 "RegularText(2%)",
                 "RegularText(Satscoinsv,)",
-                "Link(⚡️satscoinsv@getalby.com)",
+                "RegularText(⚡\uFE0F)",
+                "Email(satscoinsv@getalby.com)",
                 "RegularText(-)",
                 "RegularText(80db64657ea0358c5332c5cca01565eeddd4b8799688b1c46d3cb2d7c966671f)",
                 "HashTag(#215)",
@@ -2468,7 +2488,7 @@ class RichTextParserTest {
                 "HashTag(#249)",
                 "RegularText(2%)",
                 "RegularText(micmad,)",
-                "Link(miceliomad@miceliomad.github.io/nostr/)",
+                "SchemelessUrl(miceliomad@miceliomad.github.io/nostr/)",
                 "RegularText(-)",
                 "RegularText(cd806edcf8ff40ea94fa574ea9cd97da16e5beb2b85aac6e1d648b8388504343)",
                 "HashTag(#250)",
@@ -2647,7 +2667,7 @@ class RichTextParserTest {
                 "HashTag(#278)",
                 "RegularText(2%)",
                 "RegularText(𝕬𝖓𝖔𝖓𝖞𝖒𝖔𝖚𝖘,)",
-                "Link(zapper.lol)",
+                "SchemelessUrl(zapper.lol)",
                 "RegularText(-)",
                 "RegularText(96aceca84aa381eeda084167dd317e1bf7a45d874cd14147f0a9e0df86fb44c2)",
                 "HashTag(#279)",
@@ -3105,7 +3125,8 @@ class RichTextParserTest {
                 "RegularText(c4a9caef93e93f484274c04cd981d1de1424902451aca2f5602bd0835fe4393d)",
                 "HashTag(#354)",
                 "RegularText(2%)",
-                "SchemelessUrl(smies.me,)",
+                "SchemelessUrl(smies.me)",
+                "RegularText(,)",
                 "Email(jacksmies@iris.to)",
                 "RegularText(-)",
                 "RegularText(cdecbc48e35a351582e3e030fd8cf5d5f44681613d2949353d9c6644d32d451f)",
@@ -3815,7 +3836,8 @@ class RichTextParserTest {
                 "HashTag(#471)",
                 "RegularText(1%)",
                 "RegularText(leonwankum,)",
-                "RegularText(@leonawankum@BitcoinNostr.com)",
+                "RegularText(@)",
+                "Email(leonawankum@BitcoinNostr.com)",
                 "RegularText()",
                 "RegularText(-)",
                 "RegularText(652d58acafa105af8475c0fe8029a52e7ddbc337b2bd9c98bb17a111dc4cde60)",
@@ -3984,7 +4006,8 @@ class RichTextParserTest {
                 "RegularText(21a7014db2ba17acc8bbb9496645084866b46e1ba0062a80513afda405450183)",
                 "HashTag(#499)",
                 "RegularText(1%)",
-                "SchemelessUrl(baller.hodl,)",
+                "SchemelessUrl(baller.hodl)",
+                "RegularText(,)",
                 "RegularText()",
                 "RegularText(-)",
                 "RegularText(d8150dc0631f834a004f231f0747d5ec8409b1a9214d246f675dfef39807a224)",
@@ -4021,16 +4044,16 @@ class RichTextParserTest {
             .map { it.words }
             .flatten()
             .forEachIndexed { index, seg ->
-                org.junit.Assert.assertEquals(
+                assertEquals(
                     expectedResult[index],
                     "${seg.javaClass.simpleName.replace("Segment", "")}(${seg.segmentText})",
                 )
             }
 
-        org.junit.Assert.assertTrue(state.imagesForPager.isEmpty())
-        org.junit.Assert.assertTrue(state.imageList.isEmpty())
-        org.junit.Assert.assertTrue(state.customEmoji.isEmpty())
-        org.junit.Assert.assertEquals(651, state.paragraphs.size)
+        assertTrue(state.imagesForPager.isEmpty())
+        assertTrue(state.imageList.isEmpty())
+        assertTrue(state.customEmoji.isEmpty())
+        assertEquals(651, state.paragraphs.size)
     }
 
     @Test
@@ -4038,11 +4061,13 @@ class RichTextParserTest {
         val state =
             RichTextParser()
                 .parseText("Hi, how are you doing? ", EmptyTagList, null)
-        org.junit.Assert.assertTrue(state.urlSet.isEmpty())
-        org.junit.Assert.assertTrue(state.imagesForPager.isEmpty())
-        org.junit.Assert.assertTrue(state.imageList.isEmpty())
-        org.junit.Assert.assertTrue(state.customEmoji.isEmpty())
-        org.junit.Assert.assertEquals(
+        assertTrue(state.urlSet.withoutScheme.isEmpty())
+        assertTrue(state.urlSet.withScheme.isEmpty())
+        assertTrue(state.urlSet.emails.isEmpty())
+        assertTrue(state.imagesForPager.isEmpty())
+        assertTrue(state.imageList.isEmpty())
+        assertTrue(state.customEmoji.isEmpty())
+        assertEquals(
             "Hi, how are you doing?",
             state.paragraphs
                 .firstOrNull()
@@ -4056,11 +4081,13 @@ class RichTextParserTest {
     fun testShortNewLinesTextToParse() {
         val state =
             RichTextParser().parseText("\nHi, \nhow\n\n\n are you doing? \n", EmptyTagList, null)
-        org.junit.Assert.assertTrue(state.urlSet.isEmpty())
-        org.junit.Assert.assertTrue(state.imagesForPager.isEmpty())
-        org.junit.Assert.assertTrue(state.imageList.isEmpty())
-        org.junit.Assert.assertTrue(state.customEmoji.isEmpty())
-        org.junit.Assert.assertEquals(
+        assertTrue(state.urlSet.withoutScheme.isEmpty())
+        assertTrue(state.urlSet.withScheme.isEmpty())
+        assertTrue(state.urlSet.emails.isEmpty())
+        assertTrue(state.imagesForPager.isEmpty())
+        assertTrue(state.imageList.isEmpty())
+        assertTrue(state.customEmoji.isEmpty())
+        assertEquals(
             "\nHi,\nhow\n\n\n are you doing?\n",
             state.paragraphs.joinToString("\n") { it.words.joinToString(" ") { it.segmentText } },
         )
@@ -4080,19 +4107,19 @@ class RichTextParserTest {
         val state =
             RichTextParser()
                 .parseText(text, EmptyTagList, null)
-        org.junit.Assert.assertEquals(
+        assertEquals(
             "https://lnshort.it/live-stream-embeds/",
-            state.urlSet.firstOrNull(),
+            state.urlSet.withScheme.firstOrNull(),
         )
-        org.junit.Assert.assertEquals(
+        assertEquals(
             "https://nostr.build/i/fd53fcf5ad950fbe45127e4bcee1b59e8301d41de6beee211f45e344db214e8a.jpg",
             state.imagesForPager.keys.firstOrNull(),
         )
-        org.junit.Assert.assertEquals(
+        assertEquals(
             "https://nostr.build/i/fd53fcf5ad950fbe45127e4bcee1b59e8301d41de6beee211f45e344db214e8a.jpg",
             state.imageList.firstOrNull()?.url,
         )
-        org.junit.Assert.assertTrue(state.customEmoji.isEmpty())
+        assertTrue(state.customEmoji.isEmpty())
 
         printStateForDebug(state)
 
@@ -4142,7 +4169,7 @@ class RichTextParserTest {
             .map { it.words }
             .flatten()
             .forEachIndexed { index, seg ->
-                org.junit.Assert.assertEquals(
+                assertEquals(
                     expectedResult[index],
                     "${seg.javaClass.simpleName.replace("Segment", "")}(${seg.segmentText})",
                 )
@@ -4175,7 +4202,7 @@ class RichTextParserTest {
             .map { it.words }
             .flatten()
             .forEachIndexed { index, seg ->
-                org.junit.Assert.assertEquals(
+                assertEquals(
                     expectedResult[index],
                     "${seg.javaClass.simpleName.replace("Segment", "")}(${seg.segmentText})",
                 )
@@ -4207,7 +4234,7 @@ class RichTextParserTest {
             .map { it.words }
             .flatten()
             .forEachIndexed { index, seg ->
-                org.junit.Assert.assertEquals(
+                assertEquals(
                     expectedResult[index],
                     "${seg.javaClass.simpleName.replace("Segment", "")}(${seg.segmentText})",
                 )
@@ -4231,7 +4258,7 @@ class RichTextParserTest {
         val expectedResult =
             listOf<String>(
                 "RegularText(Goon Night everybody :sleep:)",
-                "Image(81ca16-b665-4f57-80cb-11a58461fb61.avif)",
+                "Image(https://81ca16-b665-4f57-80cb-11a58461fb61.avif)",
                 "Image(https://bae.st/media/66b08dde784287ed8f92c455bc62076a04671ccb44097550626a532185a5d3ed.avif?name=81ca16-b665-4f57-80cb-11a58461fb61.avif)",
             )
 
@@ -4239,7 +4266,7 @@ class RichTextParserTest {
             .map { it.words }
             .flatten()
             .forEachIndexed { index, seg ->
-                org.junit.Assert.assertEquals(
+                assertEquals(
                     expectedResult[index],
                     "${seg.javaClass.simpleName.replace("Segment", "")}(${seg.segmentText})",
                 )
@@ -4260,7 +4287,8 @@ class RichTextParserTest {
             listOf<String>(
                 "RegularText(That’s)",
                 "RegularText(it!)",
-                "Link(http://vitorpamplona.com/.)",
+                "Link(http://vitorpamplona.com/)",
+                "RegularText(.)",
                 "RegularText(That’s)",
                 "RegularText(the)",
                 "RegularText(note)",
@@ -4270,7 +4298,52 @@ class RichTextParserTest {
             .map { it.words }
             .flatten()
             .forEachIndexed { index, seg ->
-                org.junit.Assert.assertEquals(
+                assertEquals(
+                    expectedResult[index],
+                    "${seg.javaClass.simpleName.replace("Segment", "")}(${seg.segmentText})",
+                )
+            }
+    }
+
+    @Test
+    fun testRelayUrls() {
+        val text = "If you want to FreeFrom Official \uD80C\uDD66 stream or download the music from  nostr:npub1sctag667a7np6p6ety2up94pnwwxhd2ep8n8afr2gtr47cwd4ewsvdmmjm at wss://relay.damus.io can you here"
+
+        val state =
+            RichTextParser()
+                .parseText(text, EmptyTagList, null)
+
+        printStateForDebug(state)
+
+        val expectedResult =
+            listOf<String>(
+                "RegularText(If)",
+                "RegularText(you)",
+                "RegularText(want)",
+                "RegularText(to)",
+                "RegularText(FreeFrom)",
+                "RegularText(Official)",
+                "RegularText(𓅦)",
+                "RegularText(stream)",
+                "RegularText(or)",
+                "RegularText(download)",
+                "RegularText(the)",
+                "RegularText(music)",
+                "RegularText(from)",
+                "RegularText()",
+                "Bech(nostr:npub1sctag667a7np6p6ety2up94pnwwxhd2ep8n8afr2gtr47cwd4ewsvdmmjm)",
+                "RegularText(at)",
+                "RelayUrl(wss://relay.damus.io)",
+                "RegularText(can)",
+                "RegularText(you)",
+                "RegularText(here)",
+            )
+
+        state.paragraphs
+            .map { it.words }
+            .flatten()
+            .forEachIndexed { index, seg ->
+                assertEquals(
                     expectedResult[index],
                     "${seg.javaClass.simpleName.replace("Segment", "")}(${seg.segmentText})",
                 )
@@ -4308,7 +4381,7 @@ class RichTextParserTest {
             .map { it.words }
             .flatten()
             .forEachIndexed { index, seg ->
-                org.junit.Assert.assertEquals(
+                assertEquals(
                     expectedResult[index],
                     "${seg.javaClass.simpleName.replace("Segment", "")}(${seg.segmentText})",
                 )

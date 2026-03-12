@@ -25,3 +25,5 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 fun Event.isSensitive() = tags.isSensitive()
 
 fun Event.isSensitiveOrNSFW() = tags.isSensitiveOrNSFW()
+
+fun Event.contentWarningReason() = tags.contentWarningReason()

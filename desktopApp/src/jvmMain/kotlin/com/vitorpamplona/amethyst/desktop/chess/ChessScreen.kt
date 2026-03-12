@@ -99,7 +99,7 @@ fun ChessScreen(
         remember(account.pubKeyHex) {
             DesktopChessViewModelNew(account, relayManager, scope)
         }
-    val relayStatuses by relayManager.relayStatuses.collectAsState()
+    val connectedRelays by relayManager.connectedRelays.collectAsState()
     val broadcastStatus by viewModel.broadcastStatus.collectAsState()
     val activeGames by viewModel.activeGames.collectAsState()
     // Observe state version to force recomposition when game state changes
@@ -147,11 +147,10 @@ fun ChessScreen(
 
     // Subscribe to user metadata for pubkeys that need it
     val pubkeysNeeded by viewModel.userMetadataCache.pubkeysNeeded.collectAsState()
-    rememberSubscription(relayStatuses, pubkeysNeeded, relayManager = relayManager) {
-        val configuredRelays = relayStatuses.keys
-        if (configuredRelays.isNotEmpty() && pubkeysNeeded.isNotEmpty()) {
+    rememberSubscription(connectedRelays, pubkeysNeeded, relayManager = relayManager) {
+        if (connectedRelays.isNotEmpty() && pubkeysNeeded.isNotEmpty()) {
             createMetadataListSubscription(
-                relays = configuredRelays,
+                relays = connectedRelays,
                 pubKeys = pubkeysNeeded.toList(),
                 onEvent = { event, _, _, _ ->
                     viewModel.handleIncomingEvent(event)

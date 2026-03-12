@@ -34,7 +34,7 @@ fun filterCommunitiesByHashtag(
     hashtags: Set<String>?,
     since: Long?,
 ): List<RelayBasedFilter> {
-    if (hashtags == null || hashtags.isEmpty()) return emptyList()
+    if (hashtags.isNullOrEmpty()) return emptyList()
 
     val hashtags = hashtags.flatMap(::hashtagAlts).distinct().sorted()
 

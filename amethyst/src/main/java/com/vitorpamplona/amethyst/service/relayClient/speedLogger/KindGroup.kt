@@ -30,8 +30,8 @@ import kotlin.concurrent.atomics.ExperimentalAtomicApi
 class KindGroup(
     var count: AtomicInteger = AtomicInteger(0),
     var memory: AtomicInteger = AtomicInteger(0),
-    val subs: LargeCache<String, AtomicInteger> = LargeCache<String, AtomicInteger>(),
-    val relays: LargeCache<NormalizedRelayUrl, AtomicInteger> = LargeCache<NormalizedRelayUrl, AtomicInteger>(),
+    val subs: LargeCache<String, AtomicInteger> = LargeCache(),
+    val relays: LargeCache<NormalizedRelayUrl, AtomicInteger> = LargeCache(),
 ) {
     companion object {
         const val MB: Int = 1024

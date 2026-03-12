@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.model.nip01UserMetadata.AccountOutboxRelayStat
 import com.vitorpamplona.amethyst.model.nip01UserMetadata.NotificationInboxRelayState
 import com.vitorpamplona.amethyst.model.nip01UserMetadata.UserMetadataState
 import com.vitorpamplona.amethyst.model.nip02FollowLists.DeclaredFollowsPerOutboxRelay
+import com.vitorpamplona.amethyst.model.nip02FollowLists.DeclaredFollowsPerUsingRelay
 import com.vitorpamplona.amethyst.model.nip02FollowLists.FollowListOutboxOrProxyRelays
 import com.vitorpamplona.amethyst.model.nip02FollowLists.FollowListReusedOutboxOrProxyRelays
 import com.vitorpamplona.amethyst.model.nip02FollowLists.FollowsPerOutboxRelay
@@ -60,8 +61,6 @@ import com.vitorpamplona.amethyst.model.nip51Lists.blockedRelays.BlockedRelayLis
 import com.vitorpamplona.amethyst.model.nip51Lists.blockedRelays.BlockedRelayListState
 import com.vitorpamplona.amethyst.model.nip51Lists.broadcastRelays.BroadcastRelayListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.broadcastRelays.BroadcastRelayListState
-import com.vitorpamplona.amethyst.model.nip51Lists.favoriteRelays.FavoriteRelayListDecryptionCache
-import com.vitorpamplona.amethyst.model.nip51Lists.favoriteRelays.FavoriteRelayListState
 import com.vitorpamplona.amethyst.model.nip51Lists.geohashLists.GeohashListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.geohashLists.GeohashListState
 import com.vitorpamplona.amethyst.model.nip51Lists.hashtagLists.HashtagListDecryptionCache
@@ -76,6 +75,8 @@ import com.vitorpamplona.amethyst.model.nip51Lists.peopleList.PeopleListDecrypti
 import com.vitorpamplona.amethyst.model.nip51Lists.peopleList.PeopleListsState
 import com.vitorpamplona.amethyst.model.nip51Lists.proxyRelays.ProxyRelayListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.proxyRelays.ProxyRelayListState
+import com.vitorpamplona.amethyst.model.nip51Lists.relayFeeds.RelayFeedListState
+import com.vitorpamplona.amethyst.model.nip51Lists.relayFeeds.RelayFeedsListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.searchRelays.SearchRelayListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.searchRelays.SearchRelayListState
 import com.vitorpamplona.amethyst.model.nip51Lists.trustedRelays.TrustedRelayListDecryptionCache
@@ -277,8 +278,8 @@ class Account(
     val indexerRelayListDecryptionCache = IndexerRelayListDecryptionCache(signer)
     val indexerRelayList = IndexerRelayListState(signer, cache, indexerRelayListDecryptionCache, scope, settings)
 
-    val favoriteRelayListDecryptionCache = FavoriteRelayListDecryptionCache(signer)
-    val favoriteRelayList = FavoriteRelayListState(signer, cache, favoriteRelayListDecryptionCache, scope, settings)
+    val relayFeedsListDecryptionCache = RelayFeedsListDecryptionCache(signer)
+    val relayFeedsList = RelayFeedListState(signer, cache, relayFeedsListDecryptionCache, scope, settings)
 
     val blockedRelayListDecryptionCache = BlockedRelayListDecryptionCache(signer)
     val blockedRelayList = BlockedRelayListState(signer, cache, blockedRelayListDecryptionCache, scope, settings)
@@ -340,7 +341,8 @@ class Account(
     val defaultGlobalRelays = MergedFollowPlusMineRelayListsState(followOutboxesOrProxy, nip65RelayList, privateStorageRelayList, localRelayList, scope)
 
     // keeps a cache of the declared outbox relays for each author
-    val declaredFollowsPerRelay = DeclaredFollowsPerOutboxRelay(kind3FollowList, cache, scope).flow
+    val declaredFollowsPerOutboxRelay = DeclaredFollowsPerOutboxRelay(kind3FollowList, cache, scope).flow
+    val declaredFollowsPerUsingRelay = DeclaredFollowsPerUsingRelay(kind3FollowList, cache, scope).flow
 
     // keeps a cache of the outbox relays for each author
     val followsPerRelay = FollowsPerOutboxRelay(kind3FollowList, blockedRelayList, proxyRelayList, cache, scope).flow
@@ -933,6 +935,8 @@ class Account(
 
     fun upgradeAttestations() = otsState.upgradeAttestationsIfNeeded(::sendAutomatic)
 
+    suspend fun follow(users: List<User>) = sendMyPublicAndPrivateOutbox(kind3FollowList.follow(users))
+
     suspend fun follow(user: User) = sendMyPublicAndPrivateOutbox(kind3FollowList.follow(user))
 
     suspend fun unfollow(user: User) = sendMyPublicAndPrivateOutbox(kind3FollowList.unfollow(user))
@@ -1240,7 +1244,7 @@ class Account(
         val event = signer.sign(template)
         cache.justConsumeMyOwnEvent(event)
         val relays = relayList(event)
-        if (relays != null && relays.isNotEmpty()) {
+        if (!relays.isNullOrEmpty()) {
             client.send(event, relays.toSet())
         } else {
             client.send(event, computeRelayListToBroadcast(event))
@@ -1898,7 +1902,7 @@ class Account(
     fun getRelevantReports(note: Note): Set<Note> {
         val innerReports =
             if (note.event is RepostEvent || note.event is GenericRepostEvent) {
-                note.replyTo?.map { getRelevantReports(it) }?.flatten() ?: emptyList()
+                note.replyTo?.flatMap { getRelevantReports(it) } ?: emptyList()
             } else {
                 emptyList()
             }
@@ -1924,11 +1928,11 @@ class Account(
 
     suspend fun saveTrustedRelayList(trustedRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(trustedRelayList.saveRelayList(trustedRelays))
 
-    suspend fun saveFavoriteRelayList(trustedRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(favoriteRelayList.saveRelayList(trustedRelays))
+    suspend fun saveRelayFeedsList(trustedRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(relayFeedsList.saveRelayList(trustedRelays))
 
-    suspend fun followFavoriteRelay(url: NormalizedRelayUrl) = sendMyPublicAndPrivateOutbox(favoriteRelayList.addRelay(url))
+    suspend fun followRelayFeed(url: NormalizedRelayUrl) = sendMyPublicAndPrivateOutbox(relayFeedsList.addRelay(url))
 
-    suspend fun unfollowFavoriteRelay(url: NormalizedRelayUrl) = sendMyPublicAndPrivateOutbox(favoriteRelayList.removeRelay(url))
+    suspend fun unfollowRelayFeed(url: NormalizedRelayUrl) = sendMyPublicAndPrivateOutbox(relayFeedsList.removeRelay(url))
 
     suspend fun saveBlockedRelayList(blockedRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(blockedRelayList.saveRelayList(blockedRelays))
 

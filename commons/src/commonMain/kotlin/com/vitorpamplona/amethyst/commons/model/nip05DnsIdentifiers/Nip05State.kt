@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.INip05Client
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Id
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -49,7 +49,7 @@ sealed interface Nip05State {
 
         fun reset() = verificationState.tryEmit(Nip05VerifState.NotStarted)
 
-        suspend fun checkAndUpdate(nip05Client: Nip05Client) {
+        suspend fun checkAndUpdate(nip05Client: INip05Client) {
             if (verificationState.value.isExpired()) {
                 markAsVerifying()
                 try {

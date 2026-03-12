@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.quartz.utils
 
-import com.linkedin.urls.detection.UrlDetector
-import com.linkedin.urls.detection.UrlDetectorOptions
+import com.vitorpamplona.quartz.utils.urldetector.detection.UrlDetector
 
-actual fun fastFindURLs(text: String): List<String> = UrlDetector(text, UrlDetectorOptions.Default).detect().map { it.originalUrl }
+actual fun fastFindURLs(text: String): List<String> = UrlDetector(text).detect().map { it.originalUrl }

@@ -32,8 +32,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
-import com.vitorpamplona.myapplication.DisappearingBottomBar
-import com.vitorpamplona.myapplication.DisappearingFloatingButton
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

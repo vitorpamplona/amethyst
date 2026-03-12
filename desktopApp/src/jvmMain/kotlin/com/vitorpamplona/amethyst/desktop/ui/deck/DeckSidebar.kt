@@ -41,11 +41,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.vitorpamplona.amethyst.commons.domain.nip46.SignerConnectionState
+import com.vitorpamplona.amethyst.commons.ui.components.BunkerHeartbeatIndicator
 
 @Composable
 fun DeckSidebar(
     onAddColumn: () -> Unit,
     onOpenSettings: () -> Unit,
+    signerConnectionState: SignerConnectionState,
+    lastPingTimeSec: Long?,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -77,6 +81,13 @@ fun DeckSidebar(
         }
 
         Spacer(Modifier.weight(1f))
+
+        BunkerHeartbeatIndicator(
+            signerConnectionState = signerConnectionState,
+            lastPingTimeSec = lastPingTimeSec,
+        )
+
+        Spacer(Modifier.size(8.dp))
 
         IconButton(onClick = onOpenSettings) {
             Icon(

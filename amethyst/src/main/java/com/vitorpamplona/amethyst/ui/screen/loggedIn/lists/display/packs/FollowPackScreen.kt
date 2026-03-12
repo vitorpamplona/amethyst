@@ -99,7 +99,7 @@ fun FollowPackScreen(
     nav: INav,
 ) {
     val viewModel: FollowPackViewModel = viewModel()
-    viewModel.init(accountViewModel.account, selectedDTag)
+    viewModel.init(accountViewModel, selectedDTag)
 
     Scaffold(
         topBar = {

@@ -131,7 +131,7 @@ fun RelayFeedActionOptions(
                     R.string.login_with_a_private_key_to_be_able_to_unfollow,
                 )
             } else {
-                accountViewModel.unfollowFavoriteRelay(relayUrl)
+                accountViewModel.unfollowRelayFeed(relayUrl)
             }
         }
     } else {
@@ -142,7 +142,7 @@ fun RelayFeedActionOptions(
                     R.string.login_with_a_private_key_to_be_able_to_follow,
                 )
             } else {
-                accountViewModel.followFavoriteRelay(relayUrl)
+                accountViewModel.followRelayFeed(relayUrl)
             }
         }
     }

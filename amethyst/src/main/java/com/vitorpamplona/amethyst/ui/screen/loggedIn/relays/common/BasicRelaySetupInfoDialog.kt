@@ -21,13 +21,16 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common
 
 import androidx.compose.runtime.Composable
+import com.vitorpamplona.amethyst.model.nip11RelayInfo.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.HalfVertPadding
 
 @Composable
 fun BasicRelaySetupInfoDialog(
     item: BasicRelaySetupInfo,
+    nip11CachedRetriever: Nip11CachedRetriever,
     onDelete: ((BasicRelaySetupInfo) -> Unit)?,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -37,8 +40,10 @@ fun BasicRelaySetupInfoDialog(
         loadProfilePicture = accountViewModel.settings.showProfilePictures(),
         loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
         onDelete = onDelete,
-        accountViewModel = accountViewModel,
         onClick = { nav.nav(Route.RelayInfo(item.relay.url)) },
+        nip11CachedRetriever = nip11CachedRetriever,
+        modifier = HalfVertPadding,
+        accountViewModel = accountViewModel,
         nav = nav,
     )
 }

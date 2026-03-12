@@ -46,6 +46,13 @@ class RelayStats(
 
     private val clientListener =
         object : IRelayClientListener {
+            override fun onConnecting(relay: IRelayClient) {
+                super.onConnecting(relay)
+                with(get(relay.url)) {
+                    newConnection()
+                }
+            }
+
             override fun onConnected(
                 relay: IRelayClient,
                 pingMillis: Int,
@@ -54,6 +61,7 @@ class RelayStats(
                 with(get(relay.url)) {
                     pingInMs = pingMillis
                     compression = compressed
+                    connectionCompleted()
                 }
             }
 

@@ -189,7 +189,7 @@ fun RenderContentDVMThumb(
             card.personalized?.let {
                 var color = Color.DarkGray
                 var name = "generic"
-                if (card.personalized == true) {
+                if (card.personalized) {
                     color = MaterialTheme.colorScheme.bitcoinColor
                     name = "Personalized"
                 } else {

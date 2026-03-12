@@ -41,8 +41,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -146,6 +144,13 @@ fun AllSettingsScreen(
                 iconPainterRef = 1,
                 tint = tint,
                 onClick = { nav.nav(Route.PrivacyOptions) },
+            )
+            HorizontalDivider()
+            SettingsNavigationRow(
+                title = R.string.namecoin_settings,
+                icon = Icons.Outlined.Security,
+                tint = tint,
+                onClick = { nav.nav(Route.NamecoinSettings) },
             )
             HorizontalDivider()
             SettingsNavigationRow(

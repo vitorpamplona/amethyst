@@ -169,6 +169,10 @@ fun RenderStrangeNamePreview() {
                     is RelayUrlSegment -> {
                         ClickableRelayUrl(word.segmentText, EmptyNav())
                     }
+
+                    is SchemelessUrlSegment -> {
+                        NoProtocolUrlRenderer(word.segmentText)
+                    }
                 }
             }
         }
@@ -219,12 +223,16 @@ fun RenderRegularPreview() {
 
                     // is HashIndexUserSegment -> TagLink(word, accountViewModel, nav)
                     // is HashIndexEventSegment -> TagLink(word, true, backgroundColorState, accountViewModel, nav)
-                    is SchemelessUrlSegment -> {
-                        NoProtocolUrlRenderer(word)
+                    is LinkSegment -> {
+                        ClickableUrl(word.segmentText, word.segmentText)
                     }
 
                     is RegularTextSegment -> {
                         Text(word.segmentText)
+                    }
+
+                    is SchemelessUrlSegment -> {
+                        NoProtocolUrlRenderer(word.segmentText)
                     }
                 }
             }
@@ -257,11 +265,13 @@ fun RenderRegularPreview2() {
 
                 // is HashIndexUserSegment -> TagLink(word, accountViewModel, nav)
                 // is HashIndexEventSegment -> TagLink(word, true, backgroundColorState, accountViewModel, nav)
-                is SchemelessUrlSegment -> NoProtocolUrlRenderer(word)
+                is LinkSegment -> ClickableUrl(word.segmentText, word.segmentText)
 
                 is RegularTextSegment -> Text(word.segmentText)
 
                 is RelayUrlSegment -> ClickableRelayUrl(word.segmentText, EmptyNav())
+
+                is SchemelessUrlSegment -> NoProtocolUrlRenderer(word.segmentText)
             }
         }
     }
@@ -307,11 +317,12 @@ fun RenderRegularPreview3() {
 
                 // is HashIndexUserSegment -> TagLink(word, accountViewModel, nav)
                 // is HashIndexEventSegment -> TagLink(word, true, backgroundColorState, accountViewModel, nav)
-                is SchemelessUrlSegment -> NoProtocolUrlRenderer(word)
 
                 is RegularTextSegment -> Text(word.segmentText)
 
                 is RelayUrlSegment -> ClickableRelayUrl(word.segmentText, EmptyNav())
+
+                is SchemelessUrlSegment -> NoProtocolUrlRenderer(word.segmentText)
             }
         }
     }
@@ -485,11 +496,11 @@ private fun RenderWordWithoutPreview(
 
         is HashIndexEventSegment -> TagLink(word, false, 0, backgroundColor, accountViewModel, nav)
 
-        is SchemelessUrlSegment -> NoProtocolUrlRenderer(word)
-
         is RegularTextSegment -> Text(word.segmentText)
 
         is RelayUrlSegment -> ClickableRelayUrl(word.segmentText, nav)
+
+        is SchemelessUrlSegment -> NoProtocolUrlRenderer(word.segmentText)
     }
 }
 
@@ -518,10 +529,10 @@ private fun RenderWordWithPreview(
         is HashTagSegment -> HashTag(word, nav)
         is HashIndexUserSegment -> TagLink(word, accountViewModel, nav)
         is HashIndexEventSegment -> TagLink(word, true, quotesLeft, backgroundColor, accountViewModel, nav)
-        is SchemelessUrlSegment -> NoProtocolUrlRenderer(word)
         is RegularTextSegment -> Text(word.segmentText)
         is Base64Segment -> ZoomableContentView(word.segmentText, state, accountViewModel)
         is RelayUrlSegment -> ClickableRelayUrl(word.segmentText, nav)
+        is SchemelessUrlSegment -> NoProtocolUrlRenderer(word.segmentText)
     }
 }
 
@@ -539,9 +550,8 @@ private fun ZoomableContentView(
 }
 
 @Composable
-private fun NoProtocolUrlRenderer(segment: SchemelessUrlSegment) {
-    ClickableUrl(segment.url, "https://${segment.url}")
-    segment.extras?.let { it1 -> Text(it1) }
+private fun NoProtocolUrlRenderer(url: String) {
+    ClickableUrl(url, "https://$url")
 }
 
 @Composable

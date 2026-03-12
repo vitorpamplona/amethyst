@@ -186,7 +186,7 @@ class TopNavFilterState(
             account.hashtagList.flow,
             account.geohashList.flow,
             account.communityList.flowNotes,
-            account.favoriteRelayList.flow,
+            account.relayFeedsList.flow,
             ::mergeInterests,
         ).onStart {
             emit(
@@ -194,7 +194,7 @@ class TopNavFilterState(
                     account.hashtagList.flow.value,
                     account.geohashList.flow.value,
                     account.communityList.flowNotes.value,
-                    account.favoriteRelayList.flow.value,
+                    account.relayFeedsList.flow.value,
                 ),
             )
         }

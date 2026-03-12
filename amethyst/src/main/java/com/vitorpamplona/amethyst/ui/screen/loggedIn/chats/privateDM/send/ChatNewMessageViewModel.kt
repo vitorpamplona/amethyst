@@ -77,6 +77,7 @@ import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
+import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarningReason
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitive
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip40Expiration.expiration
@@ -160,6 +161,7 @@ class ChatNewMessageViewModel :
 
     // NSFW, Sensitive
     var wantsToMarkAsSensitive by mutableStateOf(false)
+    var contentWarningDescription by mutableStateOf("")
 
     // GeoHash
     var wantsToAddGeoHash by mutableStateOf(false)
@@ -188,7 +190,7 @@ class ChatNewMessageViewModel :
         this.canAddZapRaiser = hasLnAddress()
 
         this.userSuggestions?.reset()
-        this.userSuggestions = UserSuggestionState(accountVM.account)
+        this.userSuggestions = UserSuggestionState(accountVM.account, accountVM.nip05Client)
 
         this.emojiSuggestions?.reset()
         this.emojiSuggestions = EmojiSuggestionState(accountVM.account)
@@ -292,6 +294,7 @@ class ChatNewMessageViewModel :
         wantsForwardZapTo = localForwardZapTo.isNotEmpty()
 
         wantsToMarkAsSensitive = draftEvent.isSensitive()
+        contentWarningDescription = draftEvent.contentWarningReason() ?: ""
 
         val geohash = draftEvent.getGeoHash()
         wantsToAddGeoHash = geohash != null
@@ -440,7 +443,7 @@ class ChatNewMessageViewModel :
         val geoHash = if (wantsToAddGeoHash) (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString() else null
         val message = message.text
 
-        val contentWarningReason = if (wantsToMarkAsSensitive) "" else null
+        val contentWarningReason = if (wantsToMarkAsSensitive) contentWarningDescription else null
         val localZapRaiserAmount = if (wantsZapraiser) zapRaiserAmount.value else null
         val zapReceiver = if (wantsForwardZapTo) forwardZapTo.value.toZapSplitSetup() else null
 
@@ -538,6 +541,7 @@ class ChatNewMessageViewModel :
 
         wantsForwardZapTo = false
         wantsToMarkAsSensitive = false
+        contentWarningDescription = ""
         wantsToAddGeoHash = false
         wantsSecretEmoji = false
 
@@ -565,10 +569,14 @@ class ChatNewMessageViewModel :
         urlPreviews.update(newMessage)
 
         if (message.selection.collapsed) {
-            userSuggestionsMainMessage = UserSuggestionAnchor.MAIN_MESSAGE
-
-            val lastWord = message.currentWord()
-            userSuggestions?.processCurrentWord(lastWord)
+            val lastWord = newMessage.currentWord()
+            if (lastWord.startsWith("@")) {
+                userSuggestionsMainMessage = UserSuggestionAnchor.MAIN_MESSAGE
+                userSuggestions?.processCurrentWord(lastWord)
+            } else {
+                userSuggestionsMainMessage = null
+                userSuggestions?.reset()
+            }
             emojiSuggestions?.processCurrentWord(lastWord)
         }
 
@@ -596,7 +604,7 @@ class ChatNewMessageViewModel :
             toUsersTagger.run()
 
             val users = toUsersTagger.pTags?.mapTo(mutableSetOf()) { it.pubkeyHex }
-            if (users == null || users.isEmpty()) {
+            if (users.isNullOrEmpty()) {
                 room = null
                 updateNIP17StatusFromRoom()
             } else {

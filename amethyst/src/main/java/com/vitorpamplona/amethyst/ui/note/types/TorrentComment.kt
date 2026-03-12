@@ -139,12 +139,12 @@ fun TorrentCommentPreview() {
         toPreview = {
             RenderTorrentComment(
                 comment,
-                false,
-                true,
-                3,
-                ReplyRenderType.FULL,
-                remember { mutableStateOf(Color.Transparent) },
-                EmptyState,
+                makeItShort = false,
+                canPreview = true,
+                quotesLeft = 3,
+                unPackReply = ReplyRenderType.FULL,
+                backgroundColor = remember { mutableStateOf(Color.Transparent) },
+                editState = EmptyState,
                 accountViewModel = accountViewModel,
                 nav = nav,
             )

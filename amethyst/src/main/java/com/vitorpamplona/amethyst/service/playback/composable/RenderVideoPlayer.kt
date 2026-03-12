@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.service.playback.composable
 import androidx.annotation.OptIn
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
@@ -44,7 +46,7 @@ import com.vitorpamplona.amethyst.service.playback.composable.controls.RenderCen
 import com.vitorpamplona.amethyst.service.playback.composable.controls.RenderTopButtons
 import com.vitorpamplona.amethyst.service.playback.composable.controls.TopGradientOverlay
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.LoadedMediaItem
-import com.vitorpamplona.amethyst.service.playback.composable.wavefront.Waveform
+import com.vitorpamplona.amethyst.service.playback.composable.wavefront.AudioPlayingAnimation
 import com.vitorpamplona.amethyst.service.playback.diskCache.isLiveStreaming
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
@@ -118,7 +120,11 @@ fun RenderVideoPlayer(
             contentScale = contentScale,
         )
 
-        mediaItem.src.waveformData?.let { Waveform(it, controllerState, Modifier.align(Alignment.Center)) }
+        AudioPlayingAnimation(
+            controllerState,
+            mediaItem.src.waveformData,
+            Modifier.fillMaxSize().align(Alignment.Center),
+        )
 
         if (showControls) {
             TopGradientOverlay(
@@ -140,14 +146,14 @@ fun RenderVideoPlayer(
                 accountViewModel = accountViewModel,
             )
 
+            RenderAnimatedBottomInfo(controllerState, controllerVisible, Modifier.align(Alignment.BottomCenter))
+
             RenderCenterButtons(
                 controllerState = controllerState,
                 controllerVisible = controllerVisible,
                 modifier = Modifier.align(Alignment.Center),
                 isLiveStream = isLive,
             )
-
-            RenderAnimatedBottomInfo(controllerState, controllerVisible, Modifier.align(Alignment.BottomCenter))
         }
     }
 }

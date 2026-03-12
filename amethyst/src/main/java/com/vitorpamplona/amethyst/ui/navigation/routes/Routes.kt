@@ -49,9 +49,17 @@ sealed class Route {
 
     @Serializable object PrivacyOptions : Route()
 
+    @Serializable object NamecoinSettings : Route()
+
     @Serializable object Bookmarks : Route()
 
     @Serializable object BookmarkGroups : Route()
+
+    @Serializable object ImportFollowsSelectUser : Route()
+
+    @Serializable data class ImportFollowsPickFollows(
+        val userHex: HexKey,
+    ) : Route()
 
     @Serializable data class BookmarkGroupView(
         val dTag: String,

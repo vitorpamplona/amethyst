@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.search
 
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -29,26 +30,38 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.ui.feeds.InvalidatableContent
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.SearchQueryState
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
-import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
+import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.userUriPrefixes
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrlOrNull
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.INip05Client
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Id
 import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
+import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
+import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
+import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
+import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
+import com.vitorpamplona.quartz.utils.Hex
+import com.vitorpamplona.quartz.utils.Rfc3986
+import com.vitorpamplona.quartz.utils.startsWithAny
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.SharingStarted.Companion.WhileSubscribed
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -57,13 +70,14 @@ import kotlinx.coroutines.flow.update
 @OptIn(FlowPreview::class)
 class SearchBarViewModel(
     val account: Account,
+    val nip05Client: INip05Client,
 ) : ViewModel(),
     InvalidatableContent {
     val focusRequester = FocusRequester()
     var searchValue by mutableStateOf("")
 
-    val invalidations = MutableStateFlow<Int>(0)
-    val searchValueFlow = MutableStateFlow<String>("")
+    val invalidations = MutableStateFlow(0)
+    val searchValueFlow = MutableStateFlow("")
 
     val searchTerm =
         searchValueFlow
@@ -74,40 +88,75 @@ class SearchBarViewModel(
 
     val searchDataSourceState = SearchQueryState(MutableStateFlow(searchValue), account)
 
-    /**
-     * Resolves Namecoin identifiers (.bit / d/ / id/) via ElectrumX and
-     * returns the matching [User] from LocalCache, or null.
-     */
-    private val namecoinResolvedUser =
-        searchValueFlow
+    val listState: LazyListState = LazyListState(0, 0)
+
+    val directNip05Resolver: Flow<User?> =
+        searchTerm
             .debounce(400)
-            .distinctUntilChanged()
-            .filter { NamecoinNameResolver.isNamecoinIdentifier(it) }
-            .map { term ->
-                try {
-                    val result = Amethyst.instance.namecoinResolver.resolve(term)
-                    if (result != null) {
-                        LocalCache.getOrCreateUser(result.pubkey)
-                    } else {
-                        null
-                    }
-                } catch (_: Exception) {
+            .mapLatest { term ->
+                if (term.contains('@')) {
+                    runCatching {
+                        Nip05Id.parse(term)?.let { nip05 ->
+                            nip05Client.get(nip05)?.let { info ->
+                                val user = account.cache.checkGetOrCreateUser(info.pubkey)
+                                if (user != null) {
+                                    info.relays.forEach {
+                                        it.normalizeRelayUrlOrNull()?.let { relay ->
+                                            account.cache.relayHints.addKey(user.pubkey(), relay)
+                                        }
+                                    }
+                                }
+                                user
+                            }
+                        }
+                    }.getOrNull()
+                } else if (term.startsWithAny(userUriPrefixes)) {
+                    runCatching {
+                        Nip19Parser.uriToRoute(term)?.entity?.let { parsed ->
+                            when (parsed) {
+                                is NSec -> {
+                                    account.cache.getOrCreateUser(parsed.toPubKey().toHexKey())
+                                }
+
+                                is NPub -> {
+                                    account.cache.getOrCreateUser(parsed.hex)
+                                }
+
+                                is NProfile -> {
+                                    val user = account.cache.getOrCreateUser(parsed.hex)
+                                    parsed.relay.forEach { relay ->
+                                        account.cache.relayHints.addKey(user.pubkey(), relay)
+                                    }
+                                    user
+                                }
+
+                                else -> {
+                                    null
+                                }
+                            }
+                        }
+                    }.getOrNull()
+                } else if (term.length == 64 && Hex.isHex64(term)) {
+                    account.cache.getOrCreateUser(term)
+                } else {
                     null
                 }
             }.flowOn(Dispatchers.IO)
-            .stateIn(viewModelScope, WhileSubscribed(5000), null)
 
     val searchResultsUsers =
         combine(
             searchValueFlow.debounce(100),
             invalidations.debounce(100),
-            namecoinResolvedUser,
-        ) { term, version, namecoinUser ->
-            val localResults = LocalCache.findUsersStartingWith(term, account)
-            if (namecoinUser != null && localResults.none { it.pubkeyHex == namecoinUser.pubkeyHex }) {
-                listOf(namecoinUser) + localResults
+            directNip05Resolver,
+        ) { term, version, nip05Resolver ->
+            if (nip05Resolver != null) {
+                return@combine listOf(nip05Resolver)
+            }
+
+            if (term.isNotBlank()) {
+                LocalCache.findUsersStartingWith(term, account)
             } else {
-                localResults
+                emptyList()
             }
         }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
@@ -159,6 +208,35 @@ class SearchBarViewModel(
         }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 
+    val relayResults =
+        combine(
+            searchValueFlow.debounce(100),
+            invalidations,
+        ) { term, version ->
+            if (term.length > 1) {
+                val isTypingRelay = term.length > 7 && (term.startsWith("wss://") || term.startsWith("ws://"))
+                val relayUrl =
+                    if (isTypingRelay) {
+                        runCatching { NormalizedRelayUrl(Rfc3986.normalize(term)) }.getOrNull()
+                    } else {
+                        null
+                    }
+                val lower = term.lowercase()
+
+                val relays =
+                    listOfNotNull(relayUrl) +
+                        LocalCache.relayHints.relayDB.filter { _, relay -> relay.url.contains(lower) }
+
+                relays
+                    .map { relaySetupInfoBuilder(it) }
+                    .sortedByDescending { it.relayStat.receivedBytes }
+                    .take(20)
+            } else {
+                emptyList()
+            }
+        }.flowOn(Dispatchers.IO)
+            .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
+
     override val isRefreshing = derivedStateOf { searchValue.isNotBlank() }
 
     override fun invalidateData(ignoreIfDoing: Boolean) {
@@ -173,11 +251,12 @@ class SearchBarViewModel(
 
     fun clear() = updateSearchValue("")
 
-    fun updateDataSource(searchTerm: String) {
+    suspend fun updateDataSource(searchTerm: String) {
         if (searchTerm.isBlank()) {
             searchDataSourceState.searchQuery.tryEmit("")
         } else {
             searchDataSourceState.searchQuery.tryEmit(searchTerm)
+            listState.scrollToItem(0, 0)
         }
     }
 
@@ -185,8 +264,9 @@ class SearchBarViewModel(
 
     class Factory(
         val account: Account,
+        val nip05: INip05Client,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = SearchBarViewModel(account) as T
+        override fun <T : ViewModel> create(modelClass: Class<T>): T = SearchBarViewModel(account, nip05) as T
     }
 }

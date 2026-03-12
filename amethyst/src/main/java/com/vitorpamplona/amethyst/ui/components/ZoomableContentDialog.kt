@@ -290,7 +290,7 @@ private fun DialogContent(
                                 Icon(
                                     imageVector = Icons.Default.Download,
                                     modifier = Size20Modifier,
-                                    contentDescription = stringRes(R.string.save_to_gallery),
+                                    contentDescription = stringRes(R.string.download_to_phone),
                                 )
                             }
                         }

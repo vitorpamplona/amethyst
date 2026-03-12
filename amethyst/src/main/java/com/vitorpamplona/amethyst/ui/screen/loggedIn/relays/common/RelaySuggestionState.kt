@@ -20,11 +20,12 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common
 
+import android.R.id.input
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -32,11 +33,11 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 
 @Stable
-class RelaySuggestionState {
+class RelaySuggestionState : IRelaySuggestionState {
     val currentInput = MutableStateFlow("")
 
     @OptIn(FlowPreview::class)
-    val results =
+    override val results =
         currentInput
             .debounce(300)
             .distinctUntilChanged()
@@ -45,18 +46,28 @@ class RelaySuggestionState {
                     val lower = input.lowercase()
                     LocalCache.relayHints.relayDB
                         .filter { _, relay -> relay.url.contains(lower) }
-                        .sortedBy { it.url }
+                        .map { relaySetupInfoBuilder(it) }
+                        .sortedByDescending { it.relayStat.receivedBytes }
                         .take(20)
                 } else {
-                    emptyList<NormalizedRelayUrl>()
+                    emptyList()
                 }
             }.flowOn(Dispatchers.IO)
 
-    fun processInput(input: String) {
+    override fun processInput(input: String) {
         currentInput.tryEmit(input)
     }
 
-    fun reset() {
+    override fun reset() {
         currentInput.tryEmit("")
     }
+}
+
+@Stable
+interface IRelaySuggestionState {
+    val results: Flow<List<BasicRelaySetupInfo>>
+
+    fun processInput(input: String)
+
+    fun reset()
 }

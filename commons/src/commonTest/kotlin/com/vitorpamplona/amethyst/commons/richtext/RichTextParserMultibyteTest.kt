@@ -55,7 +55,55 @@ class RichTextParserMultibyteTest {
         // user@example.com should not be in urlSet
         assertTrue(
             "user@example.com should not be in urlSet",
-            !state.urlSet.contains("user@example.com"),
+            !state.urlSet.withScheme.contains("user@example.com") && !state.urlSet.withoutScheme.contains("user@example.com"),
+        )
+    }
+
+    @Test
+    fun testHttpWithoutSpaces() {
+        // Multibyte characters around an email address should not produce URL/Link segments
+        val text =
+            "Vitor, vocêhttp://test.com? \uD83E\uDD7A"
+
+        val state =
+            RichTextParser()
+                .parseText(text, EmptyTagList, null)
+
+        assertEquals(
+            "Vitor, você http://test.com ? \uD83E\uDD7A",
+            state.paragraphs.joinToString("\n") { it.words.joinToString(" ") { it.segmentText } },
+        )
+    }
+
+    @Test
+    fun testHttpWithoutSpacesJapan() {
+        // Multibyte characters around an email address should not produce URL/Link segments
+        val text =
+            "Vitor, vocêhttp://test.comほげほげ"
+
+        val state =
+            RichTextParser()
+                .parseText(text, EmptyTagList, null)
+
+        assertEquals(
+            "Vitor, você http://test.com ほげほげ",
+            state.paragraphs.joinToString("\n") { it.words.joinToString(" ") { it.segmentText } },
+        )
+    }
+
+    @Test
+    fun testHttpWithoutSpacesJapan2() {
+        // Multibyte characters around an email address should not produce URL/Link segments
+        val text =
+            "Vitor, vocêhttp://test.com。ほげほげ"
+
+        val state =
+            RichTextParser()
+                .parseText(text, EmptyTagList, null)
+
+        assertEquals(
+            "Vitor, você http://test.com 。ほげほげ",
+            state.paragraphs.joinToString("\n") { it.words.joinToString(" ") { it.segmentText } },
         )
     }
 
@@ -65,11 +113,29 @@ class RichTextParserMultibyteTest {
         val text =
             "Vitor, você tem como colocar alguma forma de aviso se o link vai carregar uma imagem ou um vídeo? \uD83E\uDD7A"
 
-        val regex = Regex("(?<=[\\u0000-\\u00FF])(?=[\\u0100-\\uFFFF])|(?<=[\\u0100-\\uFFFF])(?=[\\u0000-\\u00FF])| +")
+        val state =
+            RichTextParser()
+                .parseText(text, EmptyTagList, null)
 
         assertEquals(
-            "Vitor,-você-tem-como-colocar-alguma-forma-de-aviso-se-o-link-vai-carregar-uma-imagem-ou-um-vídeo?-\uD83E\uDD7A",
-            text.split(regex).joinToString("-"),
+            "Vitor, você tem como colocar alguma forma de aviso se o link vai carregar uma imagem ou um vídeo? \uD83E\uDD7A",
+            state.paragraphs.joinToString("\n") { it.words.joinToString(" ") { it.segmentText } },
+        )
+    }
+
+    @Test
+    fun testFullTextWithMultibyteAndQuotes() {
+        // Multibyte characters around an email address should not produce URL/Link segments
+        val text =
+            "I’ve been thinking lately about how I believe there will more than likely be models unattainable by most. Think Bloomberg Terminal. Where their cost of tokens is too high for the average lay person, but their level of “cognition” is unmatched by anything else. I’m sure there will even be many closed models that are invite only. Crazy times ahead."
+
+        val state =
+            RichTextParser()
+                .parseText(text, EmptyTagList, null)
+
+        assertEquals(
+            "I’ve been thinking lately about how I believe there will more than likely be models unattainable by most. Think Bloomberg Terminal. Where their cost of tokens is too high for the average lay person, but their level of “cognition” is unmatched by anything else. I’m sure there will even be many closed models that are invite only. Crazy times ahead.",
+            state.paragraphs.joinToString("\n") { it.words.joinToString(" ") { it.segmentText } },
         )
     }
 
@@ -93,7 +159,7 @@ class RichTextParserMultibyteTest {
 
         val urlSegments = allSegments.filterIsInstance<SchemelessUrlSegment>()
         assertTrue("Should have SchemelessUrlSegment", urlSegments.isNotEmpty())
-        assertTrue("URL should be example.com", urlSegments.any { it.url == "example.com" })
+        assertTrue("URL should be example.com", urlSegments.any { it.segmentText == "example.com" })
 
         val textSegments = allSegments.filterIsInstance<RegularTextSegment>()
         assertTrue("Should have prefix ああ", textSegments.any { it.segmentText == "ああ" })
@@ -108,7 +174,7 @@ class RichTextParserMultibyteTest {
 
         val urlSegments = allSegments.filterIsInstance<SchemelessUrlSegment>()
         assertTrue("Should have SchemelessUrlSegment", urlSegments.isNotEmpty())
-        assertTrue("URL should be example.com", urlSegments.any { it.url == "example.com" })
+        assertTrue("URL should be example.com", urlSegments.any { it.segmentText == "example.com" })
 
         val textSegments = allSegments.filterIsInstance<RegularTextSegment>()
         assertTrue("Should have suffix ああ", textSegments.any { it.segmentText == "ああ" })

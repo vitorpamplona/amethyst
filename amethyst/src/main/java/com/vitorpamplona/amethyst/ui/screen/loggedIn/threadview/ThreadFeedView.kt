@@ -124,12 +124,12 @@ import com.vitorpamplona.amethyst.ui.note.types.BadgeDisplay
 import com.vitorpamplona.amethyst.ui.note.types.DisplayBlockedRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayBroadcastRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayDMRelayList
-import com.vitorpamplona.amethyst.ui.note.types.DisplayFavoriteRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayFollowList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayIndexerRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayNIP65RelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayPeopleList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayProxyRelayList
+import com.vitorpamplona.amethyst.ui.note.types.DisplayRelayFeedsList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayRelaySet
 import com.vitorpamplona.amethyst.ui.note.types.DisplaySearchRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayTrustedRelayList
@@ -138,8 +138,11 @@ import com.vitorpamplona.amethyst.ui.note.types.FileHeaderDisplay
 import com.vitorpamplona.amethyst.ui.note.types.FileStorageHeaderDisplay
 import com.vitorpamplona.amethyst.ui.note.types.PictureDisplay
 import com.vitorpamplona.amethyst.ui.note.types.RenderAppDefinition
+import com.vitorpamplona.amethyst.ui.note.types.RenderCalendarDateSlotEvent
+import com.vitorpamplona.amethyst.ui.note.types.RenderCalendarTimeSlotEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderChannelMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderChatMessageEncryptedFile
+import com.vitorpamplona.amethyst.ui.note.types.RenderCodeSnippetHeaderForThread
 import com.vitorpamplona.amethyst.ui.note.types.RenderEmojiPack
 import com.vitorpamplona.amethyst.ui.note.types.RenderFhirResource
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitIssueEvent
@@ -222,11 +225,13 @@ import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BroadcastRelayListEvent
-import com.vitorpamplona.quartz.nip51Lists.relayLists.FavoriteRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.ProxyRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relaySets.RelaySetEvent
+import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
+import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
@@ -244,6 +249,7 @@ import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
+import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
@@ -528,6 +534,7 @@ private fun FullBleedNoteCompose(
             is LongTextNoteEvent -> RenderLongFormHeaderForThread(noteEvent, baseNote, accountViewModel)
             is WikiNoteEvent -> RenderWikiHeaderForThread(noteEvent, accountViewModel, nav)
             is ClassifiedsEvent -> RenderClassifiedsReaderForThread(noteEvent, baseNote, accountViewModel, nav)
+            is CodeSnippetEvent -> RenderCodeSnippetHeaderForThread(noteEvent)
         }
 
         Row(
@@ -622,8 +629,8 @@ private fun FullBleedNoteCompose(
                     DisplayProxyRelayList(baseNote, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is TrustedRelayListEvent) {
                     DisplayTrustedRelayList(baseNote, backgroundColor, accountViewModel, nav)
-                } else if (noteEvent is FavoriteRelayListEvent) {
-                    DisplayFavoriteRelayList(baseNote, backgroundColor, accountViewModel, nav)
+                } else if (noteEvent is RelayFeedsListEvent) {
+                    DisplayRelayFeedsList(baseNote, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is IndexerRelayListEvent) {
                     DisplayIndexerRelayList(baseNote, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is BroadcastRelayListEvent) {
@@ -635,12 +642,12 @@ private fun FullBleedNoteCompose(
                 } else if (noteEvent is InteractiveStoryBaseEvent) {
                     RenderInteractiveStory(
                         baseNote,
-                        false,
-                        true,
-                        3,
-                        backgroundColor,
-                        accountViewModel,
-                        nav,
+                        makeItShort = false,
+                        canPreview = true,
+                        quotesLeft = 3,
+                        backgroundColor = backgroundColor,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
                     )
                 } else if (noteEvent is GitPatchEvent) {
                     RenderGitPatchEvent(baseNote, makeItShort = false, canPreview = true, quotesLeft = 3, backgroundColor = backgroundColor, accountViewModel = accountViewModel, nav = nav)
@@ -654,6 +661,10 @@ private fun FullBleedNoteCompose(
                     RenderHighlight(baseNote, false, canPreview, quotesLeft = 3, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is PublicMessageEvent) {
                     RenderPublicMessage(baseNote, false, canPreview, quotesLeft = 3, backgroundColor, accountViewModel, nav)
+                } else if (noteEvent is CalendarTimeSlotEvent) {
+                    RenderCalendarTimeSlotEvent(baseNote, accountViewModel, nav)
+                } else if (noteEvent is CalendarDateSlotEvent) {
+                    RenderCalendarDateSlotEvent(baseNote, accountViewModel, nav)
                 } else if (noteEvent is CommentEvent) {
                     RenderTextEvent(
                         baseNote,
@@ -842,7 +853,7 @@ private fun RenderClassifiedsReaderForThread(
 
     Row(modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp)) {
         Column {
-            if (imageSet != null && imageSet.isNotEmpty()) {
+            if (!imageSet.isNullOrEmpty()) {
                 AutoNonlazyGrid(imageSet.size) {
                     ZoomableContentView(
                         content = imageSet[it],

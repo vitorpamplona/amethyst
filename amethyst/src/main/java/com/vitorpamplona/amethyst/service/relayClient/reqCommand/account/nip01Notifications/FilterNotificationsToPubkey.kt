@@ -90,7 +90,7 @@ fun filterSummaryNotificationsToPubkey(
     pubkey: HexKey?,
     since: Long?,
 ): List<RelayBasedFilter> {
-    if (pubkey == null || pubkey.isEmpty()) return emptyList()
+    if (pubkey.isNullOrEmpty()) return emptyList()
 
     return listOf(
         RelayBasedFilter(
@@ -111,7 +111,7 @@ fun filterNotificationsToPubkey(
     pubkey: HexKey?,
     since: Long?,
 ): List<RelayBasedFilter> {
-    if (pubkey == null || pubkey.isEmpty()) return emptyList()
+    if (pubkey.isNullOrEmpty()) return emptyList()
 
     return listOf(
         RelayBasedFilter(
@@ -142,7 +142,7 @@ fun filterJustTheLatestNotificationsToPubkeyFromRandomRelays(
     pubkey: HexKey?,
     since: Long?,
 ): List<RelayBasedFilter> {
-    if (pubkey == null || pubkey.isEmpty()) return emptyList()
+    if (pubkey.isNullOrEmpty()) return emptyList()
 
     return listOf(
         RelayBasedFilter(

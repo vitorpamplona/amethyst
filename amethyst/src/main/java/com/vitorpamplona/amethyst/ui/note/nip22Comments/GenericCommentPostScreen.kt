@@ -30,7 +30,6 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -49,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromFiles
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakePictureButton
@@ -83,6 +83,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightPage
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -254,7 +255,10 @@ private fun GenericCommentPostBody(
                         verticalAlignment = CenterVertically,
                         modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
                     ) {
-                        ContentSensitivityExplainer()
+                        ContentSensitivityExplainer(
+                            description = postViewModel.contentWarningDescription,
+                            onDescriptionChange = { postViewModel.contentWarningDescription = it },
+                        )
                     }
                 }
 
@@ -346,7 +350,7 @@ private fun GenericCommentPostBody(
                 it,
                 postViewModel::autocompleteWithUser,
                 accountViewModel,
-                modifier = Modifier.heightIn(0.dp, 300.dp),
+                modifier = SuggestionListDefaultHeightPage,
             )
         }
 
@@ -355,7 +359,7 @@ private fun GenericCommentPostBody(
                 it,
                 postViewModel::autocompleteWithEmoji,
                 postViewModel::autocompleteWithEmojiUrl,
-                modifier = Modifier.heightIn(0.dp, 300.dp),
+                modifier = SuggestionListDefaultHeightPage,
             )
         }
 
@@ -375,6 +379,14 @@ private fun BottomRowActions(postViewModel: CommentPostViewModel) {
         verticalAlignment = CenterVertically,
     ) {
         SelectFromGallery(
+            isUploading = postViewModel.isUploadingImage,
+            tint = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier,
+        ) {
+            postViewModel.selectImage(it)
+        }
+
+        SelectFromFiles(
             isUploading = postViewModel.isUploadingImage,
             tint = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier,

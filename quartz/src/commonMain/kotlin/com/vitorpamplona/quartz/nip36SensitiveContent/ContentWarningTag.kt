@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip36SensitiveContent
 
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
+import com.vitorpamplona.quartz.utils.ensure
 
 class ContentWarningTag(
     val reason: String? = null,
@@ -33,9 +34,9 @@ class ContentWarningTag(
 
         fun isTag(tag: Array<String>) = tag.has(0) && tag[0] == TAG_NAME
 
-        fun parse(tags: Array<String>): ContentWarningTag {
-            require(tags[0] == TAG_NAME)
-            return ContentWarningTag(tags.getOrNull(1))
+        fun parse(tags: Array<String>): ContentWarningTag? {
+            ensure(tags[0] == TAG_NAME) { return null }
+            return ContentWarningTag(tags.getOrNull(1)?.ifBlank { null })
         }
 
         fun assemble() = arrayOfNotNull(TAG_NAME)

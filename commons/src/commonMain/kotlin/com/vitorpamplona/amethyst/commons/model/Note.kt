@@ -890,7 +890,7 @@ open class Note(
                 return true
             }
 
-            if (author?.containsAny(accountChoices.hiddenWordsCase) == true) return true
+            if (author?.metadataOrNull()?.anyPropertyContains(accountChoices.hiddenWordsCase) == true) return true
         }
 
         return false

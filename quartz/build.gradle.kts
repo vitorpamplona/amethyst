@@ -161,9 +161,6 @@ kotlin {
                     // Performant Parser of JSONs into Events
                     api(libs.jackson.module.kotlin)
 
-                    // Parses URLs from Text:
-                    api(libs.url.detector)
-
                     // Websockets API
                     implementation(libs.okhttp)
                     implementation(libs.okhttpCoroutines)

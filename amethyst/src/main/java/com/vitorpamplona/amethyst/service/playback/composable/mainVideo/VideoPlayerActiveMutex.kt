@@ -65,7 +65,7 @@ fun VideoPlayerActiveMutex(
 
     val videoModifier =
         remember(controller) {
-            Modifier.fillMaxWidth().heightIn(min = 100.dp).onVisiblePositionChanges(view) { bounds, distanceToCenter ->
+            Modifier.fillMaxWidth().heightIn(min = 120.dp).onVisiblePositionChanges(view) { bounds, distanceToCenter ->
                 controller.visibility.bounds = bounds
                 controller.visibility.distanceToCenter = distanceToCenter
 

@@ -137,6 +137,7 @@
     <string name="bytes">Bytes</string>
     <string name="error">Error</string>
     <string name="errors">Errors</string>
+    <string name="connection_success_rate_description">Percentage of successful connections to the relay</string>
     <string name="errors_description">The number of connection errors in this session</string>
     <string name="home_feed">Home Feed</string>
     <string name="private_message_feed">Private Message Feed</string>
@@ -162,6 +163,7 @@
     <string name="pronouns">Pronouns</string>
     <string name="ln_address">LN Address</string>
     <string name="ln_url_outdated">LN URL (outdated)</string>
+    <string name="download_to_phone">Save to Phone</string>
     <string name="save_to_gallery">Save to Gallery</string>
     <string name="image_saved_to_the_gallery">Image saved to the phone\'s photo gallery</string>
     <string name="video_download_has_started_toast">Video download has started…</string>
@@ -170,6 +172,7 @@
     <string name="video_saved_to_the_gallery">Video saved to the phone\'s video gallery</string>
     <string name="failed_to_save_the_video">Failed to save the video</string>
     <string name="upload_image">Upload Image</string>
+    <string name="upload_file">Upload File</string>
     <string name="take_a_picture">Take a picture</string>
     <string name="record_a_video">Record a video</string>
     <string name="record_a_message">Record a message</string>
@@ -448,12 +451,22 @@
     <string name="move_bookmark_to_private_label">Move to Private</string>
 
     <string name="wallet_connect_service">Wallet Connect Service</string>
-    <string name="wallet_connect_service_explainer">Authorizes a Nostr Secret to pay zaps without leaving the app. Keep the secret safe and use a private relay if possible</string>
+    <string name="wallet_connect_service_explainer">Authorizes Amethyst to pay zaps without leaving the app. Keep the secret safe.</string>
     <string name="wallet_connect_service_pubkey">Wallet Connect Pubkey</string>
     <string name="wallet_connect_service_relay">Wallet Connect Relay</string>
     <string name="wallet_connect_service_secret">Wallet Connect Secret</string>
     <string name="wallet_connect_service_show_secret">Show secret key</string>
     <string name="wallet_connect_service_secret_placeholder">nsec / hex private key</string>
+    <string name="wallet_connect_status_connected">Connected</string>
+    <string name="wallet_connect_status_not_connected">Not connected</string>
+    <string name="wallet_connect_manual_config">Advanced: enter connection details manually</string>
+    <string name="quick_zap_amounts">Quick Zap Amounts</string>
+    <string name="quick_zap_amounts_explainer">Shown when pressing the zap button. Tap an amount to remove it. If you leave it empty, it will open the dialog to insert an amount every time.</string>
+    <string name="zap_privacy_section">Zap Privacy</string>
+    <string name="zap_type_section_explainer">Controls how your identity is shown when you send a zap.</string>
+    <string name="wallet_connect_connect_app">Connect Wallet</string>
+
+    <string name="see_relay_feed">See Relay Feed</string>
 
     <string name="pledge_amount_in_sats">Pledge Amount in Sats</string>
     <string name="post_poll">Post Poll</string>
@@ -730,6 +743,7 @@
     <string name="today">Today</string>
 
     <string name="content_warning">Content warning</string>
+    <string name="content_warning_with_reason">Warning: %1$s</string>
     <string name="content_warning_explanation">This post contains sensitive content which some people may find offensive or disturbing</string>
     <string name="content_warning_hide_all_sensitive_content">Always hide sensitive content</string>
     <string name="content_warning_show_all_sensitive_content">Always show sensitive content</string>
@@ -764,6 +778,7 @@
     <string name="read_from_relay_description">The amount in bytes that was received from this relay, including filters and events</string>
     <string name="an_error_occurred_trying_to_get_relay_information">An error occurred trying to get relay information from %1$s</string>
     <string name="owner">Owner</string>
+    <string name="used_by">Used By</string>
     <string name="self">Service Key</string>
     <string name="running_software">Running %1$s</string>
     <string name="running_software_version">Running %1$s (%2$s)</string>
@@ -948,6 +963,7 @@
     <string name="lack_location_permissions">No Location Permissions</string>
 
     <string name="add_sensitive_content_explainer">Adds sensitive content warning before showing your content. This is ideal for any NSFW content or content some people may find offensive or disturbing</string>
+    <string name="add_sensitive_content_description_placeholder">Reason (optional)</string>
 
     <string name="new_feature_nip17_might_not_be_available_title">New Feature</string>
     <string name="new_feature_nip17_might_not_be_available_description">Activating this mode requires Amethyst to send a NIP-17 message (GiftWrapped, Sealed Direct and Group Messages). NIP-17 is new and most clients have not implemented it yet. Make sure the receiver is using a compatible client.</string>
@@ -996,6 +1012,7 @@
     <string name="copy_stack_to_clipboard">Copy Stack</string>
 
     <string name="copy_to_clipboard">Copy to clipboard</string>
+    <string name="copy_nprofile_to_clipboard">Copy nprofile to clipboard</string>
     <string name="copy_npub_to_clipboard">Copy npub to clipboard</string>
     <string name="share_or_save">Share or Save</string>
     <string name="copy_url_to_clipboard">Copy URL to clipboard</string>
@@ -1217,6 +1234,7 @@
     <string name="route_video">Shorts</string>
     <string name="route_chess">Chess</string>
     <string name="route_security_filters">Security Filters</string>
+    <string name="route_import_follows">Import Follows</string>
 
     <string name="new_post">New Post</string>
     <string name="new_short">New Shorts: images or videos</string>
@@ -1234,7 +1252,7 @@
 
     <string name="change_reaction">Change Quick Reactions</string>
 
-    <string name="reactions_settings">Reactions Settings</string>
+    <string name="reactions_settings">Reaction Row</string>
     <string name="reactions_settings_description">Configure which reaction buttons are shown, their order, and whether to display counters.</string>
     <string name="reactions_settings_enabled">Enabled</string>
     <string name="reactions_settings_show_counter">Show Count</string>
@@ -1274,6 +1292,7 @@
     <string name="add_content_warning">Add content warning</string>
     <string name="remove_content_warning">Remove content warning</string>
     <string name="show_npub_as_a_qr_code">Show npub as a QR code</string>
+    <string name="show_nprofile_as_a_qr_code">Show nprofile as a QR code</string>
 
     <string name="invalid_nip19_uri">Invalid address</string>
     <string name="invalid_nip19_uri_description">Amethyst received a URI to open but that uri was invalid: %1$s</string>
@@ -1702,4 +1721,31 @@
     <string name="kind_voice_msg">Voice Msg</string>
     <string name="kind_voice_reply">Voice Reply</string>
     <string name="kind_wiki">Wiki</string>
+    <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Start with a great feed by following the same people as someone you trust.</string>
+    <string name="import_follow_list">Import Follow List</string>
+    <string name="select_users_to_follow">Select Users to Follow</string>
+    <string name="profile_to_import_from">Profile to import from</string>
+    <string name="name_search_npub1_alice_example_com">search, npub1…, alice@example.com</string>
+    <string name="supports_npub_nip_05_hex_and_namecoin_bit_d_id">Supports npub, nprofile, NIP-05, hex, and namecoin (.bit, d/, id/)</string>
+    <string name="look_up_follow_list">Look Up Follow List</string>
+    <string name="tip">Tip</string>
+    <string name="accounts_found">%1$d accounts found</string>
+    <string name="num_selected">%1$d selected</string>
+    <string name="resolved_via_namecoin">Resolved via Namecoin</string>
+    <string name="now_following_accounts">Now following %1$d accounts</string>
+    <string name="your_feed_is_ready">Your feed is ready.</string>
+    <string name="skip">Skip</string>
+    <string name="search_another">Search Another</string>
+    <string name="follow_accounts">Follow %1$d accounts</string>
+    <string name="import_more">Import More</string>
+    <string name="continue_txt">Continue</string>
+    <string name="skip_for_now">Skip for now</string>
+    <string name="resolving">Resolving %1$s…</string>
+    <string name="fetching_follow_list">Fetching follow list…</string>
+    <string name="no_follows_found">No follows found</string>
+    <string name="following_accounts">Following %1$d accounts…</string>
+    <string name="import_follows_tips">"Enter the profile of a friend or community leader. You can use their npub, NIP-05 address, or a Namecoin name like alice@example.bit or id/alice for blockchain-verified identities."</string>
+    <string name="select_all">Select All</string>
+    <string name="uptime">%1$d%% uptime</string>
+    <string name="namecoin_settings">Namecoin Settings</string>
 </resources>

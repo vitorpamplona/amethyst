@@ -31,7 +31,7 @@ class FixedKey(
 ) : SecretKey {
     override fun getAlgorithm() = algo
 
-    override fun getEncoded() = key
+    override fun getEncoded() = key.copyOf()
 
     override fun getFormat() = "RAW"
 

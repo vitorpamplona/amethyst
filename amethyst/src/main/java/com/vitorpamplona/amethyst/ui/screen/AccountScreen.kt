@@ -55,9 +55,17 @@ fun AccountScreen(accountSessionManager: AccountSessionManager) {
         animationSpec = tween(durationMillis = 100),
     ) { state ->
         when (state) {
-            is AccountState.Loading -> LoadingSetup()
-            is AccountState.LoggedOff -> LoggedOffSetup(accountSessionManager)
-            is AccountState.LoggedIn -> LoggedInSetup(state, accountSessionManager)
+            is AccountState.Loading -> {
+                LoadingSetup()
+            }
+
+            is AccountState.LoggedOff -> {
+                LoggedOffSetup(accountSessionManager)
+            }
+
+            is AccountState.LoggedIn -> {
+                LoggedInSetup(state, accountSessionManager)
+            }
         }
     }
 }

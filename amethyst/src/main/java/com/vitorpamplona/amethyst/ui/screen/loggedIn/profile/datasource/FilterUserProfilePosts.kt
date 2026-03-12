@@ -76,29 +76,28 @@ fun filterUserProfilePosts(
         user.outboxRelays()?.ifEmpty { null }
             ?: (user.allUsedRelays() + LocalCache.relayHints.hintsForKey(user.pubkeyHex))
 
-    return relays
-        .map { relay ->
-            listOf(
-                RelayBasedFilter(
-                    relay = relay,
-                    filter =
-                        Filter(
-                            kinds = UserProfilePostKinds1,
-                            authors = listOf(user.pubkeyHex),
-                            limit = 500,
-                            since = since?.get(relay)?.time,
-                        ),
-                ),
-                RelayBasedFilter(
-                    relay = relay,
-                    filter =
-                        Filter(
-                            kinds = UserProfilePostKinds2,
-                            authors = listOf(user.pubkeyHex),
-                            limit = 50,
-                            since = since?.get(relay)?.time,
-                        ),
-                ),
-            )
-        }.flatten()
+    return relays.flatMap { relay ->
+        listOf(
+            RelayBasedFilter(
+                relay = relay,
+                filter =
+                    Filter(
+                        kinds = UserProfilePostKinds1,
+                        authors = listOf(user.pubkeyHex),
+                        limit = 500,
+                        since = since?.get(relay)?.time,
+                    ),
+            ),
+            RelayBasedFilter(
+                relay = relay,
+                filter =
+                    Filter(
+                        kinds = UserProfilePostKinds2,
+                        authors = listOf(user.pubkeyHex),
+                        limit = 50,
+                        since = since?.get(relay)?.time,
+                    ),
+            ),
+        )
+    }
 }

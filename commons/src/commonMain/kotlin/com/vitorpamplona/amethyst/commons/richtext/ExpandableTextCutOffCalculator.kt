@@ -44,10 +44,11 @@ class ExpandableTextCutOffCalculator {
                 if (min > TOO_FAR_SEARCH_THE_OTHER_WAY) {
                     // if it is still too big, finds the first space or new line BEFORE the cut off.
                     val newString = content.take(SHORT_TEXT_LENGTH)
+
                     val firstSpaceBeforeCut =
-                        newString.lastIndexOf(' ').let { if (it < 0) content.length else it }
+                        newString.lastIndexOf(' ').let { if (it < 0) newString.length else it }
                     val firstNewLineBeforeCut =
-                        newString.lastIndexOf('\n').let { if (it < 0) content.length else it }
+                        newString.lastIndexOf('\n').let { if (it < 0) newString.length else it }
 
                     maxOf(firstSpaceBeforeCut, firstNewLineBeforeCut)
                 } else {

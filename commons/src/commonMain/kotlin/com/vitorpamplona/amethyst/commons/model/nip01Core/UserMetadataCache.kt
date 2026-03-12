@@ -28,7 +28,6 @@ import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
 import com.vitorpamplona.quartz.nip39ExtIdentities.IdentityClaimTag
 import com.vitorpamplona.quartz.nip39ExtIdentities.identityClaims
 import com.vitorpamplona.quartz.utils.DualCase
-import com.vitorpamplona.quartz.utils.containsAny
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 
@@ -60,48 +59,16 @@ class UserMetadataCache {
 
     fun shouldUpdateWith(event: MetadataEvent) = event.createdAt > (flow.value?.createdAt ?: 0)
 
-    fun anyNameStartsWith(username: String): Boolean = flow.value?.info?.anyNameStartsWith(username) ?: false
+    fun anyNameOrAddressContains(terms: List<DualCase>): Boolean = flow.value?.info?.anyNameOrAddressContains(terms) ?: false
 
-    fun containsAny(hiddenWordsCase: List<DualCase>): Boolean {
+    fun anyNameStartsWith(terms: List<DualCase>): Boolean = flow.value?.info?.anyNameStartsWith(terms) ?: false
+
+    fun anyAddressStartsWith(terms: List<DualCase>): Boolean = flow.value?.info?.anyAddressStartsWith(terms) ?: false
+
+    fun anyPropertyContains(hiddenWordsCase: List<DualCase>): Boolean {
         if (hiddenWordsCase.isEmpty()) return false
 
-        flow.value?.let { userInfo ->
-            val info = userInfo.info
-
-            if (info.name?.containsAny(hiddenWordsCase) == true) {
-                return true
-            }
-
-            if (info.displayName?.containsAny(hiddenWordsCase) == true) {
-                return true
-            }
-
-            if (info.picture?.containsAny(hiddenWordsCase) == true) {
-                return true
-            }
-
-            if (info.banner?.containsAny(hiddenWordsCase) == true) {
-                return true
-            }
-
-            if (info.about?.containsAny(hiddenWordsCase) == true) {
-                return true
-            }
-
-            if (info.lud06?.containsAny(hiddenWordsCase) == true) {
-                return true
-            }
-
-            if (info.lud16?.containsAny(hiddenWordsCase) == true) {
-                return true
-            }
-
-            if (info.nip05?.containsAny(hiddenWordsCase) == true) {
-                return true
-            }
-        }
-
-        return false
+        return flow.value?.info?.anyPropertyContains(hiddenWordsCase) ?: false
     }
 
     fun bestName(): String? = flow.value?.info?.bestName()

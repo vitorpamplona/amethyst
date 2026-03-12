@@ -55,6 +55,15 @@ class SelectedMedia(
     fun isImage() = mimeType?.startsWith("image")
 
     fun isVideo() = mimeType?.startsWith("video")
+
+    fun isAudio() = mimeType?.startsWith("audio")
+
+    fun isNotMedia() =
+        mimeType?.let {
+            !(it.startsWith("image") || it.startsWith("video") || it.startsWith("audio"))
+        } ?: true
+
+    fun isDocument() = mimeType == "application/pdf"
 }
 
 @Composable

@@ -20,13 +20,15 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults.cardElevation
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -35,37 +37,115 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.nip11RelayInfo.Nip11CachedRetriever
+import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
-import com.vitorpamplona.amethyst.ui.theme.Size10dp
+import com.vitorpamplona.amethyst.ui.theme.HalfHorzPadding
+import com.vitorpamplona.amethyst.ui.theme.PopupUpEffect
+import com.vitorpamplona.amethyst.ui.theme.StdEndPadding
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStat
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 
 @Preview
 @Composable
 fun RelayUrlEditFieldPreview() {
+    val suggestions =
+        listOf(
+            BasicRelaySetupInfo(
+                relay = "wss://nos.lol".normalizeRelayUrl(),
+                relayStat =
+                    RelayStat(
+                        receivedBytes = 1000,
+                        sentBytes = 1000,
+                        spamCounter = 12,
+                        errorCounter = 0,
+                    ),
+            ),
+            BasicRelaySetupInfo(
+                relay = "wss://nostr.mom".normalizeRelayUrl(),
+                relayStat =
+                    RelayStat(
+                        receivedBytes = 1000,
+                        sentBytes = 1000,
+                        spamCounter = 12,
+                        errorCounter = 0,
+                    ),
+            ),
+        )
+
+    val relaySuggestions =
+        remember {
+            object : IRelaySuggestionState {
+                override val results: Flow<List<BasicRelaySetupInfo>> =
+                    MutableStateFlow(suggestions)
+
+                override fun processInput(input: String) {}
+
+                override fun reset() {}
+            }
+        }
+
+    val accountViewModel = mockAccountViewModel()
+
     ThemeComparisonColumn {
-        RelayUrlEditField {}
+        RelayUrlEditField(
+            onNewRelay = {},
+            relaySuggestions = relaySuggestions,
+            nip11CachedRetriever = Nip11CachedRetriever { TODO() },
+            accountViewModel = accountViewModel,
+            nav = EmptyNav(),
+        )
     }
 }
 
 @Composable
-fun RelayUrlEditField(onNewRelay: (NormalizedRelayUrl) -> Unit) {
-    var url by remember { mutableStateOf("") }
+fun RelayUrlEditField(
+    onNewRelay: (NormalizedRelayUrl) -> Unit,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
     val relaySuggestions = remember { RelaySuggestionState() }
+    val nip11CachedRetriever = remember { Amethyst.instance.nip11Cache }
+    RelayUrlEditField(
+        onNewRelay = onNewRelay,
+        relaySuggestions = relaySuggestions,
+        nip11CachedRetriever = nip11CachedRetriever,
+        accountViewModel = accountViewModel,
+        nav = nav,
+    )
+}
+
+@Composable
+fun RelayUrlEditField(
+    onNewRelay: (NormalizedRelayUrl) -> Unit,
+    relaySuggestions: IRelaySuggestionState,
+    nip11CachedRetriever: Nip11CachedRetriever,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    var url by remember { mutableStateOf("") }
 
     fun submitRelay() {
-        if (url.isNotBlank() && url != "/") {
+        if (url.isNotBlank()) {
             val relay = RelayUrlNormalizer.normalizeOrNull(url)
             if (relay != null) {
                 onNewRelay(relay)
@@ -76,59 +156,69 @@ fun RelayUrlEditField(onNewRelay: (NormalizedRelayUrl) -> Unit) {
     }
 
     Column {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Size10dp)) {
-            OutlinedTextField(
-                label = { Text(text = stringRes(R.string.add_a_relay)) },
-                modifier = Modifier.weight(1f),
-                value = url,
-                onValueChange = {
-                    url = it
-                    relaySuggestions.processInput(it)
-                },
-                placeholder = {
-                    Text(
-                        text = "server.com",
-                        color = MaterialTheme.colorScheme.placeholderText,
-                        maxLines = 1,
-                    )
-                },
-                singleLine = true,
-                keyboardOptions =
-                    KeyboardOptions.Default.copy(
-                        autoCorrectEnabled = false,
-                        imeAction = ImeAction.Go,
-                        capitalization = KeyboardCapitalization.None,
-                        keyboardType = KeyboardType.Text,
-                    ),
-                keyboardActions =
-                    KeyboardActions(
-                        onGo = { submitRelay() },
-                    ),
-            )
-
-            Button(
-                onClick = { submitRelay() },
-                shape = ButtonBorder,
-                colors =
-                    ButtonDefaults.buttonColors(
-                        containerColor =
-                            if (url.isNotBlank()) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.placeholderText
-                            },
-                    ),
-            ) {
-                Text(text = stringRes(id = R.string.add), color = Color.White)
-            }
-        }
-
-        ShowRelaySuggestionList(
-            relaySuggestions = relaySuggestions,
-            onSelect = { relay ->
-                url = relay.url
-                relaySuggestions.reset()
+        OutlinedTextField(
+            label = { Text(text = stringRes(R.string.add_a_relay)) },
+            modifier = Modifier.fillMaxWidth(),
+            value = url,
+            onValueChange = {
+                url = it
+                relaySuggestions.processInput(it)
+            },
+            placeholder = {
+                Text(
+                    text = "server.com",
+                    color = MaterialTheme.colorScheme.placeholderText,
+                    maxLines = 1,
+                )
+            },
+            singleLine = true,
+            keyboardOptions =
+                KeyboardOptions.Default.copy(
+                    autoCorrectEnabled = false,
+                    imeAction = ImeAction.Go,
+                    capitalization = KeyboardCapitalization.None,
+                    keyboardType = KeyboardType.Text,
+                ),
+            keyboardActions =
+                KeyboardActions(
+                    onGo = { submitRelay() },
+                ),
+            trailingIcon = {
+                Button(
+                    onClick = { submitRelay() },
+                    shape = ButtonBorder,
+                    colors =
+                        ButtonDefaults.buttonColors(
+                            containerColor =
+                                if (url.isNotBlank()) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.placeholderText
+                                },
+                        ),
+                    modifier = StdEndPadding,
+                ) {
+                    Text(text = stringRes(id = R.string.add), color = Color.White)
+                }
             },
         )
+
+        Card(
+            modifier = Modifier.padding(horizontal = 1.dp),
+            elevation = cardElevation(5.dp),
+            shape = PopupUpEffect,
+        ) {
+            ShowRelaySuggestionList(
+                relaySuggestions = relaySuggestions,
+                onSelect = { relay ->
+                    url = relay.url
+                    relaySuggestions.reset()
+                },
+                modifier = HalfHorzPadding,
+                nip11CachedRetriever = nip11CachedRetriever,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
     }
 }

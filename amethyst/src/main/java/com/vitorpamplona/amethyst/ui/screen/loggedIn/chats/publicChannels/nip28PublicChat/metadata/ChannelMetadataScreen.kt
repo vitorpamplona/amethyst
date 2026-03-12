@@ -46,6 +46,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectSingleFromGallery
@@ -222,13 +223,18 @@ private fun ChannelMetadataScaffold(
                 BasicRelaySetupInfoDialog(
                     item,
                     onDelete = { postViewModel.deleteHomeRelay(item) },
+                    nip11CachedRetriever = Amethyst.instance.nip11Cache,
                     accountViewModel = accountViewModel,
-                    nav,
+                    nav = nav,
                 )
             }
 
             item {
-                RelayUrlEditField { postViewModel.addHomeRelay(relaySetupInfoBuilder(it)) }
+                RelayUrlEditField(
+                    onNewRelay = { postViewModel.addHomeRelay(relaySetupInfoBuilder(it)) },
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
 
                 Spacer(modifier = DoubleVertSpacer)
             }

@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
+import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromFiles
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
@@ -57,6 +58,7 @@ import com.vitorpamplona.amethyst.ui.theme.EditFieldModifier
 import com.vitorpamplona.amethyst.ui.theme.EditFieldTrailingIconModifier
 import com.vitorpamplona.amethyst.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.ui.theme.PostKeyboard
+import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightChat
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
@@ -119,6 +121,7 @@ fun PrivateMessageEditFieldRow(
                 it,
                 channelScreenModel::autocompleteWithUser,
                 accountViewModel,
+                SuggestionListDefaultHeightChat,
             )
         }
 
@@ -127,6 +130,7 @@ fun PrivateMessageEditFieldRow(
                 it,
                 channelScreenModel::autocompleteWithEmoji,
                 channelScreenModel::autocompleteWithEmojiUrl,
+                SuggestionListDefaultHeightChat,
             )
         }
 
@@ -202,6 +206,14 @@ fun KeyboardLeadingIcon(
             modifier = Modifier,
             onImageChosen = channelScreenModel::pickedMedia,
         )
+
+        SelectFromFiles(
+            isUploading = channelScreenModel.isUploadingImage,
+            tint = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier,
+        ) {
+            channelScreenModel.pickedMedia(it)
+        }
 
         ToggleNip17Button(channelScreenModel, accountViewModel)
     }

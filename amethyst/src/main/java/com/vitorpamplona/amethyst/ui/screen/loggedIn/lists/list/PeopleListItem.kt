@@ -426,7 +426,7 @@ private fun ListModifyDescriptionDialog(
     onDismissDialog: () -> Unit,
     onModifyDescription: (String) -> Unit,
 ) {
-    val updatedDescription = remember { mutableStateOf<String>("") }
+    val updatedDescription = remember { mutableStateOf("") }
 
     val modifyIndicatorLabel =
         if (currentDescription == null) {

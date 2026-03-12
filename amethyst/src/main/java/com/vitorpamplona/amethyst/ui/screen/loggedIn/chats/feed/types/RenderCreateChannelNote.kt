@@ -222,8 +222,8 @@ fun RenderRelayLinePreview() {
             "wss://nos.lol",
             "http://icon.com/icon.ico",
             Modifier,
-            true,
-            true,
+            showPicture = true,
+            loadRobohash = true,
         )
     }
 }
