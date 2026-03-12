@@ -28,13 +28,13 @@ actual class MacInstance actual constructor(
     algorithm: String,
     key: ByteArray,
 ) {
-    private var nativeHmac = HMac(altDigestForAlgorithm(algorithm), key)
+    private var nativeHmac = HMac(digestForAlgorithm(algorithm), key)
 
     actual fun init(
         key: ByteArray,
         algorithm: String,
     ) {
-        nativeHmac = HMac(altDigestForAlgorithm(algorithm), key)
+        nativeHmac = HMac(digestForAlgorithm(algorithm), key)
     }
 
     actual fun getMacLength(): Int = nativeHmac.macSize
@@ -56,7 +56,7 @@ actual class MacInstance actual constructor(
         nativeHmac.digest(output, offset)
     }
 
-    private fun altDigestForAlgorithm(algorithm: String) =
+    private fun digestForAlgorithm(algorithm: String) =
         when (algorithm) {
             "HmacSHA256" -> Sha256()
             "HmacSHA512" -> Sha512()
