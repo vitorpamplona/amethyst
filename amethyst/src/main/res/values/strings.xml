@@ -1327,6 +1327,9 @@
 
     <string name="dm_upload">DM Upload</string>
     <string name="relay_settings">Relay Settings</string>
+    <string name="test_outbox_relays">Test</string>
+    <string name="relay_test_in_progress">Testing…</string>
+    <string name="relay_test_success">Working properly</string>
     <string name="public_home_section">Public Outbox/Home Relays</string>
     <string name="public_home_section_explainer_profile">User is posting his content to these relays</string>
     <string name="public_home_section_explainer">This relay type stores all your content. Amethyst will send your posts here and others will use these relays to find your content. Insert between 1–3 relays. They can be personal relays, paid relays or public relays.</string>

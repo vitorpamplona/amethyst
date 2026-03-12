@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -35,6 +36,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.foundation.layout.size
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -50,6 +52,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.blocked.BlockedRelay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.blocked.renderBlockedItems
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.broadcast.BroadcastRelayListViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.broadcast.renderBroadcastItems
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.connected.ConnectedRelayListViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.connected.renderConnectedItems
@@ -64,7 +67,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.local.renderLocalIte
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.nip37.PrivateOutboxRelayListViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.nip37.renderPrivateOutboxItems
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.nip65.Nip65RelayListViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.nip65.renderNip65HomeItems
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.nip65.OutboxRelayTesterViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.nip65.renderNip65HomeItemsWithTest
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.nip65.renderNip65NotifItems
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.proxy.ProxyRelayListViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.proxy.renderProxyItems
@@ -86,6 +90,7 @@ fun AllRelayListScreen(
 ) {
     val dmViewModel: DMRelayListViewModel = viewModel()
     val nip65ViewModel: Nip65RelayListViewModel = viewModel()
+    val outboxTesterViewModel: OutboxRelayTesterViewModel = viewModel()
     val privateOutboxViewModel: PrivateOutboxRelayListViewModel = viewModel()
     val searchViewModel: SearchRelayListViewModel = viewModel()
     val blockedViewModel: BlockedRelayListViewModel = viewModel()
@@ -99,6 +104,7 @@ fun AllRelayListScreen(
 
     dmViewModel.init(accountViewModel)
     nip65ViewModel.init(accountViewModel)
+    outboxTesterViewModel.init(accountViewModel)
     searchViewModel.init(accountViewModel)
     localViewModel.init(accountViewModel)
     privateOutboxViewModel.init(accountViewModel)
@@ -128,6 +134,7 @@ fun AllRelayListScreen(
     MappedAllRelayListView(
         dmViewModel,
         nip65ViewModel,
+        outboxTesterViewModel,
         searchViewModel,
         localViewModel,
         privateOutboxViewModel,
@@ -148,6 +155,7 @@ fun AllRelayListScreen(
 fun MappedAllRelayListView(
     dmViewModel: DMRelayListViewModel,
     nip65ViewModel: Nip65RelayListViewModel,
+    outboxTesterViewModel: OutboxRelayTesterViewModel,
     searchViewModel: SearchRelayListViewModel,
     localViewModel: LocalRelayListViewModel,
     privateOutboxViewModel: PrivateOutboxRelayListViewModel,
@@ -164,6 +172,7 @@ fun MappedAllRelayListView(
     val dmFeedState by dmViewModel.relays.collectAsStateWithLifecycle()
     val homeFeedState by nip65ViewModel.homeRelays.collectAsStateWithLifecycle()
     val notifFeedState by nip65ViewModel.notificationRelays.collectAsStateWithLifecycle()
+    val outboxTestResults by outboxTesterViewModel.results.collectAsStateWithLifecycle()
     val privateOutboxFeedState by privateOutboxViewModel.relays.collectAsStateWithLifecycle()
     val searchFeedState by searchViewModel.relays.collectAsStateWithLifecycle()
     val blockedFeedState by blockedViewModel.relays.collectAsStateWithLifecycle()
@@ -224,13 +233,15 @@ fun MappedAllRelayListView(
                     .imePadding(),
         ) {
             item {
-                SettingsCategory(
+                SettingsCategoryWithButton(
                     R.string.public_home_section,
                     R.string.public_home_section_explainer,
                     SettingsCategoryFirstModifier,
-                )
+                ) {
+                    TestOutboxRelaysButton(homeFeedState, outboxTesterViewModel)
+                }
             }
-            renderNip65HomeItems(homeFeedState, nip65ViewModel, accountViewModel, newNav)
+            renderNip65HomeItemsWithTest(homeFeedState, outboxTestResults, nip65ViewModel, accountViewModel, newNav)
 
             item {
                 SettingsCategory(
@@ -445,5 +456,28 @@ fun SettingsCategoryWithButton(
         }
 
         action()
+    }
+}
+
+@Composable
+fun TestOutboxRelaysButton(
+    relays: List<BasicRelaySetupInfo>,
+    outboxTesterViewModel: OutboxRelayTesterViewModel,
+) {
+    val testResults by outboxTesterViewModel.results.collectAsStateWithLifecycle()
+    val isTesting = testResults.values.any { it is OutboxRelayTesterViewModel.TestState.Testing }
+
+    OutlinedButton(
+        onClick = { outboxTesterViewModel.testRelays(relays.map { it.relay }) },
+        enabled = !isTesting,
+    ) {
+        if (isTesting) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(16.dp),
+                strokeWidth = 2.dp,
+            )
+        } else {
+            Text(stringRes(R.string.test_outbox_relays))
+        }
     }
 }
