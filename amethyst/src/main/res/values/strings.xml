@@ -1748,4 +1748,5 @@
     <string name="select_all">Select All</string>
     <string name="uptime">%1$d%% uptime</string>
     <string name="namecoin_settings">Namecoin Settings</string>
+    <string name="ots_explorer_settings">Bitcoin Explorer (OTS)</string>
 </resources>
