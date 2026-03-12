@@ -125,6 +125,7 @@
     <string name="bytes">Bytes</string>
     <string name="error">Fel</string>
     <string name="errors">Fel</string>
+    <string name="connection_success_rate_description">Andel lyckade anslutningar till reläet</string>
     <string name="errors_description">Antal anslutningsfel under denna session</string>
     <string name="home_feed">Hem Flöde</string>
     <string name="private_message_feed">Privata Meddelande Flöde</string>
@@ -150,6 +151,7 @@
     <string name="pronouns">Pronomen</string>
     <string name="ln_address">LN Adress</string>
     <string name="ln_url_outdated">LN URL (Utdaterad)</string>
+    <string name="download_to_phone">Spara till telefon</string>
     <string name="save_to_gallery">Spara i Galleri</string>
     <string name="image_saved_to_the_gallery">Bild sparad till galleriet</string>
     <string name="video_download_has_started_toast">Nedladdning av video har startat…</string>
@@ -639,6 +641,7 @@
     <string name="channel_list_join_channel">Gå med</string>
     <string name="today">Idag</string>
     <string name="content_warning">Varning för innehåll</string>
+    <string name="content_warning_with_reason">Varning: %1$s</string>
     <string name="content_warning_explanation">Det här inlägget innehåller känsligt innehåll som vissa människor kan tycka är stötande eller störande</string>
     <string name="content_warning_hide_all_sensitive_content">Dölj alltid känsligt innehåll</string>
     <string name="content_warning_show_all_sensitive_content">Visa alltid känsligt innehåll</string>
@@ -826,6 +829,7 @@
     <string name="loading_location">Laddar position</string>
     <string name="lack_location_permissions">Inga platsbehörigheter</string>
     <string name="add_sensitive_content_explainer">Lägger till en varning för känsligt innehåll innan ditt innehåll visas. Detta är idealiskt för NSFW-innehåll (inte säkert för arbete) eller innehåll som vissa personer kan uppleva som stötande eller störande</string>
+    <string name="add_sensitive_content_description_placeholder">Anledning (valfritt)</string>
     <string name="new_feature_nip17_might_not_be_available_title">Ny Funktion</string>
     <string name="new_feature_nip17_might_not_be_available_description">För att aktivera denna funktion kräver det att Amethyst skickar ett NIP-17 meddelande (GiftWrapped, Förseglade Direkta och Gruppmeddelanden). NIP-17 är nytt och de flesta klienter har ännu inte implementerat det. Se till att mottagaren använder en kompatibel klient.</string>
     <string name="new_feature_nip17_activate">Aktivera</string>
@@ -1041,6 +1045,7 @@
     <string name="route_video">Kortfilmer</string>
     <string name="route_chess">Schack</string>
     <string name="route_security_filters">Säkerhetsfilter</string>
+    <string name="route_import_follows">Importera följare</string>
     <string name="new_post">Nytt inlägg</string>
     <string name="new_short">Nya kort: bilder eller videor</string>
     <string name="new_community_note">Nytt Community-meddelande</string>
@@ -1470,4 +1475,31 @@
     <string name="kind_voice_msg">Röstmeddelande</string>
     <string name="kind_voice_reply">Röstsvar</string>
     <string name="kind_wiki">Wiki</string>
+    <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Kom igång med ett bra flöde genom att följa samma personer som någon du litar på.</string>
+    <string name="import_follow_list">Importera följarlista</string>
+    <string name="select_users_to_follow">Välj användare att följa</string>
+    <string name="profile_to_import_from">Profil att importera från</string>
+    <string name="name_search_npub1_alice_example_com">namnsökning, npub1…, alice@example.com</string>
+    <string name="supports_npub_nip_05_hex_and_namecoin_bit_d_id">Stöder npub, NIP-05, hex och Namecoin (.bit / d/ / id/)</string>
+    <string name="look_up_follow_list">Slå upp följarlista</string>
+    <string name="tip">Tips</string>
+    <string name="accounts_found">%1$d konton hittades</string>
+    <string name="num_selected">%1$d valda</string>
+    <string name="resolved_via_namecoin">Löst via Namecoin</string>
+    <string name="now_following_accounts">Följer nu %1$d konton</string>
+    <string name="your_feed_is_ready">Ditt flöde är klart.</string>
+    <string name="skip">Hoppa över</string>
+    <string name="search_another">Sök en till</string>
+    <string name="follow_accounts">Följ %1$d konton</string>
+    <string name="import_more">Importera fler</string>
+    <string name="continue_txt">Fortsätt</string>
+    <string name="skip_for_now">Hoppa över för nu</string>
+    <string name="resolving">Löser upp %1$s…</string>
+    <string name="fetching_follow_list">Hämtar följarlista…</string>
+    <string name="no_follows_found">Inga följare hittades</string>
+    <string name="following_accounts">Följer %1$d konton…</string>
+    <string name="import_follows_tips">"Ange profilen för en vän eller gemenskapsledare. Du kan använda deras npub, NIP-05-adress eller ett Namecoin-namn som alice@example.bit eller id/alice för blockchain-verifierade identiteter."</string>
+    <string name="select_all">Välj alla</string>
+    <string name="uptime">%1$d%% drifttid</string>
+    <string name="namecoin_settings">Namecoin-inställningar</string>
 </resources>
