@@ -2298,12 +2298,17 @@ object LocalCache : ILocalCache, ICacheProvider {
                 }
             }
 
+        val findsFollowing = finds.associateWith { forAccount?.isFollowing(it) == true }
+        val anyNameStartsWith = finds.associateWith { it.metadataOrNull()?.anyNameStartsWith(dualCase) == true }
+        val anyAddressStartsWith = finds.associateWith { it.metadataOrNull()?.anyAddressStartsWith(dualCase) == true }
+        val displayNames = finds.associateWith { it.toBestDisplayName().lowercase() }
+
         return finds.sortedWith(
             compareBy(
-                { forAccount?.isFollowing(it) == false },
-                { it.metadataOrNull()?.anyNameStartsWith(dualCase) == false },
-                { it.metadataOrNull()?.anyAddressStartsWith(dualCase) == false },
-                { it.toBestDisplayName().lowercase() },
+                { findsFollowing[it] == false },
+                { anyNameStartsWith[it] == false },
+                { anyAddressStartsWith[it] == false },
+                { displayNames[it] },
                 { it.pubkeyHex },
             ),
         )
