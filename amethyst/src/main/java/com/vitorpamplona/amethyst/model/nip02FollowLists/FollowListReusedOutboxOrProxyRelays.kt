@@ -23,8 +23,10 @@ package com.vitorpamplona.amethyst.model.nip02FollowLists
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.nip51Lists.blockedRelays.BlockedRelayListState
 import com.vitorpamplona.amethyst.model.nip51Lists.proxyRelays.ProxyRelayListState
+import com.vitorpamplona.amethyst.model.nip66RelayLiveness.RelayLivenessState
 import com.vitorpamplona.amethyst.model.topNavFeeds.OutboxRelayLoader
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isOnion
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -45,6 +47,7 @@ class FollowListReusedOutboxOrProxyRelays(
     kind3Follows: Kind3FollowListState,
     blockedRelayList: BlockedRelayListState,
     proxyRelayList: ProxyRelayListState,
+    relayLiveness: RelayLivenessState,
     val cache: LocalCache,
     scope: CoroutineScope,
 ) {
@@ -86,8 +89,9 @@ class FollowListReusedOutboxOrProxyRelays(
             )
 
     val outboxRelayMinusBlockedFlow: StateFlow<Set<NormalizedRelayUrl>> =
-        combine(outboxRelayFlow, blockedRelayList.flow) { followList, blockedRelays ->
-            followList.minus(blockedRelays)
+        combine(outboxRelayFlow, blockedRelayList.flow, relayLiveness.aliveRelaysFlow) { followList, blockedRelays, aliveRelays ->
+            val afterBlocked = followList.minus(blockedRelays)
+            if (aliveRelays.isEmpty()) afterBlocked else afterBlocked.filter { it in aliveRelays || it.isOnion() }.toSet()
         }.onStart {
             emit(outboxRelayFlow.value.minus(blockedRelayList.flow.value.toSet()))
         }.flowOn(Dispatchers.IO)
