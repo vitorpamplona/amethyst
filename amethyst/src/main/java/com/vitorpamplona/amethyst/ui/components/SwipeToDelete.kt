@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.components
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -38,10 +39,12 @@ import androidx.compose.material3.SwipeToDismissBoxState
 import androidx.compose.material3.SwipeToDismissBoxValue.EndToStart
 import androidx.compose.material3.SwipeToDismissBoxValue.Settled
 import androidx.compose.material3.SwipeToDismissBoxValue.StartToEnd
+import androidx.compose.material3.Text
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -50,6 +53,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.stringRes
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -88,6 +92,34 @@ fun SwipeToDeleteContainer(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SwipeToDeleteWithConfirmation(
+    modifier: Modifier = Modifier,
+    onDelete: () -> Unit,
+    content: @Composable (RowScope.() -> Unit),
+) {
+    val scope = rememberCoroutineScope()
+
+    val dismissState =
+        rememberSwipeToDismissBoxState(
+            positionalThreshold = { it * .40f },
+        )
+
+    SwipeToDismissBox(
+        state = dismissState,
+        modifier = modifier,
+        backgroundContent = {
+            ConfirmDeleteBackground(dismissState) {
+                onDelete()
+                scope.launch { dismissState.reset() }
+            }
+        },
+        enableDismissFromEndToStart = true,
+        content = content,
+    )
+}
+
 @Composable
 fun DismissBackground(dismissState: SwipeToDismissBoxState) {
     val color by animateColorAsState(
@@ -121,6 +153,56 @@ fun DismissBackground(dismissState: SwipeToDismissBoxState) {
             contentDescription = stringRes(id = R.string.request_deletion),
         )
         Spacer(modifier = Modifier)
+        Icon(
+            Icons.Default.Delete,
+            contentDescription = stringRes(id = R.string.request_deletion),
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ConfirmDeleteBackground(
+    dismissState: SwipeToDismissBoxState,
+    onConfirmDelete: () -> Unit,
+) {
+    val settled = dismissState.currentValue == Settled && dismissState.targetValue == Settled
+
+    val color by animateColorAsState(
+        if (!settled) {
+            Color(0xFFFF1744)
+        } else {
+            MaterialTheme.colorScheme.surfaceVariant
+        },
+        label = "ConfirmDeleteBackground",
+    )
+
+    val haptic = LocalHapticFeedback.current
+    LaunchedEffect(key1 = dismissState.currentValue > dismissState.targetValue) {
+        if (dismissState.progress > 0 && dismissState.progress < 1) {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        }
+    }
+
+    Row(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(color)
+                .clickable(enabled = !settled) { onConfirmDelete() }
+                .padding(20.dp, 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Icon(
+            Icons.Default.Delete,
+            contentDescription = stringRes(id = R.string.request_deletion),
+        )
+        Text(
+            text = stringRes(id = R.string.request_deletion),
+            color = Color.White,
+            style = MaterialTheme.typography.titleMedium,
+        )
         Icon(
             Icons.Default.Delete,
             contentDescription = stringRes(id = R.string.request_deletion),
