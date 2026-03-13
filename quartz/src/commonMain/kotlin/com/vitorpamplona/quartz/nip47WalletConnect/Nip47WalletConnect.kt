@@ -30,11 +30,10 @@ import com.vitorpamplona.quartz.utils.UriParser
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.Serializable
 
-// Rename to the corect nip number when ready.
 class Nip47WalletConnect {
     companion object {
         fun parse(uri: String): Nip47URINorm {
-            // nostrwalletconnect://b889ff5b1513b641e2a139f661a661364979c5beee91842f8f0ef42ab558e9d4?relay=wss%3A%2F%2Frelay.damus.io&metadata=%7B%22name%22%3A%22Example%22%7D
+            // nostr+walletconnect://b889ff5b...?relay=wss%3A%2F%2Frelay.damus.io&secret=...&lud16=user@example.com
 
             val url = UriParser(uri)
 
@@ -55,8 +54,9 @@ class Nip47WalletConnect {
             val relay = url.getQueryParameter("relay") ?: throw IllegalArgumentException("Relay cannot be null")
             val relayNorm = RelayUrlNormalizer.normalizeOrNull(relay) ?: throw IllegalArgumentException("Invalid relay Url")
             val secret = url.getQueryParameter("secret")
+            val lud16 = url.getQueryParameter("lud16")
 
-            return Nip47URINorm(pubkeyHex, relayNorm, secret)
+            return Nip47URINorm(pubkeyHex, relayNorm, secret, lud16)
         }
     }
 
@@ -65,6 +65,7 @@ class Nip47WalletConnect {
         val pubKeyHex: HexKey,
         val relayUri: String,
         val secret: HexKey?,
+        val lud16: String? = null,
     ) {
         fun normalize(): Nip47URINorm? =
             RelayUrlNormalizer.normalizeOrNull(relayUri)?.let {
@@ -72,6 +73,7 @@ class Nip47WalletConnect {
                     pubKeyHex,
                     it,
                     secret,
+                    lud16,
                 )
             }
 
@@ -86,7 +88,8 @@ class Nip47WalletConnect {
         val pubKeyHex: HexKey,
         val relayUri: NormalizedRelayUrl,
         val secret: HexKey?,
+        val lud16: String? = null,
     ) {
-        fun denormalize(): Nip47URI? = Nip47URI(pubKeyHex, relayUri.url, secret)
+        fun denormalize(): Nip47URI? = Nip47URI(pubKeyHex, relayUri.url, secret, lud16)
     }
 }
