@@ -1760,6 +1760,7 @@
     <string name="event_sync_step2">Download all events that mention you and send them to your inbox relays.</string>
     <string name="event_sync_step3">Download all direct messages addressed to you and send them to your DM relays.</string>
     <string name="event_sync_wifi_warning">⚠ You appear to be on a metered or mobile connection. This operation can transfer a very large amount of data. Connect to Wi-Fi before starting.</string>
+    <string name="event_sync_mobile_data_dialog_title">Use Mobile Data?</string>
     <string name="event_sync_start">Start Sync</string>
     <string name="event_sync_start_anyway">Start Anyway (mobile data)</string>
     <string name="event_sync_cancel">Cancel</string>
