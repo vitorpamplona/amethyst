@@ -1294,6 +1294,14 @@
 
     <string name="add_content_warning">Add content warning</string>
     <string name="remove_content_warning">Remove content warning</string>
+
+    <string name="add_expiration_date">Add expiration date</string>
+    <string name="remove_expiration_date">Remove expiration date</string>
+    <string name="expiration_date_label">Expiration Date</string>
+    <string name="expiration_date_explainer">Post will be hidden by clients after this date (NIP-40)</string>
+    <string name="expiration_date_select">Select expiration date and time</string>
+    <string name="expiration_expires_in">Expires in %1$s</string>
+    <string name="expiration_time">Expiration Time</string>
     <string name="show_npub_as_a_qr_code">Show npub as a QR code</string>
     <string name="show_nprofile_as_a_qr_code">Show nprofile as a QR code</string>
 
