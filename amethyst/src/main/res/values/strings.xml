@@ -1508,6 +1508,14 @@
     <string name="language_preferences">Language Display Preferences</string>
     <string name="language_preferences_description">For each translated language pair, choose which language to show first.</string>
     <string name="language_preference_pair">%1$s → %2$s</string>
+    <string name="search_languages">Search languages</string>
+    <string name="add_language">Add language</string>
+    <string name="add_language_pair">Add language pair</string>
+    <string name="source_language">Source language</string>
+    <string name="target_language">Target language</string>
+    <string name="show_first">Show %1$s first</string>
+    <string name="no_language_preferences">No language display preferences yet. These are created automatically when translations occur, or you can add them manually.</string>
+    <string name="delete_preference">Delete preference</string>
     <string name="pause">Pause</string>
     <string name="play">Play</string>
     <string name="open_dropdown_menu">Open dropdown menu</string>
