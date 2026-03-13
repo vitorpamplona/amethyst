@@ -22,20 +22,33 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common
 
 import android.content.Context
 import android.content.Intent
+import androidx.core.content.FileProvider
 import com.vitorpamplona.amethyst.R
+import java.io.File
+import java.io.FileOutputStream
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 
-class RelayExporter(
+class RelayZipExporter(
     val context: Context,
 ) {
     fun export(collection: RelayListCollection) {
-        val text = buildExportText(collection)
+        val zipFile = buildZipFile(collection)
+
+        val uri =
+            FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.provider",
+                zipFile,
+            )
 
         val sendIntent =
             Intent().apply {
                 action = Intent.ACTION_SEND
-                type = "text/plain"
-                putExtra(Intent.EXTRA_TEXT, text)
+                type = "application/zip"
+                putExtra(Intent.EXTRA_STREAM, uri)
                 putExtra(Intent.EXTRA_TITLE, context.getString(R.string.export_relay_settings))
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
 
         val shareIntent =
@@ -46,29 +59,31 @@ class RelayExporter(
         context.startActivity(shareIntent)
     }
 
-    fun buildExportText(collection: RelayListCollection): String {
-        val builder = StringBuilder()
-        builder.appendLine("# ${context.getString(R.string.relay_settings)}")
-        builder.appendLine()
+    fun buildZipFile(collection: RelayListCollection): File {
+        val zipFile = File(context.cacheDir, "relay_settings.zip")
 
-        collection.sections().forEach { section ->
-            formatSection(section, builder)
+        ZipOutputStream(FileOutputStream(zipFile)).use { zip ->
+            collection.sections().forEach { section ->
+                if (section.relays.isNotEmpty()) {
+                    val json = buildJsonArray(section.relays)
+                    zip.putNextEntry(ZipEntry("${section.fileName}.json"))
+                    zip.write(json.toByteArray())
+                    zip.closeEntry()
+                }
+            }
         }
 
-        return builder.toString().trimEnd()
+        return zipFile
     }
 
-    private fun formatSection(
-        section: RelaySection,
-        builder: StringBuilder,
-    ) {
-        if (section.relays.isEmpty()) return
-        builder.appendLine("## ${context.getString(section.titleRes)}")
-        builder.appendLine("# ${context.getString(section.descriptionRes)}")
-        builder.appendLine()
-        section.relays.forEach { relay ->
-            builder.appendLine(relay.relay.url)
+    private fun buildJsonArray(relays: List<BasicRelaySetupInfo>): String {
+        val builder = StringBuilder()
+        builder.appendLine("[")
+        relays.forEachIndexed { index, relay ->
+            val comma = if (index < relays.size - 1) "," else ""
+            builder.appendLine("  \"${relay.relay.url}\"$comma")
         }
-        builder.appendLine()
+        builder.append("]")
+        return builder.toString()
     }
 }

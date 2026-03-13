@@ -1380,6 +1380,8 @@
     <string name="blocked_section_explainer">Amethyst will never connect to these relays</string>
 
     <string name="export_relay_settings">Export relay settings</string>
+    <string name="export_as_text">Export as text</string>
+    <string name="export_as_zip">Export as ZIP (JSON)</string>
 
     <string name="zap_the_devs_title">Zap the Devs!</string>
     <string name="zap_the_devs_description">Your donation helps us make a difference. Every sat counts!</string>

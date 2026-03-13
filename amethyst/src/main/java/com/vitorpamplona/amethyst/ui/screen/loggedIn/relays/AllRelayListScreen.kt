@@ -29,6 +29,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -39,6 +41,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -83,6 +88,8 @@ import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
 import com.vitorpamplona.amethyst.ui.theme.SettingsCategoryFirstModifier
 import com.vitorpamplona.amethyst.ui.theme.SettingsCategorySpacingModifier
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayExporter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayListCollection
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayZipExporter
 import com.vitorpamplona.amethyst.ui.theme.grayText
 
 @Composable
@@ -183,32 +190,28 @@ fun MappedAllRelayListView(
 
     val context = LocalContext.current
 
+    val collection =
+        RelayListCollection(
+            homeRelays = homeFeedState,
+            notifRelays = notifFeedState,
+            dmRelays = dmFeedState,
+            privateOutboxRelays = privateOutboxFeedState,
+            proxyRelays = proxyRelays,
+            broadcastRelays = broadcastRelays,
+            indexerRelays = indexerRelays,
+            searchRelays = searchFeedState,
+            localRelays = localFeedState,
+            trustedRelays = trustedFeedState,
+            favoriteRelays = relayFeedsFeedState,
+            blockedRelays = blockedFeedState,
+        )
+
     Scaffold(
         topBar = {
             SavingTopBar(
                 titleRes = R.string.relay_settings,
                 additionalActions = {
-                    IconButton(onClick = {
-                        RelayExporter(context).export(
-                            homeRelays = homeFeedState,
-                            notifRelays = notifFeedState,
-                            dmRelays = dmFeedState,
-                            privateOutboxRelays = privateOutboxFeedState,
-                            proxyRelays = proxyRelays,
-                            broadcastRelays = broadcastRelays,
-                            indexerRelays = indexerRelays,
-                            searchRelays = searchFeedState,
-                            localRelays = localFeedState,
-                            trustedRelays = trustedFeedState,
-                            favoriteRelays = relayFeedsFeedState,
-                            blockedRelays = blockedFeedState,
-                        )
-                    }) {
-                        Icon(
-                            imageVector = Icons.Default.Share,
-                            contentDescription = stringRes(R.string.export_relay_settings),
-                        )
-                    }
+                    ExportDropdownMenu(context, collection)
                 },
                 onCancel = {
                     dmViewModel.clear()
@@ -479,3 +482,37 @@ fun SettingsCategoryWithButton(
     }
 }
 
+@Composable
+fun ExportDropdownMenu(
+    context: android.content.Context,
+    collection: RelayListCollection,
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    IconButton(onClick = { expanded = true }) {
+        Icon(
+            imageVector = Icons.Default.Share,
+            contentDescription = stringRes(R.string.export_relay_settings),
+        )
+    }
+
+    DropdownMenu(
+        expanded = expanded,
+        onDismissRequest = { expanded = false },
+    ) {
+        DropdownMenuItem(
+            text = { Text(stringRes(R.string.export_as_text)) },
+            onClick = {
+                expanded = false
+                RelayExporter(context).export(collection)
+            },
+        )
+        DropdownMenuItem(
+            text = { Text(stringRes(R.string.export_as_zip)) },
+            onClick = {
+                expanded = false
+                RelayZipExporter(context).export(collection)
+            },
+        )
+    }
+}
