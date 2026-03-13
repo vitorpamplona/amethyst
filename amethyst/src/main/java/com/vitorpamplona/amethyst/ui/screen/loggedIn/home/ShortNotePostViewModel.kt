@@ -593,7 +593,7 @@ open class ShortNotePostViewModel :
             val (event, relays, extras) = accountViewModel.account.createPostEvent(template, extraNotesToBroadcast)
 
             // Launch broadcast in background - don't wait for completion
-            accountViewModel.viewModelScope.launch {
+            accountViewModel.viewModelScope.launch(Dispatchers.IO) {
                 accountViewModel.broadcastTracker.trackBroadcast(
                     event = event,
                     relays = relays,

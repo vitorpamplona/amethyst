@@ -173,7 +173,7 @@ class AddBountyAmountViewModel : ViewModel() {
         val newValue = nextAmount.text.trim().toBigDecimalOrNull()
 
         if (newValue != null) {
-            viewModelScope.launch {
+            viewModelScope.launch(Dispatchers.IO) {
                 account?.let { myAccount ->
                     bounty?.let { bountyInner ->
                         myAccount.sendAddBounty(

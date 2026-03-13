@@ -98,7 +98,7 @@ open class NewMediaModel : ViewModel() {
         onSucess: () -> Unit,
         onError: (String, String) -> Unit,
     ) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             val myAccount = account ?: return@launch
             val serverToUse = selectedServer ?: return@launch
 

@@ -31,7 +31,6 @@ import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
@@ -68,7 +67,7 @@ class AppSpecificState(
             settings.backupAppSpecificData?.let { event ->
                 Log.d("AccountRegisterObservers", "Loading saved app specific data ${event.toJson()}")
                 @OptIn(DelicateCoroutinesApi::class)
-                GlobalScope.launch(Dispatchers.IO) {
+                scope.launch(Dispatchers.IO) {
                     LocalCache.justConsumeMyOwnEvent(event)
                     try {
                         val decrypted = signer.decrypt(event.content, event.pubKey)

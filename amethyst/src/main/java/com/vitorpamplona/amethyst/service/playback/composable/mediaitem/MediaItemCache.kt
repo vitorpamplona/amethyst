@@ -25,33 +25,37 @@ import androidx.core.net.toUri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import com.vitorpamplona.amethyst.commons.compose.GenericBaseCache
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlin.coroutines.cancellation.CancellationException
 
 class MediaItemCache : GenericBaseCache<MediaItemData, LoadedMediaItem>(20) {
     override suspend fun compute(key: MediaItemData): LoadedMediaItem =
-        LoadedMediaItem(
-            key,
-            MediaItem
-                .Builder()
-                .setMediaId(key.videoUri)
-                .setUri(key.videoUri)
-                .setMediaMetadata(
-                    MediaMetadata
-                        .Builder()
-                        .setArtist(key.authorName?.ifBlank { null })
-                        .setTitle(key.title?.ifBlank { null } ?: key.videoUri)
-                        .setExtras(
-                            Bundle().apply {
-                                putString("callbackUri", key.callbackUri)
-                            },
-                        ).setArtworkUri(
-                            try {
-                                key.artworkUri?.toUri()
-                            } catch (e: Exception) {
-                                if (e is CancellationException) throw e
-                                null
-                            },
-                        ).build(),
-                ).build(),
-        )
+        withContext(Dispatchers.IO) {
+            LoadedMediaItem(
+                key,
+                MediaItem
+                    .Builder()
+                    .setMediaId(key.videoUri)
+                    .setUri(key.videoUri)
+                    .setMediaMetadata(
+                        MediaMetadata
+                            .Builder()
+                            .setArtist(key.authorName?.ifBlank { null })
+                            .setTitle(key.title?.ifBlank { null } ?: key.videoUri)
+                            .setExtras(
+                                Bundle().apply {
+                                    putString("callbackUri", key.callbackUri)
+                                },
+                            ).setArtworkUri(
+                                try {
+                                    key.artworkUri?.toUri()
+                                } catch (e: Exception) {
+                                    if (e is CancellationException) throw e
+                                    null
+                                },
+                            ).build(),
+                    ).build(),
+            )
+        }
 }

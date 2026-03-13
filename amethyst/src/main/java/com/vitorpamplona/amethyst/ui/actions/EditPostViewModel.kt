@@ -61,6 +61,7 @@ import com.vitorpamplona.quartz.nip94FileMetadata.originalHash
 import com.vitorpamplona.quartz.nip94FileMetadata.sensitiveContent
 import com.vitorpamplona.quartz.nip94FileMetadata.size
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Stable
@@ -175,7 +176,7 @@ open class EditPostViewModel : ViewModel() {
         onError: (String, String) -> Unit,
         context: Context,
     ) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             val myAccount = account
             val myMultiOrchestrator = multiOrchestrator ?: return@launch
 
