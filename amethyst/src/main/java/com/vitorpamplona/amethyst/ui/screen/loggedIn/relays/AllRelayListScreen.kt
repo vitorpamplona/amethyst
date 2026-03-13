@@ -188,8 +188,6 @@ fun MappedAllRelayListView(
     val proxyRelays by proxyViewModel.relays.collectAsStateWithLifecycle()
     val relayFeedsFeedState by relayFeedsViewModel.relays.collectAsStateWithLifecycle()
 
-    val context = LocalContext.current
-
     val collection =
         RelayListCollection(
             homeRelays = homeFeedState,
@@ -211,7 +209,7 @@ fun MappedAllRelayListView(
             SavingTopBar(
                 titleRes = R.string.relay_settings,
                 additionalActions = {
-                    ExportDropdownMenu(context, collection)
+                    ExportDropdownMenu(collection)
                 },
                 onCancel = {
                     dmViewModel.clear()
@@ -483,10 +481,7 @@ fun SettingsCategoryWithButton(
 }
 
 @Composable
-fun ExportDropdownMenu(
-    context: android.content.Context,
-    collection: RelayListCollection,
-) {
+fun ExportDropdownMenu(collection: RelayListCollection) {
     var expanded by remember { mutableStateOf(false) }
 
     IconButton(onClick = { expanded = true }) {
@@ -500,6 +495,7 @@ fun ExportDropdownMenu(
         expanded = expanded,
         onDismissRequest = { expanded = false },
     ) {
+        val context = LocalContext.current
         DropdownMenuItem(
             text = { Text(stringRes(R.string.export_as_text)) },
             onClick = {
