@@ -122,7 +122,8 @@ fun UserSettingsScreen(
 
 private fun getAllLanguagesSorted(): List<JavaLocale> {
     val seen = mutableSetOf<String>()
-    return JavaLocale.getAvailableLocales()
+    return JavaLocale
+        .getAvailableLocales()
         .filter { it.language.isNotBlank() && it.country.isBlank() && seen.add(it.language) }
         .sortedBy { it.displayName.lowercase() }
 }
