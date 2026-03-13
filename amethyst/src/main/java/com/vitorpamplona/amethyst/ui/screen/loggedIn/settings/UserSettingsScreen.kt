@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
+import android.R.attr.targetName
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -40,7 +41,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Search
@@ -67,6 +67,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -79,6 +80,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.SpacedBy10dp
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
+import okio.`-DeprecatedOkio`.source
 import java.util.Locale as JavaLocale
 
 @Preview(device = "spec:width=2160px,height=2340px,dpi=440")
@@ -193,7 +195,8 @@ private fun SearchableLanguageList(
 
 @Composable
 fun TranslateToSetting(accountViewModel: AccountViewModel) {
-    val currentTranslateTo = accountViewModel.translateTo()
+    val currentTranslateTo by accountViewModel.account.settings.syncedSettings.languages.translateTo
+        .collectAsStateWithLifecycle()
     val allLanguages = remember { getAllLanguagesSorted() }
     var showPicker by remember { mutableStateOf(false) }
 
@@ -235,7 +238,8 @@ fun TranslateToSetting(accountViewModel: AccountViewModel) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun DontTranslateFromSetting(accountViewModel: AccountViewModel) {
-    val selectedLanguages = accountViewModel.dontTranslateFrom().toSet()
+    val selectedLanguages by accountViewModel.account.settings.syncedSettings.languages.dontTranslateFrom
+        .collectAsStateWithLifecycle()
     var showAddPicker by remember { mutableStateOf(false) }
     val allLanguages = remember { getAllLanguagesSorted() }
 
@@ -248,7 +252,7 @@ fun DontTranslateFromSetting(accountViewModel: AccountViewModel) {
         SettingsRow(
             name = R.string.dont_translate_from,
             description = R.string.dont_translate_from_description,
-        ) {}
+        )
 
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -260,7 +264,7 @@ fun DontTranslateFromSetting(accountViewModel: AccountViewModel) {
             selectedLanguages.forEach { languageCode ->
                 InputChip(
                     selected = true,
-                    onClick = { accountViewModel.toggleDontTranslateFrom(languageCode) },
+                    onClick = { accountViewModel.removeDontTranslateFrom(languageCode) },
                     label = { Text(JavaLocale(languageCode).displayName) },
                     trailingIcon = {
                         Icon(
@@ -292,7 +296,7 @@ fun DontTranslateFromSetting(accountViewModel: AccountViewModel) {
             SearchableLanguageList(
                 languages = availableToAdd,
                 onSelect = { locale ->
-                    accountViewModel.toggleDontTranslateFrom(locale.language)
+                    accountViewModel.addDontTranslateFrom(locale.language)
                     showAddPicker = false
                 },
             )
@@ -302,14 +306,16 @@ fun DontTranslateFromSetting(accountViewModel: AccountViewModel) {
 
 @Composable
 fun LanguagePreferencesSetting(accountViewModel: AccountViewModel) {
-    val languagePreferences = accountViewModel.account.settings.syncedSettings.languages.languagePreferences
+    val languagePreferences by
+        accountViewModel.account.settings.syncedSettings.languages.languagePreferences
+            .collectAsStateWithLifecycle()
     var showAddPair by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SettingsRow(
             name = R.string.language_preferences,
             description = R.string.language_preferences_description,
-        ) {}
+        )
 
         if (languagePreferences.isEmpty() && !showAddPair) {
             Text(
@@ -332,20 +338,20 @@ fun LanguagePreferencesSetting(accountViewModel: AccountViewModel) {
             }
         }
 
-        TextButton(
-            onClick = { showAddPair = !showAddPair },
-            modifier = Modifier.align(Alignment.CenterHorizontally),
-        ) {
-            Icon(
-                imageVector = Icons.Default.Add,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp),
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(stringRes(R.string.add_language_pair))
-        }
-
-        if (showAddPair) {
+        if (!showAddPair) {
+            TextButton(
+                onClick = { showAddPair = !showAddPair },
+                modifier = Modifier.align(Alignment.CenterHorizontally),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(stringRes(R.string.add_language_pair))
+            }
+        } else {
             AddLanguagePairCard(
                 accountViewModel = accountViewModel,
                 onDismiss = { showAddPair = false },
@@ -448,7 +454,8 @@ private fun AddLanguagePairCard(
     val allLanguages = remember { getAllLanguagesSorted() }
     var selectedSource by remember { mutableStateOf<JavaLocale?>(null) }
     var selectedTarget by remember { mutableStateOf<JavaLocale?>(null) }
-    var pickingSource by remember { mutableStateOf(true) }
+    var selectedPreference by remember { mutableStateOf<JavaLocale?>(null) }
+    var pickingSource by remember { mutableStateOf(false) }
     var pickingTarget by remember { mutableStateOf(false) }
 
     OutlinedCard(modifier = Modifier.fillMaxWidth()) {
@@ -557,41 +564,57 @@ private fun AddLanguagePairCard(
                 )
             }
 
+            val selectedSource = selectedSource
+            val selectedTarget = selectedTarget
             if (selectedSource != null && selectedTarget != null) {
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                accountViewModel.prefer(selectedSource.language, selectedTarget.language, selectedSource.language)
+                                onDismiss()
+                            }.padding(vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    TextButton(onClick = onDismiss) {
-                        Text(stringRes(R.string.go_back))
-                    }
-
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    TextButton(
+                    RadioButton(
+                        selected = selectedPreference == selectedSource,
                         onClick = {
-                            val src = selectedSource!!.language
-                            val tgt = selectedTarget!!.language
-                            accountViewModel.prefer(src, tgt, tgt)
+                            accountViewModel.prefer(selectedSource.language, selectedTarget.language, selectedSource.language)
                             onDismiss()
                         },
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp),
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            stringRes(
-                                R.string.show_first,
-                                selectedTarget!!.displayName,
-                            ),
-                        )
-                    }
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = stringRes(R.string.show_first, selectedSource.displayName),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                accountViewModel.prefer(selectedSource.language, selectedTarget.language, selectedTarget.language)
+                                onDismiss()
+                            }.padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    RadioButton(
+                        selected = selectedPreference == selectedTarget,
+                        onClick = {
+                            accountViewModel.prefer(selectedSource.language, selectedTarget.language, selectedTarget.language)
+                            onDismiss()
+                        },
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = stringRes(R.string.show_first, selectedTarget.displayName),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
                 }
             }
         }

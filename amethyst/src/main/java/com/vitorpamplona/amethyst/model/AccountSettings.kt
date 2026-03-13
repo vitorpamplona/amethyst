@@ -322,7 +322,19 @@ class AccountSettings(
         saveAccountSettings()
     }
 
-    fun translateToContains(languageCode: Locale) = syncedSettings.languages.translateTo.contains(languageCode.language)
+    fun addDontTranslateFrom(languageCode: String) {
+        syncedSettings.languages.addDontTranslateFrom(languageCode)
+        saveAccountSettings()
+    }
+
+    fun removeDontTranslateFrom(languageCode: String) {
+        syncedSettings.languages.removeDontTranslateFrom(languageCode)
+        saveAccountSettings()
+    }
+
+    fun translateToContains(languageCode: Locale) =
+        syncedSettings.languages.translateTo.value
+            .contains(languageCode.language)
 
     fun updateTranslateTo(languageCode: Locale): Boolean {
         if (syncedSettings.languages.updateTranslateTo(languageCode)) {

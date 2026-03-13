@@ -422,3 +422,33 @@ fun SettingsRow(
         }
     }
 }
+
+@Composable
+fun SettingsRow(
+    name: Int,
+    description: Int,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
+    ) {
+        Column(
+            modifier = Modifier.weight(2.0f),
+            verticalArrangement = Arrangement.spacedBy(3.dp),
+        ) {
+            Text(
+                text = stringRes(name),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = stringRes(description),
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.Gray,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}

@@ -497,6 +497,16 @@ class Account(
         sendNewAppSpecificData()
     }
 
+    suspend fun addDontTranslateFrom(languageCode: String) {
+        settings.addDontTranslateFrom(languageCode)
+        sendNewAppSpecificData()
+    }
+
+    suspend fun removeDontTranslateFrom(languageCode: String) {
+        settings.removeDontTranslateFrom(languageCode)
+        sendNewAppSpecificData()
+    }
+
     suspend fun updateTranslateTo(languageCode: Locale) {
         if (settings.updateTranslateTo(languageCode)) {
             sendNewAppSpecificData()

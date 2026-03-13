@@ -953,11 +953,9 @@ class AccountViewModel(
 
     fun markDonatedInThisVersion() = account.markDonatedInThisVersion()
 
-    fun dontTranslateFrom() = account.settings.syncedSettings.languages.dontTranslateFrom
+    fun dontTranslateFrom() = account.settings.syncedSettings.languages.dontTranslateFrom.value
 
-    fun dontTranslateFromFilteredBySpokenLanguages() = account.settings.syncedSettings.dontTranslateFromFilteredBySpokenLanguages()
-
-    fun translateTo() = account.settings.syncedSettings.languages.translateTo
+    fun translateTo() = account.settings.syncedSettings.languages.translateTo.value
 
     fun defaultZapType() = account.settings.syncedSettings.zaps.defaultZapType.value
 
@@ -1006,6 +1004,10 @@ class AccountViewModel(
     ) = launchSigner { account.updateZapAmounts(amountSet, selectedZapType, nip47Update) }
 
     fun toggleDontTranslateFrom(languageCode: String) = launchSigner { account.toggleDontTranslateFrom(languageCode) }
+
+    fun addDontTranslateFrom(languageCode: String) = launchSigner { account.addDontTranslateFrom(languageCode) }
+
+    fun removeDontTranslateFrom(languageCode: String) = launchSigner { account.removeDontTranslateFrom(languageCode) }
 
     fun updateTranslateTo(languageCode: Locale) = launchSigner { account.updateTranslateTo(languageCode) }
 
