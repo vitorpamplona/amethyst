@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send
 
+import android.R.attr.maxLines
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -33,20 +34,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
-import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromFiles
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
+import com.vitorpamplona.amethyst.ui.note.timeAheadNoDot
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.upload.RoomChatFileUploadDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.DisplayReplyingToNote
@@ -134,10 +135,14 @@ fun PrivateMessageEditFieldRow(
             )
         }
 
-        channelScreenModel.expirationDays?.let {
+        if (channelScreenModel.wantsExpirationDate) {
             Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), horizontalArrangement = Arrangement.Center) {
+                val context = LocalContext.current
                 Text(
-                    stringResource(R.string.this_message_will_disappear_in_days, it),
+                    stringRes(
+                        R.string.this_message_will_disappear_in,
+                        timeAheadNoDot(channelScreenModel.expirationDate, context),
+                    ),
                     fontSize = Font12SP,
                     color = MaterialTheme.colorScheme.placeholderText,
                     maxLines = 1,
@@ -206,14 +211,6 @@ fun KeyboardLeadingIcon(
             modifier = Modifier,
             onImageChosen = channelScreenModel::pickedMedia,
         )
-
-        SelectFromFiles(
-            isUploading = channelScreenModel.isUploadingImage,
-            tint = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier,
-        ) {
-            channelScreenModel.pickedMedia(it)
-        }
 
         ToggleNip17Button(channelScreenModel, accountViewModel)
     }

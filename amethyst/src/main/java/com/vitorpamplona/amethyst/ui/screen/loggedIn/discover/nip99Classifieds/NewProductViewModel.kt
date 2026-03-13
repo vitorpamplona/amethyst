@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip99Classifieds
 import android.content.Context
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.input.TextFieldValue
@@ -48,6 +49,7 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.ui.note.creators.draftTags.DraftTagState
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.EmojiSuggestionState
+import com.vitorpamplona.amethyst.ui.note.creators.expiration.IExpiration
 import com.vitorpamplona.amethyst.ui.note.creators.location.ILocationGrabber
 import com.vitorpamplona.amethyst.ui.note.creators.messagefield.IMessageField
 import com.vitorpamplona.amethyst.ui.note.creators.previews.PreviewState
@@ -79,6 +81,7 @@ import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarningReason
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitive
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
+import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplits
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiser
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
@@ -89,6 +92,7 @@ import com.vitorpamplona.quartz.nip99Classifieds.image
 import com.vitorpamplona.quartz.nip99Classifieds.tags.ConditionTag
 import com.vitorpamplona.quartz.nip99Classifieds.tags.PriceTag
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
@@ -102,7 +106,8 @@ open class NewProductViewModel :
     ILocationGrabber,
     IMessageField,
     IZapField,
-    IZapRaiser {
+    IZapRaiser,
+    IExpiration {
     val draftTag = DraftTagState()
 
     lateinit var accountViewModel: AccountViewModel
@@ -159,6 +164,10 @@ open class NewProductViewModel :
     // NSFW, Sensitive
     var wantsToMarkAsSensitive by mutableStateOf(false)
     var contentWarningDescription by mutableStateOf("")
+
+    // Expiration Date (NIP-40)
+    var wantsExpirationDate by mutableStateOf(false)
+    override var expirationDate by mutableLongStateOf(TimeUtils.oneDayAhead())
 
     // GeoHash
     var wantsToAddGeoHash by mutableStateOf(false)
@@ -254,6 +263,10 @@ open class NewProductViewModel :
         wantsToMarkAsSensitive = draftEvent.isSensitive()
         contentWarningDescription = draftEvent.contentWarningReason() ?: ""
 
+        val draftExpiration = draftEvent.expiration()
+        wantsExpirationDate = draftExpiration != null
+        expirationDate = draftExpiration ?: TimeUtils.oneDayAhead()
+
         val geohash = draftEvent.getGeoHash()
         wantsToAddGeoHash = geohash != null
 
@@ -333,6 +346,7 @@ open class NewProductViewModel :
         val zapReceiver = if (wantsForwardZapTo) forwardZapTo.value.toZapSplitSetup() else null
         val localZapRaiserAmount = if (wantsZapraiser) zapRaiserAmount.value else null
         val contentWarningReason = if (wantsToMarkAsSensitive) contentWarningDescription else null
+        val localExpirationDate = if (wantsExpirationDate) expirationDate else null
 
         val quotes = findNostrUris(tagger.message)
 
@@ -353,6 +367,7 @@ open class NewProductViewModel :
                 localZapRaiserAmount?.let { zapraiser(it) }
                 zapReceiver?.let { zapSplits(it) }
                 contentWarningReason?.let { contentWarning(it) }
+                localExpirationDate?.let { expiration(it) }
 
                 emojis(emojis)
                 imetas(usedAttachments)
@@ -615,6 +630,14 @@ open class NewProductViewModel :
 
     fun toggleMarkAsSensitive() {
         wantsToMarkAsSensitive = !wantsToMarkAsSensitive
+        draftTag.newVersion()
+    }
+
+    fun toggleExpirationDate() {
+        wantsExpirationDate = !wantsExpirationDate
+        if (wantsExpirationDate) {
+            expirationDate = TimeUtils.oneDayAhead()
+        }
         draftTag.newVersion()
     }
 

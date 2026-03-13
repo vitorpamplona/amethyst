@@ -56,6 +56,7 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceAnonymizationControlle
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoicePreset
 import com.vitorpamplona.amethyst.ui.note.creators.draftTags.DraftTagState
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.EmojiSuggestionState
+import com.vitorpamplona.amethyst.ui.note.creators.expiration.IExpiration
 import com.vitorpamplona.amethyst.ui.note.creators.location.ILocationGrabber
 import com.vitorpamplona.amethyst.ui.note.creators.messagefield.IMessageField
 import com.vitorpamplona.amethyst.ui.note.creators.previews.PreviewState
@@ -144,7 +145,8 @@ open class ShortNotePostViewModel :
     ILocationGrabber,
     IMessageField,
     IZapField,
-    IZapRaiser {
+    IZapRaiser,
+    IExpiration {
     val draftTag = DraftTagState()
 
     lateinit var accountViewModel: AccountViewModel
@@ -242,7 +244,7 @@ open class ShortNotePostViewModel :
 
     // Expiration Date (NIP-40)
     var wantsExpirationDate by mutableStateOf(false)
-    var expirationDate by mutableLongStateOf(TimeUtils.oneDayAhead())
+    override var expirationDate by mutableLongStateOf(TimeUtils.oneDayAhead())
 
     // GeoHash
     var wantsToAddGeoHash by mutableStateOf(false)

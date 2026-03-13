@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send
 import android.content.Context
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.input.TextFieldValue
@@ -42,6 +43,7 @@ import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.note.creators.draftTags.DraftTagState
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.EmojiSuggestionState
+import com.vitorpamplona.amethyst.ui.note.creators.expiration.IExpiration
 import com.vitorpamplona.amethyst.ui.note.creators.location.ILocationGrabber
 import com.vitorpamplona.amethyst.ui.note.creators.messagefield.IMessageField
 import com.vitorpamplona.amethyst.ui.note.creators.previews.PreviewState
@@ -104,7 +106,8 @@ class ChatNewMessageViewModel :
     ILocationGrabber,
     IMessageField,
     IZapField,
-    IZapRaiser {
+    IZapRaiser,
+    IExpiration {
     val draftTag = DraftTagState()
 
     lateinit var accountViewModel: AccountViewModel
@@ -163,6 +166,10 @@ class ChatNewMessageViewModel :
     var wantsToMarkAsSensitive by mutableStateOf(false)
     var contentWarningDescription by mutableStateOf("")
 
+    // Expiration Date (NIP-40)
+    var wantsExpirationDate by mutableStateOf(false)
+    override var expirationDate by mutableLongStateOf(TimeUtils.oneDayAhead())
+
     // GeoHash
     var wantsToAddGeoHash by mutableStateOf(false)
     var location: StateFlow<LocationState.LocationResult>? = null
@@ -171,8 +178,6 @@ class ChatNewMessageViewModel :
     var canAddZapRaiser by mutableStateOf(false)
     var wantsZapraiser by mutableStateOf(false)
     override var zapRaiserAmount = mutableStateOf<Long?>(null)
-
-    var expirationDays by mutableStateOf<Int?>(null)
 
     // NIP17 Wrapped DMs / Group messages
     var nip17 by mutableStateOf(false)
@@ -274,7 +279,8 @@ class ChatNewMessageViewModel :
     }
 
     fun loadExpiration(expirationDays: Int) {
-        this.expirationDays = expirationDays
+        this.wantsExpirationDate = true
+        this.expirationDate = TimeUtils.now() + expirationDays * 86400L
     }
 
     private fun loadFromDraft(draft: Note) {
@@ -295,6 +301,10 @@ class ChatNewMessageViewModel :
 
         wantsToMarkAsSensitive = draftEvent.isSensitive()
         contentWarningDescription = draftEvent.contentWarningReason() ?: ""
+
+        val draftExpiration = draftEvent.expiration()
+        wantsExpirationDate = draftExpiration != null
+        expirationDate = draftExpiration ?: TimeUtils.oneDayAhead()
 
         val geohash = draftEvent.getGeoHash()
         wantsToAddGeoHash = geohash != null
@@ -347,8 +357,6 @@ class ChatNewMessageViewModel :
                 TextFieldValue(draftEvent.content)
             }
         urlPreviews.update(message)
-
-        expirationDays = draftEvent.expiration()?.let { (it / 86_400).toInt() }
 
         iMetaAttachments.addAll(draftEvent.imetas())
 
@@ -444,10 +452,9 @@ class ChatNewMessageViewModel :
         val message = message.text
 
         val contentWarningReason = if (wantsToMarkAsSensitive) contentWarningDescription else null
+        val localExpirationDate = if (wantsExpirationDate) expirationDate else null
         val localZapRaiserAmount = if (wantsZapraiser) zapRaiserAmount.value else null
         val zapReceiver = if (wantsForwardZapTo) forwardZapTo.value.toZapSplitSetup() else null
-
-        val expiration = expirationDays?.let { TimeUtils.now() + it.toLong() * 86_400 }
 
         if (nip17 || room.users.size > 1 || replyTo.value?.event is NIP17Group) {
             val replyHint = replyTo.value?.toEventHint<BaseDMGroupEvent>()
@@ -463,7 +470,7 @@ class ChatNewMessageViewModel :
                         localZapRaiserAmount?.let { zapraiser(it) }
                         zapReceiver?.let { zapSplits(it) }
                         contentWarningReason?.let { contentWarning(it) }
-                        expiration?.let { expiration(it) }
+                        localExpirationDate?.let { expiration(it) }
 
                         emojis(emojis)
                         imetas(usedAttachments)
@@ -478,7 +485,7 @@ class ChatNewMessageViewModel :
                         localZapRaiserAmount?.let { zapraiser(it) }
                         zapReceiver?.let { zapSplits(it) }
                         contentWarningReason?.let { contentWarning(it) }
-                        expiration?.let { expiration(it) }
+                        localExpirationDate?.let { expiration(it) }
 
                         emojis(emojis)
                         imetas(usedAttachments)
@@ -501,7 +508,7 @@ class ChatNewMessageViewModel :
                     replyingTo = replyTo.value?.toEventHint<PrivateDmEvent>(),
                     signer = accountViewModel.account.signer,
                 ) {
-                    expiration?.let { expiration(it) }
+                    localExpirationDate?.let { expiration(it) }
                 }
 
             if (draftTag != null) {
@@ -533,7 +540,6 @@ class ChatNewMessageViewModel :
         subject = TextFieldValue("")
 
         replyTo.value = null
-        expirationDays = null
 
         wantsInvoice = false
         wantsZapraiser = false
@@ -739,6 +745,14 @@ class ChatNewMessageViewModel :
 
     fun toggleMarkAsSensitive() {
         wantsToMarkAsSensitive = !wantsToMarkAsSensitive
+        draftTag.newVersion()
+    }
+
+    fun toggleExpirationDate() {
+        wantsExpirationDate = !wantsExpirationDate
+        if (wantsExpirationDate) {
+            expirationDate = TimeUtils.oneDayAhead()
+        }
         draftTag.newVersion()
     }
 
