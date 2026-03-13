@@ -245,9 +245,10 @@ private fun SyncProgressCard(state: EventSyncViewModel.SyncState.Running) {
 
             // Overall progress across all phases and relays
             val overallProgress =
-                ((state.phase - 1).toFloat() / state.phaseTotal +
-                    (state.relayIndex.toFloat() / state.totalRelays) / state.phaseTotal)
-                    .coerceIn(0f, 1f)
+                (
+                    (state.phase - 1).toFloat() / state.phaseTotal +
+                        (state.relayIndex.toFloat() / state.totalRelays) / state.phaseTotal
+                ).coerceIn(0f, 1f)
             LinearProgressIndicator(
                 progress = { overallProgress },
                 modifier = Modifier.fillMaxWidth(),

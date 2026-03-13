@@ -95,7 +95,10 @@ class EventSyncViewModel(
         val startTime = System.currentTimeMillis()
 
         val myPubKey = account.signer.pubKey
-        val allRelays = account.cache.relayHints.relayDB.keys().toList()
+        val allRelays =
+            account.cache.relayHints.relayDB
+                .keys()
+                .toList()
 
         if (allRelays.isEmpty()) {
             _syncState.value = SyncState.Error("No known relays found. Browse some content first to discover relays.")
