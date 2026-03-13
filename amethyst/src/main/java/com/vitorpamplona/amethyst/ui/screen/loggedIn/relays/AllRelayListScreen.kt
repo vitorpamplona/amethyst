@@ -44,7 +44,6 @@ import com.vitorpamplona.amethyst.model.DefaultDMRelayList
 import com.vitorpamplona.amethyst.model.DefaultIndexerRelayList
 import com.vitorpamplona.amethyst.model.DefaultSearchRelayList
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.blocked.BlockedRelayListViewModel
@@ -354,12 +353,6 @@ fun MappedAllRelayListView(
                     R.string.event_sync_section_explainer,
                     SettingsCategorySpacingModifier,
                 )
-                OutlinedButton(
-                    onClick = { newNav.nav(Route.EventSync) },
-                    modifier = Modifier.padding(top = 8.dp),
-                ) {
-                    Text(stringRes(R.string.event_sync_open_button))
-                }
             }
         }
     }
