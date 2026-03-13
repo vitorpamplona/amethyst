@@ -172,7 +172,7 @@ fun MappedAllRelayListView(
     proxyViewModel: ProxyRelayListViewModel,
     relayFeedsViewModel: RelayFeedsListViewModel,
     accountViewModel: AccountViewModel,
-    newNav: INav,
+    nav: INav,
 ) {
     val dmFeedState by dmViewModel.relays.collectAsStateWithLifecycle()
     val homeFeedState by nip65ViewModel.homeRelays.collectAsStateWithLifecycle()
@@ -188,28 +188,27 @@ fun MappedAllRelayListView(
     val proxyRelays by proxyViewModel.relays.collectAsStateWithLifecycle()
     val relayFeedsFeedState by relayFeedsViewModel.relays.collectAsStateWithLifecycle()
 
-    val collection =
-        RelayListCollection(
-            homeRelays = homeFeedState,
-            notifRelays = notifFeedState,
-            dmRelays = dmFeedState,
-            privateOutboxRelays = privateOutboxFeedState,
-            proxyRelays = proxyRelays,
-            broadcastRelays = broadcastRelays,
-            indexerRelays = indexerRelays,
-            searchRelays = searchFeedState,
-            localRelays = localFeedState,
-            trustedRelays = trustedFeedState,
-            favoriteRelays = relayFeedsFeedState,
-            blockedRelays = blockedFeedState,
-        )
-
     Scaffold(
         topBar = {
             SavingTopBar(
                 titleRes = R.string.relay_settings,
                 additionalActions = {
-                    ExportDropdownMenu(collection)
+                    ExportDropdownMenu {
+                        RelayListCollection(
+                            homeRelays = homeFeedState,
+                            notifRelays = notifFeedState,
+                            dmRelays = dmFeedState,
+                            privateOutboxRelays = privateOutboxFeedState,
+                            proxyRelays = proxyRelays,
+                            broadcastRelays = broadcastRelays,
+                            indexerRelays = indexerRelays,
+                            searchRelays = searchFeedState,
+                            localRelays = localFeedState,
+                            trustedRelays = trustedFeedState,
+                            favoriteRelays = relayFeedsFeedState,
+                            blockedRelays = blockedFeedState,
+                        )
+                    }
                 },
                 onCancel = {
                     dmViewModel.clear()
@@ -223,7 +222,7 @@ fun MappedAllRelayListView(
                     indexerViewModel.clear()
                     proxyViewModel.clear()
                     relayFeedsViewModel.clear()
-                    newNav.popBack()
+                    nav.popBack()
                 },
                 onPost = {
                     dmViewModel.create()
@@ -237,7 +236,7 @@ fun MappedAllRelayListView(
                     indexerViewModel.create()
                     proxyViewModel.create()
                     relayFeedsViewModel.create()
-                    newNav.popBack()
+                    nav.popBack()
                 },
             )
         },
@@ -262,7 +261,7 @@ fun MappedAllRelayListView(
                     SettingsCategoryFirstModifier,
                 )
             }
-            renderNip65HomeItems(homeFeedState, nip65ViewModel, accountViewModel, newNav)
+            renderNip65HomeItems(homeFeedState, nip65ViewModel, accountViewModel, nav)
 
             item {
                 SettingsCategory(
@@ -271,7 +270,7 @@ fun MappedAllRelayListView(
                     SettingsCategorySpacingModifier,
                 )
             }
-            renderNip65NotifItems(notifFeedState, nip65ViewModel, accountViewModel, newNav)
+            renderNip65NotifItems(notifFeedState, nip65ViewModel, accountViewModel, nav)
 
             item {
                 SettingsCategoryWithButton(
@@ -283,7 +282,7 @@ fun MappedAllRelayListView(
                     },
                 )
             }
-            renderDMItems(dmFeedState, dmViewModel, accountViewModel, newNav)
+            renderDMItems(dmFeedState, dmViewModel, accountViewModel, nav)
 
             item {
                 SettingsCategory(
@@ -292,7 +291,7 @@ fun MappedAllRelayListView(
                     SettingsCategorySpacingModifier,
                 )
             }
-            renderPrivateOutboxItems(privateOutboxFeedState, privateOutboxViewModel, accountViewModel, newNav)
+            renderPrivateOutboxItems(privateOutboxFeedState, privateOutboxViewModel, accountViewModel, nav)
 
             item {
                 SettingsCategory(
@@ -301,7 +300,7 @@ fun MappedAllRelayListView(
                     SettingsCategorySpacingModifier,
                 )
             }
-            renderProxyItems(proxyRelays, proxyViewModel, accountViewModel, newNav)
+            renderProxyItems(proxyRelays, proxyViewModel, accountViewModel, nav)
 
             item {
                 SettingsCategory(
@@ -310,7 +309,7 @@ fun MappedAllRelayListView(
                     SettingsCategorySpacingModifier,
                 )
             }
-            renderBroadcastItems(broadcastRelays, broadcastViewModel, accountViewModel, newNav)
+            renderBroadcastItems(broadcastRelays, broadcastViewModel, accountViewModel, nav)
 
             item {
                 SettingsCategoryWithButton(
@@ -321,7 +320,7 @@ fun MappedAllRelayListView(
                     ResetIndexerRelays(indexerViewModel)
                 }
             }
-            renderIndexerItems(indexerRelays, indexerViewModel, accountViewModel, newNav)
+            renderIndexerItems(indexerRelays, indexerViewModel, accountViewModel, nav)
 
             item {
                 SettingsCategoryWithButton(
@@ -332,7 +331,7 @@ fun MappedAllRelayListView(
                     ResetSearchRelays(searchViewModel)
                 }
             }
-            renderSearchItems(searchFeedState, searchViewModel, accountViewModel, newNav)
+            renderSearchItems(searchFeedState, searchViewModel, accountViewModel, nav)
 
             item {
                 SettingsCategory(
@@ -341,7 +340,7 @@ fun MappedAllRelayListView(
                     SettingsCategorySpacingModifier,
                 )
             }
-            renderLocalItems(localFeedState, localViewModel, accountViewModel, newNav)
+            renderLocalItems(localFeedState, localViewModel, accountViewModel, nav)
 
             item {
                 SettingsCategory(
@@ -350,7 +349,7 @@ fun MappedAllRelayListView(
                     SettingsCategorySpacingModifier,
                 )
             }
-            renderTrustedItems(trustedFeedState, trustedViewModel, accountViewModel, newNav)
+            renderTrustedItems(trustedFeedState, trustedViewModel, accountViewModel, nav)
 
             item {
                 SettingsCategory(
@@ -359,7 +358,7 @@ fun MappedAllRelayListView(
                     SettingsCategorySpacingModifier,
                 )
             }
-            renderRelayFeedsItems(relayFeedsFeedState, relayFeedsViewModel, accountViewModel, newNav)
+            renderRelayFeedsItems(relayFeedsFeedState, relayFeedsViewModel, accountViewModel, nav)
 
             item {
                 SettingsCategory(
@@ -368,7 +367,7 @@ fun MappedAllRelayListView(
                     SettingsCategorySpacingModifier,
                 )
             }
-            renderBlockedItems(blockedFeedState, blockedViewModel, accountViewModel, newNav)
+            renderBlockedItems(blockedFeedState, blockedViewModel, accountViewModel, nav)
 
             item {
                 SettingsCategory(
@@ -377,7 +376,7 @@ fun MappedAllRelayListView(
                     SettingsCategorySpacingModifier,
                 )
             }
-            renderConnectedItems(connectedRelays, connectedViewModel, accountViewModel, newNav)
+            renderConnectedItems(connectedRelays, connectedViewModel, accountViewModel, nav)
         }
     }
 }
@@ -481,7 +480,7 @@ fun SettingsCategoryWithButton(
 }
 
 @Composable
-fun ExportDropdownMenu(collection: RelayListCollection) {
+fun ExportDropdownMenu(collection: () -> RelayListCollection) {
     var expanded by remember { mutableStateOf(false) }
 
     IconButton(onClick = { expanded = true }) {
@@ -500,14 +499,14 @@ fun ExportDropdownMenu(collection: RelayListCollection) {
             text = { Text(stringRes(R.string.export_as_text)) },
             onClick = {
                 expanded = false
-                RelayExporter(context).export(collection)
+                RelayExporter(context).export(collection())
             },
         )
         DropdownMenuItem(
             text = { Text(stringRes(R.string.export_as_zip)) },
             onClick = {
                 expanded = false
-                RelayZipExporter(context).export(collection)
+                RelayZipExporter(context).export(collection())
             },
         )
     }
