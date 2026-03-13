@@ -124,6 +124,8 @@ sealed class Route {
 
     @Serializable object EditRelays : Route()
 
+    @Serializable object EventSync : Route()
+
     @Serializable object EditMediaServers : Route()
 
     @Serializable object UpdateReactionType : Route()
