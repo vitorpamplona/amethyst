@@ -928,6 +928,7 @@
     <string name="sign_request_rejected_description">请确保签名应用程序已授权此交易</string>
     <string name="no_wallet_found_with_error">找不到支付闪电发票的钱包（错误：%1$s）。请安装闪电钱包来使用打闪</string>
     <string name="no_wallet_found">找不到支付闪电发票的钱包。请安装闪电钱包来使用打闪</string>
+    <string name="no_blossom_apps_found_description">找不到Blossom应用。请安装本地Blossom应用查看此文件</string>
     <string name="hidden_words">隐藏单词</string>
     <string name="hide_new_word_label">隐藏新单词或句子</string>
     <string name="automatically_show_profile_picture">个人头像</string>
@@ -1271,6 +1272,12 @@
     <string name="search_by_hashtag">搜索话题标签：#%1$s</string>
     <string name="dont_translate_from">不要翻译</string>
     <string name="dont_translate_from_description">此处显示的语言不会被翻译，请选择一种目标语言重新翻译并去除这个提示。</string>
+    <string name="translate_to_description">选择要将内容翻译为什么语言。</string>
+    <string name="language_preferences">语言显示首选项</string>
+    <string name="language_preferences_description">对于每个翻译的语言对，选择先显示哪个语言。</string>
+    <string name="language_preference_pair">%1$s → %2$s</string>
+    <string name="no_language_preferences">尚无语言显示首选项。这些在翻译发生时自动创建，或者您可以手动添加。</string>
+    <string name="delete_preference">删除首选项</string>
     <string name="pause">暂停</string>
     <string name="play">播放</string>
     <string name="open_dropdown_menu">打开下拉菜单</string>
