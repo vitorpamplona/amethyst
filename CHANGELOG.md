@@ -27,7 +27,7 @@ Adds support for NIP-66 Relay Monitor and discovery support to Quartz
 
 Adds support for NIP-A3 Payment targets (PayTo: 10133) by @npub1w4uswmv6lu9yel005l3qgheysmr7tk9uvwluddznju3nuxalevvs2d0jr5
 
-Adds support for BUD-10 "Blossom:" URIs
+Adds support for BUD-10 "Blossom:" URIs in images, audios, videos, and documents.
 
 Adds support for Namecoin .bit urls to NIP-05
 - Adds choice of ElectrumX server to resolve namecoins.
@@ -46,13 +46,15 @@ Adds support to upload Documents to all new post screens.
 
 Content warning improvements:
 - Adds optional description field for sensitive content warnings in new posts.
-- Displays additional information on warning composables.
+- Displays additional information on warning composables
 
 Redesigns and reorganizes Setting pages
 - Consolidate drawer settings into a single Settings hub screen
 - Redesigns Zap Amount and NWC setup screens
 - Redesigns Custom zap amount screens
-- Add reactions row settings (enable/disable, order, show/hide counters) by @npub1w4uswmv6lu9yel005l3qgheysmr7tk9uvwluddznju3nuxalevvs2d0jr5
+- Adds brand new Translation Settings screen
+- Adds blockchain explorer settings page for OTS verification
+- Adds reactions row settings (enable/disable, order, show/hide counters) by @npub1w4uswmv6lu9yel005l3qgheysmr7tk9uvwluddznju3nuxalevvs2d0jr5
 - Tapping on Zap without any pre-configured amount opens the custom dialog
 
 URL/URI parser rewrite in Kotlin multiplatform (KMP)
@@ -63,14 +65,13 @@ URL/URI parser rewrite in Kotlin multiplatform (KMP)
 
 Minimizes parent thread rendering in quoted notes by @npub1aeh2zw4elewy5682lxc6xnlqzjnxksq303gwu2npfaxd49vmde6qcq4nwx
 
-Fixes bug on Show More calculations for very long texts without spaces
-
 Relay Management:
 - Adds relay search tooltip when adding relays
 - Adds the list of keys using each relay to the relay information
 - Adds active subscriptions and outbox event in the queue to relay information
 - Adds a complete list of event kind names to the subscription card to relay information
 - Tracks and displays connection success rate on relay settings
+- Add relay settings export functionality
 
 Search fixes
 - Breaks the search filter into two subscriptions to prioritize Metadata without punishing content.
@@ -117,9 +118,14 @@ Fixes:
 - Location permission watcher moved outside screens to avoid recreation
 - Solves the sorting contract crash on search by precaching all values before sorting users.
 - Fixes lingering relay connections from loading follows outbox's settings.
+- Enhance NIP-38 user status display with emoji support and metadata tags
+- Fixes bug on Show More calculations for very long texts without spaces
+- Fixing IO Dispatchers and coroutine scopes of choice
+- Fixes anySync parallel operation that was returning the first result, not the first positive "any".
 
 AI:
 - Add SKILL.md for AI agent customization
+- Add settings and hooks to setup Android Development for the agent
 
 Defaults:
 - Switches wss://nostr.band to wss://antiprimal.net, wss://relay.ditto.pub on app defaults
@@ -129,15 +135,16 @@ Defaults:
 
 Adds complete support for iOS to Quartz by @npub1a3tx8wcrt789skl6gg7rqwj4wey0j53eesr4z6asd4h4jwrd62jq0wkq4k
 - Provide implementation for Rfc3986 on iOS, using the Swift Rfc3986UriBridge.
-- Provide implementation for LargeCache, using a CacheMap.
+- Provide implementation for LargeCache, using a CacheMap
 - Provide implementation for fastFindURLs()
 - Provide implementation for makeAbsoluteIfRelativeUrl() in ServerInfoParser.ios.kt
-- Provide implementation for UrlEncoder.
-- Provide implementation for UnicodeNormalizer.
+- Provide implementation for UrlEncoder
+- Provide implementation for UnicodeNormalizer
 - Provide implementation for GZip compression/decompression. Some small fixes in URLs.ios.kt
-- Provide implementation for AESCBC.
-- Provide implementation for AESGCM.
-- Provide implementation for DigestInstance.
+- Provide implementation for AESCBC
+- Provide implementation for AESGCM
+- Provide implementation for DigestInstance
+- Provide implementation for LibSodium
 - Adds a reqUntilEoseAsFlow extension to the Nostr Client
 
 Amethyst Desktop by @npub12cfje6nl2nuxplcqfvhg7ljt89fmpj0n0fd24zxsukja5qm9wmtqd7y76c
