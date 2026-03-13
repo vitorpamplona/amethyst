@@ -25,6 +25,10 @@ import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -41,10 +45,18 @@ class StatusEvent(
     companion object {
         const val KIND = 30315
 
+        const val GENERAL = "general"
+        const val MUSIC = "music"
+
         suspend fun create(
             msg: String,
-            type: String,
-            expiration: Long?,
+            type: String = GENERAL,
+            expiration: Long? = null,
+            url: String? = null,
+            profileId: HexKey? = null,
+            eventId: HexKey? = null,
+            addressableId: String? = null,
+            emojiTags: List<EmojiUrlTag>? = null,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
         ): StatusEvent {
@@ -52,6 +64,11 @@ class StatusEvent(
 
             tags.add(arrayOf("d", type))
             expiration?.let { tags.add(arrayOf("expiration", it.toString())) }
+            url?.let { tags.add(arrayOf("r", it)) }
+            profileId?.let { tags.add(PTag.assemble(it, null)) }
+            eventId?.let { tags.add(ETag.assemble(it, null, null)) }
+            addressableId?.let { tags.add(ATag.assemble(it, null)) }
+            emojiTags?.forEach { tags.add(it.toTagArray()) }
 
             return signer.sign(createdAt, KIND, tags.toTypedArray(), msg)
         }
