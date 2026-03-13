@@ -26,7 +26,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.layouts.MaxWidthContainer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.RenderRoomTopBar
@@ -50,16 +52,18 @@ fun ChatroomScreen(
         },
         accountViewModel = accountViewModel,
     ) {
-        Column(Modifier.padding(it).consumeWindowInsets(it).statusBarsPadding()) {
-            ChatroomView(
-                room = roomId,
-                draftMessage = draftMessage,
-                replyToNote = replyToNote,
-                editFromDraft = editFromDraft,
-                expiresDays = expiresDays,
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
+        MaxWidthContainer(maxWidth = 720.dp) {
+            Column(Modifier.padding(it).consumeWindowInsets(it).statusBarsPadding()) {
+                ChatroomView(
+                    room = roomId,
+                    draftMessage = draftMessage,
+                    replyToNote = replyToNote,
+                    editFromDraft = editFromDraft,
+                    expiresDays = expiresDays,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
         }
     }
 }

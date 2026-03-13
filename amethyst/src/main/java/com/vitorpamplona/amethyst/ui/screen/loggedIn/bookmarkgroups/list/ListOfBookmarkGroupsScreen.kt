@@ -34,6 +34,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.layouts.MaxWidthContainer
 import com.vitorpamplona.amethyst.model.nip51Lists.BookmarkListState
 import com.vitorpamplona.amethyst.model.nip51Lists.labeledBookmarkLists.LabeledBookmarkList
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -106,23 +107,25 @@ fun ListOfBookmarkGroupsFeed(
             BookmarkGroupFab(onAddGroup = addBookmarkGroup)
         },
     ) { paddingValues ->
-        Column(
-            Modifier
-                .padding(
-                    top = paddingValues.calculateTopPadding(),
-                    bottom = paddingValues.calculateBottomPadding(),
-                ).fillMaxHeight(),
-        ) {
-            ListOfBookmarkGroupsFeedView(
-                defaultBookmarks = defaultBookmarks,
-                groupListFeedSource = listSource,
-                openDefaultBookmarks = openDefaultBookmarks,
-                onOpenItem = openBookmarkGroup,
-                onRenameItem = renameBookmarkGroup,
-                onItemDescriptionChange = changeBookmarkGroupDescription,
-                onItemClone = cloneBookmarkGroup,
-                onDeleteItem = deleteBookmarkGroup,
-            )
+        MaxWidthContainer {
+            Column(
+                Modifier
+                    .padding(
+                        top = paddingValues.calculateTopPadding(),
+                        bottom = paddingValues.calculateBottomPadding(),
+                    ).fillMaxHeight(),
+            ) {
+                ListOfBookmarkGroupsFeedView(
+                    defaultBookmarks = defaultBookmarks,
+                    groupListFeedSource = listSource,
+                    openDefaultBookmarks = openDefaultBookmarks,
+                    onOpenItem = openBookmarkGroup,
+                    onRenameItem = renameBookmarkGroup,
+                    onItemDescriptionChange = changeBookmarkGroupDescription,
+                    onItemClone = cloneBookmarkGroup,
+                    onDeleteItem = deleteBookmarkGroup,
+                )
+            }
         }
     }
 }

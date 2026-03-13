@@ -69,6 +69,7 @@ import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.feeds.rememberForeverPagerState
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.layouts.MaxWidthContainer
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -258,31 +259,33 @@ private fun DiscoverPages(
         },
         accountViewModel = accountViewModel,
     ) {
-        HorizontalPager(state = pagerState, contentPadding = it) { page ->
-            if (page >= 0 && page < feedTabs.size) {
-                val tab = feedTabs[page]
-                RefresheableBox(tab.feedState, true) {
-                    if (tab.useGridLayout) {
-                        SaveableGridFeedContentState(tab.feedState, scrollStateKey = tab.scrollStateKey) { listState ->
-                            RenderDiscoverFeed(
-                                feedContentState = tab.feedState,
-                                routeForLastRead = tab.routeForLastRead,
-                                forceEventKind = tab.forceEventKind,
-                                listState = listState,
-                                accountViewModel = accountViewModel,
-                                nav = nav,
-                            )
-                        }
-                    } else {
-                        SaveableFeedContentState(tab.feedState, scrollStateKey = tab.scrollStateKey) { listState ->
-                            RenderDiscoverFeed(
-                                feedContentState = tab.feedState,
-                                routeForLastRead = tab.routeForLastRead,
-                                forceEventKind = tab.forceEventKind,
-                                listState = listState,
-                                accountViewModel = accountViewModel,
-                                nav = nav,
-                            )
+        MaxWidthContainer {
+            HorizontalPager(state = pagerState, contentPadding = it) { page ->
+                if (page >= 0 && page < feedTabs.size) {
+                    val tab = feedTabs[page]
+                    RefresheableBox(tab.feedState, true) {
+                        if (tab.useGridLayout) {
+                            SaveableGridFeedContentState(tab.feedState, scrollStateKey = tab.scrollStateKey) { listState ->
+                                RenderDiscoverFeed(
+                                    feedContentState = tab.feedState,
+                                    routeForLastRead = tab.routeForLastRead,
+                                    forceEventKind = tab.forceEventKind,
+                                    listState = listState,
+                                    accountViewModel = accountViewModel,
+                                    nav = nav,
+                                )
+                            }
+                        } else {
+                            SaveableFeedContentState(tab.feedState, scrollStateKey = tab.scrollStateKey) { listState ->
+                                RenderDiscoverFeed(
+                                    feedContentState = tab.feedState,
+                                    routeForLastRead = tab.routeForLastRead,
+                                    forceEventKind = tab.forceEventKind,
+                                    listState = listState,
+                                    accountViewModel = accountViewModel,
+                                    nav = nav,
+                                )
+                            }
                         }
                     }
                 }

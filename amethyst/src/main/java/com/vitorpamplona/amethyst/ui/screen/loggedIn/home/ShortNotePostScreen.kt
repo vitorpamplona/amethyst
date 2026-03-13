@@ -72,6 +72,7 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.UploadProgressIndicator
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceAnonymizationSection
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceMessagePreview
 import com.vitorpamplona.amethyst.ui.components.getActivity
+import com.vitorpamplona.amethyst.ui.layouts.MaxWidthContainer
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
@@ -216,7 +217,9 @@ private fun NewPostScreenInner(
                     .consumeWindowInsets(pad)
                     .imePadding(),
         ) {
-            NewPostScreenBody(postViewModel, accountViewModel, nav)
+            MaxWidthContainer(maxWidth = 560.dp) {
+                NewPostScreenBody(postViewModel, accountViewModel, nav)
+            }
         }
     }
 }

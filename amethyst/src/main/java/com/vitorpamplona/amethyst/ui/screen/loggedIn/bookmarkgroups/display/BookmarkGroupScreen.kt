@@ -57,6 +57,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
+import com.vitorpamplona.amethyst.ui.layouts.MaxWidthContainer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
@@ -146,69 +147,71 @@ fun BookmarkGroupScreenView(
             }
         },
     ) { padding ->
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(
-                        top = padding.calculateTopPadding(),
-                        bottom = padding.calculateBottomPadding(),
-                    ).consumeWindowInsets(padding)
-                    .imePadding(),
-        ) {
-            when (bookmarkType) {
-                BookmarkType.PostBookmark -> {
-                    RenderPostList(
-                        bookmarkGroupViewModel,
-                        pagerState,
-                        accountViewModel,
-                        movePostBookmark = { postId, isPrivate ->
-                            accountViewModel.launchSigner {
-                                bookmarkGroupViewModel.movePostBookmark(
-                                    groupIdentifier = bookmarkGroupViewModel.bookmarkGroupIdentifier,
-                                    postId = postId,
-                                    isCurrentlyPrivate = isPrivate,
-                                )
-                            }
-                        },
-                        deletePostBookmark = { postId, isPrivate ->
-                            accountViewModel.launchSigner {
-                                bookmarkGroupViewModel.removePostBookmark(
-                                    bookmarkGroupViewModel.bookmarkGroupIdentifier,
-                                    postId,
-                                    isPrivate,
-                                )
-                            }
-                        },
-                        nav,
-                    )
-                }
+        MaxWidthContainer {
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(
+                            top = padding.calculateTopPadding(),
+                            bottom = padding.calculateBottomPadding(),
+                        ).consumeWindowInsets(padding)
+                        .imePadding(),
+            ) {
+                when (bookmarkType) {
+                    BookmarkType.PostBookmark -> {
+                        RenderPostList(
+                            bookmarkGroupViewModel,
+                            pagerState,
+                            accountViewModel,
+                            movePostBookmark = { postId, isPrivate ->
+                                accountViewModel.launchSigner {
+                                    bookmarkGroupViewModel.movePostBookmark(
+                                        groupIdentifier = bookmarkGroupViewModel.bookmarkGroupIdentifier,
+                                        postId = postId,
+                                        isCurrentlyPrivate = isPrivate,
+                                    )
+                                }
+                            },
+                            deletePostBookmark = { postId, isPrivate ->
+                                accountViewModel.launchSigner {
+                                    bookmarkGroupViewModel.removePostBookmark(
+                                        bookmarkGroupViewModel.bookmarkGroupIdentifier,
+                                        postId,
+                                        isPrivate,
+                                    )
+                                }
+                            },
+                            nav,
+                        )
+                    }
 
-                BookmarkType.ArticleBookmark -> {
-                    RenderArticleList(
-                        bookmarkGroupViewModel,
-                        pagerState,
-                        accountViewModel,
-                        moveArticleBookmark = { articleAddress, isPrivate ->
-                            accountViewModel.launchSigner {
-                                bookmarkGroupViewModel.moveArticleBookmark(
-                                    groupIdentifier = bookmarkGroupViewModel.bookmarkGroupIdentifier,
-                                    articleAddress = articleAddress,
-                                    isCurrentlyPrivate = isPrivate,
-                                )
-                            }
-                        },
-                        deleteArticleBookmark = { articleAddress, isPrivate ->
-                            accountViewModel.launchSigner {
-                                bookmarkGroupViewModel.removeArticleBookmark(
-                                    bookmarkGroupViewModel.bookmarkGroupIdentifier,
-                                    articleAddress,
-                                    isPrivate,
-                                )
-                            }
-                        },
-                        nav,
-                    )
+                    BookmarkType.ArticleBookmark -> {
+                        RenderArticleList(
+                            bookmarkGroupViewModel,
+                            pagerState,
+                            accountViewModel,
+                            moveArticleBookmark = { articleAddress, isPrivate ->
+                                accountViewModel.launchSigner {
+                                    bookmarkGroupViewModel.moveArticleBookmark(
+                                        groupIdentifier = bookmarkGroupViewModel.bookmarkGroupIdentifier,
+                                        articleAddress = articleAddress,
+                                        isCurrentlyPrivate = isPrivate,
+                                    )
+                                }
+                            },
+                            deleteArticleBookmark = { articleAddress, isPrivate ->
+                                accountViewModel.launchSigner {
+                                    bookmarkGroupViewModel.removeArticleBookmark(
+                                        bookmarkGroupViewModel.bookmarkGroupIdentifier,
+                                        articleAddress,
+                                        isPrivate,
+                                    )
+                                }
+                            },
+                            nav,
+                        )
+                    }
                 }
             }
         }

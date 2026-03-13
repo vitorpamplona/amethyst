@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNo
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.feeds.rememberForeverPagerState
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.layouts.MaxWidthContainer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.ShorterTopAppBar
@@ -171,35 +172,37 @@ fun FollowPackFeedScreen(
         },
         accountViewModel = accountViewModel,
     ) {
-        HorizontalPager(
-            contentPadding = it,
-            state = pagerState,
-        ) { page ->
-            when (page) {
-                0 -> {
-                    RefresheableFeedView(
-                        newThreadFeedViewModel,
-                        null,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
-                }
+        MaxWidthContainer {
+            HorizontalPager(
+                contentPadding = it,
+                state = pagerState,
+            ) { page ->
+                when (page) {
+                    0 -> {
+                        RefresheableFeedView(
+                            newThreadFeedViewModel,
+                            null,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                        )
+                    }
 
-                1 -> {
-                    RefresheableFeedView(
-                        conversationsFeedViewModel,
-                        null,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
-                }
+                    1 -> {
+                        RefresheableFeedView(
+                            conversationsFeedViewModel,
+                            null,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                        )
+                    }
 
-                2 -> {
-                    UserFeedView(
-                        membersFeedViewModel,
-                        accountViewModel,
-                        nav,
-                    )
+                    2 -> {
+                        UserFeedView(
+                            membersFeedViewModel,
+                            accountViewModel,
+                            nav,
+                        )
+                    }
                 }
             }
         }

@@ -34,6 +34,7 @@ import androidx.compose.ui.layout.ContentScale
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserPicture
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
+import com.vitorpamplona.amethyst.ui.layouts.isCompactWindow
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.SearchIcon
@@ -61,7 +62,9 @@ fun UserDrawerSearchTopBar(
             }
         },
         navigationIcon = {
-            LoggedInUserPictureDrawer(accountViewModel, nav::openDrawer)
+            if (isCompactWindow()) {
+                LoggedInUserPictureDrawer(accountViewModel, nav::openDrawer)
+            }
         },
         actions = {
             IconButton(onClick = { nav.nav(Route.Search) }) {

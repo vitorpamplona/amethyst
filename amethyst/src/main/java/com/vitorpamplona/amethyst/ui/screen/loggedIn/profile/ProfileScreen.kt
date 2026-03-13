@@ -23,12 +23,14 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
@@ -40,6 +42,7 @@ import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -56,8 +59,11 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.window.core.layout.WindowWidthSizeClass
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.layouts.LocalWindowSizeClass
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.observeAccountIsHiddenUser
@@ -277,11 +283,11 @@ fun ProfileScreen(
 
     UserProfileFilterAssemblerSubscription(baseUser, accountViewModel.dataSources().profile)
 
-    RenderSurface { tabRowModifier: Modifier, pagerModifier: Modifier ->
-        RenderScreen(
+    val isExpanded = LocalWindowSizeClass.current == WindowWidthSizeClass.EXPANDED
+
+    if (isExpanded) {
+        RenderExpandedScreen(
             baseUser,
-            tabRowModifier,
-            pagerModifier,
             threadsViewModel,
             repliesViewModel,
             mutualViewModel,
@@ -296,6 +302,27 @@ fun ProfileScreen(
             accountViewModel,
             nav,
         )
+    } else {
+        RenderSurface { tabRowModifier: Modifier, pagerModifier: Modifier ->
+            RenderScreen(
+                baseUser,
+                tabRowModifier,
+                pagerModifier,
+                threadsViewModel,
+                repliesViewModel,
+                mutualViewModel,
+                appRecommendations,
+                externalIdentities,
+                followsFeedViewModel,
+                followersFeedViewModel,
+                zapFeedViewModel,
+                bookmarksFeedViewModel,
+                galleryFeedViewModel,
+                reportsFeedViewModel,
+                accountViewModel,
+                nav,
+            )
+        }
     }
 }
 
@@ -366,6 +393,106 @@ private fun RenderSurface(content: @Composable (tabRowModifier: Modifier, pagerM
                     },
             ) {
                 content(tabRowModifier, pagerModifier)
+            }
+        }
+    }
+}
+
+@Composable
+private fun RenderExpandedScreen(
+    baseUser: User,
+    threadsViewModel: UserProfileNewThreadsFeedViewModel,
+    repliesViewModel: UserProfileConversationsFeedViewModel,
+    mutualViewModel: UserProfileMutualFeedViewModel,
+    appRecommendations: UserAppRecommendationsFeedViewModel,
+    externalIdentities: UserExternalIdentitiesViewModel,
+    followsFeedViewModel: UserProfileFollowsUserFeedViewModel,
+    followersFeedViewModel: UserProfileFollowersUserFeedViewModel,
+    zapFeedViewModel: UserProfileZapsViewModel,
+    bookmarksFeedViewModel: UserProfileBookmarksFeedViewModel,
+    galleryFeedViewModel: UserProfileGalleryFeedViewModel,
+    reportsFeedViewModel: UserProfileReportFeedViewModel,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val pagerState = rememberPagerState { 11 }
+
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background,
+    ) {
+        Row(modifier = Modifier.fillMaxSize()) {
+            // Left side pane: profile header in a scrollable column
+            Column(
+                modifier =
+                    Modifier
+                        .width(320.dp)
+                        .fillMaxHeight()
+                        .verticalScroll(rememberScrollState()),
+            ) {
+                ProfileHeader(baseUser, appRecommendations, externalIdentities, nav, accountViewModel)
+            }
+
+            VerticalDivider(thickness = DividerThickness)
+
+            // Right side: tabs + pager filling remaining space
+            var columnSize by remember { mutableStateOf(IntSize.Zero) }
+            var tabsSize by remember { mutableStateOf(IntSize.Zero) }
+
+            Column(
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .onSizeChanged { columnSize = it },
+            ) {
+                val tabRowModifier = remember { Modifier.onSizeChanged { tabsSize = it } }
+                val pagerModifier =
+                    with(LocalDensity.current) { Modifier.height((columnSize.height - tabsSize.height).toDp()) }
+
+                ScrollableTabRow(
+                    containerColor = Color.Transparent,
+                    contentColor = MaterialTheme.colorScheme.onBackground,
+                    selectedTabIndex = pagerState.currentPage,
+                    edgePadding = Size8dp,
+                    modifier = tabRowModifier,
+                    divider = { HorizontalDivider(thickness = DividerThickness) },
+                ) {
+                    CreateAndRenderTabs(
+                        baseUser,
+                        pagerState,
+                        threadsViewModel,
+                        repliesViewModel,
+                        mutualViewModel,
+                        followsFeedViewModel,
+                        followersFeedViewModel,
+                        zapFeedViewModel,
+                        bookmarksFeedViewModel,
+                        galleryFeedViewModel,
+                        reportsFeedViewModel,
+                        accountViewModel,
+                    )
+                }
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = pagerModifier,
+                ) { page ->
+                    CreateAndRenderPages(
+                        page,
+                        baseUser,
+                        threadsViewModel,
+                        repliesViewModel,
+                        mutualViewModel,
+                        followsFeedViewModel,
+                        followersFeedViewModel,
+                        zapFeedViewModel,
+                        bookmarksFeedViewModel,
+                        galleryFeedViewModel,
+                        reportsFeedViewModel,
+                        accountViewModel,
+                        nav,
+                    )
+                }
             }
         }
     }

@@ -61,6 +61,7 @@ import com.vitorpamplona.amethyst.ui.components.ZapButtonConfig
 import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.layouts.MaxWidthContainer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.WatchNoteEvent
 import com.vitorpamplona.amethyst.ui.note.elements.BannerImage
@@ -97,19 +98,21 @@ fun DvmContentDiscoveryScreen(
         },
         accountViewModel = accountViewModel,
     ) { paddingValues ->
-        Column(Modifier.padding(paddingValues)) {
-            LoadNote(baseNoteHex = appDefinitionEventId, accountViewModel = accountViewModel) { note ->
-                note?.let { baseNote ->
-                    WatchNoteEvent(
-                        baseNote,
-                        onNoteEventFound = {
-                            DvmContentDiscoveryScreen(baseNote, accountViewModel, nav)
-                        },
-                        onBlank = {
-                            FeedEmptyWithStatus(baseNote, stringRes(R.string.dvm_looking_for_app), accountViewModel, nav)
-                        },
-                        accountViewModel,
-                    )
+        MaxWidthContainer {
+            Column(Modifier.padding(paddingValues)) {
+                LoadNote(baseNoteHex = appDefinitionEventId, accountViewModel = accountViewModel) { note ->
+                    note?.let { baseNote ->
+                        WatchNoteEvent(
+                            baseNote,
+                            onNoteEventFound = {
+                                DvmContentDiscoveryScreen(baseNote, accountViewModel, nav)
+                            },
+                            onBlank = {
+                                FeedEmptyWithStatus(baseNote, stringRes(R.string.dvm_looking_for_app), accountViewModel, nav)
+                            },
+                            accountViewModel,
+                        )
+                    }
                 }
             }
         }

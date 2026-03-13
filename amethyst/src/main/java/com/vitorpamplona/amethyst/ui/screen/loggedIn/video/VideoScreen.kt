@@ -65,6 +65,7 @@ import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.feeds.WatchScrollToTop
 import com.vitorpamplona.amethyst.ui.feeds.rememberForeverPagerState
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.layouts.MaxWidthContainer
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -143,15 +144,17 @@ fun VideoScreen(
         },
         accountViewModel = accountViewModel,
     ) {
-        Column(
-            modifier = Modifier.padding(it).consumeWindowInsets(it),
-        ) {
-            RenderPage(
-                videoFeedContentState = videoFeedContentState,
-                pagerStateKey = ScrollStateKeys.VIDEO_SCREEN,
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
+        MaxWidthContainer {
+            Column(
+                modifier = Modifier.padding(it).consumeWindowInsets(it),
+            ) {
+                RenderPage(
+                    videoFeedContentState = videoFeedContentState,
+                    pagerStateKey = ScrollStateKeys.VIDEO_SCREEN,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
         }
     }
 }

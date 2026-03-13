@@ -76,97 +76,110 @@ fun AllSettingsScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val tint = MaterialTheme.colorScheme.onBackground
-
     Scaffold(
         topBar = {
             TopBarWithBackButton(stringRes(id = R.string.settings), nav::popBack)
         },
     ) { padding ->
-        Column(Modifier.padding(padding)) {
-            SettingsSectionHeader(R.string.account_settings)
-            SettingsNavigationRow(
-                title = R.string.relay_setup,
-                iconPainter = R.drawable.relays,
-                iconPainterRef = 4,
-                tint = tint,
-                onClick = { nav.nav(Route.EditRelays) },
-            )
+        AllSettingsContent(
+            accountViewModel = accountViewModel,
+            onSettingsNav = { route -> nav.nav(route) },
+            modifier = Modifier.padding(padding),
+        )
+    }
+}
+
+@Composable
+fun AllSettingsContent(
+    accountViewModel: AccountViewModel,
+    onSettingsNav: (Route) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val tint = MaterialTheme.colorScheme.onBackground
+
+    Column(modifier) {
+        SettingsSectionHeader(R.string.account_settings)
+        SettingsNavigationRow(
+            title = R.string.relay_setup,
+            iconPainter = R.drawable.relays,
+            iconPainterRef = 4,
+            tint = tint,
+            onClick = { onSettingsNav(Route.EditRelays) },
+        )
+        HorizontalDivider()
+        SettingsNavigationRow(
+            title = R.string.media_servers,
+            icon = Icons.Outlined.CloudUpload,
+            tint = tint,
+            onClick = { onSettingsNav(Route.EditMediaServers) },
+        )
+        HorizontalDivider()
+        SettingsNavigationRow(
+            title = R.string.reactions,
+            icon = Icons.Outlined.FavoriteBorder,
+            tint = tint,
+            onClick = { onSettingsNav(Route.UpdateReactionType) },
+        )
+        HorizontalDivider()
+        SettingsNavigationRow(
+            title = R.string.zaps,
+            icon = Icons.Outlined.Bolt,
+            tint = tint,
+            onClick = { onSettingsNav(Route.UpdateZapAmount()) },
+        )
+        HorizontalDivider()
+        SettingsNavigationRow(
+            title = R.string.security_filters,
+            icon = Icons.Outlined.Security,
+            tint = tint,
+            onClick = { onSettingsNav(Route.SecurityFilters) },
+        )
+        HorizontalDivider()
+        SettingsNavigationRow(
+            title = R.string.translations,
+            icon = Icons.Outlined.Translate,
+            tint = tint,
+            onClick = { onSettingsNav(Route.UserSettings) },
+        )
+        accountViewModel.account.settings.keyPair.privKey?.let {
             HorizontalDivider()
             SettingsNavigationRow(
-                title = R.string.media_servers,
-                icon = Icons.Outlined.CloudUpload,
+                title = R.string.backup_keys,
+                icon = Icons.Outlined.Key,
                 tint = tint,
-                onClick = { nav.nav(Route.EditMediaServers) },
-            )
-            HorizontalDivider()
-            SettingsNavigationRow(
-                title = R.string.reactions,
-                icon = Icons.Outlined.FavoriteBorder,
-                tint = tint,
-                onClick = { nav.nav(Route.UpdateReactionType) },
-            )
-            HorizontalDivider()
-            SettingsNavigationRow(
-                title = R.string.zaps,
-                icon = Icons.Outlined.Bolt,
-                tint = tint,
-                onClick = { nav.nav(Route.UpdateZapAmount()) },
-            )
-            HorizontalDivider()
-            SettingsNavigationRow(
-                title = R.string.security_filters,
-                icon = Icons.Outlined.Security,
-                tint = tint,
-                onClick = { nav.nav(Route.SecurityFilters) },
-            )
-            HorizontalDivider()
-            SettingsNavigationRow(
-                title = R.string.translations,
-                icon = Icons.Outlined.Translate,
-                tint = tint,
-                onClick = { nav.nav(Route.UserSettings) },
-            )
-            accountViewModel.account.settings.keyPair.privKey?.let {
-                HorizontalDivider()
-                SettingsNavigationRow(
-                    title = R.string.backup_keys,
-                    icon = Icons.Outlined.Key,
-                    tint = tint,
-                    onClick = { nav.nav(Route.AccountBackup) },
-                )
-            }
-            HorizontalDivider(thickness = 4.dp)
-            SettingsSectionHeader(R.string.app_settings)
-            SettingsNavigationRow(
-                title = R.string.privacy_options,
-                iconPainter = R.drawable.ic_tor,
-                iconPainterRef = 1,
-                tint = tint,
-                onClick = { nav.nav(Route.PrivacyOptions) },
-            )
-            HorizontalDivider()
-            SettingsNavigationRow(
-                title = R.string.namecoin_settings,
-                icon = Icons.Outlined.Security,
-                tint = tint,
-                onClick = { nav.nav(Route.NamecoinSettings) },
-            )
-            HorizontalDivider()
-            SettingsNavigationRow(
-                title = R.string.ui_preferences,
-                icon = Icons.Outlined.Settings,
-                tint = tint,
-                onClick = { nav.nav(Route.Settings) },
-            )
-            HorizontalDivider()
-            SettingsNavigationRow(
-                title = R.string.reactions_settings,
-                icon = Icons.Outlined.ThumbUp,
-                tint = tint,
-                onClick = { nav.nav(Route.ReactionsSettings) },
+                onClick = { onSettingsNav(Route.AccountBackup) },
             )
         }
+        HorizontalDivider(thickness = 4.dp)
+        SettingsSectionHeader(R.string.app_settings)
+        SettingsNavigationRow(
+            title = R.string.privacy_options,
+            iconPainter = R.drawable.ic_tor,
+            iconPainterRef = 1,
+            tint = tint,
+            onClick = { onSettingsNav(Route.PrivacyOptions) },
+        )
+        HorizontalDivider()
+        SettingsNavigationRow(
+            title = R.string.namecoin_settings,
+            icon = Icons.Outlined.Security,
+            tint = tint,
+            onClick = { onSettingsNav(Route.NamecoinSettings) },
+        )
+        HorizontalDivider()
+        SettingsNavigationRow(
+            title = R.string.ui_preferences,
+            icon = Icons.Outlined.Settings,
+            tint = tint,
+            onClick = { onSettingsNav(Route.Settings) },
+        )
+        HorizontalDivider()
+        SettingsNavigationRow(
+            title = R.string.reactions_settings,
+            icon = Icons.Outlined.ThumbUp,
+            tint = tint,
+            onClick = { onSettingsNav(Route.ReactionsSettings) },
+        )
     }
 }
 

@@ -56,6 +56,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUse
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
+import com.vitorpamplona.amethyst.ui.layouts.MaxWidthContainer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
@@ -147,20 +148,22 @@ fun ShowQRScreen(
             )
         },
     ) { pad ->
-        Column(
-            Modifier
-                .fillMaxSize()
-                .padding(
-                    start = 20.dp,
-                    end = 20.dp,
-                    top = pad.calculateTopPadding(),
-                    bottom = pad.calculateBottomPadding(),
-                ).consumeWindowInsets(pad)
-                .imePadding(),
-            verticalArrangement = Arrangement.SpaceAround,
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            ShowQRBody(user, accountViewModel, nav)
+        MaxWidthContainer(maxWidth = 560.dp) {
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .padding(
+                        start = 20.dp,
+                        end = 20.dp,
+                        top = pad.calculateTopPadding(),
+                        bottom = pad.calculateBottomPadding(),
+                    ).consumeWindowInsets(pad)
+                    .imePadding(),
+                verticalArrangement = Arrangement.SpaceAround,
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                ShowQRBody(user, accountViewModel, nav)
+            }
         }
     }
 }

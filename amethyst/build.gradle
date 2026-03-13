@@ -257,6 +257,10 @@ dependencies {
     // Adaptive Layout / Two Pane
     implementation libs.androidx.material3.windowSize
     implementation libs.accompanist.adaptive
+    implementation libs.androidx.material3.adaptive
+    implementation libs.androidx.material3.adaptive.layout
+    implementation libs.androidx.material3.adaptive.navigation
+    implementation libs.androidx.material3.adaptive.navigation.suite
 
     // Lifecycle
     implementation libs.androidx.lifecycle.runtime.ktx

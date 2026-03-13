@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.TextSearchDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.layouts.MaxWidthContainer
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -124,11 +125,13 @@ fun SearchScreen(
         },
         accountViewModel = accountViewModel,
     ) {
-        Column(
-            modifier = Modifier.padding(it).consumeWindowInsets(it),
-        ) {
-            ObserveRelayListForSearchAndDisplayIfNotFound(accountViewModel, nav)
-            DisplaySearchResults(searchBarViewModel, nav, accountViewModel)
+        MaxWidthContainer {
+            Column(
+                modifier = Modifier.padding(it).consumeWindowInsets(it),
+            ) {
+                ObserveRelayListForSearchAndDisplayIfNotFound(accountViewModel, nav)
+                DisplaySearchResults(searchBarViewModel, nav, accountViewModel)
+            }
         }
     }
 }

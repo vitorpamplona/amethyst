@@ -52,6 +52,7 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakePictureButton
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakeVideoButton
+import com.vitorpamplona.amethyst.ui.layouts.MaxWidthContainer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.PostingTopBar
@@ -173,11 +174,13 @@ fun NewProductScreen(
                     .consumeWindowInsets(pad)
                     .imePadding(),
         ) {
-            NewProductBody(
-                postViewModel,
-                accountViewModel,
-                nav,
-            )
+            MaxWidthContainer(maxWidth = 560.dp) {
+                NewProductBody(
+                    postViewModel,
+                    accountViewModel,
+                    nav,
+                )
+            }
         }
     }
 }

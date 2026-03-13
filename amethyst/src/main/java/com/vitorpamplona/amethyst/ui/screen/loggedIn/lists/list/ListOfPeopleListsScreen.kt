@@ -35,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.layouts.MaxWidthContainer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -66,14 +67,16 @@ fun ListOfPeopleListsScreen(
             TopBarWithBackButton(stringRes(R.string.my_lists), nav::popBack)
         },
     ) { paddingValues ->
-        Column(
-            Modifier
-                .padding(
-                    top = paddingValues.calculateTopPadding(),
-                    bottom = paddingValues.calculateBottomPadding(),
-                ).fillMaxHeight(),
-        ) {
-            AllPeopleListFeedView(list, pack, nav)
+        MaxWidthContainer {
+            Column(
+                Modifier
+                    .padding(
+                        top = paddingValues.calculateTopPadding(),
+                        bottom = paddingValues.calculateBottomPadding(),
+                    ).fillMaxHeight(),
+            ) {
+                AllPeopleListFeedView(list, pack, nav)
+            }
         }
     }
 }

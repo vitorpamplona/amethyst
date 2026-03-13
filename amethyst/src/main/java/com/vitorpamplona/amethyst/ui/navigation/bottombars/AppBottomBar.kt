@@ -41,6 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.ui.layouts.isCompactWindow
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -55,6 +56,8 @@ fun AppBottomBar(
     accountViewModel: AccountViewModel,
     nav: (Route) -> Unit,
 ) {
+    if (!isCompactWindow()) return
+
     val isKeyboardState by keyboardAsState()
     if (isKeyboardState == KeyboardState.Closed) {
         RenderBottomMenu(selectedRoute, accountViewModel, nav)
