@@ -117,6 +117,12 @@ class AppModules(
         OtsSharedPreferences(appContext, applicationIOScope)
     }
 
+    init {
+        applicationIOScope.launch {
+            // Eagerly initialize OtsSharedPreferences off the main thread
+            otsPrefs
+        }
+    }
     // App services that should be run as soon as there are subscribers to their flows
     val locationManager = LocationState(appContext, applicationIOScope)
     val connManager = ConnectivityManager(appContext, applicationIOScope)

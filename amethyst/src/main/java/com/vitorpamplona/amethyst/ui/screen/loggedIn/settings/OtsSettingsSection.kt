@@ -234,7 +234,7 @@ private fun CustomExplorerInput(
     onSave: (String?) -> Unit,
 ) {
     var input by rememberSaveable(currentUrl) { mutableStateOf(currentUrl ?: "") }
-    var validationError by remember { mutableStateOf<String?>(null) }
+    var validationError by remember(currentUrl) { mutableStateOf<String?>(null) }
     val kb = LocalSoftwareKeyboardController.current
 
     fun trySave() {
