@@ -79,6 +79,7 @@ import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.note.showAmountInteger
 import com.vitorpamplona.amethyst.ui.screen.UiSettingsState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CombinedZap
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync.EventSyncViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
 import com.vitorpamplona.amethyst.ui.tor.TorType
@@ -175,6 +176,7 @@ class AccountViewModel(
     val toastManager = ToastManager()
     val broadcastTracker = BroadcastTracker()
     val feedStates = AccountFeedContentStates(account, viewModelScope)
+    val eventSyncViewModel = EventSyncViewModel(account, viewModelScope)
 
     val tempManualPaymentCache = LruCache<String, List<ZapPaymentHandler.Payable>>(5)
 

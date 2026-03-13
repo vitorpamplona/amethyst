@@ -21,15 +21,13 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -47,10 +45,14 @@ import kotlinx.coroutines.withTimeoutOrNull
  *
  * The procedure iterates over every relay URL in LocalCache.relayHints.relayDB.
  * Events are deduplicated per destination to avoid redundant sends.
+ *
+ * Scoped to the AccountViewModel so the sync continues in the background while
+ * the user navigates to other screens or away from the app.
  */
 class EventSyncViewModel(
     val account: Account,
-) : ViewModel() {
+    private val scope: CoroutineScope,
+) {
     sealed class SyncState {
         object Idle : SyncState()
 
@@ -81,7 +83,7 @@ class EventSyncViewModel(
     fun start() {
         if (_syncState.value is SyncState.Running) return
         syncJob =
-            viewModelScope.launch(Dispatchers.IO) {
+            scope.launch(Dispatchers.IO) {
                 runSync()
             }
     }
@@ -275,12 +277,5 @@ class EventSyncViewModel(
 
         account.client.close(subId)
         done.close()
-    }
-
-    class Factory(
-        val account: Account,
-    ) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = EventSyncViewModel(account) as T
     }
 }

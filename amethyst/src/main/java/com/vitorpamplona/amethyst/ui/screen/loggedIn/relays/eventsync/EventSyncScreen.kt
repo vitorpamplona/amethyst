@@ -48,7 +48,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
@@ -60,8 +59,7 @@ fun EventSyncScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val syncViewModel: EventSyncViewModel =
-        viewModel(factory = EventSyncViewModel.Factory(accountViewModel.account))
+    val syncViewModel = accountViewModel.eventSyncViewModel
 
     val syncState by syncViewModel.syncState.collectAsStateWithLifecycle()
     val isMobileOrMetered by accountViewModel.settings.isMobileOrMeteredConnection.collectAsStateWithLifecycle()
@@ -70,10 +68,7 @@ fun EventSyncScreen(
         topBar = {
             TopBarWithBackButton(
                 caption = stringRes(R.string.event_sync_title),
-                popBack = {
-                    syncViewModel.cancel()
-                    nav.popBack()
-                },
+                popBack = nav::popBack,
             )
         },
     ) { padding ->
