@@ -43,6 +43,7 @@ fun ActionTopBar(
     isActive: () -> Boolean = { true },
     onCancel: () -> Unit,
     onPost: () -> Unit,
+    additionalActions: @Composable (() -> Unit)? = null,
 ) {
     ShorterTopAppBar(
         title = {
@@ -63,6 +64,9 @@ fun ActionTopBar(
             )
         },
         actions = {
+            if (additionalActions != null) {
+                additionalActions()
+            }
             Button(
                 modifier = HalfHorzPadding,
                 enabled = isActive(),
@@ -100,12 +104,14 @@ fun SavingTopBar(
     isActive: () -> Boolean = { true },
     onCancel: () -> Unit,
     onPost: () -> Unit,
+    additionalActions: @Composable (() -> Unit)? = null,
 ) = ActionTopBar(
     titleRes = titleRes,
     postRes = R.string.save,
     isActive = isActive,
     onCancel = onCancel,
     onPost = onPost,
+    additionalActions = additionalActions,
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
