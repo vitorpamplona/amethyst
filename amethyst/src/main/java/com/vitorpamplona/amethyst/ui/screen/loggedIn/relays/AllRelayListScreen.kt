@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays
 
+import android.content.Context
+import android.content.Intent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.consumeWindowInsets
@@ -27,7 +29,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -36,6 +42,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -77,6 +84,7 @@ import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
 import com.vitorpamplona.amethyst.ui.theme.SettingsCategoryFirstModifier
 import com.vitorpamplona.amethyst.ui.theme.SettingsCategorySpacingModifier
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfo
 import com.vitorpamplona.amethyst.ui.theme.grayText
 
 @Composable
@@ -175,10 +183,36 @@ fun MappedAllRelayListView(
     val proxyRelays by proxyViewModel.relays.collectAsStateWithLifecycle()
     val relayFeedsFeedState by relayFeedsViewModel.relays.collectAsStateWithLifecycle()
 
+    val context = LocalContext.current
+
     Scaffold(
         topBar = {
             SavingTopBar(
                 titleRes = R.string.relay_settings,
+                additionalActions = {
+                    IconButton(onClick = {
+                        exportRelaySettings(
+                            context = context,
+                            homeRelays = homeFeedState,
+                            notifRelays = notifFeedState,
+                            dmRelays = dmFeedState,
+                            privateOutboxRelays = privateOutboxFeedState,
+                            proxyRelays = proxyRelays,
+                            broadcastRelays = broadcastRelays,
+                            indexerRelays = indexerRelays,
+                            searchRelays = searchFeedState,
+                            localRelays = localFeedState,
+                            trustedRelays = trustedFeedState,
+                            favoriteRelays = relayFeedsFeedState,
+                            blockedRelays = blockedFeedState,
+                        )
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.Share,
+                            contentDescription = stringRes(R.string.export_relay_settings),
+                        )
+                    }
+                },
                 onCancel = {
                     dmViewModel.clear()
                     nip65ViewModel.clear()
@@ -446,4 +480,163 @@ fun SettingsCategoryWithButton(
 
         action()
     }
+}
+
+private fun formatRelaySection(
+    title: String,
+    description: String,
+    relays: List<BasicRelaySetupInfo>,
+    builder: StringBuilder,
+) {
+    if (relays.isEmpty()) return
+    builder.appendLine("## $title")
+    builder.appendLine("# $description")
+    builder.appendLine()
+    relays.forEach { relay ->
+        builder.appendLine(relay.relay.url)
+    }
+    builder.appendLine()
+}
+
+fun buildRelaySettingsText(
+    context: Context,
+    homeRelays: List<BasicRelaySetupInfo>,
+    notifRelays: List<BasicRelaySetupInfo>,
+    dmRelays: List<BasicRelaySetupInfo>,
+    privateOutboxRelays: List<BasicRelaySetupInfo>,
+    proxyRelays: List<BasicRelaySetupInfo>,
+    broadcastRelays: List<BasicRelaySetupInfo>,
+    indexerRelays: List<BasicRelaySetupInfo>,
+    searchRelays: List<BasicRelaySetupInfo>,
+    localRelays: List<BasicRelaySetupInfo>,
+    trustedRelays: List<BasicRelaySetupInfo>,
+    favoriteRelays: List<BasicRelaySetupInfo>,
+    blockedRelays: List<BasicRelaySetupInfo>,
+): String {
+    val builder = StringBuilder()
+    builder.appendLine("# ${context.getString(R.string.relay_settings)}")
+    builder.appendLine()
+
+    formatRelaySection(
+        context.getString(R.string.public_home_section),
+        context.getString(R.string.public_home_section_explainer),
+        homeRelays,
+        builder,
+    )
+    formatRelaySection(
+        context.getString(R.string.public_notif_section),
+        context.getString(R.string.public_notif_section_explainer),
+        notifRelays,
+        builder,
+    )
+    formatRelaySection(
+        context.getString(R.string.private_inbox_section),
+        context.getString(R.string.private_inbox_section_explainer),
+        dmRelays,
+        builder,
+    )
+    formatRelaySection(
+        context.getString(R.string.private_outbox_section),
+        context.getString(R.string.private_outbox_section_explainer),
+        privateOutboxRelays,
+        builder,
+    )
+    formatRelaySection(
+        context.getString(R.string.proxy_section),
+        context.getString(R.string.proxy_section_explainer),
+        proxyRelays,
+        builder,
+    )
+    formatRelaySection(
+        context.getString(R.string.broadcast_section),
+        context.getString(R.string.broadcast_section_explainer),
+        broadcastRelays,
+        builder,
+    )
+    formatRelaySection(
+        context.getString(R.string.indexer_section),
+        context.getString(R.string.indexer_section_explainer),
+        indexerRelays,
+        builder,
+    )
+    formatRelaySection(
+        context.getString(R.string.search_section),
+        context.getString(R.string.search_section_explainer),
+        searchRelays,
+        builder,
+    )
+    formatRelaySection(
+        context.getString(R.string.local_section),
+        context.getString(R.string.local_section_explainer),
+        localRelays,
+        builder,
+    )
+    formatRelaySection(
+        context.getString(R.string.trusted_section),
+        context.getString(R.string.trusted_section_explainer),
+        trustedRelays,
+        builder,
+    )
+    formatRelaySection(
+        context.getString(R.string.favorite_section),
+        context.getString(R.string.favorite_section_explainer),
+        favoriteRelays,
+        builder,
+    )
+    formatRelaySection(
+        context.getString(R.string.blocked_section),
+        context.getString(R.string.blocked_section_explainer),
+        blockedRelays,
+        builder,
+    )
+
+    return builder.toString().trimEnd()
+}
+
+fun exportRelaySettings(
+    context: Context,
+    homeRelays: List<BasicRelaySetupInfo>,
+    notifRelays: List<BasicRelaySetupInfo>,
+    dmRelays: List<BasicRelaySetupInfo>,
+    privateOutboxRelays: List<BasicRelaySetupInfo>,
+    proxyRelays: List<BasicRelaySetupInfo>,
+    broadcastRelays: List<BasicRelaySetupInfo>,
+    indexerRelays: List<BasicRelaySetupInfo>,
+    searchRelays: List<BasicRelaySetupInfo>,
+    localRelays: List<BasicRelaySetupInfo>,
+    trustedRelays: List<BasicRelaySetupInfo>,
+    favoriteRelays: List<BasicRelaySetupInfo>,
+    blockedRelays: List<BasicRelaySetupInfo>,
+) {
+    val text =
+        buildRelaySettingsText(
+            context,
+            homeRelays,
+            notifRelays,
+            dmRelays,
+            privateOutboxRelays,
+            proxyRelays,
+            broadcastRelays,
+            indexerRelays,
+            searchRelays,
+            localRelays,
+            trustedRelays,
+            favoriteRelays,
+            blockedRelays,
+        )
+
+    val sendIntent =
+        Intent().apply {
+            action = Intent.ACTION_SEND
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, text)
+            putExtra(Intent.EXTRA_TITLE, context.getString(R.string.export_relay_settings))
+        }
+
+    val shareIntent =
+        Intent.createChooser(
+            sendIntent,
+            context.getString(R.string.export_relay_settings),
+        )
+    context.startActivity(shareIntent)
 }

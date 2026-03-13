@@ -1379,6 +1379,8 @@
     <string name="blocked_section">Blocked Relays</string>
     <string name="blocked_section_explainer">Amethyst will never connect to these relays</string>
 
+    <string name="export_relay_settings">Export relay settings</string>
+
     <string name="zap_the_devs_title">Zap the Devs!</string>
     <string name="zap_the_devs_description">Your donation helps us make a difference. Every sat counts!</string>
     <string name="donate_now">Donate Now</string>
