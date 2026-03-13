@@ -61,12 +61,48 @@ kotlin {
     // project can be found here:
     // https://developer.android.com/kotlin/multiplatform/migrate
     val xcfName = "quartz-kmpKit"
+    val libsodiumPath = project.file("src/nativeInterop/libsodium")
+    val libsodiumHeaderFilesPath = project.file("$libsodiumPath/include/sodium")
+
+    // This generates the Libsodium definition file, necessary for creating native bindings(a Kotlin API) for libsodium(for iOS).
+//    val headersTask = tasks.register<Exec>("ExtractLibsodiumHeaders") {
+//        val unpackDirectory = "$libsodiumPath/include"
+//        unzipTo(
+//            project.file(unpackDirectory),
+//            project.file("$unpackDirectory/sodium.zip")
+//        )
+//    }
+
+    val libsodiumDefFileGeneration = tasks.register<Exec>("GenerateSodiumCinteropFile") {
+        val definitionFile = project.file("src/nativeInterop/cinterop/Clibsodium.def")
+        if (!definitionFile.exists()){
+            definitionFile.createNewFile()
+            definitionFile.writeText("package = Clibsodium")
+            definitionFile.appendText("\n" + "staticLibraries = libsodium.a libsodium-simulator.a")
+            definitionFile.appendText("\n" + "libraryPaths = ${libsodiumPath}/ios/lib ${libsodiumPath}/ios-simulators/lib")
+        }
+    }
 
     listOf(
         iosArm64(),
         iosX64(),
         iosSimulatorArm64(),
     ).forEach { target ->
+
+        target.compilations.getByName("main") {
+//            headersTask.get()
+            val Clibsodium by cinterops.creating {
+                assert(project.file("Clibsodium.def").exists())
+                definitionFile.set(project.file("Clibsodium.def"))
+
+                headers(
+                    "$libsodiumHeaderFilesPath/crypto_aead_xchacha20poly1305.h",
+                    "$libsodiumHeaderFilesPath/crypto_core_hchacha20.h",
+                    "$libsodiumHeaderFilesPath/crypto_stream_chacha20.h"
+                )
+            }
+        }
+
         target.swiftPackageConfig(cinteropName = "swiftbridge") {
             minIos = "17"
             minMacos = "14"
@@ -239,6 +275,8 @@ kotlin {
                 implementation(libs.charlietap.cachemap)
                 implementation(libs.net.thauvin.erik.urlencoder.lib)
                 implementation(libs.dev.whyoleg.cryptography.provider.apple.optimal)
+                implementation("io.github.andreypfau:kotlinx-crypto-hmac:0.0.4")
+                implementation("io.github.andreypfau:kotlinx-crypto-sha2:0.0.4")
             }
         }
 

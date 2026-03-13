@@ -20,62 +20,46 @@
  */
 package com.vitorpamplona.quartz.utils.mac
 
-import dev.whyoleg.cryptography.CryptographyProvider
-import dev.whyoleg.cryptography.algorithms.HMAC
-import dev.whyoleg.cryptography.algorithms.SHA256
-import dev.whyoleg.cryptography.algorithms.SHA512
-import dev.whyoleg.cryptography.providers.apple.Apple
+import io.github.andreypfau.kotlinx.crypto.HMac
+import io.github.andreypfau.kotlinx.crypto.Sha256
+import io.github.andreypfau.kotlinx.crypto.Sha512
 
 actual class MacInstance actual constructor(
     algorithm: String,
     key: ByteArray,
 ) {
-    private val cryptoProvider = CryptographyProvider.Apple
-
-    private var internalMacInstance: HMAC.Key =
-        cryptoProvider
-            .get(HMAC)
-            .keyDecoder(digestForAlgorithm(algorithm))
-            .decodeFromByteArrayBlocking(HMAC.Key.Format.RAW, key)
-
-    private var hmacSignFunction = internalMacInstance.signatureGenerator().createSignFunction()
+    private var nativeHmac = HMac(digestForAlgorithm(algorithm), key)
 
     actual fun init(
         key: ByteArray,
         algorithm: String,
     ) {
-        internalMacInstance =
-            cryptoProvider
-                .get(HMAC)
-                .keyDecoder(digestForAlgorithm(algorithm))
-                .decodeFromByteArrayBlocking(HMAC.Key.Format.RAW, key)
-
-        hmacSignFunction = internalMacInstance.signatureGenerator().createSignFunction()
+        nativeHmac = HMac(digestForAlgorithm(algorithm), key)
     }
 
-    actual fun getMacLength(): Int = hmacSignFunction.signIntoByteArray(internalMacInstance.encodeToByteArrayBlocking(HMAC.Key.Format.RAW))
+    actual fun getMacLength(): Int = nativeHmac.macSize
 
     actual fun update(array: ByteArray) {
-        hmacSignFunction.update(array)
+        nativeHmac.update(array)
     }
 
     actual fun update(byte: Byte) {
-        hmacSignFunction.update(byteArrayOf(byte))
+        nativeHmac.update(byte)
     }
 
-    actual fun doFinal(): ByteArray = hmacSignFunction.signToByteArray()
+    actual fun doFinal(): ByteArray = nativeHmac.digest()
 
     actual fun doFinal(
         output: ByteArray,
         offset: Int,
     ) {
-        hmacSignFunction.signIntoByteArray(output, offset)
+        nativeHmac.digest(output, offset)
     }
 
     private fun digestForAlgorithm(algorithm: String) =
         when (algorithm) {
-            "HmacSHA256" -> SHA256
-            "HmacSHA512" -> SHA512
+            "HmacSHA256" -> Sha256()
+            "HmacSHA512" -> Sha512()
             else -> error("Algorithm is not yet supported.")
         }
 }
