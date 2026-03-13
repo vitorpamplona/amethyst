@@ -59,11 +59,14 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNo
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserStatuses
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.ClickableTextPrimary
+import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeForUser
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.NIP05IconSize
@@ -77,8 +80,13 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.firstTaggedAddress
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.firstTaggedEvent
+import com.vitorpamplona.quartz.nip01Core.tags.people.firstTaggedUserId
+import com.vitorpamplona.quartz.nip30CustomEmoji.taggedEmojis
 import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.ImmutableMap
+import kotlinx.collections.immutable.persistentMapOf
+import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.seconds
 
@@ -220,12 +228,24 @@ fun DisplayStatus(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val emojis =
+        remember(event) {
+            val emojiList = event.taggedEmojis()
+            if (emojiList.isEmpty()) {
+                persistentMapOf()
+            } else {
+                emojiList.associate { it.code to it.url }.toImmutableMap()
+            }
+        }
+
     DisplayStatusInner(
         event.content,
         event.dTag(),
         event.firstTaggedUrl()?.ifBlank { null },
         event.firstTaggedAddress(),
         event.firstTaggedEvent(),
+        event.firstTaggedUserId(),
+        emojis,
         accountViewModel,
         nav,
     )
@@ -238,11 +258,13 @@ fun DisplayStatusInner(
     url: String?,
     nostrATag: Address?,
     nostrETag: ETag?,
+    nostrPTag: String?,
+    emojis: ImmutableMap<String, String>,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     when (type) {
-        "music" -> {
+        StatusEvent.MUSIC -> {
             Icon(
                 imageVector = CustomHashTagIcons.Tunestr,
                 null,
@@ -254,13 +276,24 @@ fun DisplayStatusInner(
         else -> {}
     }
 
-    Text(
-        text = content,
-        fontSize = Font14SP,
-        color = MaterialTheme.colorScheme.placeholderText,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-    )
+    if (emojis.isNotEmpty()) {
+        CreateTextWithEmoji(
+            text = content,
+            emojis = emojis,
+            color = MaterialTheme.colorScheme.placeholderText,
+            fontSize = Font14SP,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    } else {
+        Text(
+            text = content,
+            fontSize = Font14SP,
+            color = MaterialTheme.colorScheme.placeholderText,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
 
     if (url != null) {
         val uri = LocalUriHandler.current
@@ -310,6 +343,23 @@ fun DisplayStatusInner(
                             accountViewModel.account,
                         )?.let { nav.nav(it) }
                     },
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+                        null,
+                        modifier = Size15Modifier,
+                        tint = MaterialTheme.colorScheme.lessImportantLink,
+                    )
+                }
+            }
+        }
+    } else if (nostrPTag != null) {
+        LoadUser(baseUserHex = nostrPTag, accountViewModel) { user ->
+            if (user != null) {
+                Spacer(modifier = StdHorzSpacer)
+                IconButton(
+                    modifier = Size15Modifier,
+                    onClick = { nav.nav(routeForUser(nostrPTag)) },
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.OpenInNew,
