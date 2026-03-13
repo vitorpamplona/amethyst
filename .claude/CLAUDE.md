@@ -1,8 +1,14 @@
-# Amethyst Desktop Fork
+# Amethyst
 
 ## Project Overview
 
-Fork of [Amethyst](https://github.com/vitorpamplona/amethyst) adding Compose Multiplatform Desktop support. Quartz library converted to full KMP for code sharing between Android and Desktop JVM.
+Amethyst is a Nostr Client for Android that was made for Android-only and has been slowly switching
+over to a Kotlin Multiplatform project. This project has 4 main modules: `quartz`, `commons`,
+`amethyst` and `desktopApp`. Quartz should contain implementations of Nostr specifications and
+utilities to help implement them. Commons stores shared code between Amethyst Android (`amethyst`)
+and Amethyst Desktop (`desktopApp`). The Desktop App is designed to be mouse first and so uses a
+completely different screen and navigation architecture while sharing the back end components with
+the android counterpart.
 
 ## Architecture
 
@@ -12,7 +18,8 @@ amethyst/
 │   └── src/
 │       ├── commonMain/    # Shared Nostr protocol, data models
 │       ├── androidMain/   # Android-specific (crypto, storage)
-│       └── jvmMain/       # Desktop JVM-specific
+│       ├── jvmMain/       # Desktop JVM-specific
+│       └── iosMain/       # iOS-specific
 ├── commons/        # Shared UI components (convert to KMP)
 │   └── src/
 │       ├── commonMain/    # Shared composables, icons, state
@@ -20,12 +27,12 @@ amethyst/
 │       └── jvmMain/       # Desktop-specific UI utilities
 ├── desktopApp/     # Desktop JVM application (layouts, navigation)
 ├── amethyst/       # Android app (layouts, navigation)
-└── ammolite/       # Support module
+└── ammolite/       # Support module (unused)
 ```
 
 **Sharing Philosophy:**
-- `quartz/` = Business logic, protocol, data (no UI)
-- `commons/` = Shared UI components, icons, composables, **ViewModels**
+- `quartz/` = Nostr business logic, protocol, data (no UI)
+- `commons/` = Shared UI components, icons, composables, flows and ViewModels
 - `amethyst/` & `desktopApp/` = Platform-native layouts and navigation
 
 ## Tech Stack
@@ -240,6 +247,13 @@ actual fun openExternalUrl(url: String) {
     Desktop.getDesktop().browse(URI(url))
 }
 ```
+
+## Code Formatting
+After completing any task that modifies Kotlin files, always run:
+```
+./gradlew spotlessApply
+```
+Do this before considering the task complete.
 
 ### Navigation Shell
 - **Desktop**: Sidebar + main content area

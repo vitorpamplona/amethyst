@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./gradlew spotlessApply",
+            "timeout": 120
+          }
+        ]
+      }
+    ]
+  }
+}
