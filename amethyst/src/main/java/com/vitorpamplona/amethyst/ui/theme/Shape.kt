@@ -249,6 +249,23 @@ val ChatPaddingModifier =
             top = 3.dp,
             bottom = 3.dp,
         )
+val ChatPaddingGroupedModifier =
+    Modifier
+        .fillMaxWidth(1f)
+        .padding(
+            start = 12.dp,
+            end = 12.dp,
+            top = 1.dp,
+            bottom = 1.dp,
+        )
+
+// Grouped bubble shapes (me = right side, them = left side)
+val ChatBubbleShapeMeFirst = RoundedCornerShape(15.dp, 15.dp, 3.dp, 15.dp)
+val ChatBubbleShapeThemFirst = RoundedCornerShape(15.dp, 15.dp, 15.dp, 3.dp)
+val ChatBubbleShapeMeMiddle = RoundedCornerShape(15.dp, 5.dp, 3.dp, 15.dp)
+val ChatBubbleShapeThemMiddle = RoundedCornerShape(5.dp, 15.dp, 15.dp, 3.dp)
+val ChatBubbleShapeMeLast = RoundedCornerShape(15.dp, 5.dp, 15.dp, 15.dp)
+val ChatBubbleShapeThemLast = RoundedCornerShape(5.dp, 15.dp, 15.dp, 15.dp)
 
 val profileContentHeaderModifier =
     Modifier.fillMaxWidth().padding(top = 70.dp, start = Size25dp, end = Size25dp)

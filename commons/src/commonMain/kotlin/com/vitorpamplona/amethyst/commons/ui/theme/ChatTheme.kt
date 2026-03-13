@@ -34,9 +34,33 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
-// Chat bubble shapes
+// Chat bubble shapes - standalone messages
 val ChatBubbleShapeMe = RoundedCornerShape(15.dp, 15.dp, 3.dp, 15.dp)
 val ChatBubbleShapeThem = RoundedCornerShape(3.dp, 15.dp, 15.dp, 15.dp)
+
+// Chat bubble shapes - grouped messages (me = right side, them = left side)
+// First in group: normal top corners, small bottom-right for me / small bottom-left for them
+val ChatBubbleShapeMeFirst = RoundedCornerShape(15.dp, 15.dp, 3.dp, 15.dp)
+val ChatBubbleShapeThemFirst = RoundedCornerShape(15.dp, 15.dp, 15.dp, 3.dp)
+
+// Middle of group: small corners on the sender side
+val ChatBubbleShapeMeMiddle = RoundedCornerShape(15.dp, 5.dp, 3.dp, 15.dp)
+val ChatBubbleShapeThemMiddle = RoundedCornerShape(5.dp, 15.dp, 15.dp, 3.dp)
+
+// Last in group: small top corner on sender side, normal bottom
+val ChatBubbleShapeMeLast = RoundedCornerShape(15.dp, 5.dp, 15.dp, 15.dp)
+val ChatBubbleShapeThemLast = RoundedCornerShape(5.dp, 15.dp, 15.dp, 15.dp)
+
+// Grouping spacing
+val ChatGroupedPadding =
+    Modifier
+        .fillMaxWidth(1f)
+        .padding(
+            start = 12.dp,
+            end = 12.dp,
+            top = 1.dp,
+            bottom = 1.dp,
+        )
 
 // Chat bubble modifiers
 val ChatBubbleMaxSizeModifier = Modifier.fillMaxWidth(0.85f)
@@ -68,6 +92,20 @@ val ChatReactionRowHeight = Modifier.height(20.dp)
 // Common size values
 val ChatSize20dp = 20.dp
 val ChatSize34dp = 34.dp
+
+// Below-bubble timestamp padding
+val ChatTimestampPadding = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+
+// Reaction pill styling
+val ChatReactionPillShape = RoundedCornerShape(12.dp)
+val ChatReactionPillPadding = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+val ChatReactionPillSpacing = Arrangement.spacedBy(4.dp)
+val ChatBelowBubblePadding = Modifier.padding(top = 2.dp)
+
+// Reply preview bar
+val ChatReplyBarWidth = 3.dp
+val ChatReplyBarShape = RoundedCornerShape(2.dp)
+val ChatReplyPreviewPadding = Modifier.padding(start = 8.dp, top = 2.dp, bottom = 4.dp)
 
 // Chat color extensions for ColorScheme
 val ColorScheme.chatBubbleBackground: Color

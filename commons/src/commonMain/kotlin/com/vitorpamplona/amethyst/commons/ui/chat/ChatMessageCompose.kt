@@ -61,12 +61,15 @@ fun ChatMessageCompose(
     isComplete: Boolean = true,
     hasDetailsToShow: Boolean = false,
     drawAuthorInfo: Boolean = false,
+    isFirstInGroup: Boolean = true,
+    isLastInGroup: Boolean = true,
     parentBackgroundColor: MutableState<Color>? = null,
     onClick: () -> Boolean = { false },
     onAuthorClick: () -> Unit = {},
     actionMenu: @Composable (onDismiss: () -> Unit) -> Unit = {},
     authorLine: @Composable () -> Unit = {},
     detailRow: @Composable () -> Unit = {},
+    belowBubble: @Composable (() -> Unit)? = null,
     messageContent: @Composable (MutableState<Color>) -> Unit,
 ) {
     ChatBubbleLayout(
@@ -76,12 +79,15 @@ fun ChatMessageCompose(
         isComplete = isComplete,
         hasDetailsToShow = hasDetailsToShow,
         drawAuthorInfo = drawAuthorInfo,
+        isFirstInGroup = isFirstInGroup,
+        isLastInGroup = isLastInGroup,
         parentBackgroundColor = parentBackgroundColor,
         onClick = onClick,
         onAuthorClick = onAuthorClick,
         actionMenu = actionMenu,
         drawAuthorLine = authorLine,
         detailRow = detailRow,
+        belowBubble = belowBubble,
     ) { bgColor ->
         Row(verticalAlignment = Alignment.CenterVertically) {
             messageContent(bgColor)

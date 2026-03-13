@@ -48,7 +48,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import com.vitorpamplona.amethyst.ui.theme.ChatBubbleMaxSizeModifier
 import com.vitorpamplona.amethyst.ui.theme.ChatBubbleShapeMe
+import com.vitorpamplona.amethyst.ui.theme.ChatBubbleShapeMeFirst
+import com.vitorpamplona.amethyst.ui.theme.ChatBubbleShapeMeLast
+import com.vitorpamplona.amethyst.ui.theme.ChatBubbleShapeMeMiddle
 import com.vitorpamplona.amethyst.ui.theme.ChatBubbleShapeThem
+import com.vitorpamplona.amethyst.ui.theme.ChatBubbleShapeThemFirst
+import com.vitorpamplona.amethyst.ui.theme.ChatBubbleShapeThemLast
+import com.vitorpamplona.amethyst.ui.theme.ChatBubbleShapeThemMiddle
+import com.vitorpamplona.amethyst.ui.theme.ChatPaddingGroupedModifier
 import com.vitorpamplona.amethyst.ui.theme.ChatPaddingInnerQuoteModifier
 import com.vitorpamplona.amethyst.ui.theme.ChatPaddingModifier
 import com.vitorpamplona.amethyst.ui.theme.HalfHalfVertPadding
@@ -70,12 +77,15 @@ fun ChatBubbleLayout(
     isComplete: Boolean,
     hasDetailsToShow: Boolean,
     drawAuthorInfo: Boolean,
+    isFirstInGroup: Boolean = true,
+    isLastInGroup: Boolean = true,
     parentBackgroundColor: MutableState<Color>? = null,
     onClick: () -> Boolean,
     onAuthorClick: () -> Unit,
     actionMenu: @Composable (onDismiss: () -> Unit) -> Unit,
     detailRow: @Composable () -> Unit,
     drawAuthorLine: @Composable () -> Unit,
+    belowBubble: @Composable (() -> Unit)? = null,
     inner: @Composable (MutableState<Color>) -> Unit,
 ) {
     val loggedInColors = MaterialTheme.colorScheme.mediumImportanceLink
@@ -100,8 +110,25 @@ fun ChatBubbleLayout(
             }
         }
 
+    val rowPadding = if (innerQuote) {
+        ChatPaddingInnerQuoteModifier
+    } else if (!isFirstInGroup || !isLastInGroup) {
+        ChatPaddingGroupedModifier
+    } else {
+        ChatPaddingModifier
+    }
+
+    val bubbleShape = remember(isLoggedInUser, isFirstInGroup, isLastInGroup) {
+        when {
+            isFirstInGroup && isLastInGroup -> if (isLoggedInUser) ChatBubbleShapeMe else ChatBubbleShapeThem
+            isFirstInGroup -> if (isLoggedInUser) ChatBubbleShapeMeFirst else ChatBubbleShapeThemFirst
+            isLastInGroup -> if (isLoggedInUser) ChatBubbleShapeMeLast else ChatBubbleShapeThemLast
+            else -> if (isLoggedInUser) ChatBubbleShapeMeMiddle else ChatBubbleShapeThemMiddle
+        }
+    }
+
     Row(
-        modifier = if (innerQuote) ChatPaddingInnerQuoteModifier else ChatPaddingModifier,
+        modifier = rowPadding,
         horizontalArrangement = if (isLoggedInUser) Arrangement.End else Arrangement.Start,
     ) {
         val popupExpanded = remember { mutableStateOf(false) }
@@ -131,17 +158,17 @@ fun ChatBubbleLayout(
                 )
             }
 
-        Row(
-            horizontalArrangement = if (isLoggedInUser) Arrangement.End else Arrangement.Start,
+        Column(
             modifier = if (innerQuote) Modifier else ChatBubbleMaxSizeModifier,
+            horizontalAlignment = if (isLoggedInUser) Alignment.End else Alignment.Start,
         ) {
             Surface(
                 color = bgColor.value,
-                shape = if (isLoggedInUser) ChatBubbleShapeMe else ChatBubbleShapeThem,
+                shape = bubbleShape,
                 modifier = clickableModifier,
             ) {
                 Column(modifier = messageBubbleLimits, verticalArrangement = RowColSpacing5dp) {
-                    if (drawAuthorInfo) {
+                    if (drawAuthorInfo && isFirstInGroup) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = if (isLoggedInUser) Arrangement.End else Arrangement.Start,
@@ -157,6 +184,10 @@ fun ChatBubbleLayout(
                         detailRow()
                     }
                 }
+            }
+
+            if (!innerQuote && belowBubble != null) {
+                belowBubble()
             }
         }
 

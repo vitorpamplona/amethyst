@@ -38,7 +38,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import com.vitorpamplona.amethyst.commons.ui.theme.ChatBubbleMaxSizeModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.ChatBubbleShapeMe
+import com.vitorpamplona.amethyst.commons.ui.theme.ChatBubbleShapeMeFirst
+import com.vitorpamplona.amethyst.commons.ui.theme.ChatBubbleShapeMeLast
+import com.vitorpamplona.amethyst.commons.ui.theme.ChatBubbleShapeMeMiddle
 import com.vitorpamplona.amethyst.commons.ui.theme.ChatBubbleShapeThem
+import com.vitorpamplona.amethyst.commons.ui.theme.ChatBubbleShapeThemFirst
+import com.vitorpamplona.amethyst.commons.ui.theme.ChatBubbleShapeThemLast
+import com.vitorpamplona.amethyst.commons.ui.theme.ChatBubbleShapeThemMiddle
+import com.vitorpamplona.amethyst.commons.ui.theme.ChatGroupedPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.ChatHalfHalfVertPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.ChatPaddingInnerQuoteModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.ChatPaddingModifier
@@ -70,6 +77,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.chatBubbleMeBackground
  * @param actionMenu Composable for the long-press action menu popup
  * @param detailRow Composable for the detail row (time, reactions, relays)
  * @param drawAuthorLine Composable for the author avatar + name row
+ * @param belowBubble Optional composable rendered below the bubble surface (e.g. timestamp, reaction pills)
  * @param inner Composable for the message body content; receives the resolved background color
  */
 @OptIn(ExperimentalFoundationApi::class)
@@ -81,12 +89,15 @@ fun ChatBubbleLayout(
     isComplete: Boolean,
     hasDetailsToShow: Boolean,
     drawAuthorInfo: Boolean,
+    isFirstInGroup: Boolean = true,
+    isLastInGroup: Boolean = true,
     parentBackgroundColor: MutableState<Color>? = null,
     onClick: () -> Boolean,
     onAuthorClick: () -> Unit,
     actionMenu: @Composable (onDismiss: () -> Unit) -> Unit,
     detailRow: @Composable () -> Unit,
     drawAuthorLine: @Composable () -> Unit,
+    belowBubble: @Composable (() -> Unit)? = null,
     inner: @Composable (MutableState<Color>) -> Unit,
 ) {
     val loggedInColors = MaterialTheme.colorScheme.chatBubbleMeBackground
@@ -111,8 +122,25 @@ fun ChatBubbleLayout(
             }
         }
 
+    val rowPadding = if (innerQuote) {
+        ChatPaddingInnerQuoteModifier
+    } else if (!isFirstInGroup || !isLastInGroup) {
+        ChatGroupedPadding
+    } else {
+        ChatPaddingModifier
+    }
+
+    val bubbleShape = remember(isLoggedInUser, isFirstInGroup, isLastInGroup) {
+        when {
+            isFirstInGroup && isLastInGroup -> if (isLoggedInUser) ChatBubbleShapeMe else ChatBubbleShapeThem
+            isFirstInGroup -> if (isLoggedInUser) ChatBubbleShapeMeFirst else ChatBubbleShapeThemFirst
+            isLastInGroup -> if (isLoggedInUser) ChatBubbleShapeMeLast else ChatBubbleShapeThemLast
+            else -> if (isLoggedInUser) ChatBubbleShapeMeMiddle else ChatBubbleShapeThemMiddle
+        }
+    }
+
     Row(
-        modifier = if (innerQuote) ChatPaddingInnerQuoteModifier else ChatPaddingModifier,
+        modifier = rowPadding,
         horizontalArrangement = if (isLoggedInUser) Arrangement.End else Arrangement.Start,
     ) {
         val popupExpanded = remember { mutableStateOf(false) }
@@ -142,17 +170,17 @@ fun ChatBubbleLayout(
                 )
             }
 
-        Row(
-            horizontalArrangement = if (isLoggedInUser) Arrangement.End else Arrangement.Start,
+        Column(
             modifier = if (innerQuote) Modifier else ChatBubbleMaxSizeModifier,
+            horizontalAlignment = if (isLoggedInUser) Alignment.End else Alignment.Start,
         ) {
             Surface(
                 color = bgColor.value,
-                shape = if (isLoggedInUser) ChatBubbleShapeMe else ChatBubbleShapeThem,
+                shape = bubbleShape,
                 modifier = clickableModifier,
             ) {
                 Column(modifier = MessageBubbleLimits, verticalArrangement = ChatRowColSpacing5dp) {
-                    if (drawAuthorInfo) {
+                    if (drawAuthorInfo && isFirstInGroup) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = if (isLoggedInUser) Arrangement.End else Arrangement.Start,
@@ -168,6 +196,10 @@ fun ChatBubbleLayout(
                         detailRow()
                     }
                 }
+            }
+
+            if (!innerQuote && belowBubble != null) {
+                belowBubble()
             }
         }
 

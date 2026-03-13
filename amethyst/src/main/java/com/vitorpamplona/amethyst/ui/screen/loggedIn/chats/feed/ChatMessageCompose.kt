@@ -21,13 +21,19 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -41,6 +47,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterStart
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -67,9 +75,12 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderEncr
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderRegularTextNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.IncognitoBadge
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowHeightChat
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowZapraiser
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
+import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size15dp
 import com.vitorpamplona.amethyst.ui.theme.Size18Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
@@ -90,6 +101,8 @@ fun ChatroomMessageCompose(
     baseNote: Note,
     routeForLastRead: String?,
     innerQuote: Boolean = false,
+    isFirstInGroup: Boolean = true,
+    isLastInGroup: Boolean = true,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -109,6 +122,8 @@ fun ChatroomMessageCompose(
                 routeForLastRead,
                 innerQuote,
                 canPreview,
+                isFirstInGroup,
+                isLastInGroup,
                 parentBackgroundColor,
                 accountViewModel,
                 nav,
@@ -125,6 +140,8 @@ fun NormalChatNote(
     routeForLastRead: String?,
     innerQuote: Boolean = false,
     canPreview: Boolean = true,
+    isFirstInGroup: Boolean = true,
+    isLastInGroup: Boolean = true,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -159,14 +176,17 @@ fun NormalChatNote(
             }
         }
 
-    ChatBubbleLayout(
-        isLoggedInUser = isLoggedInUser,
-        isDraft = note.event is DraftWrapEvent,
-        innerQuote = innerQuote,
-        isComplete = accountViewModel.settings.isCompleteUIMode(),
-        hasDetailsToShow = note.zaps.isNotEmpty() || note.zapPayments.isNotEmpty() || note.reactions.isNotEmpty(),
-        drawAuthorInfo = drawAuthorInfo,
-        parentBackgroundColor = parentBackgroundColor,
+    val bubbleContent = @Composable {
+        ChatBubbleLayout(
+            isLoggedInUser = isLoggedInUser,
+            isDraft = note.event is DraftWrapEvent,
+            innerQuote = innerQuote,
+            isComplete = accountViewModel.settings.isCompleteUIMode(),
+            hasDetailsToShow = note.zaps.isNotEmpty() || note.zapPayments.isNotEmpty() || note.reactions.isNotEmpty(),
+            drawAuthorInfo = drawAuthorInfo,
+            isFirstInGroup = isFirstInGroup,
+            isLastInGroup = isLastInGroup,
+            parentBackgroundColor = parentBackgroundColor,
         onClick = {
             if (note.event is ChannelCreateEvent) {
                 nav.nav(Route.PublicChatChannel(note.idHex))
@@ -181,13 +201,23 @@ fun NormalChatNote(
             }
         },
         actionMenu = { onDismiss ->
-            NoteQuickActionMenu(
-                note = note,
-                onDismiss = onDismiss,
-                onWantsToEditDraft = { onWantsToEditDraft(note) },
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
+            if (note.isDraft()) {
+                NoteQuickActionMenu(
+                    note = note,
+                    onDismiss = onDismiss,
+                    onWantsToEditDraft = { onWantsToEditDraft(note) },
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            } else {
+                ChatQuickActionBar(
+                    note = note,
+                    onDismiss = onDismiss,
+                    onWantsToReply = onWantsToReply,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
         },
         drawAuthorLine = {
             DrawAuthorInfo(
@@ -203,7 +233,6 @@ fun NormalChatNote(
                     modifier = ReactionRowHeightChat,
                 ) {
                     IncognitoBadge(note)
-                    ChatTimeAgo(note)
                     RelayBadgesHorizontal(note, accountViewModel, nav = nav)
 
                     Spacer(modifier = DoubleHorzSpacer)
@@ -242,6 +271,40 @@ fun NormalChatNote(
                 LoadAndDisplayClickableZapraiser(note, accountViewModel)
             }
         },
+        belowBubble = {
+            Column {
+                // Reaction emoji pills - always visible when reactions exist
+                if (note.reactions.isNotEmpty()) {
+                    ReactionEmojiPills(note)
+                }
+
+                // Timestamp row - shown on last message in a group
+                // In complete mode, also show small action icons inline
+                if (isLastInGroup) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        ChatTimeAgo(note)
+
+                        if (accountViewModel.settings.isCompleteUIMode() && !note.isDraft()) {
+                            ReplyReaction(
+                                baseNote = note,
+                                grayTint = MaterialTheme.colorScheme.placeholderText,
+                                accountViewModel = accountViewModel,
+                                showCounter = false,
+                                iconSizeModifier = Size15Modifier,
+                            ) {
+                                onWantsToReply(note)
+                            }
+                            LikeReaction(note, MaterialTheme.colorScheme.placeholderText, accountViewModel, nav, iconSize = Size15dp)
+                            ZapReaction(note, MaterialTheme.colorScheme.placeholderText, accountViewModel, iconSize = Size15dp, nav = nav)
+                        }
+                    }
+                }
+            }
+        },
     ) { bgColor ->
         MessageBubbleLines(
             note,
@@ -253,6 +316,18 @@ fun NormalChatNote(
             accountViewModel,
             nav,
         )
+    }
+    }
+
+    if (!innerQuote && !note.isDraft()) {
+        SwipeToReplyWrapper(
+            isLoggedInUser = isLoggedInUser,
+            onSwipeToReply = { onWantsToReply(note) },
+        ) {
+            bubbleContent()
+        }
+    } else {
+        bubbleContent()
     }
 }
 
@@ -348,26 +423,110 @@ private fun RenderReply(
     onWantsToReply: (Note) -> Unit,
     onWantsToEditDraft: (Note) -> Unit,
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        @Suppress("ProduceStateDoesNotAssignValue")
-        val replyTo =
-            produceState(initialValue = note.replyTo?.lastOrNull()) {
-                accountViewModel.unwrapIfNeeded(value) {
-                    value = it
+    @Suppress("ProduceStateDoesNotAssignValue")
+    val replyTo =
+        produceState(initialValue = note.replyTo?.lastOrNull()) {
+            accountViewModel.unwrapIfNeeded(value) {
+                value = it
+            }
+        }
+
+    replyTo.value?.let { replyNote ->
+        CompactReplyPreview(
+            replyNote = replyNote,
+            bgColor = bgColor,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
+    }
+}
+
+@Composable
+fun CompactReplyPreview(
+    replyNote: Note,
+    bgColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val authorName = remember(replyNote.author) {
+        replyNote.author?.toBestDisplayName() ?: ""
+    }
+    val replyContent = remember(replyNote.event) {
+        replyNote.event?.content()?.take(120)?.replace("\n", " ") ?: ""
+    }
+
+    Row(
+        modifier = Modifier.padding(bottom = 4.dp),
+        verticalAlignment = Alignment.Top,
+    ) {
+        // Colored left bar
+        Surface(
+            modifier = Modifier
+                .width(3.dp)
+                .height(36.dp),
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+            shape = RoundedCornerShape(2.dp),
+        ) {}
+
+        Column(
+            modifier = Modifier.padding(start = 8.dp),
+        ) {
+            Text(
+                text = authorName,
+                color = MaterialTheme.colorScheme.primary,
+                fontSize = Font12SP,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = replyContent,
+                color = MaterialTheme.colorScheme.placeholderText,
+                fontSize = Font12SP,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+@Composable
+fun ReactionEmojiPills(note: Note) {
+    Row(
+        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        note.reactions.forEach { (emoji, notes) ->
+            if (notes.isNotEmpty()) {
+                val displayEmoji = when {
+                    emoji == "+" -> "\u2764\uFE0F" // heart
+                    emoji == "-" -> "\uD83D\uDC4E" // thumbs down
+                    emoji.startsWith(":") -> emoji.removeSurrounding(":")
+                    else -> emoji
+                }
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(2.dp),
+                    ) {
+                        Text(
+                            text = displayEmoji,
+                            fontSize = Font12SP,
+                        )
+                        if (notes.size > 1) {
+                            Text(
+                                text = notes.size.toString(),
+                                fontSize = Font12SP,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
                 }
             }
-
-        replyTo.value?.let { note ->
-            ChatroomMessageCompose(
-                baseNote = note,
-                routeForLastRead = null,
-                innerQuote = true,
-                parentBackgroundColor = bgColor,
-                accountViewModel = accountViewModel,
-                nav = nav,
-                onWantsToReply = onWantsToReply,
-                onWantsToEditDraft = onWantsToEditDraft,
-            )
         }
     }
 }

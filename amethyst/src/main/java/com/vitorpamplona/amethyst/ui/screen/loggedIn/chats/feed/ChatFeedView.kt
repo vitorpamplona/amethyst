@@ -140,9 +140,20 @@ fun ChatFeedLoaded(
         itemsIndexed(items.list, key = { _, item -> item.idHex }) { index, item ->
             val noteEvent = item.event
             if (avoidDraft == null || noteEvent !is DraftWrapEvent || noteEvent.dTag() !in avoidDraft.usedDraftTags) {
+                // In a reversed LazyColumn, index 0 is newest (bottom).
+                // "previous" in visual order (the message above) is index+1 in the list.
+                // "next" in visual order (the message below) is index-1 in the list.
+                val prevItem = items.list.getOrNull(index + 1)
+                val nextItem = items.list.getOrNull(index - 1)
+
+                val isFirstInGroup = prevItem?.author?.pubkeyHex != item.author?.pubkeyHex
+                val isLastInGroup = nextItem?.author?.pubkeyHex != item.author?.pubkeyHex
+
                 ChatroomMessageCompose(
                     baseNote = item,
                     routeForLastRead = routeForLastRead,
+                    isFirstInGroup = isFirstInGroup,
+                    isLastInGroup = isLastInGroup,
                     accountViewModel = accountViewModel,
                     nav = nav,
                     onWantsToReply = onWantsToReply,
