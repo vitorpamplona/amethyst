@@ -78,10 +78,10 @@ import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.creators.contentWarning.ContentSensitivityExplainer
 import com.vitorpamplona.amethyst.ui.note.creators.contentWarning.MarkAsSensitiveButton
-import com.vitorpamplona.amethyst.ui.note.creators.expiration.ExpirationDateButton
-import com.vitorpamplona.amethyst.ui.note.creators.expiration.ExpirationDatePicker
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.WatchAndLoadMyEmojiList
+import com.vitorpamplona.amethyst.ui.note.creators.expiration.ExpirationDateButton
+import com.vitorpamplona.amethyst.ui.note.creators.expiration.ExpirationDatePicker
 import com.vitorpamplona.amethyst.ui.note.creators.invoice.AddLnInvoiceButton
 import com.vitorpamplona.amethyst.ui.note.creators.invoice.InvoiceRequest
 import com.vitorpamplona.amethyst.ui.note.creators.location.AddGeoHashButton

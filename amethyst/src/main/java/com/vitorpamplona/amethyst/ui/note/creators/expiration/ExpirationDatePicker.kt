@@ -81,9 +81,7 @@ fun ExpirationDatePicker(model: ShortNotePostViewModel) {
             yearRange = currentTime.year..2050,
             selectableDates =
                 object : SelectableDates {
-                    override fun isSelectableDate(utcTimeMillis: Long): Boolean {
-                        return utcTimeMillis >= System.currentTimeMillis() - 86400000
-                    }
+                    override fun isSelectableDate(utcTimeMillis: Long): Boolean = utcTimeMillis >= System.currentTimeMillis() - 86400000
                 },
         )
 
