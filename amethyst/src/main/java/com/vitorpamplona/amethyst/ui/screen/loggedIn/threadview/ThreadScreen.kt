@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFind
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.layouts.MaxWidthContainer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -72,8 +73,10 @@ fun ThreadScreen(
         },
         accountViewModel = accountViewModel,
     ) {
-        Column(Modifier.padding(it)) {
-            ThreadFeedView(noteId, feedViewModel, accountViewModel, nav)
+        MaxWidthContainer {
+            Column(Modifier.padding(it)) {
+                ThreadFeedView(noteId, feedViewModel, accountViewModel, nav)
+            }
         }
     }
 }

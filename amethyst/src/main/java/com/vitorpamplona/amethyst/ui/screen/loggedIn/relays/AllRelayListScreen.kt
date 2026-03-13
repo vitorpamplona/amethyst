@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.DefaultDMRelayList
 import com.vitorpamplona.amethyst.model.DefaultIndexerRelayList
 import com.vitorpamplona.amethyst.model.DefaultSearchRelayList
+import com.vitorpamplona.amethyst.ui.layouts.MaxWidthContainer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -210,19 +211,20 @@ fun MappedAllRelayListView(
             )
         },
     ) { pad ->
-        LazyColumn(
-            contentPadding = FeedPadding,
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(
-                        start = 10.dp,
-                        end = 10.dp,
-                        top = pad.calculateTopPadding(),
-                        bottom = pad.calculateBottomPadding(),
-                    ).consumeWindowInsets(pad)
-                    .imePadding(),
-        ) {
+        MaxWidthContainer(maxWidth = 560.dp) {
+            LazyColumn(
+                contentPadding = FeedPadding,
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(
+                            start = 10.dp,
+                            end = 10.dp,
+                            top = pad.calculateTopPadding(),
+                            bottom = pad.calculateBottomPadding(),
+                        ).consumeWindowInsets(pad)
+                        .imePadding(),
+            ) {
             item {
                 SettingsCategory(
                     R.string.public_home_section,
@@ -346,6 +348,7 @@ fun MappedAllRelayListView(
                 )
             }
             renderConnectedItems(connectedRelays, connectedViewModel, accountViewModel, newNav)
+            }
         }
     }
 }

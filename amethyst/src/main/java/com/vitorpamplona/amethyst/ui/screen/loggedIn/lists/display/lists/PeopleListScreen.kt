@@ -75,6 +75,7 @@ import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
+import com.vitorpamplona.amethyst.ui.layouts.MaxWidthContainer
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -136,20 +137,22 @@ fun PeopleListScreen(
             }
         },
     ) { padding ->
-        ListViewAndEditColumn(
-            viewModel = viewModel,
-            pagerState = pagerState,
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(
-                        top = padding.calculateTopPadding(),
-                        bottom = padding.calculateBottomPadding(),
-                    ).consumeWindowInsets(padding)
-                    .imePadding(),
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
+        MaxWidthContainer {
+            ListViewAndEditColumn(
+                viewModel = viewModel,
+                pagerState = pagerState,
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(
+                            top = padding.calculateTopPadding(),
+                            bottom = padding.calculateBottomPadding(),
+                        ).consumeWindowInsets(padding)
+                        .imePadding(),
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
     }
 }
 

@@ -27,8 +27,10 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.layouts.MaxWidthContainer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.ui.note.UpdateZapAmountContent
@@ -75,11 +77,13 @@ fun NIP47SetupScreen(
             )
         },
     ) {
-        Column(Modifier.padding(it)) {
-            UpdateZapAmountContent(postViewModel, onClose = {
-                postViewModel.cancel()
-                nav.popBack()
-            }, nip47, accountViewModel)
+        MaxWidthContainer(maxWidth = 560.dp) {
+            Column(Modifier.padding(it)) {
+                UpdateZapAmountContent(postViewModel, onClose = {
+                    postViewModel.cancel()
+                    nav.popBack()
+                }, nip47, accountViewModel)
+            }
         }
     }
 }

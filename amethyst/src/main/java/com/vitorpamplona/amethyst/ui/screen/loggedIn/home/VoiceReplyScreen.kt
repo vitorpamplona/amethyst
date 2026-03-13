@@ -44,6 +44,7 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.FileServerSelectionRow
 import com.vitorpamplona.amethyst.ui.actions.uploads.UploadProgressIndicator
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceAnonymizationSection
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceMessagePreview
+import com.vitorpamplona.amethyst.ui.layouts.MaxWidthContainer
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
@@ -98,7 +99,9 @@ fun VoiceReplyScreen(
                     .padding(pad)
                     .consumeWindowInsets(pad),
         ) {
-            VoiceReplyScreenBody(viewModel, accountViewModel, nav)
+            MaxWidthContainer(maxWidth = 560.dp) {
+                VoiceReplyScreenBody(viewModel, accountViewModel, nav)
+            }
         }
     }
 }

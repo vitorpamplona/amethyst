@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
-import android.content.res.Configuration
 import androidx.activity.compose.BackHandler
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -29,14 +28,13 @@ import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalConfiguration
+import com.vitorpamplona.amethyst.ui.layouts.isCompactWindow
 import com.vitorpamplona.amethyst.ui.navigation.drawer.AccountSwitchBottomSheet
 import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerContent
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -71,24 +69,18 @@ fun AccountSwitcherAndLeftDrawerLayout(
             }
         }
 
-    val orientation = LocalConfiguration.current.orientation
-    val currentDrawerState = nav.drawerState.currentValue
-    LaunchedEffect(key1 = orientation) {
-        if (
-            orientation == Configuration.ORIENTATION_LANDSCAPE && currentDrawerState == DrawerValue.Closed
-        ) {
-            nav.drawerState.close()
-        }
+    if (isCompactWindow()) {
+        ModalNavigationDrawer(
+            drawerState = nav.drawerState,
+            drawerContent = {
+                DrawerContent(nav, openSheetFunction, accountViewModel)
+                BackHandler(enabled = nav.drawerState.isOpen, nav::closeDrawer)
+            },
+            content = content,
+        )
+    } else {
+        content()
     }
-
-    ModalNavigationDrawer(
-        drawerState = nav.drawerState,
-        drawerContent = {
-            DrawerContent(nav, openSheetFunction, accountViewModel)
-            BackHandler(enabled = nav.drawerState.isOpen, nav::closeDrawer)
-        },
-        content = content,
-    )
 
     // Sheet content
     if (openAccountSwitcherBottomSheet) {

@@ -35,6 +35,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavDestination.Companion.hasRoute
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.core.net.toUri
 import androidx.core.util.Consumer
 import androidx.navigation.compose.NavHost
@@ -48,6 +51,8 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.AllMediaServersScreen
 import com.vitorpamplona.amethyst.ui.broadcast.DisplayBroadcastProgress
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.components.toasts.DisplayErrorMessages
+import com.vitorpamplona.amethyst.ui.layouts.AdaptiveScaffold
+import com.vitorpamplona.amethyst.ui.layouts.isCompactWindow
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.navs.rememberNav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -109,7 +114,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relay.RelayFeedScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.AllRelayListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.RelayInformationScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.search.SearchScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.AllSettingsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.AdaptiveSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.NIP47SetupScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.NamecoinSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.ReactionsSettingsScreen
@@ -137,13 +142,23 @@ fun AppNavigation(
 ) {
     val nav = rememberNav()
 
-    AccountSwitcherAndLeftDrawerLayout(accountViewModel, accountSessionManager, nav) {
-        NavHost(
-            navController = nav.controller,
-            startDestination = Route.Home,
-            enterTransition = { fadeIn(animationSpec = tween(200)) },
-            exitTransition = { fadeOut(animationSpec = tween(200)) },
-        ) {
+    val currentBackStackEntry by nav.controller.currentBackStackEntryAsState()
+    val selectedRoute =
+        remember(currentBackStackEntry) {
+            currentBackStackEntry?.toBaseRoute()
+        }
+
+    AdaptiveScaffold(
+        selectedRoute = selectedRoute,
+        onNavigate = { route -> nav.newStack(route) },
+    ) {
+        AccountSwitcherAndLeftDrawerLayout(accountViewModel, accountSessionManager, nav) {
+            NavHost(
+                navController = nav.controller,
+                startDestination = Route.Home,
+                enterTransition = { fadeIn(animationSpec = tween(200)) },
+                exitTransition = { fadeOut(animationSpec = tween(200)) },
+            ) {
             composable<Route.Home> { HomeScreen(accountViewModel, nav) }
             composable<Route.Message> { MessagesScreen(accountViewModel, nav) }
             composable<Route.Video> { VideoScreen(accountViewModel, nav) }
@@ -172,7 +187,7 @@ fun AppNavigation(
             composableFromBottomArgs<Route.EditProfile> { NewUserMetadataScreen(nav, accountViewModel) }
             composable<Route.Search> { SearchScreen(accountViewModel, nav) }
 
-            composableFromEnd<Route.AllSettings> { AllSettingsScreen(accountViewModel, nav) }
+            composableFromEnd<Route.AllSettings> { AdaptiveSettingsScreen(accountViewModel, nav) }
             composableFromEnd<Route.AccountBackup> { AccountBackupScreen(accountViewModel, nav) }
             composableFromEnd<Route.SecurityFilters> { SecurityFiltersScreen(accountViewModel, nav) }
             composableFromEnd<Route.PrivacyOptions> { PrivacyOptionsScreen(Amethyst.instance.torPrefs.value, nav) }
@@ -334,6 +349,7 @@ fun AppNavigation(
                 )
             }
         }
+        }
     }
 
     NavigateIfIntentRequested(nav, accountViewModel, accountSessionManager)
@@ -492,6 +508,18 @@ private fun NavigateIfIntentRequested(
         if (newAccount != null) {
             AddAccountDialog(newAccount, accountSessionManager) { newAccount = null }
         }
+    }
+}
+
+private fun NavBackStackEntry.toBaseRoute(): Route? {
+    val dest = destination
+    return when {
+        dest.hasRoute<Route.Home>() -> Route.Home
+        dest.hasRoute<Route.Message>() -> Route.Message
+        dest.hasRoute<Route.Video>() -> Route.Video
+        dest.hasRoute<Route.Discover>() -> Route.Discover
+        dest.hasRoute<Route.Notification>() -> Route.Notification
+        else -> null
     }
 }
 

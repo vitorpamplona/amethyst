@@ -49,6 +49,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromFiles
+import com.vitorpamplona.amethyst.ui.layouts.MaxWidthContainer
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakePictureButton
@@ -177,11 +178,13 @@ fun GenericCommentPostScreen(
                     .consumeWindowInsets(pad)
                     .imePadding(),
         ) {
-            GenericCommentPostBody(
-                postViewModel,
-                accountViewModel,
-                nav,
-            )
+            MaxWidthContainer(maxWidth = 560.dp) {
+                GenericCommentPostBody(
+                    postViewModel,
+                    accountViewModel,
+                    nav,
+                )
+            }
         }
     }
 }

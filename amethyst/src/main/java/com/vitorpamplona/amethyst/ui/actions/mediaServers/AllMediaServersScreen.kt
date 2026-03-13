@@ -38,6 +38,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.layouts.MaxWidthContainer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -83,29 +84,31 @@ fun MediaServersScaffold(
             )
         },
     ) { padding ->
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(
-                        start = 16.dp,
-                        top = padding.calculateTopPadding(),
-                        end = 16.dp,
-                        bottom = padding.calculateBottomPadding(),
-                    ).consumeWindowInsets(padding)
-                    .imePadding(),
-            verticalArrangement = Arrangement.spacedBy(10.dp, alignment = Alignment.Top),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Text(
-                text = stringRes(id = R.string.set_preferred_media_servers),
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(top = 10.dp),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.grayText,
-            )
+        MaxWidthContainer(maxWidth = 560.dp) {
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(
+                            start = 16.dp,
+                            top = padding.calculateTopPadding(),
+                            end = 16.dp,
+                            bottom = padding.calculateBottomPadding(),
+                        ).consumeWindowInsets(padding)
+                        .imePadding(),
+                verticalArrangement = Arrangement.spacedBy(10.dp, alignment = Alignment.Top),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    text = stringRes(id = R.string.set_preferred_media_servers),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(top = 10.dp),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.grayText,
+                )
 
-            AllMediaBody(blossomServersViewModel)
+                AllMediaBody(blossomServersViewModel)
+            }
         }
     }
 }

@@ -73,6 +73,7 @@ import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.feeds.rememberForeverPagerState
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.layouts.MaxWidthContainer
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -208,19 +209,21 @@ private fun HomePages(
         },
         accountViewModel = accountViewModel,
     ) {
-        HorizontalPager(
-            contentPadding = it,
-            state = pagerState,
-            userScrollEnabled = false,
-        ) { page ->
-            HomeFeeds(
-                feedState = tabs[page].feedState,
-                routeForLastRead = tabs[page].routeForLastRead,
-                scrollStateKey = tabs[page].scrollStateKey,
-                liveSection = tabs[page].liveSection,
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
+        MaxWidthContainer {
+            HorizontalPager(
+                contentPadding = it,
+                state = pagerState,
+                userScrollEnabled = false,
+            ) { page ->
+                HomeFeeds(
+                    feedState = tabs[page].feedState,
+                    routeForLastRead = tabs[page].routeForLastRead,
+                    scrollStateKey = tabs[page].scrollStateKey,
+                    liveSection = tabs[page].liveSection,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
         }
     }
 }

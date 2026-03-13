@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.ui.components.SelectNotificationProvider
 import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.layouts.MaxWidthContainer
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -84,17 +85,19 @@ fun NotificationScreen(
         },
         accountViewModel = accountViewModel,
     ) {
-        Column(
-            modifier = Modifier.padding(it).consumeWindowInsets(it),
-        ) {
-            ObserveInboxRelayListAndDisplayIfNotFound(accountViewModel, nav)
-            RefreshableCardView(
-                feedContent = notifFeedContentState,
-                accountViewModel = accountViewModel,
-                nav = nav,
-                routeForLastRead = "Notification",
-                scrollStateKey = ScrollStateKeys.NOTIFICATION_SCREEN,
-            )
+        MaxWidthContainer {
+            Column(
+                modifier = Modifier.padding(it).consumeWindowInsets(it),
+            ) {
+                ObserveInboxRelayListAndDisplayIfNotFound(accountViewModel, nav)
+                RefreshableCardView(
+                    feedContent = notifFeedContentState,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                    routeForLastRead = "Notification",
+                    scrollStateKey = ScrollStateKeys.NOTIFICATION_SCREEN,
+                )
+            }
         }
     }
 }

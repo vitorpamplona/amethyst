@@ -58,6 +58,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectSingleFromGallery
+import com.vitorpamplona.amethyst.ui.layouts.MaxWidthContainer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -101,20 +102,21 @@ fun NewUserMetadataScreen(
             )
         },
     ) { pad ->
-        Column(
-            modifier =
-                Modifier
-                    .padding(
-                        start = 10.dp,
-                        end = 10.dp,
-                        top = pad.calculateTopPadding(),
-                        bottom = pad.calculateBottomPadding(),
-                    ).consumeWindowInsets(pad)
-                    .imePadding(),
-        ) {
+        MaxWidthContainer(maxWidth = 560.dp) {
             Column(
-                modifier = Modifier.padding(10.dp).verticalScroll(rememberScrollState()),
+                modifier =
+                    Modifier
+                        .padding(
+                            start = 10.dp,
+                            end = 10.dp,
+                            top = pad.calculateTopPadding(),
+                            bottom = pad.calculateBottomPadding(),
+                        ).consumeWindowInsets(pad)
+                        .imePadding(),
             ) {
+                Column(
+                    modifier = Modifier.padding(10.dp).verticalScroll(rememberScrollState()),
+                ) {
                 // -- Profile (always visible) --
                 OutlinedTextField(
                     label = { Text(text = stringRes(R.string.username)) },
@@ -338,6 +340,7 @@ fun NewUserMetadataScreen(
                     )
                 }
             }
+        }
         }
     }
 }

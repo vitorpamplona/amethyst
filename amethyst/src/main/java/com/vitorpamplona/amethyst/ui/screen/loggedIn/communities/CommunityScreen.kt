@@ -48,6 +48,7 @@ import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.feeds.rememberForeverPagerState
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.layouts.MaxWidthContainer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TitleIconModifier
@@ -191,27 +192,29 @@ fun CommunityScreen(
         },
         accountViewModel = accountViewModel,
     ) {
-        HorizontalPager(
-            contentPadding = it,
-            state = pagerState,
-        ) { page ->
-            when (page) {
-                0 -> {
-                    RefresheableFeedView(
-                        feedViewModel,
-                        null,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
-                }
+        MaxWidthContainer {
+            HorizontalPager(
+                contentPadding = it,
+                state = pagerState,
+            ) { page ->
+                when (page) {
+                    0 -> {
+                        RefresheableFeedView(
+                            feedViewModel,
+                            null,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                        )
+                    }
 
-                1 -> {
-                    RefresheableFeedView(
-                        modFeedViewModel,
-                        null,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
+                    1 -> {
+                        RefresheableFeedView(
+                            modFeedViewModel,
+                            null,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                        )
+                    }
                 }
             }
         }
