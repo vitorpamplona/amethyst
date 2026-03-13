@@ -31,9 +31,9 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.accountsCache.AccountCacheState
 import com.vitorpamplona.amethyst.model.nip03Timestamp.IncomingOtsEventVerifier
 import com.vitorpamplona.amethyst.model.nip03Timestamp.TorAwareOkHttpOtsResolverBuilder
-import com.vitorpamplona.amethyst.model.preferences.OtsSharedPreferences
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.model.preferences.NamecoinSharedPreferences
+import com.vitorpamplona.amethyst.model.preferences.OtsSharedPreferences
 import com.vitorpamplona.amethyst.model.preferences.TorSharedPreferences
 import com.vitorpamplona.amethyst.model.preferences.UiSharedPreferences
 import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilder
@@ -135,6 +135,7 @@ class AppModules(
             otsPrefs
         }
     }
+
     // App services that should be run as soon as there are subscribers to their flows
     val locationManager = LocationState(appContext, applicationIOScope)
     val connManager = ConnectivityManager(appContext, applicationIOScope)
