@@ -63,23 +63,18 @@ kotlin {
     val xcfName = "quartz-kmpKit"
     val libsodiumPath = project.file("src/nativeInterop/libsodium")
     val libsodiumHeaderFilesPath = project.file("$libsodiumPath/include/sodium")
+    val libsodiumDefFile = project.file("src/nativeInterop/cinterop/Clibsodium.def")
 
     // This generates the Libsodium definition file, necessary for creating native bindings(a Kotlin API) for libsodium(for iOS).
-//    val headersTask = tasks.register<Exec>("ExtractLibsodiumHeaders") {
-//        val unpackDirectory = "$libsodiumPath/include"
-//        unzipTo(
-//            project.file(unpackDirectory),
-//            project.file("$unpackDirectory/sodium.zip")
-//        )
-//    }
-
-    val libsodiumDefFileGeneration = tasks.register<Exec>("GenerateSodiumCinteropFile") {
-        val definitionFile = project.file("src/nativeInterop/cinterop/Clibsodium.def")
-        if (!definitionFile.exists()){
-            definitionFile.createNewFile()
-            definitionFile.writeText("package = Clibsodium")
-            definitionFile.appendText("\n" + "staticLibraries = libsodium.a libsodium-simulator.a")
-            definitionFile.appendText("\n" + "libraryPaths = ${libsodiumPath}/ios/lib ${libsodiumPath}/ios-simulators/lib")
+    val libsodiumDefFileGeneration = tasks.register("GenerateSodiumCinteropFile") {
+        outputs.file(libsodiumDefFile)
+        doLast {
+            if (!libsodiumDefFile.exists()) {
+                libsodiumDefFile.parentFile.mkdirs()
+                libsodiumDefFile.writeText("package = Clibsodium\n")
+                libsodiumDefFile.appendText("staticLibraries = libsodium.a libsodium-simulator.a\n")
+                libsodiumDefFile.appendText("libraryPaths = ${libsodiumPath.absolutePath}/ios/lib ${libsodiumPath.absolutePath}/ios-simulators/lib\n")
+            }
         }
     }
 
@@ -90,16 +85,19 @@ kotlin {
     ).forEach { target ->
 
         target.compilations.getByName("main") {
-//            headersTask.get()
             val Clibsodium by cinterops.creating {
-                assert(project.file("Clibsodium.def").exists())
-                definitionFile.set(project.file("Clibsodium.def"))
+                definitionFile = libsodiumDefFile
+                packageName = "Clibsodium"
 
                 headers(
                     "$libsodiumHeaderFilesPath/crypto_aead_xchacha20poly1305.h",
                     "$libsodiumHeaderFilesPath/crypto_core_hchacha20.h",
                     "$libsodiumHeaderFilesPath/crypto_stream_chacha20.h"
                 )
+            }
+
+            tasks.named(cinterops.getByName("Clibsodium").interopProcessingTaskName).configure {
+                dependsOn(libsodiumDefFileGeneration)
             }
         }
 
