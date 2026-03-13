@@ -1756,4 +1756,27 @@
     <string name="select_all">Select All</string>
     <string name="uptime">%1$d%% uptime</string>
     <string name="namecoin_settings">Namecoin Settings</string>
+
+    <!-- Event Sync Screen -->
+    <string name="event_sync_title">Relay Sync</string>
+    <string name="event_sync_section">Relay Sync</string>
+    <string name="event_sync_section_explainer">Re-publish your events across all known relays to keep your outbox, inbox, and DM relays up to date. Requires Wi-Fi — this may use a lot of data.</string>
+    <string name="event_sync_open_button">Open Relay Sync…</string>
+    <string name="event_sync_what_happens_title">What this does</string>
+    <string name="event_sync_what_happens_body">This tool scans every relay your app has seen and redistributes your events to the correct destinations. It may transfer a large amount of data, so it is best run on Wi-Fi.</string>
+    <string name="event_sync_step1">Download all events you authored and send them to your outbox relays.</string>
+    <string name="event_sync_step2">Download all events that mention you and send them to your inbox relays.</string>
+    <string name="event_sync_step3">Download all direct messages addressed to you and send them to your DM relays.</string>
+    <string name="event_sync_wifi_warning">⚠ You appear to be on a metered or mobile connection. This operation can transfer a very large amount of data. Connect to Wi-Fi before starting.</string>
+    <string name="event_sync_start">Start Sync</string>
+    <string name="event_sync_start_anyway">Start Anyway (mobile data)</string>
+    <string name="event_sync_cancel">Cancel</string>
+    <string name="event_sync_phase1">Phase 1 of 3 — Syncing your posts to outbox relays</string>
+    <string name="event_sync_phase2">Phase 2 of 3 — Syncing mentions to inbox relays</string>
+    <string name="event_sync_phase3">Phase 3 of 3 — Syncing direct messages to DM relays</string>
+    <string name="event_sync_relay_of">Relay %1$d of %2$d</string>
+    <string name="event_sync_events_sent">Events redistributed: %1$d</string>
+    <string name="event_sync_done_title">Sync complete</string>
+    <string name="event_sync_done_body">Redistributed %1$d events in %2$d seconds.</string>
+    <string name="event_sync_error_title">Sync error</string>
 </resources>
