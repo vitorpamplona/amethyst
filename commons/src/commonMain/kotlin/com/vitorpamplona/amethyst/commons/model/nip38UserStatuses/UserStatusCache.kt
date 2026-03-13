@@ -62,12 +62,15 @@ class UserStatusCache : UserDependencies {
     }
 
     fun removeExpired() {
-        statuses.update { list ->
-            val filtered = list.filter { it.event?.isExpired() != true }
-            if (filtered.size != list.size) {
-                filtered.toImmutableList()
-            } else {
-                list
+        val hasExpired = statuses.value.any { it.event?.isExpired() == true }
+        if (hasExpired) {
+            statuses.update { list ->
+                val filtered = list.filter { it.event?.isExpired() != true }
+                if (filtered.size != list.size) {
+                    filtered.toImmutableList()
+                } else {
+                    list
+                }
             }
         }
     }
