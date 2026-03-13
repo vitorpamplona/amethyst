@@ -76,7 +76,7 @@ fun LoadUrlPreviewDirect(
 
             is UrlPreviewState.Loading -> {
                 WaitAndDisplay {
-                    DisplayUrlWithLoadingSymbol(url)
+                    DisplayUrlWithLoadingSymbol(url, accountViewModel.toastManager::toast)
                 }
             }
 

@@ -4050,8 +4050,8 @@ class RichTextParserTest {
                 )
             }
 
-        assertTrue(state.imagesForPager.isEmpty())
-        assertTrue(state.imageList.isEmpty())
+        assertTrue(state.mediaForPager.isEmpty())
+        assertTrue(state.mediaList.isEmpty())
         assertTrue(state.customEmoji.isEmpty())
         assertEquals(651, state.paragraphs.size)
     }
@@ -4064,8 +4064,8 @@ class RichTextParserTest {
         assertTrue(state.urlSet.withoutScheme.isEmpty())
         assertTrue(state.urlSet.withScheme.isEmpty())
         assertTrue(state.urlSet.emails.isEmpty())
-        assertTrue(state.imagesForPager.isEmpty())
-        assertTrue(state.imageList.isEmpty())
+        assertTrue(state.mediaForPager.isEmpty())
+        assertTrue(state.mediaList.isEmpty())
         assertTrue(state.customEmoji.isEmpty())
         assertEquals(
             "Hi, how are you doing?",
@@ -4084,8 +4084,8 @@ class RichTextParserTest {
         assertTrue(state.urlSet.withoutScheme.isEmpty())
         assertTrue(state.urlSet.withScheme.isEmpty())
         assertTrue(state.urlSet.emails.isEmpty())
-        assertTrue(state.imagesForPager.isEmpty())
-        assertTrue(state.imageList.isEmpty())
+        assertTrue(state.mediaForPager.isEmpty())
+        assertTrue(state.mediaList.isEmpty())
         assertTrue(state.customEmoji.isEmpty())
         assertEquals(
             "\nHi,\nhow\n\n\n are you doing?\n",
@@ -4107,17 +4107,29 @@ class RichTextParserTest {
         val state =
             RichTextParser()
                 .parseText(text, EmptyTagList, null)
+
+        val urls = state.urlSet.withScheme.toList()
+        val bech = state.urlSet.bech32s.toList()
+
         assertEquals(
             "https://lnshort.it/live-stream-embeds/",
-            state.urlSet.withScheme.firstOrNull(),
+            urls[0],
         )
         assertEquals(
             "https://nostr.build/i/fd53fcf5ad950fbe45127e4bcee1b59e8301d41de6beee211f45e344db214e8a.jpg",
-            state.imagesForPager.keys.firstOrNull(),
+            urls[1],
+        )
+        assertEquals(
+            "nostr:npub1048qg5p6kfnpth2l98kq3dffg097tutm4npsz2exygx25ge2k9xqf5x3nf",
+            bech[0],
         )
         assertEquals(
             "https://nostr.build/i/fd53fcf5ad950fbe45127e4bcee1b59e8301d41de6beee211f45e344db214e8a.jpg",
-            state.imageList.firstOrNull()?.url,
+            state.mediaForPager.keys.firstOrNull(),
+        )
+        assertEquals(
+            "https://nostr.build/i/fd53fcf5ad950fbe45127e4bcee1b59e8301d41de6beee211f45e344db214e8a.jpg",
+            state.mediaList.firstOrNull()?.url,
         )
         assertTrue(state.customEmoji.isEmpty())
 

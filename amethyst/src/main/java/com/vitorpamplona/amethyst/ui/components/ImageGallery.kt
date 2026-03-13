@@ -144,7 +144,7 @@ fun ImageGallery(
         images.words
             .mapNotNull { segment ->
                 val imageUrl = segment.segmentText
-                state.imagesForPager[imageUrl] as? MediaUrlImage
+                state.mediaForPager[imageUrl] as? MediaUrlImage
             }.toImmutableList()
 
     Column(modifier = modifier.padding(vertical = Size10dp)) {

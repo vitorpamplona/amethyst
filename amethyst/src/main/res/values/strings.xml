@@ -1081,6 +1081,9 @@
     <string name="no_wallet_found_with_error">No Wallets found to pay a lightning invoice (Error: %1$s). Please install a Lightning wallet to use zaps</string>
     <string name="no_wallet_found">No Wallets found to pay a lightning invoice. Please install a Lightning wallet to use zaps</string>
 
+    <string name="no_blossom_apps_found_title">Can\'t open Blossom links</string>
+    <string name="no_blossom_apps_found_description">Blossom apps were not found. Please install a local Blossom app to see this file</string>
+
     <string name="hidden_words">Hidden Words</string>
     <string name="hide_new_word_label">Hide new word or sentence</string>
     <string name="automatically_show_profile_picture">Profile Picture</string>
@@ -1500,6 +1503,11 @@
 
     <string name="dont_translate_from">Don\'t Translate From</string>
     <string name="dont_translate_from_description">Languages shown here will not be translated. Select a language to remove it and have it translated again.</string>
+    <string name="translate_to">Translate To</string>
+    <string name="translate_to_description">Choose the language to translate content into.</string>
+    <string name="language_preferences">Language Display Preferences</string>
+    <string name="language_preferences_description">For each translated language pair, choose which language to show first.</string>
+    <string name="language_preference_pair">%1$s → %2$s</string>
     <string name="pause">Pause</string>
     <string name="play">Play</string>
     <string name="open_dropdown_menu">Open dropdown menu</string>

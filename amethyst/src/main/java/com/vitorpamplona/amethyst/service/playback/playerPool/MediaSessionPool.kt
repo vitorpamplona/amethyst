@@ -29,8 +29,8 @@ import androidx.core.net.toUri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSourceBitmapLoader
-import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import com.google.common.util.concurrent.Futures
@@ -41,7 +41,6 @@ import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import okhttp3.OkHttpClient
 
 class SessionListener(
     val session: MediaSession,
@@ -57,7 +56,7 @@ class SessionListener(
  */
 class MediaSessionPool(
     val exoPlayerPool: ExoPlayerPool,
-    val okHttpClient: OkHttpClient,
+    val dataSourceFactory: DataSource.Factory,
     val appContext: Context,
     val reset: (MediaSession, Boolean) -> Unit,
 ) {
@@ -101,7 +100,7 @@ class MediaSessionPool(
                         DataSourceBitmapLoader
                             .Builder(context)
                             .setExecutorService(DataSourceBitmapLoader.DEFAULT_EXECUTOR_SERVICE.get())
-                            .setDataSourceFactory(OkHttpDataSource.Factory(okHttpClient))
+                            .setDataSourceFactory(dataSourceFactory)
                             .build(),
                     )
                     setId(id)

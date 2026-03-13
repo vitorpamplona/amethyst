@@ -86,6 +86,7 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.service.images.BlurhashWrapper
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
+import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.openBlossomUriAsIntent
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.actions.InformationDialog
 import com.vitorpamplona.amethyst.ui.note.BlankNote
@@ -286,7 +287,7 @@ fun LocalImageView(
                                     }
                                 } else {
                                     WaitAndDisplay {
-                                        DisplayUrlWithLoadingSymbol(content)
+                                        DisplayUrlWithLoadingSymbol(content, accountViewModel.toastManager::toast)
                                     }
                                 }
                             }
@@ -408,7 +409,7 @@ fun UrlImageView(
                                 }
                             } else {
                                 WaitAndDisplay {
-                                    DisplayUrlWithLoadingSymbol(content)
+                                    DisplayUrlWithLoadingSymbol(content, accountViewModel.toastManager::toast)
                                 }
                             }
                         }
@@ -580,7 +581,10 @@ fun WaitAndDisplay(content: @Composable (AnimatedVisibilityScope.() -> Unit)) {
 }
 
 @Composable
-fun DisplayUrlWithLoadingSymbol(content: BaseMediaContent) {
+fun DisplayUrlWithLoadingSymbol(
+    content: BaseMediaContent,
+    onError: (Int, Int) -> Unit = { _, _ -> },
+) {
     val uri = LocalUriHandler.current
 
     val primary = MaterialTheme.colorScheme.primary
@@ -588,6 +592,8 @@ fun DisplayUrlWithLoadingSymbol(content: BaseMediaContent) {
 
     val regularText = remember { SpanStyle(color = background) }
     val clickableTextStyle = remember { SpanStyle(color = primary) }
+
+    val context = LocalContext.current
 
     val annotatedTermsString =
         remember {
@@ -614,7 +620,13 @@ fun DisplayUrlWithLoadingSymbol(content: BaseMediaContent) {
     val pressIndicator =
         remember {
             if (content is MediaUrlContent) {
-                Modifier.clickable { runCatching { uri.openUri(content.url) } }
+                Modifier.clickable {
+                    if (content.url.startsWith("blossom:")) {
+                        openBlossomUriAsIntent(context, content.url, onError)
+                    } else {
+                        runCatching { uri.openUri(content.url) }
+                    }
+                }
             } else {
                 Modifier
             }
@@ -628,10 +640,8 @@ fun DisplayUrlWithLoadingSymbol(content: BaseMediaContent) {
     ) {
         Text(
             text = annotatedTermsString,
-            modifier =
-                pressIndicator
-                    .weight(1f, fill = false),
-            overflow = TextOverflow.Ellipsis,
+            modifier = pressIndicator.weight(1f, fill = false),
+            overflow = TextOverflow.MiddleEllipsis,
             maxLines = 1,
         )
         InlineLoadingIcon()
@@ -639,7 +649,10 @@ fun DisplayUrlWithLoadingSymbol(content: BaseMediaContent) {
 }
 
 @Composable
-fun DisplayUrlWithLoadingSymbol(url: String) {
+fun DisplayUrlWithLoadingSymbol(
+    url: String,
+    onError: (Int, Int) -> Unit = { _, _ -> },
+) {
     val uri = LocalUriHandler.current
 
     val primary = MaterialTheme.colorScheme.primary
@@ -654,7 +667,20 @@ fun DisplayUrlWithLoadingSymbol(url: String) {
             }
         }
 
-    val pressIndicator = remember { Modifier.clickable { runCatching { uri.openUri(url) } } }
+    val context = LocalContext.current
+
+    val pressIndicator =
+        remember {
+            Modifier.clickable {
+                if (url.startsWith("blossom:")) {
+                    openBlossomUriAsIntent(context, url, onError)
+                } else {
+                    runCatching {
+                        uri.openUri(url)
+                    }
+                }
+            }
+        }
 
     Row(
         modifier = Modifier.width(IntrinsicSize.Max),

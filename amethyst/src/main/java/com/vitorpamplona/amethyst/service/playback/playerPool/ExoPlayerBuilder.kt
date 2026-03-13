@@ -23,23 +23,25 @@ package com.vitorpamplona.amethyst.service.playback.playerPool
 import android.content.Context
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DataSource
 import androidx.media3.exoplayer.ExoPlayer
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
+import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCache
 import com.vitorpamplona.amethyst.service.playback.playerPool.aspectRatio.AspectRatioCacher
 import com.vitorpamplona.amethyst.service.playback.playerPool.positions.CurrentPlayPositionCacher
 import com.vitorpamplona.amethyst.service.playback.playerPool.positions.VideoViewedPositionCache
 import com.vitorpamplona.amethyst.service.playback.playerPool.wake.KeepVideosPlaying
-import okhttp3.OkHttpClient
 
 @OptIn(UnstableApi::class)
 class ExoPlayerBuilder(
-    val okHttp: OkHttpClient,
+    val videoCache: VideoCache,
+    val dataSourceFactory: DataSource.Factory,
 ) {
     fun build(context: Context): ExoPlayer =
         ExoPlayer
             .Builder(context)
             .apply {
-                setMediaSourceFactory(CustomMediaSourceFactory(okHttp))
+                setMediaSourceFactory(CustomMediaSourceFactory(videoCache, dataSourceFactory))
             }.build()
             .apply {
                 addListener(AspectRatioCacher(MediaAspectRatioCache))

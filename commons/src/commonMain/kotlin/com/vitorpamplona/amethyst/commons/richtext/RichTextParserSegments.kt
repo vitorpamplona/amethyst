@@ -28,8 +28,8 @@ import kotlinx.collections.immutable.ImmutableMap
 @Immutable
 class RichTextViewerState(
     val urlSet: Urls,
-    val imagesForPager: ImmutableMap<String, MediaUrlContent>,
-    val imageList: ImmutableList<MediaUrlContent>,
+    val mediaForPager: ImmutableMap<String, MediaUrlContent>,
+    val mediaList: ImmutableList<MediaUrlContent>,
     val customEmoji: ImmutableMap<String, String>,
     val paragraphs: ImmutableList<ParagraphState>,
     val tags: ImmutableListOfLists<String>,
@@ -140,6 +140,11 @@ class HashTagSegment(
 
 @Immutable
 class RelayUrlSegment(
+    segment: String,
+) : Segment(segment)
+
+@Immutable
+class BlossomUriSegment(
     segment: String,
 ) : Segment(segment)
 

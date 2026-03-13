@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.service.relayClient
 import com.vitorpamplona.amethyst.model.torState.TorRelayEvaluation
 import com.vitorpamplona.amethyst.service.connectivity.ConnectivityManager
 import com.vitorpamplona.amethyst.service.connectivity.ConnectivityStatus
-import com.vitorpamplona.amethyst.service.okhttp.DualHttpClientManager
+import com.vitorpamplona.amethyst.service.okhttp.DualHttpClientManagerForRelays
 import com.vitorpamplona.amethyst.ui.tor.TorManager
 import com.vitorpamplona.amethyst.ui.tor.TorServiceStatus
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -45,7 +45,7 @@ import okhttp3.OkHttpClient
 
 class RelayProxyClientConnector(
     val torEvaluator: StateFlow<TorRelayEvaluation>,
-    val okHttpClients: DualHttpClientManager,
+    val okHttpClients: DualHttpClientManagerForRelays,
     val connManager: ConnectivityManager,
     val torManager: TorManager,
     val client: INostrClient,

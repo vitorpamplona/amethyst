@@ -70,9 +70,9 @@ class BlossomServerListState(
 
     val flow =
         getBlossomServersListFlow()
-            .map { normalizeServers(it.note) }
-            .onStart { emit(normalizeServers(blossomListNote)) }
-            .flowOn(Dispatchers.IO)
+            .map {
+                normalizeServers(it.note)
+            }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,

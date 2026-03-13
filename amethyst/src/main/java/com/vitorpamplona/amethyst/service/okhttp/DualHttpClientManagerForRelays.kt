@@ -26,20 +26,17 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import okhttp3.Call
 import okhttp3.OkHttpClient
-import okhttp3.Request
 import java.net.InetSocketAddress
 import java.net.Proxy
 
-class DualHttpClientManager(
+class DualHttpClientManagerForRelays(
     userAgent: String,
     proxyPortProvider: StateFlow<Int?>,
     isMobileDataProvider: StateFlow<Boolean?>,
-    keyCache: EncryptionKeyCache,
     scope: CoroutineScope,
 ) : IHttpClientManager {
-    val factory = OkHttpClientFactory(keyCache, userAgent)
+    val factory = OkHttpClientFactoryForRelays(userAgent)
 
     val defaultHttpClient: StateFlow<OkHttpClient> =
         combine(proxyPortProvider, isMobileDataProvider) { proxy, mobile ->
@@ -75,16 +72,4 @@ class DualHttpClientManager(
         } else {
             defaultHttpClientWithoutProxy.value
         }
-
-    fun getDynamicCallFactory(useProxy: Boolean) = DynamicCallFactory(useProxy, this)
-}
-
-/**
- * the okhttp can change on the manager without affecting other systems.
- */
-class DynamicCallFactory(
-    val useProxy: Boolean,
-    val manager: DualHttpClientManager,
-) : Call.Factory {
-    override fun newCall(request: Request): Call = manager.getHttpClient(useProxy).newCall(request)
 }

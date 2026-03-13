@@ -21,11 +21,13 @@ Adds support for NIP-52 Calendar appointments
 
 Adds support for NIP-39 External Identities with kind 10011
 
+Adds support for NIP-C0 Code Snippets
+
 Adds support for NIP-66 Relay Monitor and discovery support to Quartz
 
-Adds support for NIP-C0 Code Snippets to Quartz
-
 Adds support for NIP-A3 Payment targets (PayTo: 10133) by @npub1w4uswmv6lu9yel005l3qgheysmr7tk9uvwluddznju3nuxalevvs2d0jr5
+
+Adds support for BUD-10 "Blossom:" URIs
 
 Adds support for Namecoin .bit urls to NIP-05
 - Adds choice of ElectrumX server to resolve namecoins.
@@ -41,6 +43,10 @@ Adds support for rendering Zap events when quoted inside of posts.
 Removes support for NIP-96 and updates Blossom recommendations
 
 Adds support to upload Documents to all new post screens.
+
+Content warning improvements:
+- Adds optional description field for sensitive content warnings in new posts.
+- Displays additional information on warning composables.
 
 Redesigns and reorganizes Setting pages
 - Consolidate drawer settings into a single Settings hub screen
@@ -109,6 +115,8 @@ Fixes:
 - Fixes crash when getting OpenGraph tags of invalid URLs
 - Fixes NIP-44 key mutation in NIP-46 connect
 - Location permission watcher moved outside screens to avoid recreation
+- Solves the sorting contract crash on search by precaching all values before sorting users.
+- Fixes lingering relay connections from loading follows outbox's settings.
 
 AI:
 - Add SKILL.md for AI agent customization
@@ -136,6 +144,7 @@ Amethyst Desktop by @npub12cfje6nl2nuxplcqfvhg7ljt89fmpj0n0fd24zxsukja5qm9wmtqd7
 - Adds NIP-46 Bunker Login
 - Adds Support for Chess
 - Adds Thread Screens
+- Adds advanced search with query engine and filter panel
 - Adds encrypted DMs (NIP-04/NIP-17)
 - Adds proper empty states with EOSE tracking
 - Adds multi-column deck layout
