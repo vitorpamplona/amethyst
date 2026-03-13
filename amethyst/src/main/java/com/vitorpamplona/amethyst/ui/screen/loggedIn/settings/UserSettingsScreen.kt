@@ -20,28 +20,43 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
-import android.content.res.Resources
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.InputChip
+import androidx.compose.material3.InputChipDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,10 +64,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.core.os.ConfigurationCompat
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -64,7 +78,6 @@ import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.SpacedBy10dp
-import com.vitorpamplona.amethyst.ui.theme.SpacedBy5dp
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import java.util.Locale as JavaLocale
 
@@ -97,141 +110,219 @@ fun UserSettingsScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = SpacedBy10dp,
             ) {
-                DontTranslateFromSetting(accountViewModel)
                 TranslateToSetting(accountViewModel)
+                HorizontalDivider(thickness = DividerThickness)
+                DontTranslateFromSetting(accountViewModel)
+                HorizontalDivider(thickness = DividerThickness)
                 LanguagePreferencesSetting(accountViewModel)
             }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+private fun getAllLanguagesSorted(): List<JavaLocale> {
+    val seen = mutableSetOf<String>()
+    return JavaLocale.getAvailableLocales()
+        .filter { it.language.isNotBlank() && it.country.isBlank() && seen.add(it.language) }
+        .sortedBy { it.displayName.lowercase() }
+}
+
 @Composable
-fun DontTranslateFromSetting(accountViewModel: AccountViewModel) {
-    var expanded by remember { mutableStateOf(false) }
-    val selectedLanguages = accountViewModel.dontTranslateFromFilteredBySpokenLanguages().toMutableSet()
+private fun SearchableLanguageList(
+    languages: List<JavaLocale>,
+    onSelect: (JavaLocale) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var searchQuery by remember { mutableStateOf("") }
+    val filtered =
+        remember(searchQuery, languages) {
+            if (searchQuery.isBlank()) {
+                languages
+            } else {
+                languages.filter {
+                    it.displayName.contains(searchQuery, ignoreCase = true) ||
+                        it.language.contains(searchQuery, ignoreCase = true)
+                }
+            }
+        }
 
-    Column {
-        SettingsRow(
-            name = R.string.dont_translate_from,
-            description = R.string.dont_translate_from_description,
-        ) {
-            ExposedDropdownMenuBox(
-                expanded = expanded,
-                onExpandedChange = { expanded = !expanded },
-            ) {
-                OutlinedTextField(
-                    value = stringRes(R.string.quick_action_select),
-                    onValueChange = {},
-                    readOnly = true,
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                    modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryEditable),
+    Column(modifier) {
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = { searchQuery = it },
+            placeholder = { Text(stringRes(R.string.search_languages)) },
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
                 )
+            },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
 
-                ExposedDropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false },
+        Spacer(modifier = Modifier.height(4.dp))
+
+        LazyColumn(modifier = Modifier.heightIn(max = 200.dp)) {
+            items(filtered, key = { it.language }) { locale ->
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelect(locale) }
+                            .padding(horizontal = 8.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    selectedLanguages.forEach { languageCode ->
-                        DropdownMenuItem(
-                            text = { Text(text = JavaLocale.forLanguageTag(languageCode).displayName) },
-                            onClick = {
-                                accountViewModel.toggleDontTranslateFrom(languageCode)
-                                selectedLanguages.remove(languageCode)
-                                expanded = false
-                            },
-                            trailingIcon = {
-                                Icon(
-                                    imageVector = Icons.Default.Close,
-                                    contentDescription = stringRes(R.string.remove_language, languageCode),
-                                    tint = Color.Red,
-                                    modifier = Modifier.size(16.dp),
-                                )
-                            },
-                        )
-                    }
+                    Text(
+                        text = locale.displayName,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Text(
+                        text = locale.language,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TranslateToSetting(accountViewModel: AccountViewModel) {
-    var expanded by remember { mutableStateOf(false) }
     val currentTranslateTo = accountViewModel.translateTo()
-    val languageList = ConfigurationCompat.getLocales(Resources.getSystem().configuration)
+    val allLanguages = remember { getAllLanguagesSorted() }
+    var showPicker by remember { mutableStateOf(false) }
 
-    Column {
+    Column(modifier = Modifier.fillMaxWidth()) {
         SettingsRow(
             name = R.string.translate_to,
             description = R.string.translate_to_description,
         ) {
-            ExposedDropdownMenuBox(
-                expanded = expanded,
-                onExpandedChange = { expanded = !expanded },
+            OutlinedCard(
+                modifier = Modifier.clickable { showPicker = !showPicker },
             ) {
-                OutlinedTextField(
-                    value = JavaLocale(currentTranslateTo).displayName,
-                    onValueChange = {},
-                    readOnly = true,
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                    modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryEditable),
-                )
-
-                ExposedDropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false },
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    for (i in 0 until languageList.size()) {
-                        languageList.get(i)?.let { lang ->
-                            DropdownMenuItem(
-                                text = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        if (accountViewModel.account.settings.translateToContains(lang)) {
-                                            Icon(
-                                                imageVector = Icons.Default.Check,
-                                                contentDescription = null,
-                                                modifier = Modifier.size(24.dp),
-                                            )
-                                        } else {
-                                            Spacer(modifier = Modifier.size(24.dp))
-                                        }
-                                        Spacer(modifier = Modifier.size(10.dp))
-                                        Text(text = lang.displayName)
-                                    }
-                                },
-                                onClick = {
-                                    accountViewModel.updateTranslateTo(lang)
-                                    expanded = false
-                                },
-                            )
-                        }
-                    }
+                    Text(
+                        text = JavaLocale(currentTranslateTo).displayName,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                    )
                 }
             }
+        }
+
+        if (showPicker) {
+            Spacer(modifier = Modifier.height(8.dp))
+
+            SearchableLanguageList(
+                languages = allLanguages,
+                onSelect = { locale ->
+                    accountViewModel.updateTranslateTo(locale)
+                    showPicker = false
+                },
+            )
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun DontTranslateFromSetting(accountViewModel: AccountViewModel) {
+    val selectedLanguages = accountViewModel.dontTranslateFrom().toSet()
+    var showAddPicker by remember { mutableStateOf(false) }
+    val allLanguages = remember { getAllLanguagesSorted() }
+
+    val availableToAdd =
+        remember(selectedLanguages, allLanguages) {
+            allLanguages.filter { it.language !in selectedLanguages }
+        }
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        SettingsRow(
+            name = R.string.dont_translate_from,
+            description = R.string.dont_translate_from_description,
+        ) {}
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            selectedLanguages.forEach { languageCode ->
+                InputChip(
+                    selected = true,
+                    onClick = { accountViewModel.toggleDontTranslateFrom(languageCode) },
+                    label = { Text(JavaLocale(languageCode).displayName) },
+                    trailingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = stringRes(R.string.remove_language, languageCode),
+                            modifier = Modifier.size(InputChipDefaults.IconSize),
+                        )
+                    },
+                )
+            }
+
+            InputChip(
+                selected = false,
+                onClick = { showAddPicker = !showAddPicker },
+                label = { Text(stringRes(R.string.add_language)) },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = null,
+                        modifier = Modifier.size(InputChipDefaults.IconSize),
+                    )
+                },
+            )
+        }
+
+        if (showAddPicker) {
+            Spacer(modifier = Modifier.height(8.dp))
+
+            SearchableLanguageList(
+                languages = availableToAdd,
+                onSelect = { locale ->
+                    accountViewModel.toggleDontTranslateFrom(locale.language)
+                    showAddPicker = false
+                },
+            )
+        }
+    }
+}
+
 @Composable
 fun LanguagePreferencesSetting(accountViewModel: AccountViewModel) {
     val languagePreferences = accountViewModel.account.settings.syncedSettings.languages.languagePreferences
+    var showAddPair by remember { mutableStateOf(false) }
 
-    if (languagePreferences.isEmpty()) return
-
-    Column(verticalArrangement = SpacedBy5dp) {
+    Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SettingsRow(
             name = R.string.language_preferences,
             description = R.string.language_preferences_description,
         ) {}
 
+        if (languagePreferences.isEmpty() && !showAddPair) {
+            Text(
+                text = stringRes(R.string.no_language_preferences),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(vertical = 8.dp),
+            )
+        }
+
         languagePreferences.forEach { (key, preference) ->
             val parts = key.split(",")
             if (parts.size == 2) {
-                LanguagePreferenceItem(
+                LanguagePreferenceCard(
                     source = parts[0],
                     target = parts[1],
                     preference = preference,
@@ -239,12 +330,31 @@ fun LanguagePreferencesSetting(accountViewModel: AccountViewModel) {
                 )
             }
         }
+
+        TextButton(
+            onClick = { showAddPair = !showAddPair },
+            modifier = Modifier.align(Alignment.CenterHorizontally),
+        ) {
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(stringRes(R.string.add_language_pair))
+        }
+
+        if (showAddPair) {
+            AddLanguagePairCard(
+                accountViewModel = accountViewModel,
+                onDismiss = { showAddPair = false },
+            )
+        }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun LanguagePreferenceItem(
+private fun LanguagePreferenceCard(
     source: String,
     target: String,
     preference: String,
@@ -252,77 +362,237 @@ private fun LanguagePreferenceItem(
 ) {
     val sourceName = JavaLocale(source).displayName
     val targetName = JavaLocale(target).displayName
-    var expanded by remember { mutableStateOf(false) }
 
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = !expanded },
-        modifier = Modifier.padding(vertical = 4.dp),
-    ) {
-        OutlinedTextField(
-            value = stringRes(R.string.language_preference_pair, sourceName, targetName),
-            onValueChange = {},
-            readOnly = true,
-            label = {
+    OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    imageVector = Icons.Default.SwapHoriz,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp),
+                )
+                Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    if (preference == source) {
-                        stringRes(R.string.translations_show_in_lang_first, sourceName)
-                    } else {
-                        stringRes(R.string.translations_show_in_lang_first, targetName)
+                    text = stringRes(R.string.language_preference_pair, sourceName, targetName),
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.weight(1f),
+                )
+                IconButton(
+                    onClick = {
+                        accountViewModel.prefer(source, target, preference)
+                    },
+                    modifier = Modifier.size(32.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = stringRes(R.string.delete_preference),
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable { accountViewModel.prefer(source, target, source) }
+                        .padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                RadioButton(
+                    selected = preference == source,
+                    onClick = { accountViewModel.prefer(source, target, source) },
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = stringRes(R.string.show_first, sourceName),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable { accountViewModel.prefer(source, target, target) }
+                        .padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                RadioButton(
+                    selected = preference == target,
+                    onClick = { accountViewModel.prefer(source, target, target) },
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = stringRes(R.string.show_first, targetName),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AddLanguagePairCard(
+    accountViewModel: AccountViewModel,
+    onDismiss: () -> Unit,
+) {
+    val allLanguages = remember { getAllLanguagesSorted() }
+    var selectedSource by remember { mutableStateOf<JavaLocale?>(null) }
+    var selectedTarget by remember { mutableStateOf<JavaLocale?>(null) }
+    var pickingSource by remember { mutableStateOf(true) }
+    var pickingTarget by remember { mutableStateOf(false) }
+
+    OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(
+                text = stringRes(R.string.add_language_pair),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Medium,
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                OutlinedCard(
+                    modifier =
+                        Modifier
+                            .weight(1f)
+                            .clickable {
+                                pickingSource = true
+                                pickingTarget = false
+                            },
+                ) {
+                    Column(modifier = Modifier.padding(8.dp)) {
+                        Text(
+                            text = stringRes(R.string.source_language),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            text = selectedSource?.displayName ?: stringRes(R.string.quick_action_select),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = if (selectedSource != null) FontWeight.Medium else FontWeight.Normal,
+                            color =
+                                if (selectedSource != null) {
+                                    MaterialTheme.colorScheme.onSurface
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                },
+                        )
+                    }
+                }
+
+                Icon(
+                    imageVector = Icons.Default.SwapHoriz,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp),
+                )
+
+                OutlinedCard(
+                    modifier =
+                        Modifier
+                            .weight(1f)
+                            .clickable {
+                                pickingTarget = true
+                                pickingSource = false
+                            },
+                ) {
+                    Column(modifier = Modifier.padding(8.dp)) {
+                        Text(
+                            text = stringRes(R.string.target_language),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            text = selectedTarget?.displayName ?: stringRes(R.string.quick_action_select),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = if (selectedTarget != null) FontWeight.Medium else FontWeight.Normal,
+                            color =
+                                if (selectedTarget != null) {
+                                    MaterialTheme.colorScheme.onSurface
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                },
+                        )
+                    }
+                }
+            }
+
+            if (pickingSource) {
+                Spacer(modifier = Modifier.height(8.dp))
+                SearchableLanguageList(
+                    languages = allLanguages,
+                    onSelect = { locale ->
+                        selectedSource = locale
+                        pickingSource = false
+                        if (selectedTarget == null) {
+                            pickingTarget = true
+                        }
                     },
                 )
-            },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryEditable),
-        )
+            }
 
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-        ) {
-            DropdownMenuItem(
-                text = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (preference == source) {
-                            Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = null,
-                                modifier = Modifier.size(24.dp),
-                            )
-                        } else {
-                            Spacer(modifier = Modifier.size(24.dp))
-                        }
-                        Spacer(modifier = Modifier.size(10.dp))
-                        Text(stringRes(R.string.translations_show_in_lang_first, sourceName))
+            if (pickingTarget) {
+                Spacer(modifier = Modifier.height(8.dp))
+                SearchableLanguageList(
+                    languages = allLanguages.filter { it.language != selectedSource?.language },
+                    onSelect = { locale ->
+                        selectedTarget = locale
+                        pickingTarget = false
+                    },
+                )
+            }
+
+            if (selectedSource != null && selectedTarget != null) {
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text(stringRes(R.string.go_back))
                     }
-                },
-                onClick = {
-                    accountViewModel.prefer(source, target, source)
-                    expanded = false
-                },
-            )
-            HorizontalDivider(thickness = DividerThickness)
-            DropdownMenuItem(
-                text = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (preference == target) {
-                            Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = null,
-                                modifier = Modifier.size(24.dp),
-                            )
-                        } else {
-                            Spacer(modifier = Modifier.size(24.dp))
-                        }
-                        Spacer(modifier = Modifier.size(10.dp))
-                        Text(stringRes(R.string.translations_show_in_lang_first, targetName))
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    TextButton(
+                        onClick = {
+                            val src = selectedSource!!.language
+                            val tgt = selectedTarget!!.language
+                            accountViewModel.prefer(src, tgt, tgt)
+                            onDismiss()
+                        },
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            stringRes(
+                                R.string.show_first,
+                                selectedTarget!!.displayName,
+                            ),
+                        )
                     }
-                },
-                onClick = {
-                    accountViewModel.prefer(source, target, target)
-                    expanded = false
-                },
-            )
+                }
+            }
         }
     }
 }
