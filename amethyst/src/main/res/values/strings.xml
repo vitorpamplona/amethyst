@@ -1473,6 +1473,7 @@
     <string name="add_a_blossom_server">Add a Blossom Server</string>
     <string name="delete_all">Delete all</string>
     <string name="delete_all_drafts_confirmation">Are you sure you want to delete all drafts?</string>
+    <string name="delete_draft_confirmation">Are you sure you want to delete this draft?</string>
     <string name="and_more" translatable="false">" +%1$s"</string>
     <string name="stack">Stack:</string>
 

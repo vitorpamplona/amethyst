@@ -48,7 +48,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
-import com.vitorpamplona.amethyst.ui.components.SwipeToDeleteContainer
+import com.vitorpamplona.amethyst.ui.components.SwipeToDeleteWithConfirmation
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.RenderFeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys.DRAFTS
@@ -168,7 +168,7 @@ private fun DraftFeedLoaded(
         }
         itemsIndexed(items.list, key = { _, item -> item.idHex }) { _, item ->
             Row(Modifier.fillMaxWidth().animateItem()) {
-                SwipeToDeleteContainer(
+                SwipeToDeleteWithConfirmation(
                     modifier = Modifier.fillMaxWidth().animateContentSize(),
                     onStartToEnd = { accountViewModel.delete(item) },
                 ) {
