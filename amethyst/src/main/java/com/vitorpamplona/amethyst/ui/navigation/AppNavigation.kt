@@ -112,6 +112,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.search.SearchScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.AllSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.NIP47SetupScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.NamecoinSettingsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.OtsSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.ReactionsSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SecurityFiltersScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsScreen
@@ -177,6 +178,7 @@ fun AppNavigation(
             composableFromEnd<Route.SecurityFilters> { SecurityFiltersScreen(accountViewModel, nav) }
             composableFromEnd<Route.PrivacyOptions> { PrivacyOptionsScreen(Amethyst.instance.torPrefs.value, nav) }
             composableFromEnd<Route.NamecoinSettings> { NamecoinSettingsScreen(Amethyst.instance.namecoinPrefs, nav) }
+            composableFromEnd<Route.OtsSettings> { OtsSettingsScreen(Amethyst.instance.otsPrefs, Amethyst.instance.torPrefs.value, nav) }
             composableFromEnd<Route.Bookmarks> { BookmarkListScreen(accountViewModel, nav) }
             composableFromEnd<Route.Drafts> { DraftListScreen(accountViewModel, nav) }
             composableFromEnd<Route.Settings> { SettingsScreen(accountViewModel, nav) }
