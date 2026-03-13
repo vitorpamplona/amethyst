@@ -20,16 +20,30 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.nip65
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Error
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.navs.rememberExtendedNav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -37,8 +51,14 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySet
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayUrlEditField
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
+import com.vitorpamplona.amethyst.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.allGoodColor
+import com.vitorpamplona.amethyst.ui.theme.redColorOnSecondSurface
+import com.vitorpamplona.amethyst.ui.theme.warningColor
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 @Composable
 fun Nip65RelayList(
@@ -151,5 +171,100 @@ fun LazyListScope.renderNip65NotifItems(
             accountViewModel = accountViewModel,
             nav = nav,
         )
+    }
+}
+
+fun LazyListScope.renderNip65HomeItemsWithTest(
+    feedState: List<BasicRelaySetupInfo>,
+    testResults: Map<NormalizedRelayUrl, OutboxRelayTesterViewModel.TestState>,
+    postViewModel: Nip65RelayListViewModel,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    itemsIndexed(feedState, key = { _, item -> "Nip65HomeTest" + item.relay.url }) { _, item ->
+        BasicRelaySetupInfoDialog(
+            item,
+            onDelete = { postViewModel.deleteHomeRelay(item) },
+            nip11CachedRetriever = Amethyst.instance.nip11Cache,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
+        testResults[item.relay]?.let { testState ->
+            RelayTestStatusRow(testState)
+        }
+    }
+
+    item {
+        Spacer(modifier = StdVertSpacer)
+        RelayUrlEditField(
+            onNewRelay = { postViewModel.addHomeRelay(relaySetupInfoBuilder(it)) },
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
+    }
+}
+
+@Composable
+fun RelayTestStatusRow(state: OutboxRelayTesterViewModel.TestState) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(start = 52.dp, end = 16.dp, bottom = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        when (state) {
+            is OutboxRelayTesterViewModel.TestState.Testing -> {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(13.dp),
+                    strokeWidth = 2.dp,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    text = stringRes(R.string.relay_test_in_progress),
+                    fontSize = Font12SP,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+            is OutboxRelayTesterViewModel.TestState.Success -> {
+                Icon(
+                    imageVector = Icons.Default.CheckCircle,
+                    contentDescription = null,
+                    modifier = Modifier.size(13.dp),
+                    tint = MaterialTheme.colorScheme.allGoodColor,
+                )
+                Text(
+                    text = stringRes(R.string.relay_test_success),
+                    fontSize = Font12SP,
+                    color = MaterialTheme.colorScheme.allGoodColor,
+                )
+            }
+            is OutboxRelayTesterViewModel.TestState.Failed -> {
+                Icon(
+                    imageVector = Icons.Default.Error,
+                    contentDescription = null,
+                    modifier = Modifier.size(13.dp),
+                    tint =
+                        if (state.message == "Timeout") {
+                            MaterialTheme.colorScheme.warningColor
+                        } else {
+                            MaterialTheme.colorScheme.redColorOnSecondSurface
+                        },
+                )
+                Text(
+                    text = state.message,
+                    fontSize = Font12SP,
+                    color =
+                        if (state.message == "Timeout") {
+                            MaterialTheme.colorScheme.warningColor
+                        } else {
+                            MaterialTheme.colorScheme.redColorOnSecondSurface
+                        },
+                    maxLines = 2,
+                )
+            }
+            else -> {}
+        }
     }
 }
