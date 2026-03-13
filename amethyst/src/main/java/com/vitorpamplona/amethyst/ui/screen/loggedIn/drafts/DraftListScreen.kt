@@ -170,7 +170,7 @@ private fun DraftFeedLoaded(
             Row(Modifier.fillMaxWidth().animateItem()) {
                 SwipeToDeleteWithConfirmation(
                     modifier = Modifier.fillMaxWidth().animateContentSize(),
-                    onStartToEnd = { accountViewModel.delete(item) },
+                    onDelete = { accountViewModel.delete(item) },
                 ) {
                     NoteCompose(
                         item,
