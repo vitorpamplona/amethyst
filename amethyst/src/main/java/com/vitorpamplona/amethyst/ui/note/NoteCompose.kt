@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Timer
@@ -1358,7 +1359,7 @@ fun DisplayExpiration(expirationDate: Long) {
         Icon(
             imageVector = Icons.Outlined.Timer,
             contentDescription = stringRes(R.string.expiration_date_label),
-            modifier = Modifier.size(15.dp),
+            modifier = Modifier.padding(start = 5.dp).size(15.dp),
             tint = MaterialTheme.colorScheme.placeholderText,
         )
         val context = LocalContext.current
@@ -1366,6 +1367,7 @@ fun DisplayExpiration(expirationDate: Long) {
             text = timeAheadNoDot(expirationDate, context),
             color = MaterialTheme.colorScheme.placeholderText,
             maxLines = 1,
+            modifier = Modifier.padding(start = 3.dp),
         )
     }
 }
