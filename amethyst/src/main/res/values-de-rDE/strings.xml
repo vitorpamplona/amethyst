@@ -1510,7 +1510,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="import_follow_list">Folgeliste importieren</string>
     <string name="select_users_to_follow">Benutzer zum Folgen auswählen</string>
     <string name="profile_to_import_from">Profil, aus dem importiert werden soll</string>
-    <string name="name_search_npub1_alice_example_com">Namenssuche, npub1…, alice@example.com</string>
+    <string name="name_search_npub1_alice_example_com" tools:ignore="Typos">Namenssuche, npub1…, alice@example.com</string>
     <string name="supports_npub_nip_05_hex_and_namecoin_bit_d_id">Unterstützt npub, NIP-05, Hex und Namecoin (.bit / d/ / id/)</string>
     <string name="look_up_follow_list">Folgeliste nachschlagen</string>
     <string name="tip">Tipp</string>
@@ -1533,4 +1533,28 @@ anz der Bedingungen ist erforderlich</string>
     <string name="select_all">Alle auswählen</string>
     <string name="uptime">%1$d%% Verfügbarkeit</string>
     <string name="namecoin_settings">Namecoin-Einstellungen</string>
+    <string name="wallet">Wallet</string>
+    <string name="wallet_balance">Guthaben</string>
+    <string name="wallet_send">Senden</string>
+    <string name="wallet_receive">Empfangen</string>
+    <string name="wallet_transactions">Transaktionen</string>
+    <string name="wallet_no_connection">Keine Wallet verbunden</string>
+    <string name="wallet_no_connection_description">Richte eine Nostr Wallet Connect (NWC)-Verbindung in deinen Zap-Einstellungen ein, um die Wallet zu nutzen.</string>
+    <string name="wallet_setup">Wallet einrichten</string>
+    <string name="wallet_sats">Sats</string>
+    <string name="wallet_paste_invoice">BOLT-11-Rechnung einfügen</string>
+    <string name="wallet_pay">Bezahlen</string>
+    <string name="wallet_payment_success">Zahlung erfolgreich</string>
+    <string name="wallet_payment_sending">Zahlung wird gesendet…</string>
+    <string name="wallet_amount_sats">Betrag (Sats)</string>
+    <string name="wallet_description">Beschreibung (optional)</string>
+    <string name="wallet_create_invoice">Rechnung erstellen</string>
+    <string name="wallet_creating_invoice">Rechnung wird erstellt…</string>
+    <string name="wallet_copy_invoice">Rechnung kopieren</string>
+    <string name="wallet_no_transactions">Noch keine Transaktionen</string>
+    <string name="wallet_loading">Wird geladen…</string>
+    <string name="wallet_incoming">Empfangen</string>
+    <string name="wallet_outgoing">Gesendet</string>
+    <string name="wallet_refresh">Aktualisieren</string>
+    <string name="language_preference_pair">%1$s → %2$s</string>
 </resources>
