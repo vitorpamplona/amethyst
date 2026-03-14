@@ -119,6 +119,10 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.UpdateZapAmountScr
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.UserSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.ThreadScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.VideoScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletReceiveScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletSendScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletTransactionsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.AddAccountDialog
 import com.vitorpamplona.amethyst.ui.uriToRoute
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
@@ -150,6 +154,11 @@ fun AppNavigation(
             composable<Route.Discover> { DiscoverScreen(accountViewModel, nav) }
             composable<Route.Notification> { NotificationScreen(accountViewModel, nav) }
             composable<Route.Chess> { ChessLobbyScreen(accountViewModel, nav) }
+
+            composableFromEnd<Route.Wallet> { WalletScreen(accountViewModel, nav) }
+            composableFromEnd<Route.WalletSend> { WalletSendScreen(accountViewModel, nav) }
+            composableFromEnd<Route.WalletReceive> { WalletReceiveScreen(accountViewModel, nav) }
+            composableFromEnd<Route.WalletTransactions> { WalletTransactionsScreen(accountViewModel, nav) }
 
             composableFromEnd<Route.Lists> { ListOfPeopleListsScreen(accountViewModel, nav) }
             composableFromEndArgs<Route.MyPeopleListView> { PeopleListScreen(it.dTag, accountViewModel, nav) }

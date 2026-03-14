@@ -139,6 +139,45 @@ class NwcSignerState(
     }
 
     /**
+     * Sends a generic NIP-47 request to the connected wallet.
+     * Subscribes to responses and waits up to 60s for a reply.
+     *
+     * @param request the NIP-47 request to send
+     * @param onResponse callback to handle the response from the wallet
+     * @return a pair containing the request event and target relay URL
+     * @throws IllegalArgumentException if no NIP-47 wallet is set up
+     */
+    suspend fun sendNwcRequest(
+        request: Request,
+        onResponse: (Response?) -> Unit,
+    ): Pair<LnZapPaymentRequestEvent, NormalizedRelayUrl> {
+        val walletService = nip47Setup.value ?: throw IllegalArgumentException("No NIP47 setup")
+
+        val event = LnZapPaymentRequestEvent.createRequest(request, walletService.pubKeyHex, nip47Signer.value)
+
+        val filter =
+            NWCPaymentQueryState(
+                fromServiceHex = walletService.pubKeyHex,
+                toUserHex = event.pubKey,
+                replyingToHex = event.id,
+                relay = walletService.relayUri,
+            )
+
+        nwcFilterAssembler.subscribe(filter)
+
+        scope.launch(Dispatchers.IO) {
+            delay(60000)
+            nwcFilterAssembler.unsubscribe(filter)
+        }
+
+        cache.consume(event, null, true, walletService.relayUri) {
+            onResponse(decryptResponse(it))
+        }
+
+        return Pair(event, walletService.relayUri)
+    }
+
+    /**
      * Sends a zap payment request to a connected Lightning wallet.
      * Subscribes to responses and waits up to 60s for a reply.
      *

@@ -43,6 +43,14 @@ sealed class Route {
 
     @Serializable object Chess : Route()
 
+    @Serializable object Wallet : Route()
+
+    @Serializable object WalletSend : Route()
+
+    @Serializable object WalletReceive : Route()
+
+    @Serializable object WalletTransactions : Route()
+
     @Serializable object Search : Route()
 
     @Serializable object SecurityFilters : Route()
