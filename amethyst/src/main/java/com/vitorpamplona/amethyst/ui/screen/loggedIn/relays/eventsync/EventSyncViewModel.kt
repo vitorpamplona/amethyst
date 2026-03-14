@@ -36,6 +36,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -245,62 +246,104 @@ class EventSyncViewModel(
     }
 
     /**
-     * Sends [filters] to every relay in [relays] simultaneously (one subscription covering
-     * the whole chunk).  Suspends until every relay has replied with EOSE/CLOSED/error, or
-     * [CHUNK_TIMEOUT_MS] elapses, whichever comes first.
+     * Sends [baseFilters] to every relay in [relays] simultaneously, then paginates per relay
+     * until each one is exhausted.
+     *
+     * Many relays impose a hard event-count limit per filter (commonly 500).  After EOSE the
+     * oldest [Event.createdAt] seen on that relay becomes the next `until` cursor, so the
+     * following request fetches the next page.  This repeats until a relay returns no new
+     * events, at which point it is removed from the active set.
+     *
+     * All relays in [relays] are queried in parallel within each pagination round.  Only the
+     * relays that still have more pages participate in subsequent rounds.
      */
     private suspend fun downloadFromChunk(
         relays: List<NormalizedRelayUrl>,
-        filters: List<Filter>,
+        baseFilters: List<Filter>,
         onEvent: (Event) -> Unit,
     ) {
-        val remaining = AtomicInteger(relays.size)
-        val done = Channel<Unit>(Channel.CONFLATED)
-        val subId = newSubId()
+        // `until` cursor per relay; absent = first page (no cursor).
+        val relayUntil = ConcurrentHashMap<NormalizedRelayUrl, Long>()
+        // Relays that can no longer be contacted are skipped immediately.
+        val deadRelays = ConcurrentHashMap.newKeySet<NormalizedRelayUrl>()
 
-        val listener =
-            object : IRequestListener {
-                override fun onEvent(
-                    event: Event,
-                    isLive: Boolean,
-                    relay: NormalizedRelayUrl,
-                    forFilters: List<Filter>?,
-                ) {
-                    onEvent(event)
+        val activeRelays = relays.toMutableList()
+
+        while (activeRelays.isNotEmpty() && isActive) {
+            // Per-relay event count and oldest timestamp for this round.
+            val roundCount = ConcurrentHashMap<NormalizedRelayUrl, Int>()
+            val roundMinTs = ConcurrentHashMap<NormalizedRelayUrl, Long>()
+
+            val remaining = AtomicInteger(activeRelays.size)
+            val done = Channel<Unit>(Channel.CONFLATED)
+            val subId = newSubId()
+
+            val listener =
+                object : IRequestListener {
+                    override fun onEvent(
+                        event: Event,
+                        isLive: Boolean,
+                        relay: NormalizedRelayUrl,
+                        forFilters: List<Filter>?,
+                    ) {
+                        onEvent(event)
+                        roundCount.merge(relay, 1, Int::plus)
+                        roundMinTs.merge(relay, event.createdAt, ::minOf)
+                    }
+
+                    override fun onEose(
+                        relay: NormalizedRelayUrl,
+                        forFilters: List<Filter>?,
+                    ) {
+                        if (remaining.decrementAndGet() <= 0) done.trySend(Unit)
+                    }
+
+                    override fun onClosed(
+                        message: String,
+                        relay: NormalizedRelayUrl,
+                        forFilters: List<Filter>?,
+                    ) {
+                        if (remaining.decrementAndGet() <= 0) done.trySend(Unit)
+                    }
+
+                    override fun onCannotConnect(
+                        relay: NormalizedRelayUrl,
+                        message: String,
+                        forFilters: List<Filter>?,
+                    ) {
+                        deadRelays.add(relay)
+                        if (remaining.decrementAndGet() <= 0) done.trySend(Unit)
+                    }
                 }
 
-                override fun onEose(
-                    relay: NormalizedRelayUrl,
-                    forFilters: List<Filter>?,
-                ) {
-                    if (remaining.decrementAndGet() <= 0) done.trySend(Unit)
+            // Build per-relay filter list, injecting each relay's current `until` cursor.
+            val filtersMap =
+                activeRelays.associateWith { relay ->
+                    val until = relayUntil[relay]
+                    if (until == null) {
+                        baseFilters
+                    } else {
+                        baseFilters.map { it.copy(until = until) }
+                    }
                 }
 
-                override fun onClosed(
-                    message: String,
-                    relay: NormalizedRelayUrl,
-                    forFilters: List<Filter>?,
-                ) {
-                    if (remaining.decrementAndGet() <= 0) done.trySend(Unit)
-                }
+            account.client.openReqSubscription(subId, filtersMap, listener)
+            withTimeoutOrNull(CHUNK_TIMEOUT_MS) { done.receive() }
+            account.client.close(subId)
+            done.close()
 
-                override fun onCannotConnect(
-                    relay: NormalizedRelayUrl,
-                    message: String,
-                    forFilters: List<Filter>?,
-                ) {
-                    if (remaining.decrementAndGet() <= 0) done.trySend(Unit)
+            // Advance cursors for relays that returned events; drop exhausted or dead ones.
+            activeRelays.removeAll { relay ->
+                when {
+                    relay in deadRelays -> true
+                    (roundCount[relay] ?: 0) == 0 -> true  // EOSE with no events = exhausted
+                    else -> {
+                        // Next page starts just before the oldest event seen this round.
+                        relayUntil[relay] = roundMinTs[relay]!! - 1
+                        false
+                    }
                 }
             }
-
-        val filtersMap = relays.associateWith { filters }
-        account.client.openReqSubscription(subId, filtersMap, listener)
-
-        withTimeoutOrNull(CHUNK_TIMEOUT_MS) {
-            done.receive()
         }
-
-        account.client.close(subId)
-        done.close()
     }
 }
