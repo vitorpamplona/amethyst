@@ -346,14 +346,6 @@ fun MappedAllRelayListView(
                 )
             }
             renderConnectedItems(connectedRelays, connectedViewModel, accountViewModel, newNav)
-
-            item {
-                SettingsCategory(
-                    R.string.event_sync_section,
-                    R.string.event_sync_section_explainer,
-                    SettingsCategorySpacingModifier,
-                )
-            }
         }
     }
 }
