@@ -30,6 +30,22 @@ object NwcTransactionState {
     const val SETTLED = "SETTLED"
     const val FAILED = "FAILED"
     const val ACCEPTED = "ACCEPTED"
+
+    fun isSettled(state: String?) = state.equals(SETTLED, ignoreCase = true)
+
+    fun isPending(state: String?) = state.equals(PENDING, ignoreCase = true)
+
+    fun isFailed(state: String?) = state.equals(FAILED, ignoreCase = true)
+
+    fun isAccepted(state: String?) = state.equals(ACCEPTED, ignoreCase = true)
+}
+
+object NwcBudgetRenewal {
+    const val DAILY = "daily"
+    const val WEEKLY = "weekly"
+    const val MONTHLY = "monthly"
+    const val YEARLY = "yearly"
+    const val NEVER = "never"
 }
 
 class NwcTransaction(

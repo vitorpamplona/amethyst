@@ -26,10 +26,12 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 /**
- * Interoperability tests using JSON structures matching Alby Hub's NIP-47 implementation.
- * These tests verify that Amethyst can correctly parse responses from Alby Hub wallets.
+ * Interoperability tests using JSON structures matching Alby Hub (server)
+ * and Alby JS SDK (client) NIP-47 implementations.
+ * These tests verify that Amethyst can correctly parse responses from Alby wallets.
  */
 class AlbyInteropTest {
     // --- Alby Hub pay_invoice response format ---
@@ -403,5 +405,100 @@ class AlbyInteropTest {
         assertNotNull(txn)
         assertEquals(144L, txn.settle_deadline)
         assertEquals(NwcTransactionState.PENDING, txn.state)
+    }
+
+    // ===================================================================
+    // Alby JS SDK (client) interop tests
+    // The JS SDK uses lowercase transaction states while Hub uses uppercase.
+    // Both formats must be handled correctly.
+    // ===================================================================
+
+    @Test
+    fun testJsSdkLowercaseSettledState() {
+        val json =
+            """{"result_type":"lookup_invoice","result":{"type":"incoming","state":"settled","invoice":"lnbc...","payment_hash":"hash123","amount":1000,"settled_at":1694876497}}"""
+        val response = OptimizedJsonMapper.fromJsonTo<Response>(json)
+        assertIs<LookupInvoiceSuccessResponse>(response)
+        assertEquals("settled", response.result?.state)
+        assertTrue(NwcTransactionState.isSettled(response.result?.state))
+    }
+
+    @Test
+    fun testJsSdkLowercasePendingState() {
+        val json =
+            """{"result_type":"make_invoice","result":{"type":"incoming","state":"pending","invoice":"lnbc...","payment_hash":"hash","amount":5000,"created_at":1000}}"""
+        val response = OptimizedJsonMapper.fromJsonTo<Response>(json)
+        assertIs<MakeInvoiceSuccessResponse>(response)
+        assertEquals("pending", response.result?.state)
+        assertTrue(NwcTransactionState.isPending(response.result?.state))
+    }
+
+    @Test
+    fun testJsSdkLowercaseStatesInListTransactions() {
+        val json =
+            """{"result_type":"list_transactions","result":{"transactions":[{"type":"incoming","state":"settled","amount":1000,"created_at":1000},{"type":"outgoing","state":"failed","amount":2000,"created_at":2000},{"type":"incoming","state":"accepted","amount":3000,"created_at":3000}],"total_count":3}}"""
+        val response = OptimizedJsonMapper.fromJsonTo<Response>(json)
+        assertIs<ListTransactionsSuccessResponse>(response)
+        val txns = response.result?.transactions
+        assertNotNull(txns)
+        assertEquals(3, txns.size)
+        assertTrue(NwcTransactionState.isSettled(txns[0].state))
+        assertTrue(NwcTransactionState.isFailed(txns[1].state))
+        assertTrue(NwcTransactionState.isAccepted(txns[2].state))
+    }
+
+    @Test
+    fun testJsSdkLowercaseStatesInNotification() {
+        val json =
+            """{"notification_type":"payment_received","notification":{"type":"incoming","state":"settled","invoice":"lnbc...","amount":5000,"created_at":1000,"settled_at":2000}}"""
+        val notification = OptimizedJsonMapper.fromJsonTo<Notification>(json)
+        assertIs<PaymentReceivedNotification>(notification)
+        assertTrue(NwcTransactionState.isSettled(notification.notification?.state))
+    }
+
+    @Test
+    fun testJsSdkEmptyGetBudgetResponse() {
+        // JS SDK allows get_budget to return empty object when no budget is set
+        val json = """{"result_type":"get_budget","result":{}}"""
+        val response = OptimizedJsonMapper.fromJsonTo<Response>(json)
+        assertIs<GetBudgetSuccessResponse>(response)
+        assertNull(response.result?.used_budget)
+        assertNull(response.result?.total_budget)
+        assertNull(response.result?.renews_at)
+        assertNull(response.result?.renewal_period)
+    }
+
+    @Test
+    fun testJsSdkGetBudgetWithAllRenewalPeriods() {
+        for (period in listOf("daily", "weekly", "monthly", "yearly", "never")) {
+            val json = """{"result_type":"get_budget","result":{"used_budget":0,"total_budget":100000,"renewal_period":"$period"}}"""
+            val response = OptimizedJsonMapper.fromJsonTo<Response>(json)
+            assertIs<GetBudgetSuccessResponse>(response)
+            assertEquals(period, response.result?.renewal_period)
+        }
+    }
+
+    @Test
+    fun testJsSdkTransactionWithMetadata() {
+        // JS SDK supports structured metadata with comment, payer_data, nostr fields
+        val json =
+            """{"result_type":"lookup_invoice","result":{"type":"incoming","state":"settled","invoice":"lnbc...","payment_hash":"hash","amount":5000,"created_at":1000,"settled_at":2000,"metadata":{"comment":"Thanks!","payer_data":{"name":"Alice","pubkey":"abc123"},"nostr":{"pubkey":"npub1...","tags":[["p","def456"]]}}}}"""
+        val response = OptimizedJsonMapper.fromJsonTo<Response>(json)
+        assertIs<LookupInvoiceSuccessResponse>(response)
+        assertNotNull(response.result?.metadata)
+    }
+
+    @Test
+    fun testJsSdkGetInfoWithAllMethods() {
+        // JS SDK advertises all 13 single methods + notifications
+        val json =
+            """{"result_type":"get_info","result":{"alias":"TestNode","methods":["get_info","get_balance","get_budget","make_invoice","pay_invoice","pay_keysend","lookup_invoice","list_transactions","sign_message","create_connection","make_hold_invoice","settle_hold_invoice","cancel_hold_invoice"],"notifications":["payment_received","payment_sent","hold_invoice_accepted"]}}"""
+        val response = OptimizedJsonMapper.fromJsonTo<Response>(json)
+        assertIs<GetInfoSuccessResponse>(response)
+        assertEquals(13, response.result?.methods?.size)
+        assertEquals(3, response.result?.notifications?.size)
+        assertTrue(response.result?.methods?.contains(NwcMethod.GET_BUDGET) == true)
+        assertTrue(response.result?.methods?.contains(NwcMethod.SIGN_MESSAGE) == true)
+        assertTrue(response.result?.methods?.contains(NwcMethod.CREATE_CONNECTION) == true)
     }
 }

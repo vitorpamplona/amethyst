@@ -93,6 +93,20 @@ class Nip47WalletConnectTest {
         }
     }
 
+    // --- Alby JS SDK URI test vector ---
+
+    @Test
+    fun testParseAlbyJsSdkUri() {
+        // Test vector from @getalby/js-sdk NWCClient.test.ts
+        val uri =
+            "nostr+walletconnect://69effe7b49a6dd5cf525bd0905917a5005ffe480b58eeb8e861418cf3ae760d9?relay=wss%3A%2F%2Frelay.getalby.com%2Fv1&secret=e839faf78693765b3833027fefa5a305c78f6965d0a5d2e47a3fcb25aa7cc45b&lud16=hello%40getalby.com"
+        val parsed = Nip47WalletConnect.parse(uri)
+
+        assertEquals("69effe7b49a6dd5cf525bd0905917a5005ffe480b58eeb8e861418cf3ae760d9", parsed.pubKeyHex)
+        assertEquals("e839faf78693765b3833027fefa5a305c78f6965d0a5d2e47a3fcb25aa7cc45b", parsed.secret)
+        assertEquals("hello@getalby.com", parsed.lud16)
+    }
+
     // --- Nip47URI serialization ---
 
     @Test

@@ -22,6 +22,8 @@ package com.vitorpamplona.quartz.nip47WalletConnect
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class NwcMethodTest {
     @Test
@@ -79,6 +81,30 @@ class NwcMethodTest {
         assertEquals("SETTLED", NwcTransactionState.SETTLED)
         assertEquals("FAILED", NwcTransactionState.FAILED)
         assertEquals("ACCEPTED", NwcTransactionState.ACCEPTED)
+    }
+
+    @Test
+    fun testTransactionStateCaseInsensitive() {
+        // Alby Hub uses uppercase, Alby JS SDK uses lowercase
+        assertTrue(NwcTransactionState.isSettled("SETTLED"))
+        assertTrue(NwcTransactionState.isSettled("settled"))
+        assertTrue(NwcTransactionState.isPending("PENDING"))
+        assertTrue(NwcTransactionState.isPending("pending"))
+        assertTrue(NwcTransactionState.isFailed("FAILED"))
+        assertTrue(NwcTransactionState.isFailed("failed"))
+        assertTrue(NwcTransactionState.isAccepted("ACCEPTED"))
+        assertTrue(NwcTransactionState.isAccepted("accepted"))
+        assertFalse(NwcTransactionState.isSettled("pending"))
+        assertFalse(NwcTransactionState.isSettled(null))
+    }
+
+    @Test
+    fun testBudgetRenewalConstants() {
+        assertEquals("daily", NwcBudgetRenewal.DAILY)
+        assertEquals("weekly", NwcBudgetRenewal.WEEKLY)
+        assertEquals("monthly", NwcBudgetRenewal.MONTHLY)
+        assertEquals("yearly", NwcBudgetRenewal.YEARLY)
+        assertEquals("never", NwcBudgetRenewal.NEVER)
     }
 
     @Test
