@@ -18,42 +18,43 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip99Classifieds
 
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
-import com.vitorpamplona.amethyst.R
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Size26Modifier
-import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.DiscoverTabFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.DiscoverTabScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.NewProductButton
+import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 
 @Composable
-fun NewProductButton(
+fun DiscoverMarketplaceScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    FloatingActionButton(
-        onClick = {
-            nav.nav(Route.NewProduct())
-        },
-        modifier = Size55Modifier,
-        shape = CircleShape,
-        containerColor = MaterialTheme.colorScheme.primary,
-    ) {
-        Icon(
-            imageVector = Icons.Outlined.Add,
-            contentDescription = stringRes(id = R.string.new_product),
-            modifier = Size26Modifier,
-            tint = Color.White,
+    val feedViewModel: DiscoverTabFeedViewModel =
+        viewModel(
+            key = "DiscoverMarketplace",
+            factory =
+                DiscoverTabFeedViewModel.Factory(
+                    DiscoverMarketplaceFeedFilter(accountViewModel.account),
+                ),
         )
-    }
+
+    DiscoverTabScreen(
+        feedViewModel = feedViewModel,
+        dataSource = accountViewModel.dataSources().discoverMarketplace,
+        routeForLastRead = "DiscoverMarketplace",
+        scrollStateKey = ScrollStateKeys.DISCOVER_MARKETPLACE,
+        forceEventKind = ClassifiedsEvent.KIND,
+        useGridLayout = true,
+        selectedRoute = Route.Discover,
+        accountViewModel = accountViewModel,
+        nav = nav,
+        floatingButton = { NewProductButton(accountViewModel, nav) },
+    )
 }

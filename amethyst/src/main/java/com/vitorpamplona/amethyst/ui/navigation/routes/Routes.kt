@@ -39,6 +39,20 @@ sealed class Route {
 
     @Serializable object Discover : Route()
 
+    @Serializable object DiscoverFollowPacks : Route()
+
+    @Serializable object DiscoverReads : Route()
+
+    @Serializable object DiscoverDVMs : Route()
+
+    @Serializable object DiscoverLive : Route()
+
+    @Serializable object DiscoverCommunities : Route()
+
+    @Serializable object DiscoverMarketplace : Route()
+
+    @Serializable object DiscoverChats : Route()
+
     @Serializable object Notification : Route()
 
     @Serializable object Chess : Route()

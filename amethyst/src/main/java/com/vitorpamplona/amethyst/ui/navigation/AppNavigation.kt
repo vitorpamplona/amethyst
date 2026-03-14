@@ -78,7 +78,13 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.MessagesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessGameScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessLobbyScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.CommunityScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.DiscoverScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip23LongForm.DiscoverReadsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip28Chats.DiscoverChatsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip51FollowSets.DiscoverFollowPacksScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip53LiveActivities.DiscoverLiveScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip72Communities.DiscoverCommunitiesScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip90DVMs.DiscoverDVMsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip99Classifieds.DiscoverMarketplaceScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip99Classifieds.NewProductScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.drafts.DraftListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.DvmContentDiscoveryScreen
@@ -148,7 +154,14 @@ fun AppNavigation(
             composable<Route.Home> { HomeScreen(accountViewModel, nav) }
             composable<Route.Message> { MessagesScreen(accountViewModel, nav) }
             composable<Route.Video> { VideoScreen(accountViewModel, nav) }
-            composable<Route.Discover> { DiscoverScreen(accountViewModel, nav) }
+            composable<Route.Discover> { DiscoverFollowPacksScreen(accountViewModel, nav) }
+            composable<Route.DiscoverFollowPacks> { DiscoverFollowPacksScreen(accountViewModel, nav) }
+            composable<Route.DiscoverReads> { DiscoverReadsScreen(accountViewModel, nav) }
+            composable<Route.DiscoverDVMs> { DiscoverDVMsScreen(accountViewModel, nav) }
+            composable<Route.DiscoverLive> { DiscoverLiveScreen(accountViewModel, nav) }
+            composable<Route.DiscoverCommunities> { DiscoverCommunitiesScreen(accountViewModel, nav) }
+            composable<Route.DiscoverMarketplace> { DiscoverMarketplaceScreen(accountViewModel, nav) }
+            composable<Route.DiscoverChats> { DiscoverChatsScreen(accountViewModel, nav) }
             composable<Route.Notification> { NotificationScreen(accountViewModel, nav) }
             composable<Route.Chess> { ChessLobbyScreen(accountViewModel, nav) }
 

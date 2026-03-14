@@ -21,26 +21,18 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.datasource
 
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountFeedContentStates
+import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import kotlinx.coroutines.CoroutineScope
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 
-// This allows multiple screen to be listening to tags, even the same tag
-class DiscoveryQueryState(
-    val account: Account,
-    val feedStates: AccountFeedContentStates,
-    val scope: CoroutineScope,
-)
-
-class DiscoveryFilterAssembler(
+class DiscoverTabFilterAssembler(
     client: INostrClient,
-) : ComposeSubscriptionManager<DiscoveryQueryState>() {
+    makeFilter: (IFeedTopNavPerRelayFilterSet, SincePerRelayMap?, Long?) -> List<RelayBasedFilter>,
+) : ComposeSubscriptionManager<DiscoverTabQueryState>() {
     val group =
         listOf(
-            DiscoveryLongFormClassifiedsAndDVMSubAssembler1(client, ::allKeys),
-            DiscoveryFollowsSetsAndLiveStreamsSubAssembler2(client, ::allKeys),
-            DiscoveryPublicChatsAndCommunitiesSubAssembler3(client, ::allKeys),
+            DiscoverTabSubAssembler(client, ::allKeys, makeFilter),
         )
 
     override fun invalidateKeys() = invalidateFilters()

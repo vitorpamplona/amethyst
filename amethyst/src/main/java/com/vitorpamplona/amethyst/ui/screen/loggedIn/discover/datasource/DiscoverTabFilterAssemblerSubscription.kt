@@ -24,26 +24,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.KeyDataSourceSubscription
+import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
-fun DiscoveryFilterAssemblerSubscription(accountViewModel: AccountViewModel) {
-    DiscoveryFilterAssemblerSubscription(
-        accountViewModel.dataSources().discovery,
-        accountViewModel,
-    )
-}
-
-@Composable
-fun DiscoveryFilterAssemblerSubscription(
-    dataSource: DiscoveryFilterAssembler,
+fun DiscoverTabFilterAssemblerSubscription(
+    dataSource: DiscoverTabFilterAssembler,
+    feedState: FeedContentState,
     accountViewModel: AccountViewModel,
 ) {
-    // different screens get different states
-    // even if they are tracking the same tag.
     val state =
-        remember(accountViewModel.account) {
-            DiscoveryQueryState(accountViewModel.account, accountViewModel.feedStates, accountViewModel.viewModelScope)
+        remember(accountViewModel.account, feedState) {
+            DiscoverTabQueryState(accountViewModel.account, feedState, accountViewModel.viewModelScope)
         }
 
     KeyDataSourceSubscription(state, dataSource)

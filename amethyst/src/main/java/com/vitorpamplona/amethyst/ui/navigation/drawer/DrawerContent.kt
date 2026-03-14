@@ -47,9 +47,16 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.outlined.CollectionsBookmark
+import androidx.compose.material.icons.automirrored.outlined.Article
+import androidx.compose.material.icons.automirrored.outlined.Chat
+import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.outlined.Drafts
 import androidx.compose.material.icons.outlined.GroupAdd
+import androidx.compose.material.icons.outlined.Groups
+import androidx.compose.material.icons.outlined.LiveTv
+import androidx.compose.material.icons.outlined.People
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.Storefront
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -461,6 +468,72 @@ fun ListContent(
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
             route = Route.Drafts,
+        )
+
+        HorizontalDivider(
+            thickness = DividerThickness,
+            modifier = Modifier.padding(vertical = 8.dp),
+        )
+
+        NavigationRow(
+            title = R.string.discover_follows,
+            icon = Icons.Outlined.People,
+            tint = MaterialTheme.colorScheme.onBackground,
+            nav = nav,
+            route = Route.DiscoverFollowPacks,
+        )
+
+        NavigationRow(
+            title = R.string.discover_reads,
+            icon = Icons.AutoMirrored.Outlined.Article,
+            tint = MaterialTheme.colorScheme.onBackground,
+            nav = nav,
+            route = Route.DiscoverReads,
+        )
+
+        NavigationRow(
+            title = R.string.discover_content_v2,
+            icon = Icons.Outlined.Apps,
+            tint = MaterialTheme.colorScheme.onBackground,
+            nav = nav,
+            route = Route.DiscoverDVMs,
+        )
+
+        NavigationRow(
+            title = R.string.discover_live_v2,
+            icon = Icons.Outlined.LiveTv,
+            tint = MaterialTheme.colorScheme.onBackground,
+            nav = nav,
+            route = Route.DiscoverLive,
+        )
+
+        NavigationRow(
+            title = R.string.discover_community_v2,
+            icon = Icons.Outlined.Groups,
+            tint = MaterialTheme.colorScheme.onBackground,
+            nav = nav,
+            route = Route.DiscoverCommunities,
+        )
+
+        NavigationRow(
+            title = R.string.discover_marketplace,
+            icon = Icons.Outlined.Storefront,
+            tint = MaterialTheme.colorScheme.onBackground,
+            nav = nav,
+            route = Route.DiscoverMarketplace,
+        )
+
+        NavigationRow(
+            title = R.string.discover_chat,
+            icon = Icons.AutoMirrored.Outlined.Chat,
+            tint = MaterialTheme.colorScheme.onBackground,
+            nav = nav,
+            route = Route.DiscoverChats,
+        )
+
+        HorizontalDivider(
+            thickness = DividerThickness,
+            modifier = Modifier.padding(vertical = 8.dp),
         )
 
         NavigationRow(

@@ -22,10 +22,9 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.datasource
 
 import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserAndFollowListEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip51FollowSets.makeFollowSetsFilter
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip53LiveActivities.makeLiveActivitiesFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
@@ -33,40 +32,38 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.launch
 
-class DiscoveryFollowsSetsAndLiveStreamsSubAssembler2(
+class DiscoverTabSubAssembler(
     client: INostrClient,
-    allKeys: () -> Set<DiscoveryQueryState>,
-) : PerUserAndFollowListEoseManager<DiscoveryQueryState, TopFilter>(client, allKeys) {
+    allKeys: () -> Set<DiscoverTabQueryState>,
+    val makeFilter: (IFeedTopNavPerRelayFilterSet, SincePerRelayMap?, Long?) -> List<RelayBasedFilter>,
+) : PerUserAndFollowListEoseManager<DiscoverTabQueryState, TopFilter>(client, allKeys) {
     override fun updateFilter(
-        key: DiscoveryQueryState,
+        key: DiscoverTabQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> {
         val feedSettings = key.followsPerRelay()
-
-        return makeFollowSetsFilter(feedSettings, since, key.feedStates.discoverFollowSets.lastNoteCreatedAtIfFilled()) +
-            makeLiveActivitiesFilter(feedSettings, since, key.feedStates.discoverLive.lastNoteCreatedAtIfFilled())
+        return makeFilter(feedSettings, since, key.feedState.lastNoteCreatedAtIfFilled())
     }
 
-    override fun user(key: DiscoveryQueryState) = key.account.userProfile()
+    override fun user(key: DiscoverTabQueryState) = key.account.userProfile()
 
-    override fun list(key: DiscoveryQueryState) = key.listName()
+    override fun list(key: DiscoverTabQueryState) = key.listName()
 
-    fun DiscoveryQueryState.listNameFlow() = account.settings.defaultDiscoveryFollowList
+    fun DiscoverTabQueryState.listNameFlow() = account.settings.defaultDiscoveryFollowList
 
-    fun DiscoveryQueryState.listName() = listNameFlow().value
+    fun DiscoverTabQueryState.listName() = listNameFlow().value
 
-    fun DiscoveryQueryState.followsPerRelayFlow() = account.liveDiscoveryFollowListsPerRelay
+    fun DiscoverTabQueryState.followsPerRelayFlow() = account.liveDiscoveryFollowListsPerRelay
 
-    fun DiscoveryQueryState.followsPerRelay() = followsPerRelayFlow().value
+    fun DiscoverTabQueryState.followsPerRelay() = followsPerRelayFlow().value
 
     val userJobMap = mutableMapOf<User, List<Job>>()
 
     @OptIn(FlowPreview::class)
-    override fun newSub(key: DiscoveryQueryState): Subscription {
+    override fun newSub(key: DiscoverTabQueryState): Subscription {
         val user = user(key)
         userJobMap[user]?.forEach { it.cancel() }
         userJobMap[user] =
@@ -77,17 +74,12 @@ class DiscoveryFollowsSetsAndLiveStreamsSubAssembler2(
                     }
                 },
                 key.scope.launch(Dispatchers.IO) {
-                    key.followsPerRelayFlow().sample(1000).collectLatest {
+                    key.followsPerRelayFlow().sample(500).collectLatest {
                         invalidateFilters()
                     }
                 },
                 key.account.scope.launch(Dispatchers.IO) {
-                    combine(
-                        key.feedStates.discoverFollowSets.lastNoteCreatedAtWhenFullyLoaded,
-                        key.feedStates.discoverLive.lastNoteCreatedAtWhenFullyLoaded,
-                    ) {
-                        Any()
-                    }.sample(5000).collectLatest {
+                    key.feedState.lastNoteCreatedAtWhenFullyLoaded.sample(5000).collectLatest {
                         invalidateFilters()
                     }
                 },

@@ -32,7 +32,14 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.dataso
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.datasource.ChatroomListFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.datasource.ChessFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.datasource.CommunityFilterAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.datasource.DiscoveryFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.datasource.DiscoverTabFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip23LongForm.makeLongFormFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip28Chats.makePublicChatsFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip51FollowSets.makeFollowSetsFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip53LiveActivities.makeLiveActivitiesFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip72Communities.makeCommunitiesFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip90DVMs.makeContentDVMsFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip99Classifieds.makeClassifiedsFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.feed.datasource.FollowPackFeedFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.datasource.GeoHashFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.datasource.HashtagFilterAssembler
@@ -60,7 +67,15 @@ class RelaySubscriptionsCoordinator(
     val home = HomeFilterAssembler(client)
     val chatroomList = ChatroomListFilterAssembler(client)
     val video = VideoFilterAssembler(client)
-    val discovery = DiscoveryFilterAssembler(client)
+
+    // active depending on the discovery screen.
+    val discoverFollowSets = DiscoverTabFilterAssembler(client, ::makeFollowSetsFilter)
+    val discoverReads = DiscoverTabFilterAssembler(client, ::makeLongFormFilter)
+    val discoverDVMs = DiscoverTabFilterAssembler(client, ::makeContentDVMsFilter)
+    val discoverLive = DiscoverTabFilterAssembler(client, ::makeLiveActivitiesFilter)
+    val discoverCommunities = DiscoverTabFilterAssembler(client, ::makeCommunitiesFilter)
+    val discoverMarketplace = DiscoverTabFilterAssembler(client, ::makeClassifiedsFilter)
+    val discoverChats = DiscoverTabFilterAssembler(client, ::makePublicChatsFilter)
 
     // loaders of content that is not yet in the device.
     // they are active when looking at events, users, channels.
@@ -92,7 +107,13 @@ class RelaySubscriptionsCoordinator(
             home,
             chatroomList,
             video,
-            discovery,
+            discoverFollowSets,
+            discoverReads,
+            discoverDVMs,
+            discoverLive,
+            discoverCommunities,
+            discoverMarketplace,
+            discoverChats,
             channelFinder,
             eventFinder,
             userFinder,
