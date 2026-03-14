@@ -309,6 +309,88 @@ class AlbyInteropTest {
         assertEquals(false, request.params?.isolated)
     }
 
+    // --- Alby Hub real bolt11 test vectors ---
+
+    @Test
+    fun testAlbyRealBolt11PayInvoiceRequest() {
+        val json =
+            """{"method":"pay_invoice","params":{"invoice":"lntbs1230n1pnkqautdqyw3jsnp4q09a0z84kg4a2m38zjllw43h953fx5zvqe8qxfgw694ymkq26u8zcpp5yvnh6hsnlnj4xnuh2trzlnunx732dv8ta2wjr75pdfxf6p2vlyassp5hyeg97a3ft5u769kjwsn7p0e85h79pzz8kladmnqhpcypz2uawjs9qyysgqcqpcxq8zals8sq9yeg2pa9eywkgj50cyzxd5elatujuc0c0wh6j9nat5mn34pgk8u9ufpgs99tw9ldlfk42cqlkr48au3lmuh09269prg4qkggh4a8cyqpfl0y6j","metadata":{"a":123}}}"""
+        val request = OptimizedJsonMapper.fromJsonTo<Request>(json)
+        assertIs<PayInvoiceMethod>(request)
+        assertNotNull(request.params?.invoice)
+        assertNotNull(request.params?.metadata)
+    }
+
+    @Test
+    fun testAlbyPayKeysendWithTlvRecords() {
+        val json =
+            """{"method":"pay_keysend","params":{"amount":123000,"pubkey":"123pubkey2","preimage":"018465013e2337234a7e5530a21c4a8cf70d84231f4a8ff0b1e2cce3cb2bd03b","tlv_records":[{"type":5482373484,"value":"fajsn341414fq"}]}}"""
+        val request = OptimizedJsonMapper.fromJsonTo<Request>(json)
+        assertIs<PayKeysendMethod>(request)
+        assertEquals(123000L, request.params?.amount)
+        assertEquals("123pubkey2", request.params?.pubkey)
+        assertEquals("018465013e2337234a7e5530a21c4a8cf70d84231f4a8ff0b1e2cce3cb2bd03b", request.params?.preimage)
+        assertNotNull(request.params?.tlv_records)
+        assertEquals(1, request.params?.tlv_records?.size)
+        assertEquals(5482373484L, request.params?.tlv_records?.first()?.type)
+        assertEquals("fajsn341414fq", request.params?.tlv_records?.first()?.value)
+    }
+
+    @Test
+    fun testAlbyMakeInvoiceWithNestedMetadata() {
+        val json =
+            """{"method":"make_invoice","params":{"amount":1000,"description":"Hello, world","expiry":3600,"metadata":{"a":1,"b":"2","c":{"d":3,"e":[{"f":"g"},{"h":"i"}]}}}}"""
+        val request = OptimizedJsonMapper.fromJsonTo<Request>(json)
+        assertIs<MakeInvoiceMethod>(request)
+        assertEquals(1000L, request.params?.amount)
+        assertEquals("Hello, world", request.params?.description)
+        assertEquals(3600L, request.params?.expiry)
+        assertNotNull(request.params?.metadata)
+    }
+
+    @Test
+    fun testAlbyMakeHoldInvoiceWithPaymentHash() {
+        val json =
+            """{"method":"make_hold_invoice","params":{"amount":1000,"description":"Hello, world","payment_hash":"1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef","expiry":3600}}"""
+        val request = OptimizedJsonMapper.fromJsonTo<Request>(json)
+        assertIs<MakeHoldInvoiceMethod>(request)
+        assertEquals(1000L, request.params?.amount)
+        assertEquals("1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef", request.params?.payment_hash)
+        assertEquals("Hello, world", request.params?.description)
+    }
+
+    @Test
+    fun testAlbySettleHoldInvoiceWithPreimage() {
+        val json =
+            """{"method":"settle_hold_invoice","params":{"preimage":"1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"}}"""
+        val request = OptimizedJsonMapper.fromJsonTo<Request>(json)
+        assertIs<SettleHoldInvoiceMethod>(request)
+        assertEquals("1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef", request.params?.preimage)
+    }
+
+    @Test
+    fun testAlbyListTransactionsWithUnpaidFilters() {
+        val json = """{"method":"list_transactions","params":{"from":0,"until":0,"limit":10,"offset":0,"unpaid_outgoing":true}}"""
+        val request = OptimizedJsonMapper.fromJsonTo<Request>(json)
+        assertIs<ListTransactionsMethod>(request)
+        assertEquals(10, request.params?.limit)
+        assertEquals(true, request.params?.unpaid_outgoing)
+    }
+
+    @Test
+    fun testAlbyCreateConnectionIsolated() {
+        val json =
+            """{"method":"create_connection","params":{"pubkey":"02a1633cafcc01ebfb6d78e39f687a1f0995c62fc95f51ead10a02ee0be551b5dc","name":"Test 123","request_methods":["get_info","pay_invoice"],"notification_types":["payment_received"],"max_amount":100000000,"budget_renewal":"monthly","isolated":true}}"""
+        val request = OptimizedJsonMapper.fromJsonTo<Request>(json)
+        assertIs<CreateConnectionMethod>(request)
+        assertEquals("Test 123", request.params?.name)
+        assertEquals(true, request.params?.isolated)
+        assertEquals(100000000L, request.params?.max_amount)
+        assertEquals("monthly", request.params?.budget_renewal)
+        assertEquals(listOf("get_info", "pay_invoice"), request.params?.request_methods)
+        assertEquals(listOf("payment_received"), request.params?.notification_types)
+    }
+
     // --- Transaction with settle_deadline from Alby hold invoice ---
 
     @Test
