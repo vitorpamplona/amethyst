@@ -28,7 +28,6 @@ object Nip66Constants {
             RelayUrlNormalizer.normalize("wss://relaypag.es"),
             RelayUrlNormalizer.normalize("wss://relay.nostr.watch"),
         )
-    const val HTTP_API_URL = "https://api.nostr.watch/v1/online"
     const val FETCH_SINCE_SECONDS = 7 * 86400L
     const val FETCH_LIMIT = 5000
     const val REFRESH_INTERVAL_MS = 3600_000L

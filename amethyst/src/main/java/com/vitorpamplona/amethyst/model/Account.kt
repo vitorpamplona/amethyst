@@ -138,6 +138,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.downloadFirstEvent
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
@@ -239,6 +240,7 @@ class Account(
     val otsResolverBuilder: OtsResolverBuilder,
     val cache: LocalCache,
     val client: INostrClient,
+    val websocketBuilder: WebsocketBuilder,
     val scope: CoroutineScope,
 ) : IAccount {
     private var userProfileCache: User? = null
@@ -265,7 +267,7 @@ class Account(
     val privateStorageRelayList = PrivateStorageRelayListState(signer, cache, privateStorageDecryptionCache, scope, settings)
 
     // NIP-66 relay liveness filtering
-    val relayLiveness = RelayLivenessState(scope)
+    val relayLiveness = RelayLivenessState(websocketBuilder, scope)
 
     val searchRelayListDecryptionCache = SearchRelayListDecryptionCache(signer)
     val searchRelayList = SearchRelayListState(signer, cache, searchRelayListDecryptionCache, relayLiveness, scope, settings)

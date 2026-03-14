@@ -54,17 +54,16 @@ class ThreadDualAxisChartAssemblerTest {
         val keyPair = KeyPair()
         val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-        val client =
-            NostrClient(
-                OkHttpWebSocket.Builder {
-                    OkHttpClient
-                        .Builder()
-                        .followRedirects(true)
-                        .followSslRedirects(true)
-                        .build()
-                },
-                scope,
-            )
+        val websocketBuilder =
+            OkHttpWebSocket.Builder {
+                OkHttpClient
+                    .Builder()
+                    .followRedirects(true)
+                    .followSslRedirects(true)
+                    .build()
+            }
+
+        val client = NostrClient(websocketBuilder, scope)
 
         val account =
             Account(
@@ -75,6 +74,7 @@ class ThreadDualAxisChartAssemblerTest {
                 otsResolverBuilder = EmptyOtsResolverBuilder,
                 cache = LocalCache,
                 client = client,
+                websocketBuilder = websocketBuilder,
                 scope = scope,
             )
 

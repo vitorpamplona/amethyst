@@ -96,6 +96,9 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.EmptyNostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.EmptyIAuthStatus
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocket
+import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocketListener
+import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.tags.people.PubKeyReferenceTag
@@ -1703,6 +1706,23 @@ class AccountViewModel(
     val nip19: Nip19Parser.ParseReturn,
 )
 
+private val EmptyWebsocketBuilder =
+    object : WebsocketBuilder {
+        override fun build(
+            url: NormalizedRelayUrl,
+            out: WebSocketListener,
+        ): WebSocket =
+            object : WebSocket {
+                override fun needsReconnect() = false
+
+                override fun connect() {}
+
+                override fun disconnect() {}
+
+                override fun send(msg: String) = false
+            }
+    }
+
 var mockedCache: AccountViewModel? = null
 
 @SuppressLint("ViewModelConstructorInComposable")
@@ -1741,6 +1761,7 @@ fun mockAccountViewModel(): AccountViewModel {
             otsResolverBuilder = EmptyOtsResolverBuilder,
             cache = LocalCache,
             client = client,
+            websocketBuilder = EmptyWebsocketBuilder,
             scope = scope,
         )
 
@@ -1792,6 +1813,7 @@ fun mockVitorAccountViewModel(): AccountViewModel {
             otsResolverBuilder = EmptyOtsResolverBuilder,
             cache = LocalCache,
             client = EmptyNostrClient,
+            websocketBuilder = EmptyWebsocketBuilder,
             scope = scope,
         )
 

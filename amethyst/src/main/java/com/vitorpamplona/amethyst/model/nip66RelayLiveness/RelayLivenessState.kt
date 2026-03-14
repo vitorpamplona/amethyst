@@ -20,25 +20,50 @@
  */
 package com.vitorpamplona.amethyst.model.nip66RelayLiveness
 
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isOnion
+import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.coroutines.executeAsync
-import org.json.JSONArray
+import kotlinx.coroutines.withTimeoutOrNull
+import java.util.concurrent.atomic.AtomicInteger
 
+/**
+ * Fetches relay liveness data via NIP-66 kind 30166 events from monitor relays.
+ *
+ * No HTTP API dependency — data comes entirely from Nostr events that any
+ * monitor can publish. See https://github.com/nostr-protocol/nips/blob/master/66.md
+ *
+ * Connections to monitor relays respect the app's Tor settings via the
+ * shared WebsocketBuilder.
+ */
 class RelayLivenessState(
+    val websocketBuilder: WebsocketBuilder,
     val scope: CoroutineScope,
 ) {
+    companion object {
+        private const val TAG = "RelayLivenessState"
+        private const val KIND_RELAY_DISCOVERY = 30166
+        private const val FETCH_TIMEOUT_MS = 30_000L
+        private const val MIN_ALIVE_THRESHOLD = 100
+    }
+
     private val _aliveRelaysFlow = MutableStateFlow<Set<NormalizedRelayUrl>>(emptySet())
     val aliveRelaysFlow: StateFlow<Set<NormalizedRelayUrl>> = _aliveRelaysFlow.asStateFlow()
 
@@ -47,12 +72,14 @@ class RelayLivenessState(
             while (true) {
                 try {
                     val alive = fetchAliveRelays()
-                    if (alive.isNotEmpty()) {
+                    if (alive.size >= MIN_ALIVE_THRESHOLD) {
                         _aliveRelaysFlow.value = alive
-                        Log.d("RelayLivenessState", "Loaded ${alive.size} alive relays")
+                        Log.d(TAG, "Loaded ${alive.size} alive relays from NIP-66 monitors")
+                    } else if (alive.isNotEmpty()) {
+                        Log.w(TAG, "Only ${alive.size} alive relays (< $MIN_ALIVE_THRESHOLD), skipping update")
                     }
                 } catch (e: Exception) {
-                    Log.e("RelayLivenessState", "Failed to fetch alive relays", e)
+                    Log.e(TAG, "Failed to fetch alive relays", e)
                 }
                 delay(Nip66Constants.REFRESH_INTERVAL_MS)
             }
@@ -61,34 +88,79 @@ class RelayLivenessState(
 
     private suspend fun fetchAliveRelays(): Set<NormalizedRelayUrl> {
         try {
-            return fetchFromHttpApi()
+            return fetchFromNostrRelays()
         } catch (e: Exception) {
-            Log.e("RelayLivenessState", "HTTP API fetch failed", e)
+            Log.e(TAG, "NIP-66 event fetch failed", e)
         }
         return emptySet()
     }
 
-    private suspend fun fetchFromHttpApi(): Set<NormalizedRelayUrl> {
-        val client = OkHttpClient.Builder().build()
-        val request =
-            Request
-                .Builder()
-                .url(Nip66Constants.HTTP_API_URL)
-                .get()
-                .build()
+    /**
+     * Fetches kind 30166 events from NIP-66 monitor relays.
+     * Each event's "d" tag contains a relay URL that the monitor has observed alive.
+     * Uses the app's WebsocketBuilder so connections respect Tor settings.
+     */
+    private suspend fun fetchFromNostrRelays(): Set<NormalizedRelayUrl> {
+        val clientScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+        val client = NostrClient(websocketBuilder, clientScope)
 
-        client.newCall(request).executeAsync().use { response ->
-            if (!response.isSuccessful) {
-                throw IllegalStateException("HTTP ${response.code}: ${response.message}")
-            }
-            val body = response.body.string()
-            val jsonArray = JSONArray(body)
+        try {
             val result = mutableSetOf<NormalizedRelayUrl>()
-            for (i in 0 until jsonArray.length()) {
-                val url = jsonArray.getString(i)
-                RelayUrlNormalizer.normalizeOrNull(url)?.let { result.add(it) }
-            }
+            val subId = newSubId()
+            val sinceTimestamp = TimeUtils.now() - Nip66Constants.FETCH_SINCE_SECONDS
+
+            val filter =
+                Filter(
+                    kinds = listOf(KIND_RELAY_DISCOVERY),
+                    since = sinceTimestamp,
+                    limit = Nip66Constants.FETCH_LIMIT,
+                )
+
+            // Track EOSE from each source relay to know when all data has arrived
+            val eoseCount = AtomicInteger(0)
+            val expectedEose = Nip66Constants.SOURCE_RELAYS.size
+            val allDone = CompletableDeferred<Unit>()
+
+            val filters =
+                Nip66Constants.SOURCE_RELAYS.associateWith { listOf(filter) }
+
+            val listener =
+                object : IRequestListener {
+                    override fun onEvent(
+                        event: Event,
+                        isLive: Boolean,
+                        relay: NormalizedRelayUrl,
+                        forFilters: List<Filter>?,
+                    ) {
+                        if (event.kind == KIND_RELAY_DISCOVERY) {
+                            val relayUrl = event.tags.firstTagValue("d") ?: return
+                            RelayUrlNormalizer.normalizeOrNull(relayUrl)?.let {
+                                synchronized(result) { result.add(it) }
+                            }
+                        }
+                    }
+
+                    override fun onEose(
+                        relay: NormalizedRelayUrl,
+                        forFilters: List<Filter>?,
+                    ) {
+                        if (eoseCount.incrementAndGet() >= expectedEose) {
+                            allDone.complete(Unit)
+                        }
+                    }
+                }
+
+            client.openReqSubscription(subId, filters, listener)
+
+            // Wait for all relays to send EOSE, or timeout
+            withTimeoutOrNull(FETCH_TIMEOUT_MS) { allDone.await() }
+
+            client.close(subId)
+
+            Log.d(TAG, "Fetched ${result.size} alive relays from ${Nip66Constants.SOURCE_RELAYS.size} monitors")
             return result
+        } finally {
+            client.disconnect()
         }
     }
 
