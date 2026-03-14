@@ -57,39 +57,43 @@ class NwcTransactionMetadata(
 
             val comment = map["comment"] as? String
 
-            val payerData = (map["payer_data"] as? Map<*, *>)?.let { pd ->
-                PayerData(
-                    name = pd["name"] as? String,
-                    email = pd["email"] as? String,
-                    pubkey = pd["pubkey"] as? String,
-                )
-            }
-
-            val recipientData = (map["recipient_data"] as? Map<*, *>)?.let { rd ->
-                RecipientData(
-                    identifier = rd["identifier"] as? String,
-                )
-            }
-
-            val nostr = (map["nostr"] as? Map<*, *>)?.let { n ->
-                val rawPubkey = n["pubkey"] as? String
-                val pubkeyHex = rawPubkey?.let { decodePublicKeyAsHexOrNull(it) }
-
-                val tags = n["tags"] as? List<*>
-                val recipientHex = tags?.firstNotNullOfOrNull { tag ->
-                    val tagList = tag as? List<*>
-                    if (tagList != null && tagList.size >= 2 && tagList[0] == "p") {
-                        tagList[1] as? String
-                    } else {
-                        null
-                    }
+            val payerData =
+                (map["payer_data"] as? Map<*, *>)?.let { pd ->
+                    PayerData(
+                        name = pd["name"] as? String,
+                        email = pd["email"] as? String,
+                        pubkey = pd["pubkey"] as? String,
+                    )
                 }
 
-                NostrZapData(
-                    pubkeyHex = pubkeyHex,
-                    recipientPubkeyHex = recipientHex,
-                )
-            }
+            val recipientData =
+                (map["recipient_data"] as? Map<*, *>)?.let { rd ->
+                    RecipientData(
+                        identifier = rd["identifier"] as? String,
+                    )
+                }
+
+            val nostr =
+                (map["nostr"] as? Map<*, *>)?.let { n ->
+                    val rawPubkey = n["pubkey"] as? String
+                    val pubkeyHex = rawPubkey?.let { decodePublicKeyAsHexOrNull(it) }
+
+                    val tags = n["tags"] as? List<*>
+                    val recipientHex =
+                        tags?.firstNotNullOfOrNull { tag ->
+                            val tagList = tag as? List<*>
+                            if (tagList != null && tagList.size >= 2 && tagList[0] == "p") {
+                                tagList[1] as? String
+                            } else {
+                                null
+                            }
+                        }
+
+                    NostrZapData(
+                        pubkeyHex = pubkeyHex,
+                        recipientPubkeyHex = recipientHex,
+                    )
+                }
 
             if (comment == null && payerData == null && recipientData == null && nostr == null) {
                 return null
