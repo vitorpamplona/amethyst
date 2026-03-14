@@ -48,7 +48,7 @@ class NwcNotificationEvent(
 
     suspend fun decryptNotification(signer: NostrSigner): Notification {
         if (!canDecrypt(signer)) throw SignerExceptions.UnauthorizedDecryptionException()
-        val jsonText = signer.nip44Decrypt(content, talkingWith(signer.pubKey))
+        val jsonText = signer.decrypt(content, talkingWith(signer.pubKey))
         return OptimizedJsonMapper.fromJsonTo<Notification>(jsonText)
     }
 
