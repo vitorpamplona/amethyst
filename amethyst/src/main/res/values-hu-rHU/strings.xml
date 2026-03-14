@@ -1099,6 +1099,13 @@
     <string name="cancel_zap_split">Zap-megosztások visszavonása</string>
     <string name="add_content_warning">Tartalmi figyelmeztetés hozzáadása</string>
     <string name="remove_content_warning">Tartalmi figyelmeztetés eltávolítása</string>
+    <string name="add_expiration_date">Lejárati dátum hozzáadása</string>
+    <string name="remove_expiration_date">Lejárati dátum törlése</string>
+    <string name="expiration_date_label">Lejárati dátum</string>
+    <string name="expiration_date_explainer">Ezen dátum után a klienek elrejtik a bejegyzést (NIP-40)</string>
+    <string name="expiration_date_select">Válassza ki a lejárati dátumot és időpontot</string>
+    <string name="expiration_expires_in">Lejár ekkor: %1$s</string>
+    <string name="expiration_time">Lejárati idő</string>
     <string name="show_npub_as_a_qr_code">Az npub-kulcs megjelenítése QR-kódként</string>
     <string name="show_nprofile_as_a_qr_code">nprofile-kulcs megjelenítése QR-kódként</string>
     <string name="invalid_nip19_uri">Érvénytelen cím</string>
@@ -1168,6 +1175,9 @@
     <string name="blocked_relays_title">Letiltott átjátszók</string>
     <string name="blocked_section">Letiltott átjátszók</string>
     <string name="blocked_section_explainer">Az Amethyst soha nem fog csatlakozni ezekhez az átjátszókhoz</string>
+    <string name="export_relay_settings">Átjátszóbeállítások exportálása</string>
+    <string name="export_as_text">Exportálás szövegként</string>
+    <string name="export_as_zip">Exportálás ZIP-fájlként (JSON)</string>
     <string name="zap_the_devs_title">Zap a fejlesztőknek!</string>
     <string name="zap_the_devs_description">Az Ön adománya segít nekünk abban, hogy változtassunk a dolgokon. Minden satoshi számít!</string>
     <string name="donate_now">Adományozás most</string>
@@ -1295,6 +1305,7 @@
     <string name="crashreport_found">Összeomlási jelentés megtalálva</string>
     <string name="would_you_like_to_send_the_recent_crash_report_to_amethyst_in_a_dm_no_personal_information_will_be_shared">Szeretné elküldeni a legutóbbi összeomlási jelentést az Amethystnek egy közvetlen üzenetben? A személyes adatait nem osztja meg</string>
     <string name="crashreport_found_send">Küldés</string>
+    <string name="this_message_will_disappear_in">Ez az üzenet %1$s után eltűnik</string>
     <string name="this_message_will_disappear_in_days">Ez az üzenet %1$d nap múlva eltűnik</string>
     <string name="select_signer">Aláíró kiválasztása</string>
     <string name="in_the_list">Már rajta van a listán</string>
@@ -1523,4 +1534,5 @@
     <string name="select_all">Összes kijelölése</string>
     <string name="uptime">Üzemidő: %1$d%%</string>
     <string name="namecoin_settings">Namecoin-beállítások</string>
+    <string name="ots_explorer_settings">Bitcoin felfedező (OTS)</string>
 </resources>
