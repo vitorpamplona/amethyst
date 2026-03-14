@@ -37,7 +37,9 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -74,9 +76,10 @@ fun RefreshableCardView(
     routeForLastRead: String,
     scrollStateKey: String? = null,
     enablePullRefresh: Boolean = true,
+    typeFilter: NotificationTypeFilter = NotificationTypeFilter.ALL,
 ) {
     RefresheableBox(feedContent, enablePullRefresh) {
-        SaveableCardFeedState(feedContent, accountViewModel, nav, routeForLastRead, scrollStateKey)
+        SaveableCardFeedState(feedContent, accountViewModel, nav, routeForLastRead, scrollStateKey, typeFilter)
     }
 }
 
@@ -87,6 +90,7 @@ private fun SaveableCardFeedState(
     nav: INav,
     routeForLastRead: String,
     scrollStateKey: String? = null,
+    typeFilter: NotificationTypeFilter = NotificationTypeFilter.ALL,
 ) {
     val listState =
         if (scrollStateKey != null) {
@@ -97,7 +101,7 @@ private fun SaveableCardFeedState(
 
     WatchScrollToTop(feedContent, listState)
 
-    RenderCardFeed(feedContent, accountViewModel, listState, nav, routeForLastRead)
+    RenderCardFeed(feedContent, accountViewModel, listState, nav, routeForLastRead, typeFilter)
 }
 
 @Composable
@@ -107,6 +111,7 @@ fun RenderCardFeed(
     listState: LazyListState,
     nav: INav,
     routeForLastRead: String,
+    typeFilter: NotificationTypeFilter = NotificationTypeFilter.ALL,
 ) {
     val feedState by feedContent.feedContent.collectAsStateWithLifecycle()
 
@@ -132,6 +137,7 @@ fun RenderCardFeed(
                     routeForLastRead = routeForLastRead,
                     accountViewModel = accountViewModel,
                     nav = nav,
+                    typeFilter = typeFilter,
                 )
             }
 
@@ -163,8 +169,19 @@ private fun FeedLoaded(
     routeForLastRead: String,
     accountViewModel: AccountViewModel,
     nav: INav,
+    typeFilter: NotificationTypeFilter = NotificationTypeFilter.ALL,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
+
+    val filteredItems by remember(typeFilter, items) {
+        derivedStateOf {
+            if (typeFilter == NotificationTypeFilter.ALL) {
+                items.list
+            } else {
+                items.list.filter { it.matchesNotificationTypeFilter(typeFilter) }
+            }
+        }
+    }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -176,7 +193,7 @@ private fun FeedLoaded(
         }
 
         itemsIndexed(
-            items = items.list,
+            items = filteredItems,
             key = { _, item -> item.id() },
             contentType = { _, item -> item.javaClass.simpleName },
         ) { _, item ->

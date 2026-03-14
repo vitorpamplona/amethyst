@@ -26,6 +26,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.model.UiSettingsFlow
@@ -63,6 +66,8 @@ fun NotificationScreen(
 
     WatchAccountForNotifications(notifFeedContentState, accountViewModel)
 
+    var selectedTypeFilter by remember { mutableStateOf(NotificationTypeFilter.ALL) }
+
     DisappearingScaffold(
         isInvertedLayout = false,
         topBar = {
@@ -70,6 +75,10 @@ fun NotificationScreen(
                 NotificationTopBar(accountViewModel, nav)
                 SummaryBar(
                     state = notifSummaryState,
+                )
+                NotificationTypeFilterRow(
+                    selectedFilter = selectedTypeFilter,
+                    onFilterSelected = { selectedTypeFilter = it },
                 )
             }
         },
@@ -94,6 +103,7 @@ fun NotificationScreen(
                 nav = nav,
                 routeForLastRead = "Notification",
                 scrollStateKey = ScrollStateKeys.NOTIFICATION_SCREEN,
+                typeFilter = selectedTypeFilter,
             )
         }
     }

@@ -258,6 +258,11 @@
     <string name="error_loading_replies">"Error loading replies: "</string>
     <string name="try_again">Try again</string>
     <string name="notification_feed_is_empty">No notifications yet.</string>
+    <string name="notification_type_all">All</string>
+    <string name="notification_type_replies">Replies</string>
+    <string name="notification_type_reactions">Reactions</string>
+    <string name="notification_type_zaps">Zaps</string>
+    <string name="notification_type_reposts">Reposts</string>
     <string name="feed_is_empty">Feed is empty.</string>
     <string name="refresh">Refresh</string>
     <string name="created">created</string>
