@@ -288,6 +288,97 @@ class RequestTest {
         assertEquals("preimage_xyz", request.params?.preimage)
     }
 
+    // --- GetBudget ---
+
+    @Test
+    fun testGetBudgetCreate() {
+        val request = GetBudgetMethod.create()
+        assertEquals(NwcMethod.GET_BUDGET, request.method)
+    }
+
+    @Test
+    fun testGetBudgetSerialization() {
+        val request = GetBudgetMethod.create()
+        val json = OptimizedJsonMapper.toJson(request)
+        assertTrue(json.contains("\"method\":\"get_budget\""))
+    }
+
+    @Test
+    fun testGetBudgetDeserialization() {
+        val json = """{"method":"get_budget"}"""
+        val request = OptimizedJsonMapper.fromJsonTo<Request>(json)
+        assertIs<GetBudgetMethod>(request)
+    }
+
+    // --- SignMessage ---
+
+    @Test
+    fun testSignMessageCreate() {
+        val request = SignMessageMethod.create("Hello Nostr")
+        assertEquals(NwcMethod.SIGN_MESSAGE, request.method)
+        assertEquals("Hello Nostr", request.params?.message)
+    }
+
+    @Test
+    fun testSignMessageSerialization() {
+        val request = SignMessageMethod.create("test message")
+        val json = OptimizedJsonMapper.toJson(request)
+        assertTrue(json.contains("\"method\":\"sign_message\""))
+        assertTrue(json.contains("\"message\":\"test message\""))
+    }
+
+    @Test
+    fun testSignMessageDeserialization() {
+        val json = """{"method":"sign_message","params":{"message":"Hello Nostr"}}"""
+        val request = OptimizedJsonMapper.fromJsonTo<Request>(json)
+        assertIs<SignMessageMethod>(request)
+        assertEquals("Hello Nostr", request.params?.message)
+    }
+
+    // --- CreateConnection ---
+
+    @Test
+    fun testCreateConnectionCreate() {
+        val request =
+            CreateConnectionMethod.create(
+                pubkey = "abc123",
+                name = "My App",
+                requestMethods = listOf("pay_invoice", "get_balance"),
+                notificationTypes = listOf("payment_received"),
+                maxAmount = 100000L,
+                budgetRenewal = "monthly",
+            )
+        assertEquals(NwcMethod.CREATE_CONNECTION, request.method)
+        assertEquals("abc123", request.params?.pubkey)
+        assertEquals("My App", request.params?.name)
+        assertEquals(listOf("pay_invoice", "get_balance"), request.params?.request_methods)
+        assertEquals(listOf("payment_received"), request.params?.notification_types)
+        assertEquals(100000L, request.params?.max_amount)
+        assertEquals("monthly", request.params?.budget_renewal)
+    }
+
+    @Test
+    fun testCreateConnectionSerialization() {
+        val request = CreateConnectionMethod.create(pubkey = "abc123", name = "My App")
+        val json = OptimizedJsonMapper.toJson(request)
+        assertTrue(json.contains("\"method\":\"create_connection\""))
+        assertTrue(json.contains("\"pubkey\":\"abc123\""))
+        assertTrue(json.contains("\"name\":\"My App\""))
+    }
+
+    @Test
+    fun testCreateConnectionDeserialization() {
+        val json =
+            """{"method":"create_connection","params":{"pubkey":"abc123","name":"Test App","request_methods":["pay_invoice"],"max_amount":50000,"budget_renewal":"monthly"}}"""
+        val request = OptimizedJsonMapper.fromJsonTo<Request>(json)
+        assertIs<CreateConnectionMethod>(request)
+        assertEquals("abc123", request.params?.pubkey)
+        assertEquals("Test App", request.params?.name)
+        assertEquals(listOf("pay_invoice"), request.params?.request_methods)
+        assertEquals(50000L, request.params?.max_amount)
+        assertEquals("monthly", request.params?.budget_renewal)
+    }
+
     // --- Unknown method ---
 
     @Test

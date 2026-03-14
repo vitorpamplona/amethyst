@@ -113,6 +113,8 @@ class ListTransactionsParams(
     var limit: Int? = null,
     var offset: Int? = null,
     var unpaid: Boolean? = null,
+    var unpaid_outgoing: Boolean? = null,
+    var unpaid_incoming: Boolean? = null,
     var type: String? = null,
 )
 
@@ -196,5 +198,59 @@ class SettleHoldInvoiceMethod(
 ) : Request(NwcMethod.SETTLE_HOLD_INVOICE) {
     companion object {
         fun create(preimage: String): SettleHoldInvoiceMethod = SettleHoldInvoiceMethod(SettleHoldInvoiceParams(preimage))
+    }
+}
+
+// get_budget
+class GetBudgetMethod : Request(NwcMethod.GET_BUDGET) {
+    companion object {
+        fun create(): GetBudgetMethod = GetBudgetMethod()
+    }
+}
+
+// sign_message
+class SignMessageParams(
+    var message: String? = null,
+)
+
+class SignMessageMethod(
+    var params: SignMessageParams? = null,
+) : Request(NwcMethod.SIGN_MESSAGE) {
+    companion object {
+        fun create(message: String): SignMessageMethod = SignMessageMethod(SignMessageParams(message))
+    }
+}
+
+// create_connection
+class CreateConnectionParams(
+    var pubkey: String? = null,
+    var name: String? = null,
+    var request_methods: List<String>? = null,
+    var notification_types: List<String>? = null,
+    var max_amount: Long? = null,
+    var budget_renewal: String? = null,
+    var expires_at: Long? = null,
+    var isolated: Boolean? = null,
+    var metadata: Any? = null,
+)
+
+class CreateConnectionMethod(
+    var params: CreateConnectionParams? = null,
+) : Request(NwcMethod.CREATE_CONNECTION) {
+    companion object {
+        fun create(
+            pubkey: String,
+            name: String,
+            requestMethods: List<String>? = null,
+            notificationTypes: List<String>? = null,
+            maxAmount: Long? = null,
+            budgetRenewal: String? = null,
+            expiresAt: Long? = null,
+            isolated: Boolean? = null,
+            metadata: Any? = null,
+        ): CreateConnectionMethod =
+            CreateConnectionMethod(
+                CreateConnectionParams(pubkey, name, requestMethods, notificationTypes, maxAmount, budgetRenewal, expiresAt, isolated, metadata),
+            )
     }
 }

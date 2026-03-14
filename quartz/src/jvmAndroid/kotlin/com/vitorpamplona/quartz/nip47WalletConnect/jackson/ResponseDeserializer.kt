@@ -25,7 +25,9 @@ import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.vitorpamplona.quartz.nip47WalletConnect.CancelHoldInvoiceSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.CreateConnectionSuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.GetBalanceSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.GetBudgetSuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.GetInfoSuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.ListTransactionsSuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.LookupInvoiceSuccessResponse
@@ -39,6 +41,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceSuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.PayKeysendSuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.Response
 import com.vitorpamplona.quartz.nip47WalletConnect.SettleHoldInvoiceSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.SignMessageSuccessResponse
 import com.vitorpamplona.quartz.utils.asTextOrNull
 
 class ResponseDeserializer : StdDeserializer<Response>(Response::class.java) {
@@ -70,6 +73,9 @@ class ResponseDeserializer : StdDeserializer<Response>(Response::class.java) {
                 NwcMethod.LIST_TRANSACTIONS -> jp.codec.treeToValue(jsonObject, ListTransactionsSuccessResponse::class.java)
                 NwcMethod.GET_BALANCE -> jp.codec.treeToValue(jsonObject, GetBalanceSuccessResponse::class.java)
                 NwcMethod.GET_INFO -> jp.codec.treeToValue(jsonObject, GetInfoSuccessResponse::class.java)
+                NwcMethod.GET_BUDGET -> jp.codec.treeToValue(jsonObject, GetBudgetSuccessResponse::class.java)
+                NwcMethod.SIGN_MESSAGE -> jp.codec.treeToValue(jsonObject, SignMessageSuccessResponse::class.java)
+                NwcMethod.CREATE_CONNECTION -> jp.codec.treeToValue(jsonObject, CreateConnectionSuccessResponse::class.java)
                 NwcMethod.MAKE_HOLD_INVOICE -> jp.codec.treeToValue(jsonObject, MakeHoldInvoiceSuccessResponse::class.java)
                 NwcMethod.CANCEL_HOLD_INVOICE -> jp.codec.treeToValue(jsonObject, CancelHoldInvoiceSuccessResponse::class.java)
                 NwcMethod.SETTLE_HOLD_INVOICE -> jp.codec.treeToValue(jsonObject, SettleHoldInvoiceSuccessResponse::class.java)

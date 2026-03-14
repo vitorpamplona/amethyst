@@ -30,6 +30,9 @@ enum class NwcErrorCode {
     UNAUTHORIZED,
     INTERNAL,
     UNSUPPORTED_ENCRYPTION,
+    BAD_REQUEST,
+    NOT_FOUND,
+    EXPIRED,
     OTHER,
 }
 

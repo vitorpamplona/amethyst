@@ -33,6 +33,9 @@ class NwcMethodTest {
         assertEquals("list_transactions", NwcMethod.LIST_TRANSACTIONS)
         assertEquals("get_balance", NwcMethod.GET_BALANCE)
         assertEquals("get_info", NwcMethod.GET_INFO)
+        assertEquals("get_budget", NwcMethod.GET_BUDGET)
+        assertEquals("sign_message", NwcMethod.SIGN_MESSAGE)
+        assertEquals("create_connection", NwcMethod.CREATE_CONNECTION)
         assertEquals("make_hold_invoice", NwcMethod.MAKE_HOLD_INVOICE)
         assertEquals("cancel_hold_invoice", NwcMethod.CANCEL_HOLD_INVOICE)
         assertEquals("settle_hold_invoice", NwcMethod.SETTLE_HOLD_INVOICE)
@@ -48,7 +51,7 @@ class NwcMethodTest {
     @Test
     fun testErrorCodeValues() {
         val codes = NwcErrorCode.entries
-        assertEquals(10, codes.size)
+        assertEquals(13, codes.size)
         assertEquals(NwcErrorCode.RATE_LIMITED, NwcErrorCode.valueOf("RATE_LIMITED"))
         assertEquals(NwcErrorCode.NOT_IMPLEMENTED, NwcErrorCode.valueOf("NOT_IMPLEMENTED"))
         assertEquals(NwcErrorCode.INSUFFICIENT_BALANCE, NwcErrorCode.valueOf("INSUFFICIENT_BALANCE"))
@@ -58,7 +61,24 @@ class NwcMethodTest {
         assertEquals(NwcErrorCode.UNAUTHORIZED, NwcErrorCode.valueOf("UNAUTHORIZED"))
         assertEquals(NwcErrorCode.INTERNAL, NwcErrorCode.valueOf("INTERNAL"))
         assertEquals(NwcErrorCode.UNSUPPORTED_ENCRYPTION, NwcErrorCode.valueOf("UNSUPPORTED_ENCRYPTION"))
+        assertEquals(NwcErrorCode.BAD_REQUEST, NwcErrorCode.valueOf("BAD_REQUEST"))
+        assertEquals(NwcErrorCode.NOT_FOUND, NwcErrorCode.valueOf("NOT_FOUND"))
+        assertEquals(NwcErrorCode.EXPIRED, NwcErrorCode.valueOf("EXPIRED"))
         assertEquals(NwcErrorCode.OTHER, NwcErrorCode.valueOf("OTHER"))
+    }
+
+    @Test
+    fun testTransactionTypeConstants() {
+        assertEquals("incoming", NwcTransactionType.INCOMING)
+        assertEquals("outgoing", NwcTransactionType.OUTGOING)
+    }
+
+    @Test
+    fun testTransactionStateConstants() {
+        assertEquals("PENDING", NwcTransactionState.PENDING)
+        assertEquals("SETTLED", NwcTransactionState.SETTLED)
+        assertEquals("FAILED", NwcTransactionState.FAILED)
+        assertEquals("ACCEPTED", NwcTransactionState.ACCEPTED)
     }
 
     @Test

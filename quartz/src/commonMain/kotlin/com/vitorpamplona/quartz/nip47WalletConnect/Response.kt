@@ -79,6 +79,7 @@ class ListTransactionsSuccessResponse(
 ) : Response(NwcMethod.LIST_TRANSACTIONS) {
     class ListTransactionsResult(
         val transactions: List<NwcTransaction>? = null,
+        val total_count: Long? = null,
     )
 }
 
@@ -104,6 +105,8 @@ class GetInfoSuccessResponse(
         val block_hash: String? = null,
         val methods: List<String>? = null,
         val notifications: List<String>? = null,
+        val metadata: Any? = null,
+        val lud16: String? = null,
     )
 }
 
@@ -121,3 +124,34 @@ class CancelHoldInvoiceSuccessResponse(
 class SettleHoldInvoiceSuccessResponse(
     val result: Any? = null,
 ) : Response(NwcMethod.SETTLE_HOLD_INVOICE)
+
+// get_budget success response
+class GetBudgetSuccessResponse(
+    val result: GetBudgetResult? = null,
+) : Response(NwcMethod.GET_BUDGET) {
+    class GetBudgetResult(
+        val used_budget: Long? = null,
+        val total_budget: Long? = null,
+        val renews_at: Long? = null,
+        val renewal_period: String? = null,
+    )
+}
+
+// sign_message success response
+class SignMessageSuccessResponse(
+    val result: SignMessageResult? = null,
+) : Response(NwcMethod.SIGN_MESSAGE) {
+    class SignMessageResult(
+        val message: String? = null,
+        val signature: String? = null,
+    )
+}
+
+// create_connection success response
+class CreateConnectionSuccessResponse(
+    val result: CreateConnectionResult? = null,
+) : Response(NwcMethod.CREATE_CONNECTION) {
+    class CreateConnectionResult(
+        val wallet_pubkey: String? = null,
+    )
+}

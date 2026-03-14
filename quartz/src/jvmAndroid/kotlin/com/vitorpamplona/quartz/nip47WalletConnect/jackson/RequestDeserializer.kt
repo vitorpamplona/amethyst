@@ -25,7 +25,9 @@ import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.vitorpamplona.quartz.nip47WalletConnect.CancelHoldInvoiceMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.CreateConnectionMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.GetBalanceMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.GetBudgetMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.GetInfoMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.ListTransactionsMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.LookupInvoiceMethod
@@ -36,6 +38,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.PayKeysendMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.Request
 import com.vitorpamplona.quartz.nip47WalletConnect.SettleHoldInvoiceMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.SignMessageMethod
 import com.vitorpamplona.quartz.utils.asTextOrNull
 
 class RequestDeserializer : StdDeserializer<Request>(Request::class.java) {
@@ -54,6 +57,9 @@ class RequestDeserializer : StdDeserializer<Request>(Request::class.java) {
             NwcMethod.LIST_TRANSACTIONS -> jp.codec.treeToValue(jsonObject, ListTransactionsMethod::class.java)
             NwcMethod.GET_BALANCE -> jp.codec.treeToValue(jsonObject, GetBalanceMethod::class.java)
             NwcMethod.GET_INFO -> jp.codec.treeToValue(jsonObject, GetInfoMethod::class.java)
+            NwcMethod.GET_BUDGET -> jp.codec.treeToValue(jsonObject, GetBudgetMethod::class.java)
+            NwcMethod.SIGN_MESSAGE -> jp.codec.treeToValue(jsonObject, SignMessageMethod::class.java)
+            NwcMethod.CREATE_CONNECTION -> jp.codec.treeToValue(jsonObject, CreateConnectionMethod::class.java)
             NwcMethod.MAKE_HOLD_INVOICE -> jp.codec.treeToValue(jsonObject, MakeHoldInvoiceMethod::class.java)
             NwcMethod.CANCEL_HOLD_INVOICE -> jp.codec.treeToValue(jsonObject, CancelHoldInvoiceMethod::class.java)
             NwcMethod.SETTLE_HOLD_INVOICE -> jp.codec.treeToValue(jsonObject, SettleHoldInvoiceMethod::class.java)

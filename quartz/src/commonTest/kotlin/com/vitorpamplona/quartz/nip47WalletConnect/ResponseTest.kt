@@ -255,6 +255,117 @@ class ResponseTest {
         assertIs<PayInvoiceErrorResponse>(response)
     }
 
+    // --- GetBudget Success ---
+
+    @Test
+    fun testGetBudgetSuccessDeserialization() {
+        val json = """{"result_type":"get_budget","result":{"used_budget":50000,"total_budget":100000,"renews_at":1700000000,"renewal_period":"monthly"}}"""
+        val response = OptimizedJsonMapper.fromJsonTo<Response>(json)
+        assertIs<GetBudgetSuccessResponse>(response)
+        assertNotNull(response.result)
+        assertEquals(50000L, response.result?.used_budget)
+        assertEquals(100000L, response.result?.total_budget)
+        assertEquals(1700000000L, response.result?.renews_at)
+        assertEquals("monthly", response.result?.renewal_period)
+    }
+
+    @Test
+    fun testGetBudgetNoBudgetLimit() {
+        val json = """{"result_type":"get_budget","result":{"used_budget":0,"total_budget":0,"renewal_period":"never"}}"""
+        val response = OptimizedJsonMapper.fromJsonTo<Response>(json)
+        assertIs<GetBudgetSuccessResponse>(response)
+        assertEquals(0L, response.result?.used_budget)
+        assertEquals(0L, response.result?.total_budget)
+        assertNull(response.result?.renews_at)
+        assertEquals("never", response.result?.renewal_period)
+    }
+
+    // --- SignMessage Success ---
+
+    @Test
+    fun testSignMessageSuccessDeserialization() {
+        val json = """{"result_type":"sign_message","result":{"message":"Hello Nostr","signature":"sig123abc"}}"""
+        val response = OptimizedJsonMapper.fromJsonTo<Response>(json)
+        assertIs<SignMessageSuccessResponse>(response)
+        assertNotNull(response.result)
+        assertEquals("Hello Nostr", response.result?.message)
+        assertEquals("sig123abc", response.result?.signature)
+    }
+
+    // --- CreateConnection Success ---
+
+    @Test
+    fun testCreateConnectionSuccessDeserialization() {
+        val json = """{"result_type":"create_connection","result":{"wallet_pubkey":"walletpub123"}}"""
+        val response = OptimizedJsonMapper.fromJsonTo<Response>(json)
+        assertIs<CreateConnectionSuccessResponse>(response)
+        assertNotNull(response.result)
+        assertEquals("walletpub123", response.result?.wallet_pubkey)
+    }
+
+    // --- GetInfo with extended fields ---
+
+    @Test
+    fun testGetInfoWithMetadataAndLud16() {
+        val json =
+            """{"result_type":"get_info","result":{"alias":"AlbyHub","methods":["pay_invoice","get_balance"],"notifications":["payment_received"],"lud16":"user@getalby.com"}}"""
+        val response = OptimizedJsonMapper.fromJsonTo<Response>(json)
+        assertIs<GetInfoSuccessResponse>(response)
+        assertEquals("AlbyHub", response.result?.alias)
+        assertEquals("user@getalby.com", response.result?.lud16)
+        assertEquals(listOf("pay_invoice", "get_balance"), response.result?.methods)
+    }
+
+    // --- ListTransactions with total_count ---
+
+    @Test
+    fun testListTransactionsWithTotalCount() {
+        val json =
+            """{"result_type":"list_transactions","result":{"transactions":[{"type":"incoming","amount":100,"created_at":1000}],"total_count":42}}"""
+        val response = OptimizedJsonMapper.fromJsonTo<Response>(json)
+        assertIs<ListTransactionsSuccessResponse>(response)
+        assertEquals(1, response.result?.transactions?.size)
+        assertEquals(42L, response.result?.total_count)
+    }
+
+    // --- Transaction with settle_deadline ---
+
+    @Test
+    fun testTransactionWithSettleDeadline() {
+        val json =
+            """{"result_type":"lookup_invoice","result":{"type":"incoming","state":"ACCEPTED","invoice":"lnbc...","payment_hash":"hash","amount":5000,"created_at":1000,"settle_deadline":800000}}"""
+        val response = OptimizedJsonMapper.fromJsonTo<Response>(json)
+        assertIs<LookupInvoiceSuccessResponse>(response)
+        assertEquals(800000L, response.result?.settle_deadline)
+        assertEquals("ACCEPTED", response.result?.state)
+    }
+
+    // --- Error responses for new error codes ---
+
+    @Test
+    fun testBadRequestError() {
+        val json = """{"result_type":"pay_invoice","error":{"code":"BAD_REQUEST","message":"Invalid invoice"}}"""
+        val response = OptimizedJsonMapper.fromJsonTo<Response>(json)
+        assertIs<PayInvoiceErrorResponse>(response)
+        assertEquals(NwcErrorCode.BAD_REQUEST, response.error?.code)
+    }
+
+    @Test
+    fun testNotFoundError() {
+        val json = """{"result_type":"lookup_invoice","error":{"code":"NOT_FOUND","message":"Invoice not found"}}"""
+        val response = OptimizedJsonMapper.fromJsonTo<Response>(json)
+        assertIs<NwcErrorResponse>(response)
+        assertEquals(NwcErrorCode.NOT_FOUND, response.error?.code)
+    }
+
+    @Test
+    fun testExpiredError() {
+        val json = """{"result_type":"pay_invoice","error":{"code":"EXPIRED","message":"Connection expired"}}"""
+        val response = OptimizedJsonMapper.fromJsonTo<Response>(json)
+        assertIs<PayInvoiceErrorResponse>(response)
+        assertEquals(NwcErrorCode.EXPIRED, response.error?.code)
+    }
+
     // --- Null/missing result ---
 
     @Test

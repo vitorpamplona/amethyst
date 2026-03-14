@@ -20,6 +20,18 @@
  */
 package com.vitorpamplona.quartz.nip47WalletConnect
 
+object NwcTransactionType {
+    const val INCOMING = "incoming"
+    const val OUTGOING = "outgoing"
+}
+
+object NwcTransactionState {
+    const val PENDING = "PENDING"
+    const val SETTLED = "SETTLED"
+    const val FAILED = "FAILED"
+    const val ACCEPTED = "ACCEPTED"
+}
+
 class NwcTransaction(
     var type: String? = null,
     var state: String? = null,
@@ -33,6 +45,7 @@ class NwcTransaction(
     var created_at: Long? = null,
     var expires_at: Long? = null,
     var settled_at: Long? = null,
+    var settle_deadline: Long? = null,
     var metadata: Any? = null,
 )
 
