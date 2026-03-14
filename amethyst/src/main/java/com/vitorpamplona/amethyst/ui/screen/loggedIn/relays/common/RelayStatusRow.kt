@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CloudQueue
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.SyncProblem
@@ -237,6 +238,33 @@ fun RelayStatusRow(
                 modifier = HalfStartPadding,
                 color = MaterialTheme.colorScheme.placeholderText,
             )
+        }
+
+        if (item.eventCount != null) {
+            Row(
+                modifier =
+                    Modifier.weight(1f).pointerInput(Unit) {
+                        detectTapGestures(
+                            onTap = { onClick() },
+                        )
+                    },
+                horizontalArrangement = Arrangement.End,
+            ) {
+                Icon(
+                    imageVector = Icons.Default.CloudQueue,
+                    contentDescription = stringRes(R.string.notes),
+                    modifier = Size15Modifier,
+                    tint = MaterialTheme.colorScheme.allGoodColor,
+                )
+
+                Text(
+                    text = countToHumanReadable(item.eventCount, "events"),
+                    maxLines = 1,
+                    fontSize = Font12SP,
+                    modifier = HalfStartPadding,
+                    color = MaterialTheme.colorScheme.placeholderText,
+                )
+            }
         }
     }
 }

@@ -33,6 +33,7 @@ data class BasicRelaySetupInfo(
     val paidRelay: Boolean = false,
     val forcesTor: Boolean = false,
     val users: List<User> = emptyList(),
+    val eventCount: Long? = null,
 )
 
 fun relaySetupInfoBuilder(

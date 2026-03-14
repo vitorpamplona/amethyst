@@ -29,6 +29,12 @@ import com.vitorpamplona.amethyst.service.replace
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
+import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CountMessage
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayInfo
 import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayType
 import kotlinx.coroutines.Dispatchers
@@ -38,7 +44,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 @Stable
-class Nip65RelayListViewModel : ViewModel() {
+class Nip65RelayListViewModel :
+    ViewModel(),
+    IRelayClientListener {
     private lateinit var accountViewModel: AccountViewModel
     private lateinit var account: Account
 
@@ -50,6 +58,9 @@ class Nip65RelayListViewModel : ViewModel() {
 
     var hasModified = false
 
+    private var homeCountSubId: String? = null
+    private var notifCountSubId: String? = null
+
     fun init(accountViewModel: AccountViewModel) {
         this.accountViewModel = accountViewModel
         this.account = accountViewModel.account
@@ -58,6 +69,68 @@ class Nip65RelayListViewModel : ViewModel() {
     fun load() {
         clear()
         loadRelayDocuments()
+        loadEventCounts()
+    }
+
+    fun loadEventCounts() {
+        val pubKey = account.signer.pubKey
+
+        account.client.subscribe(this)
+
+        // Count events authored by this account on each outbox relay
+        val homeRelayList = _homeRelays.value
+        if (homeRelayList.isNotEmpty()) {
+            val subId = newSubId()
+            homeCountSubId = subId
+            val authorFilter = Filter(authors = listOf(pubKey))
+            val filterMap = homeRelayList.associate { it.relay to listOf(authorFilter) }
+            account.client.queryCount(subId, filterMap)
+        }
+
+        // Count events p-tagged to this account on each inbox relay
+        val notifRelayList = _notificationRelays.value
+        if (notifRelayList.isNotEmpty()) {
+            val subId = newSubId()
+            notifCountSubId = subId
+            val pTagFilter = Filter(tags = mapOf("p" to listOf(pubKey)))
+            val filterMap = notifRelayList.associate { it.relay to listOf(pTagFilter) }
+            account.client.queryCount(subId, filterMap)
+        }
+    }
+
+    override fun onIncomingMessage(
+        relay: IRelayClient,
+        msgStr: String,
+        msg: Message,
+    ) {
+        if (msg is CountMessage) {
+            val count = msg.result.count.toLong()
+            when (msg.queryId) {
+                homeCountSubId -> {
+                    _homeRelays.update { list ->
+                        list.map {
+                            if (it.relay == relay.url) it.copy(eventCount = count) else it
+                        }
+                    }
+                }
+                notifCountSubId -> {
+                    _notificationRelays.update { list ->
+                        list.map {
+                            if (it.relay == relay.url) it.copy(eventCount = count) else it
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        if (::account.isInitialized) {
+            homeCountSubId?.let { account.client.close(it) }
+            notifCountSubId?.let { account.client.close(it) }
+            account.client.unsubscribe(this)
+        }
     }
 
     fun create() {
