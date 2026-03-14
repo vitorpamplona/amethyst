@@ -73,6 +73,9 @@ sealed class ReceiveState {
 class WalletViewModel : ViewModel() {
     private var account: Account? = null
 
+    private val _hasWalletSetup = MutableStateFlow(false)
+    val hasWalletSetup = _hasWalletSetup.asStateFlow()
+
     private val _balanceSats = MutableStateFlow<Long?>(null)
     val balanceSats = _balanceSats.asStateFlow()
 
@@ -96,9 +99,12 @@ class WalletViewModel : ViewModel() {
 
     fun init(account: Account) {
         this.account = account
+        _hasWalletSetup.value = account.nip47SignerState?.hasWalletConnectSetup() == true
     }
 
-    fun hasWalletSetup(): Boolean = account?.nip47SignerState?.hasWalletConnectSetup() == true
+    fun refreshWalletSetup() {
+        _hasWalletSetup.value = account?.nip47SignerState?.hasWalletConnectSetup() == true
+    }
 
     fun fetchBalance() {
         val acc = account ?: return

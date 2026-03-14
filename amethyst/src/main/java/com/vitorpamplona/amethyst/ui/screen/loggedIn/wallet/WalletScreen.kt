@@ -73,10 +73,9 @@ fun WalletScreen(
     nav: INav,
 ) {
     val walletViewModel: WalletViewModel = viewModel()
+    walletViewModel.init(accountViewModel.account)
 
-    LaunchedEffect(accountViewModel) {
-        walletViewModel.init(accountViewModel.account)
-    }
+    val hasWallet by walletViewModel.hasWalletSetup.collectAsState()
 
     Scaffold(
         topBar = {
@@ -93,7 +92,7 @@ fun WalletScreen(
             )
         },
     ) { padding ->
-        if (!walletViewModel.hasWalletSetup()) {
+        if (!hasWallet) {
             NoWalletSetup(
                 modifier = Modifier.padding(padding),
                 nav = nav,
