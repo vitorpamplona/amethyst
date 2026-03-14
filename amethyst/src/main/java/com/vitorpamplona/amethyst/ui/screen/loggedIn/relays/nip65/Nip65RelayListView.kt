@@ -227,6 +227,7 @@ fun RelayTestStatusRow(state: OutboxRelayTesterViewModel.TestState) {
                     color = MaterialTheme.colorScheme.primary,
                 )
             }
+
             is OutboxRelayTesterViewModel.TestState.Success -> {
                 Icon(
                     imageVector = Icons.Default.CheckCircle,
@@ -240,6 +241,7 @@ fun RelayTestStatusRow(state: OutboxRelayTesterViewModel.TestState) {
                     color = MaterialTheme.colorScheme.allGoodColor,
                 )
             }
+
             is OutboxRelayTesterViewModel.TestState.Failed -> {
                 Icon(
                     imageVector = Icons.Default.Error,
@@ -264,6 +266,7 @@ fun RelayTestStatusRow(state: OutboxRelayTesterViewModel.TestState) {
                     maxLines = 2,
                 )
             }
+
             else -> {}
         }
     }
