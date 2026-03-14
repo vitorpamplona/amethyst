@@ -135,6 +135,7 @@ open class ChannelNewMessageViewModel :
     var message by mutableStateOf(TextFieldValue(""))
     var urlPreview by mutableStateOf<String?>(null)
     var isUploadingImage by mutableStateOf(false)
+    var isUploadingFile by mutableStateOf(false)
 
     var userSuggestions: UserSuggestionState? = null
     var userSuggestionsMainMessage: UserSuggestionAnchor? = null
@@ -337,7 +338,11 @@ open class ChannelNewMessageViewModel :
 
             val myMultiOrchestrator = uploadState.multiOrchestrator ?: return@launch
 
-            isUploadingImage = true
+            if (myMultiOrchestrator.hasNonMedia()) {
+                isUploadingFile = true
+            } else {
+                isUploadingImage = true
+            }
 
             val results =
                 myMultiOrchestrator.upload(
@@ -379,6 +384,7 @@ open class ChannelNewMessageViewModel :
             }
 
             isUploadingImage = false
+            isUploadingFile = false
         }
     }
 
@@ -546,6 +552,9 @@ open class ChannelNewMessageViewModel :
         userSuggestions?.reset()
         userSuggestionsMainMessage = null
 
+        isUploadingImage = false
+        isUploadingFile = false
+
         iMetaAttachments.reset()
 
         emojiSuggestions?.reset()
@@ -633,6 +642,7 @@ open class ChannelNewMessageViewModel :
     fun canPost(): Boolean =
         message.text.isNotBlank() &&
             uploadState?.isUploadingImage != true &&
+            uploadState?.isUploadingFile != true &&
             !wantsInvoice &&
             (!wantsZapraiser || zapRaiserAmount != null) &&
             uploadState?.multiOrchestrator == null

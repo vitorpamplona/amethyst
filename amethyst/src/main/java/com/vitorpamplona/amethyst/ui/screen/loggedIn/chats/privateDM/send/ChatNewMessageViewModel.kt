@@ -141,7 +141,8 @@ class ChatNewMessageViewModel :
 
     val urlPreviews = PreviewState()
 
-    var isUploadingImage by mutableStateOf(false)
+    val isUploadingImage: Boolean get() = uploadState?.isUploadingImage ?: false
+    val isUploadingFile: Boolean get() = uploadState?.isUploadingFile ?: false
 
     var userSuggestions: UserSuggestionState? = null
     var userSuggestionsMainMessage: UserSuggestionAnchor? = null
@@ -692,6 +693,7 @@ class ChatNewMessageViewModel :
     fun canPost(): Boolean =
         message.text.isNotBlank() &&
             uploadState?.isUploadingImage != true &&
+            uploadState?.isUploadingFile != true &&
             !wantsInvoice &&
             (!wantsZapraiser || zapRaiserAmount.value != null) &&
             (toUsers.text.isNotBlank()) &&

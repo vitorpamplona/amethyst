@@ -150,6 +150,7 @@ class NewPublicMessageViewModel :
     val urlPreviews = PreviewState()
 
     var isUploadingImage by mutableStateOf(false)
+    var isUploadingFile by mutableStateOf(false)
 
     var userSuggestions: UserSuggestionState? = null
     var userSuggestionsMainMessage: UserSuggestionAnchor? = null
@@ -439,7 +440,11 @@ class NewPublicMessageViewModel :
         viewModelScope.launch(Dispatchers.IO) {
             val myMultiOrchestrator = multiOrchestrator ?: return@launch
 
-            isUploadingImage = true
+            if (myMultiOrchestrator.hasNonMedia()) {
+                isUploadingFile = true
+            } else {
+                isUploadingImage = true
+            }
 
             val results =
                 myMultiOrchestrator.upload(
@@ -495,6 +500,7 @@ class NewPublicMessageViewModel :
             }
 
             isUploadingImage = false
+            isUploadingFile = false
         }
     }
 
@@ -522,6 +528,9 @@ class NewPublicMessageViewModel :
 
         userSuggestions?.reset()
         userSuggestionsMainMessage = null
+
+        isUploadingImage = false
+        isUploadingFile = false
 
         iMetaAttachments.reset()
 
@@ -629,6 +638,7 @@ class NewPublicMessageViewModel :
     fun canPost(): Boolean =
         message.text.isNotBlank() &&
             !isUploadingImage &&
+            !isUploadingFile &&
             !wantsInvoice &&
             (!wantsZapraiser || zapRaiserAmount.value != null) &&
             (toUsers.text.isNotBlank()) &&

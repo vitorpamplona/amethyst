@@ -179,6 +179,7 @@ open class ShortNotePostViewModel :
     val urlPreviews = PreviewState()
 
     var isUploadingImage by mutableStateOf(false)
+    var isUploadingFile by mutableStateOf(false)
 
     var userSuggestions: UserSuggestionState? = null
     var userSuggestionsMainMessage: UserSuggestionAnchor? = null
@@ -829,7 +830,11 @@ open class ShortNotePostViewModel :
         viewModelScope.launch(Dispatchers.IO) {
             val myMultiOrchestrator = multiOrchestrator ?: return@launch
 
-            isUploadingImage = true
+            if (myMultiOrchestrator.hasNonMedia()) {
+                isUploadingFile = true
+            } else {
+                isUploadingImage = true
+            }
 
             val results =
                 myMultiOrchestrator.upload(
@@ -886,6 +891,7 @@ open class ShortNotePostViewModel :
             }
 
             isUploadingImage = false
+            isUploadingFile = false
         }
     }
 
@@ -898,6 +904,7 @@ open class ShortNotePostViewModel :
 
         multiOrchestrator = null
         isUploadingImage = false
+        isUploadingFile = false
         voiceAnonymization.clear()
         deleteVoiceLocalFile()
         voiceRecording = null
@@ -1032,12 +1039,13 @@ open class ShortNotePostViewModel :
     fun canPost(): Boolean {
         // Voice messages can be posted without text (with either uploaded or pending recording)
         if (voiceMetadata != null || voiceRecording != null) {
-            return !isUploadingVoice && !isUploadingImage && processingPreset == null
+            return !isUploadingVoice && !isUploadingImage && !isUploadingFile && processingPreset == null
         }
 
         // Regular text/media posts require text
         return message.text.isNotBlank() &&
             !isUploadingImage &&
+            !isUploadingFile &&
             !isUploadingVoice &&
             !wantsInvoice &&
             (!wantsZapRaiser || zapRaiserAmount.value != null) &&

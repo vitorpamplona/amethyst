@@ -37,6 +37,7 @@ class ChatFileUploadState(
     val defaultServer: ServerName,
 ) {
     var isUploadingImage by mutableStateOf(false)
+    var isUploadingFile by mutableStateOf(false)
 
     var selectedServer by mutableStateOf(defaultServer)
     var caption by mutableStateOf("")
@@ -65,6 +66,7 @@ class ChatFileUploadState(
     fun reset() {
         multiOrchestrator = null
         isUploadingImage = false
+        isUploadingFile = false
         caption = ""
         selectedServer = defaultServer
     }

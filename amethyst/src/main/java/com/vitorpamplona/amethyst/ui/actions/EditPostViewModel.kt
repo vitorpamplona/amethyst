@@ -80,6 +80,7 @@ open class EditPostViewModel : ViewModel() {
     var message by mutableStateOf(TextFieldValue(""))
     var urlPreview by mutableStateOf<String?>(null)
     var isUploadingImage by mutableStateOf(false)
+    var isUploadingFile by mutableStateOf(false)
 
     var userSuggestions: UserSuggestionState? = null
     var userSuggestionsMainMessage: UserSuggestionAnchor? = null
@@ -180,7 +181,11 @@ open class EditPostViewModel : ViewModel() {
             val myAccount = account
             val myMultiOrchestrator = multiOrchestrator ?: return@launch
 
-            isUploadingImage = true
+            if (myMultiOrchestrator.hasNonMedia()) {
+                isUploadingFile = true
+            } else {
+                isUploadingImage = true
+            }
 
             val results =
                 myMultiOrchestrator.upload(
@@ -244,6 +249,7 @@ open class EditPostViewModel : ViewModel() {
             }
 
             isUploadingImage = false
+            isUploadingFile = false
         }
     }
 
@@ -256,6 +262,7 @@ open class EditPostViewModel : ViewModel() {
         multiOrchestrator = null
         urlPreview = null
         isUploadingImage = false
+        isUploadingFile = false
 
         wantsInvoice = false
 
@@ -296,7 +303,7 @@ open class EditPostViewModel : ViewModel() {
         }
     }
 
-    fun canPost() = message.text.isNotBlank() && !isUploadingImage && !wantsInvoice && multiOrchestrator == null
+    fun canPost() = message.text.isNotBlank() && !isUploadingImage && !isUploadingFile && !wantsInvoice && multiOrchestrator == null
 
     fun selectImage(uris: ImmutableList<SelectedMedia>) {
         multiOrchestrator = MultiOrchestrator(uris)

@@ -69,6 +69,7 @@ class SelectedMedia(
 @Composable
 fun SelectFromGallery(
     isUploading: Boolean,
+    enabled: Boolean = true,
     tint: Color,
     modifier: Modifier,
     onImageChosen: (ImmutableList<SelectedMedia>) -> Unit,
@@ -85,12 +86,13 @@ fun SelectFromGallery(
         )
     }
 
-    GallerySelectButton(isUploading, tint, modifier) { showGallerySelect = true }
+    GallerySelectButton(isUploading, enabled, tint, modifier) { showGallerySelect = true }
 }
 
 @Composable
 fun SelectSingleFromGallery(
     isUploading: Boolean,
+    enabled: Boolean = true,
     tint: Color,
     modifier: Modifier,
     onImageChosen: (SelectedMedia) -> Unit,
@@ -107,19 +109,20 @@ fun SelectSingleFromGallery(
         )
     }
 
-    GallerySelectButton(isUploading, tint, modifier) { showGallerySelect = true }
+    GallerySelectButton(isUploading, enabled, tint, modifier) { showGallerySelect = true }
 }
 
 @Composable
 private fun GallerySelectButton(
     isUploading: Boolean,
+    enabled: Boolean,
     tint: Color,
     modifier: Modifier,
     onClick: () -> Unit,
 ) {
     IconButton(
         modifier = modifier,
-        enabled = !isUploading,
+        enabled = enabled && !isUploading,
         onClick = { onClick() },
     ) {
         if (!isUploading) {

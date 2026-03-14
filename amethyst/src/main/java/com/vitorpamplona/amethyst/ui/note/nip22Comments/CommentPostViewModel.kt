@@ -150,6 +150,7 @@ open class CommentPostViewModel :
     val urlPreviews = PreviewState()
 
     var isUploadingImage by mutableStateOf(false)
+    var isUploadingFile by mutableStateOf(false)
 
     var userSuggestions: UserSuggestionState? = null
     var userSuggestionsMainMessage: UserSuggestionAnchor? = null
@@ -487,7 +488,11 @@ open class CommentPostViewModel :
         viewModelScope.launch(Dispatchers.IO) {
             val myMultiOrchestrator = multiOrchestrator ?: return@launch
 
-            isUploadingImage = true
+            if (myMultiOrchestrator.hasNonMedia()) {
+                isUploadingFile = true
+            } else {
+                isUploadingImage = true
+            }
 
             val results =
                 myMultiOrchestrator.upload(
@@ -552,6 +557,7 @@ open class CommentPostViewModel :
             }
 
             isUploadingImage = false
+            isUploadingFile = false
         }
     }
 
@@ -565,6 +571,7 @@ open class CommentPostViewModel :
 
         multiOrchestrator = null
         isUploadingImage = false
+        isUploadingFile = false
 
         notifying = null
 
@@ -677,6 +684,7 @@ open class CommentPostViewModel :
     fun canPost(): Boolean =
         message.text.isNotBlank() &&
             !isUploadingImage &&
+            !isUploadingFile &&
             !wantsInvoice &&
             (!wantsZapraiser || zapRaiserAmount.value != null) &&
             multiOrchestrator == null

@@ -134,6 +134,7 @@ open class NewProductViewModel :
     val urlPreviews = PreviewState()
 
     var isUploadingImage by mutableStateOf(false)
+    var isUploadingFile by mutableStateOf(false)
 
     var userSuggestions: UserSuggestionState? = null
     var userSuggestionsMainMessage: UserSuggestionAnchor? = null
@@ -399,7 +400,11 @@ open class NewProductViewModel :
             val myAccount = account ?: return@launch
             val myMultiOrchestrator = multiOrchestrator ?: return@launch
 
-            isUploadingImage = true
+            if (myMultiOrchestrator.hasNonMedia()) {
+                isUploadingFile = true
+            } else {
+                isUploadingImage = true
+            }
 
             val results =
                 myMultiOrchestrator.upload(
@@ -445,6 +450,7 @@ open class NewProductViewModel :
             }
 
             isUploadingImage = false
+            isUploadingFile = false
         }
     }
 
@@ -455,6 +461,7 @@ open class NewProductViewModel :
 
         multiOrchestrator = null
         isUploadingImage = false
+        isUploadingFile = false
 
         wantsInvoice = false
         wantsZapraiser = false
@@ -576,6 +583,7 @@ open class NewProductViewModel :
     fun canPost(): Boolean =
         message.text.isNotBlank() &&
             !isUploadingImage &&
+            !isUploadingFile &&
             !wantsInvoice &&
             (!wantsZapraiser || zapRaiserAmount.value != null) &&
             title.text.isNotBlank() &&
