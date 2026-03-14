@@ -36,32 +36,48 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Syncs the user's events across all known relays:
  *  1. Downloads all events authored by the user and sends them to their outbox relays.
- *  2. Downloads all events that p-tag the user and sends them to their inbox relays.
+ *  2. Downloads all events that p-tag the user (non-DM) and sends them to their inbox relays.
  *  3. Downloads kind-4 and kind-1059 events that p-tag the user and sends them to DM relays.
  *
- * The procedure iterates over every relay URL in LocalCache.relayHints.relayDB.
- * Events are deduplicated per destination to avoid redundant sends.
+ * Relays are processed in batches of [CHUNK_SIZE].  All three filters are sent to every relay
+ * in a chunk simultaneously, and events are routed to the appropriate destination by their
+ * properties.  This removes the need for three sequential passes over the full relay list.
  *
- * Scoped to the AccountViewModel so the sync continues in the background while
- * the user navigates to other screens or away from the app.
+ * The sync is pausable: calling [cancel] transitions to [SyncState.Paused] so the user can
+ * [resume] from the last completed chunk rather than starting over.
+ *
+ * Scoped to the AccountViewModel so the sync survives navigation within the same session.
  */
 class EventSyncViewModel(
     val account: Account,
     private val scope: CoroutineScope,
 ) {
+    companion object {
+        /** Number of relays queried in each batch. */
+        const val CHUNK_SIZE = 50
+
+        /** How long (ms) to wait for all relays in a chunk to reply before moving on. */
+        const val CHUNK_TIMEOUT_MS = 120_000L
+    }
+
     sealed class SyncState {
         object Idle : SyncState()
 
         data class Running(
-            val phase: Int,
-            val phaseTotal: Int,
-            val currentRelay: String,
-            val relayIndex: Int,
-            val totalRelays: Int,
+            val chunkIndex: Int,
+            val totalChunks: Int,
+            val eventsSent: Int,
+        ) : SyncState()
+
+        /** Cancelled mid-run; can be resumed from [nextChunkIndex]. */
+        data class Paused(
+            val nextChunkIndex: Int,
+            val totalChunks: Int,
             val eventsSent: Int,
         ) : SyncState()
 
@@ -84,129 +100,135 @@ class EventSyncViewModel(
         if (_syncState.value is SyncState.Running) return
         syncJob =
             scope.launch(Dispatchers.IO) {
-                runSync()
+                runSync(startChunkIndex = 0, initialEventsSent = 0)
+            }
+    }
+
+    fun resume() {
+        val paused = _syncState.value as? SyncState.Paused ?: return
+        if (_syncState.value is SyncState.Running) return
+        syncJob =
+            scope.launch(Dispatchers.IO) {
+                runSync(
+                    startChunkIndex = paused.nextChunkIndex,
+                    initialEventsSent = paused.eventsSent,
+                )
             }
     }
 
     fun cancel() {
         syncJob?.cancel()
-        _syncState.value = SyncState.Idle
+        val current = _syncState.value
+        _syncState.value =
+            if (current is SyncState.Running) {
+                SyncState.Paused(
+                    nextChunkIndex = current.chunkIndex - 1, // retry the in-progress chunk
+                    totalChunks = current.totalChunks,
+                    eventsSent = current.eventsSent,
+                )
+            } else {
+                SyncState.Idle
+            }
     }
 
-    private suspend fun runSync() {
+    private suspend fun runSync(
+        startChunkIndex: Int,
+        initialEventsSent: Int,
+    ) {
         val startTime = System.currentTimeMillis()
-
         val myPubKey = account.signer.pubKey
+
         val allRelays =
             account.cache.relayHints.relayDB
                 .keys()
                 .toList()
 
         if (allRelays.isEmpty()) {
-            _syncState.value = SyncState.Error("No known relays found. Browse some content first to discover relays.")
+            _syncState.value =
+                SyncState.Error("No known relays found. Browse some content first to discover relays.")
             return
         }
+
+        val chunks = allRelays.chunked(CHUNK_SIZE)
+        val totalChunks = chunks.size
 
         val outboxTargets = account.outboxRelays.flow.value
         val inboxTargets = account.nip65RelayList.inboxFlow.value
         val dmTargets = account.dmRelays.flow.value
 
-        // Deduplication sets — one per destination category
+        // Build the minimal set of filters needed across all three categories.
+        // Events are routed to their correct destination(s) by property after retrieval.
+        val filters =
+            buildList {
+                if (outboxTargets.isNotEmpty()) add(Filter(authors = listOf(myPubKey)))
+                if (inboxTargets.isNotEmpty() || dmTargets.isNotEmpty()) {
+                    add(Filter(tags = mapOf("p" to listOf(myPubKey))))
+                }
+            }
+
+        if (filters.isEmpty()) {
+            _syncState.value =
+                SyncState.Error("No outbox, inbox, or DM relays configured.")
+            return
+        }
+
+        // Deduplication sets — one per destination category.
         val outboxSent = HashSet<String>(1024)
         val inboxSent = HashSet<String>(1024)
         val dmSent = HashSet<String>(1024)
 
-        var totalSent = 0
-        val totalPhases = 3
+        var totalSent = initialEventsSent
 
         try {
-            // -------------------------
-            // Phase 1: Author's events → Outbox relays
-            // -------------------------
-            if (outboxTargets.isNotEmpty()) {
-                allRelays.forEachIndexed { index, relay ->
-                    if (!isActive) return
+            for (i in startChunkIndex until totalChunks) {
+                if (!isActive) return
 
-                    _syncState.value =
-                        SyncState.Running(
-                            phase = 1,
-                            phaseTotal = totalPhases,
-                            currentRelay = relay.url,
-                            relayIndex = index + 1,
-                            totalRelays = allRelays.size,
-                            eventsSent = totalSent,
-                        )
+                _syncState.value =
+                    SyncState.Running(
+                        chunkIndex = i + 1,
+                        totalChunks = totalChunks,
+                        eventsSent = totalSent,
+                    )
 
-                    downloadFromRelay(
-                        relay = relay,
-                        filter = Filter(authors = listOf(myPubKey)),
-                    ) { event ->
+                downloadFromChunk(
+                    relays = chunks[i],
+                    filters = filters,
+                ) { event ->
+                    // Route to outbox if I authored it.
+                    if (event.pubKey == myPubKey && outboxTargets.isNotEmpty()) {
                         if (outboxSent.add(event.id)) {
                             account.client.send(event, outboxTargets)
                             totalSent++
                         }
                     }
-                }
-            }
-
-            // -------------------------
-            // Phase 2: P-tagged (non-DM) events → Inbox relays
-            // -------------------------
-            if (inboxTargets.isNotEmpty()) {
-                allRelays.forEachIndexed { index, relay ->
-                    if (!isActive) return
-
-                    _syncState.value =
-                        SyncState.Running(
-                            phase = 2,
-                            phaseTotal = totalPhases,
-                            currentRelay = relay.url,
-                            relayIndex = index + 1,
-                            totalRelays = allRelays.size,
-                            eventsSent = totalSent,
-                        )
-
-                    downloadFromRelay(
-                        relay = relay,
-                        filter = Filter(tags = mapOf("p" to listOf(myPubKey))),
-                    ) { event ->
-                        // Skip DM kinds — handled in phase 3
-                        if (event.kind != 4 && event.kind != 1059) {
-                            if (inboxSent.add(event.id)) {
+                    // Route p-tagged events to inbox or DM relays.
+                    val pTagsMe =
+                        event.tags.any { tag ->
+                            tag.size >= 2 && tag[0] == "p" && tag[1] == myPubKey
+                        }
+                    if (pTagsMe) {
+                        if (event.kind == 4 || event.kind == 1059) {
+                            if (dmTargets.isNotEmpty() && dmSent.add(event.id)) {
+                                account.client.send(event, dmTargets)
+                                totalSent++
+                            }
+                        } else {
+                            if (inboxTargets.isNotEmpty() && inboxSent.add(event.id)) {
                                 account.client.send(event, inboxTargets)
                                 totalSent++
                             }
                         }
                     }
                 }
-            }
 
-            // -------------------------
-            // Phase 3: DM events (kind 4 & 1059) → DM relays
-            // -------------------------
-            if (dmTargets.isNotEmpty()) {
-                allRelays.forEachIndexed { index, relay ->
-                    if (!isActive) return
-
+                // Update the running count after the chunk completes.
+                if (isActive) {
                     _syncState.value =
                         SyncState.Running(
-                            phase = 3,
-                            phaseTotal = totalPhases,
-                            currentRelay = relay.url,
-                            relayIndex = index + 1,
-                            totalRelays = allRelays.size,
+                            chunkIndex = i + 1,
+                            totalChunks = totalChunks,
                             eventsSent = totalSent,
                         )
-
-                    downloadFromRelay(
-                        relay = relay,
-                        filter = Filter(kinds = listOf(4, 1059), tags = mapOf("p" to listOf(myPubKey))),
-                    ) { event ->
-                        if (dmSent.add(event.id)) {
-                            account.client.send(event, dmTargets)
-                            totalSent++
-                        }
-                    }
                 }
             }
 
@@ -223,14 +245,16 @@ class EventSyncViewModel(
     }
 
     /**
-     * Opens a REQ subscription on [relay] with [filter], delivers every event to [onEvent],
-     * and suspends until the relay sends EOSE (or 90 seconds pass, whichever comes first).
+     * Sends [filters] to every relay in [relays] simultaneously (one subscription covering
+     * the whole chunk).  Suspends until every relay has replied with EOSE/CLOSED/error, or
+     * [CHUNK_TIMEOUT_MS] elapses, whichever comes first.
      */
-    private suspend fun downloadFromRelay(
-        relay: NormalizedRelayUrl,
-        filter: Filter,
+    private suspend fun downloadFromChunk(
+        relays: List<NormalizedRelayUrl>,
+        filters: List<Filter>,
         onEvent: (Event) -> Unit,
     ) {
+        val remaining = AtomicInteger(relays.size)
         val done = Channel<Unit>(Channel.CONFLATED)
         val subId = newSubId()
 
@@ -249,7 +273,7 @@ class EventSyncViewModel(
                     relay: NormalizedRelayUrl,
                     forFilters: List<Filter>?,
                 ) {
-                    done.trySend(Unit)
+                    if (remaining.decrementAndGet() <= 0) done.trySend(Unit)
                 }
 
                 override fun onClosed(
@@ -257,7 +281,7 @@ class EventSyncViewModel(
                     relay: NormalizedRelayUrl,
                     forFilters: List<Filter>?,
                 ) {
-                    done.trySend(Unit)
+                    if (remaining.decrementAndGet() <= 0) done.trySend(Unit)
                 }
 
                 override fun onCannotConnect(
@@ -265,13 +289,14 @@ class EventSyncViewModel(
                     message: String,
                     forFilters: List<Filter>?,
                 ) {
-                    done.trySend(Unit)
+                    if (remaining.decrementAndGet() <= 0) done.trySend(Unit)
                 }
             }
 
-        account.client.openReqSubscription(subId, mapOf(relay to listOf(filter)), listener)
+        val filtersMap = relays.associateWith { filters }
+        account.client.openReqSubscription(subId, filtersMap, listener)
 
-        withTimeoutOrNull(90_000L) {
+        withTimeoutOrNull(CHUNK_TIMEOUT_MS) {
             done.receive()
         }
 

@@ -50,7 +50,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
@@ -134,12 +133,14 @@ fun EventSyncScreen(
 
             // ---- Progress / Status area ----
             when (val state = syncState) {
-                is EventSyncViewModel.SyncState.Idle -> {
-                    // No progress shown — just the start button below
-                }
+                is EventSyncViewModel.SyncState.Idle -> Unit
 
                 is EventSyncViewModel.SyncState.Running -> {
                     SyncProgressCard(state = state)
+                }
+
+                is EventSyncViewModel.SyncState.Paused -> {
+                    PausedCard(state = state)
                 }
 
                 is EventSyncViewModel.SyncState.Done -> {
@@ -152,7 +153,7 @@ fun EventSyncScreen(
             }
 
             // ---- Action buttons ----
-            when (syncState) {
+            when (val state = syncState) {
                 is EventSyncViewModel.SyncState.Idle,
                 is EventSyncViewModel.SyncState.Done,
                 is EventSyncViewModel.SyncState.Error,
@@ -171,6 +172,27 @@ fun EventSyncScreen(
                     }
                 }
 
+                is EventSyncViewModel.SyncState.Paused -> {
+                    Button(
+                        onClick = {
+                            if (isMobileOrMetered) {
+                                showMobileDataDialog = true
+                            } else {
+                                syncViewModel.resume()
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(stringRes(R.string.event_sync_resume))
+                    }
+                    OutlinedButton(
+                        onClick = { syncViewModel.start() },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(stringRes(R.string.event_sync_start_over))
+                    }
+                }
+
                 is EventSyncViewModel.SyncState.Running -> {
                     OutlinedButton(
                         onClick = { syncViewModel.cancel() },
@@ -180,12 +202,14 @@ fun EventSyncScreen(
                                 contentColor = MaterialTheme.colorScheme.error,
                             ),
                     ) {
-                        Text(stringRes(R.string.event_sync_cancel))
+                        Text(stringRes(R.string.event_sync_pause))
                     }
                 }
             }
 
+            // ---- Mobile-data confirmation dialog ----
             if (showMobileDataDialog) {
+                val isPaused = syncState is EventSyncViewModel.SyncState.Paused
                 AlertDialog(
                     onDismissRequest = { showMobileDataDialog = false },
                     title = { Text(stringRes(R.string.event_sync_mobile_data_dialog_title)) },
@@ -194,7 +218,7 @@ fun EventSyncScreen(
                         Button(
                             onClick = {
                                 showMobileDataDialog = false
-                                syncViewModel.start()
+                                if (isPaused) syncViewModel.resume() else syncViewModel.start()
                             },
                         ) {
                             Text(stringRes(R.string.event_sync_start_anyway))
@@ -223,7 +247,7 @@ private fun StepRow(
         verticalAlignment = Alignment.Top,
     ) {
         Text(
-            text = number + ".",
+            text = "$number.",
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary,
@@ -244,34 +268,13 @@ private fun SyncProgressCard(state: EventSyncViewModel.SyncState.Running) {
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = phaseLabel(state.phase),
+                text = stringRes(R.string.event_sync_batch_of, state.chunkIndex, state.totalChunks),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
             )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = stringRes(R.string.event_sync_relay_of, state.relayIndex, state.totalRelays),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = state.currentRelay,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
             Spacer(Modifier.height(8.dp))
-
-            // Overall progress across all phases and relays
-            val overallProgress =
-                (
-                    (state.phase - 1).toFloat() / state.phaseTotal +
-                        (state.relayIndex.toFloat() / state.totalRelays) / state.phaseTotal
-                ).coerceIn(0f, 1f)
             LinearProgressIndicator(
-                progress = { overallProgress },
+                progress = { state.chunkIndex.toFloat() / state.totalChunks },
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(8.dp))
@@ -279,6 +282,38 @@ private fun SyncProgressCard(state: EventSyncViewModel.SyncState.Running) {
                 text = stringRes(R.string.event_sync_events_sent, state.eventsSent),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun PausedCard(state: EventSyncViewModel.SyncState.Paused) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+            ),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = stringRes(R.string.event_sync_paused_title),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text =
+                    stringRes(
+                        R.string.event_sync_paused_body,
+                        state.nextChunkIndex,
+                        state.totalChunks,
+                        state.eventsSent,
+                    ),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
             )
         }
     }
@@ -340,12 +375,3 @@ private fun ErrorCard(message: String) {
         }
     }
 }
-
-@Composable
-private fun phaseLabel(phase: Int): String =
-    when (phase) {
-        1 -> stringRes(R.string.event_sync_phase1)
-        2 -> stringRes(R.string.event_sync_phase2)
-        3 -> stringRes(R.string.event_sync_phase3)
-        else -> ""
-    }
