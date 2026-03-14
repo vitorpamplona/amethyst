@@ -1505,7 +1505,7 @@
     <string name="import_follow_list">Importar lista de seguidos</string>
     <string name="select_users_to_follow">Selecionar usuários para seguir</string>
     <string name="profile_to_import_from">Perfil para importar</string>
-    <string name="name_search_npub1_alice_example_com" tools:ignore="Typos">busca por nome, npub1…, alice@example.com</string>
+    <string name="name_search_npub1_alice_example_com">busca por nome, npub1…, alice@example.com</string>
     <string name="supports_npub_nip_05_hex_and_namecoin_bit_d_id">Suporta npub, NIP-05, hex e Namecoin (.bit / d/ / id/)</string>
     <string name="look_up_follow_list">Buscar lista de seguidos</string>
     <string name="tip">Dica</string>
@@ -1529,28 +1529,4 @@
     <string name="uptime">%1$d%% de disponibilidade</string>
     <string name="namecoin_settings">Configurações do Namecoin</string>
     <string name="ots_explorer_settings">Explorador Bitcoin (OTS)</string>
-    <string name="wallet">Carteira</string>
-    <string name="wallet_balance">Saldo</string>
-    <string name="wallet_send">Enviar</string>
-    <string name="wallet_receive">Receber</string>
-    <string name="wallet_transactions">Transações</string>
-    <string name="wallet_no_connection">Nenhuma carteira conectada</string>
-    <string name="wallet_no_connection_description">Configure uma conexão Nostr Wallet Connect (NWC) nas configurações de zap para usar a carteira.</string>
-    <string name="wallet_setup">Configurar Carteira</string>
-    <string name="wallet_sats">sats</string>
-    <string name="wallet_paste_invoice">Cole uma fatura BOLT-11</string>
-    <string name="wallet_pay">Pagar</string>
-    <string name="wallet_payment_success">Pagamento bem-sucedido</string>
-    <string name="wallet_payment_sending">Enviando pagamento…</string>
-    <string name="wallet_amount_sats">Valor (sats)</string>
-    <string name="wallet_description">Descrição (opcional)</string>
-    <string name="wallet_create_invoice">Criar Fatura</string>
-    <string name="wallet_creating_invoice">Criando fatura…</string>
-    <string name="wallet_copy_invoice">Copiar Fatura</string>
-    <string name="wallet_no_transactions">Nenhuma transação ainda</string>
-    <string name="wallet_loading">Carregando…</string>
-    <string name="wallet_incoming">Recebido</string>
-    <string name="wallet_outgoing">Enviado</string>
-    <string name="wallet_refresh">Atualizar</string>
-    <string name="language_preference_pair">%1$s → %2$s</string>
 </resources>
