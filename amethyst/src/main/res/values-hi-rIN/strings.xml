@@ -125,6 +125,7 @@
     <string name="bytes">अष्टक</string>
     <string name="error">अपक्रम</string>
     <string name="errors">अपक्रम</string>
+    <string name="connection_success_rate_description">सफल संयोजनों का प्रतिशत पुनःप्रसारक के साथ</string>
     <string name="errors_description">संयोजन अपक्रमों की संख्या इस सत्र में</string>
     <string name="home_feed">मुख्य सूचनावली</string>
     <string name="private_message_feed">निजी संदेश सूचनावली</string>
@@ -150,6 +151,7 @@
     <string name="pronouns">सर्वनाम</string>
     <string name="ln_address">लै॰जाल पता</string>
     <string name="ln_url_outdated">लै॰जाल पता (पुराना)</string>
+    <string name="download_to_phone">संचारयन्त्र में अभिलेखन करें</string>
     <string name="save_to_gallery">चित्रालय में अभिलेखन करें</string>
     <string name="image_saved_to_the_gallery">चित्र का अभिलेखन किया गया चित्रालय क्रमक में</string>
     <string name="video_download_has_started_toast">चलचित्र अवरोहण आरम्भ हुआ …</string>
@@ -158,6 +160,7 @@
     <string name="video_saved_to_the_gallery">चलचित्र को संचारयन्त्र के चलचित्रालय में सुरक्षित रखा गया</string>
     <string name="failed_to_save_the_video">चलचित्र को सुरक्षित रखने में असफल</string>
     <string name="upload_image">चित्र आरोहण</string>
+    <string name="upload_file">अभिलेख आरोहण</string>
     <string name="take_a_picture">एक चित्र लें</string>
     <string name="record_a_video">चलचित्र का अभिलेखन करें</string>
     <string name="record_a_message">ऐक संदेश का अभिलेखन करें</string>
@@ -429,6 +432,7 @@
     <string name="zap_privacy_section">ज्साप गोपनीयता</string>
     <string name="zap_type_section_explainer">नियन्त्रण करता है कि आपका परिचय कैसे दिखाया जाता है ज्साप भेजने पर।</string>
     <string name="wallet_connect_connect_app">संयोजन धनकोष</string>
+    <string name="see_relay_feed">पुनःप्रसारक सूचनावली देखें</string>
     <string name="pledge_amount_in_sats">प्रतिज्ञा मात्रा साट्स में</string>
     <string name="post_poll">मतदान प्रकाशित करें</string>
     <string name="poll_heading_required">अनिवार्य प्रपत्रस्थान :</string>
@@ -642,6 +646,7 @@
     <string name="channel_list_join_channel">जुडें</string>
     <string name="today">आज</string>
     <string name="content_warning">विषयवस्तु चेतावनी</string>
+    <string name="content_warning_with_reason">सावधान : %1$s</string>
     <string name="content_warning_explanation">इस पत्र में संवेदनशील विषयवस्तु समावेशित है जो कुछ लोगों के लिए आपत्तिजनक अथवा व्याकुल करनेवाला लग सकता है</string>
     <string name="content_warning_hide_all_sensitive_content">संवेदनशील विषयवस्तु सर्वदा छिपाएँ</string>
     <string name="content_warning_show_all_sensitive_content">संवेदनशील विषयवस्तु सर्वदा दिखाएँ</string>
@@ -670,6 +675,7 @@
     <string name="read_from_relay_description">अष्टकों में मात्रा जो इस पुनःप्रसारक से प्राप्त हुआ था छलनियाँ तथा घटनाएँ समेत</string>
     <string name="an_error_occurred_trying_to_get_relay_information">%1$s से पुनःप्रसारक जानकारी प्राप्त करने के प्रयास में अपक्रम हुआ</string>
     <string name="owner">अधिपति</string>
+    <string name="used_by">द्वारा उपयुक्त</string>
     <string name="self">सेवा कुंजी</string>
     <string name="running_software">%1$s चलाया जा रहा है</string>
     <string name="running_software_version">%1$s (%2$s) चलाया जा रहा है</string>
@@ -828,6 +834,7 @@
     <string name="loading_location">स्थान प्राप्त किया जा रहा है</string>
     <string name="lack_location_permissions">स्थान प्राप्त करने की अनुमति नहीं</string>
     <string name="add_sensitive_content_explainer">आपके विषयवस्तु दिखाने से पूर्व संवेदनशील विषयवस्तु चेतावनी जोडता है। यह आदर्श है किसी कार्यालय अनुचित विषयवस्तु के लिए अथवा जो कुछ लोगों के लिए आपत्तिजनक अथवा व्याकुल करनेवाला लग सकता है</string>
+    <string name="add_sensitive_content_description_placeholder">कारण (विकल्पात्मक)</string>
     <string name="new_feature_nip17_might_not_be_available_title">नयी सुविधा</string>
     <string name="new_feature_nip17_might_not_be_available_description">इस कार्यशैली सक्षम करने के लिए अमेथिस्ट के द्वारा निप॰-१७ संदेश (उपहारकोषयुक्त, आच्छादित सीधा तथा झुण्ड संदेश) भेजना पडेगा। यह निप॰-१७ नया है तथा अनेक ग्राहक इसे कार्यान्वित किया नहीं अब तक। सुनिश्चित करें कि प्राप्तकर्ता एक अनुकूल ग्राहक का प्रयोग कर रहे हैं।</string>
     <string name="new_feature_nip17_activate">सक्रिय करें</string>
@@ -866,6 +873,7 @@
     <string name="load_image_description">चित्रों का अवरोहण कब करें</string>
     <string name="copy_stack_to_clipboard">चिति की अनुकृति करें</string>
     <string name="copy_to_clipboard">टाँकाफलक में अनुकृति करें</string>
+    <string name="copy_nprofile_to_clipboard">टाँकाफलक में एन॰परिचय की अनुकृति करें</string>
     <string name="copy_npub_to_clipboard">टाँकाफलक में एनपुब॰ की अनुकृति करें</string>
     <string name="share_or_save">बाँटें अथवा अभिलेखन करें</string>
     <string name="copy_url_to_clipboard">टाँकाफलक में जालपता की अनुकृति करें</string>
@@ -920,6 +928,8 @@
     <string name="sign_request_rejected_description">सुनिश्चित करें हस्ताक्षर क्रमक ने इस व्यापार को अनुमति दिया</string>
     <string name="no_wallet_found_with_error">कोई धनकोष प्राप्त नहीं लैटनिंग चालान चुकाने के लिए (अपक्रम : %1$s)। कृपया एक लैटनिंग धनकोष की स्थापना करें ज्सापों का प्रयोग करने के लिए</string>
     <string name="no_wallet_found">कोई धनकोष प्राप्त नहीं लैटनिंग चालान चुकाने के लिए। कृपया एक लैटनिंग धनकोष की स्थापना करें ज्सापों का प्रयोग करने के लिए</string>
+    <string name="no_blossom_apps_found_title">ब्लोस्सम॰ योजक खोला नहीं जा सकता</string>
+    <string name="no_blossom_apps_found_description">ब्लोस्सम॰ क्रमक प्राप्त नहीं। कृपया एक स्थानीय ब्लोस्सम॰ क्रमक की स्थापना करें इस अभिलेख को देखने के लिए</string>
     <string name="hidden_words">छिपाए गये शब्द</string>
     <string name="hide_new_word_label">नया शब्द अथवा वाक्य छिपाएँ</string>
     <string name="automatically_show_profile_picture">परिचय चित्र</string>
@@ -1043,6 +1053,7 @@
     <string name="route_video">छोटे</string>
     <string name="route_chess">चतुरंग</string>
     <string name="route_security_filters">सुरक्षार्थ छलनियाँ</string>
+    <string name="route_import_follows">अनुचरित आयात करें</string>
     <string name="new_post">नया पत्र प्रकाशन</string>
     <string name="new_short">नये छोटे : चित्र अथवा चलचित्र</string>
     <string name="new_community_note">नया सामुदायिक टीका</string>
@@ -1088,7 +1099,15 @@
     <string name="cancel_zap_split">ज्साप विभाजन निरस्त करें</string>
     <string name="add_content_warning">विषयवस्तु चेतावनी जोडें</string>
     <string name="remove_content_warning">विषयवस्तु चेतावनी हटाएँ</string>
+    <string name="add_expiration_date">समापन दिनांक जोडें</string>
+    <string name="remove_expiration_date">समापन दिनांक हटाएँ</string>
+    <string name="expiration_date_label">समापन दिनांक</string>
+    <string name="expiration_date_explainer">पत्र इस दिनांक के पश्चात ग्राहकों द्वारा छिपाया जाएगा (निप॰४०)</string>
+    <string name="expiration_date_select">समापन दिनांक तथा समय चुनें</string>
+    <string name="expiration_expires_in">%1$s में समाप्त</string>
+    <string name="expiration_time">समापन समय</string>
     <string name="show_npub_as_a_qr_code">क्यूआर॰ क्रमचित्र के रूप में एनपुब॰ को दिखाएँ</string>
+    <string name="show_nprofile_as_a_qr_code">क्यूआर॰ क्रमचित्र के रूप में एन॰परिचय को दिखाएँ</string>
     <string name="invalid_nip19_uri">अमान्य पता</string>
     <string name="invalid_nip19_uri_description">अमेथिस्ट को एक वैश्विक वस्तु विभेदक प्राप्त हुआ खोलने के लिए परन्तु वह विभेदक अमान्य था : %1$s</string>
     <string name="dm_relays_title">सीधा संदेश आगतपेटिका पुनःप्रसारक</string>
@@ -1156,6 +1175,9 @@
     <string name="blocked_relays_title">बाधित पुनःप्रसारक</string>
     <string name="blocked_section">बाधित पुनःप्रसारक</string>
     <string name="blocked_section_explainer">अमेथिस्ट इन पुनःप्रसारकों से कभी नहीं जुडेगा</string>
+    <string name="export_relay_settings">पुनःप्रसारक स्थापना विकल्प निर्यात</string>
+    <string name="export_as_text">लेख के रूप में निर्यात</string>
+    <string name="export_as_zip">ज्सिप॰ (जेसोन॰) के रूप में निर्यात</string>
     <string name="zap_the_devs_title">क्रमलेखकों को ज्साप करें!</string>
     <string name="zap_the_devs_description">आपका दान हमारा सहायक है परिवर्तन लाने में। प्रत्येक साट गणनीय है!</string>
     <string name="donate_now">दान करें अभी</string>
@@ -1261,6 +1283,19 @@
     <string name="search_by_hashtag">विषयसूचक खोज : #%1$s</string>
     <string name="dont_translate_from">अनुवाद ना करें</string>
     <string name="dont_translate_from_description">यहाँ प्रस्तुत भाषाओं का अनुवाद नहीं होगा। भाषा चयन करें हटाने के लिए जिससे उसका अनुवाद पुनः होने लगेगा।</string>
+    <string name="translate_to">अनुवाद इस में</string>
+    <string name="translate_to_description">भाषा चयन करें जिसमें विषयवस्तु का अनुवाद करना है।</string>
+    <string name="language_preferences">भाषा प्रस्तुति आद्यताएँ</string>
+    <string name="language_preferences_description">प्रत्येक अनुवाद भाषा युग्म के लिए चयन करें किस भाषा को पहले दिखाना है।</string>
+    <string name="language_preference_pair">%1$s से %2$s</string>
+    <string name="search_languages">भाषा ढूँढें</string>
+    <string name="add_language">भाषा जोडें</string>
+    <string name="add_language_pair">भाषा युग्म जोडें</string>
+    <string name="source_language">स्रोत भाषा</string>
+    <string name="target_language">लक्ष्य भाषा</string>
+    <string name="show_first">पहले %1$s दिखाएँ</string>
+    <string name="no_language_preferences">अभी कोई भाषा प्रस्तुति आद्यताएँ नहीं। ये स्वचालित रूप से बनाए जाएँगे जब अनुवाद होगा अथवा आप इनहें स्वयम हाथ से जोड सकते हैं।</string>
+    <string name="delete_preference">आद्यता मिटाएँ</string>
     <string name="pause">विराम</string>
     <string name="play">चलाएँ</string>
     <string name="open_dropdown_menu">विकल्प सूची खोलें</string>
@@ -1270,6 +1305,7 @@
     <string name="crashreport_found">क्रमदोष सूचनापत्र प्राप्त</string>
     <string name="would_you_like_to_send_the_recent_crash_report_to_amethyst_in_a_dm_no_personal_information_will_be_shared">क्या आप निकटकालिक क्रमदोष सूचनापत्र एक सीधे सन्देश में अमेथिस्ट को भेजना चाहते हैं। कोई व्यक्तिगत जानकारी बाँटी नहीं जाएगी</string>
     <string name="crashreport_found_send">भेजें</string>
+    <string name="this_message_will_disappear_in">यह सन्देश %1$s में अदृश्य हो जाएगा</string>
     <string name="this_message_will_disappear_in_days">यह सन्देश %1$d दिनों में अदृश्य हो जाएगा</string>
     <string name="select_signer">हस्ताक्षरकर्ता चुनें</string>
     <string name="in_the_list">पहले से ही सूची में</string>
@@ -1471,4 +1507,8 @@
     <string name="kind_voice_msg">ध्वनि सन्देश</string>
     <string name="kind_voice_reply">ध्वनि उत्तर</string>
     <string name="kind_wiki">विकि॰</string>
+    <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">एक बढिया सूचनावली के साथ आरम्भ करें उन लोगों का अनुचरण करके जिनको आपके द्वारा विश्वास प्राप्त कोई व्यक्ति करते हैं।</string>
+    <string name="import_follow_list">अनुचरित सूची आयात</string>
+    <string name="select_users_to_follow">प्रयोक्ता चुनें अनुचरण करने के लिए</string>
+    <string name="profile_to_import_from">प्रयोक्ता परिचय जिससे आयात करना है</string>
 </resources>
