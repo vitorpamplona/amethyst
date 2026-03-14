@@ -128,10 +128,34 @@ class ResponseTest {
         assertIs<ListTransactionsSuccessResponse>(response)
         assertNotNull(response.result?.transactions)
         assertEquals(2, response.result?.transactions?.size)
-        assertEquals("incoming", response.result?.transactions?.get(0)?.type)
-        assertEquals(100L, response.result?.transactions?.get(0)?.amount)
-        assertEquals("outgoing", response.result?.transactions?.get(1)?.type)
-        assertEquals(200L, response.result?.transactions?.get(1)?.amount)
+        assertEquals(
+            "incoming",
+            response.result
+                ?.transactions
+                ?.get(0)
+                ?.type,
+        )
+        assertEquals(
+            100L,
+            response.result
+                ?.transactions
+                ?.get(0)
+                ?.amount,
+        )
+        assertEquals(
+            "outgoing",
+            response.result
+                ?.transactions
+                ?.get(1)
+                ?.type,
+        )
+        assertEquals(
+            200L,
+            response.result
+                ?.transactions
+                ?.get(1)
+                ?.amount,
+        )
     }
 
     @Test

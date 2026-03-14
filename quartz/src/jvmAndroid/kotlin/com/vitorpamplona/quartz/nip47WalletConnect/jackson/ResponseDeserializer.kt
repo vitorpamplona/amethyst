@@ -56,7 +56,10 @@ class ResponseDeserializer : StdDeserializer<Response>(Response::class.java) {
 
         if (hasError) {
             return when (resultType) {
-                NwcMethod.PAY_INVOICE -> jp.codec.treeToValue(jsonObject, PayInvoiceErrorResponse::class.java)
+                NwcMethod.PAY_INVOICE -> {
+                    jp.codec.treeToValue(jsonObject, PayInvoiceErrorResponse::class.java)
+                }
+
                 else -> {
                     val error = jp.codec.treeToValue(jsonObject.get("error"), NwcError::class.java)
                     NwcErrorResponse(resultType ?: "", error)
@@ -66,19 +69,58 @@ class ResponseDeserializer : StdDeserializer<Response>(Response::class.java) {
 
         if (hasResult || resultType != null) {
             return when (resultType) {
-                NwcMethod.PAY_INVOICE -> jp.codec.treeToValue(jsonObject, PayInvoiceSuccessResponse::class.java)
-                NwcMethod.PAY_KEYSEND -> jp.codec.treeToValue(jsonObject, PayKeysendSuccessResponse::class.java)
-                NwcMethod.MAKE_INVOICE -> jp.codec.treeToValue(jsonObject, MakeInvoiceSuccessResponse::class.java)
-                NwcMethod.LOOKUP_INVOICE -> jp.codec.treeToValue(jsonObject, LookupInvoiceSuccessResponse::class.java)
-                NwcMethod.LIST_TRANSACTIONS -> jp.codec.treeToValue(jsonObject, ListTransactionsSuccessResponse::class.java)
-                NwcMethod.GET_BALANCE -> jp.codec.treeToValue(jsonObject, GetBalanceSuccessResponse::class.java)
-                NwcMethod.GET_INFO -> jp.codec.treeToValue(jsonObject, GetInfoSuccessResponse::class.java)
-                NwcMethod.GET_BUDGET -> jp.codec.treeToValue(jsonObject, GetBudgetSuccessResponse::class.java)
-                NwcMethod.SIGN_MESSAGE -> jp.codec.treeToValue(jsonObject, SignMessageSuccessResponse::class.java)
-                NwcMethod.CREATE_CONNECTION -> jp.codec.treeToValue(jsonObject, CreateConnectionSuccessResponse::class.java)
-                NwcMethod.MAKE_HOLD_INVOICE -> jp.codec.treeToValue(jsonObject, MakeHoldInvoiceSuccessResponse::class.java)
-                NwcMethod.CANCEL_HOLD_INVOICE -> jp.codec.treeToValue(jsonObject, CancelHoldInvoiceSuccessResponse::class.java)
-                NwcMethod.SETTLE_HOLD_INVOICE -> jp.codec.treeToValue(jsonObject, SettleHoldInvoiceSuccessResponse::class.java)
+                NwcMethod.PAY_INVOICE -> {
+                    jp.codec.treeToValue(jsonObject, PayInvoiceSuccessResponse::class.java)
+                }
+
+                NwcMethod.PAY_KEYSEND -> {
+                    jp.codec.treeToValue(jsonObject, PayKeysendSuccessResponse::class.java)
+                }
+
+                NwcMethod.MAKE_INVOICE -> {
+                    jp.codec.treeToValue(jsonObject, MakeInvoiceSuccessResponse::class.java)
+                }
+
+                NwcMethod.LOOKUP_INVOICE -> {
+                    jp.codec.treeToValue(jsonObject, LookupInvoiceSuccessResponse::class.java)
+                }
+
+                NwcMethod.LIST_TRANSACTIONS -> {
+                    jp.codec.treeToValue(jsonObject, ListTransactionsSuccessResponse::class.java)
+                }
+
+                NwcMethod.GET_BALANCE -> {
+                    jp.codec.treeToValue(jsonObject, GetBalanceSuccessResponse::class.java)
+                }
+
+                NwcMethod.GET_INFO -> {
+                    jp.codec.treeToValue(jsonObject, GetInfoSuccessResponse::class.java)
+                }
+
+                NwcMethod.GET_BUDGET -> {
+                    jp.codec.treeToValue(jsonObject, GetBudgetSuccessResponse::class.java)
+                }
+
+                NwcMethod.SIGN_MESSAGE -> {
+                    jp.codec.treeToValue(jsonObject, SignMessageSuccessResponse::class.java)
+                }
+
+                NwcMethod.CREATE_CONNECTION -> {
+                    jp.codec.treeToValue(jsonObject, CreateConnectionSuccessResponse::class.java)
+                }
+
+                NwcMethod.MAKE_HOLD_INVOICE -> {
+                    jp.codec.treeToValue(jsonObject, MakeHoldInvoiceSuccessResponse::class.java)
+                }
+
+                NwcMethod.CANCEL_HOLD_INVOICE -> {
+                    jp.codec.treeToValue(jsonObject, CancelHoldInvoiceSuccessResponse::class.java)
+                }
+
+                NwcMethod.SETTLE_HOLD_INVOICE -> {
+                    jp.codec.treeToValue(jsonObject, SettleHoldInvoiceSuccessResponse::class.java)
+                }
+
                 else -> {
                     // tries to guess for backward compatibility
                     if (jsonObject.get("result")?.get("preimage") != null) {

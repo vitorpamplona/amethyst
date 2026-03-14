@@ -137,14 +137,12 @@ class Nip47Client(
     /**
      * Builds a lookup_invoice request event by payment hash.
      */
-    suspend fun lookupInvoiceByHash(paymentHash: String): LnZapPaymentRequestEvent =
-        buildRequest(LookupInvoiceMethod.createByHash(paymentHash))
+    suspend fun lookupInvoiceByHash(paymentHash: String): LnZapPaymentRequestEvent = buildRequest(LookupInvoiceMethod.createByHash(paymentHash))
 
     /**
      * Builds a lookup_invoice request event by BOLT11 invoice.
      */
-    suspend fun lookupInvoiceByInvoice(invoice: String): LnZapPaymentRequestEvent =
-        buildRequest(LookupInvoiceMethod.createByInvoice(invoice))
+    suspend fun lookupInvoiceByInvoice(invoice: String): LnZapPaymentRequestEvent = buildRequest(LookupInvoiceMethod.createByInvoice(invoice))
 
     /**
      * Builds a list_transactions request event.
@@ -178,20 +176,17 @@ class Nip47Client(
         descriptionHash: String? = null,
         expiry: Long? = null,
         minCltvExpiryDelta: Int? = null,
-    ): LnZapPaymentRequestEvent =
-        buildRequest(MakeHoldInvoiceMethod.create(amount, paymentHash, description, descriptionHash, expiry, minCltvExpiryDelta))
+    ): LnZapPaymentRequestEvent = buildRequest(MakeHoldInvoiceMethod.create(amount, paymentHash, description, descriptionHash, expiry, minCltvExpiryDelta))
 
     /**
      * Builds a cancel_hold_invoice request event.
      */
-    suspend fun cancelHoldInvoice(paymentHash: String): LnZapPaymentRequestEvent =
-        buildRequest(CancelHoldInvoiceMethod.create(paymentHash))
+    suspend fun cancelHoldInvoice(paymentHash: String): LnZapPaymentRequestEvent = buildRequest(CancelHoldInvoiceMethod.create(paymentHash))
 
     /**
      * Builds a settle_hold_invoice request event.
      */
-    suspend fun settleHoldInvoice(preimage: String): LnZapPaymentRequestEvent =
-        buildRequest(SettleHoldInvoiceMethod.create(preimage))
+    suspend fun settleHoldInvoice(preimage: String): LnZapPaymentRequestEvent = buildRequest(SettleHoldInvoiceMethod.create(preimage))
 
     /**
      * Builds a request event from any [Request] object.

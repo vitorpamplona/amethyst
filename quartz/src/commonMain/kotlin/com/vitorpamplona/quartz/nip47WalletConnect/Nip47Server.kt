@@ -169,7 +169,16 @@ class Nip47Server(
         buildResponse(
             GetInfoSuccessResponse(
                 GetInfoSuccessResponse.GetInfoResult(
-                    alias, color, pubkey, network, blockHeight, blockHash, methods, notifications, null, lud16,
+                    alias,
+                    color,
+                    pubkey,
+                    network,
+                    blockHeight,
+                    blockHash,
+                    methods,
+                    notifications,
+                    null,
+                    lud16,
                 ),
             ),
             requestEvent,
@@ -181,8 +190,7 @@ class Nip47Server(
     suspend fun respondMakeInvoice(
         requestEvent: LnZapPaymentRequestEvent,
         transaction: NwcTransaction,
-    ): LnZapPaymentResponseEvent =
-        buildResponse(MakeInvoiceSuccessResponse(transaction), requestEvent)
+    ): LnZapPaymentResponseEvent = buildResponse(MakeInvoiceSuccessResponse(transaction), requestEvent)
 
     /**
      * Builds a lookup_invoice success response.
@@ -190,8 +198,7 @@ class Nip47Server(
     suspend fun respondLookupInvoice(
         requestEvent: LnZapPaymentRequestEvent,
         transaction: NwcTransaction,
-    ): LnZapPaymentResponseEvent =
-        buildResponse(LookupInvoiceSuccessResponse(transaction), requestEvent)
+    ): LnZapPaymentResponseEvent = buildResponse(LookupInvoiceSuccessResponse(transaction), requestEvent)
 
     /**
      * Builds a list_transactions success response.

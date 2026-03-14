@@ -112,9 +112,11 @@ class WalletViewModel : ViewModel() {
                             // NWC balance is in millisats, convert to sats
                             _balanceSats.value = (response.result?.balance ?: 0L) / 1000L
                         }
+
                         is NwcErrorResponse -> {
                             _error.value = response.error?.message ?: "Balance request failed"
                         }
+
                         else -> {}
                     }
                     _isLoading.value = false
@@ -135,6 +137,7 @@ class WalletViewModel : ViewModel() {
                         is GetInfoSuccessResponse -> {
                             _walletAlias.value = response.result?.alias
                         }
+
                         else -> {}
                     }
                 }
@@ -163,9 +166,11 @@ class WalletViewModel : ViewModel() {
                         is ListTransactionsSuccessResponse -> {
                             _transactions.value = response.result?.transactions ?: emptyList()
                         }
+
                         is NwcErrorResponse -> {
                             _error.value = response.error?.message ?: "Failed to load transactions"
                         }
+
                         else -> {}
                     }
                     _isLoading.value = false
@@ -189,16 +194,21 @@ class WalletViewModel : ViewModel() {
                             // Refresh balance after payment
                             fetchBalance()
                         }
+
                         is PayInvoiceErrorResponse -> {
-                            _sendState.value = SendState.Error(
-                                response.error?.message ?: "Payment failed",
-                            )
+                            _sendState.value =
+                                SendState.Error(
+                                    response.error?.message ?: "Payment failed",
+                                )
                         }
+
                         is NwcErrorResponse -> {
-                            _sendState.value = SendState.Error(
-                                response.error?.message ?: "Payment failed",
-                            )
+                            _sendState.value =
+                                SendState.Error(
+                                    response.error?.message ?: "Payment failed",
+                                )
                         }
+
                         else -> {
                             _sendState.value = SendState.Error("Unexpected response")
                         }
@@ -234,11 +244,14 @@ class WalletViewModel : ViewModel() {
                                 _receiveState.value = ReceiveState.Error("No invoice returned")
                             }
                         }
+
                         is NwcErrorResponse -> {
-                            _receiveState.value = ReceiveState.Error(
-                                response.error?.message ?: "Invoice creation failed",
-                            )
+                            _receiveState.value =
+                                ReceiveState.Error(
+                                    response.error?.message ?: "Invoice creation failed",
+                                )
                         }
+
                         else -> {
                             _receiveState.value = ReceiveState.Error("Unexpected response")
                         }

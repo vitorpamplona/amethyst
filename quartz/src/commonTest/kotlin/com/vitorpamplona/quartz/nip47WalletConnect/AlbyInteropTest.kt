@@ -334,8 +334,20 @@ class AlbyInteropTest {
         assertEquals("018465013e2337234a7e5530a21c4a8cf70d84231f4a8ff0b1e2cce3cb2bd03b", request.params?.preimage)
         assertNotNull(request.params?.tlv_records)
         assertEquals(1, request.params?.tlv_records?.size)
-        assertEquals(5482373484L, request.params?.tlv_records?.first()?.type)
-        assertEquals("fajsn341414fq", request.params?.tlv_records?.first()?.value)
+        assertEquals(
+            5482373484L,
+            request.params
+                ?.tlv_records
+                ?.first()
+                ?.type,
+        )
+        assertEquals(
+            "fajsn341414fq",
+            request.params
+                ?.tlv_records
+                ?.first()
+                ?.value,
+        )
     }
 
     @Test

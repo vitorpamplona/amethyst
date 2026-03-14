@@ -93,8 +93,20 @@ class RequestTest {
         assertEquals("preimage123", request.params?.preimage)
         assertNotNull(request.params?.tlv_records)
         assertEquals(1, request.params?.tlv_records?.size)
-        assertEquals(7629169L, request.params?.tlv_records?.first()?.type)
-        assertEquals("hex_value", request.params?.tlv_records?.first()?.value)
+        assertEquals(
+            7629169L,
+            request.params
+                ?.tlv_records
+                ?.first()
+                ?.type,
+        )
+        assertEquals(
+            "hex_value",
+            request.params
+                ?.tlv_records
+                ?.first()
+                ?.value,
+        )
     }
 
     @Test
