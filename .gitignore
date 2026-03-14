@@ -149,3 +149,6 @@ lint/tmp/
 
 # Local task tracking
 TASKS.md
+
+# Claude Code local settings
+.claude/settings.local.json
