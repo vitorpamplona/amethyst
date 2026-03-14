@@ -75,7 +75,9 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import androidx.compose.ui.tooling.preview.Preview
 
 @Composable
 fun EventSyncScreen(
@@ -714,3 +716,129 @@ private fun formatCount(n: Int): String =
         n >= 1_000 -> "${n / 1_000}K"
         else -> n.toString()
     }
+
+// -------------------------------------------------------------------------
+// Preview data
+// -------------------------------------------------------------------------
+
+private val previewRelaySet =
+    setOf(
+        NormalizedRelayUrl("wss://relay.damus.io"),
+        NormalizedRelayUrl("wss://nos.lol"),
+        NormalizedRelayUrl("wss://relay.nostr.band"),
+        NormalizedRelayUrl("wss://nostr.bitcoiner.social"),
+        NormalizedRelayUrl("wss://relay.snort.social"),
+    )
+
+private val previewCompletions =
+    listOf(
+        EventSyncViewModel.LiveSyncActivity.CompletedRelayInfo(NormalizedRelayUrl("wss://relay.damus.io"), 1247),
+        EventSyncViewModel.LiveSyncActivity.CompletedRelayInfo(NormalizedRelayUrl("wss://nos.lol"), 892),
+        EventSyncViewModel.LiveSyncActivity.CompletedRelayInfo(NormalizedRelayUrl("wss://relay.nostr.band"), 3500),
+        EventSyncViewModel.LiveSyncActivity.CompletedRelayInfo(NormalizedRelayUrl("wss://slow.relay.example.com"), 0),
+        EventSyncViewModel.LiveSyncActivity.CompletedRelayInfo(NormalizedRelayUrl("wss://nostr.bitcoiner.social"), 15),
+        EventSyncViewModel.LiveSyncActivity.CompletedRelayInfo(NormalizedRelayUrl("wss://unreachable.relay.xyz"), 0),
+    )
+
+private val previewActivity =
+    EventSyncViewModel.LiveSyncActivity(
+        activeRelays = previewRelaySet,
+        recentCompletions = previewCompletions,
+        outboxTargets =
+            setOf(
+                NormalizedRelayUrl("wss://outbox.nostr.com"),
+                NormalizedRelayUrl("wss://relay.damus.io"),
+            ),
+        inboxTargets =
+            setOf(
+                NormalizedRelayUrl("wss://inbox.nostr.com"),
+                NormalizedRelayUrl("wss://nos.lol"),
+            ),
+        dmTargets =
+            setOf(
+                NormalizedRelayUrl("wss://dm.nostr.com"),
+            ),
+    )
+
+// -------------------------------------------------------------------------
+// Previews
+// -------------------------------------------------------------------------
+
+@Composable
+@Preview
+fun SyncProgressCardPreview() {
+    ThemeComparisonColumn {
+        SyncProgressCard(
+            state =
+                EventSyncViewModel.SyncState.Running(
+                    relaysCompleted = 312,
+                    totalRelays = 1024,
+                    eventsSent = 4821,
+                ),
+        )
+    }
+}
+
+@Composable
+@Preview
+fun PausedCardPreview() {
+    ThemeComparisonColumn {
+        PausedCard(
+            state =
+                EventSyncViewModel.SyncState.Paused(
+                    nextRelayIndex = 260,
+                    totalRelays = 1024,
+                    eventsSent = 3200,
+                ),
+        )
+    }
+}
+
+@Composable
+@Preview
+fun DoneCardPreview() {
+    ThemeComparisonColumn {
+        DoneCard(
+            state =
+                EventSyncViewModel.SyncState.Done(
+                    totalEventsSent = 18_432,
+                    durationMs = 187_000,
+                ),
+        )
+    }
+}
+
+@Composable
+@Preview
+fun ErrorCardPreview() {
+    ThemeComparisonColumn {
+        ErrorCard(message = "No outbox, inbox, or DM relays configured.")
+    }
+}
+
+@Composable
+@Preview
+fun ActiveRelaysCardPreview() {
+    ThemeComparisonColumn {
+        ActiveRelaysCard(
+            activeRelays = previewRelaySet,
+            isRunning = true,
+        )
+    }
+}
+
+@Composable
+@Preview
+fun DestinationRelaysCardPreview() {
+    ThemeComparisonColumn {
+        DestinationRelaysCard(activity = previewActivity)
+    }
+}
+
+@Composable
+@Preview
+fun ActivityLogCardPreview() {
+    ThemeComparisonColumn {
+        ActivityLogCard(completions = previewCompletions)
+    }
+}
