@@ -33,6 +33,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
@@ -237,10 +239,10 @@ class EventSyncViewModel(
                     totalEventsSent = totalSent.get().toInt(),
                     durationMs = System.currentTimeMillis() - startTime,
                 )
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            if (isActive) {
-                _syncState.value = SyncState.Error(e.message ?: "Unknown error")
-            }
+            _syncState.value = SyncState.Error(e.message ?: "Unknown error")
         }
     }
 
@@ -287,7 +289,8 @@ class EventSyncViewModel(
     ) {
         var until: Long? = null
 
-        while (isActive) {
+        while (true) {
+            coroutineContext.ensureActive()
             val pageCount = AtomicInteger(0)
             val pageMinTs = AtomicLong(Long.MAX_VALUE)
             val done = Channel<Unit>(Channel.CONFLATED)
