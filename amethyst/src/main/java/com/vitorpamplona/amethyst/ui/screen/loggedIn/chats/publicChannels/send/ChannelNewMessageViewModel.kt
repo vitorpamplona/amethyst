@@ -185,7 +185,7 @@ open class ChannelNewMessageViewModel :
         this.emojiSuggestions?.reset()
         this.emojiSuggestions = EmojiSuggestionState(accountVM.account)
 
-        this.uploadState = ChatFileUploadState(account.settings.defaultFileServer)
+        this.uploadState = ChatFileUploadState(account.settings.defaultFileServer, account.settings.stripLocationOnUpload)
     }
 
     open fun load(channel: Channel) {
@@ -347,6 +347,7 @@ open class ChannelNewMessageViewModel :
                     uploadState.selectedServer,
                     account,
                     context,
+                    stripMetadata = uploadState.stripLocationMetadata,
                 )
 
             if (results.allGood) {

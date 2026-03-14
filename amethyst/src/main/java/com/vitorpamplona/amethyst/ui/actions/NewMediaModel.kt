@@ -65,6 +65,9 @@ open class NewMediaModel : ViewModel() {
     // Codec selection: false = H264, true = H265
     var useH265Codec by mutableStateOf(false)
 
+    // Strip location and sensitive metadata from files before upload
+    var stripLocationMetadata by mutableStateOf(true)
+
     open fun load(
         account: Account,
         uris: ImmutableList<SelectedMedia>,
@@ -73,6 +76,7 @@ open class NewMediaModel : ViewModel() {
         this.account = account
         this.multiOrchestrator = MultiOrchestrator(uris)
         this.selectedServer = defaultServer()
+        this.stripLocationMetadata = account.settings.stripLocationOnUpload
     }
 
     fun isImage(
@@ -115,6 +119,7 @@ open class NewMediaModel : ViewModel() {
                     myAccount,
                     context,
                     useH265Codec,
+                    stripLocationMetadata,
                 )
 
             if (results.allGood) {

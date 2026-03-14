@@ -203,6 +203,7 @@ class ChatNewMessageViewModel :
         this.uploadState =
             ChatFileUploadState(
                 account.settings.defaultFileServer,
+                account.settings.stripLocationOnUpload,
             )
     }
 
