@@ -63,7 +63,9 @@ class NwcTransaction(
     var settled_at: Long? = null,
     var settle_deadline: Long? = null,
     var metadata: Any? = null,
-)
+) {
+    fun parsedMetadata(): NwcTransactionMetadata? = NwcTransactionMetadata.parse(metadata)
+}
 
 class TlvRecord(
     var type: Long? = null,

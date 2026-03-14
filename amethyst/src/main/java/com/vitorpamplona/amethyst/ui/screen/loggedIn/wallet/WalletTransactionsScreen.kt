@@ -59,7 +59,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.note.UserPicture
+import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip47WalletConnect.NwcTransaction
 import com.vitorpamplona.quartz.nip47WalletConnect.NwcTransactionType
@@ -143,7 +146,7 @@ fun WalletTransactionsScreen(
                 modifier = Modifier.padding(padding),
             ) {
                 items(transactions) { tx ->
-                    TransactionItem(tx)
+                    TransactionItem(tx, accountViewModel, nav)
                     HorizontalDivider()
                 }
             }
@@ -152,7 +155,11 @@ fun WalletTransactionsScreen(
 }
 
 @Composable
-private fun TransactionItem(tx: NwcTransaction) {
+private fun TransactionItem(
+    tx: NwcTransaction,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
     val isIncoming = tx.type == NwcTransactionType.INCOMING
     val amountSats = (tx.amount ?: 0L) / 1000L
     val formattedAmount =
@@ -169,6 +176,36 @@ private fun TransactionItem(tx: NwcTransaction) {
             } ?: ""
         }
 
+    val parsed = remember(tx.metadata) { tx.parsedMetadata() }
+
+    // For incoming: show who sent it (nostr pubkey or payer name/email)
+    // For outgoing: show who received it (nostr recipient or recipient identifier)
+    val counterpartyPubkeyHex =
+        remember(parsed) {
+            if (isIncoming) parsed?.senderPubkeyHex() else parsed?.recipientPubkeyHex()
+        }
+
+    val counterpartyDisplayName =
+        remember(parsed) {
+            if (isIncoming) {
+                parsed?.senderDisplayName()
+            } else {
+                parsed?.recipientIdentifier()
+            }
+        }
+
+    // Show comment only if it differs from description
+    val commentText =
+        remember(parsed, tx.description) {
+            parsed?.comment?.let { comment ->
+                if (tx.description == null || !comment.equals(tx.description, ignoreCase = true)) {
+                    comment
+                } else {
+                    null
+                }
+            }
+        }
+
     Row(
         modifier =
             Modifier
@@ -176,34 +213,74 @@ private fun TransactionItem(tx: NwcTransaction) {
                 .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(
-            imageVector =
-                if (isIncoming) Icons.Filled.ArrowDownward else Icons.Filled.ArrowUpward,
-            contentDescription =
-                if (isIncoming) {
-                    stringRes(R.string.wallet_incoming)
-                } else {
-                    stringRes(R.string.wallet_outgoing)
-                },
-            modifier = Modifier.size(24.dp),
-            tint =
-                if (isIncoming) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                },
-        )
-
-        Spacer(modifier = Modifier.width(12.dp))
+        if (counterpartyPubkeyHex != null) {
+            UserPicture(
+                userHex = counterpartyPubkeyHex,
+                size = 40.dp,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+        } else {
+            Icon(
+                imageVector =
+                    if (isIncoming) Icons.Filled.ArrowDownward else Icons.Filled.ArrowUpward,
+                contentDescription =
+                    if (isIncoming) {
+                        stringRes(R.string.wallet_incoming)
+                    } else {
+                        stringRes(R.string.wallet_outgoing)
+                    },
+                modifier = Modifier.size(24.dp),
+                tint =
+                    if (isIncoming) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+        }
 
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = tx.description ?: if (isIncoming) stringRes(R.string.wallet_incoming) else stringRes(R.string.wallet_outgoing),
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            if (counterpartyPubkeyHex != null) {
+                TransactionUserName(counterpartyPubkeyHex, counterpartyDisplayName, accountViewModel)
+            } else if (counterpartyDisplayName != null) {
+                Text(
+                    text = counterpartyDisplayName,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            } else {
+                Text(
+                    text = tx.description ?: if (isIncoming) stringRes(R.string.wallet_incoming) else stringRes(R.string.wallet_outgoing),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+
+            if (commentText != null) {
+                Text(
+                    text = commentText,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            } else if (counterpartyPubkeyHex != null || counterpartyDisplayName != null) {
+                val descOrType = tx.description ?: if (isIncoming) stringRes(R.string.wallet_incoming) else stringRes(R.string.wallet_outgoing)
+                Text(
+                    text = descOrType,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+
             Text(
                 text = dateText,
                 style = MaterialTheme.typography.bodySmall,
@@ -222,5 +299,30 @@ private fun TransactionItem(tx: NwcTransaction) {
                     MaterialTheme.colorScheme.onBackground
                 },
         )
+    }
+}
+
+@Composable
+private fun TransactionUserName(
+    pubkeyHex: String,
+    fallbackName: String?,
+    accountViewModel: AccountViewModel,
+) {
+    LoadUser(baseUserHex = pubkeyHex, accountViewModel = accountViewModel) { user ->
+        if (user != null) {
+            UsernameDisplay(
+                baseUser = user,
+                fontWeight = FontWeight.Medium,
+                accountViewModel = accountViewModel,
+            )
+        } else {
+            Text(
+                text = fallbackName ?: pubkeyHex.take(8) + "...",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }

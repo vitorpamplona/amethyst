@@ -501,6 +501,78 @@ class AlbyInteropTest {
     }
 
     @Test
+    fun testMetadataParserComment() {
+        val json =
+            """{"result_type":"lookup_invoice","result":{"type":"incoming","state":"settled","invoice":"lnbc...","payment_hash":"hash","amount":5000,"created_at":1000,"settled_at":2000,"metadata":{"comment":"Great post!"}}}"""
+        val response = OptimizedJsonMapper.fromJsonTo<Response>(json)
+        assertIs<LookupInvoiceSuccessResponse>(response)
+        val parsed = response.result?.parsedMetadata()
+        assertNotNull(parsed)
+        assertEquals("Great post!", parsed.comment)
+        assertNull(parsed.payerData)
+        assertNull(parsed.nostr)
+    }
+
+    @Test
+    fun testMetadataParserPayerData() {
+        val json =
+            """{"result_type":"lookup_invoice","result":{"type":"incoming","state":"settled","invoice":"lnbc...","payment_hash":"hash","amount":5000,"created_at":1000,"settled_at":2000,"metadata":{"payer_data":{"name":"Alice","email":"alice@example.com","pubkey":"abc123"}}}}"""
+        val response = OptimizedJsonMapper.fromJsonTo<Response>(json)
+        assertIs<LookupInvoiceSuccessResponse>(response)
+        val parsed = response.result?.parsedMetadata()
+        assertNotNull(parsed)
+        assertEquals("Alice", parsed.payerData?.name)
+        assertEquals("alice@example.com", parsed.payerData?.email)
+        assertEquals("abc123", parsed.payerData?.pubkey)
+        assertEquals("Alice", parsed.senderDisplayName())
+    }
+
+    @Test
+    fun testMetadataParserNostrZap() {
+        val senderHex = "7e7e9c42a91bfef19fa929e5fda1b72e0ebc1a4c1141673e2794234d86addf4e"
+        val recipientHex = "460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c"
+        val json =
+            """{"result_type":"lookup_invoice","result":{"type":"incoming","state":"settled","invoice":"lnbc...","payment_hash":"hash","amount":21000,"created_at":1000,"settled_at":2000,"metadata":{"nostr":{"pubkey":"$senderHex","tags":[["p","$recipientHex"],["amount","21000"]]}}}}"""
+        val response = OptimizedJsonMapper.fromJsonTo<Response>(json)
+        assertIs<LookupInvoiceSuccessResponse>(response)
+        val parsed = response.result?.parsedMetadata()
+        assertNotNull(parsed)
+        assertEquals(senderHex, parsed.senderPubkeyHex())
+        assertEquals(recipientHex, parsed.recipientPubkeyHex())
+    }
+
+    @Test
+    fun testMetadataParserRecipientData() {
+        val json =
+            """{"result_type":"lookup_invoice","result":{"type":"outgoing","state":"settled","invoice":"lnbc...","payment_hash":"hash","amount":5000,"created_at":1000,"settled_at":2000,"metadata":{"recipient_data":{"identifier":"alice@getalby.com"}}}}"""
+        val response = OptimizedJsonMapper.fromJsonTo<Response>(json)
+        assertIs<LookupInvoiceSuccessResponse>(response)
+        val parsed = response.result?.parsedMetadata()
+        assertNotNull(parsed)
+        assertEquals("alice@getalby.com", parsed.recipientIdentifier())
+    }
+
+    @Test
+    fun testMetadataParserNullForSimpleMetadata() {
+        val json =
+            """{"result_type":"lookup_invoice","result":{"type":"incoming","state":"settled","invoice":"lnbc...","payment_hash":"hash","amount":5000,"created_at":1000,"settled_at":2000,"metadata":{"a":123}}}"""
+        val response = OptimizedJsonMapper.fromJsonTo<Response>(json)
+        assertIs<LookupInvoiceSuccessResponse>(response)
+        val parsed = response.result?.parsedMetadata()
+        assertNull(parsed)
+    }
+
+    @Test
+    fun testMetadataParserNullMetadata() {
+        val json =
+            """{"result_type":"lookup_invoice","result":{"type":"incoming","state":"settled","invoice":"lnbc...","payment_hash":"hash","amount":5000,"created_at":1000,"settled_at":2000}}"""
+        val response = OptimizedJsonMapper.fromJsonTo<Response>(json)
+        assertIs<LookupInvoiceSuccessResponse>(response)
+        val parsed = response.result?.parsedMetadata()
+        assertNull(parsed)
+    }
+
+    @Test
     fun testJsSdkGetInfoWithAllMethods() {
         // JS SDK advertises all 13 single methods + notifications
         val json =
