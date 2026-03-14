@@ -129,7 +129,9 @@ class ListTransactionsMethod(
             offset: Int? = null,
             unpaid: Boolean? = null,
             type: String? = null,
-        ): ListTransactionsMethod = ListTransactionsMethod(ListTransactionsParams(from, until, limit, offset, unpaid, type))
+            unpaid_outgoing: Boolean? = null,
+            unpaid_incoming: Boolean? = null,
+        ): ListTransactionsMethod = ListTransactionsMethod(ListTransactionsParams(from, until, limit, offset, unpaid, unpaid_outgoing, unpaid_incoming, type))
     }
 }
 
