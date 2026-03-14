@@ -26,6 +26,8 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
+import com.vitorpamplona.quartz.nip31Alts.AltTag
+import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
 class NwcNotificationEvent(
@@ -54,5 +56,33 @@ class NwcNotificationEvent(
         const val KIND = 23197
         const val LEGACY_KIND = 23196
         const val ALT = "Wallet notification"
+
+        /**
+         * Creates an NWC notification event (server-side).
+         * Uses NIP-44 encryption (kind 23197).
+         *
+         * @param notification the notification to send
+         * @param clientPubkey the client's public key to encrypt to
+         * @param signer the wallet service signer
+         * @param createdAt event timestamp
+         */
+        suspend fun createNotification(
+            notification: Notification,
+            clientPubkey: HexKey,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+        ): NwcNotificationEvent {
+            val serialized = OptimizedJsonMapper.toJson(notification)
+
+            val tags =
+                arrayOf(
+                    arrayOf("p", clientPubkey),
+                    AltTag.assemble(ALT),
+                )
+
+            val encrypted = signer.nip44Encrypt(serialized, clientPubkey)
+
+            return signer.sign(createdAt, KIND, tags, encrypted)
+        }
     }
 }
