@@ -27,9 +27,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -110,10 +112,16 @@ fun SwipeToDeleteWithConfirmation(
         state = dismissState,
         modifier = modifier,
         backgroundContent = {
-            ConfirmDeleteBackground(dismissState) {
-                onDelete()
-                scope.launch { dismissState.reset() }
-            }
+            ConfirmDeleteBackground(
+                dismissState = dismissState,
+                onConfirmDelete = {
+                    onDelete()
+                    scope.launch { dismissState.reset() }
+                },
+                onCancel = {
+                    scope.launch { dismissState.reset() }
+                },
+            )
         },
         enableDismissFromEndToStart = true,
         content = content,
@@ -165,6 +173,7 @@ fun DismissBackground(dismissState: SwipeToDismissBoxState) {
 fun ConfirmDeleteBackground(
     dismissState: SwipeToDismissBoxState,
     onConfirmDelete: () -> Unit,
+    onCancel: () -> Unit,
 ) {
     val settled = dismissState.currentValue == Settled && dismissState.targetValue == Settled
 
@@ -189,23 +198,51 @@ fun ConfirmDeleteBackground(
             Modifier
                 .fillMaxSize()
                 .background(color)
-                .clickable(enabled = !settled) { onConfirmDelete() }
                 .padding(20.dp, 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Icon(
-            Icons.Default.Delete,
-            contentDescription = stringRes(id = R.string.request_deletion),
-        )
-        Text(
-            text = stringRes(id = R.string.request_deletion),
-            color = Color.White,
-            style = MaterialTheme.typography.titleMedium,
-        )
-        Icon(
-            Icons.Default.Delete,
-            contentDescription = stringRes(id = R.string.request_deletion),
-        )
+        Row(
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .clickable(enabled = !settled) { onConfirmDelete() },
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+        ) {
+            Icon(
+                Icons.Default.Delete,
+                contentDescription = stringRes(id = R.string.request_deletion),
+                tint = Color.White,
+            )
+            Spacer(modifier = Modifier.padding(horizontal = 4.dp))
+            Text(
+                text = stringRes(id = R.string.request_deletion),
+                color = Color.White,
+                style = MaterialTheme.typography.titleMedium,
+            )
+        }
+        Row(
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .clickable(enabled = !settled) { onCancel() },
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+        ) {
+            Icon(
+                Icons.Default.Close,
+                contentDescription = stringRes(id = R.string.cancel),
+                tint = Color.White,
+            )
+            Spacer(modifier = Modifier.padding(horizontal = 4.dp))
+            Text(
+                text = stringRes(id = R.string.cancel),
+                color = Color.White,
+                style = MaterialTheme.typography.titleMedium,
+            )
+        }
     }
 }
