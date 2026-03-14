@@ -268,13 +268,13 @@ private fun SyncProgressCard(state: EventSyncViewModel.SyncState.Running) {
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = stringRes(R.string.event_sync_batch_of, state.chunkIndex, state.totalChunks),
+                text = stringRes(R.string.event_sync_batch_of, state.relaysCompleted, state.totalRelays),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
             )
             Spacer(Modifier.height(8.dp))
             LinearProgressIndicator(
-                progress = { state.chunkIndex.toFloat() / state.totalChunks },
+                progress = { state.relaysCompleted.toFloat() / state.totalRelays },
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(8.dp))
@@ -308,8 +308,8 @@ private fun PausedCard(state: EventSyncViewModel.SyncState.Paused) {
                 text =
                     stringRes(
                         R.string.event_sync_paused_body,
-                        state.nextChunkIndex,
-                        state.totalChunks,
+                        state.nextRelayIndex,
+                        state.totalRelays,
                         state.eventsSent,
                     ),
                 style = MaterialTheme.typography.bodyMedium,

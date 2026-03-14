@@ -35,9 +35,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.supervisorScope
+import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Syncs the user's events across all known relays:
@@ -45,12 +48,15 @@ import java.util.concurrent.atomic.AtomicInteger
  *  2. Downloads all events that p-tag the user (non-DM) and sends them to their inbox relays.
  *  3. Downloads kind-4 and kind-1059 events that p-tag the user and sends them to DM relays.
  *
- * Relays are processed in batches of [CHUNK_SIZE].  All three filters are sent to every relay
- * in a chunk simultaneously, and events are routed to the appropriate destination by their
- * properties.  This removes the need for three sequential passes over the full relay list.
+ * Up to [MAX_CONCURRENT_RELAYS] relays are queried in parallel. As soon as one relay is fully
+ * exhausted (all pages retrieved) the next relay from the list starts immediately, keeping the
+ * concurrency window full at all times.
+ *
+ * Each relay is paginated individually: after EOSE the oldest [Event.createdAt] seen on that
+ * relay becomes the next `until` cursor, repeating until the relay returns no new events.
  *
  * The sync is pausable: calling [cancel] transitions to [SyncState.Paused] so the user can
- * [resume] from the last completed chunk rather than starting over.
+ * [resume] from the last completed relay index rather than starting over.
  *
  * Scoped to the AccountViewModel so the sync survives navigation within the same session.
  */
@@ -59,26 +65,26 @@ class EventSyncViewModel(
     private val scope: CoroutineScope,
 ) {
     companion object {
-        /** Number of relays queried in each batch. */
-        const val CHUNK_SIZE = 50
+        /** Maximum number of relays queried at the same time. */
+        const val MAX_CONCURRENT_RELAYS = 50
 
-        /** How long (ms) to wait for all relays in a chunk to reply before moving on. */
-        const val CHUNK_TIMEOUT_MS = 120_000L
+        /** How long (ms) to wait for a single relay to reply per page before giving up. */
+        const val RELAY_TIMEOUT_MS = 30_000L
     }
 
     sealed class SyncState {
         object Idle : SyncState()
 
         data class Running(
-            val chunkIndex: Int,
-            val totalChunks: Int,
+            val relaysCompleted: Int,
+            val totalRelays: Int,
             val eventsSent: Int,
         ) : SyncState()
 
-        /** Cancelled mid-run; can be resumed from [nextChunkIndex]. */
+        /** Cancelled mid-run; can be resumed from [nextRelayIndex]. */
         data class Paused(
-            val nextChunkIndex: Int,
-            val totalChunks: Int,
+            val nextRelayIndex: Int,
+            val totalRelays: Int,
             val eventsSent: Int,
         ) : SyncState()
 
@@ -101,7 +107,7 @@ class EventSyncViewModel(
         if (_syncState.value is SyncState.Running) return
         syncJob =
             scope.launch(Dispatchers.IO) {
-                runSync(startChunkIndex = 0, initialEventsSent = 0)
+                runSync(startRelayIndex = 0, initialEventsSent = 0)
             }
     }
 
@@ -111,7 +117,7 @@ class EventSyncViewModel(
         syncJob =
             scope.launch(Dispatchers.IO) {
                 runSync(
-                    startChunkIndex = paused.nextChunkIndex,
+                    startRelayIndex = paused.nextRelayIndex,
                     initialEventsSent = paused.eventsSent,
                 )
             }
@@ -123,8 +129,8 @@ class EventSyncViewModel(
         _syncState.value =
             if (current is SyncState.Running) {
                 SyncState.Paused(
-                    nextChunkIndex = current.chunkIndex - 1, // retry the in-progress chunk
-                    totalChunks = current.totalChunks,
+                    nextRelayIndex = maxOf(0, current.relaysCompleted - MAX_CONCURRENT_RELAYS),
+                    totalRelays = current.totalRelays,
                     eventsSent = current.eventsSent,
                 )
             } else {
@@ -133,7 +139,7 @@ class EventSyncViewModel(
     }
 
     private suspend fun runSync(
-        startChunkIndex: Int,
+        startRelayIndex: Int,
         initialEventsSent: Int,
     ) {
         val startTime = System.currentTimeMillis()
@@ -150,16 +156,14 @@ class EventSyncViewModel(
             return
         }
 
-        val chunks = allRelays.chunked(CHUNK_SIZE)
-        val totalChunks = chunks.size
+        val relaysToProcess = if (startRelayIndex > 0) allRelays.drop(startRelayIndex) else allRelays
+        val totalRelays = allRelays.size
 
         val outboxTargets = account.outboxRelays.flow.value
         val inboxTargets = account.nip65RelayList.inboxFlow.value
         val dmTargets = account.dmRelays.flow.value
 
-        // Build the minimal set of filters needed across all three categories.
-        // Events are routed to their correct destination(s) by property after retrieval.
-        val filters =
+        val baseFilters =
             buildList {
                 if (outboxTargets.isNotEmpty()) add(Filter(authors = listOf(myPubKey)))
                 if (inboxTargets.isNotEmpty() || dmTargets.isNotEmpty()) {
@@ -167,42 +171,38 @@ class EventSyncViewModel(
                 }
             }
 
-        if (filters.isEmpty()) {
+        if (baseFilters.isEmpty()) {
             _syncState.value =
                 SyncState.Error("No outbox, inbox, or DM relays configured.")
             return
         }
 
-        // Deduplication sets — one per destination category.
-        val outboxSent = HashSet<String>(1024)
-        val inboxSent = HashSet<String>(1024)
-        val dmSent = HashSet<String>(1024)
+        // Thread-safe dedup sets and counter — relay workers run concurrently.
+        val outboxSent = ConcurrentHashMap.newKeySet<String>()
+        val inboxSent = ConcurrentHashMap.newKeySet<String>()
+        val dmSent = ConcurrentHashMap.newKeySet<String>()
+        val totalSent = AtomicLong(initialEventsSent.toLong())
 
-        var totalSent = initialEventsSent
+        val relaysCompleted = AtomicInteger(startRelayIndex)
+
+        _syncState.value =
+            SyncState.Running(
+                relaysCompleted = relaysCompleted.get(),
+                totalRelays = totalRelays,
+                eventsSent = totalSent.get().toInt(),
+            )
 
         try {
-            for (i in startChunkIndex until totalChunks) {
-                if (!isActive) return
-
-                _syncState.value =
-                    SyncState.Running(
-                        chunkIndex = i + 1,
-                        totalChunks = totalChunks,
-                        eventsSent = totalSent,
-                    )
-
-                downloadFromChunk(
-                    relays = chunks[i],
-                    filters = filters,
-                ) { event ->
-                    // Route to outbox if I authored it.
+            downloadFromPool(
+                relays = relaysToProcess,
+                baseFilters = baseFilters,
+                onEvent = { event ->
                     if (event.pubKey == myPubKey && outboxTargets.isNotEmpty()) {
                         if (outboxSent.add(event.id)) {
                             account.client.send(event, outboxTargets)
-                            totalSent++
+                            totalSent.incrementAndGet()
                         }
                     }
-                    // Route p-tagged events to inbox or DM relays.
                     val pTagsMe =
                         event.tags.any { tag ->
                             tag.size >= 2 && tag[0] == "p" && tag[1] == myPubKey
@@ -211,31 +211,30 @@ class EventSyncViewModel(
                         if (event.kind == 4 || event.kind == 1059) {
                             if (dmTargets.isNotEmpty() && dmSent.add(event.id)) {
                                 account.client.send(event, dmTargets)
-                                totalSent++
+                                totalSent.incrementAndGet()
                             }
                         } else {
                             if (inboxTargets.isNotEmpty() && inboxSent.add(event.id)) {
                                 account.client.send(event, inboxTargets)
-                                totalSent++
+                                totalSent.incrementAndGet()
                             }
                         }
                     }
-                }
-
-                // Update the running count after the chunk completes.
-                if (isActive) {
+                },
+                onRelayComplete = {
+                    val completed = relaysCompleted.incrementAndGet()
                     _syncState.value =
                         SyncState.Running(
-                            chunkIndex = i + 1,
-                            totalChunks = totalChunks,
-                            eventsSent = totalSent,
+                            relaysCompleted = completed,
+                            totalRelays = totalRelays,
+                            eventsSent = totalSent.get().toInt(),
                         )
-                }
-            }
+                },
+            )
 
             _syncState.value =
                 SyncState.Done(
-                    totalEventsSent = totalSent,
+                    totalEventsSent = totalSent.get().toInt(),
                     durationMs = System.currentTimeMillis() - startTime,
                 )
         } catch (e: Exception) {
@@ -246,37 +245,60 @@ class EventSyncViewModel(
     }
 
     /**
-     * Sends [baseFilters] to every relay in [relays] simultaneously, then paginates per relay
-     * until each one is exhausted.
-     *
-     * Many relays impose a hard event-count limit per filter (commonly 500).  After EOSE the
-     * oldest [Event.createdAt] seen on that relay becomes the next `until` cursor, so the
-     * following request fetches the next page.  This repeats until a relay returns no new
-     * events, at which point it is removed from the active set.
-     *
-     * All relays in [relays] are queried in parallel within each pagination round.  Only the
-     * relays that still have more pages participate in subsequent rounds.
+     * Maintains a sliding window of up to [MAX_CONCURRENT_RELAYS] active relay workers.
+     * As soon as one relay finishes (all pages exhausted), the next relay from [relays]
+     * starts immediately — no waiting for an entire batch to drain.
      */
-    private suspend fun downloadFromChunk(
+    private suspend fun downloadFromPool(
         relays: List<NormalizedRelayUrl>,
         baseFilters: List<Filter>,
         onEvent: (Event) -> Unit,
+        onRelayComplete: () -> Unit,
     ) {
-        // `until` cursor per relay; absent = first page (no cursor).
-        val relayUntil = ConcurrentHashMap<NormalizedRelayUrl, Long>()
-        // Relays that can no longer be contacted are skipped immediately.
-        val deadRelays = ConcurrentHashMap.newKeySet<NormalizedRelayUrl>()
+        val semaphore = Semaphore(MAX_CONCURRENT_RELAYS)
+        supervisorScope {
+            for (relay in relays) {
+                if (!isActive) break
+                semaphore.acquire()
+                launch {
+                    try {
+                        downloadFromRelay(relay, baseFilters, onEvent)
+                        onRelayComplete()
+                    } finally {
+                        semaphore.release()
+                    }
+                }
+            }
+        }
+    }
 
-        val activeRelays = relays.toMutableList()
+    /**
+     * Fetches all pages from a single [relay] using paginated `until` cursors.
+     *
+     * Sends [baseFilters] and waits for EOSE. If events were returned, the oldest
+     * [Event.createdAt] minus one becomes the next `until` and the query repeats.
+     * Stops when EOSE arrives with no new events (relay exhausted) or the relay
+     * cannot be reached.
+     */
+    private suspend fun downloadFromRelay(
+        relay: NormalizedRelayUrl,
+        baseFilters: List<Filter>,
+        onEvent: (Event) -> Unit,
+    ) {
+        var until: Long? = null
 
-        while (activeRelays.isNotEmpty() && isActive) {
-            // Per-relay event count and oldest timestamp for this round.
-            val roundCount = ConcurrentHashMap<NormalizedRelayUrl, Int>()
-            val roundMinTs = ConcurrentHashMap<NormalizedRelayUrl, Long>()
-
-            val remaining = AtomicInteger(activeRelays.size)
+        while (isActive) {
+            val pageCount = AtomicInteger(0)
+            val pageMinTs = AtomicLong(Long.MAX_VALUE)
             val done = Channel<Unit>(Channel.CONFLATED)
             val subId = newSubId()
+
+            val filters =
+                if (until == null) {
+                    baseFilters
+                } else {
+                    baseFilters.map { it.copy(until = until) }
+                }
 
             val listener =
                 object : IRequestListener {
@@ -287,15 +309,15 @@ class EventSyncViewModel(
                         forFilters: List<Filter>?,
                     ) {
                         onEvent(event)
-                        roundCount.merge(relay, 1, Int::plus)
-                        roundMinTs.merge(relay, event.createdAt, ::minOf)
+                        pageCount.incrementAndGet()
+                        pageMinTs.updateAndGet { minOf(it, event.createdAt) }
                     }
 
                     override fun onEose(
                         relay: NormalizedRelayUrl,
                         forFilters: List<Filter>?,
                     ) {
-                        if (remaining.decrementAndGet() <= 0) done.trySend(Unit)
+                        done.trySend(Unit)
                     }
 
                     override fun onClosed(
@@ -303,7 +325,7 @@ class EventSyncViewModel(
                         relay: NormalizedRelayUrl,
                         forFilters: List<Filter>?,
                     ) {
-                        if (remaining.decrementAndGet() <= 0) done.trySend(Unit)
+                        done.trySend(Unit)
                     }
 
                     override fun onCannotConnect(
@@ -311,39 +333,19 @@ class EventSyncViewModel(
                         message: String,
                         forFilters: List<Filter>?,
                     ) {
-                        deadRelays.add(relay)
-                        if (remaining.decrementAndGet() <= 0) done.trySend(Unit)
+                        done.trySend(Unit)
                     }
                 }
 
-            // Build per-relay filter list, injecting each relay's current `until` cursor.
-            val filtersMap =
-                activeRelays.associateWith { relay ->
-                    val until = relayUntil[relay]
-                    if (until == null) {
-                        baseFilters
-                    } else {
-                        baseFilters.map { it.copy(until = until) }
-                    }
-                }
-
-            account.client.openReqSubscription(subId, filtersMap, listener)
-            withTimeoutOrNull(CHUNK_TIMEOUT_MS) { done.receive() }
+            account.client.openReqSubscription(subId, mapOf(relay to filters), listener)
+            withTimeoutOrNull(RELAY_TIMEOUT_MS) { done.receive() }
             account.client.close(subId)
             done.close()
 
-            // Advance cursors for relays that returned events; drop exhausted or dead ones.
-            activeRelays.removeAll { relay ->
-                when {
-                    relay in deadRelays -> true
-                    (roundCount[relay] ?: 0) == 0 -> true  // EOSE with no events = exhausted
-                    else -> {
-                        // Next page starts just before the oldest event seen this round.
-                        relayUntil[relay] = roundMinTs[relay]!! - 1
-                        false
-                    }
-                }
-            }
+            if (pageCount.get() == 0) break  // relay exhausted or unreachable
+
+            // Advance cursor: next page starts just before the oldest event seen.
+            until = pageMinTs.get() - 1
         }
     }
 }
