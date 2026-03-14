@@ -231,7 +231,7 @@ private fun TransactionItem(
                     } else {
                         stringRes(R.string.wallet_outgoing)
                     },
-                modifier = Modifier.size(24.dp),
+                modifier = Modifier.size(40.dp),
                 tint =
                     if (isIncoming) {
                         MaterialTheme.colorScheme.primary
