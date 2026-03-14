@@ -27,14 +27,13 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
@@ -57,6 +56,9 @@ import java.util.concurrent.atomic.AtomicLong
  * Each relay is paginated individually: after EOSE the oldest [Event.createdAt] seen on that
  * relay becomes the next `until` cursor, repeating until the relay returns no new events.
  *
+ * Live activity is emitted via [liveActivity] so the UI can show which relays are currently
+ * being read, where events are being sent, and a running log of completed relays.
+ *
  * The sync is pausable: calling [cancel] transitions to [SyncState.Paused] so the user can
  * [resume] from the last completed relay index rather than starting over.
  *
@@ -72,7 +74,14 @@ class EventSyncViewModel(
 
         /** How long (ms) to wait for a single relay to reply per page before giving up. */
         const val RELAY_TIMEOUT_MS = 30_000L
+
+        /** Maximum number of completed-relay entries kept in the activity log. */
+        const val MAX_ACTIVITY_LOG = 100
     }
+
+    // -------------------------------------------------------------------------
+    // Public state
+    // -------------------------------------------------------------------------
 
     sealed class SyncState {
         object Idle : SyncState()
@@ -100,13 +109,71 @@ class EventSyncViewModel(
         ) : SyncState()
     }
 
+    /**
+     * Per-relay activity snapshot emitted continuously while the sync runs.
+     *
+     * @param activeRelays  Relays currently being queried.
+     * @param recentCompletions  Last [MAX_ACTIVITY_LOG] relays that finished, newest first.
+     * @param outboxTargets  Relays receiving events authored by the user.
+     * @param inboxTargets  Relays receiving events that mention the user.
+     * @param dmTargets  Relays receiving DMs addressed to the user.
+     */
+    data class LiveSyncActivity(
+        val activeRelays: Set<NormalizedRelayUrl> = emptySet(),
+        val recentCompletions: List<CompletedRelayInfo> = emptyList(),
+        val outboxTargets: Set<NormalizedRelayUrl> = emptySet(),
+        val inboxTargets: Set<NormalizedRelayUrl> = emptySet(),
+        val dmTargets: Set<NormalizedRelayUrl> = emptySet(),
+    ) {
+        data class CompletedRelayInfo(
+            val relay: NormalizedRelayUrl,
+            /** Total events received across all pages. 0 = relay was empty or unreachable. */
+            val eventsFound: Int,
+        )
+    }
+
     private val _syncState = MutableStateFlow<SyncState>(SyncState.Idle)
     val syncState: StateFlow<SyncState> = _syncState
+
+    private val _liveActivity = MutableStateFlow(LiveSyncActivity())
+    val liveActivity: StateFlow<LiveSyncActivity> = _liveActivity
+
+    // -------------------------------------------------------------------------
+    // Live activity tracking (written from worker threads)
+    // -------------------------------------------------------------------------
+
+    private val trackingActiveRelays = ConcurrentHashMap.newKeySet<NormalizedRelayUrl>()
+    private val trackingCompletions = ArrayDeque<LiveSyncActivity.CompletedRelayInfo>()
+    private val trackingLock = Any()
+
+    /** Destination relay sets, set at the start of each sync run. */
+    @Volatile private var liveOutboxTargets: Set<NormalizedRelayUrl> = emptySet()
+    @Volatile private var liveInboxTargets: Set<NormalizedRelayUrl> = emptySet()
+    @Volatile private var liveDmTargets: Set<NormalizedRelayUrl> = emptySet()
+
+    private fun emitLiveSnapshot() {
+        val completions = synchronized(trackingLock) { trackingCompletions.toList() }
+        _liveActivity.value =
+            LiveSyncActivity(
+                activeRelays = trackingActiveRelays.toSet(),
+                recentCompletions = completions,
+                outboxTargets = liveOutboxTargets,
+                inboxTargets = liveInboxTargets,
+                dmTargets = liveDmTargets,
+            )
+    }
+
+    // -------------------------------------------------------------------------
+    // Control functions
+    // -------------------------------------------------------------------------
 
     private var syncJob: Job? = null
 
     fun start() {
         if (_syncState.value is SyncState.Running) return
+        trackingActiveRelays.clear()
+        synchronized(trackingLock) { trackingCompletions.clear() }
+        _liveActivity.value = LiveSyncActivity()
         syncJob =
             scope.launch(Dispatchers.IO) {
                 runSync(startRelayIndex = 0, initialEventsSent = 0)
@@ -140,6 +207,10 @@ class EventSyncViewModel(
             }
     }
 
+    // -------------------------------------------------------------------------
+    // Sync logic
+    // -------------------------------------------------------------------------
+
     private suspend fun runSync(
         startRelayIndex: Int,
         initialEventsSent: Int,
@@ -164,6 +235,12 @@ class EventSyncViewModel(
         val outboxTargets = account.outboxRelays.flow.value
         val inboxTargets = account.nip65RelayList.inboxFlow.value
         val dmTargets = account.dmRelays.flow.value
+
+        // Publish destination relays so the UI can show them before events arrive.
+        liveOutboxTargets = outboxTargets
+        liveInboxTargets = inboxTargets
+        liveDmTargets = dmTargets
+        emitLiveSnapshot()
 
         val baseFilters =
             buildList {
@@ -223,8 +300,19 @@ class EventSyncViewModel(
                         }
                     }
                 },
-                onRelayComplete = {
+                onRelayStart = { relay ->
+                    trackingActiveRelays.add(relay)
+                    emitLiveSnapshot()
+                },
+                onRelayComplete = { relay, eventsFound ->
+                    trackingActiveRelays.remove(relay)
+                    val info = LiveSyncActivity.CompletedRelayInfo(relay, eventsFound)
+                    synchronized(trackingLock) {
+                        trackingCompletions.addFirst(info)
+                        while (trackingCompletions.size > MAX_ACTIVITY_LOG) trackingCompletions.removeLast()
+                    }
                     val completed = relaysCompleted.incrementAndGet()
+                    emitLiveSnapshot()
                     _syncState.value =
                         SyncState.Running(
                             relaysCompleted = completed,
@@ -255,7 +343,8 @@ class EventSyncViewModel(
         relays: List<NormalizedRelayUrl>,
         baseFilters: List<Filter>,
         onEvent: (Event) -> Unit,
-        onRelayComplete: () -> Unit,
+        onRelayStart: (NormalizedRelayUrl) -> Unit,
+        onRelayComplete: (NormalizedRelayUrl, Int) -> Unit,
     ) {
         val semaphore = Semaphore(MAX_CONCURRENT_RELAYS)
         supervisorScope {
@@ -264,8 +353,9 @@ class EventSyncViewModel(
                 semaphore.acquire()
                 launch {
                     try {
-                        downloadFromRelay(relay, baseFilters, onEvent)
-                        onRelayComplete()
+                        onRelayStart(relay)
+                        val eventsFound = downloadFromRelay(relay, baseFilters, onEvent)
+                        onRelayComplete(relay, eventsFound)
                     } finally {
                         semaphore.release()
                     }
@@ -281,13 +371,16 @@ class EventSyncViewModel(
      * [Event.createdAt] minus one becomes the next `until` and the query repeats.
      * Stops when EOSE arrives with no new events (relay exhausted) or the relay
      * cannot be reached.
+     *
+     * @return total number of events received across all pages.
      */
     private suspend fun downloadFromRelay(
         relay: NormalizedRelayUrl,
         baseFilters: List<Filter>,
         onEvent: (Event) -> Unit,
-    ) {
+    ): Int {
         var until: Long? = null
+        var totalEvents = 0
 
         while (true) {
             coroutineContext.ensureActive()
@@ -345,10 +438,15 @@ class EventSyncViewModel(
             account.client.close(subId)
             done.close()
 
-            if (pageCount.get() == 0) break  // relay exhausted or unreachable
+            val count = pageCount.get()
+            if (count == 0) break  // relay exhausted or unreachable
+
+            totalEvents += count
 
             // Advance cursor: next page starts just before the oldest event seen.
             until = pageMinTs.get() - 1
         }
+
+        return totalEvents
     }
 }

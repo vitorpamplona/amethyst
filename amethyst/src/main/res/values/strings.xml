@@ -1767,11 +1767,19 @@
     <string name="event_sync_resume">Resume</string>
     <string name="event_sync_start_over">Start Over</string>
     <string name="event_sync_cancel">Cancel</string>
-    <string name="event_sync_batch_of">Batch %1$d of %2$d</string>
+    <string name="event_sync_relays_progress">Relays: %1$d / %2$d</string>
     <string name="event_sync_events_sent">Events redistributed: %1$d</string>
     <string name="event_sync_paused_title">Sync Paused</string>
-    <string name="event_sync_paused_body">Completed batch %1$d of %2$d — %3$d events redistributed so far. Tap Resume to continue.</string>
+    <string name="event_sync_paused_body">Completed %1$d of %2$d relays — %3$d events redistributed so far. Tap Resume to continue.</string>
     <string name="event_sync_done_title">Sync complete</string>
     <string name="event_sync_done_body">Redistributed %1$d events in %2$d seconds.</string>
     <string name="event_sync_error_title">Sync error</string>
+    <string name="event_sync_reading_from">Reading (%1$d active)</string>
+    <string name="event_sync_sending_to">Sending To</string>
+    <string name="event_sync_outbox_relays">Outbox</string>
+    <string name="event_sync_inbox_relays">Inbox</string>
+    <string name="event_sync_dm_relays">DMs</string>
+    <string name="event_sync_activity_log">Activity (%1$d relays)</string>
+    <string name="event_sync_events_found_log">%1$s events</string>
+    <string name="event_sync_no_events">no events</string>
 </resources>

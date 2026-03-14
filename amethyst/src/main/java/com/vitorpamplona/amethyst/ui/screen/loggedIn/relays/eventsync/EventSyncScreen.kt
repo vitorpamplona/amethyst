@@ -21,25 +21,40 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -49,7 +64,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
@@ -57,6 +75,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 @Composable
 fun EventSyncScreen(
@@ -66,6 +85,7 @@ fun EventSyncScreen(
     val syncViewModel = accountViewModel.eventSyncViewModel
 
     val syncState by syncViewModel.syncState.collectAsStateWithLifecycle()
+    val liveActivity by syncViewModel.liveActivity.collectAsStateWithLifecycle()
     val isMobileOrMetered by accountViewModel.settings.isMobileOrMeteredConnection.collectAsStateWithLifecycle()
     var showMobileDataDialog by remember { mutableStateOf(false) }
 
@@ -150,6 +170,27 @@ fun EventSyncScreen(
                 is EventSyncViewModel.SyncState.Error -> {
                     ErrorCard(message = state.message)
                 }
+            }
+
+            // ---- Live relay activity (shown during and after sync) ----
+            val isRunning = syncState is EventSyncViewModel.SyncState.Running
+
+            if (liveActivity.activeRelays.isNotEmpty()) {
+                ActiveRelaysCard(
+                    activeRelays = liveActivity.activeRelays,
+                    isRunning = isRunning,
+                )
+            }
+
+            if (liveActivity.outboxTargets.isNotEmpty() ||
+                liveActivity.inboxTargets.isNotEmpty() ||
+                liveActivity.dmTargets.isNotEmpty()
+            ) {
+                DestinationRelaysCard(activity = liveActivity)
+            }
+
+            if (liveActivity.recentCompletions.isNotEmpty()) {
+                ActivityLogCard(completions = liveActivity.recentCompletions)
             }
 
             // ---- Action buttons ----
@@ -237,27 +278,9 @@ fun EventSyncScreen(
     }
 }
 
-@Composable
-private fun StepRow(
-    number: String,
-    text: String,
-) {
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.Top,
-    ) {
-        Text(
-            text = "$number.",
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary,
-        )
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyMedium,
-        )
-    }
-}
+// -------------------------------------------------------------------------
+// Progress / status cards
+// -------------------------------------------------------------------------
 
 @Composable
 private fun SyncProgressCard(state: EventSyncViewModel.SyncState.Running) {
@@ -268,13 +291,19 @@ private fun SyncProgressCard(state: EventSyncViewModel.SyncState.Running) {
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = stringRes(R.string.event_sync_batch_of, state.relaysCompleted, state.totalRelays),
+                text = stringRes(R.string.event_sync_relays_progress, state.relaysCompleted, state.totalRelays),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
             )
             Spacer(Modifier.height(8.dp))
             LinearProgressIndicator(
-                progress = { state.relaysCompleted.toFloat() / state.totalRelays },
+                progress = {
+                    if (state.totalRelays > 0) {
+                        state.relaysCompleted.toFloat() / state.totalRelays
+                    } else {
+                        0f
+                    }
+                },
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(8.dp))
@@ -375,3 +404,313 @@ private fun ErrorCard(message: String) {
         }
     }
 }
+
+// -------------------------------------------------------------------------
+// Live activity cards
+// -------------------------------------------------------------------------
+
+/**
+ * Shows all relays currently being queried, each with a pulsing dot indicator.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ActiveRelaysCard(
+    activeRelays: Set<NormalizedRelayUrl>,
+    isRunning: Boolean,
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 0.2f,
+        animationSpec =
+            infiniteRepeatable(
+                animation = tween(durationMillis = 800),
+                repeatMode = RepeatMode.Reverse,
+            ),
+        label = "pulseAlpha",
+    )
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = stringRes(R.string.event_sync_reading_from, activeRelays.size),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Spacer(Modifier.height(10.dp))
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                activeRelays.forEach { relay ->
+                    ActiveRelayChip(
+                        relay = relay,
+                        pulseAlpha = if (isRunning) pulseAlpha else 1f,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ActiveRelayChip(
+    relay: NormalizedRelayUrl,
+    pulseAlpha: Float,
+) {
+    SuggestionChip(
+        onClick = {},
+        label = {
+            Text(
+                text = relay.displayHost(),
+                style = MaterialTheme.typography.labelSmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        },
+        icon = {
+            Box(
+                modifier =
+                    Modifier
+                        .size(8.dp)
+                        .alpha(pulseAlpha)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary),
+            )
+        },
+        colors =
+            SuggestionChipDefaults.suggestionChipColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
+            ),
+    )
+}
+
+/**
+ * Shows where events are being sent: outbox, inbox, and DM relay lists.
+ */
+@Composable
+private fun DestinationRelaysCard(activity: EventSyncViewModel.LiveSyncActivity) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = stringRes(R.string.event_sync_sending_to),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+
+            if (activity.outboxTargets.isNotEmpty()) {
+                Spacer(Modifier.height(10.dp))
+                DestinationSection(
+                    label = stringRes(R.string.event_sync_outbox_relays),
+                    relays = activity.outboxTargets,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+
+            if (activity.inboxTargets.isNotEmpty()) {
+                Spacer(Modifier.height(10.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                Spacer(Modifier.height(10.dp))
+                DestinationSection(
+                    label = stringRes(R.string.event_sync_inbox_relays),
+                    relays = activity.inboxTargets,
+                    color = MaterialTheme.colorScheme.secondary,
+                )
+            }
+
+            if (activity.dmTargets.isNotEmpty()) {
+                Spacer(Modifier.height(10.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                Spacer(Modifier.height(10.dp))
+                DestinationSection(
+                    label = stringRes(R.string.event_sync_dm_relays),
+                    relays = activity.dmTargets,
+                    color = MaterialTheme.colorScheme.tertiary,
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun DestinationSection(
+    label: String,
+    relays: Set<NormalizedRelayUrl>,
+    color: androidx.compose.ui.graphics.Color,
+) {
+    Text(
+        text = label,
+        style = MaterialTheme.typography.labelMedium,
+        fontWeight = FontWeight.Medium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    Spacer(Modifier.height(6.dp))
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        relays.forEach { relay ->
+            SuggestionChip(
+                onClick = {},
+                label = {
+                    Text(
+                        text = relay.displayHost(),
+                        style = MaterialTheme.typography.labelSmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                },
+                colors =
+                    SuggestionChipDefaults.suggestionChipColors(
+                        containerColor = color.copy(alpha = 0.12f),
+                        labelColor = color,
+                    ),
+            )
+        }
+    }
+}
+
+/**
+ * Scrollable log of recently completed relays, newest at the top.
+ * Uses a fixed-height inner scroll area so it doesn't compete with the outer scroll.
+ */
+@Composable
+private fun ActivityLogCard(
+    completions: List<EventSyncViewModel.LiveSyncActivity.CompletedRelayInfo>,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = stringRes(R.string.event_sync_activity_log, completions.size),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Spacer(Modifier.height(10.dp))
+
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(260.dp)
+                        .verticalScroll(rememberScrollState()),
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    completions.forEachIndexed { index, info ->
+                        if (index > 0) {
+                            HorizontalDivider(
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                            )
+                        }
+                        ActivityLogRow(info = info)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ActivityLogRow(info: EventSyncViewModel.LiveSyncActivity.CompletedRelayInfo) {
+    val hasEvents = info.eventsFound > 0
+    val dotColor =
+        if (hasEvents) {
+            MaterialTheme.colorScheme.primary
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+        }
+    val textColor =
+        if (hasEvents) {
+            MaterialTheme.colorScheme.onSurface
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        }
+
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Box(
+            modifier =
+                Modifier
+                    .size(8.dp)
+                    .clip(CircleShape)
+                    .background(dotColor),
+        )
+        Text(
+            text = info.relay.displayHost(),
+            style = MaterialTheme.typography.bodySmall,
+            color = textColor,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
+        Text(
+            text =
+                if (hasEvents) {
+                    stringRes(R.string.event_sync_events_found_log, formatCount(info.eventsFound))
+                } else {
+                    stringRes(R.string.event_sync_no_events)
+                },
+            style = MaterialTheme.typography.bodySmall,
+            color = textColor,
+        )
+    }
+}
+
+// -------------------------------------------------------------------------
+// Helpers
+// -------------------------------------------------------------------------
+
+@Composable
+private fun StepRow(
+    number: String,
+    text: String,
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Text(
+            text = "$number.",
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyMedium,
+        )
+    }
+}
+
+/** Strips the WebSocket scheme and trailing slash for compact display. */
+private fun NormalizedRelayUrl.displayHost(): String =
+    url
+        .removePrefix("wss://")
+        .removePrefix("ws://")
+        .trimEnd('/')
+
+/** Formats a count with K/M suffix for large numbers. */
+private fun formatCount(n: Int): String =
+    when {
+        n >= 1_000_000 -> "${n / 1_000_000}M"
+        n >= 1_000 -> "${n / 1_000}K"
+        else -> n.toString()
+    }
