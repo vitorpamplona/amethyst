@@ -87,6 +87,17 @@ class MetadataStripper {
             )
     }
 
+    private fun extractorToCodecFlags(sampleFlags: Int): Int {
+        var flags = 0
+        if (sampleFlags and MediaExtractor.SAMPLE_FLAG_SYNC != 0) {
+            flags = flags or MediaCodec.BUFFER_FLAG_KEY_FRAME
+        }
+        if (sampleFlags and MediaExtractor.SAMPLE_FLAG_PARTIAL_FRAME != 0) {
+            flags = flags or MediaCodec.BUFFER_FLAG_PARTIAL_FRAME
+        }
+        return flags
+    }
+
     fun stripImageMetadata(
         uri: Uri,
         context: Context,
@@ -158,7 +169,7 @@ class MetadataStripper {
                     bufferInfo.offset = 0
                     bufferInfo.size = sampleSize
                     bufferInfo.presentationTimeUs = extractor.sampleTime
-                    bufferInfo.flags = extractor.sampleFlags
+                    bufferInfo.flags = extractorToCodecFlags(extractor.sampleFlags)
 
                     muxer.writeSampleData(outputTrack, buffer, bufferInfo)
                     extractor.advance()
@@ -228,7 +239,7 @@ class MetadataStripper {
                 bufferInfo.offset = 0
                 bufferInfo.size = sampleSize
                 bufferInfo.presentationTimeUs = extractor.sampleTime
-                bufferInfo.flags = extractor.sampleFlags
+                bufferInfo.flags = extractorToCodecFlags(extractor.sampleFlags)
 
                 muxer.writeSampleData(outputTrack, buffer, bufferInfo)
                 extractor.advance()
@@ -252,12 +263,11 @@ class MetadataStripper {
         uri: Uri,
         mimeType: String?,
         context: Context,
-    ): Uri {
-        return when {
+    ): Uri =
+        when {
             mimeType?.startsWith("image/", ignoreCase = true) == true -> stripImageMetadata(uri, context)
             mimeType?.startsWith("video/", ignoreCase = true) == true -> stripVideoMetadata(uri, context)
             mimeType?.startsWith("audio/", ignoreCase = true) == true -> stripAudioMetadata(uri, context)
             else -> uri
         }
-    }
 }
