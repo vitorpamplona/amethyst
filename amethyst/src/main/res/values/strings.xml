@@ -1244,6 +1244,14 @@
     <string name="new_community_note">New Community Note</string>
     <string name="new_product">New Product</string>
     <string name="new_exclusive_geo_note">New Geo-Exclusive Post</string>
+    <string name="new_long_form_post">New Article</string>
+
+    <string name="article_title">Title</string>
+    <string name="article_summary">Summary (optional)</string>
+    <string name="article_cover_image_url">Cover image URL (optional)</string>
+    <string name="write_your_article_in_markdown">Write your article in markdown…</string>
+    <string name="markdown_preview">Preview</string>
+    <string name="markdown_edit">Edit</string>
 
     <string name="open_all_reactions_to_this_post">Open all reactions to this post</string>
     <string name="close_all_reactions_to_this_post">Close all reactions to this post</string>

@@ -279,6 +279,12 @@ sealed class Route {
     ) : Route()
 
     @Serializable
+    data class NewMarkdownPost(
+        val draft: String? = null,
+        val version: String? = null,
+    ) : Route()
+
+    @Serializable
     data class GeoPost(
         val geohash: String? = null,
         val message: String? = null,

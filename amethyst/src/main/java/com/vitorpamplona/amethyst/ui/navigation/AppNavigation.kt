@@ -88,6 +88,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.GeoHashScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.HashtagPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.HashtagScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.HomeScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.MarkdownPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ShortNotePostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.VoiceReplyScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.keyBackup.AccountBackupScreen
@@ -307,6 +308,15 @@ fun AppNavigation(
                     draft = it.draft?.let { hex -> accountViewModel.getNoteIfExists(hex) },
                     accountViewModel,
                     nav,
+                )
+            }
+
+            composableFromBottomArgs<Route.NewMarkdownPost> {
+                MarkdownPostScreen(
+                    draft = it.draft?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                    version = it.version?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                    accountViewModel = accountViewModel,
+                    nav = nav,
                 )
             }
 
