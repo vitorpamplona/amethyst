@@ -561,6 +561,7 @@ class ChatNewMessageViewModel :
         userSuggestionsMainMessage = null
 
         uploadsWaitingToBeSent = emptyList()
+        uploadState?.reset()
 
         iMetaAttachments.reset()
 
@@ -692,8 +693,7 @@ class ChatNewMessageViewModel :
 
     fun canPost(): Boolean =
         message.text.isNotBlank() &&
-            uploadState?.isUploadingImage != true &&
-            uploadState?.isUploadingFile != true &&
+            uploadState?.mediaUploadTracker?.isUploading != true &&
             !wantsInvoice &&
             (!wantsZapraiser || zapRaiserAmount.value != null) &&
             (toUsers.text.isNotBlank()) &&

@@ -43,11 +43,7 @@ class ChatFileUploader(
         onceUploaded: suspend (List<SuccessfulUploads>) -> Unit,
     ) {
         val orchestrator = viewState.multiOrchestrator ?: return
-        if (orchestrator.hasNonMedia()) {
-            viewState.isUploadingFile = true
-        } else {
-            viewState.isUploadingImage = true
-        }
+        viewState.mediaUploadTracker.startUpload(orchestrator.hasNonMedia())
 
         val cipher = AESGCM()
 
@@ -80,8 +76,7 @@ class ChatFileUploader(
             onError(stringRes(context, R.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
         }
 
-        viewState.isUploadingImage = false
-        viewState.isUploadingFile = false
+        viewState.mediaUploadTracker.finishUpload()
     }
 
     // ------
@@ -95,11 +90,7 @@ class ChatFileUploader(
         onceUploaded: suspend (List<SuccessfulUploads>) -> Unit,
     ) {
         val orchestrator = viewState.multiOrchestrator ?: return
-        if (orchestrator.hasNonMedia()) {
-            viewState.isUploadingFile = true
-        } else {
-            viewState.isUploadingImage = true
-        }
+        viewState.mediaUploadTracker.startUpload(orchestrator.hasNonMedia())
 
         val results =
             orchestrator.upload(
@@ -129,7 +120,6 @@ class ChatFileUploader(
             onError(stringRes(context, R.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
         }
 
-        viewState.isUploadingImage = false
-        viewState.isUploadingFile = false
+        viewState.mediaUploadTracker.finishUpload()
     }
 }

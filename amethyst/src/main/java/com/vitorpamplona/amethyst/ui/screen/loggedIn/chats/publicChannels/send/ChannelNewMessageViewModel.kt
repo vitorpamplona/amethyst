@@ -338,11 +338,7 @@ open class ChannelNewMessageViewModel :
 
             val myMultiOrchestrator = uploadState.multiOrchestrator ?: return@launch
 
-            if (myMultiOrchestrator.hasNonMedia()) {
-                uploadState.isUploadingFile = true
-            } else {
-                uploadState.isUploadingImage = true
-            }
+            uploadState.mediaUploadTracker.startUpload(myMultiOrchestrator.hasNonMedia())
 
             val results =
                 myMultiOrchestrator.upload(
@@ -383,8 +379,7 @@ open class ChannelNewMessageViewModel :
                 onError(stringRes(context, R.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
             }
 
-            uploadState.isUploadingImage = false
-            uploadState.isUploadingFile = false
+            uploadState.mediaUploadTracker.finishUpload()
         }
     }
 
@@ -640,8 +635,7 @@ open class ChannelNewMessageViewModel :
 
     fun canPost(): Boolean =
         message.text.isNotBlank() &&
-            uploadState?.isUploadingImage != true &&
-            uploadState?.isUploadingFile != true &&
+            uploadState?.mediaUploadTracker?.isUploading != true &&
             !wantsInvoice &&
             (!wantsZapraiser || zapRaiserAmount != null) &&
             uploadState?.multiOrchestrator == null
