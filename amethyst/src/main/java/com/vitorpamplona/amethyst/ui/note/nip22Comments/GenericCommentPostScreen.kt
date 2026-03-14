@@ -300,6 +300,7 @@ private fun GenericCommentPostBody(
                         ImageVideoDescription(
                             it,
                             accountViewModel.account.settings.defaultFileServer,
+                            isUploading = postViewModel.mediaUploadTracker.isUploading,
                             onAdd = { alt, server, sensitiveContent, mediaQuality, _ ->
                                 postViewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, server, accountViewModel.toastManager::toast, context)
                                 accountViewModel.account.settings.changeDefaultFileServer(server)
@@ -391,6 +392,7 @@ private fun BottomRowActions(postViewModel: CommentPostViewModel) {
     ) {
         SelectFromGallery(
             isUploading = postViewModel.isUploadingImage,
+            enabled = !postViewModel.isUploadingFile,
             tint = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier,
         ) {
@@ -398,7 +400,8 @@ private fun BottomRowActions(postViewModel: CommentPostViewModel) {
         }
 
         SelectFromFiles(
-            isUploading = postViewModel.isUploadingImage,
+            isUploading = postViewModel.isUploadingFile,
+            enabled = !postViewModel.isUploadingImage,
             tint = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier,
         ) {

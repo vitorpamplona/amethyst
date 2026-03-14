@@ -356,6 +356,7 @@ private fun NewPostScreenBody(
                         ImageVideoDescription(
                             it,
                             accountViewModel.account.settings.defaultFileServer,
+                            isUploading = postViewModel.mediaUploadTracker.isUploading,
                             onAdd = { alt, server, sensitiveContent, mediaQuality, useH265 ->
                                 postViewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, server, accountViewModel.toastManager::toast, context, useH265)
                                 accountViewModel.account.settings.changeDefaultFileServer(server)
@@ -494,6 +495,7 @@ private fun BottomRowActions(postViewModel: ShortNotePostViewModel) {
     ) {
         SelectFromGallery(
             isUploading = postViewModel.isUploadingImage,
+            enabled = !postViewModel.isUploadingFile,
             tint = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier,
         ) {
@@ -501,7 +503,8 @@ private fun BottomRowActions(postViewModel: ShortNotePostViewModel) {
         }
 
         SelectFromFiles(
-            isUploading = postViewModel.isUploadingImage,
+            isUploading = postViewModel.isUploadingFile,
+            enabled = !postViewModel.isUploadingImage,
             tint = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier,
         ) {

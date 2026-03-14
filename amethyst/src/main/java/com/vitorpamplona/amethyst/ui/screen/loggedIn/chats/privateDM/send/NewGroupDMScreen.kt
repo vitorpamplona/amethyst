@@ -287,6 +287,7 @@ fun GroupDMScreenContent(
                         ImageVideoDescription(
                             selectedFiles,
                             accountViewModel.account.settings.defaultFileServer,
+                            isUploading = uploading.mediaUploadTracker.isUploading,
                             onAdd = { alt, server, sensitiveContent, mediaQuality, _ ->
                                 postViewModel.uploadAndHold(
                                     accountViewModel.toastManager::toast,
@@ -386,6 +387,7 @@ private fun BottomRowActions(
         if (postViewModel.room != null) {
             SelectFromGallery(
                 isUploading = postViewModel.isUploadingImage,
+                enabled = !postViewModel.isUploadingFile,
                 tint = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier,
             ) {
@@ -393,7 +395,8 @@ private fun BottomRowActions(
             }
 
             SelectFromFiles(
-                isUploading = postViewModel.isUploadingImage,
+                isUploading = postViewModel.isUploadingFile,
+                enabled = !postViewModel.isUploadingImage,
                 tint = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier,
             ) {
