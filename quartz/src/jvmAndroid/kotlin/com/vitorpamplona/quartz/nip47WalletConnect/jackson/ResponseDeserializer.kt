@@ -24,9 +24,24 @@ import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
+import com.vitorpamplona.quartz.nip47WalletConnect.CancelHoldInvoiceSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.CreateConnectionSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.GetBalanceSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.GetBudgetSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.GetInfoSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.ListTransactionsSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.LookupInvoiceSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.MakeHoldInvoiceSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.MakeInvoiceSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.NwcError
+import com.vitorpamplona.quartz.nip47WalletConnect.NwcErrorResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.NwcMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceErrorResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.PayKeysendSuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.Response
+import com.vitorpamplona.quartz.nip47WalletConnect.SettleHoldInvoiceSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.SignMessageSuccessResponse
 import com.vitorpamplona.quartz.utils.asTextOrNull
 
 class ResponseDeserializer : StdDeserializer<Response>(Response::class.java) {
@@ -36,25 +51,86 @@ class ResponseDeserializer : StdDeserializer<Response>(Response::class.java) {
     ): Response? {
         val jsonObject: JsonNode = jp.codec.readTree(jp)
         val resultType = jsonObject.get("result_type")?.asTextOrNull()
+        val hasError = jsonObject.has("error") && !jsonObject.get("error").isNull
+        val hasResult = jsonObject.has("result") && !jsonObject.get("result").isNull
 
-        if (resultType == "pay_invoice") {
-            val result = jsonObject.get("result")
-            val error = jsonObject.get("error")
-            if (result != null) {
-                return jp.codec.treeToValue(jsonObject, PayInvoiceSuccessResponse::class.java)
-            }
-            if (error != null) {
-                return jp.codec.treeToValue(jsonObject, PayInvoiceErrorResponse::class.java)
-            }
-        } else {
-            // tries to guess
-            if (jsonObject.get("result")?.get("preimage") != null) {
-                return jp.codec.treeToValue(jsonObject, PayInvoiceSuccessResponse::class.java)
-            }
-            if (jsonObject.get("error")?.get("code") != null) {
-                return jp.codec.treeToValue(jsonObject, PayInvoiceErrorResponse::class.java)
+        if (hasError) {
+            return when (resultType) {
+                NwcMethod.PAY_INVOICE -> {
+                    jp.codec.treeToValue(jsonObject, PayInvoiceErrorResponse::class.java)
+                }
+
+                else -> {
+                    val error = jp.codec.treeToValue(jsonObject.get("error"), NwcError::class.java)
+                    NwcErrorResponse(resultType ?: "", error)
+                }
             }
         }
+
+        if (hasResult || resultType != null) {
+            return when (resultType) {
+                NwcMethod.PAY_INVOICE -> {
+                    jp.codec.treeToValue(jsonObject, PayInvoiceSuccessResponse::class.java)
+                }
+
+                NwcMethod.PAY_KEYSEND -> {
+                    jp.codec.treeToValue(jsonObject, PayKeysendSuccessResponse::class.java)
+                }
+
+                NwcMethod.MAKE_INVOICE -> {
+                    jp.codec.treeToValue(jsonObject, MakeInvoiceSuccessResponse::class.java)
+                }
+
+                NwcMethod.LOOKUP_INVOICE -> {
+                    jp.codec.treeToValue(jsonObject, LookupInvoiceSuccessResponse::class.java)
+                }
+
+                NwcMethod.LIST_TRANSACTIONS -> {
+                    jp.codec.treeToValue(jsonObject, ListTransactionsSuccessResponse::class.java)
+                }
+
+                NwcMethod.GET_BALANCE -> {
+                    jp.codec.treeToValue(jsonObject, GetBalanceSuccessResponse::class.java)
+                }
+
+                NwcMethod.GET_INFO -> {
+                    jp.codec.treeToValue(jsonObject, GetInfoSuccessResponse::class.java)
+                }
+
+                NwcMethod.GET_BUDGET -> {
+                    jp.codec.treeToValue(jsonObject, GetBudgetSuccessResponse::class.java)
+                }
+
+                NwcMethod.SIGN_MESSAGE -> {
+                    jp.codec.treeToValue(jsonObject, SignMessageSuccessResponse::class.java)
+                }
+
+                NwcMethod.CREATE_CONNECTION -> {
+                    jp.codec.treeToValue(jsonObject, CreateConnectionSuccessResponse::class.java)
+                }
+
+                NwcMethod.MAKE_HOLD_INVOICE -> {
+                    jp.codec.treeToValue(jsonObject, MakeHoldInvoiceSuccessResponse::class.java)
+                }
+
+                NwcMethod.CANCEL_HOLD_INVOICE -> {
+                    jp.codec.treeToValue(jsonObject, CancelHoldInvoiceSuccessResponse::class.java)
+                }
+
+                NwcMethod.SETTLE_HOLD_INVOICE -> {
+                    jp.codec.treeToValue(jsonObject, SettleHoldInvoiceSuccessResponse::class.java)
+                }
+
+                else -> {
+                    // tries to guess for backward compatibility
+                    if (jsonObject.get("result")?.get("preimage") != null) {
+                        return jp.codec.treeToValue(jsonObject, PayInvoiceSuccessResponse::class.java)
+                    }
+                    null
+                }
+            }
+        }
+
         return null
     }
 }

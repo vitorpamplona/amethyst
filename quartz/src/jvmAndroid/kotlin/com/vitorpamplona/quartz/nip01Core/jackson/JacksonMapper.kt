@@ -52,8 +52,10 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.jackson.BunkerRequestDeseriali
 import com.vitorpamplona.quartz.nip46RemoteSigner.jackson.BunkerRequestSerializer
 import com.vitorpamplona.quartz.nip46RemoteSigner.jackson.BunkerResponseDeserializer
 import com.vitorpamplona.quartz.nip46RemoteSigner.jackson.BunkerResponseSerializer
+import com.vitorpamplona.quartz.nip47WalletConnect.Notification
 import com.vitorpamplona.quartz.nip47WalletConnect.Request
 import com.vitorpamplona.quartz.nip47WalletConnect.Response
+import com.vitorpamplona.quartz.nip47WalletConnect.jackson.NotificationDeserializer
 import com.vitorpamplona.quartz.nip47WalletConnect.jackson.RequestDeserializer
 import com.vitorpamplona.quartz.nip47WalletConnect.jackson.ResponseDeserializer
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.Rumor
@@ -93,6 +95,7 @@ class JacksonMapper {
                         // nip 47
                         .addDeserializer(Response::class.java, ResponseDeserializer())
                         .addDeserializer(Request::class.java, RequestDeserializer())
+                        .addDeserializer(Notification::class.java, NotificationDeserializer())
                         // nip 46
                         .addDeserializer(BunkerMessage::class.java, BunkerMessageDeserializer())
                         .addSerializer(BunkerRequest::class.java, BunkerRequestSerializer())

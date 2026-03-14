@@ -30,7 +30,7 @@ import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
-class LnZapPaymentRequestEvent(
+class NwcNotificationEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
@@ -40,59 +40,47 @@ class LnZapPaymentRequestEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
     override fun isContentEncoded() = true
 
-    fun walletServicePubKey() = tags.firstOrNull { it.size > 1 && it[0] == "p" }?.get(1)
+    fun clientPubKey() = tags.firstOrNull { it.size > 1 && it[0] == "p" }?.get(1)
 
-    fun talkingWith(oneSideHex: String): HexKey = if (pubKey == oneSideHex) walletServicePubKey() ?: pubKey else pubKey
+    fun talkingWith(oneSideHex: String): HexKey = if (pubKey == oneSideHex) clientPubKey() ?: pubKey else pubKey
 
-    fun canDecrypt(signer: NostrSigner) = pubKey == signer.pubKey || walletServicePubKey() == signer.pubKey
+    fun canDecrypt(signer: NostrSigner) = pubKey == signer.pubKey || clientPubKey() == signer.pubKey
 
-    suspend fun decryptRequest(signer: NostrSigner): Request {
+    suspend fun decryptNotification(signer: NostrSigner): Notification {
         if (!canDecrypt(signer)) throw SignerExceptions.UnauthorizedDecryptionException()
         val jsonText = signer.decrypt(content, talkingWith(signer.pubKey))
-        return OptimizedJsonMapper.fromJsonTo<Request>(jsonText)
+        return OptimizedJsonMapper.fromJsonTo<Notification>(jsonText)
     }
 
-    fun encryptionScheme() = tags.firstOrNull { it.size > 1 && it[0] == "encryption" }?.get(1)
-
     companion object {
-        const val KIND = 23194
-        const val ALT = "NWC request"
+        const val KIND = 23197
+        const val LEGACY_KIND = 23196
+        const val ALT = "Wallet notification"
 
-        suspend fun create(
-            lnInvoice: String,
-            walletServicePubkey: String,
+        /**
+         * Creates an NWC notification event (server-side).
+         * Uses NIP-44 encryption (kind 23197).
+         *
+         * @param notification the notification to send
+         * @param clientPubkey the client's public key to encrypt to
+         * @param signer the wallet service signer
+         * @param createdAt event timestamp
+         */
+        suspend fun createNotification(
+            notification: Notification,
+            clientPubkey: HexKey,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-        ): LnZapPaymentRequestEvent =
-            createRequest(
-                PayInvoiceMethod.create(lnInvoice),
-                walletServicePubkey,
-                signer,
-                createdAt,
-            )
-
-        suspend fun createRequest(
-            request: Request,
-            walletServicePubkey: String,
-            signer: NostrSigner,
-            createdAt: Long = TimeUtils.now(),
-            useNip44: Boolean = false,
-        ): LnZapPaymentRequestEvent {
-            val serializedRequest = OptimizedJsonMapper.toJson(request)
+        ): NwcNotificationEvent {
+            val serialized = OptimizedJsonMapper.toJson(notification)
 
             val tags =
-                if (useNip44) {
-                    arrayOf(arrayOf("p", walletServicePubkey), AltTag.assemble(ALT), arrayOf("encryption", "nip44_v2"))
-                } else {
-                    arrayOf(arrayOf("p", walletServicePubkey), AltTag.assemble(ALT))
-                }
+                arrayOf(
+                    arrayOf("p", clientPubkey),
+                    AltTag.assemble(ALT),
+                )
 
-            val encrypted =
-                if (useNip44) {
-                    signer.nip44Encrypt(serializedRequest, walletServicePubkey)
-                } else {
-                    signer.nip04Encrypt(serializedRequest, walletServicePubkey)
-                }
+            val encrypted = signer.nip44Encrypt(serialized, clientPubkey)
 
             return signer.sign(createdAt, KIND, tags, encrypted)
         }
