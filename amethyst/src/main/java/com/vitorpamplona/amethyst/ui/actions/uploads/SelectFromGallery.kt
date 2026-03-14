@@ -92,7 +92,6 @@ fun SelectFromGallery(
 @Composable
 fun SelectSingleFromGallery(
     isUploading: Boolean,
-    enabled: Boolean = true,
     tint: Color,
     modifier: Modifier,
     onImageChosen: (SelectedMedia) -> Unit,
@@ -109,7 +108,7 @@ fun SelectSingleFromGallery(
         )
     }
 
-    GallerySelectButton(isUploading, enabled, tint, modifier) { showGallerySelect = true }
+    GallerySelectButton(isUploading, true, tint, modifier) { showGallerySelect = true }
 }
 
 @Composable

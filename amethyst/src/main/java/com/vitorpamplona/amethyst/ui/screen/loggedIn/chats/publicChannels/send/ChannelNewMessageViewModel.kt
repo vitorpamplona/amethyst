@@ -134,8 +134,8 @@ open class ChannelNewMessageViewModel :
 
     var message by mutableStateOf(TextFieldValue(""))
     var urlPreview by mutableStateOf<String?>(null)
-    var isUploadingImage by mutableStateOf(false)
-    var isUploadingFile by mutableStateOf(false)
+    val isUploadingImage: Boolean get() = uploadState?.isUploadingImage ?: false
+    val isUploadingFile: Boolean get() = uploadState?.isUploadingFile ?: false
 
     var userSuggestions: UserSuggestionState? = null
     var userSuggestionsMainMessage: UserSuggestionAnchor? = null
@@ -339,9 +339,9 @@ open class ChannelNewMessageViewModel :
             val myMultiOrchestrator = uploadState.multiOrchestrator ?: return@launch
 
             if (myMultiOrchestrator.hasNonMedia()) {
-                isUploadingFile = true
+                uploadState.isUploadingFile = true
             } else {
-                isUploadingImage = true
+                uploadState.isUploadingImage = true
             }
 
             val results =
@@ -383,8 +383,8 @@ open class ChannelNewMessageViewModel :
                 onError(stringRes(context, R.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
             }
 
-            isUploadingImage = false
-            isUploadingFile = false
+            uploadState.isUploadingImage = false
+            uploadState.isUploadingFile = false
         }
     }
 
@@ -552,8 +552,7 @@ open class ChannelNewMessageViewModel :
         userSuggestions?.reset()
         userSuggestionsMainMessage = null
 
-        isUploadingImage = false
-        isUploadingFile = false
+        uploadState?.reset()
 
         iMetaAttachments.reset()
 
