@@ -55,7 +55,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.Nip05State
-import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.commons.util.toShortDisplay
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
@@ -67,7 +66,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.DrawPlayName
 import com.vitorpamplona.amethyst.ui.note.ObserveAndRenderNIP05VerifiedSymbol
-import com.vitorpamplona.amethyst.ui.note.toShortDisplay
+import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.apps.DisplayAppRecommendations

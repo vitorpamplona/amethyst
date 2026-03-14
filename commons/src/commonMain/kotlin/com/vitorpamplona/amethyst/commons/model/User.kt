@@ -144,8 +144,7 @@ class User(
 
     private var lastSeen: MutableStateFlow<Long?>? = null
 
-    fun lastSeenFlow(): MutableStateFlow<Long?> =
-        lastSeen ?: MutableStateFlow<Long?>(null).also { lastSeen = it }
+    fun lastSeenFlow(): MutableStateFlow<Long?> = lastSeen ?: MutableStateFlow<Long?>(null).also { lastSeen = it }
 
     fun updateLastSeen(timestamp: Long) {
         val flow = lastSeen ?: MutableStateFlow<Long?>(null).also { lastSeen = it }
