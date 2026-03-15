@@ -54,7 +54,7 @@ jobs:
           name: FDroid Debug APK
           path: amethyst/build/outputs/apk/fdroid/debug/amethyst-fdroid-universal-debug.apk
 
-      - name: Build APK (gradle)
+      - name: Build Benchmark APK (gradle)
         run: ./gradlew assembleBenchmark
 
       - name: Upload Play APK Benchmark
