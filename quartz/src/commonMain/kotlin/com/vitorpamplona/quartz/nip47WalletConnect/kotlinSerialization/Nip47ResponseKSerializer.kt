@@ -229,7 +229,7 @@ object Nip47ResponseKSerializer : KSerializer<Response> {
         return ListTransactionsSuccessResponse(
             result?.let {
                 ListTransactionsSuccessResponse.ListTransactionsResult(
-                    transactions = it["transactions"]?.jsonArray?.map { t -> parseTransaction(t.jsonObject) },
+                    transactions = it["transactions"]?.jsonArray?.mapNotNull { t -> parseTransaction(t.jsonObject) },
                     total_count = it["total_count"]?.jsonPrimitive?.longOrNull,
                 )
             },

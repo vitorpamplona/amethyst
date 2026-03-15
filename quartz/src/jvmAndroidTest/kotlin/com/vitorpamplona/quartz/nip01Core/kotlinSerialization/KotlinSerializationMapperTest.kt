@@ -487,7 +487,7 @@ class KotlinSerializationMapperTest {
         val json = """["EOSE","sub123"]"""
         val deserialized = KotlinSerializationMapper.fromJsonToMessage(json)
         assertTrue(deserialized is EoseMessage)
-        assertEquals("sub123", (deserialized as EoseMessage).subId)
+        assertEquals("sub123", (deserialized).subId)
     }
 
     @Test
@@ -573,12 +573,12 @@ class KotlinSerializationMapperTest {
         val jacksonJson = JacksonMapper.toJson(cmd)
         val kotlinDeserialized = KotlinSerializationMapper.fromJsonToCommand(jacksonJson)
         assertTrue(kotlinDeserialized is CloseCmd)
-        assertEquals("sub1", (kotlinDeserialized as CloseCmd).subId)
+        assertEquals("sub1", (kotlinDeserialized).subId)
 
         val kotlinJson = KotlinSerializationMapper.toJson(cmd)
         val jacksonDeserialized = JacksonMapper.fromJsonToCommand(kotlinJson)
         assertTrue(jacksonDeserialized is CloseCmd)
-        assertEquals("sub1", (jacksonDeserialized as CloseCmd).subId)
+        assertEquals("sub1", (jacksonDeserialized).subId)
     }
 
     // =========================================================================
@@ -603,7 +603,7 @@ class KotlinSerializationMapperTest {
 
     @Test
     fun crossDeserializationBunkerRequest() {
-        val req = BunkerRequest("id1", "sign_event", arrayOf("eventJson"))
+        val req = BunkerRequest("id1", "sign_event", arrayOf("{\"created_at\":1234,\"kind\":1,\"tags\":[],\"content\":\"This is an unsigned event.\"}"))
         val jacksonJson = JacksonMapper.toJson(req)
         val kotlinDeserialized = KotlinSerializationMapper.fromJsonTo<BunkerRequest>(jacksonJson)
         assertEquals(req.id, kotlinDeserialized.id)

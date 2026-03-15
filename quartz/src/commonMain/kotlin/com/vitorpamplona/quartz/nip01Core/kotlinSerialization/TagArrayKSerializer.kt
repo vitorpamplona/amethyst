@@ -79,11 +79,9 @@ object TagArrayKSerializer : KSerializer<TagArray> {
                     innerList.add(s.jsonPrimitive.content)
                 }
             }
-            @Suppress("UNCHECKED_CAST")
-            outerList.add(innerList.toArray(arrayOfNulls<String>(innerList.size)) as Array<String>)
+            outerList.add(innerList.toTypedArray())
         }
-        @Suppress("UNCHECKED_CAST")
-        return outerList.toArray(arrayOfNulls<Array<String>>(outerList.size)) as TagArray
+        return outerList.toTypedArray()
     }
 
     fun serializeToElement(value: TagArray): JsonArray =
