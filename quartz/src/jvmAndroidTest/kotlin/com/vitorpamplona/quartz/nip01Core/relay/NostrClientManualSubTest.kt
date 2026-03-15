@@ -81,7 +81,7 @@ class NostrClientManualSubTest : BaseNostrClientTest() {
 
             client.openReqSubscription(mySubId, filters, listener)
 
-            withTimeoutOrNull(30000) {
+            withTimeoutOrNull(10000) {
                 while (events.size < 101) {
                     val event = resultChannel.receive()
                     events.add(event)
