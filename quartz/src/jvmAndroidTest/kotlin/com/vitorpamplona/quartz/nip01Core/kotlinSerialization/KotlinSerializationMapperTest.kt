@@ -603,7 +603,7 @@ class KotlinSerializationMapperTest {
 
     @Test
     fun crossDeserializationBunkerRequest() {
-        val req = BunkerRequest("id1", "sign_event", arrayOf("eventJson"))
+        val req = BunkerRequest("id1", "sign_event", arrayOf("{\"created_at\":1234,\"kind\":1,\"tags\":[],\"content\":\"This is an unsigned event.\"}"))
         val jacksonJson = JacksonMapper.toJson(req)
         val kotlinDeserialized = KotlinSerializationMapper.fromJsonTo<BunkerRequest>(jacksonJson)
         assertEquals(req.id, kotlinDeserialized.id)
