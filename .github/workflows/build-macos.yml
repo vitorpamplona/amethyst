@@ -1,4 +1,4 @@
-name: Test/Build Desktop
+name: Test/Build macOS
 
 on:
   pull_request:
@@ -8,11 +8,7 @@ on:
 
 jobs:
   build:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [macos-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
+    runs-on: macos-latest
     timeout-minutes: 45
 
     steps:
@@ -48,24 +44,16 @@ jobs:
         run: ./gradlew :desktopApp:packageDistributionForCurrentOS --no-daemon
 
       - name: Upload macOS distribution
-        if: matrix.os == 'macos-latest'
         uses: actions/upload-artifact@v4
         with:
           name: Desktop-macOS
           path: desktopApp/build/compose/binaries/main/dmg/*.dmg
 
-      - name: Upload Windows distribution
-        if: matrix.os == 'windows-latest'
-        uses: actions/upload-artifact@v4
-        with:
-          name: Desktop-Windows
-          path: desktopApp/build/compose/binaries/main/msi/*.msi
-
       - name: Upload Test Results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Test-Reports-${{ runner.os }}
+          name: Test-Reports-macOS
           path: |
             quartz/build/reports/tests/
             commons/build/reports/tests/

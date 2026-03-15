@@ -1,0 +1,60 @@
+name: Test/Build Windows
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: 21
+
+      - name: Cache gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Test Quartz (gradle)
+        run: ./gradlew :quartz:jvmTest --no-daemon
+
+      - name: Test Commons (gradle)
+        run: ./gradlew :commons:jvmTest --no-daemon
+
+      - name: Test Desktop (gradle)
+        run: ./gradlew :desktopApp:test --no-daemon
+
+      - name: Build Desktop distribution (gradle)
+        run: ./gradlew :desktopApp:packageDistributionForCurrentOS --no-daemon
+
+      - name: Upload Windows distribution
+        uses: actions/upload-artifact@v4
+        with:
+          name: Desktop-Windows
+          path: desktopApp/build/compose/binaries/main/msi/*.msi
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Test-Reports-Windows
+          path: |
+            quartz/build/reports/tests/
+            commons/build/reports/tests/
+            desktopApp/build/reports/tests/
