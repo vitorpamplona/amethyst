@@ -33,6 +33,7 @@ import androidx.compose.material3.adaptive.layout.ListDetailPaneScaffoldRole
 import androidx.compose.material3.adaptive.navigation.NavigableListDetailPaneScaffold
 import androidx.compose.material3.adaptive.navigation.rememberListDetailPaneScaffoldNavigator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.Amethyst
@@ -43,6 +44,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable
@@ -64,9 +66,12 @@ private fun AdaptiveSettingsListDetail(
     nav: INav,
 ) {
     val navigator = rememberListDetailPaneScaffoldNavigator<Route>()
+    val scope = rememberCoroutineScope()
 
     BackHandler(navigator.canNavigateBack()) {
-        navigator.navigateBack()
+        scope.launch {
+            navigator.navigateBack()
+        }
     }
 
     Scaffold(
@@ -81,7 +86,9 @@ private fun AdaptiveSettingsListDetail(
                     AllSettingsContent(
                         accountViewModel = accountViewModel,
                         onSettingsNav = { route ->
-                            navigator.navigateTo(ListDetailPaneScaffoldRole.Detail, route)
+                            scope.launch {
+                                navigator.navigateTo(ListDetailPaneScaffoldRole.Detail, route)
+                            }
                         },
                     )
                 }
