@@ -21,10 +21,8 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.ScrollState
-import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -33,9 +31,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DragIndicator
+import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -57,32 +56,17 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.ReactionRowAction
 import com.vitorpamplona.amethyst.model.ReactionRowItem
-import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
-import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
-
-@Composable
-@Preview(device = "spec:width=2100px,height=2340px,dpi=440")
-fun ReactionsSettingsScreenPreview() {
-    ThemeComparisonRow {
-        ReactionsSettingsScreen(
-            mockAccountViewModel(),
-            EmptyNav(),
-        )
-    }
-}
 
 @Composable
 fun ReactionsSettingsScreen(
@@ -103,7 +87,7 @@ fun ReactionsSettingsScreen(
 @Composable
 fun ReactionsSettingsContent(accountViewModel: AccountViewModel) {
     val reactionRowItems by accountViewModel.reactionRowItemsFlow().collectAsStateWithLifecycle()
-    var items by remember(reactionRowItems) { mutableStateOf(reactionRowItems.toList()) }
+    var items by remember(reactionRowItems) { mutableStateOf(reactionRowItems.toMutableList()) }
 
     fun save(newItems: List<ReactionRowItem>) {
         items = newItems.toMutableList()
@@ -113,14 +97,13 @@ fun ReactionsSettingsContent(accountViewModel: AccountViewModel) {
     var draggedItemIndex by remember { mutableIntStateOf(-1) }
     var dragOffset by remember { mutableFloatStateOf(0f) }
     val itemHeights = remember { mutableStateMapOf<Int, Float>() }
-    val isDragging = draggedItemIndex >= 0
-    val scrollState = remember { ScrollState(0) }
 
     Column(
         modifier =
             Modifier
                 .fillMaxSize()
-                .verticalScroll(scrollState, enabled = !isDragging),
+                .padding(horizontal = Size20dp)
+                .verticalScroll(rememberScrollState()),
     ) {
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -128,7 +111,7 @@ fun ReactionsSettingsContent(accountViewModel: AccountViewModel) {
             text = stringRes(R.string.reactions_settings_description),
             style = MaterialTheme.typography.bodyMedium,
             color = Color.Gray,
-            modifier = Modifier.padding(bottom = 16.dp, start = Size20dp, end = Size20dp),
+            modifier = Modifier.padding(bottom = 16.dp),
         )
 
         items.forEachIndexed { index, item ->
@@ -223,7 +206,7 @@ fun ReactionsSettingsContent(accountViewModel: AccountViewModel) {
                         .zIndex(if (isDragging) 1f else 0f),
             )
             if (index < items.lastIndex) {
-                HorizontalDivider(modifier = Modifier.padding(horizontal = Size20dp))
+                HorizontalDivider()
             }
         }
 
@@ -262,18 +245,7 @@ private fun ReactionRowItemCard(
                         scaleX = 1.02f
                         scaleY = 1.02f
                     }
-                }.padding(vertical = 8.dp, horizontal = Size20dp)
-                .pointerInput(Unit) {
-                    detectDragGestures(
-                        onDragStart = { onDragStart() },
-                        onDrag = { change, dragAmount ->
-                            change.consume()
-                            onDrag(dragAmount.y)
-                        },
-                        onDragEnd = { onDragEnd() },
-                        onDragCancel = { onDragCancel() },
-                    )
-                },
+                }.padding(vertical = 8.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -296,17 +268,25 @@ private fun ReactionRowItemCard(
                 )
             }
 
-            Box(
-                modifier = Modifier.size(32.dp),
-                contentAlignment = Alignment.CenterEnd,
-            ) {
-                Icon(
-                    Icons.Default.DragIndicator,
-                    contentDescription = stringRes(R.string.reactions_settings_reorder),
-                    modifier = Modifier.size(28.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+            Icon(
+                Icons.Default.DragHandle,
+                contentDescription = stringRes(R.string.reactions_settings_reorder),
+                modifier =
+                    Modifier
+                        .size(32.dp)
+                        .pointerInput(Unit) {
+                            detectDragGesturesAfterLongPress(
+                                onDragStart = { onDragStart() },
+                                onDrag = { change, dragAmount ->
+                                    change.consume()
+                                    onDrag(dragAmount.y)
+                                },
+                                onDragEnd = { onDragEnd() },
+                                onDragCancel = { onDragCancel() },
+                            )
+                        },
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
 
         Spacer(modifier = Modifier.height(8.dp))
