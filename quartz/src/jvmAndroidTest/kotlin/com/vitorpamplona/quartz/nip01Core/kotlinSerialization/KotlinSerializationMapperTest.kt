@@ -487,7 +487,7 @@ class KotlinSerializationMapperTest {
         val json = """["EOSE","sub123"]"""
         val deserialized = KotlinSerializationMapper.fromJsonToMessage(json)
         assertTrue(deserialized is EoseMessage)
-        assertEquals("sub123", (deserialized as EoseMessage).subId)
+        assertEquals("sub123", (deserialized).subId)
     }
 
     @Test
@@ -573,12 +573,12 @@ class KotlinSerializationMapperTest {
         val jacksonJson = JacksonMapper.toJson(cmd)
         val kotlinDeserialized = KotlinSerializationMapper.fromJsonToCommand(jacksonJson)
         assertTrue(kotlinDeserialized is CloseCmd)
-        assertEquals("sub1", (kotlinDeserialized as CloseCmd).subId)
+        assertEquals("sub1", (kotlinDeserialized).subId)
 
         val kotlinJson = KotlinSerializationMapper.toJson(cmd)
         val jacksonDeserialized = JacksonMapper.fromJsonToCommand(kotlinJson)
         assertTrue(jacksonDeserialized is CloseCmd)
-        assertEquals("sub1", (jacksonDeserialized as CloseCmd).subId)
+        assertEquals("sub1", (jacksonDeserialized).subId)
     }
 
     // =========================================================================
