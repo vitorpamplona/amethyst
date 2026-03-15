@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.dm
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.CountFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -39,7 +40,7 @@ class DMRelayListViewModel : BasicRelaySetupInfoModel() {
     override fun countFilters(relayUrl: NormalizedRelayUrl): List<CountFilter> =
         listOf(
             CountFilter(
-                label = "events",
+                label = R.string.dms,
                 filter =
                     Filter(
                         kinds = listOf(GiftWrapEvent.KIND, PrivateDmEvent.KIND),

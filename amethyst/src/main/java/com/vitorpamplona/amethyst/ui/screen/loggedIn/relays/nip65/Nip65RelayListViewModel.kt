@@ -24,6 +24,7 @@ import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.replace
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -136,7 +137,7 @@ class Nip65RelayListViewModel : ViewModel() {
                         RelayCountResult(
                             listOf(
                                 RelayCountResult.CountEntry(
-                                    label = "events",
+                                    label = R.string.events,
                                     count = result.count,
                                     approximate = result.approximate,
                                 ),
@@ -155,7 +156,7 @@ class Nip65RelayListViewModel : ViewModel() {
                         RelayCountResult(
                             listOf(
                                 RelayCountResult.CountEntry(
-                                    label = "events",
+                                    label = R.string.events,
                                     count = result.count,
                                     approximate = result.approximate,
                                 ),

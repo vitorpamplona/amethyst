@@ -1802,4 +1802,8 @@
     <string name="uptime">%1$d%% uptime</string>
     <string name="namecoin_settings">Namecoin Settings</string>
     <string name="ots_explorer_settings">Bitcoin Explorer (OTS)</string>
+    <string name="events">events</string>
+    <string name="dms">DMs</string>
+    <string name="profiles">profiles</string>
+    <string name="relay_settings_lower">relay settings</string>
 </resources>

@@ -29,13 +29,13 @@ data class RelayCountResult(
 ) {
     @Immutable
     data class CountEntry(
-        val label: String,
+        val label: Int,
         val count: Int,
         val approximate: Boolean = false,
     )
 }
 
 data class CountFilter(
-    val label: String,
+    val label: Int,
     val filter: Filter,
 )

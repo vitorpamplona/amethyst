@@ -69,9 +69,9 @@ fun RelayEventCountRow(
 
             val countText =
                 if (entry.approximate) {
-                    "~${countToHumanReadable(entry.count, entry.label)}"
+                    "~${countToHumanReadable(entry.count, stringRes(entry.label))}"
                 } else {
-                    countToHumanReadable(entry.count, entry.label)
+                    countToHumanReadable(entry.count, stringRes(entry.label))
                 }
 
             Row(

@@ -89,7 +89,7 @@ abstract class BasicRelaySetupInfoModel : ViewModel() {
     private fun loadCounts() {
         _countResults.value = emptyMap()
 
-        val client = Amethyst.instance.client
+        val client = account.client
         val relayList = _relays.value
         if (relayList.isEmpty()) return
 
