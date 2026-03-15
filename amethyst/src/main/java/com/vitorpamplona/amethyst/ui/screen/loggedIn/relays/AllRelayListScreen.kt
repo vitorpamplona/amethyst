@@ -60,7 +60,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.blocked.BlockedRelay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.blocked.renderBlockedItems
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.broadcast.BroadcastRelayListViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.broadcast.renderBroadcastItems
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayEventCountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayExporter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayListCollection
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayZipExporter
@@ -110,13 +109,6 @@ fun AllRelayListScreen(
     val indexerViewModel: IndexerRelayListViewModel = viewModel()
     val proxyViewModel: ProxyRelayListViewModel = viewModel()
     val relayFeedsViewModel: RelayFeedsListViewModel = viewModel()
-    val outboxCountViewModel: RelayEventCountViewModel = viewModel(key = "outboxCount")
-    val inboxCountViewModel: RelayEventCountViewModel = viewModel(key = "inboxCount")
-    val dmCountViewModel: RelayEventCountViewModel = viewModel(key = "dmCount")
-    val privateHomeCountViewModel: RelayEventCountViewModel = viewModel(key = "privateHomeCount")
-    val proxyCountViewModel: RelayEventCountViewModel = viewModel(key = "proxyCount")
-    val indexerCountViewModel: RelayEventCountViewModel = viewModel(key = "indexerCount")
-    val searchCountViewModel: RelayEventCountViewModel = viewModel(key = "searchCount")
 
     dmViewModel.init(accountViewModel)
     nip65ViewModel.init(accountViewModel)
@@ -159,13 +151,6 @@ fun AllRelayListScreen(
         indexerViewModel,
         proxyViewModel,
         relayFeedsViewModel,
-        outboxCountViewModel,
-        inboxCountViewModel,
-        dmCountViewModel,
-        privateHomeCountViewModel,
-        proxyCountViewModel,
-        indexerCountViewModel,
-        searchCountViewModel,
         accountViewModel,
         nav,
     )
@@ -186,13 +171,6 @@ fun MappedAllRelayListView(
     indexerViewModel: IndexerRelayListViewModel,
     proxyViewModel: ProxyRelayListViewModel,
     relayFeedsViewModel: RelayFeedsListViewModel,
-    outboxCountViewModel: RelayEventCountViewModel,
-    inboxCountViewModel: RelayEventCountViewModel,
-    dmCountViewModel: RelayEventCountViewModel,
-    privateHomeCountViewModel: RelayEventCountViewModel,
-    proxyCountViewModel: RelayEventCountViewModel,
-    indexerCountViewModel: RelayEventCountViewModel,
-    searchCountViewModel: RelayEventCountViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -210,71 +188,13 @@ fun MappedAllRelayListView(
     val proxyRelays by proxyViewModel.relays.collectAsStateWithLifecycle()
     val relayFeedsFeedState by relayFeedsViewModel.relays.collectAsStateWithLifecycle()
 
-    val outboxCounts by outboxCountViewModel.counts.collectAsStateWithLifecycle()
-    val inboxCounts by inboxCountViewModel.counts.collectAsStateWithLifecycle()
-    val dmCounts by dmCountViewModel.counts.collectAsStateWithLifecycle()
-    val privateHomeCounts by privateHomeCountViewModel.counts.collectAsStateWithLifecycle()
-    val proxyCounts by proxyCountViewModel.counts.collectAsStateWithLifecycle()
-    val indexerCounts by indexerCountViewModel.counts.collectAsStateWithLifecycle()
-    val searchCounts by searchCountViewModel.counts.collectAsStateWithLifecycle()
-
-    val userPubKey = accountViewModel.account.pubKey
-
-    LaunchedEffect(homeFeedState) {
-        if (homeFeedState.isNotEmpty()) {
-            outboxCountViewModel.queryCountsForRelays(
-                RelayEventCountViewModel.authorCountFilters(userPubKey, homeFeedState.map { it.relay }),
-            )
-        }
-    }
-
-    LaunchedEffect(notifFeedState) {
-        if (notifFeedState.isNotEmpty()) {
-            inboxCountViewModel.queryCountsForRelays(
-                RelayEventCountViewModel.pTagCountFilters(userPubKey, notifFeedState.map { it.relay }),
-            )
-        }
-    }
-
-    LaunchedEffect(dmFeedState) {
-        if (dmFeedState.isNotEmpty()) {
-            dmCountViewModel.queryCountsForRelays(
-                RelayEventCountViewModel.dmCountFilters(userPubKey, dmFeedState.map { it.relay }),
-            )
-        }
-    }
-
-    LaunchedEffect(privateOutboxFeedState) {
-        if (privateOutboxFeedState.isNotEmpty()) {
-            privateHomeCountViewModel.queryCountsForRelays(
-                RelayEventCountViewModel.authorCountFilters(userPubKey, privateOutboxFeedState.map { it.relay }),
-            )
-        }
-    }
-
-    LaunchedEffect(proxyRelays) {
-        if (proxyRelays.isNotEmpty()) {
-            proxyCountViewModel.queryCountsForRelays(
-                RelayEventCountViewModel.totalCountFilters(proxyRelays.map { it.relay }),
-            )
-        }
-    }
-
-    LaunchedEffect(indexerRelays) {
-        if (indexerRelays.isNotEmpty()) {
-            indexerCountViewModel.queryCountsForRelays(
-                RelayEventCountViewModel.indexerCountFilters(indexerRelays.map { it.relay }),
-            )
-        }
-    }
-
-    LaunchedEffect(searchFeedState) {
-        if (searchFeedState.isNotEmpty()) {
-            searchCountViewModel.queryCountsForRelays(
-                RelayEventCountViewModel.totalCountFilters(searchFeedState.map { it.relay }),
-            )
-        }
-    }
+    val outboxCounts by nip65ViewModel.homeCountResults.collectAsStateWithLifecycle()
+    val inboxCounts by nip65ViewModel.notifCountResults.collectAsStateWithLifecycle()
+    val dmCounts by dmViewModel.countResults.collectAsStateWithLifecycle()
+    val privateHomeCounts by privateOutboxViewModel.countResults.collectAsStateWithLifecycle()
+    val proxyCounts by proxyViewModel.countResults.collectAsStateWithLifecycle()
+    val indexerCounts by indexerViewModel.countResults.collectAsStateWithLifecycle()
+    val searchCounts by searchViewModel.countResults.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
