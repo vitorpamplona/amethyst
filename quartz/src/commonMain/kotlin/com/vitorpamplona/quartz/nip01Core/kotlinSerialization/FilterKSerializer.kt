@@ -27,18 +27,15 @@ import kotlinx.serialization.descriptors.buildClassSerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.JsonDecoder
-import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonEncoder
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.int
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.long
 import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
 
@@ -120,6 +117,7 @@ object FilterKSerializer : KSerializer<Filter> {
                 key.startsWith("#") -> {
                     tags[key.substring(1)] = value.jsonArray.mapNotNull { it.jsonPrimitive.content }
                 }
+
                 key.startsWith("&") -> {
                     tagsAll[key.substring(1)] = value.jsonArray.mapNotNull { it.jsonPrimitive.content }
                 }

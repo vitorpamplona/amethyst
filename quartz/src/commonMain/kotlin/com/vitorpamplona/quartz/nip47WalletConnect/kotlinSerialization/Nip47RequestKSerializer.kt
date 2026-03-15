@@ -68,9 +68,7 @@ object Nip47RequestKSerializer : KSerializer<Request> {
     override fun serialize(
         encoder: Encoder,
         value: Request,
-    ) {
-        throw UnsupportedOperationException("NIP-47 Request serialization not supported")
-    }
+    ): Unit = throw UnsupportedOperationException("NIP-47 Request serialization not supported")
 
     override fun deserialize(decoder: Decoder): Request {
         val jsonDecoder = decoder as JsonDecoder

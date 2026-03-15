@@ -34,8 +34,6 @@ import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.JsonDecoder
 import kotlinx.serialization.json.JsonEncoder
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonObject
@@ -87,7 +85,7 @@ object EventKSerializer : KSerializer<Event> {
         var createdAt: Long = 0
         var kind: Kind = 0
         var tags: TagArray = emptyTagArray
-        var content: String = ""
+        var content = ""
         var sig: HexKey = ""
 
         for ((key, value) in jsonObject) {

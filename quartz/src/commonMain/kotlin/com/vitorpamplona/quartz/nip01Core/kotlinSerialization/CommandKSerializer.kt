@@ -59,15 +59,19 @@ object CommandKSerializer : KSerializer<Command> {
                             add(FilterKSerializer.serializeToElement(filter))
                         }
                     }
+
                     is EventCmd -> {
                         add(EventKSerializer.serializeToElement(value.event))
                     }
+
                     is CloseCmd -> {
                         add(JsonPrimitive(value.subId))
                     }
+
                     is AuthCmd -> {
                         add(EventKSerializer.serializeToElement(value.event))
                     }
+
                     is CountCmd -> {
                         add(JsonPrimitive(value.queryId))
                         for (filter in value.filters) {
@@ -93,6 +97,7 @@ object CommandKSerializer : KSerializer<Command> {
                     }
                 ReqCmd(subId, filters)
             }
+
             CountCmd.LABEL -> {
                 val queryId = array[1].jsonPrimitive.content
                 val filters =
@@ -101,16 +106,22 @@ object CommandKSerializer : KSerializer<Command> {
                     }
                 CountCmd(queryId, filters)
             }
+
             EventCmd.LABEL -> {
                 EventCmd(EventKSerializer.deserializeFromElement(array[1].jsonObject))
             }
+
             CloseCmd.LABEL -> {
                 CloseCmd(array[1].jsonPrimitive.content)
             }
+
             AuthCmd.LABEL -> {
                 AuthCmd(EventKSerializer.deserializeFromElement(array[1].jsonObject) as RelayAuthEvent)
             }
-            else -> throw IllegalArgumentException("Message $type is not supported")
+
+            else -> {
+                throw IllegalArgumentException("Message $type is not supported")
+            }
         }
     }
 }

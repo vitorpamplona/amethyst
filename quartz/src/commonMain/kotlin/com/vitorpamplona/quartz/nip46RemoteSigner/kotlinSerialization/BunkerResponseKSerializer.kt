@@ -81,8 +81,14 @@ object BunkerResponseKSerializer : KSerializer<BunkerResponse> {
 
         if (result != null) {
             when (result) {
-                BunkerResponseAck.RESULT -> return BunkerResponseAck.parse(id, result, error)
-                BunkerResponsePong.RESULT -> return BunkerResponsePong.parse(id, result, error)
+                BunkerResponseAck.RESULT -> {
+                    return BunkerResponseAck.parse(id, result, error)
+                }
+
+                BunkerResponsePong.RESULT -> {
+                    return BunkerResponsePong.parse(id, result, error)
+                }
+
                 else -> {
                     if (result.length == 64 && Hex.isHex(result)) {
                         return BunkerResponsePublicKey.parse(id, result)

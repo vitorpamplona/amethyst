@@ -60,9 +60,7 @@ object Nip47ResponseKSerializer : KSerializer<Response> {
     override fun serialize(
         encoder: Encoder,
         value: Response,
-    ) {
-        throw UnsupportedOperationException("NIP-47 Response serialization not supported")
-    }
+    ): Unit = throw UnsupportedOperationException("NIP-47 Response serialization not supported")
 
     override fun deserialize(decoder: Decoder): Response {
         val jsonDecoder = decoder as JsonDecoder
@@ -73,7 +71,10 @@ object Nip47ResponseKSerializer : KSerializer<Response> {
 
         if (hasError) {
             return when (resultType) {
-                NwcMethod.PAY_INVOICE -> parsePayInvoiceError(jsonObject)
+                NwcMethod.PAY_INVOICE -> {
+                    parsePayInvoiceError(jsonObject)
+                }
+
                 else -> {
                     val error = jsonObject["error"]?.jsonObject?.let { parseNwcError(it) }
                     NwcErrorResponse(resultType ?: "", error)
@@ -83,19 +84,58 @@ object Nip47ResponseKSerializer : KSerializer<Response> {
 
         if (hasResult || resultType != null) {
             return when (resultType) {
-                NwcMethod.PAY_INVOICE -> parsePayInvoiceSuccess(jsonObject)
-                NwcMethod.PAY_KEYSEND -> parsePayKeysendSuccess(jsonObject)
-                NwcMethod.MAKE_INVOICE -> MakeInvoiceSuccessResponse(parseTransaction(jsonObject["result"]?.jsonObject))
-                NwcMethod.LOOKUP_INVOICE -> LookupInvoiceSuccessResponse(parseTransaction(jsonObject["result"]?.jsonObject))
-                NwcMethod.LIST_TRANSACTIONS -> parseListTransactionsSuccess(jsonObject)
-                NwcMethod.GET_BALANCE -> parseGetBalanceSuccess(jsonObject)
-                NwcMethod.GET_INFO -> parseGetInfoSuccess(jsonObject)
-                NwcMethod.GET_BUDGET -> parseGetBudgetSuccess(jsonObject)
-                NwcMethod.SIGN_MESSAGE -> parseSignMessageSuccess(jsonObject)
-                NwcMethod.CREATE_CONNECTION -> parseCreateConnectionSuccess(jsonObject)
-                NwcMethod.MAKE_HOLD_INVOICE -> MakeHoldInvoiceSuccessResponse(parseTransaction(jsonObject["result"]?.jsonObject))
-                NwcMethod.CANCEL_HOLD_INVOICE -> CancelHoldInvoiceSuccessResponse()
-                NwcMethod.SETTLE_HOLD_INVOICE -> SettleHoldInvoiceSuccessResponse()
+                NwcMethod.PAY_INVOICE -> {
+                    parsePayInvoiceSuccess(jsonObject)
+                }
+
+                NwcMethod.PAY_KEYSEND -> {
+                    parsePayKeysendSuccess(jsonObject)
+                }
+
+                NwcMethod.MAKE_INVOICE -> {
+                    MakeInvoiceSuccessResponse(parseTransaction(jsonObject["result"]?.jsonObject))
+                }
+
+                NwcMethod.LOOKUP_INVOICE -> {
+                    LookupInvoiceSuccessResponse(parseTransaction(jsonObject["result"]?.jsonObject))
+                }
+
+                NwcMethod.LIST_TRANSACTIONS -> {
+                    parseListTransactionsSuccess(jsonObject)
+                }
+
+                NwcMethod.GET_BALANCE -> {
+                    parseGetBalanceSuccess(jsonObject)
+                }
+
+                NwcMethod.GET_INFO -> {
+                    parseGetInfoSuccess(jsonObject)
+                }
+
+                NwcMethod.GET_BUDGET -> {
+                    parseGetBudgetSuccess(jsonObject)
+                }
+
+                NwcMethod.SIGN_MESSAGE -> {
+                    parseSignMessageSuccess(jsonObject)
+                }
+
+                NwcMethod.CREATE_CONNECTION -> {
+                    parseCreateConnectionSuccess(jsonObject)
+                }
+
+                NwcMethod.MAKE_HOLD_INVOICE -> {
+                    MakeHoldInvoiceSuccessResponse(parseTransaction(jsonObject["result"]?.jsonObject))
+                }
+
+                NwcMethod.CANCEL_HOLD_INVOICE -> {
+                    CancelHoldInvoiceSuccessResponse()
+                }
+
+                NwcMethod.SETTLE_HOLD_INVOICE -> {
+                    SettleHoldInvoiceSuccessResponse()
+                }
+
                 else -> {
                     // backward compatibility: guess by result content
                     val resultObj = jsonObject["result"]?.jsonObject
@@ -111,13 +151,14 @@ object Nip47ResponseKSerializer : KSerializer<Response> {
     }
 
     private fun parseNwcError(obj: JsonObject): NwcError {
-        val code = obj["code"]?.jsonPrimitive?.content?.let { codeName ->
-            try {
-                NwcErrorCode.valueOf(codeName)
-            } catch (_: Exception) {
-                null
+        val code =
+            obj["code"]?.jsonPrimitive?.content?.let { codeName ->
+                try {
+                    NwcErrorCode.valueOf(codeName)
+                } catch (_: Exception) {
+                    null
+                }
             }
-        }
         return NwcError(code, obj["message"]?.jsonPrimitive?.content)
     }
 
@@ -157,13 +198,14 @@ object Nip47ResponseKSerializer : KSerializer<Response> {
         return PayInvoiceErrorResponse(
             error?.let {
                 PayInvoiceErrorResponse.PayInvoiceErrorParams(
-                    code = it["code"]?.jsonPrimitive?.content?.let { codeName ->
-                        try {
-                            NwcErrorCode.valueOf(codeName)
-                        } catch (_: Exception) {
-                            null
-                        }
-                    },
+                    code =
+                        it["code"]?.jsonPrimitive?.content?.let { codeName ->
+                            try {
+                                NwcErrorCode.valueOf(codeName)
+                            } catch (_: Exception) {
+                                null
+                            }
+                        },
                     message = it["message"]?.jsonPrimitive?.content,
                 )
             },
