@@ -85,7 +85,7 @@ object EventKSerializer : KSerializer<Event> {
         var createdAt: Long = 0
         var kind: Kind = 0
         var tags: TagArray = emptyTagArray
-        var content: String = ""
+        var content = ""
         var sig: HexKey = ""
 
         for ((key, value) in jsonObject) {
