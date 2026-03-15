@@ -1052,6 +1052,14 @@
     <string name="route_global">Globális</string>
     <string name="route_video">Rövidek</string>
     <string name="route_chess">Sakk</string>
+    <string name="wallet">Pénztárca</string>
+    <string name="wallet_send">Küldés</string>
+    <string name="wallet_receive">Fogadás</string>
+    <string name="wallet_transactions">Tranzakciók</string>
+    <string name="wallet_setup">Pénztárca beállítása</string>
+    <string name="wallet_paste_invoice">Egy BOLT-11 számla beillesztése</string>
+    <string name="wallet_pay">Fizetés</string>
+    <string name="wallet_payment_success">Sikeres fizetés</string>
     <string name="route_security_filters">Biztonsági szűrők</string>
     <string name="route_import_follows">Követettek importálása</string>
     <string name="new_post">Új bejegyzés</string>
