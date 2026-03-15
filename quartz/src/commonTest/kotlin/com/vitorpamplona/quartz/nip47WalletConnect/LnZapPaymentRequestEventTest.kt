@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip47WalletConnect
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import kotlinx.coroutines.test.runTest
@@ -44,7 +45,7 @@ class LnZapPaymentRequestEventTest {
             val walletKeyPair = KeyPair()
             val clientSigner = NostrSignerInternal(clientKeyPair)
             val walletServicePubkey: HexKey =
-                walletKeyPair.pubKey.joinToString("") { "%02x".format(it) }
+                walletKeyPair.pubKey.toHexKey()
 
             val event =
                 LnZapPaymentRequestEvent.create(
@@ -68,7 +69,7 @@ class LnZapPaymentRequestEventTest {
             val walletKeyPair = KeyPair()
             val clientSigner = NostrSignerInternal(clientKeyPair)
             val walletServicePubkey: HexKey =
-                walletKeyPair.pubKey.joinToString("") { "%02x".format(it) }
+                walletKeyPair.pubKey.toHexKey()
 
             val request = GetBalanceMethod.create()
             val event =
@@ -92,7 +93,7 @@ class LnZapPaymentRequestEventTest {
             val walletKeyPair = KeyPair()
             val clientSigner = NostrSignerInternal(clientKeyPair)
             val walletServicePubkey: HexKey =
-                walletKeyPair.pubKey.joinToString("") { "%02x".format(it) }
+                walletKeyPair.pubKey.toHexKey()
 
             val request = GetBalanceMethod.create()
             val event =
@@ -116,7 +117,7 @@ class LnZapPaymentRequestEventTest {
             val clientSigner = NostrSignerInternal(clientKeyPair)
             val walletSigner = NostrSignerInternal(walletKeyPair)
             val walletServicePubkey: HexKey =
-                walletKeyPair.pubKey.joinToString("") { "%02x".format(it) }
+                walletKeyPair.pubKey.toHexKey()
 
             val event =
                 LnZapPaymentRequestEvent.create(
@@ -139,7 +140,7 @@ class LnZapPaymentRequestEventTest {
             val clientSigner = NostrSignerInternal(clientKeyPair)
             val walletSigner = NostrSignerInternal(walletKeyPair)
             val walletServicePubkey: HexKey =
-                walletKeyPair.pubKey.joinToString("") { "%02x".format(it) }
+                walletKeyPair.pubKey.toHexKey()
 
             val request = MakeInvoiceMethod.create(5000L, "test payment")
             val event =
@@ -163,7 +164,7 @@ class LnZapPaymentRequestEventTest {
             val clientSigner = NostrSignerInternal(clientKeyPair)
             val walletSigner = NostrSignerInternal(walletKeyPair)
             val walletServicePubkey: HexKey =
-                walletKeyPair.pubKey.joinToString("") { "%02x".format(it) }
+                walletKeyPair.pubKey.toHexKey()
 
             val request = GetInfoMethod.create()
             val event =
@@ -191,7 +192,7 @@ class LnZapPaymentRequestEventTest {
             val walletSigner = NostrSignerInternal(walletKeyPair)
             val otherSigner = NostrSignerInternal(otherKeyPair)
             val walletServicePubkey: HexKey =
-                walletKeyPair.pubKey.joinToString("") { "%02x".format(it) }
+                walletKeyPair.pubKey.toHexKey()
 
             val event =
                 LnZapPaymentRequestEvent.create(

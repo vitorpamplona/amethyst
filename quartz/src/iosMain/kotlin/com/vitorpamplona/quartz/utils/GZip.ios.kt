@@ -45,6 +45,33 @@ import platform.zlib.z_stream
 
 @OptIn(ExperimentalForeignApi::class)
 actual object GZip {
+    // Standard gzip stream for empty content (header + empty deflate block + CRC32/size trailer)
+    private val GZIP_EMPTY =
+        byteArrayOf(
+            0x1F,
+            0x8B.toByte(),
+            0x08,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x03,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+        )
+
+    private fun isGzipEmpty(data: ByteArray): Boolean = data.size == GZIP_EMPTY.size && data.contentEquals(GZIP_EMPTY)
+
     /**
      * Compresses [content] into a gzip byte array using zlib's deflateInit2 with
      * windowBits=31 (MAX_WBITS + 16), which requests the gzip wrapper format.
@@ -53,6 +80,7 @@ actual object GZip {
      */
     actual fun compress(content: String): ByteArray {
         val input = content.encodeToByteArray()
+        if (input.isEmpty()) return GZIP_EMPTY.copyOf()
 
         return memScoped {
             val stream = alloc<z_stream>()
@@ -97,6 +125,8 @@ actual object GZip {
      * Output is collected in fixed-size chunks to handle arbitrary output size.
      */
     actual fun decompress(content: ByteArray): String {
+        if (content.isEmpty() || isGzipEmpty(content)) return ""
+
         val chunks = ArrayList<ByteArray>()
         val chunkSize = maxOf(content.size * 4, 4096)
 

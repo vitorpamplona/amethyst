@@ -44,5 +44,7 @@ actual object OptimizedJsonMapper {
 
     actual inline fun <reified T : OptimizedSerializable> fromJsonTo(json: String): T = TODO("Not yet implemented")
 
+    actual inline fun <reified T : OptimizedSerializable> fromJsonToOrNull(json: String): T? = TODO("Not yet implemented")
+
     actual fun toJson(value: OptimizedSerializable): String = TODO("Not yet implemented")
 }

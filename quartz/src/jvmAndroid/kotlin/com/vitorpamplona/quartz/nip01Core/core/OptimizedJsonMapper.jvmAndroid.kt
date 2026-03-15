@@ -80,5 +80,12 @@ actual object OptimizedJsonMapper {
             throw IllegalArgumentException(e.message, e)
         }
 
+    actual inline fun <reified T : OptimizedSerializable> fromJsonToOrNull(json: String): T? =
+        try {
+            JacksonMapper.fromJsonToOrNull<T>(json)
+        } catch (e: com.fasterxml.jackson.core.JsonParseException) {
+            null
+        }
+
     actual fun toJson(value: OptimizedSerializable): String = JacksonMapper.toJson(value)
 }
