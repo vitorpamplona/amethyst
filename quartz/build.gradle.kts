@@ -162,6 +162,16 @@ kotlin {
 
     tasks.withType<Test>().configureEach {
         environment("TEST_RESOURCES_ROOT", rootDir)
+        // Make libsodium available for host JVM tests (installed via brew)
+        systemProperty("jna.library.path", "/opt/homebrew/lib:/usr/local/lib")
+    }
+
+    // Exclude tests that require Android-specific APIs (android.net.Uri) from host JVM tests.
+    // These tests pass in jvmTest (using java.net.URI) and androidDeviceTest.
+    afterEvaluate {
+        tasks.named<Test>("testAndroidHostTest") {
+            exclude("**/Nip47WalletConnectTest.class")
+        }
     }
 
     tasks.withType<KotlinNativeTest>().configureEach {
@@ -276,6 +286,10 @@ kotlin {
             dependencies {
                 // Bitcoin secp256k1 bindings
                 implementation(libs.secp256k1.kmp.jni.jvm)
+
+                // LibSodium for host JVM tests (need Java variant, not Android)
+                implementation(libs.lazysodium.java)
+                implementation(libs.jna)
             }
         }
 

@@ -128,6 +128,13 @@ class JacksonMapper {
 
         inline fun <reified T : OptimizedSerializable> fromJsonTo(json: String): T = mapper.readValue<T>(json)
 
+        inline fun <reified T : OptimizedSerializable> fromJsonToOrNull(json: String): T? =
+            try {
+                mapper.readValue<T>(json)
+            } catch (e: com.fasterxml.jackson.databind.RuntimeJsonMappingException) {
+                null
+            }
+
         inline fun <reified T : OptimizedSerializable> fromJsonTo(json: InputStream): T = mapper.readValue<T>(json)
 
         fun toJson(event: Event): String = EventManualSerializer.toJson(event.id, event.pubKey, event.createdAt, event.kind, event.tags, event.content, event.sig)

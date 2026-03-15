@@ -396,7 +396,7 @@ class RequestTest {
     @Test
     fun testUnknownMethodReturnsNull() {
         val json = """{"method":"unknown_method","params":{}}"""
-        val request = OptimizedJsonMapper.fromJsonTo<Request>(json)
+        val request = OptimizedJsonMapper.fromJsonToOrNull<Request>(json)
         assertNull(request)
     }
 }

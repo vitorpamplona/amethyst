@@ -47,6 +47,8 @@ expect object OptimizedJsonMapper {
 
     inline fun <reified T : OptimizedSerializable> fromJsonTo(json: String): T
 
+    inline fun <reified T : OptimizedSerializable> fromJsonToOrNull(json: String): T?
+
     fun toJson(value: OptimizedSerializable): String
 }
 
