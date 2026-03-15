@@ -590,6 +590,7 @@
     <string name="follow_list_global">Global</string>
     <string name="follow_list_chess">Chess</string>
     <string name="follow_list_mute_list">Mute List</string>
+    <string name="follow_list_wot">Web of Trust</string>
 
     <string name="follow_sets">Follow Lists</string>
     <string name="follow_sets_explainer">These are follow lists designed for your own usage. You can follow users privately or publicly</string>

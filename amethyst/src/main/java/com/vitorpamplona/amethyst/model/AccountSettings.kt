@@ -152,6 +152,9 @@ sealed class TopFilter(
     class Relay(
         val url: String,
     ) : TopFilter("Relay/$url")
+
+    @Serializable
+    object WoT : TopFilter(" Web of Trust ")
 }
 
 @Stable
