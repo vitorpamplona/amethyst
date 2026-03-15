@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.nip51Lists.peopleList.PeopleList
 import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
+import com.vitorpamplona.amethyst.service.uploads.MetadataStripper
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
 import com.vitorpamplona.amethyst.service.uploads.nip96.Nip96Uploader
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
@@ -137,7 +138,13 @@ class FollowPackMetadataViewModel : ViewModel() {
     ) {
         onUploading(true)
 
-        val compResult = MediaCompressor().compress(galleryUri.uri, galleryUri.mimeType, CompressorQuality.MEDIUM, context.applicationContext)
+        val strippedUri =
+            if (account.settings.stripLocationOnUpload) {
+                MetadataStripper().strip(galleryUri.uri, galleryUri.mimeType, context.applicationContext)
+            } else {
+                galleryUri.uri
+            }
+        val compResult = MediaCompressor().compress(strippedUri, galleryUri.mimeType, CompressorQuality.MEDIUM, context.applicationContext)
 
         try {
             val result =
