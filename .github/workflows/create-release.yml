@@ -6,7 +6,24 @@ on:
     - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
 
 jobs:
-  deploy:
+  create-release:
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+    steps:
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: true
+
+  deploy-android:
+    needs: create-release
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -21,8 +38,10 @@ jobs:
       - name: Cache gradle
         uses: actions/cache@v4
         with:
-          path: ~/.gradle/caches
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
 
@@ -38,7 +57,6 @@ jobs:
           keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
           keyPassword: ${{ secrets.KEY_PASSWORD }}
         env:
-          # override default build-tools version (29.0.3) -- optional
           BUILD_TOOLS_VERSION: "36.0.0"
 
       - name: Sign AAB (F-Droid)
@@ -50,7 +68,6 @@ jobs:
           keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
           keyPassword: ${{ secrets.KEY_PASSWORD }}
         env:
-          # override default build-tools version (29.0.3) -- optional
           BUILD_TOOLS_VERSION: "36.0.0"
 
       - name: Build APK
@@ -65,7 +82,6 @@ jobs:
           keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
           keyPassword: ${{ secrets.KEY_PASSWORD }}
         env:
-          # override default build-tools version (29.0.3) -- optional
           BUILD_TOOLS_VERSION: "36.0.0"
 
       - name: Sign APK (F-Droid)
@@ -77,19 +93,7 @@ jobs:
           keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
           keyPassword: ${{ secrets.KEY_PASSWORD }}
         env:
-          # override default build-tools version (29.0.3) -- optional
           BUILD_TOOLS_VERSION: "36.0.0"
-
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          draft: false
-          prerelease: true
 
       # Google Play APK
       - name: Upload Play APK Universal Asset
@@ -98,7 +102,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
           asset_path: amethyst/build/outputs/apk/play/release/amethyst-play-universal-release-unsigned-signed.apk
           asset_name: amethyst-googleplay-universal-${{ github.ref_name }}.apk
           asset_content_type: application/zip
@@ -109,7 +113,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
           asset_path: amethyst/build/outputs/apk/play/release/amethyst-play-x86-release-unsigned-signed.apk
           asset_name: amethyst-googleplay-x86-${{ github.ref_name }}.apk
           asset_content_type: application/zip
@@ -120,7 +124,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
           asset_path: amethyst/build/outputs/apk/play/release/amethyst-play-x86_64-release-unsigned-signed.apk
           asset_name: amethyst-googleplay-x86_64-${{ github.ref_name }}.apk
           asset_content_type: application/zip
@@ -131,7 +135,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
           asset_path: amethyst/build/outputs/apk/play/release/amethyst-play-arm64-v8a-release-unsigned-signed.apk
           asset_name: amethyst-googleplay-arm64-v8a-${{ github.ref_name }}.apk
           asset_content_type: application/zip
@@ -142,7 +146,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
           asset_path: amethyst/build/outputs/apk/play/release/amethyst-play-armeabi-v7a-release-unsigned-signed.apk
           asset_name: amethyst-googleplay-armeabi-v7a-${{ github.ref_name }}.apk
           asset_content_type: application/zip
@@ -154,7 +158,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
           asset_path: amethyst/build/outputs/apk/fdroid/release/amethyst-fdroid-universal-release-unsigned-signed.apk
           asset_name: amethyst-fdroid-universal-${{ github.ref_name }}.apk
           asset_content_type: application/zip
@@ -165,7 +169,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
           asset_path: amethyst/build/outputs/apk/fdroid/release/amethyst-fdroid-x86-release-unsigned-signed.apk
           asset_name: amethyst-fdroid-x86-${{ github.ref_name }}.apk
           asset_content_type: application/zip
@@ -176,7 +180,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
           asset_path: amethyst/build/outputs/apk/fdroid/release/amethyst-fdroid-x86_64-release-unsigned-signed.apk
           asset_name: amethyst-fdroid-x86_64-${{ github.ref_name }}.apk
           asset_content_type: application/zip
@@ -187,7 +191,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
           asset_path: amethyst/build/outputs/apk/fdroid/release/amethyst-fdroid-arm64-v8a-release-unsigned-signed.apk
           asset_name: amethyst-fdroid-arm64-v8a-${{ github.ref_name }}.apk
           asset_content_type: application/zip
@@ -198,12 +202,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
           asset_path: amethyst/build/outputs/apk/fdroid/release/amethyst-fdroid-armeabi-v7a-release-unsigned-signed.apk
           asset_name: amethyst-fdroid-armeabi-v7a-${{ github.ref_name }}.apk
           asset_content_type: application/zip
-
-
 
       # Google Play AAB
       - name: Upload Google Play AAB Asset
@@ -212,7 +214,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
           asset_path: amethyst/build/outputs/bundle/playRelease/amethyst-play-release.aab
           asset_name: amethyst-googleplay-${{ github.ref_name }}.aab
           asset_content_type: application/zip
@@ -224,7 +226,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
           asset_path: amethyst/build/outputs/bundle/fdroidRelease/amethyst-fdroid-release.aab
           asset_name: amethyst-fdroid-${{ github.ref_name }}.aab
           asset_content_type: application/zip
@@ -236,3 +238,65 @@ jobs:
           ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.SONATYPE_PASSWORD }}
           ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_PRIVATE_KEY }}
           ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
+
+  deploy-desktop:
+    needs: create-release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            task: packageDeb
+            format: deb
+            platform: linux
+          - os: macos-latest
+            task: packageDmg
+            format: dmg
+            platform: macos
+          - os: windows-latest
+            task: packageMsi
+            format: msi
+            platform: windows
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: 21
+
+      - name: Cache gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Build Desktop Distribution
+        run: ./gradlew :desktopApp:${{ matrix.task }}
+
+      - name: Find distribution file
+        id: find-dist
+        run: |
+          DIST_FILE=$(find desktopApp/build/compose/binaries/main/${{ matrix.format }} -type f \( -name "*.deb" -o -name "*.dmg" -o -name "*.msi" \) | head -1)
+          echo "path=$DIST_FILE" >> $GITHUB_OUTPUT
+          echo "name=$(basename $DIST_FILE)" >> $GITHUB_OUTPUT
+
+      - name: Upload Desktop Distribution to Release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ${{ steps.find-dist.outputs.path }}
+          asset_name: amethyst-desktop-${{ matrix.platform }}-${{ github.ref_name }}.${{ matrix.format }}
+          asset_content_type: application/octet-stream
