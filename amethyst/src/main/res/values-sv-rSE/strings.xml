@@ -1054,6 +1054,7 @@
     <string name="wallet_no_connection">Ingen plånbok ansluten</string>
     <string name="wallet_no_connection_description">Konfigurera en Nostr Wallet Connect (NWC)-anslutning i dina zap-inställningar för att använda plånboken.</string>
     <string name="wallet_setup">Konfigurera plånbok</string>
+    <string name="wallet_sats">sats</string>
     <string name="wallet_paste_invoice">Klistra in en BOLT-11-faktura</string>
     <string name="wallet_pay">Betala</string>
     <string name="wallet_payment_success">Betalning lyckades</string>
@@ -1303,6 +1304,7 @@
     <string name="translate_to_description">Välj det språk du vill översätta innehållet till.</string>
     <string name="language_preferences">Språkvisningsinställningar</string>
     <string name="language_preferences_description">Välj för varje översatt språkpar vilket språk som ska visas först.</string>
+    <string name="language_preference_pair">%1$s → %2$s</string>
     <string name="search_languages">Sök språk</string>
     <string name="add_language">Lägg till språk</string>
     <string name="add_language_pair">Lägg till språkpar</string>
@@ -1549,4 +1551,5 @@
     <string name="select_all">Välj alla</string>
     <string name="uptime">%1$d%% drifttid</string>
     <string name="namecoin_settings">Namecoin-inställningar</string>
+    <string name="ots_explorer_settings">Bitcoin Explorer (OTS)</string>
 </resources>

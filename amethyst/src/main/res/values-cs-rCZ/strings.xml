@@ -1055,6 +1055,7 @@
     <string name="wallet_no_connection">Žádná peněženka není připojena</string>
     <string name="wallet_no_connection_description">Nastavte připojení Nostr Wallet Connect (NWC) v nastavení zapů, abyste mohli peněženku používat.</string>
     <string name="wallet_setup">Nastavit peněženku</string>
+    <string name="wallet_sats">sats</string>
     <string name="wallet_paste_invoice">Vložte fakturu BOLT-11</string>
     <string name="wallet_pay">Zaplatit</string>
     <string name="wallet_payment_success">Platba úspěšná</string>
@@ -1304,6 +1305,7 @@
     <string name="translate_to_description">Vyberte jazyk, do kterého chcete obsah přeložit.</string>
     <string name="language_preferences">Předvolby zobrazení jazyka</string>
     <string name="language_preferences_description">Pro každý přeložený jazykový pár zvolte, který jazyk zobrazit jako první.</string>
+    <string name="language_preference_pair">%1$s → %2$s</string>
     <string name="search_languages">Hledat jazyky</string>
     <string name="add_language">Přidat jazyk</string>
     <string name="add_language_pair">Přidat jazykový pár</string>
