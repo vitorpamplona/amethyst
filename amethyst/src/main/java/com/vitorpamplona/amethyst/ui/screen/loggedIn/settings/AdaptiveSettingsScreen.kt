@@ -112,18 +112,58 @@ private fun SettingsDetailContent(
     nav: INav,
 ) {
     when (route) {
-        is Route.EditRelays -> com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.AllRelayListScreen(accountViewModel, nav)
-        is Route.EditMediaServers -> com.vitorpamplona.amethyst.ui.actions.mediaServers.AllMediaServersScreen(accountViewModel, nav)
-        is Route.UpdateReactionType -> com.vitorpamplona.amethyst.ui.note.UpdateReactionTypeScreen(accountViewModel, nav)
-        is Route.UpdateZapAmount -> UpdateZapAmountScreen(accountViewModel, nav, route.nip47)
-        is Route.SecurityFilters -> SecurityFiltersScreen(accountViewModel, nav)
-        is Route.UserSettings -> UserSettingsScreen(accountViewModel, nav)
-        is Route.AccountBackup -> com.vitorpamplona.amethyst.ui.screen.loggedIn.keyBackup.AccountBackupScreen(accountViewModel, nav)
-        is Route.PrivacyOptions -> com.vitorpamplona.amethyst.ui.screen.loggedIn.privacy.PrivacyOptionsScreen(Amethyst.instance.torPrefs.value, nav)
-        is Route.NamecoinSettings -> NamecoinSettingsScreen(Amethyst.instance.namecoinPrefs, nav)
-        is Route.Settings -> SettingsScreen(accountViewModel, nav)
-        is Route.ReactionsSettings -> ReactionsSettingsScreen(accountViewModel, nav)
-        else -> SettingsDetailPlaceholder()
+        is Route.EditRelays -> {
+            com.vitorpamplona.amethyst.ui.screen.loggedIn.relays
+                .AllRelayListScreen(accountViewModel, nav)
+        }
+
+        is Route.EditMediaServers -> {
+            com.vitorpamplona.amethyst.ui.actions.mediaServers
+                .AllMediaServersScreen(accountViewModel, nav)
+        }
+
+        is Route.UpdateReactionType -> {
+            com.vitorpamplona.amethyst.ui.note
+                .UpdateReactionTypeScreen(accountViewModel, nav)
+        }
+
+        is Route.UpdateZapAmount -> {
+            UpdateZapAmountScreen(accountViewModel, nav, route.nip47)
+        }
+
+        is Route.SecurityFilters -> {
+            SecurityFiltersScreen(accountViewModel, nav)
+        }
+
+        is Route.UserSettings -> {
+            UserSettingsScreen(accountViewModel, nav)
+        }
+
+        is Route.AccountBackup -> {
+            com.vitorpamplona.amethyst.ui.screen.loggedIn.keyBackup
+                .AccountBackupScreen(accountViewModel, nav)
+        }
+
+        is Route.PrivacyOptions -> {
+            com.vitorpamplona.amethyst.ui.screen.loggedIn.privacy
+                .PrivacyOptionsScreen(Amethyst.instance.torPrefs.value, nav)
+        }
+
+        is Route.NamecoinSettings -> {
+            NamecoinSettingsScreen(Amethyst.instance.namecoinPrefs, nav)
+        }
+
+        is Route.Settings -> {
+            SettingsScreen(accountViewModel, nav)
+        }
+
+        is Route.ReactionsSettings -> {
+            ReactionsSettingsScreen(accountViewModel, nav)
+        }
+
+        else -> {
+            SettingsDetailPlaceholder()
+        }
     }
 }
 

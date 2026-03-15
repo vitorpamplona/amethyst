@@ -35,13 +35,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
-import androidx.navigation.NavBackStackEntry
-import androidx.navigation.NavDestination.Companion.hasRoute
-import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.core.net.toUri
 import androidx.core.util.Consumer
+import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.crashreports.DisplayCrashMessages
@@ -52,7 +52,6 @@ import com.vitorpamplona.amethyst.ui.broadcast.DisplayBroadcastProgress
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.components.toasts.DisplayErrorMessages
 import com.vitorpamplona.amethyst.ui.layouts.AdaptiveScaffold
-import com.vitorpamplona.amethyst.ui.layouts.isCompactWindow
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.navs.rememberNav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -159,196 +158,196 @@ fun AppNavigation(
                 enterTransition = { fadeIn(animationSpec = tween(200)) },
                 exitTransition = { fadeOut(animationSpec = tween(200)) },
             ) {
-            composable<Route.Home> { HomeScreen(accountViewModel, nav) }
-            composable<Route.Message> { MessagesScreen(accountViewModel, nav) }
-            composable<Route.Video> { VideoScreen(accountViewModel, nav) }
-            composable<Route.Discover> { DiscoverScreen(accountViewModel, nav) }
-            composable<Route.Notification> { NotificationScreen(accountViewModel, nav) }
-            composable<Route.Chess> { ChessLobbyScreen(accountViewModel, nav) }
+                composable<Route.Home> { HomeScreen(accountViewModel, nav) }
+                composable<Route.Message> { MessagesScreen(accountViewModel, nav) }
+                composable<Route.Video> { VideoScreen(accountViewModel, nav) }
+                composable<Route.Discover> { DiscoverScreen(accountViewModel, nav) }
+                composable<Route.Notification> { NotificationScreen(accountViewModel, nav) }
+                composable<Route.Chess> { ChessLobbyScreen(accountViewModel, nav) }
 
-            composableFromEnd<Route.Lists> { ListOfPeopleListsScreen(accountViewModel, nav) }
-            composableFromEndArgs<Route.MyPeopleListView> { PeopleListScreen(it.dTag, accountViewModel, nav) }
-            composableFromEndArgs<Route.MyFollowPackView> { FollowPackScreen(it.dTag, accountViewModel, nav) }
-            composableFromBottomArgs<Route.PeopleListManagement> { FollowListAndPackAndUserScreen(it.userToAdd, accountViewModel, nav) }
+                composableFromEnd<Route.Lists> { ListOfPeopleListsScreen(accountViewModel, nav) }
+                composableFromEndArgs<Route.MyPeopleListView> { PeopleListScreen(it.dTag, accountViewModel, nav) }
+                composableFromEndArgs<Route.MyFollowPackView> { FollowPackScreen(it.dTag, accountViewModel, nav) }
+                composableFromBottomArgs<Route.PeopleListManagement> { FollowListAndPackAndUserScreen(it.userToAdd, accountViewModel, nav) }
 
-            composableFromBottomArgs<Route.PeopleListMetadataEdit> { PeopleListMetadataScreen(it.dTag, accountViewModel, nav) }
-            composableFromBottomArgs<Route.FollowPackMetadataEdit> { FollowPackMetadataScreen(it.dTag, accountViewModel, nav) }
+                composableFromBottomArgs<Route.PeopleListMetadataEdit> { PeopleListMetadataScreen(it.dTag, accountViewModel, nav) }
+                composableFromBottomArgs<Route.FollowPackMetadataEdit> { FollowPackMetadataScreen(it.dTag, accountViewModel, nav) }
 
-            composableFromEnd<Route.BookmarkGroups> { ListOfBookmarkGroupsScreen(accountViewModel, nav) }
-            composableFromEndArgs<Route.BookmarkGroupView> { BookmarkGroupScreen(it.dTag, it.bookmarkType, accountViewModel, nav) }
-            composableFromBottomArgs<Route.BookmarkGroupMetadataEdit> { BookmarkGroupMetadataScreen(it.dTag, accountViewModel, nav) }
-            composableFromBottomArgs<Route.PostBookmarkManagement> { PostBookmarkListManagementScreen(it.postId, accountViewModel, nav) }
-            composableFromBottomArgs<Route.ArticleBookmarkManagement> { ArticleBookmarkListManagementScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
+                composableFromEnd<Route.BookmarkGroups> { ListOfBookmarkGroupsScreen(accountViewModel, nav) }
+                composableFromEndArgs<Route.BookmarkGroupView> { BookmarkGroupScreen(it.dTag, it.bookmarkType, accountViewModel, nav) }
+                composableFromBottomArgs<Route.BookmarkGroupMetadataEdit> { BookmarkGroupMetadataScreen(it.dTag, accountViewModel, nav) }
+                composableFromBottomArgs<Route.PostBookmarkManagement> { PostBookmarkListManagementScreen(it.postId, accountViewModel, nav) }
+                composableFromBottomArgs<Route.ArticleBookmarkManagement> { ArticleBookmarkListManagementScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
 
-            composableFromBottomArgs<Route.QRDisplay> { ShowQRScreen(it.pubkey, accountViewModel, nav) }
+                composableFromBottomArgs<Route.QRDisplay> { ShowQRScreen(it.pubkey, accountViewModel, nav) }
 
-            composableFromBottomArgs<Route.ManualZapSplitPayment> { PayViaIntentScreen(it.paymentId, accountViewModel, nav) }
+                composableFromBottomArgs<Route.ManualZapSplitPayment> { PayViaIntentScreen(it.paymentId, accountViewModel, nav) }
 
-            composableFromBottomArgs<Route.EditProfile> { NewUserMetadataScreen(nav, accountViewModel) }
-            composable<Route.Search> { SearchScreen(accountViewModel, nav) }
+                composableFromBottomArgs<Route.EditProfile> { NewUserMetadataScreen(nav, accountViewModel) }
+                composable<Route.Search> { SearchScreen(accountViewModel, nav) }
 
-            composableFromEnd<Route.AllSettings> { AdaptiveSettingsScreen(accountViewModel, nav) }
-            composableFromEnd<Route.AccountBackup> { AccountBackupScreen(accountViewModel, nav) }
-            composableFromEnd<Route.SecurityFilters> { SecurityFiltersScreen(accountViewModel, nav) }
-            composableFromEnd<Route.PrivacyOptions> { PrivacyOptionsScreen(Amethyst.instance.torPrefs.value, nav) }
-            composableFromEnd<Route.NamecoinSettings> { NamecoinSettingsScreen(Amethyst.instance.namecoinPrefs, nav) }
-            composableFromEnd<Route.Bookmarks> { BookmarkListScreen(accountViewModel, nav) }
-            composableFromEnd<Route.Drafts> { DraftListScreen(accountViewModel, nav) }
-            composableFromEnd<Route.Settings> { SettingsScreen(accountViewModel, nav) }
-            composableFromEnd<Route.UserSettings> { UserSettingsScreen(accountViewModel, nav) }
-            composableFromEnd<Route.ReactionsSettings> { ReactionsSettingsScreen(accountViewModel, nav) }
-            composableFromEnd<Route.ImportFollowsSelectUser> { ImportFollowListSelectUserScreen(accountViewModel, nav) }
-            composableFromEndArgs<Route.ImportFollowsPickFollows> {
-                ImportFollowListPickFollowsScreen(
-                    accountViewModel.getOrCreateAddressableNote(ContactListEvent.createAddress(it.userHex)),
-                    accountViewModel,
-                    nav,
-                )
-            }
+                composableFromEnd<Route.AllSettings> { AdaptiveSettingsScreen(accountViewModel, nav) }
+                composableFromEnd<Route.AccountBackup> { AccountBackupScreen(accountViewModel, nav) }
+                composableFromEnd<Route.SecurityFilters> { SecurityFiltersScreen(accountViewModel, nav) }
+                composableFromEnd<Route.PrivacyOptions> { PrivacyOptionsScreen(Amethyst.instance.torPrefs.value, nav) }
+                composableFromEnd<Route.NamecoinSettings> { NamecoinSettingsScreen(Amethyst.instance.namecoinPrefs, nav) }
+                composableFromEnd<Route.Bookmarks> { BookmarkListScreen(accountViewModel, nav) }
+                composableFromEnd<Route.Drafts> { DraftListScreen(accountViewModel, nav) }
+                composableFromEnd<Route.Settings> { SettingsScreen(accountViewModel, nav) }
+                composableFromEnd<Route.UserSettings> { UserSettingsScreen(accountViewModel, nav) }
+                composableFromEnd<Route.ReactionsSettings> { ReactionsSettingsScreen(accountViewModel, nav) }
+                composableFromEnd<Route.ImportFollowsSelectUser> { ImportFollowListSelectUserScreen(accountViewModel, nav) }
+                composableFromEndArgs<Route.ImportFollowsPickFollows> {
+                    ImportFollowListPickFollowsScreen(
+                        accountViewModel.getOrCreateAddressableNote(ContactListEvent.createAddress(it.userHex)),
+                        accountViewModel,
+                        nav,
+                    )
+                }
 
-            composableFromEndArgs<Route.Nip47NWCSetup> { NIP47SetupScreen(accountViewModel, nav, it.nip47) }
-            composableFromEndArgs<Route.UpdateZapAmount> { UpdateZapAmountScreen(accountViewModel, nav, it.nip47) }
-            composableFromEndArgs<Route.EditRelays> { AllRelayListScreen(accountViewModel, nav) }
-            composableFromEndArgs<Route.EditMediaServers> { AllMediaServersScreen(accountViewModel, nav) }
-            composableFromEndArgs<Route.UpdateReactionType> { UpdateReactionTypeScreen(accountViewModel, nav) }
+                composableFromEndArgs<Route.Nip47NWCSetup> { NIP47SetupScreen(accountViewModel, nav, it.nip47) }
+                composableFromEndArgs<Route.UpdateZapAmount> { UpdateZapAmountScreen(accountViewModel, nav, it.nip47) }
+                composableFromEndArgs<Route.EditRelays> { AllRelayListScreen(accountViewModel, nav) }
+                composableFromEndArgs<Route.EditMediaServers> { AllMediaServersScreen(accountViewModel, nav) }
+                composableFromEndArgs<Route.UpdateReactionType> { UpdateReactionTypeScreen(accountViewModel, nav) }
 
-            composableFromEndArgs<Route.ContentDiscovery> { DvmContentDiscoveryScreen(it.id, accountViewModel, nav) }
-            composableFromEndArgs<Route.Profile> { ProfileScreen(it.id, accountViewModel, nav) }
-            composableFromEndArgs<Route.Note> { ThreadScreen(it.id, accountViewModel, nav) }
-            composableFromEndArgs<Route.Hashtag> { HashtagScreen(it, accountViewModel, nav) }
-            composableFromEndArgs<Route.Geohash> { GeoHashScreen(it, accountViewModel, nav) }
-            composableFromEndArgs<Route.RelayFeed> { RelayFeedScreen(it, accountViewModel, nav) }
-            composableFromEndArgs<Route.ChessGame> { ChessGameScreen(it.gameId, accountViewModel, nav) }
-            composableFromEndArgs<Route.RelayInfo> { RelayInformationScreen(it.url, accountViewModel, nav) }
-            composableFromEndArgs<Route.Community> { CommunityScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
-            composableFromEndArgs<Route.FollowPack> { FollowPackFeedScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
+                composableFromEndArgs<Route.ContentDiscovery> { DvmContentDiscoveryScreen(it.id, accountViewModel, nav) }
+                composableFromEndArgs<Route.Profile> { ProfileScreen(it.id, accountViewModel, nav) }
+                composableFromEndArgs<Route.Note> { ThreadScreen(it.id, accountViewModel, nav) }
+                composableFromEndArgs<Route.Hashtag> { HashtagScreen(it, accountViewModel, nav) }
+                composableFromEndArgs<Route.Geohash> { GeoHashScreen(it, accountViewModel, nav) }
+                composableFromEndArgs<Route.RelayFeed> { RelayFeedScreen(it, accountViewModel, nav) }
+                composableFromEndArgs<Route.ChessGame> { ChessGameScreen(it.gameId, accountViewModel, nav) }
+                composableFromEndArgs<Route.RelayInfo> { RelayInformationScreen(it.url, accountViewModel, nav) }
+                composableFromEndArgs<Route.Community> { CommunityScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
+                composableFromEndArgs<Route.FollowPack> { FollowPackFeedScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
 
-            composableFromEndArgs<Route.Room> { ChatroomScreen(it.toKey(), it.message, it.replyId, it.draftId, it.expiresDays, accountViewModel, nav) }
-            composableFromEndArgs<Route.RoomByAuthor> { ChatroomByAuthorScreen(it.id, null, accountViewModel, nav) }
+                composableFromEndArgs<Route.Room> { ChatroomScreen(it.toKey(), it.message, it.replyId, it.draftId, it.expiresDays, accountViewModel, nav) }
+                composableFromEndArgs<Route.RoomByAuthor> { ChatroomByAuthorScreen(it.id, null, accountViewModel, nav) }
 
-            composableFromEndArgs<Route.PublicChatChannel> {
-                PublicChatChannelScreen(
-                    it.id,
-                    it.draftId?.let { hex -> accountViewModel.getNoteIfExists(hex) },
-                    it.replyTo?.let { hex -> accountViewModel.checkGetOrCreateNote(hex) },
-                    accountViewModel,
-                    nav,
-                )
-            }
+                composableFromEndArgs<Route.PublicChatChannel> {
+                    PublicChatChannelScreen(
+                        it.id,
+                        it.draftId?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                        it.replyTo?.let { hex -> accountViewModel.checkGetOrCreateNote(hex) },
+                        accountViewModel,
+                        nav,
+                    )
+                }
 
-            composableFromEndArgs<Route.LiveActivityChannel> {
-                LiveActivityChannelScreen(
-                    Address(it.kind, it.pubKeyHex, it.dTag),
-                    draft = it.draftId?.let { hex -> accountViewModel.getNoteIfExists(hex) },
-                    replyTo = it.replyTo?.let { hex -> accountViewModel.checkGetOrCreateNote(hex) },
-                    accountViewModel,
-                    nav,
-                )
-            }
-
-            composableFromEndArgs<Route.EphemeralChat> {
-                RelayUrlNormalizer.normalizeOrNull(it.relayUrl)?.let { relay ->
-                    EphemeralChatScreen(
-                        channelId = RoomId(it.id, relay),
+                composableFromEndArgs<Route.LiveActivityChannel> {
+                    LiveActivityChannelScreen(
+                        Address(it.kind, it.pubKeyHex, it.dTag),
                         draft = it.draftId?.let { hex -> accountViewModel.getNoteIfExists(hex) },
                         replyTo = it.replyTo?.let { hex -> accountViewModel.checkGetOrCreateNote(hex) },
+                        accountViewModel,
+                        nav,
+                    )
+                }
+
+                composableFromEndArgs<Route.EphemeralChat> {
+                    RelayUrlNormalizer.normalizeOrNull(it.relayUrl)?.let { relay ->
+                        EphemeralChatScreen(
+                            channelId = RoomId(it.id, relay),
+                            draft = it.draftId?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                            replyTo = it.replyTo?.let { hex -> accountViewModel.checkGetOrCreateNote(hex) },
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                        )
+                    }
+                }
+
+                composableFromBottomArgs<Route.ChannelMetadataEdit> { ChannelMetadataScreen(it.id, accountViewModel, nav) }
+                composableFromBottomArgs<Route.NewEphemeralChat> { NewEphemeralChatScreen(accountViewModel, nav) }
+                composableFromBottomArgs<Route.NewGroupDM> { NewGroupDMScreen(it.message, it.attachment, accountViewModel, nav) }
+
+                composableArgs<Route.EventRedirect> { LoadRedirectScreen(it.id, accountViewModel, nav) }
+
+                composableFromBottomArgs<Route.GeoPost> {
+                    GeoHashPostScreen(
+                        geohash = it.geohash,
+                        message = it.message,
+                        attachment = it.attachment?.ifBlank { null }?.toUri(),
+                        reply = it.replyTo?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                        quote = it.quote?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                        draft = it.draft?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                        accountViewModel,
+                        nav,
+                    )
+                }
+
+                composableFromBottomArgs<Route.NewPublicMessage> {
+                    NewPublicMessageScreen(
+                        to = it.toKey(),
+                        reply = it.replyId?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                        draft = it.draftId?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                }
+
+                composableFromBottomArgs<Route.HashtagPost> {
+                    HashtagPostScreen(
+                        hashtag = it.hashtag,
+                        message = it.message,
+                        attachment = it.attachment?.ifBlank { null }?.toUri(),
+                        reply = it.replyTo?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                        quote = it.quote?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                        draft = it.draft?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                        accountViewModel,
+                        nav,
+                    )
+                }
+
+                composableFromBottomArgs<Route.GenericCommentPost> {
+                    ReplyCommentPostScreen(
+                        reply = it.replyTo?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                        message = it.message,
+                        attachment = it.attachment?.ifBlank { null }?.toUri(),
+                        quote = it.quote?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                        draft = it.draft?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                        accountViewModel,
+                        nav,
+                    )
+                }
+
+                composableFromBottomArgs<Route.NewProduct> {
+                    NewProductScreen(
+                        message = it.message,
+                        attachment = it.attachment?.ifBlank { null }?.toUri(),
+                        quote = it.quote?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                        draft = it.draft?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                        accountViewModel,
+                        nav,
+                    )
+                }
+
+                composableFromBottomArgs<Route.NewShortNote> {
+                    ShortNotePostScreen(
+                        message = it.message,
+                        attachment = it.attachment?.ifBlank { null }?.toUri(),
+                        baseReplyTo = it.baseReplyTo?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                        quote = it.quote?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                        fork = it.fork?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                        version = it.version?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                        draft = it.draft?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                }
+
+                composableFromBottomArgs<Route.VoiceReply> {
+                    VoiceReplyScreen(
+                        replyToNoteId = it.replyToNoteId,
+                        recordingFilePath = it.recordingFilePath,
+                        mimeType = it.mimeType,
+                        duration = it.duration,
+                        amplitudesJson = it.amplitudes,
                         accountViewModel = accountViewModel,
                         nav = nav,
                     )
                 }
             }
-
-            composableFromBottomArgs<Route.ChannelMetadataEdit> { ChannelMetadataScreen(it.id, accountViewModel, nav) }
-            composableFromBottomArgs<Route.NewEphemeralChat> { NewEphemeralChatScreen(accountViewModel, nav) }
-            composableFromBottomArgs<Route.NewGroupDM> { NewGroupDMScreen(it.message, it.attachment, accountViewModel, nav) }
-
-            composableArgs<Route.EventRedirect> { LoadRedirectScreen(it.id, accountViewModel, nav) }
-
-            composableFromBottomArgs<Route.GeoPost> {
-                GeoHashPostScreen(
-                    geohash = it.geohash,
-                    message = it.message,
-                    attachment = it.attachment?.ifBlank { null }?.toUri(),
-                    reply = it.replyTo?.let { hex -> accountViewModel.getNoteIfExists(hex) },
-                    quote = it.quote?.let { hex -> accountViewModel.getNoteIfExists(hex) },
-                    draft = it.draft?.let { hex -> accountViewModel.getNoteIfExists(hex) },
-                    accountViewModel,
-                    nav,
-                )
-            }
-
-            composableFromBottomArgs<Route.NewPublicMessage> {
-                NewPublicMessageScreen(
-                    to = it.toKey(),
-                    reply = it.replyId?.let { hex -> accountViewModel.getNoteIfExists(hex) },
-                    draft = it.draftId?.let { hex -> accountViewModel.getNoteIfExists(hex) },
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                )
-            }
-
-            composableFromBottomArgs<Route.HashtagPost> {
-                HashtagPostScreen(
-                    hashtag = it.hashtag,
-                    message = it.message,
-                    attachment = it.attachment?.ifBlank { null }?.toUri(),
-                    reply = it.replyTo?.let { hex -> accountViewModel.getNoteIfExists(hex) },
-                    quote = it.quote?.let { hex -> accountViewModel.getNoteIfExists(hex) },
-                    draft = it.draft?.let { hex -> accountViewModel.getNoteIfExists(hex) },
-                    accountViewModel,
-                    nav,
-                )
-            }
-
-            composableFromBottomArgs<Route.GenericCommentPost> {
-                ReplyCommentPostScreen(
-                    reply = it.replyTo?.let { hex -> accountViewModel.getNoteIfExists(hex) },
-                    message = it.message,
-                    attachment = it.attachment?.ifBlank { null }?.toUri(),
-                    quote = it.quote?.let { hex -> accountViewModel.getNoteIfExists(hex) },
-                    draft = it.draft?.let { hex -> accountViewModel.getNoteIfExists(hex) },
-                    accountViewModel,
-                    nav,
-                )
-            }
-
-            composableFromBottomArgs<Route.NewProduct> {
-                NewProductScreen(
-                    message = it.message,
-                    attachment = it.attachment?.ifBlank { null }?.toUri(),
-                    quote = it.quote?.let { hex -> accountViewModel.getNoteIfExists(hex) },
-                    draft = it.draft?.let { hex -> accountViewModel.getNoteIfExists(hex) },
-                    accountViewModel,
-                    nav,
-                )
-            }
-
-            composableFromBottomArgs<Route.NewShortNote> {
-                ShortNotePostScreen(
-                    message = it.message,
-                    attachment = it.attachment?.ifBlank { null }?.toUri(),
-                    baseReplyTo = it.baseReplyTo?.let { hex -> accountViewModel.getNoteIfExists(hex) },
-                    quote = it.quote?.let { hex -> accountViewModel.getNoteIfExists(hex) },
-                    fork = it.fork?.let { hex -> accountViewModel.getNoteIfExists(hex) },
-                    version = it.version?.let { hex -> accountViewModel.getNoteIfExists(hex) },
-                    draft = it.draft?.let { hex -> accountViewModel.getNoteIfExists(hex) },
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                )
-            }
-
-            composableFromBottomArgs<Route.VoiceReply> {
-                VoiceReplyScreen(
-                    replyToNoteId = it.replyToNoteId,
-                    recordingFilePath = it.recordingFilePath,
-                    mimeType = it.mimeType,
-                    duration = it.duration,
-                    amplitudesJson = it.amplitudes,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                )
-            }
-        }
         }
     }
 

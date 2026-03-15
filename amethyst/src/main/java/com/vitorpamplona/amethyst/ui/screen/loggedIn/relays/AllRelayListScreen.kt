@@ -225,129 +225,129 @@ fun MappedAllRelayListView(
                         ).consumeWindowInsets(pad)
                         .imePadding(),
             ) {
-            item {
-                SettingsCategory(
-                    R.string.public_home_section,
-                    R.string.public_home_section_explainer,
-                    SettingsCategoryFirstModifier,
-                )
-            }
-            renderNip65HomeItems(homeFeedState, nip65ViewModel, accountViewModel, newNav)
-
-            item {
-                SettingsCategory(
-                    R.string.public_notif_section,
-                    R.string.public_notif_section_explainer,
-                    SettingsCategorySpacingModifier,
-                )
-            }
-            renderNip65NotifItems(notifFeedState, nip65ViewModel, accountViewModel, newNav)
-
-            item {
-                SettingsCategoryWithButton(
-                    R.string.private_inbox_section,
-                    R.string.private_inbox_section_explainer,
-                    SettingsCategorySpacingModifier,
-                    action = {
-                        ResetDMRelays(dmViewModel)
-                    },
-                )
-            }
-            renderDMItems(dmFeedState, dmViewModel, accountViewModel, newNav)
-
-            item {
-                SettingsCategory(
-                    R.string.private_outbox_section,
-                    R.string.private_outbox_section_explainer,
-                    SettingsCategorySpacingModifier,
-                )
-            }
-            renderPrivateOutboxItems(privateOutboxFeedState, privateOutboxViewModel, accountViewModel, newNav)
-
-            item {
-                SettingsCategory(
-                    R.string.proxy_section,
-                    R.string.proxy_section_explainer,
-                    SettingsCategorySpacingModifier,
-                )
-            }
-            renderProxyItems(proxyRelays, proxyViewModel, accountViewModel, newNav)
-
-            item {
-                SettingsCategory(
-                    R.string.broadcast_section,
-                    R.string.broadcast_section_explainer,
-                    SettingsCategorySpacingModifier,
-                )
-            }
-            renderBroadcastItems(broadcastRelays, broadcastViewModel, accountViewModel, newNav)
-
-            item {
-                SettingsCategoryWithButton(
-                    R.string.indexer_section,
-                    R.string.indexer_section_explainer,
-                    SettingsCategorySpacingModifier,
-                ) {
-                    ResetIndexerRelays(indexerViewModel)
+                item {
+                    SettingsCategory(
+                        R.string.public_home_section,
+                        R.string.public_home_section_explainer,
+                        SettingsCategoryFirstModifier,
+                    )
                 }
-            }
-            renderIndexerItems(indexerRelays, indexerViewModel, accountViewModel, newNav)
+                renderNip65HomeItems(homeFeedState, nip65ViewModel, accountViewModel, newNav)
 
-            item {
-                SettingsCategoryWithButton(
-                    R.string.search_section,
-                    R.string.search_section_explainer,
-                    SettingsCategorySpacingModifier,
-                ) {
-                    ResetSearchRelays(searchViewModel)
+                item {
+                    SettingsCategory(
+                        R.string.public_notif_section,
+                        R.string.public_notif_section_explainer,
+                        SettingsCategorySpacingModifier,
+                    )
                 }
-            }
-            renderSearchItems(searchFeedState, searchViewModel, accountViewModel, newNav)
+                renderNip65NotifItems(notifFeedState, nip65ViewModel, accountViewModel, newNav)
 
-            item {
-                SettingsCategory(
-                    R.string.local_section,
-                    R.string.local_section_explainer,
-                    SettingsCategorySpacingModifier,
-                )
-            }
-            renderLocalItems(localFeedState, localViewModel, accountViewModel, newNav)
+                item {
+                    SettingsCategoryWithButton(
+                        R.string.private_inbox_section,
+                        R.string.private_inbox_section_explainer,
+                        SettingsCategorySpacingModifier,
+                        action = {
+                            ResetDMRelays(dmViewModel)
+                        },
+                    )
+                }
+                renderDMItems(dmFeedState, dmViewModel, accountViewModel, newNav)
 
-            item {
-                SettingsCategory(
-                    R.string.trusted_section,
-                    R.string.trusted_section_explainer,
-                    SettingsCategorySpacingModifier,
-                )
-            }
-            renderTrustedItems(trustedFeedState, trustedViewModel, accountViewModel, newNav)
+                item {
+                    SettingsCategory(
+                        R.string.private_outbox_section,
+                        R.string.private_outbox_section_explainer,
+                        SettingsCategorySpacingModifier,
+                    )
+                }
+                renderPrivateOutboxItems(privateOutboxFeedState, privateOutboxViewModel, accountViewModel, newNav)
 
-            item {
-                SettingsCategory(
-                    R.string.favorite_section,
-                    R.string.favorite_section_explainer,
-                    SettingsCategorySpacingModifier,
-                )
-            }
-            renderRelayFeedsItems(relayFeedsFeedState, relayFeedsViewModel, accountViewModel, newNav)
+                item {
+                    SettingsCategory(
+                        R.string.proxy_section,
+                        R.string.proxy_section_explainer,
+                        SettingsCategorySpacingModifier,
+                    )
+                }
+                renderProxyItems(proxyRelays, proxyViewModel, accountViewModel, newNav)
 
-            item {
-                SettingsCategory(
-                    R.string.blocked_section,
-                    R.string.blocked_section_explainer,
-                    SettingsCategorySpacingModifier,
-                )
-            }
-            renderBlockedItems(blockedFeedState, blockedViewModel, accountViewModel, newNav)
+                item {
+                    SettingsCategory(
+                        R.string.broadcast_section,
+                        R.string.broadcast_section_explainer,
+                        SettingsCategorySpacingModifier,
+                    )
+                }
+                renderBroadcastItems(broadcastRelays, broadcastViewModel, accountViewModel, newNav)
 
-            item {
-                SettingsCategory(
-                    R.string.connected_section,
-                    R.string.connected_section_description,
-                    SettingsCategorySpacingModifier,
-                )
-            }
-            renderConnectedItems(connectedRelays, connectedViewModel, accountViewModel, newNav)
+                item {
+                    SettingsCategoryWithButton(
+                        R.string.indexer_section,
+                        R.string.indexer_section_explainer,
+                        SettingsCategorySpacingModifier,
+                    ) {
+                        ResetIndexerRelays(indexerViewModel)
+                    }
+                }
+                renderIndexerItems(indexerRelays, indexerViewModel, accountViewModel, newNav)
+
+                item {
+                    SettingsCategoryWithButton(
+                        R.string.search_section,
+                        R.string.search_section_explainer,
+                        SettingsCategorySpacingModifier,
+                    ) {
+                        ResetSearchRelays(searchViewModel)
+                    }
+                }
+                renderSearchItems(searchFeedState, searchViewModel, accountViewModel, newNav)
+
+                item {
+                    SettingsCategory(
+                        R.string.local_section,
+                        R.string.local_section_explainer,
+                        SettingsCategorySpacingModifier,
+                    )
+                }
+                renderLocalItems(localFeedState, localViewModel, accountViewModel, newNav)
+
+                item {
+                    SettingsCategory(
+                        R.string.trusted_section,
+                        R.string.trusted_section_explainer,
+                        SettingsCategorySpacingModifier,
+                    )
+                }
+                renderTrustedItems(trustedFeedState, trustedViewModel, accountViewModel, newNav)
+
+                item {
+                    SettingsCategory(
+                        R.string.favorite_section,
+                        R.string.favorite_section_explainer,
+                        SettingsCategorySpacingModifier,
+                    )
+                }
+                renderRelayFeedsItems(relayFeedsFeedState, relayFeedsViewModel, accountViewModel, newNav)
+
+                item {
+                    SettingsCategory(
+                        R.string.blocked_section,
+                        R.string.blocked_section_explainer,
+                        SettingsCategorySpacingModifier,
+                    )
+                }
+                renderBlockedItems(blockedFeedState, blockedViewModel, accountViewModel, newNav)
+
+                item {
+                    SettingsCategory(
+                        R.string.connected_section,
+                        R.string.connected_section_description,
+                        SettingsCategorySpacingModifier,
+                    )
+                }
+                renderConnectedItems(connectedRelays, connectedViewModel, accountViewModel, newNav)
             }
         }
     }
