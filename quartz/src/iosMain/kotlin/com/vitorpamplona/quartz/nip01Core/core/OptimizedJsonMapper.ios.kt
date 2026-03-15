@@ -20,29 +20,66 @@
  */
 package com.vitorpamplona.quartz.nip01Core.core
 
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.KotlinSerializationMapper
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.Rumor
+import kotlinx.serialization.SerializationException
 
 actual object OptimizedJsonMapper {
-    actual fun fromJson(json: String): Event = TODO("Not yet implemented")
+    actual fun fromJson(json: String): Event =
+        try {
+            KotlinSerializationMapper.fromJson(json)
+        } catch (e: SerializationException) {
+            throw IllegalArgumentException(e.message, e)
+        }
 
-    actual fun toJson(event: Event): String = TODO("Not yet implemented")
+    actual fun toJson(event: Event): String = KotlinSerializationMapper.toJson(event)
 
-    actual fun fromJsonToMessage(json: String): Message = TODO("Not yet implemented")
+    actual fun fromJsonToMessage(json: String): Message =
+        try {
+            KotlinSerializationMapper.fromJsonToMessage(json)
+        } catch (e: SerializationException) {
+            throw IllegalArgumentException(e.message, e)
+        }
 
-    actual fun fromJsonToCommand(json: String): Command = TODO("Not yet implemented")
+    actual fun fromJsonToCommand(json: String): Command =
+        try {
+            KotlinSerializationMapper.fromJsonToCommand(json)
+        } catch (e: SerializationException) {
+            throw IllegalArgumentException(e.message, e)
+        }
 
-    actual fun fromJsonToTagArray(json: String): Array<Array<String>> = TODO("Not yet implemented")
+    actual fun fromJsonToTagArray(json: String): Array<Array<String>> =
+        try {
+            KotlinSerializationMapper.fromJsonToTagArray(json)
+        } catch (e: SerializationException) {
+            throw IllegalArgumentException(e.message, e)
+        }
 
-    actual fun fromJsonToEventTemplate(json: String): EventTemplate<Event> = TODO("Not yet implemented")
+    actual fun fromJsonToEventTemplate(json: String): EventTemplate<Event> =
+        try {
+            KotlinSerializationMapper.fromJsonToEventTemplate(json)
+        } catch (e: SerializationException) {
+            throw IllegalArgumentException(e.message, e)
+        }
 
-    actual fun fromJsonToRumor(json: String): Rumor = TODO("Not yet implemented")
+    actual fun fromJsonToRumor(json: String): Rumor =
+        try {
+            KotlinSerializationMapper.fromJsonToRumor(json)
+        } catch (e: SerializationException) {
+            throw IllegalArgumentException(e.message, e)
+        }
 
-    actual fun toJson(tags: Array<Array<String>>): String = TODO("Not yet implemented")
+    actual fun toJson(tags: Array<Array<String>>): String = KotlinSerializationMapper.toJson(tags)
 
-    actual inline fun <reified T : OptimizedSerializable> fromJsonTo(json: String): T = TODO("Not yet implemented")
+    actual inline fun <reified T : OptimizedSerializable> fromJsonTo(json: String): T =
+        try {
+            KotlinSerializationMapper.fromJsonTo<T>(json)
+        } catch (e: SerializationException) {
+            throw IllegalArgumentException(e.message, e)
+        }
 
-    actual fun toJson(value: OptimizedSerializable): String = TODO("Not yet implemented")
+    actual fun toJson(value: OptimizedSerializable): String = KotlinSerializationMapper.toJson(value)
 }

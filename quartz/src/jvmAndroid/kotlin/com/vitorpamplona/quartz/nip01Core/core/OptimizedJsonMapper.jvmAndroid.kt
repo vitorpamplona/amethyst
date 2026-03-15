@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip01Core.core
 
+import com.fasterxml.jackson.databind.RuntimeJsonMappingException
 import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
@@ -77,6 +78,10 @@ actual object OptimizedJsonMapper {
         try {
             JacksonMapper.fromJsonTo<T>(json)
         } catch (e: com.fasterxml.jackson.core.JsonParseException) {
+            throw IllegalArgumentException(e.message, e)
+        } catch (e: com.fasterxml.jackson.core.JsonProcessingException) {
+            throw IllegalArgumentException(e.message, e)
+        } catch (e: RuntimeJsonMappingException) {
             throw IllegalArgumentException(e.message, e)
         }
 

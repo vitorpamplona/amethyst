@@ -28,7 +28,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class NwcInfoEventTest {
-    private val signer = DeterministicSigner("nsec1w4uucmeyyng0kegm7486r23sv4majkmvqsj6eypprq0xttxss55s5mgg9t".nsecToKeyPair())
+    private val signer = DeterministicSigner("nsec10g0wheggqn9dawlc0yuv6adnat6n09anr7eyykevw2dm8xa5fffs0wsdsr".nsecToKeyPair())
 
     @Test
     fun testBuildInfoEvent() {
