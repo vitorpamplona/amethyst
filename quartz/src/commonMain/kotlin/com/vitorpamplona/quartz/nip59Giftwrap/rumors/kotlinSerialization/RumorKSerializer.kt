@@ -18,7 +18,9 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip01Core.kotlinSerialization
+package com.vitorpamplona.quartz.nip59Giftwrap.rumors.kotlinSerialization
+
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.TagArrayKSerializer
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
