@@ -20,32 +20,25 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.datasource
 
-import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 
-// This allows multiple screen to be listening to tags, even the same tag
-class UserProfileQueryState(
-    val user: User,
-)
+fun filterUserProfileLastSeen(user: User): List<RelayBasedFilter> {
+    val relays =
+        user.outboxRelays()?.ifEmpty { null }
+            ?: user.allUsedRelaysOrNull()
+            ?: LocalCache.relayHints.hintsForKey(user.pubkeyHex)
 
-class UserProfileFilterAssembler(
-    client: INostrClient,
-) : ComposeSubscriptionManager<UserProfileQueryState>() {
-    val group =
-        listOf(
-            // 6 subs per visible user profile screen.
-            UserProfileMetadataFilterSubAssembler(client, ::allKeys),
-            UserProfilePostsFilterSubAssembler(client, ::allKeys),
-            UserProfileMediaFilterSubAssembler(client, ::allKeys),
-            UserProfileFollowersFilterSubAssembler(client, ::allKeys),
-            UserProfileZapsFilterSubAssembler(client, ::allKeys),
-            UserProfileLastSeenFilterSubAssembler(client, ::allKeys),
+    return relays.map { relay ->
+        RelayBasedFilter(
+            relay = relay,
+            filter =
+                Filter(
+                    authors = listOf(user.pubkeyHex),
+                    limit = 1,
+                ),
         )
-
-    override fun invalidateFilters() = group.forEach { it.invalidateFilters() }
-
-    override fun invalidateKeys() = invalidateFilters()
-
-    override fun destroy() = group.forEach { it.destroy() }
+    }
 }

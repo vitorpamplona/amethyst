@@ -37,6 +37,7 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.utils.Hex
+import kotlinx.coroutines.flow.MutableStateFlow
 
 interface UserDependencies
 
@@ -140,6 +141,17 @@ class User(
     fun relayStateOrNull(): UserRelaysCache? = relays
 
     fun relayState(): UserRelaysCache = relays ?: UserRelaysCache().also { relays = it }
+
+    private var lastSeen: MutableStateFlow<Long?>? = null
+
+    fun lastSeenFlow(): MutableStateFlow<Long?> = lastSeen ?: MutableStateFlow<Long?>(null).also { lastSeen = it }
+
+    fun updateLastSeen(timestamp: Long) {
+        val flow = lastSeen ?: MutableStateFlow<Long?>(null).also { lastSeen = it }
+        if ((flow.value ?: 0L) < timestamp) {
+            flow.tryEmit(timestamp)
+        }
+    }
 }
 
 fun Set<User>.toHexSet() = mapTo(LinkedHashSet(size)) { it.pubkeyHex }
