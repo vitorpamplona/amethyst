@@ -1,4 +1,4 @@
-name: Test/Build Android
+name: Test/Build Linux
 
 on:
   pull_request:
@@ -30,17 +30,17 @@ jobs:
             ${{ runner.os }}-gradle-
 
       - name: Linter (gradle)
-        run: ./gradlew spotlessCheck
+        run: ./gradlew spotlessCheck --warn
 
       - name: Test (gradle)
-        run: ./gradlew test --no-daemon
+        run: ./gradlew test --no-daemon --warn
 
       - name: Android Test Report
         uses: asadmansr/android-test-report-action@v1.2.0
         if: ${{ always() }} # IMPORTANT: run Android Test Report regardless
 
       - name: Build APK (gradle)
-        run: ./gradlew assembleDebug
+        run: ./gradlew assembleDebug --warn
 
       - name: Upload Play APK
         uses: actions/upload-artifact@v4
@@ -55,7 +55,7 @@ jobs:
           path: amethyst/build/outputs/apk/fdroid/debug/amethyst-fdroid-universal-debug.apk
 
       - name: Build APK (gradle)
-        run: ./gradlew assembleBenchmark
+        run: ./gradlew assembleBenchmark --warn
 
       - name: Upload Play APK Benchmark
         uses: actions/upload-artifact@v4

@@ -32,16 +32,16 @@ jobs:
             ${{ runner.os }}-gradle-
 
       - name: Test Quartz (gradle)
-        run: ./gradlew :quartz:jvmTest --no-daemon
+        run: ./gradlew :quartz:jvmTest --no-daemon --warn
 
       - name: Test Commons (gradle)
-        run: ./gradlew :commons:jvmTest --no-daemon
+        run: ./gradlew :commons:jvmTest --no-daemon --warn
 
       - name: Test Desktop (gradle)
-        run: ./gradlew :desktopApp:test --no-daemon
+        run: ./gradlew :desktopApp:test --no-daemon --warn
 
       - name: Build Desktop distribution (gradle)
-        run: ./gradlew :desktopApp:packageDistributionForCurrentOS --no-daemon
+        run: ./gradlew :desktopApp:packageDistributionForCurrentOS --no-daemon --warn
 
       - name: Upload Windows distribution
         uses: actions/upload-artifact@v4
