@@ -63,18 +63,26 @@ kotlin {
     val xcfName = "quartz-kmpKit"
     val libsodiumPath = project.file("src/nativeInterop/libsodium")
     val libsodiumHeaderFilesPath = project.file("$libsodiumPath/include/sodium")
-    val libsodiumDefFile = project.file("src/nativeInterop/cinterop/Clibsodium.def")
 
-    // This generates the Libsodium definition file, necessary for creating native bindings(a Kotlin API) for libsodium(for iOS).
+    // Generate target-specific Libsodium definition files for creating native bindings.
+    // Device (iosArm64) uses libsodium.a, simulator targets use libsodium-simulator.a.
+    val libsodiumDeviceDefFile = project.layout.buildDirectory.file("cinterop/Clibsodium-device.def").get().asFile
+    val libsodiumSimulatorDefFile = project.layout.buildDirectory.file("cinterop/Clibsodium-simulator.def").get().asFile
+
     val libsodiumDefFileGeneration = tasks.register("GenerateSodiumCinteropFile") {
-        outputs.file(libsodiumDefFile)
+        outputs.files(libsodiumDeviceDefFile, libsodiumSimulatorDefFile)
         doLast {
-            if (!libsodiumDefFile.exists()) {
-                libsodiumDefFile.parentFile.mkdirs()
-                libsodiumDefFile.writeText("package = Clibsodium\n")
-                libsodiumDefFile.appendText("staticLibraries = libsodium.a libsodium-simulator.a\n")
-                libsodiumDefFile.appendText("libraryPaths = ${libsodiumPath.absolutePath}/ios/lib ${libsodiumPath.absolutePath}/ios-simulators/lib\n")
-            }
+            libsodiumDeviceDefFile.parentFile.mkdirs()
+            libsodiumDeviceDefFile.writeText(
+                "package = Clibsodium\n" +
+                "staticLibraries = libsodium.a\n" +
+                "libraryPaths = ${libsodiumPath.absolutePath}/ios/lib\n"
+            )
+            libsodiumSimulatorDefFile.writeText(
+                "package = Clibsodium\n" +
+                "staticLibraries = libsodium-simulator.a\n" +
+                "libraryPaths = ${libsodiumPath.absolutePath}/ios-simulators/lib\n"
+            )
         }
     }
 
@@ -83,10 +91,12 @@ kotlin {
         iosX64(),
         iosSimulatorArm64(),
     ).forEach { target ->
+        val isSimulator = target.name != "iosArm64"
+        val defFile = if (isSimulator) libsodiumSimulatorDefFile else libsodiumDeviceDefFile
 
         target.compilations.getByName("main") {
-            val Clibsodium by cinterops.creating {
-                definitionFile = libsodiumDefFile
+            cinterops.create("Clibsodium") {
+                definitionFile = defFile
                 packageName = "Clibsodium"
 
                 headers(
@@ -118,20 +128,32 @@ kotlin {
     }
 
     iosX64 {
+        binaries.all {
+            linkerOpts("-L${libsodiumPath.absolutePath}/ios-simulators/lib", "-lsodium-simulator")
+        }
         binaries.framework {
             baseName = xcfName
+            binaryOption("bundleId", "com.vitorpamplona.quartz")
         }
     }
 
     iosArm64 {
+        binaries.all {
+            linkerOpts("-L${libsodiumPath.absolutePath}/ios/lib", "-lsodium")
+        }
         binaries.framework {
             baseName = xcfName
+            binaryOption("bundleId", "com.vitorpamplona.quartz")
         }
     }
 
     iosSimulatorArm64 {
+        binaries.all {
+            linkerOpts("-L${libsodiumPath.absolutePath}/ios-simulators/lib", "-lsodium-simulator")
+        }
         binaries.framework {
             baseName = xcfName
+            binaryOption("bundleId", "com.vitorpamplona.quartz")
         }
     }
 
@@ -245,8 +267,8 @@ kotlin {
                 api(libs.secp256k1.kmp.jni.android)
 
                 // LibSodium for ChaCha encryption (NIP-44)
-                implementation("com.goterl:lazysodium-android:5.2.0@aar")
-                implementation("net.java.dev.jna:jna:5.18.1@aar")
+                implementation(libs.lazysodium.android)
+                implementation(libs.jna)
             }
         }
 
