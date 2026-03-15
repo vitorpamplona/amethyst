@@ -275,6 +275,7 @@ class AppModules(
             otsResolverBuilder = otsResolverBuilder,
             cache = cache,
             client = client,
+            websocketBuilder = websocketBuilder,
         )
 
     val sessionManager =

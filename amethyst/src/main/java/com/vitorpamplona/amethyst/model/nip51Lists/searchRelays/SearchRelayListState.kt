@@ -25,7 +25,9 @@ import com.vitorpamplona.amethyst.model.DefaultSearchRelayList
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
+import com.vitorpamplona.amethyst.model.nip66RelayLiveness.RelayLivenessState
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isOnion
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.utils.Log
@@ -34,6 +36,7 @@ import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
@@ -44,6 +47,7 @@ class SearchRelayListState(
     val signer: NostrSigner,
     val cache: LocalCache,
     val decryptionCache: SearchRelayListDecryptionCache,
+    val relayLiveness: RelayLivenessState,
     val scope: CoroutineScope,
     val settings: AccountSettings,
 ) {
@@ -63,10 +67,19 @@ class SearchRelayListState(
     suspend fun normalizeSearchRelayListWithBackupNoDefaults(note: Note): Set<NormalizedRelayUrl> = searchListEvent(note)?.let { decryptionCache.relays(it) } ?: emptySet()
 
     val flow =
-        getSearchRelayListFlow()
-            .map { normalizeSearchRelayListWithBackup(it.note) }
-            .onStart { emit(normalizeSearchRelayListWithBackup(searchListNote)) }
-            .flowOn(Dispatchers.IO)
+        combine(
+            getSearchRelayListFlow()
+                .map { normalizeSearchRelayListWithBackup(it.note) }
+                .onStart { emit(normalizeSearchRelayListWithBackup(searchListNote)) },
+            relayLiveness.aliveRelaysFlow,
+        ) { searchRelays, aliveRelays ->
+            if (aliveRelays.isEmpty()) {
+                searchRelays
+            } else {
+                val filtered = searchRelays.filter { it in aliveRelays || it.isOnion() }.toSet()
+                if (filtered.isEmpty()) searchRelays else filtered
+            }
+        }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,

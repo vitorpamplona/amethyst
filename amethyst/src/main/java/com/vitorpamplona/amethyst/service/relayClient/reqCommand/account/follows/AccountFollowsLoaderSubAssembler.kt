@@ -40,6 +40,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.SubscriptionController
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isOnion
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineScope
@@ -158,7 +159,21 @@ class AccountFollowsLoaderSubAssembler(
 
         val connectedRelays = client.connectedRelaysFlow().value
 
-        val perRelay = pickRelaysToLoadUsers(users, accounts, connectedRelays, failureTracker.cannotConnectRelays, hasTried)
+        val aliveRelays =
+            accounts
+                .firstOrNull()
+                ?.relayLiveness
+                ?.aliveRelaysFlow
+                ?.value ?: emptySet()
+        val effectiveCannot =
+            if (aliveRelays.isEmpty()) {
+                failureTracker.cannotConnectRelays
+            } else {
+                failureTracker.cannotConnectRelays +
+                    connectedRelays.filter { it !in aliveRelays && !it.isOnion() }
+            }
+
+        val perRelay = pickRelaysToLoadUsers(users, accounts, connectedRelays, effectiveCannot, hasTried)
 
         hasTried.removeEveryoneBut(users)
 
