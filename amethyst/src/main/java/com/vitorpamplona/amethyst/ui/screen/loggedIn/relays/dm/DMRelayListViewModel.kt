@@ -22,7 +22,11 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.dm
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.CountFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 
 @Stable
 class DMRelayListViewModel : BasicRelaySetupInfoModel() {
@@ -31,4 +35,16 @@ class DMRelayListViewModel : BasicRelaySetupInfoModel() {
     override suspend fun saveRelayList(urlList: List<NormalizedRelayUrl>) {
         account.saveDMRelayList(urlList)
     }
+
+    override fun countFilters(relayUrl: NormalizedRelayUrl): List<CountFilter> =
+        listOf(
+            CountFilter(
+                label = "events",
+                filter =
+                    Filter(
+                        kinds = listOf(GiftWrapEvent.KIND, PrivateDmEvent.KIND),
+                        tags = mapOf("p" to listOf(account.pubKey)),
+                    ),
+            ),
+        )
 }

@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.replace
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.queryCountSuspend
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -40,6 +41,9 @@ abstract class BasicRelaySetupInfoModel : ViewModel() {
     private val _relays = MutableStateFlow<List<BasicRelaySetupInfo>>(emptyList())
     val relays = _relays.asStateFlow()
 
+    private val _countResults = MutableStateFlow<Map<NormalizedRelayUrl, RelayCountResult>>(emptyMap())
+    val countResults = _countResults.asStateFlow()
+
     var hasModified = false
 
     fun init(accountViewModel: AccountViewModel) {
@@ -50,11 +54,14 @@ abstract class BasicRelaySetupInfoModel : ViewModel() {
     fun load() {
         clear()
         loadRelayDocuments()
+        loadCounts()
     }
 
     abstract fun getRelayList(): List<NormalizedRelayUrl>?
 
     abstract suspend fun saveRelayList(urlList: List<NormalizedRelayUrl>)
+
+    open fun countFilters(relayUrl: NormalizedRelayUrl): List<CountFilter> = emptyList()
 
     fun create() {
         if (hasModified) {
@@ -75,6 +82,40 @@ abstract class BasicRelaySetupInfoModel : ViewModel() {
                     },
                     onError = { url, errorCode, exceptionMessage -> },
                 )
+            }
+        }
+    }
+
+    private fun loadCounts() {
+        _countResults.value = emptyMap()
+
+        val client = Amethyst.instance.client
+        val relayList = _relays.value
+        if (relayList.isEmpty()) return
+
+        relayList.forEach { item ->
+            val filters = countFilters(item.relay)
+            if (filters.isEmpty()) return@forEach
+
+            filters.forEach { countFilter ->
+                viewModelScope.launch(Dispatchers.IO) {
+                    val result = client.queryCountSuspend(item.relay, countFilter.filter)
+                    if (result != null) {
+                        _countResults.update { currentMap ->
+                            val current = currentMap[item.relay] ?: RelayCountResult()
+                            val entries = current.counts.toMutableList()
+                            val newEntry =
+                                RelayCountResult.CountEntry(
+                                    label = countFilter.label,
+                                    count = result.count,
+                                    approximate = result.approximate,
+                                )
+                            val existing = entries.indexOfFirst { it.label == countFilter.label }
+                            if (existing >= 0) entries[existing] = newEntry else entries.add(newEntry)
+                            currentMap + (item.relay to RelayCountResult(entries))
+                        }
+                    }
+                }
             }
         }
     }

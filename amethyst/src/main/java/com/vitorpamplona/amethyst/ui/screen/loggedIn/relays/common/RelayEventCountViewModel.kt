@@ -18,29 +18,24 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.proxy
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common
 
-import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.CountFilter
+import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
-@Stable
-class ProxyRelayListViewModel : BasicRelaySetupInfoModel() {
-    override fun getRelayList(): List<NormalizedRelayUrl> =
-        account.proxyRelayList.flow.value
-            .toList()
-
-    override suspend fun saveRelayList(urlList: List<NormalizedRelayUrl>) {
-        account.saveProxyRelayList(urlList)
-    }
-
-    override fun countFilters(relayUrl: NormalizedRelayUrl): List<CountFilter> =
-        listOf(
-            CountFilter(
-                label = "events",
-                filter = Filter(),
-            ),
-        )
+@Immutable
+data class RelayCountResult(
+    val counts: List<CountEntry> = emptyList(),
+) {
+    @Immutable
+    data class CountEntry(
+        val label: String,
+        val count: Int,
+        val approximate: Boolean = false,
+    )
 }
+
+data class CountFilter(
+    val label: String,
+    val filter: Filter,
+)

@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.search
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.CountFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 @Stable
@@ -33,4 +35,12 @@ class SearchRelayListViewModel : BasicRelaySetupInfoModel() {
     override suspend fun saveRelayList(urlList: List<NormalizedRelayUrl>) {
         account.saveSearchRelayList(urlList)
     }
+
+    override fun countFilters(relayUrl: NormalizedRelayUrl): List<CountFilter> =
+        listOf(
+            CountFilter(
+                label = "events",
+                filter = Filter(),
+            ),
+        )
 }
