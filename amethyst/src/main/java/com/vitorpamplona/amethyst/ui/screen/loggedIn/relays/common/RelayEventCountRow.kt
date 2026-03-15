@@ -20,10 +20,14 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material3.Icon
@@ -32,15 +36,17 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.countToHumanReadable
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Font12SP
-import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
-import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
+import com.vitorpamplona.amethyst.ui.theme.Font10SP
+import com.vitorpamplona.amethyst.ui.theme.Size10Modifier
 import com.vitorpamplona.amethyst.ui.theme.allGoodColor
-import com.vitorpamplona.amethyst.ui.theme.placeholderText
+
+private val PillShape = RoundedCornerShape(12.dp)
 
 @Composable
 fun RelayEventCountRow(
@@ -49,37 +55,51 @@ fun RelayEventCountRow(
 ) {
     if (countResult == null || countResult.counts.isEmpty()) return
 
+    val pillColor = MaterialTheme.colorScheme.allGoodColor
+
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Start,
         modifier = modifier,
     ) {
-        Icon(
-            imageVector = Icons.Default.Storage,
-            contentDescription = stringRes(R.string.relay_event_count),
-            modifier = Size15Modifier,
-            tint = MaterialTheme.colorScheme.allGoodColor,
-        )
-
         countResult.counts.forEachIndexed { index, entry ->
             if (index > 0) {
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(6.dp))
             }
 
-            val text =
+            val countText =
                 if (entry.approximate) {
                     "~${countToHumanReadable(entry.count, entry.label)}"
                 } else {
                     countToHumanReadable(entry.count, entry.label)
                 }
 
-            Text(
-                text = text,
-                maxLines = 1,
-                fontSize = Font12SP,
-                modifier = HalfStartPadding,
-                color = MaterialTheme.colorScheme.placeholderText,
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier =
+                    Modifier
+                        .clip(PillShape)
+                        .border(width = 1.dp, color = pillColor.copy(alpha = 0.4f), shape = PillShape)
+                        .background(pillColor.copy(alpha = 0.1f))
+                        .padding(horizontal = 6.dp, vertical = 2.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Storage,
+                    contentDescription = stringRes(R.string.relay_event_count),
+                    modifier = Size10Modifier,
+                    tint = pillColor,
+                )
+
+                Spacer(modifier = Modifier.width(3.dp))
+
+                Text(
+                    text = countText,
+                    maxLines = 1,
+                    fontSize = Font10SP,
+                    fontWeight = FontWeight.Medium,
+                    color = pillColor,
+                )
+            }
         }
     }
 }
