@@ -32,6 +32,7 @@ fun BasicRelaySetupInfoDialog(
     item: BasicRelaySetupInfo,
     nip11CachedRetriever: Nip11CachedRetriever,
     onDelete: ((BasicRelaySetupInfo) -> Unit)?,
+    countResult: RelayCountResult? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -43,6 +44,7 @@ fun BasicRelaySetupInfoDialog(
         onClick = { nav.nav(Route.RelayInfo(item.relay.url)) },
         nip11CachedRetriever = nip11CachedRetriever,
         modifier = HalfVertPadding,
+        countResult = countResult,
         accountViewModel = accountViewModel,
         nav = nav,
     )

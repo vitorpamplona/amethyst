@@ -63,6 +63,7 @@ fun BasicRelaySetupInfoClickableRow(
     onClick: () -> Unit,
     nip11CachedRetriever: Nip11CachedRetriever,
     modifier: Modifier = Modifier,
+    countResult: RelayCountResult? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -103,6 +104,11 @@ fun BasicRelaySetupInfoClickableRow(
                 )
 
                 UsedBy(item, accountViewModel, nav)
+
+                RelayEventCountRow(
+                    countResult = countResult,
+                    modifier = ReactionRowHeightChatMaxWidth,
+                )
 
                 RelayStatusRow(
                     item = item,

@@ -776,6 +776,7 @@
     <string name="write_to_relay">Write to Relay</string>
     <string name="write_to_relay_description">The amount in bytes that was sent to this relay, including filters and events</string>
     <string name="read_from_relay_description">The amount in bytes that was received from this relay, including filters and events</string>
+    <string name="relay_event_count">Events stored</string>
     <string name="an_error_occurred_trying_to_get_relay_information">An error occurred trying to get relay information from %1$s</string>
     <string name="owner">Owner</string>
     <string name="used_by">Used By</string>
