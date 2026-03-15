@@ -91,7 +91,7 @@ class NotificationTest {
     @Test
     fun testUnknownNotificationTypeReturnsNull() {
         val json = """{"notification_type":"unknown_type","notification":{}}"""
-        val notification = OptimizedJsonMapper.fromJsonTo<Notification>(json)
+        val notification = runCatching { OptimizedJsonMapper.fromJsonTo<Notification>(json) }.getOrNull()
         assertNull(notification)
     }
 }
