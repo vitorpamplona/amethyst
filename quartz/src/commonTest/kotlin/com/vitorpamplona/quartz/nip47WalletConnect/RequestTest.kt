@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip47WalletConnect
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -396,7 +397,8 @@ class RequestTest {
     @Test
     fun testUnknownMethodReturnsNull() {
         val json = """{"method":"unknown_method","params":{}}"""
-        val request = OptimizedJsonMapper.fromJsonToOrNull<Request>(json)
-        assertNull(request)
+        assertFailsWith<IllegalArgumentException> {
+            OptimizedJsonMapper.fromJsonTo<Request>(json)
+        }
     }
 }

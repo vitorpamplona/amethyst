@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip47WalletConnect
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -35,16 +36,16 @@ class NotificationTest {
         val notification = OptimizedJsonMapper.fromJsonTo<Notification>(json)
         assertIs<PaymentReceivedNotification>(notification)
         assertNotNull(notification.notification)
-        assertEquals("incoming", notification.notification?.type)
-        assertEquals("lnbc50n1...", notification.notification?.invoice)
-        assertEquals("coffee", notification.notification?.description)
-        assertEquals("abc", notification.notification?.preimage)
-        assertEquals("hash123", notification.notification?.payment_hash)
-        assertEquals(5000L, notification.notification?.amount)
-        assertEquals(10L, notification.notification?.fees_paid)
-        assertEquals(1693876497L, notification.notification?.created_at)
-        assertEquals(1694876497L, notification.notification?.expires_at)
-        assertEquals(1694876500L, notification.notification?.settled_at)
+        assertEquals("incoming", notification.notification.type)
+        assertEquals("lnbc50n1...", notification.notification.invoice)
+        assertEquals("coffee", notification.notification.description)
+        assertEquals("abc", notification.notification.preimage)
+        assertEquals("hash123", notification.notification.payment_hash)
+        assertEquals(5000L, notification.notification.amount)
+        assertEquals(10L, notification.notification.fees_paid)
+        assertEquals(1693876497L, notification.notification.created_at)
+        assertEquals(1694876497L, notification.notification.expires_at)
+        assertEquals(1694876500L, notification.notification.settled_at)
     }
 
     @Test
@@ -54,11 +55,11 @@ class NotificationTest {
         val notification = OptimizedJsonMapper.fromJsonTo<Notification>(json)
         assertIs<PaymentSentNotification>(notification)
         assertNotNull(notification.notification)
-        assertEquals("outgoing", notification.notification?.type)
-        assertEquals("lnbc100n1...", notification.notification?.invoice)
-        assertEquals("def456", notification.notification?.preimage)
-        assertEquals(10000L, notification.notification?.amount)
-        assertEquals(50L, notification.notification?.fees_paid)
+        assertEquals("outgoing", notification.notification.type)
+        assertEquals("lnbc100n1...", notification.notification.invoice)
+        assertEquals("def456", notification.notification.preimage)
+        assertEquals(10000L, notification.notification.amount)
+        assertEquals(50L, notification.notification.fees_paid)
     }
 
     @Test
@@ -68,13 +69,13 @@ class NotificationTest {
         val notification = OptimizedJsonMapper.fromJsonTo<Notification>(json)
         assertIs<HoldInvoiceAcceptedNotification>(notification)
         assertNotNull(notification.notification)
-        assertEquals("incoming", notification.notification?.type)
-        assertEquals("lnbc200n1...", notification.notification?.invoice)
-        assertEquals("hash789", notification.notification?.payment_hash)
-        assertEquals(20000L, notification.notification?.amount)
-        assertEquals(800000L, notification.notification?.settle_deadline)
-        assertEquals(1693876497L, notification.notification?.created_at)
-        assertEquals(1694876497L, notification.notification?.expires_at)
+        assertEquals("incoming", notification.notification.type)
+        assertEquals("lnbc200n1...", notification.notification.invoice)
+        assertEquals("hash789", notification.notification.payment_hash)
+        assertEquals(20000L, notification.notification.amount)
+        assertEquals(800000L, notification.notification.settle_deadline)
+        assertEquals(1693876497L, notification.notification.created_at)
+        assertEquals(1694876497L, notification.notification.expires_at)
     }
 
     @Test
@@ -89,9 +90,11 @@ class NotificationTest {
     }
 
     @Test
+    @Throws(IllegalArgumentException::class)
     fun testUnknownNotificationTypeReturnsNull() {
         val json = """{"notification_type":"unknown_type","notification":{}}"""
-        val notification = OptimizedJsonMapper.fromJsonToOrNull<Notification>(json)
-        assertNull(notification)
+        assertFailsWith<IllegalArgumentException> {
+            OptimizedJsonMapper.fromJsonToOrNull<Notification>(json)
+        }
     }
 }
