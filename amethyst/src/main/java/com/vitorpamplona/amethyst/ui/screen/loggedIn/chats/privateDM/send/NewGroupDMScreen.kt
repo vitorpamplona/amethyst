@@ -302,6 +302,15 @@ fun GroupDMScreenContent(
                         )
                     }
                 }
+
+                postViewModel.encryptedUploadErrorTitle?.let { title ->
+                    EncryptedUploadErrorDialog(
+                        title = title,
+                        message = postViewModel.encryptedUploadErrorMessage ?: "",
+                        onDismiss = postViewModel::dismissEncryptedUploadError,
+                        onRetryWithoutEncryption = postViewModel::retryWithoutEncryption,
+                    )
+                }
             }
         }
 
