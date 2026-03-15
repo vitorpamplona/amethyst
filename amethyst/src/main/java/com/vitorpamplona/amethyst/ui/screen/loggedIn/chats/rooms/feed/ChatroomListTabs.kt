@@ -48,6 +48,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
+import com.vitorpamplona.amethyst.ui.components.zonedDrawerSwipe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -124,7 +125,12 @@ fun MessagesPager(
     HorizontalPager(
         contentPadding = paddingValues,
         state = pagerState,
-        userScrollEnabled = false,
+        userScrollEnabled = true,
+        modifier =
+            Modifier.zonedDrawerSwipe(
+                pagerState = pagerState,
+                openDrawer = nav::openDrawer,
+            ),
     ) { page ->
         ChatroomListFeedView(
             feedContentState = tabs[page].feedContentState,

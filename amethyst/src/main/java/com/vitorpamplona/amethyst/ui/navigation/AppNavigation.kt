@@ -37,8 +37,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.net.toUri
 import androidx.core.util.Consumer
+import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.crashreports.DisplayCrashMessages
@@ -142,7 +144,14 @@ fun AppNavigation(
 ) {
     val nav = rememberNav()
 
-    AccountSwitcherAndLeftDrawerLayout(accountViewModel, accountSessionManager, nav) {
+    val navBackStackEntry by nav.controller.currentBackStackEntryAsState()
+    val isTabPagerRoute =
+        navBackStackEntry?.destination?.let { dest ->
+            dest.hasRoute<Route.Home>() || dest.hasRoute<Route.Message>()
+        } ?: false
+    val drawerGesturesEnabled = !isTabPagerRoute || nav.drawerState.isOpen
+
+    AccountSwitcherAndLeftDrawerLayout(accountViewModel, accountSessionManager, nav, drawerGesturesEnabled) {
         NavHost(
             navController = nav.controller,
             startDestination = Route.Home,
