@@ -1772,14 +1772,16 @@
     <string name="event_sync_paused_title">Sync Paused</string>
     <string name="event_sync_paused_body">Completed %1$d of %2$d relays — %3$d events redistributed so far. Tap Resume to continue.</string>
     <string name="event_sync_done_title">Sync complete</string>
-    <string name="event_sync_done_body">Redistributed %1$d events in %2$d seconds.</string>
+    <string name="event_sync_done_sent">Forwarded %1$d events to destination relays.</string>
+    <string name="event_sync_done_accepted">%1$d events accepted as new by destination relays.</string>
+    <string name="event_sync_done_duration">Completed in %1$d seconds.</string>
     <string name="event_sync_error_title">Sync error</string>
-    <string name="event_sync_reading_from">Reading (%1$d active)</string>
     <string name="event_sync_sending_to">Sending To</string>
     <string name="event_sync_outbox_relays">Outbox</string>
     <string name="event_sync_inbox_relays">Inbox</string>
     <string name="event_sync_dm_relays">DMs</string>
     <string name="event_sync_activity_log">Activity (%1$d relays)</string>
-    <string name="event_sync_events_found_log">%1$s events</string>
+    <string name="event_sync_log_recv">recv %1$s</string>
+    <string name="event_sync_log_new">new %1$s</string>
     <string name="event_sync_no_events">no events</string>
 </resources>

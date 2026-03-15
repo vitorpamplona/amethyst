@@ -21,11 +21,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync
 
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -175,15 +170,6 @@ fun EventSyncScreen(
             }
 
             // ---- Live relay activity (shown during and after sync) ----
-            val isRunning = syncState is EventSyncViewModel.SyncState.Running
-
-            if (liveActivity.activeRelays.isNotEmpty()) {
-                ActiveRelaysCard(
-                    activeRelays = liveActivity.activeRelays,
-                    isRunning = isRunning,
-                )
-            }
-
             if (liveActivity.outboxTargets.isNotEmpty() ||
                 liveActivity.inboxTargets.isNotEmpty() ||
                 liveActivity.dmTargets.isNotEmpty()
@@ -366,16 +352,24 @@ private fun DoneCard(state: EventSyncViewModel.SyncState.Done) {
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
             )
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(6.dp))
             Text(
-                text =
-                    stringRes(
-                        R.string.event_sync_done_body,
-                        state.totalEventsSent,
-                        (state.durationMs / 1000).toInt(),
-                    ),
+                text = stringRes(R.string.event_sync_done_sent, state.totalEventsSent),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = stringRes(R.string.event_sync_done_accepted, state.totalEventsAccepted),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = stringRes(R.string.event_sync_done_duration, (state.durationMs / 1000).toInt()),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
             )
         }
     }
@@ -410,86 +404,6 @@ private fun ErrorCard(message: String) {
 // -------------------------------------------------------------------------
 // Live activity cards
 // -------------------------------------------------------------------------
-
-/**
- * Shows all relays currently being queried, each with a pulsing dot indicator.
- */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun ActiveRelaysCard(
-    activeRelays: Set<NormalizedRelayUrl>,
-    isRunning: Boolean,
-) {
-    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-    val pulseAlpha by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 0.2f,
-        animationSpec =
-            infiniteRepeatable(
-                animation = tween(durationMillis = 800),
-                repeatMode = RepeatMode.Reverse,
-            ),
-        label = "pulseAlpha",
-    )
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = stringRes(R.string.event_sync_reading_from, activeRelays.size),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Spacer(Modifier.height(10.dp))
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                activeRelays.forEach { relay ->
-                    ActiveRelayChip(
-                        relay = relay,
-                        pulseAlpha = if (isRunning) pulseAlpha else 1f,
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ActiveRelayChip(
-    relay: NormalizedRelayUrl,
-    pulseAlpha: Float,
-) {
-    SuggestionChip(
-        onClick = {},
-        label = {
-            Text(
-                text = relay.displayHost(),
-                style = MaterialTheme.typography.labelSmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        },
-        icon = {
-            Box(
-                modifier =
-                    Modifier
-                        .size(8.dp)
-                        .alpha(pulseAlpha)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary),
-            )
-        },
-        colors =
-            SuggestionChipDefaults.suggestionChipColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
-            ),
-    )
-}
 
 /**
  * Shows where events are being sent: outbox, inbox, and DM relay lists.
@@ -663,16 +577,31 @@ private fun ActivityLogRow(info: EventSyncViewModel.LiveSyncActivity.CompletedRe
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
-        Text(
-            text =
-                if (hasEvents) {
-                    stringRes(R.string.event_sync_events_found_log, formatCount(info.eventsFound))
-                } else {
-                    stringRes(R.string.event_sync_no_events)
-                },
-            style = MaterialTheme.typography.bodySmall,
-            color = textColor,
-        )
+        if (hasEvents) {
+            Text(
+                text = stringRes(R.string.event_sync_log_recv, formatCount(info.eventsFound)),
+                style = MaterialTheme.typography.bodySmall,
+                color = textColor,
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = stringRes(R.string.event_sync_log_new, formatCount(info.eventsAccepted)),
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = if (info.eventsAccepted > 0) FontWeight.SemiBold else FontWeight.Normal,
+                color =
+                    if (info.eventsAccepted > 0) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+            )
+        } else {
+            Text(
+                text = stringRes(R.string.event_sync_no_events),
+                style = MaterialTheme.typography.bodySmall,
+                color = textColor,
+            )
+        }
     }
 }
 
@@ -721,28 +650,18 @@ private fun formatCount(n: Int): String =
 // Preview data
 // -------------------------------------------------------------------------
 
-private val previewRelaySet =
-    setOf(
-        NormalizedRelayUrl("wss://relay.damus.io"),
-        NormalizedRelayUrl("wss://nos.lol"),
-        NormalizedRelayUrl("wss://relay.nostr.band"),
-        NormalizedRelayUrl("wss://nostr.bitcoiner.social"),
-        NormalizedRelayUrl("wss://relay.snort.social"),
-    )
-
 private val previewCompletions =
     listOf(
-        EventSyncViewModel.LiveSyncActivity.CompletedRelayInfo(NormalizedRelayUrl("wss://relay.damus.io"), 1247),
-        EventSyncViewModel.LiveSyncActivity.CompletedRelayInfo(NormalizedRelayUrl("wss://nos.lol"), 892),
-        EventSyncViewModel.LiveSyncActivity.CompletedRelayInfo(NormalizedRelayUrl("wss://relay.nostr.band"), 3500),
-        EventSyncViewModel.LiveSyncActivity.CompletedRelayInfo(NormalizedRelayUrl("wss://slow.relay.example.com"), 0),
-        EventSyncViewModel.LiveSyncActivity.CompletedRelayInfo(NormalizedRelayUrl("wss://nostr.bitcoiner.social"), 15),
-        EventSyncViewModel.LiveSyncActivity.CompletedRelayInfo(NormalizedRelayUrl("wss://unreachable.relay.xyz"), 0),
+        EventSyncViewModel.LiveSyncActivity.CompletedRelayInfo(NormalizedRelayUrl("wss://relay.damus.io"), 1247, 891),
+        EventSyncViewModel.LiveSyncActivity.CompletedRelayInfo(NormalizedRelayUrl("wss://nos.lol"), 892, 45),
+        EventSyncViewModel.LiveSyncActivity.CompletedRelayInfo(NormalizedRelayUrl("wss://relay.nostr.band"), 3500, 3498),
+        EventSyncViewModel.LiveSyncActivity.CompletedRelayInfo(NormalizedRelayUrl("wss://slow.relay.example.com"), 0, 0),
+        EventSyncViewModel.LiveSyncActivity.CompletedRelayInfo(NormalizedRelayUrl("wss://nostr.bitcoiner.social"), 15, 0),
+        EventSyncViewModel.LiveSyncActivity.CompletedRelayInfo(NormalizedRelayUrl("wss://unreachable.relay.xyz"), 0, 0),
     )
 
 private val previewActivity =
     EventSyncViewModel.LiveSyncActivity(
-        activeRelays = previewRelaySet,
         recentCompletions = previewCompletions,
         outboxTargets =
             setOf(
@@ -802,6 +721,7 @@ fun DoneCardPreview() {
             state =
                 EventSyncViewModel.SyncState.Done(
                     totalEventsSent = 18_432,
+                    totalEventsAccepted = 14_891,
                     durationMs = 187_000,
                 ),
         )
@@ -813,17 +733,6 @@ fun DoneCardPreview() {
 fun ErrorCardPreview() {
     ThemeComparisonColumn {
         ErrorCard(message = "No outbox, inbox, or DM relays configured.")
-    }
-}
-
-@Composable
-@Preview
-fun ActiveRelaysCardPreview() {
-    ThemeComparisonColumn {
-        ActiveRelaysCard(
-            activeRelays = previewRelaySet,
-            isRunning = true,
-        )
     }
 }
 
