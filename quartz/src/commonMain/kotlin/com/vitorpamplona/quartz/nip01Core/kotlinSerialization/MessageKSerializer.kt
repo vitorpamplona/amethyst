@@ -90,6 +90,10 @@ object MessageKSerializer : KSerializer<Message> {
                     is CountMessage -> {
                         add(CountResultKSerializer.serializeToElement(value.result))
                     }
+
+                    is EoseMessage -> {
+                        add(JsonPrimitive(value.subId))
+                    }
                 }
             }
         jsonEncoder.encodeJsonElement(element)

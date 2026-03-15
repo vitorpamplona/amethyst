@@ -18,30 +18,24 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.nip37
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common
 
-import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.CountFilter
+import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
-@Stable
-class PrivateOutboxRelayListViewModel : BasicRelaySetupInfoModel() {
-    override fun getRelayList(): List<NormalizedRelayUrl> =
-        account.privateStorageRelayList.flow.value
-            .toList()
-
-    override suspend fun saveRelayList(urlList: List<NormalizedRelayUrl>) {
-        account.savePrivateOutboxRelayList(urlList)
-    }
-
-    override fun countFilters(relayUrl: NormalizedRelayUrl): List<CountFilter> =
-        listOf(
-            CountFilter(
-                label = R.string.events,
-                filter = Filter(authors = listOf(account.pubKey)),
-            ),
-        )
+@Immutable
+data class RelayCountResult(
+    val counts: List<CountEntry> = emptyList(),
+) {
+    @Immutable
+    data class CountEntry(
+        val label: Int,
+        val count: Int,
+        val approximate: Boolean = false,
+    )
 }
+
+data class CountFilter(
+    val label: Int,
+    val filter: Filter,
+)
