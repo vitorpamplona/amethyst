@@ -44,9 +44,7 @@ object Nip47NotificationKSerializer : KSerializer<Notification> {
     override fun serialize(
         encoder: Encoder,
         value: Notification,
-    ) {
-        throw UnsupportedOperationException("NIP-47 Notification serialization not supported")
-    }
+    ): Unit = throw UnsupportedOperationException("NIP-47 Notification serialization not supported")
 
     override fun deserialize(decoder: Decoder): Notification {
         val jsonDecoder = decoder as JsonDecoder
@@ -63,6 +61,7 @@ object Nip47NotificationKSerializer : KSerializer<Notification> {
                         ),
                 )
             }
+
             NwcNotificationType.PAYMENT_SENT -> {
                 PaymentSentNotification(
                     notification =
@@ -71,6 +70,7 @@ object Nip47NotificationKSerializer : KSerializer<Notification> {
                         ),
                 )
             }
+
             NwcNotificationType.HOLD_INVOICE_ACCEPTED -> {
                 val notifObj = jsonObject["notification"]?.jsonObject
                 HoldInvoiceAcceptedNotification(
@@ -88,7 +88,10 @@ object Nip47NotificationKSerializer : KSerializer<Notification> {
                         },
                 )
             }
-            else -> throw IllegalArgumentException("Unknown notification type: $notificationType")
+
+            else -> {
+                throw IllegalArgumentException("Unknown notification type: $notificationType")
+            }
         }
     }
 }

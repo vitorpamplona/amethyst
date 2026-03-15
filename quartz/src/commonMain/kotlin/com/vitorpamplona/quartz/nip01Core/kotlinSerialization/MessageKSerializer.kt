@@ -60,9 +60,11 @@ object MessageKSerializer : KSerializer<Message> {
                         add(JsonPrimitive(value.subId))
                         add(EventKSerializer.serializeToElement(value.event))
                     }
+
                     is NoticeMessage -> {
                         add(JsonPrimitive(value.message))
                     }
+
                     is OkMessage -> {
                         add(JsonPrimitive(value.eventId))
                         // Jackson writes success as a string, not boolean
@@ -71,16 +73,20 @@ object MessageKSerializer : KSerializer<Message> {
                             add(JsonPrimitive(value.message))
                         }
                     }
+
                     is AuthMessage -> {
                         add(JsonPrimitive(value.challenge))
                     }
+
                     is NotifyMessage -> {
                         add(JsonPrimitive(value.message))
                     }
+
                     is ClosedMessage -> {
                         add(JsonPrimitive(value.subId))
                         add(JsonPrimitive(value.message))
                     }
+
                     is CountMessage -> {
                         add(CountResultKSerializer.serializeToElement(value.result))
                     }
@@ -100,12 +106,15 @@ object MessageKSerializer : KSerializer<Message> {
                 val event = EventKSerializer.deserializeFromElement(array[2].jsonObject)
                 EventMessage(subId, event)
             }
+
             EoseMessage.LABEL -> {
                 EoseMessage(array[1].jsonPrimitive.content)
             }
+
             NoticeMessage.LABEL -> {
                 NoticeMessage(array[1].jsonPrimitive.content)
             }
+
             OkMessage.LABEL -> {
                 OkMessage(
                     eventId = array[1].jsonPrimitive.content,
@@ -113,24 +122,31 @@ object MessageKSerializer : KSerializer<Message> {
                     message = if (array.size > 3) array[3].jsonPrimitive.content else "",
                 )
             }
+
             AuthMessage.LABEL -> {
                 AuthMessage(array[1].jsonPrimitive.content)
             }
+
             NotifyMessage.LABEL -> {
                 NotifyMessage(array[1].jsonPrimitive.content)
             }
+
             ClosedMessage.LABEL -> {
                 ClosedMessage(
                     subId = array[1].jsonPrimitive.content,
                     message = if (array.size > 2) array[2].jsonPrimitive.content else "",
                 )
             }
+
             CountMessage.LABEL -> {
                 val queryId = array[1].jsonPrimitive.content
                 val result = CountResultKSerializer.deserializeFromElement(array[2].jsonObject)
                 CountMessage(queryId, result)
             }
-            else -> throw IllegalArgumentException("Message $type is not supported")
+
+            else -> {
+                throw IllegalArgumentException("Message $type is not supported")
+            }
         }
     }
 }

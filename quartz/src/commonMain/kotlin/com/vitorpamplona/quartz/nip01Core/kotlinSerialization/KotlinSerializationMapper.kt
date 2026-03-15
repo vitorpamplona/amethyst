@@ -70,19 +70,46 @@ class KotlinSerializationMapper {
 
         fun toJson(value: OptimizedSerializable): String =
             when (value) {
-                is Event -> json.encodeToString(EventKSerializer, value)
-                is Filter -> json.encodeToString(FilterKSerializer, value)
-                is Rumor -> json.encodeToString(RumorKSerializer, value)
+                is Event -> {
+                    json.encodeToString(EventKSerializer, value)
+                }
+
+                is Filter -> {
+                    json.encodeToString(FilterKSerializer, value)
+                }
+
+                is Rumor -> {
+                    json.encodeToString(RumorKSerializer, value)
+                }
+
                 is EventTemplate<*> -> {
                     @Suppress("UNCHECKED_CAST")
                     json.encodeToString(EventTemplateKSerializer, value as EventTemplate<Event>)
                 }
-                is Message -> json.encodeToString(MessageKSerializer, value)
-                is Command -> json.encodeToString(CommandKSerializer, value)
-                is BunkerRequest -> json.encodeToString(BunkerRequestKSerializer, value)
-                is BunkerResponse -> json.encodeToString(BunkerResponseKSerializer, value)
-                is BunkerMessage -> json.encodeToString(BunkerMessageKSerializer, value)
-                else -> throw IllegalArgumentException("Unsupported type: ${value::class}")
+
+                is Message -> {
+                    json.encodeToString(MessageKSerializer, value)
+                }
+
+                is Command -> {
+                    json.encodeToString(CommandKSerializer, value)
+                }
+
+                is BunkerRequest -> {
+                    json.encodeToString(BunkerRequestKSerializer, value)
+                }
+
+                is BunkerResponse -> {
+                    json.encodeToString(BunkerResponseKSerializer, value)
+                }
+
+                is BunkerMessage -> {
+                    json.encodeToString(BunkerMessageKSerializer, value)
+                }
+
+                else -> {
+                    throw IllegalArgumentException("Unsupported type: ${value::class}")
+                }
             }
 
         inline fun <reified T : OptimizedSerializable> fromJsonTo(jsonStr: String): T {

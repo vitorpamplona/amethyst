@@ -20,10 +20,9 @@
  */
 package com.vitorpamplona.quartz.nip59Giftwrap.rumors.kotlinSerialization
 
-import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.TagArrayKSerializer
-
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.TagArrayKSerializer
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.Rumor
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.descriptors.SerialDescriptor
