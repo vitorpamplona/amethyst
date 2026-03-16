@@ -669,6 +669,7 @@
     <string name="write_to_relay">Enviar para o Relay</string>
     <string name="write_to_relay_description">A quantidade em bytes que foi enviada para este relé, incluindo filtros e eventos</string>
     <string name="read_from_relay_description">A quantidade em bytes que foi recebida deste relé, incluindo filtros e eventos</string>
+    <string name="relay_event_count">Eventos armazenados</string>
     <string name="an_error_occurred_trying_to_get_relay_information">Ocorreu um erro ao tentar obter informações do relay de %1$s</string>
     <string name="owner">Proprietário</string>
     <string name="used_by">Usado por</string>
@@ -1553,4 +1554,8 @@
     <string name="uptime">%1$d%% de disponibilidade</string>
     <string name="namecoin_settings">Configurações do Namecoin</string>
     <string name="ots_explorer_settings">Explorador Bitcoin (OTS)</string>
+    <string name="events">eventos</string>
+    <string name="dms">DMs</string>
+    <string name="profiles">perfils</string>
+    <string name="relay_settings_lower">configurações de Relay</string>
 </resources>
