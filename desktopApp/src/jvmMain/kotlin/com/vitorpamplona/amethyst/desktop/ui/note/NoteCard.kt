@@ -54,6 +54,7 @@ import com.vitorpamplona.amethyst.commons.richtext.UrlParser
 import com.vitorpamplona.amethyst.commons.richtext.Urls
 import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
 import com.vitorpamplona.amethyst.commons.util.toTimeAgo
+import com.vitorpamplona.amethyst.desktop.ui.media.AudioPlayer
 import com.vitorpamplona.amethyst.desktop.ui.media.DesktopVideoPlayer
 
 /**
@@ -85,11 +86,27 @@ fun NoteCard(
         remember(urls) {
             urls.withScheme.filter { RichTextParser.isImageUrl(it) }
         }
-    val videoUrls =
+    val allMediaUrls =
         remember(urls) {
             urls.withScheme.filter { RichTextParser.isVideoUrl(it) }
         }
-    val mediaUrls = remember(imageUrls, videoUrls) { (imageUrls + videoUrls).toSet() }
+    val audioExtensions = setOf("mp3", "ogg", "wav", "flac", "aac", "opus", "m4a")
+    val audioUrls =
+        remember(allMediaUrls) {
+            allMediaUrls.filter { url ->
+                val ext =
+                    url
+                        .substringAfterLast('.', "")
+                        .substringBefore('?')
+                        .lowercase()
+                ext in audioExtensions
+            }
+        }
+    val videoUrls =
+        remember(allMediaUrls, audioUrls) {
+            allMediaUrls - audioUrls.toSet()
+        }
+    val mediaUrls = remember(imageUrls, allMediaUrls) { (imageUrls + allMediaUrls).toSet() }
     val strippedContent =
         remember(note.content, mediaUrls) {
             var text = note.content
@@ -209,6 +226,22 @@ fun NoteCard(
                         modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp),
                     )
                     if (url != videoUrls.last()) {
+                        Spacer(Modifier.height(4.dp))
+                    }
+                }
+            }
+
+            // Inline audio
+            if (audioUrls.isNotEmpty()) {
+                if (strippedContent.isNotBlank() || imageUrls.isNotEmpty() || videoUrls.isNotEmpty()) {
+                    Spacer(Modifier.height(8.dp))
+                }
+                for (url in audioUrls) {
+                    AudioPlayer(
+                        url = url,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    if (url != audioUrls.last()) {
                         Spacer(Modifier.height(4.dp))
                     }
                 }
