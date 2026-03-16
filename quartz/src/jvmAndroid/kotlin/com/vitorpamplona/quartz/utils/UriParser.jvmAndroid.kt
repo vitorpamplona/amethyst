@@ -20,22 +20,35 @@
  */
 package com.vitorpamplona.quartz.utils
 
-import androidx.core.net.toUri
+import java.net.URI
 import java.net.URLDecoder
 
 actual class UriParser actual constructor(
     uri: String,
 ) {
-    val myUri = uri.toUri()
+    private val myUri = URI.create(uri)
 
-    val fragments: Map<String, String> by lazy {
-        myUri.fragment?.ifBlank { null }?.let { keyValuePair ->
+    private val queryParameters: Map<String, String> by lazy {
+        myUri.query?.ifBlank { null }?.let { query ->
+            query.split('&').associate { paramValue ->
+                val parts = paramValue.split("=", limit = 2)
+                if (parts.size == 2) {
+                    parts[0] to URLDecoder.decode(parts[1], "UTF-8")
+                } else {
+                    parts[0] to "" // Handle parameters without a value
+                }
+            }
+        } ?: emptyMap()
+    }
+
+    private val fragments: Map<String, String> by lazy {
+        myUri.rawFragment?.ifBlank { null }?.let { keyValuePair ->
             keyValuePair.split('&').associate { paramValue ->
                 val parts = paramValue.split("=", limit = 2)
                 if (parts.size == 2) {
                     parts[0] to URLDecoder.decode(parts[1], "UTF-8")
                 } else {
-                    parts[0] to "" // Handle parameters without a value, e.g., "param&other=value"
+                    parts[0] to "" // Handle parameters without a value
                 }
             }
         } ?: emptyMap()
@@ -46,16 +59,15 @@ actual class UriParser actual constructor(
     actual fun host(): String? = myUri.host
 
     actual fun port(): Int? {
-        // android.net.Uri.getPort() returns -1 if the port is not set, so we handle that case.
         val port = myUri.port
         return if (port == -1) null else port
     }
 
     actual fun path(): String? = myUri.path
 
-    actual fun queryParameterNames() = myUri.queryParameterNames
+    actual fun queryParameterNames(): Set<String> = queryParameters.keys
 
-    actual fun getQueryParameter(param: String) = myUri.getQueryParameter(param)
+    actual fun getQueryParameter(param: String): String? = queryParameters[param]
 
     actual fun fragments(): Map<String, String> = fragments
 }
