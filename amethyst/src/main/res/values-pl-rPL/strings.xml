@@ -670,6 +670,7 @@
     <string name="write_to_relay">Zapisz do Transmitera</string>
     <string name="write_to_relay_description">Ilość w bajtach, która została wysłana do tego transmitera, w tym filtry i wydarzenia</string>
     <string name="read_from_relay_description">Ilość w bajtach, która została otrzymana z tego transmitera, w tym filtry i wydarzenia</string>
+    <string name="relay_event_count">Zapisane zdarzenia</string>
     <string name="an_error_occurred_trying_to_get_relay_information">Wystąpił błąd podczas próby uzyskania informacji o transmiterze z %1$s</string>
     <string name="owner">Operator</string>
     <string name="used_by">Używany przez</string>
@@ -925,6 +926,8 @@
     <string name="sign_request_rejected_description">Upewnij się, że aplikacja logującego autoryzuje tę operację</string>
     <string name="no_wallet_found_with_error">Nie znaleziono portfeli do zapłacenia faktury z Lightning (Error: %1$s). Proszę zainstalować Lightning wallet, aby używać zapów</string>
     <string name="no_wallet_found">Nie znaleziono portfeli do zapłacenia faktury z Lightning. Proszę zainstalować Lightning wallet, aby używać zapów</string>
+    <string name="no_blossom_apps_found_title">Nie można otworzyć linków Blossom</string>
+    <string name="no_blossom_apps_found_description">Nie znaleziono aplikacji Blossom. Zainstaluj lokalną aplikację Blossom, aby wyświetlić ten plik</string>
     <string name="hidden_words">Ukryte słowa</string>
     <string name="hide_new_word_label">Ukryj nowe słowo lub wyrażenie</string>
     <string name="automatically_show_profile_picture">Zdjęcie profilowe</string>
@@ -1047,6 +1050,7 @@
     <string name="route_global">Wszystkie</string>
     <string name="route_video">Filmiki</string>
     <string name="route_chess">Szachy</string>
+    <string name="wallet">Portfel</string>
     <string name="route_security_filters">Filtry bezpieczeństwa</string>
     <string name="route_import_follows">Importuj Obserwujących</string>
     <string name="new_post">Nowy post</string>
