@@ -36,7 +36,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Article
-import androidx.compose.material.icons.filled.Article
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Forum
