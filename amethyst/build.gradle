@@ -336,9 +336,7 @@ dependencies {
     fdroidImplementation libs.unifiedpush
 
     // Charts
-    implementation libs.vico.charts.core
     implementation libs.vico.charts.compose
-    implementation libs.vico.charts.views
     implementation libs.vico.charts.m3
 
     // GeoHash

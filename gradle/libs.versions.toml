@@ -57,7 +57,7 @@ torAndroid = "0.4.9.5.1"
 translate = "17.0.3"
 jetbrainsCompose = "1.10.2"
 unifiedpush = "3.0.10"
-vico-charts = "2.4.3"
+vico-charts-compose = "3.0.3"
 zelory = "3.0.1"
 zoomable = "2.11.1"
 zxing = "3.5.4"
@@ -164,10 +164,9 @@ secp256k1-kmp-jni-jvm = { group = "fr.acinq.secp256k1", name = "secp256k1-kmp-jn
 tarsosdsp = { group = "be.tarsos.dsp", name = "core", version.ref = "tarsosdsp" }
 tor-android = { module = "info.guardianproject:tor-android", version.ref = "torAndroid" }
 unifiedpush = { group = "com.github.UnifiedPush", name = "android-connector", version.ref = "unifiedpush" }
-vico-charts-compose = { group = "com.patrykandpatrick.vico", name = "compose", version.ref = "vico-charts" }
-vico-charts-core = { group = "com.patrykandpatrick.vico", name = "core", version.ref = "vico-charts" }
-vico-charts-m3 = { group = "com.patrykandpatrick.vico", name = "compose-m3", version.ref = "vico-charts" }
-vico-charts-views = { group = "com.patrykandpatrick.vico", name = "views", version.ref = "vico-charts" }
+vico-charts-compose = { group = "com.patrykandpatrick.vico", name = "compose", version.ref = "vico-charts-compose" }
+vico-charts-m3 = { group = "com.patrykandpatrick.vico", name = "compose-m3", version.ref = "vico-charts-compose" }
+vico-charts-views = { group = "com.patrykandpatrick.vico", name = "views", version.ref = "vico-charts-compose" }
 zelory-image-compressor = { group = "id.zelory", name = "compressor", version.ref = "zelory" }
 zoomable = { group = "net.engawapg.lib", name = "zoomable", version.ref = "zoomable" }
 zxing = { group = "com.google.zxing", name = "core", version.ref = "zxing" }
