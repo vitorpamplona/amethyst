@@ -119,7 +119,6 @@ actual class ChessEngine {
         val sq = Square.fromValue(square.uppercase())
         return board
             .legalMoves()
-            .filterNotNull()
             .filter { it.from == sq }
             .map { it.to.toString().lowercase() }
     }
@@ -132,7 +131,7 @@ actual class ChessEngine {
             } else {
                 false
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             false
         }
 
@@ -156,7 +155,7 @@ actual class ChessEngine {
 
             val move = Move(fromSquare, toSquare, promotionPiece)
             board.legalMoves().contains(move)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             false
         }
 
@@ -192,7 +191,7 @@ actual class ChessEngine {
         val toSquare = move.to
         val piece = board.getPiece(fromSquare)
         val pt = piece.pieceType ?: return move.toString()
-        val promotionPiece = move.promotion ?: Piece.NONE
+        val promotionPiece = move.promotion
 
         // Castling
         if (pt == com.github.bhlangonijr.chesslib.PieceType.KING) {
@@ -213,7 +212,7 @@ actual class ChessEngine {
             board.getPiece(toSquare) != Piece.NONE ||
                 (
                     pt == com.github.bhlangonijr.chesslib.PieceType.PAWN &&
-                        epTarget != null && epTarget != Square.NONE && toSquare == epTarget
+                        epTarget != Square.NONE && toSquare == epTarget
                 )
 
         if (pt != com.github.bhlangonijr.chesslib.PieceType.PAWN) {
@@ -221,7 +220,7 @@ actual class ChessEngine {
 
             // Disambiguation: check if other pieces of same type can reach the same square
             val ambiguous =
-                board.legalMoves().filterNotNull().filter {
+                board.legalMoves().filter {
                     it.to == toSquare &&
                         board.getPiece(it.from).pieceType == pt &&
                         it.from != fromSquare
@@ -342,7 +341,7 @@ actual class ChessEngine {
                     blackKingSide = board.castleRight.toString().contains("k"),
                     blackQueenSide = board.castleRight.toString().contains("q"),
                 ),
-            enPassantSquare = board.enPassantTarget?.let { it.toString().lowercase() },
+            enPassantSquare = board.enPassantTarget.toString().lowercase(),
             halfMoveClock = board.halfMoveCounter,
         )
     }
