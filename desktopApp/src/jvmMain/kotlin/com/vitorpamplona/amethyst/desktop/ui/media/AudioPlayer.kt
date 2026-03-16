@@ -49,14 +49,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.desktop.service.media.VlcjPlayerPool
 import kotlinx.coroutines.delay
-import uk.co.caprica.vlcj.factory.MediaPlayerFactory
 import uk.co.caprica.vlcj.player.base.MediaPlayer
 import uk.co.caprica.vlcj.player.base.MediaPlayerEventAdapter
 
 /**
- * Audio-only player using VLCJ with no video surface.
- * Creates its own MediaPlayerFactory with "--no-video" flag.
+ * Audio-only player using VLCJ with pooled audio players.
+ * Uses VlcjPlayerPool's shared audio factory instead of creating one per instance.
  */
 @Composable
 fun AudioPlayer(
@@ -71,17 +71,13 @@ fun AudioPlayer(
     var player by remember { mutableStateOf<MediaPlayer?>(null) }
 
     DisposableEffect(url) {
-        val factory =
-            try {
-                MediaPlayerFactory("--no-video", "--no-xlib")
-            } catch (_: Exception) {
-                vlcAvailable = false
-                return@DisposableEffect onDispose {}
-            }
+        val mp = VlcjPlayerPool.acquireAudioPlayer()
+        if (mp == null) {
+            vlcAvailable = false
+            return@DisposableEffect onDispose {}
+        }
 
-        val mp = factory.mediaPlayers().newMediaPlayer()
-
-        mp.events().addMediaPlayerEventListener(
+        val listener =
             object : MediaPlayerEventAdapter() {
                 override fun playing(mediaPlayer: MediaPlayer) {
                     isPlaying = true
@@ -109,24 +105,15 @@ fun AudioPlayer(
                     position = 0f
                     currentTime = 0L
                 }
-            },
-        )
+            }
 
+        mp.events().addMediaPlayerEventListener(listener)
         player = mp
 
         onDispose {
             player = null
-            try {
-                mp.controls().stop()
-                mp.release()
-            } catch (_: Exception) {
-                // Ignore
-            }
-            try {
-                factory.release()
-            } catch (_: Exception) {
-                // Ignore
-            }
+            mp.events().removeMediaPlayerEventListener(listener)
+            VlcjPlayerPool.releaseAudioPlayer(mp)
         }
     }
 
@@ -192,7 +179,7 @@ fun AudioPlayer(
         }
 
         Text(
-            text = formatAudioTime(currentTime),
+            text = formatTime(currentTime),
             style = MaterialTheme.typography.labelSmall,
         )
 
@@ -203,15 +190,8 @@ fun AudioPlayer(
         )
 
         Text(
-            text = formatAudioTime(duration),
+            text = formatTime(duration),
             style = MaterialTheme.typography.labelSmall,
         )
     }
-}
-
-private fun formatAudioTime(millis: Long): String {
-    val totalSeconds = millis / 1000
-    val minutes = totalSeconds / 60
-    val seconds = totalSeconds % 60
-    return "%d:%02d".format(minutes, seconds)
 }

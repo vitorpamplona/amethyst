@@ -60,6 +60,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.desktop.service.media.ServerHealthCheck
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 
 @Composable
@@ -74,12 +75,16 @@ fun MediaServerSettings(
     val scope = rememberCoroutineScope()
     var isChecking by remember { mutableStateOf(false) }
 
-    // Check health on first load
+    // Check health on first load (parallel)
     LaunchedEffect(servers.toList()) {
-        for (server in servers) {
-            if (server !in serverStatuses) {
-                val status = ServerHealthCheck.check(server)
-                serverStatuses[server] = status
+        coroutineScope {
+            for (server in servers) {
+                if (server !in serverStatuses) {
+                    launch {
+                        val status = ServerHealthCheck.check(server)
+                        serverStatuses[server] = status
+                    }
+                }
             }
         }
     }
@@ -172,10 +177,14 @@ fun MediaServerSettings(
             onClick = {
                 scope.launch {
                     isChecking = true
-                    for (server in servers) {
-                        serverStatuses[server] = ServerHealthCheck.ServerStatus.UNKNOWN
-                        val status = ServerHealthCheck.check(server)
-                        serverStatuses[server] = status
+                    coroutineScope {
+                        for (server in servers) {
+                            launch {
+                                serverStatuses[server] = ServerHealthCheck.ServerStatus.UNKNOWN
+                                val status = ServerHealthCheck.check(server)
+                                serverStatuses[server] = status
+                            }
+                        }
                     }
                     isChecking = false
                 }

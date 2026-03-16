@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.desktop.service.media
 
 import uk.co.caprica.vlcj.factory.MediaPlayerFactory
-import uk.co.caprica.vlcj.player.base.MediaPlayerEventAdapter
+import uk.co.caprica.vlcj.player.base.MediaPlayer
 import uk.co.caprica.vlcj.player.embedded.EmbeddedMediaPlayer
 import uk.co.caprica.vlcj.player.embedded.videosurface.VideoSurface
 import uk.co.caprica.vlcj.player.embedded.videosurface.callback.BufferFormatCallback
@@ -40,11 +40,16 @@ object VlcjPlayerPool {
     private val available = AtomicBoolean(false)
     private var factory: MediaPlayerFactory? = null
 
-    // Strong references to ALL created players (prevents GC crash)
+    // Video player pool
     private val allPlayers = mutableListOf<EmbeddedMediaPlayer>()
     private val idlePlayers = ConcurrentLinkedQueue<EmbeddedMediaPlayer>()
-
     private const val MAX_POOL_SIZE = 3
+
+    // Audio player pool (shared factory with --no-video)
+    private var audioFactory: MediaPlayerFactory? = null
+    private val allAudioPlayers = mutableListOf<MediaPlayer>()
+    private val idleAudioPlayers = ConcurrentLinkedQueue<MediaPlayer>()
+    private const val MAX_AUDIO_POOL_SIZE = 5
 
     /**
      * Initialize the pool. Returns false if VLC is not installed.
@@ -76,18 +81,15 @@ object VlcjPlayerPool {
     }
 
     /**
-     * Acquire a player from the pool or create a new one.
+     * Acquire a video player from the pool or create a new one.
      * Returns null if VLC is not available or pool is at capacity.
      */
     fun acquire(): EmbeddedMediaPlayer? {
         if (!available.get()) return null
         val f = factory ?: return null
 
-        // Reuse idle player
-        idlePlayers.poll()?.let { return it }
-
-        // Create new if under limit
         synchronized(allPlayers) {
+            idlePlayers.poll()?.let { return it }
             if (allPlayers.size >= MAX_POOL_SIZE) return null
             return try {
                 val player = f.mediaPlayers().newEmbeddedMediaPlayer()
@@ -100,16 +102,52 @@ object VlcjPlayerPool {
     }
 
     /**
-     * Return a player to the pool for reuse. Stops playback first.
+     * Acquire an audio-only player from the pool.
+     * Uses a separate factory with --no-video for efficiency.
+     */
+    fun acquireAudioPlayer(): MediaPlayer? {
+        if (!init()) return null
+
+        synchronized(allAudioPlayers) {
+            idleAudioPlayers.poll()?.let { return it }
+            if (allAudioPlayers.size >= MAX_AUDIO_POOL_SIZE) return null
+
+            val af =
+                audioFactory ?: try {
+                    MediaPlayerFactory("--no-video", "--no-xlib").also { audioFactory = it }
+                } catch (_: Exception) {
+                    return null
+                }
+
+            return try {
+                val player = af.mediaPlayers().newMediaPlayer()
+                allAudioPlayers.add(player)
+                player
+            } catch (_: Exception) {
+                null
+            }
+        }
+    }
+
+    /**
+     * Return a video player to the pool for reuse.
      */
     fun release(player: EmbeddedMediaPlayer) {
         try {
             player.controls().stop()
-            // Remove any event listeners to prevent stale callbacks
-            player.events().addMediaPlayerEventListener(
-                object : MediaPlayerEventAdapter() {},
-            )
             idlePlayers.offer(player)
+        } catch (_: Exception) {
+            // Player may already be disposed
+        }
+    }
+
+    /**
+     * Return an audio player to the pool for reuse.
+     */
+    fun releaseAudioPlayer(player: MediaPlayer) {
+        try {
+            player.controls().stop()
+            idleAudioPlayers.offer(player)
         } catch (_: Exception) {
             // Player may already be disposed
         }
@@ -131,12 +169,30 @@ object VlcjPlayerPool {
             }
             allPlayers.clear()
         }
+        synchronized(allAudioPlayers) {
+            idleAudioPlayers.clear()
+            for (player in allAudioPlayers) {
+                try {
+                    player.controls().stop()
+                    player.release()
+                } catch (_: Exception) {
+                    // Ignore
+                }
+            }
+            allAudioPlayers.clear()
+        }
         try {
             factory?.release()
         } catch (_: Exception) {
             // Ignore
         }
+        try {
+            audioFactory?.release()
+        } catch (_: Exception) {
+            // Ignore
+        }
         factory = null
+        audioFactory = null
         available.set(false)
     }
 }

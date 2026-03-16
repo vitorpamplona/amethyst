@@ -58,13 +58,6 @@ import uk.co.caprica.vlcj.player.embedded.videosurface.callback.format.RV32Buffe
 import java.nio.ByteBuffer
 import org.jetbrains.skia.Image as SkiaImage
 
-data class VideoPlayerState(
-    val isPlaying: Boolean = false,
-    val position: Float = 0f,
-    val duration: Long = 0L,
-    val currentTime: Long = 0L,
-)
-
 @Composable
 fun DesktopVideoPlayer(
     url: String,
@@ -93,10 +86,9 @@ fun DesktopVideoPlayer(
             return@DisposableEffect onDispose {}
         }
 
-        // Skia bitmap for DirectRendering
+        // Skia bitmap for DirectRendering — pre-allocated to avoid per-frame GC
         var skBitmap: Bitmap? = null
-        var videoWidth = 0
-        var videoHeight = 0
+        var pixelBytes: ByteArray? = null
 
         val bufferFormatCallback =
             object : BufferFormatCallback {
@@ -104,17 +96,15 @@ fun DesktopVideoPlayer(
                     sourceWidth: Int,
                     sourceHeight: Int,
                 ): BufferFormat {
-                    videoWidth = sourceWidth
-                    videoHeight = sourceHeight
                     if (sourceHeight > 0) {
                         aspectRatio = sourceWidth.toFloat() / sourceHeight.toFloat()
                     }
-                    // Allocate Skia bitmap
                     val bmp = Bitmap()
                     bmp.allocPixels(
                         ImageInfo.makeN32(sourceWidth, sourceHeight, ColorAlphaType.PREMUL),
                     )
                     skBitmap = bmp
+                    pixelBytes = ByteArray(sourceWidth * sourceHeight * 4)
                     return RV32BufferFormat(sourceWidth, sourceHeight)
                 }
 
@@ -126,9 +116,9 @@ fun DesktopVideoPlayer(
         val renderCallback =
             RenderCallback { _, nativeBuffers, _ ->
                 val bmp = skBitmap ?: return@RenderCallback
+                val bytes = pixelBytes ?: return@RenderCallback
                 val buffer = nativeBuffers[0]
                 buffer.rewind()
-                val bytes = ByteArray(buffer.remaining())
                 buffer.get(bytes)
                 bmp.installPixels(bytes)
                 frame = SkiaImage.makeFromBitmap(bmp).toComposeImageBitmap()
@@ -142,7 +132,7 @@ fun DesktopVideoPlayer(
 
         acquired.videoSurface().set(surface)
 
-        acquired.events().addMediaPlayerEventListener(
+        val listener =
             object : MediaPlayerEventAdapter() {
                 override fun playing(mediaPlayer: MediaPlayer) {
                     isPlaying = true
@@ -170,8 +160,9 @@ fun DesktopVideoPlayer(
                     position = 0f
                     currentTime = 0L
                 }
-            },
-        )
+            }
+
+        acquired.events().addMediaPlayerEventListener(listener)
 
         player = acquired
 
@@ -183,6 +174,7 @@ fun DesktopVideoPlayer(
 
         onDispose {
             player = null
+            acquired.events().removeMediaPlayerEventListener(listener)
             VlcjPlayerPool.release(acquired)
         }
     }

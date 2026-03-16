@@ -42,7 +42,6 @@ import coil3.compose.AsyncImage
 fun ZoomableImage(
     url: String,
     modifier: Modifier = Modifier,
-    onDoubleClick: (() -> Unit)? = null,
 ) {
     var scale by remember { mutableFloatStateOf(1f) }
     var offsetX by remember { mutableFloatStateOf(0f) }
@@ -93,8 +92,4 @@ fun ZoomableImage(
             contentScale = ContentScale.Fit,
         )
     }
-}
-
-fun resetZoom(onReset: () -> Unit) {
-    onReset()
 }

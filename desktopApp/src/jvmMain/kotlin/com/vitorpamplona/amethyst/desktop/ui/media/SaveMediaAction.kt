@@ -38,19 +38,24 @@ object SaveMediaAction {
     suspend fun saveMedia(
         url: String,
         suggestedFilename: String? = null,
-    ): File? =
-        withContext(Dispatchers.IO) {
-            val filename = suggestedFilename ?: url.substringAfterLast('/').substringBefore('?').ifBlank { "media" }
+    ): File? {
+        val filename = suggestedFilename ?: url.substringAfterLast('/').substringBefore('?').ifBlank { "media" }
 
-            val dialog =
-                FileDialog(null as Frame?, "Save Media", FileDialog.SAVE).apply {
-                    file = filename
-                }
-            dialog.isVisible = true
+        // FileDialog must be shown on EDT
+        val file =
+            withContext(Dispatchers.Main) {
+                val dialog =
+                    FileDialog(null as Frame?, "Save Media", FileDialog.SAVE).apply {
+                        this.file = filename
+                    }
+                dialog.isVisible = true
 
-            val dir = dialog.directory ?: return@withContext null
-            val file = File(dir, dialog.file ?: return@withContext null)
+                val dir = dialog.directory ?: return@withContext null
+                File(dir, dialog.file ?: return@withContext null)
+            } ?: return null
 
+        // Download on IO
+        return withContext(Dispatchers.IO) {
             try {
                 val request = Request.Builder().url(url).build()
                 val response = httpClient.newCall(request).execute()
@@ -67,4 +72,5 @@ object SaveMediaAction {
                 null
             }
         }
+    }
 }

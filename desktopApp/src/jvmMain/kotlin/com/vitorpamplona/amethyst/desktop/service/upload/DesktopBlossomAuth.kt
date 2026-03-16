@@ -36,15 +36,6 @@ object DesktopBlossomAuth {
         return encodeAuthHeader(event)
     }
 
-    suspend fun createDeleteAuth(
-        hash: HexKey,
-        alt: String,
-        signer: NostrSigner,
-    ): String {
-        val event = BlossomAuthorizationEvent.createDeleteAuth(hash, alt, signer)
-        return encodeAuthHeader(event)
-    }
-
     fun encodeAuthHeader(event: BlossomAuthorizationEvent): String {
         val b64 = Base64.getEncoder().encodeToString(event.toJson().toByteArray())
         return "Nostr $b64"

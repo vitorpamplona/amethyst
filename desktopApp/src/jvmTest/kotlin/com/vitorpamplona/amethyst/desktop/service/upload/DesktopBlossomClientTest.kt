@@ -35,7 +35,6 @@ import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class DesktopBlossomClientTest {
@@ -140,70 +139,6 @@ class DesktopBlossomClientTest {
             } finally {
                 file.delete()
             }
-        }
-
-    @Test
-    fun deleteSuccessReturnsTrue() =
-        runTest {
-            val client = DesktopBlossomClient(mockOkHttp(200))
-
-            val result =
-                client.delete(
-                    hash = "abc123",
-                    serverBaseUrl = "https://blossom.example.com",
-                    authHeader = "Nostr xyz",
-                )
-
-            assertTrue(result)
-        }
-
-    @Test
-    fun deleteFailureReturnsFalse() =
-        runTest {
-            val client = DesktopBlossomClient(mockOkHttp(404))
-
-            val result =
-                client.delete(
-                    hash = "abc123",
-                    serverBaseUrl = "https://blossom.example.com",
-                    authHeader = null,
-                )
-
-            assertFalse(result)
-        }
-
-    @Test
-    fun headUploadSuccessReturnsTrue() =
-        runTest {
-            val client = DesktopBlossomClient(mockOkHttp(200))
-
-            val result =
-                client.headUpload(
-                    contentType = "image/png",
-                    contentLength = 1024,
-                    sha256 = "abc123",
-                    serverBaseUrl = "https://blossom.example.com",
-                    authHeader = null,
-                )
-
-            assertTrue(result)
-        }
-
-    @Test
-    fun headUploadFailureReturnsFalse() =
-        runTest {
-            val client = DesktopBlossomClient(mockOkHttp(403))
-
-            val result =
-                client.headUpload(
-                    contentType = "image/png",
-                    contentLength = 1024,
-                    sha256 = "abc123",
-                    serverBaseUrl = "https://blossom.example.com",
-                    authHeader = null,
-                )
-
-            assertFalse(result)
         }
 
     @Test

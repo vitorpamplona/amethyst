@@ -57,6 +57,8 @@ import com.vitorpamplona.amethyst.commons.util.toTimeAgo
 import com.vitorpamplona.amethyst.desktop.ui.media.AudioPlayer
 import com.vitorpamplona.amethyst.desktop.ui.media.DesktopVideoPlayer
 
+private val AUDIO_EXTENSIONS = setOf("mp3", "ogg", "wav", "flac", "aac", "opus", "m4a")
+
 /**
  * Data class for displaying a note card.
  */
@@ -86,27 +88,26 @@ fun NoteCard(
         remember(urls) {
             urls.withScheme.filter { RichTextParser.isImageUrl(it) }
         }
-    val allMediaUrls =
+    val videoAndAudioUrls =
         remember(urls) {
             urls.withScheme.filter { RichTextParser.isVideoUrl(it) }
         }
-    val audioExtensions = setOf("mp3", "ogg", "wav", "flac", "aac", "opus", "m4a")
     val audioUrls =
-        remember(allMediaUrls) {
-            allMediaUrls.filter { url ->
+        remember(videoAndAudioUrls) {
+            videoAndAudioUrls.filter { url ->
                 val ext =
                     url
                         .substringAfterLast('.', "")
                         .substringBefore('?')
                         .lowercase()
-                ext in audioExtensions
+                ext in AUDIO_EXTENSIONS
             }
         }
     val videoUrls =
-        remember(allMediaUrls, audioUrls) {
-            allMediaUrls - audioUrls.toSet()
+        remember(videoAndAudioUrls, audioUrls) {
+            videoAndAudioUrls - audioUrls.toSet()
         }
-    val mediaUrls = remember(imageUrls, allMediaUrls) { (imageUrls + allMediaUrls).toSet() }
+    val mediaUrls = remember(imageUrls, videoAndAudioUrls) { (imageUrls + videoAndAudioUrls).toSet() }
     val strippedContent =
         remember(note.content, mediaUrls) {
             var text = note.content

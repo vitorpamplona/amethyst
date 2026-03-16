@@ -54,11 +54,11 @@ object DesktopImageLoaderSetup {
 
     private fun newMemoryCache(): MemoryCache {
         val maxMemory = Runtime.getRuntime().maxMemory()
-        val cacheSize = (maxMemory * 0.25).toLong().coerceAtMost(512L * 1024 * 1024)
+        val cacheSize = (maxMemory * 0.15).toLong().coerceAtMost(256L * 1024 * 1024)
         return MemoryCache
             .Builder()
             .maxSizeBytes(cacheSize)
-            .strongReferencesEnabled(true)
+            .strongReferencesEnabled(false)
             .build()
     }
 

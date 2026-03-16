@@ -59,8 +59,6 @@ class DesktopBlossomClient(
                     .Builder()
                     .url(apiUrl)
                     .put(requestBody)
-                    .addHeader("Content-Length", file.length().toString())
-                    .addHeader("Content-Type", contentType)
 
             authHeader?.let { requestBuilder.addHeader("Authorization", it) }
 
@@ -72,42 +70,5 @@ class DesktopBlossomClient(
                 }
                 JsonMapper.fromJson<BlossomUploadResult>(it.body.string())
             }
-        }
-
-    suspend fun delete(
-        hash: String,
-        serverBaseUrl: String,
-        authHeader: String?,
-    ): Boolean =
-        withContext(Dispatchers.IO) {
-            val apiUrl = serverBaseUrl.removeSuffix("/") + "/$hash"
-            val requestBuilder = Request.Builder().url(apiUrl).delete()
-            authHeader?.let { requestBuilder.addHeader("Authorization", it) }
-
-            val response = okHttpClient.newCall(requestBuilder.build()).execute()
-            response.use { it.isSuccessful }
-        }
-
-    suspend fun headUpload(
-        contentType: String,
-        contentLength: Long,
-        sha256: String,
-        serverBaseUrl: String,
-        authHeader: String?,
-    ): Boolean =
-        withContext(Dispatchers.IO) {
-            val apiUrl = serverBaseUrl.removeSuffix("/") + "/upload"
-            val requestBuilder =
-                Request
-                    .Builder()
-                    .url(apiUrl)
-                    .head()
-                    .addHeader("X-Content-Type", contentType)
-                    .addHeader("X-Content-Length", contentLength.toString())
-                    .addHeader("X-SHA-256", sha256)
-            authHeader?.let { requestBuilder.addHeader("Authorization", it) }
-
-            val response = okHttpClient.newCall(requestBuilder.build()).execute()
-            response.use { it.isSuccessful }
         }
 }

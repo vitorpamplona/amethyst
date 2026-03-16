@@ -39,7 +39,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -71,7 +70,6 @@ fun ChatFileAttachment(
     val isImage = mimeType?.startsWith("image/") == true
 
     var decryptedImage by remember { mutableStateOf<ImageBitmap?>(null) }
-    var decryptedBytes by remember { mutableStateOf<ByteArray?>(null) }
     var isLoading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
 
@@ -81,7 +79,6 @@ fun ChatFileAttachment(
             isLoading = true
             try {
                 val bytes = EncryptedMediaService.downloadAndDecrypt(url, keyBytes, nonce)
-                decryptedBytes = bytes
                 withContext(Dispatchers.Default) {
                     val skImage = SkiaImage.makeFromEncoded(bytes)
                     decryptedImage = skImage.toComposeImageBitmap()
@@ -171,18 +168,6 @@ fun ChatFileAttachment(
                             }
                         }
                     }
-                }
-            }
-
-            // Save button for decrypted files
-            if (decryptedBytes != null) {
-                TextButton(
-                    onClick = {
-                        // For encrypted files, we'd need to save decrypted bytes
-                        // This is handled through the save action
-                    },
-                ) {
-                    Text("Save", style = MaterialTheme.typography.labelSmall)
                 }
             }
         }

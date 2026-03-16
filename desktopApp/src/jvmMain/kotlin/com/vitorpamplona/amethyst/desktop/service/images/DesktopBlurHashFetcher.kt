@@ -31,9 +31,6 @@ import coil3.key.Keyer
 import coil3.request.Options
 import com.vitorpamplona.amethyst.commons.blurhash.BlurHashDecoder
 import com.vitorpamplona.amethyst.commons.blurhash.toBufferedImage
-import org.jetbrains.skia.Bitmap
-import org.jetbrains.skia.ColorAlphaType
-import org.jetbrains.skia.ImageInfo
 
 data class BlurhashWrapper(
     val blurhash: String,
@@ -41,23 +38,13 @@ data class BlurhashWrapper(
 
 @Stable
 class DesktopBlurHashFetcher(
-    private val options: Options,
     private val data: BlurhashWrapper,
 ) : Fetcher {
     override suspend fun fetch(): FetchResult? {
         val hash = data.blurhash
         val platformImage = BlurHashDecoder.decodeKeepAspectRatio(hash, 25) ?: return null
         val bufferedImage = platformImage.toBufferedImage()
-
-        val w = bufferedImage.width
-        val h = bufferedImage.height
-        val pixels = IntArray(w * h)
-        bufferedImage.getRGB(0, 0, w, h, pixels, 0, w)
-
-        val bitmap = Bitmap()
-        bitmap.allocPixels(ImageInfo.makeN32(w, h, ColorAlphaType.PREMUL))
-        bitmap.installPixels(convertArgbToBgra(pixels))
-        bitmap.setImmutable()
+        val bitmap = bufferedImageToSkiaBitmap(bufferedImage)
 
         return ImageFetchResult(
             image = bitmap.asImage(true),
@@ -71,7 +58,7 @@ class DesktopBlurHashFetcher(
             data: BlurhashWrapper,
             options: Options,
             imageLoader: ImageLoader,
-        ): Fetcher = DesktopBlurHashFetcher(options, data)
+        ): Fetcher = DesktopBlurHashFetcher(data)
     }
 
     object BKeyer : Keyer<BlurhashWrapper> {

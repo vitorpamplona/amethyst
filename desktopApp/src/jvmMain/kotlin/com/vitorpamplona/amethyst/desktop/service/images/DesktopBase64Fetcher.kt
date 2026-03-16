@@ -42,7 +42,6 @@ import java.awt.image.BufferedImage
 
 @Stable
 class DesktopBase64Fetcher(
-    private val options: Options,
     private val data: Uri,
 ) : Fetcher {
     override suspend fun fetch(): FetchResult? =
@@ -64,7 +63,7 @@ class DesktopBase64Fetcher(
             imageLoader: ImageLoader,
         ): Fetcher? =
             if (data.scheme == "data") {
-                DesktopBase64Fetcher(options, data)
+                DesktopBase64Fetcher(data)
             } else {
                 null
             }
