@@ -149,7 +149,10 @@ fun AppNavigation(
         navBackStackEntry?.destination?.let { dest ->
             dest.hasRoute<Route.Home>() || dest.hasRoute<Route.Message>()
         } ?: false
-    val drawerGesturesEnabled = !isTabPagerRoute || nav.drawerState.isOpen
+    val drawerGesturesEnabled =
+        !isTabPagerRoute ||
+            nav.drawerState.isOpen ||
+            nav.drawerState.targetValue != nav.drawerState.currentValue
 
     AccountSwitcherAndLeftDrawerLayout(accountViewModel, accountSessionManager, nav, drawerGesturesEnabled) {
         NavHost(
