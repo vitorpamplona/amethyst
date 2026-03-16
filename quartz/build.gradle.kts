@@ -122,12 +122,14 @@ kotlin {
     iosArm64 {
         binaries.framework {
             baseName = xcfName
+            binaryOption("bundleId", "com.vitorpamplona.quartz")
         }
     }
 
     iosSimulatorArm64 {
         binaries.framework {
             baseName = xcfName
+            binaryOption("bundleId", "com.vitorpamplona.quartz")
         }
     }
 
