@@ -105,7 +105,7 @@ class GetInfoSuccessResponse(
         val block_hash: String? = null,
         val methods: List<String>? = null,
         val notifications: List<String>? = null,
-        val metadata: Any? = null,
+        val metadata: Map<String, Any?>? = null,
         val lud16: String? = null,
     )
 }

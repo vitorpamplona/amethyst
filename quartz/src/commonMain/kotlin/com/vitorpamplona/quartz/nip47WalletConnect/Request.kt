@@ -31,7 +31,7 @@ abstract class Request(
 class PayInvoiceParams(
     var invoice: String? = null,
     var amount: Long? = null,
-    var metadata: Any? = null,
+    var metadata: Map<String, Any?>? = null,
 )
 
 class PayInvoiceMethod(
@@ -74,7 +74,7 @@ class MakeInvoiceParams(
     var description: String? = null,
     var description_hash: String? = null,
     var expiry: Long? = null,
-    var metadata: Any? = null,
+    var metadata: Map<String, Any?>? = null,
 )
 
 class MakeInvoiceMethod(
@@ -233,7 +233,7 @@ class CreateConnectionParams(
     var budget_renewal: String? = null,
     var expires_at: Long? = null,
     var isolated: Boolean? = null,
-    var metadata: Any? = null,
+    var metadata: Map<String, Any?>? = null,
 )
 
 class CreateConnectionMethod(
@@ -249,7 +249,7 @@ class CreateConnectionMethod(
             budgetRenewal: String? = null,
             expiresAt: Long? = null,
             isolated: Boolean? = null,
-            metadata: Any? = null,
+            metadata: Map<String, Any?>? = null,
         ): CreateConnectionMethod =
             CreateConnectionMethod(
                 CreateConnectionParams(pubkey, name, requestMethods, notificationTypes, maxAmount, budgetRenewal, expiresAt, isolated, metadata),

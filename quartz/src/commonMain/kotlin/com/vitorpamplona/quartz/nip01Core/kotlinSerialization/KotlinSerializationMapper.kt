@@ -107,6 +107,18 @@ class KotlinSerializationMapper {
                     json.encodeToString(BunkerMessageKSerializer, value)
                 }
 
+                is Request -> {
+                    json.encodeToString(Nip47RequestKSerializer, value)
+                }
+
+                is Response -> {
+                    json.encodeToString(Nip47ResponseKSerializer, value)
+                }
+
+                is Notification -> {
+                    json.encodeToString(Nip47NotificationKSerializer, value)
+                }
+
                 else -> {
                     throw IllegalArgumentException("Unsupported type: ${value::class}")
                 }

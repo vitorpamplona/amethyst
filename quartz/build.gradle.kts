@@ -247,9 +247,14 @@ kotlin {
         }
 
         getByName("androidHostTest") {
+            dependsOn(jvmAndroidTest)
             dependencies {
                 // Bitcoin secp256k1 bindings
                 implementation(libs.secp256k1.kmp.jni.jvm)
+
+                // LibSodium for ChaCha encryption (NIP-44) - Needed for host tests
+                implementation(libs.lazysodium.java)
+                implementation(libs.jna)
             }
         }
 
