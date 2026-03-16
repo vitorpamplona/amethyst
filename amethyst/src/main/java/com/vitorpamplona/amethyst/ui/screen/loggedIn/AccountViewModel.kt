@@ -158,7 +158,6 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.util.Locale
 
 @Stable
 class AccountViewModel(
@@ -1009,7 +1008,7 @@ class AccountViewModel(
 
     fun removeDontTranslateFrom(languageCode: String) = launchSigner { account.removeDontTranslateFrom(languageCode) }
 
-    fun updateTranslateTo(languageCode: Locale) = launchSigner { account.updateTranslateTo(languageCode) }
+    fun updateTranslateTo(languageCode: String) = launchSigner { account.updateTranslateTo(languageCode) }
 
     fun prefer(
         source: String,
