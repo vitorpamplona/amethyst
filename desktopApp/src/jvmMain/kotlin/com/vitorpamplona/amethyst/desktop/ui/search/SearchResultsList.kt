@@ -35,6 +35,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.filled.Article
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.ExpandMore
@@ -185,7 +186,7 @@ fun SearchResultsList(
                 SortableHeader(
                     title = "Articles",
                     count = articles.size,
-                    icon = Icons.Default.Article,
+                    icon = Icons.AutoMirrored.Default.Article,
                     options = SearchSortOrder.EVENT_OPTIONS,
                     selected = eventSortOrder,
                     onSelect = { state.updateEventSortOrder(it) },

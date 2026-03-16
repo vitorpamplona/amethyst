@@ -128,7 +128,7 @@ class QueryParserTest {
     fun untilDate() {
         val q = QueryParser.parse("until:2025-12-31")
         assertNull(q.since)
-        assertTrue(q.until != null && q.until!! > 0)
+        assertTrue(q.until != null && q.until > 0)
     }
 
     @Test

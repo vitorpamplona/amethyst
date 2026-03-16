@@ -39,6 +39,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
@@ -183,7 +184,7 @@ fun ChessScreen(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (selectedGameId != null) {
                     IconButton(onClick = { viewModel.selectGame(null) }) {
-                        Icon(Icons.Default.ArrowBack, "Back to list")
+                        Icon(Icons.AutoMirrored.Default.ArrowBack, "Back to list")
                     }
                     Spacer(Modifier.width(8.dp))
                 }
