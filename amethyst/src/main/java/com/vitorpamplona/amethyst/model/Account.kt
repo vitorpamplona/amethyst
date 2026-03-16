@@ -2016,6 +2016,7 @@ class Account(
         }
 
         scope.launch(Dispatchers.IO) {
+            @OptIn(kotlinx.coroutines.FlowPreview::class)
             settings.saveable.debounce(1000).collect {
                 if (it.accountSettings != null) {
                     LocalPreferences.saveToEncryptedStorage(it.accountSettings)

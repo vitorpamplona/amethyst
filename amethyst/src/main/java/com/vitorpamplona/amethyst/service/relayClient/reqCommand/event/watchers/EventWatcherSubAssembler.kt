@@ -51,14 +51,14 @@ class EventWatcherSubAssembler(
     }
 
     override fun updateFilter(
-        key: List<EventFinderQueryState>,
+        keys: List<EventFinderQueryState>,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter>? {
-        if (key.isEmpty()) {
+        if (keys.isEmpty()) {
             return null
         }
 
-        lastNotesOnFilter = key.map { it.note }
+        lastNotesOnFilter = keys.map { it.note }
 
         return groupByRelayPresence(lastNotesOnFilter, latestEOSEs)
             .map { group ->

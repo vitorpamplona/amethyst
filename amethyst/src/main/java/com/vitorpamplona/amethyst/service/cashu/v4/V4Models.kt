@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.cashu.v4
 
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.cbor.ByteString
 
@@ -34,6 +35,7 @@ class V4Token(
     val t: Array<V4T>?,
 )
 
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
 class V4T(
     // identifier
@@ -42,6 +44,7 @@ class V4T(
     val p: Array<V4Proof>,
 )
 
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
 class V4Proof(
     // amount
@@ -57,6 +60,7 @@ class V4Proof(
     val w: String? = null,
 )
 
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
 class V4DleqProof(
     @ByteString
