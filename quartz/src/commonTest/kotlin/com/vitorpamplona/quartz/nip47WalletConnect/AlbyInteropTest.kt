@@ -581,8 +581,8 @@ class AlbyInteropTest {
         assertIs<GetInfoSuccessResponse>(response)
         assertEquals(13, response.result?.methods?.size)
         assertEquals(3, response.result?.notifications?.size)
-        assertTrue(response.result?.methods?.contains(NwcMethod.GET_BUDGET) == true)
-        assertTrue(response.result?.methods?.contains(NwcMethod.SIGN_MESSAGE) == true)
-        assertTrue(response.result?.methods?.contains(NwcMethod.CREATE_CONNECTION) == true)
+        assertEquals(response.result?.methods?.contains(NwcMethod.GET_BUDGET), true)
+        assertEquals(response.result?.methods?.contains(NwcMethod.SIGN_MESSAGE), true)
+        assertEquals(response.result?.methods?.contains(NwcMethod.CREATE_CONNECTION), true)
     }
 }
