@@ -1,0 +1,113 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.desktop.service.upload
+
+import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
+import com.vitorpamplona.quartz.nipB7Blossom.BlossomUploadResult
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody
+import okio.BufferedSink
+import okio.source
+import java.io.File
+
+class DesktopBlossomClient(
+    private val okHttpClient: OkHttpClient = OkHttpClient(),
+) {
+    suspend fun upload(
+        file: File,
+        contentType: String,
+        serverBaseUrl: String,
+        authHeader: String?,
+    ): BlossomUploadResult =
+        withContext(Dispatchers.IO) {
+            val apiUrl = serverBaseUrl.removeSuffix("/") + "/upload"
+            val requestBody =
+                object : RequestBody() {
+                    override fun contentType() = contentType.toMediaType()
+
+                    override fun contentLength() = file.length()
+
+                    override fun writeTo(sink: BufferedSink) {
+                        file.inputStream().source().use(sink::writeAll)
+                    }
+                }
+
+            val requestBuilder =
+                Request
+                    .Builder()
+                    .url(apiUrl)
+                    .put(requestBody)
+                    .addHeader("Content-Length", file.length().toString())
+                    .addHeader("Content-Type", contentType)
+
+            authHeader?.let { requestBuilder.addHeader("Authorization", it) }
+
+            val response = okHttpClient.newCall(requestBuilder.build()).execute()
+            response.use {
+                if (!it.isSuccessful) {
+                    val reason = it.headers["X-Reason"] ?: it.code.toString()
+                    throw RuntimeException("Upload failed ($serverBaseUrl): $reason")
+                }
+                JsonMapper.fromJson<BlossomUploadResult>(it.body.string())
+            }
+        }
+
+    suspend fun delete(
+        hash: String,
+        serverBaseUrl: String,
+        authHeader: String?,
+    ): Boolean =
+        withContext(Dispatchers.IO) {
+            val apiUrl = serverBaseUrl.removeSuffix("/") + "/$hash"
+            val requestBuilder = Request.Builder().url(apiUrl).delete()
+            authHeader?.let { requestBuilder.addHeader("Authorization", it) }
+
+            val response = okHttpClient.newCall(requestBuilder.build()).execute()
+            response.use { it.isSuccessful }
+        }
+
+    suspend fun headUpload(
+        contentType: String,
+        contentLength: Long,
+        sha256: String,
+        serverBaseUrl: String,
+        authHeader: String?,
+    ): Boolean =
+        withContext(Dispatchers.IO) {
+            val apiUrl = serverBaseUrl.removeSuffix("/") + "/upload"
+            val requestBuilder =
+                Request
+                    .Builder()
+                    .url(apiUrl)
+                    .head()
+                    .addHeader("X-Content-Type", contentType)
+                    .addHeader("X-Content-Length", contentLength.toString())
+                    .addHeader("X-SHA-256", sha256)
+            authHeader?.let { requestBuilder.addHeader("Authorization", it) }
+
+            val response = okHttpClient.newCall(requestBuilder.build()).execute()
+            response.use { it.isSuccessful }
+        }
+}
