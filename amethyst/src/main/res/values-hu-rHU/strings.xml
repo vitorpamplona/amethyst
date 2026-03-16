@@ -673,6 +673,7 @@
     <string name="write_to_relay">Írás az átjátszóra</string>
     <string name="write_to_relay_description">Az átjátszónak küldött bájt-mennyiség, beleértve a szűrőket és eseményeket is</string>
     <string name="read_from_relay_description">Az átjátszótól kapott bájt-mennyiség, beleértve a szűrőket és eseményeket is</string>
+    <string name="relay_event_count">Tárolt események</string>
     <string name="an_error_occurred_trying_to_get_relay_information">Hiba lépett fel, amikor megpróbálta lekérni az átjátszó-információt innen: %1$s</string>
     <string name="owner">Tulajdonos</string>
     <string name="used_by">Használat a következővel:</string>
@@ -1558,4 +1559,8 @@
     <string name="uptime">Üzemidő: %1$d%%</string>
     <string name="namecoin_settings">Namecoin-beállítások</string>
     <string name="ots_explorer_settings">Bitcoin felfedező (OTS)</string>
+    <string name="events">események</string>
+    <string name="dms">Közvetlen üzenetek</string>
+    <string name="profiles">profilok</string>
+    <string name="relay_settings_lower">átjátszóbeállítások</string>
 </resources>

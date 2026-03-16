@@ -1027,7 +1027,7 @@ public inline fun <T> Iterable<Note>.filterEvents(predicate: (T) -> Boolean): Li
     return dest
 }
 
-public inline fun <T> Iterable<Note>.filterAuthoredEvents(pubkey: HexKey): List<T> {
+public fun <T> Iterable<Note>.filterAuthoredEvents(pubkey: HexKey): List<T> {
     if (this is Collection && isEmpty()) return emptyList()
 
     val dest = ArrayList<T>()

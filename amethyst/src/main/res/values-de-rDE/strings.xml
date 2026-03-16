@@ -674,6 +674,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="write_to_relay">In Relay schreiben</string>
     <string name="write_to_relay_description">Die Menge in Bytes, die an dieses Relais gesendet wurde, einschließlich Filter und Ereignisse</string>
     <string name="read_from_relay_description">Die Menge in Bytes, die von diesem Relais empfangen wurde, einschließlich Filter und Ereignisse</string>
+    <string name="relay_event_count">Ereignisse gespeichert</string>
     <string name="an_error_occurred_trying_to_get_relay_information">Ein Fehler ist beim Abrufen von Relay-Informationen von %1$s aufgetreten</string>
     <string name="owner">Inhaber</string>
     <string name="used_by">Verwendet von</string>
@@ -1558,4 +1559,8 @@ anz der Bedingungen ist erforderlich</string>
     <string name="uptime">%1$d%% Verfügbarkeit</string>
     <string name="namecoin_settings">Namecoin-Einstellungen</string>
     <string name="ots_explorer_settings">Bitcoin Explorer (OTS)</string>
+    <string name="events">ereignisse</string>
+    <string name="dms">DMs</string>
+    <string name="profiles">profile</string>
+    <string name="relay_settings_lower">relaiseinstellungen</string>
 </resources>

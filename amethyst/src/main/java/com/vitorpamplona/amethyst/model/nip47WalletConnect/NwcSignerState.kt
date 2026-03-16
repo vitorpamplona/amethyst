@@ -114,7 +114,7 @@ class NwcSignerState(
 
     fun hasWalletConnectSetup(): Boolean = nip47Setup.value != null
 
-    override fun isNIP47Author(pubkey: HexKey?): Boolean = nip47Signer.value.pubKey == pubkey
+    override fun isNIP47Author(pubKey: HexKey?): Boolean = nip47Signer.value.pubKey == pubKey
 
     /**
      * Decrypts a NIP-47 payment request using the current signer.
