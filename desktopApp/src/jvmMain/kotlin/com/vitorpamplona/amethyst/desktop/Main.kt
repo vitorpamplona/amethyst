@@ -74,6 +74,7 @@ import com.vitorpamplona.amethyst.desktop.model.DesktopDmRelayState
 import com.vitorpamplona.amethyst.desktop.model.DesktopIAccount
 import com.vitorpamplona.amethyst.desktop.network.DefaultRelays
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
+import com.vitorpamplona.amethyst.desktop.service.images.DesktopImageLoaderSetup
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.desktop.ui.ComposeNoteDialog
 import com.vitorpamplona.amethyst.desktop.ui.ConnectingRelaysScreen
@@ -137,7 +138,8 @@ sealed class DesktopScreen {
     data object Settings : DesktopScreen()
 }
 
-fun main() =
+fun main() {
+    DesktopImageLoaderSetup.setup()
     application {
         val windowState =
             rememberWindowState(
@@ -384,6 +386,7 @@ fun main() =
             )
         }
     }
+}
 
 @Composable
 fun App(

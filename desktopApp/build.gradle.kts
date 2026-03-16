@@ -46,8 +46,20 @@ dependencies {
     // JSON
     implementation(libs.jackson.module.kotlin)
 
+    // Image loading (Coil3 — explicit because commons uses implementation, not api)
+    implementation(libs.coil.compose)
+    implementation(libs.coil.okhttp)
+    implementation(libs.coil.svg)
+
+    // Video playback
+    implementation(libs.vlcj)
+
+    // EXIF stripping (lossless)
+    implementation(libs.commons.imaging)
+
     // Collections
     implementation(libs.kotlinx.collections.immutable)
+    implementation(libs.androidx.collection)
 
     // SLF4J no-op — silence "No SLF4J providers" warnings from transitive deps
     implementation("org.slf4j:slf4j-nop:2.0.16")

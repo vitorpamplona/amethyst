@@ -27,8 +27,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -38,12 +40,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
+import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.richtext.UrlParser
 import com.vitorpamplona.amethyst.commons.richtext.Urls
 import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
@@ -73,6 +79,30 @@ fun NoteCard(
     onAuthorClick: ((String) -> Unit)? = null,
 ) {
     val urls = remember(note.content) { UrlParser().parseValidUrls(note.content) }
+    val imageUrls =
+        remember(urls) {
+            urls.withScheme.filter { RichTextParser.isImageUrl(it) }
+        }
+    val strippedContent =
+        remember(note.content, imageUrls) {
+            var text = note.content
+            for (url in imageUrls) {
+                text = text.replace(url, "").trim()
+            }
+            text
+        }
+    val strippedUrls =
+        remember(urls, imageUrls) {
+            val imageSet = imageUrls.toSet()
+            Urls(
+                withScheme = urls.withScheme - imageSet,
+                withoutScheme = urls.withoutScheme,
+                emails = urls.emails,
+                bech32s = urls.bech32s,
+                relayUrls = urls.relayUrls,
+                blossomUris = urls.blossomUris,
+            )
+        }
 
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -125,11 +155,35 @@ fun NoteCard(
 
             Spacer(Modifier.height(8.dp))
 
-            RichTextContent(
-                content = note.content,
-                urls = urls,
-                modifier = Modifier.fillMaxWidth(),
-            )
+            if (strippedContent.isNotBlank()) {
+                RichTextContent(
+                    content = strippedContent,
+                    urls = strippedUrls,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+
+            // Inline images
+            if (imageUrls.isNotEmpty()) {
+                if (strippedContent.isNotBlank()) {
+                    Spacer(Modifier.height(8.dp))
+                }
+                for (url in imageUrls) {
+                    AsyncImage(
+                        model = url,
+                        contentDescription = null,
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 400.dp)
+                                .clip(RoundedCornerShape(8.dp)),
+                        contentScale = ContentScale.FillWidth,
+                    )
+                    if (url != imageUrls.last()) {
+                        Spacer(Modifier.height(4.dp))
+                    }
+                }
+            }
 
             Spacer(Modifier.height(8.dp))
 
@@ -171,7 +225,6 @@ fun RichTextContent(
         val annotatedText =
             buildAnnotatedString {
                 var lastIndex = 0
-                // TODO: User the other urls.
                 val sortedUrls = urls.withScheme.sortedBy { content.indexOf(it) }
 
                 for (url in sortedUrls) {
