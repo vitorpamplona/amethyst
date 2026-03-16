@@ -1,10 +1,12 @@
 @file:OptIn(ExperimentalSpmForKmpFeature::class)
 
 import com.vanniktech.maven.publish.KotlinMultiplatform
+import com.vanniktech.maven.publish.SourcesJar
 import io.github.frankois944.spmForKmp.swiftPackageConfig
 import io.github.frankois944.spmForKmp.utils.ExperimentalSpmForKmpFeature
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeTest
+
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -66,17 +68,18 @@ kotlin {
     val libsodiumDefFile = project.file("src/nativeInterop/cinterop/Clibsodium.def")
 
     // This generates the Libsodium definition file, necessary for creating native bindings(a Kotlin API) for libsodium(for iOS).
-    val libsodiumDefFileGeneration = tasks.register("GenerateSodiumCinteropFile") {
-        outputs.file(libsodiumDefFile)
-        doLast {
-            if (!libsodiumDefFile.exists()) {
-                libsodiumDefFile.parentFile.mkdirs()
-                libsodiumDefFile.writeText("package = Clibsodium\n")
-                libsodiumDefFile.appendText("staticLibraries = libsodium.a libsodium-simulator.a\n")
-                libsodiumDefFile.appendText("libraryPaths = ${libsodiumPath.absolutePath}/ios/lib ${libsodiumPath.absolutePath}/ios-simulators/lib\n")
+    val libsodiumDefFileGeneration =
+        tasks.register("GenerateSodiumCinteropFile") {
+            outputs.file(libsodiumDefFile)
+            doLast {
+                if (!libsodiumDefFile.exists()) {
+                    libsodiumDefFile.parentFile.mkdirs()
+                    libsodiumDefFile.writeText("package = Clibsodium\n")
+                    libsodiumDefFile.appendText("staticLibraries = libsodium.a libsodium-simulator.a\n")
+                    libsodiumDefFile.appendText("libraryPaths = ${libsodiumPath.absolutePath}/ios/lib ${libsodiumPath.absolutePath}/ios-simulators/lib\n")
+                }
             }
         }
-    }
 
     listOf(
         iosArm64(),
@@ -92,7 +95,7 @@ kotlin {
                 headers(
                     "$libsodiumHeaderFilesPath/crypto_aead_xchacha20poly1305.h",
                     "$libsodiumHeaderFilesPath/crypto_core_hchacha20.h",
-                    "$libsodiumHeaderFilesPath/crypto_stream_chacha20.h"
+                    "$libsodiumHeaderFilesPath/crypto_stream_chacha20.h",
                 )
             }
 
@@ -315,7 +318,7 @@ mavenPublishing {
     configure(
         KotlinMultiplatform(
             // whether to publish a sources jar
-            sourcesJar = true,
+            sourcesJar = SourcesJar.Sources(),
         ),
     )
 

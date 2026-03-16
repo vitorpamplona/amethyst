@@ -39,6 +39,8 @@ lazysodiumJava = "5.2.0"
 lifecycleRuntimeKtx = "2.10.0"
 lightcompressor-enhanced = "1.6.0"
 markdown = "f92ef49c9d"
+material3 = "1.9.0"
+materialIconsExtended = "1.7.3"
 media3 = "1.9.2"
 mockk = "1.14.9"
 kotlinx-coroutines-test = "1.10.2"
@@ -53,6 +55,7 @@ spotless = "8.3.0"
 tarsosdsp = "2.5"
 torAndroid = "0.4.9.5"
 translate = "17.0.3"
+jetbrainsCompose = "1.10.2"
 unifiedpush = "3.0.10"
 vico-charts = "2.4.3"
 zelory = "3.0.1"
@@ -122,6 +125,14 @@ dev-whyoleg-cryptography-provider-apple-optimal = { module = "dev.whyoleg.crypto
 drfonfon-geohash = { group = "com.github.drfonfon", name = "android-kotlin-geohash", version.ref = "androidKotlinGeohash" }
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
 firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging" }
+jetbrains-compose-components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "jetbrainsCompose" }
+jetbrains-compose-foundation = { module = "org.jetbrains.compose.foundation:foundation", version.ref = "jetbrainsCompose" }
+jetbrains-compose-material-icons-extended = { module = "org.jetbrains.compose.material:material-icons-extended", version.ref = "materialIconsExtended" }
+jetbrains-compose-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "material3" }
+jetbrains-compose-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "jetbrainsCompose" }
+jetbrains-compose-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "jetbrainsCompose" }
+jetbrains-compose-ui-tooling = { module = "org.jetbrains.compose.ui:ui-tooling", version.ref = "jetbrainsCompose" }
+jetbrains-compose-ui-tooling-preview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "jetbrainsCompose" }
 google-mlkit-language-id = { group = "com.google.mlkit", name = "language-id", version.ref = "languageId" }
 google-mlkit-translate = { group = "com.google.mlkit", name = "translate", version.ref = "translate" }
 jackson-module-kotlin = { group = "com.fasterxml.jackson.module", name = "jackson-module-kotlin", version.ref = "jacksonModuleKotlin" }
