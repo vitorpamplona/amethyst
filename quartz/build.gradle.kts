@@ -83,12 +83,11 @@ kotlin {
 
     listOf(
         iosArm64(),
-        iosX64(),
         iosSimulatorArm64(),
     ).forEach { target ->
 
         target.compilations.getByName("main") {
-            val Clibsodium by cinterops.creating {
+            val clibsodium by cinterops.creating {
                 definitionFile = libsodiumDefFile
                 packageName = "Clibsodium"
 
@@ -99,7 +98,7 @@ kotlin {
                 )
             }
 
-            tasks.named(cinterops.getByName("Clibsodium").interopProcessingTaskName).configure {
+            tasks.named(cinterops.getByName("clibsodium").interopProcessingTaskName).configure {
                 dependsOn(libsodiumDefFileGeneration)
             }
         }
@@ -117,12 +116,6 @@ kotlin {
                     version = "0.1.0",
                 )
             }
-        }
-    }
-
-    iosX64 {
-        binaries.framework {
-            baseName = xcfName
         }
     }
 
@@ -281,10 +274,6 @@ kotlin {
             }
         }
 
-        val iosX64Main by getting {
-            dependsOn(iosMain.get())
-        }
-
         val iosArm64Main by getting {
             dependsOn(iosMain.get())
         }
@@ -297,10 +286,6 @@ kotlin {
             dependsOn(commonTest.get())
             dependencies {
             }
-        }
-
-        val iosX64Test by getting {
-            dependsOn(iosTest.get())
         }
 
         val iosArm64Test by getting {
