@@ -35,7 +35,9 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -46,9 +48,17 @@ import androidx.compose.ui.window.Dialog
 import com.vitorpamplona.amethyst.commons.model.nip10TextNotes.PublishAction
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
+import com.vitorpamplona.amethyst.desktop.service.upload.DesktopUploadOrchestrator
+import com.vitorpamplona.amethyst.desktop.service.upload.DesktopUploadTracker
+import com.vitorpamplona.amethyst.desktop.ui.media.ClipboardPasteHandler
+import com.vitorpamplona.amethyst.desktop.ui.media.DesktopFilePicker
+import com.vitorpamplona.amethyst.desktop.ui.media.MediaAttachmentRow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
+
+private const val DEFAULT_BLOSSOM_SERVER = "https://blossom.primal.net"
 
 @Composable
 fun ComposeNoteDialog(
@@ -61,6 +71,10 @@ fun ComposeNoteDialog(
     var isPosting by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+    val attachedFiles = remember { mutableStateListOf<File>() }
+    val uploadTracker = remember { DesktopUploadTracker() }
+    val uploadState by uploadTracker.state.collectAsState()
+    val orchestrator = remember { DesktopUploadOrchestrator() }
 
     Dialog(onDismissRequest = { if (!isPosting) onDismiss() }) {
         Card(
@@ -99,6 +113,22 @@ fun ComposeNoteDialog(
 
                 Spacer(Modifier.height(8.dp))
 
+                MediaAttachmentRow(
+                    attachedFiles = attachedFiles,
+                    isUploading = uploadState.isUploading,
+                    onAttach = {
+                        val files = DesktopFilePicker.pickMediaFiles()
+                        attachedFiles.addAll(files)
+                    },
+                    onPaste = {
+                        val files = ClipboardPasteHandler.getClipboardFiles()
+                        attachedFiles.addAll(files)
+                    },
+                    onRemove = { attachedFiles.remove(it) },
+                )
+
+                Spacer(Modifier.height(4.dp))
+
                 // Character count
                 Text(
                     "${content.length} characters",
@@ -110,6 +140,15 @@ fun ComposeNoteDialog(
                     Spacer(Modifier.height(8.dp))
                     Text(
                         error,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+
+                uploadState.error?.let { error ->
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "Upload error: $error",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
                     )
@@ -132,7 +171,7 @@ fun ComposeNoteDialog(
 
                     Button(
                         onClick = {
-                            if (content.isBlank()) {
+                            if (content.isBlank() && attachedFiles.isEmpty()) {
                                 errorMessage = "Note cannot be empty"
                                 return@Button
                             }
@@ -142,21 +181,47 @@ fun ComposeNoteDialog(
                                 errorMessage = null
 
                                 try {
+                                    // Upload attached files first
+                                    val uploadedUrls = mutableListOf<String>()
+                                    for (file in attachedFiles) {
+                                        uploadTracker.startUpload(file.name)
+                                        val result =
+                                            orchestrator.upload(
+                                                file = file,
+                                                alt = null,
+                                                serverBaseUrl = DEFAULT_BLOSSOM_SERVER,
+                                                signer = account.signer,
+                                            )
+                                        uploadTracker.onSuccess(result)
+                                        result.blossom.url?.let { uploadedUrls.add(it) }
+                                    }
+
+                                    // Append uploaded URLs to content
+                                    val finalContent =
+                                        buildString {
+                                            append(content)
+                                            for (url in uploadedUrls) {
+                                                if (isNotBlank()) append("\n")
+                                                append(url)
+                                            }
+                                        }
+
                                     publishNote(
-                                        content = content,
+                                        content = finalContent,
                                         account = account,
                                         relayManager = relayManager,
                                         replyTo = replyTo,
                                     )
                                     onDismiss()
                                 } catch (e: Exception) {
-                                    errorMessage = "Failed to publish: ${e.message}"
+                                    errorMessage = "Failed: ${e.message}"
+                                    uploadTracker.onError(e.message ?: "Unknown error")
                                 } finally {
                                     isPosting = false
                                 }
                             }
                         },
-                        enabled = !isPosting && content.isNotBlank(),
+                        enabled = !isPosting && (content.isNotBlank() || attachedFiles.isNotEmpty()),
                     ) {
                         Text(if (isPosting) "Publishing..." else "Publish")
                     }
@@ -166,10 +231,6 @@ fun ComposeNoteDialog(
     }
 }
 
-/**
- * Publishes a text note to relays.
- * Uses the Account's key to sign the event.
- */
 private suspend fun publishNote(
     content: String,
     account: AccountState.LoggedIn,
