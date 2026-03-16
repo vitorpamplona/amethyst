@@ -25,6 +25,12 @@ import kotlin.jvm.JvmStatic
 class Log {
     companion object {
         @JvmStatic
+        fun isLoggable(
+            tag: String?,
+            msg: Int?,
+        ): Boolean = true
+
+        @JvmStatic
         fun d(
             tag: String?,
             msg: String?,
