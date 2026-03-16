@@ -274,8 +274,10 @@ kotlin {
         }
 
         getByName("androidHostTest") {
-            dependsOn(jvmAndroidTest)
             dependencies {
+                implementation(libs.kotlin.test)
+                implementation(libs.kotlinx.coroutines.test)
+
                 // Bitcoin secp256k1 bindings
                 implementation(libs.secp256k1.kmp.jni.jvm)
 
@@ -291,7 +293,16 @@ kotlin {
                 implementation(libs.androidx.core)
                 implementation(libs.androidx.junit)
                 implementation(libs.androidx.espresso.core)
+
+                implementation(libs.kotlin.test)
                 implementation(libs.kotlinx.coroutines.test)
+
+                // Bitcoin secp256k1 bindings to Android
+                api(libs.secp256k1.kmp.jni.android)
+
+                // LibSodium for ChaCha encryption (NIP-44)
+                implementation("com.goterl:lazysodium-android:5.2.0@aar")
+                implementation("net.java.dev.jna:jna:5.18.1@aar")
             }
         }
 
