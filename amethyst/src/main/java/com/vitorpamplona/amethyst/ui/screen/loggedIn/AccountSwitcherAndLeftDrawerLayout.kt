@@ -49,6 +49,7 @@ fun AccountSwitcherAndLeftDrawerLayout(
     accountViewModel: AccountViewModel,
     accountSessionManager: AccountSessionManager,
     nav: INav,
+    gesturesEnabled: Boolean = true,
     content: @Composable () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
@@ -83,6 +84,7 @@ fun AccountSwitcherAndLeftDrawerLayout(
 
     ModalNavigationDrawer(
         drawerState = nav.drawerState,
+        gesturesEnabled = gesturesEnabled,
         drawerContent = {
             DrawerContent(nav, openSheetFunction, accountViewModel)
             BackHandler(enabled = nav.drawerState.isOpen, nav::closeDrawer)
