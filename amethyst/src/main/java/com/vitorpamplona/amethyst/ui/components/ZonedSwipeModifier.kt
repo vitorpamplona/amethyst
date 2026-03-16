@@ -36,18 +36,16 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.layout.onSizeChanged
 
-private val EDGE_ZONE_WIDTH = 48.dp
+private const val PAGER_ZONE_FRACTION = 0.5f
 
 fun Modifier.zonedDrawerSwipe(
     pagerState: PagerState,
     openDrawer: () -> Unit,
 ): Modifier =
     composed {
-        val edgeZonePx = with(LocalDensity.current) { EDGE_ZONE_WIDTH.toPx() }
-
+        var widthPx by remember { mutableFloatStateOf(1f) }
         var gestureStartX by remember { mutableFloatStateOf(0f) }
         var gestureStartPage by remember { mutableIntStateOf(0) }
         var drawerOpened by remember { mutableStateOf(false) }
@@ -65,9 +63,9 @@ fun Modifier.zonedDrawerSwipe(
                         // available.x > 0 means user is swiping right
                         if (available.x > 0f) {
                             val wasOnFirstPage = gestureStartPage == 0
-                            val isInEdgeZone = gestureStartX < edgeZonePx
+                            val isInPagerZone = gestureStartX < widthPx * PAGER_ZONE_FRACTION
 
-                            if (wasOnFirstPage || !isInEdgeZone) {
+                            if (wasOnFirstPage || !isInPagerZone) {
                                 drawerOpened = true
                                 openDrawer()
                                 return Offset(available.x, 0f)
@@ -79,6 +77,7 @@ fun Modifier.zonedDrawerSwipe(
             }
 
         this
+            .onSizeChanged { widthPx = it.width.toFloat() }
             .pointerInput(Unit) {
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)
