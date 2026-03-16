@@ -16,16 +16,16 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'zulu'
           java-version: 21
 
       - name: Cache gradle
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.gradle/caches
@@ -50,16 +50,16 @@ jobs:
         shell: bash
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'zulu'
           java-version: 21
 
       - name: Cache gradle
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.gradle/caches
@@ -76,7 +76,7 @@ jobs:
         if: ${{ always() && matrix.os == 'ubuntu-latest' }}
 
       - name: Upload Test Results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: ${{ always() && matrix.os == 'ubuntu-latest' }}
         with:
           name: Test Reports
@@ -88,16 +88,16 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'zulu'
           java-version: 21
 
       - name: Cache gradle
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.gradle/caches
@@ -110,13 +110,13 @@ jobs:
         run: ./gradlew assembleDebug
 
       - name: Upload Play APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: Play Debug APK
           path: amethyst/build/outputs/apk/play/debug/amethyst-play-universal-debug.apk
 
       - name: Upload FDroid APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: FDroid Debug APK
           path: amethyst/build/outputs/apk/fdroid/debug/amethyst-fdroid-universal-debug.apk
@@ -125,19 +125,19 @@ jobs:
         run: ./gradlew assembleBenchmark
 
       - name: Upload Play APK Benchmark
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: Play Benchmark APK
           path: amethyst/build/outputs/apk/play/benchmark/amethyst-play-universal-benchmark.apk
 
       - name: Upload FDroid APK Benchmark
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: FDroid Benchmark APK
           path: amethyst/build/outputs/apk/fdroid/benchmark/amethyst-fdroid-universal-benchmark.apk
 
       - name: Upload Compose Reports
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: Compose Reports
           path: amethyst/build/compose_compiler
@@ -167,16 +167,16 @@ jobs:
         shell: bash
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'zulu'
           java-version: 21
 
       - name: Cache gradle
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.gradle/caches
@@ -189,7 +189,7 @@ jobs:
         run: ./gradlew :desktopApp:${{ matrix.task }}
 
       - name: Upload Desktop Distribution
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ matrix.artifact-name }}
           path: ${{ matrix.artifact-path }}
