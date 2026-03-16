@@ -88,10 +88,12 @@ fun PrivateMessageEditFieldRow(
     nav: INav,
 ) {
     BackHandler {
-        accountViewModel.launchSigner {
-            channelScreenModel.sendDraftSync()
-            channelScreenModel.cancel()
+        if (channelScreenModel.message.text.isNotBlank()) {
+            accountViewModel.launchSigner {
+                channelScreenModel.sendDraftSync()
+            }
         }
+        channelScreenModel.cancel()
         nav.popBack()
     }
 
