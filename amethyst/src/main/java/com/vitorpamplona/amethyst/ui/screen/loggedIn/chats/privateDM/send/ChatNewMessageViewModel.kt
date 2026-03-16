@@ -510,6 +510,7 @@ class ChatNewMessageViewModel :
                         onceUploaded?.invoke()
                     }
                 }
+
                 RetryMode.SEND -> {
                     if (room == null) return@launchSigner
                     ChatFileUploader(account).justUploadNIP17Unencrypted(
