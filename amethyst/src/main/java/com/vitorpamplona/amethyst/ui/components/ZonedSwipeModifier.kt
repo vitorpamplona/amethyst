@@ -60,16 +60,35 @@ fun Modifier.zonedDrawerSwipe(
                         if (source != NestedScrollSource.UserInput) return Offset.Zero
                         if (drawerOpened) return Offset(available.x, 0f)
 
-                        // available.x > 0 means user is swiping right
+                        // Non-first pages in the drawer zone: intercept before the
+                        // pager consumes the delta to page backwards.
                         if (available.x > 0f) {
                             val wasOnFirstPage = gestureStartPage == 0
                             val isInPagerZone = gestureStartX < widthPx * PAGER_ZONE_FRACTION
 
-                            if (wasOnFirstPage || !isInPagerZone) {
+                            if (!wasOnFirstPage && !isInPagerZone) {
                                 drawerOpened = true
                                 openDrawer()
                                 return Offset(available.x, 0f)
                             }
+                        }
+                        return Offset.Zero
+                    }
+
+                    override fun onPostScroll(
+                        consumed: Offset,
+                        available: Offset,
+                        source: NestedScrollSource,
+                    ): Offset {
+                        if (source != NestedScrollSource.UserInput) return Offset.Zero
+                        if (drawerOpened) return Offset(available.x, 0f)
+
+                        // First page: open drawer only with unconsumed right-swipe
+                        // so child LazyRows can scroll first.
+                        if (available.x > 0f && gestureStartPage == 0) {
+                            drawerOpened = true
+                            openDrawer()
+                            return Offset(available.x, 0f)
                         }
                         return Offset.Zero
                     }
