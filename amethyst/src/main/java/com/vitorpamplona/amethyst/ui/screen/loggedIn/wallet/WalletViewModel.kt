@@ -99,7 +99,7 @@ class WalletViewModel : ViewModel() {
 
     fun init(account: Account) {
         this.account = account
-        _hasWalletSetup.value = account.nip47SignerState?.hasWalletConnectSetup() == true
+        _hasWalletSetup.value = account.nip47SignerState.hasWalletConnectSetup()
     }
 
     fun refreshWalletSetup() {

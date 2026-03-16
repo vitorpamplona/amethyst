@@ -90,6 +90,7 @@ class SearchBarViewModel(
 
     val listState: LazyListState = LazyListState(0, 0)
 
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     val directNip05Resolver: Flow<User?> =
         searchTerm
             .debounce(400)

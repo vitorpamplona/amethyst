@@ -49,10 +49,10 @@ fun showAmountInteger(amount: BigDecimal?): String {
     if (amount.abs() < BigDecimal(0.01)) return ""
 
     return when {
-        amount >= OneGiga -> dfG.get().format(amount.div(OneGiga).setScale(0, RoundingMode.HALF_UP))
-        amount >= OneMega -> dfM.get().format(amount.div(OneMega).setScale(0, RoundingMode.HALF_UP))
-        amount >= TenKilo -> dfK.get().format(amount.div(OneKilo).setScale(0, RoundingMode.HALF_UP))
-        else -> dfN.get().format(amount)
+        amount >= OneGiga -> dfG.get()?.format(amount.div(OneGiga).setScale(0, RoundingMode.HALF_UP)) ?: ""
+        amount >= OneMega -> dfM.get()?.format(amount.div(OneMega).setScale(0, RoundingMode.HALF_UP)) ?: ""
+        amount >= TenKilo -> dfK.get()?.format(amount.div(OneKilo).setScale(0, RoundingMode.HALF_UP)) ?: ""
+        else -> dfN.get()?.format(amount) ?: ""
     }
 }
 

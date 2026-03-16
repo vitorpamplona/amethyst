@@ -322,7 +322,7 @@ class NewPublicMessageViewModel :
     }
 
     suspend fun sendPostSync() {
-        val template = createTemplate() ?: return
+        val template = createTemplate()
         val extraNotesToBroadcast = mutableListOf<Event>()
 
         if (nip95attachments.isNotEmpty()) {
@@ -354,7 +354,7 @@ class NewPublicMessageViewModel :
                 broadcast.add(it.second)
             }
 
-            val template = createTemplate() ?: return
+            val template = createTemplate()
             accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template, broadcast)
         }
     }
@@ -459,7 +459,7 @@ class NewPublicMessageViewModel :
                     if (state.result is UploadOrchestrator.OrchestratorResult.NIP95Result) {
                         val nip95 = account.createNip95(state.result.bytes, headerInfo = state.result.fileHeader, alt, contentWarningReason)
                         nip95attachments = nip95attachments + nip95
-                        val note = nip95.let { it1 -> account?.consumeNip95(it1.first, it1.second) }
+                        val note = nip95.let { it1 -> account.consumeNip95(it1.first, it1.second) }
 
                         note?.let {
                             message = message.insertUrlAtCursor("nostr:" + it.toNEvent())
