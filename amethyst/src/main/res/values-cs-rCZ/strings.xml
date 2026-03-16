@@ -669,6 +669,7 @@
     <string name="write_to_relay">Zapisovat do Relay</string>
     <string name="write_to_relay_description">Množství bajtů, které bylo odesláno na toto relé, včetně filtrů a událostí</string>
     <string name="read_from_relay_description">Množství bajtů, které bylo přijato z tohoto relé, včetně filtrů a událostí</string>
+    <string name="relay_event_count">Uložené události</string>
     <string name="an_error_occurred_trying_to_get_relay_information">Při pokusu o získání informací z Relay se vyskytla chyba z %1$s</string>
     <string name="owner">Vlastník</string>
     <string name="used_by">Používáno</string>
@@ -1553,4 +1554,8 @@
     <string name="uptime">%1$d%% dostupnost</string>
     <string name="namecoin_settings">Nastavení Namecoin</string>
     <string name="ots_explorer_settings">Průzkumník Bitcoin (OTS)</string>
+    <string name="events">události</string>
+    <string name="dms">DMs</string>
+    <string name="profiles">profily</string>
+    <string name="relay_settings_lower">nastavení relé</string>
 </resources>
