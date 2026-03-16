@@ -75,6 +75,7 @@ import com.vitorpamplona.amethyst.desktop.model.DesktopIAccount
 import com.vitorpamplona.amethyst.desktop.network.DefaultRelays
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.service.images.DesktopImageLoaderSetup
+import com.vitorpamplona.amethyst.desktop.service.media.VlcjPlayerPool
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.desktop.ui.ComposeNoteDialog
 import com.vitorpamplona.amethyst.desktop.ui.ConnectingRelaysScreen
@@ -140,6 +141,7 @@ sealed class DesktopScreen {
 
 fun main() {
     DesktopImageLoaderSetup.setup()
+    Runtime.getRuntime().addShutdownHook(Thread { VlcjPlayerPool.shutdown() })
     application {
         val windowState =
             rememberWindowState(

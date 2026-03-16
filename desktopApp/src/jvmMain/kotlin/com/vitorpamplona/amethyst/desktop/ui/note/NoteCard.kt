@@ -54,6 +54,7 @@ import com.vitorpamplona.amethyst.commons.richtext.UrlParser
 import com.vitorpamplona.amethyst.commons.richtext.Urls
 import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
 import com.vitorpamplona.amethyst.commons.util.toTimeAgo
+import com.vitorpamplona.amethyst.desktop.ui.media.DesktopVideoPlayer
 
 /**
  * Data class for displaying a note card.
@@ -83,19 +84,23 @@ fun NoteCard(
         remember(urls) {
             urls.withScheme.filter { RichTextParser.isImageUrl(it) }
         }
+    val videoUrls =
+        remember(urls) {
+            urls.withScheme.filter { RichTextParser.isVideoUrl(it) }
+        }
+    val mediaUrls = remember(imageUrls, videoUrls) { (imageUrls + videoUrls).toSet() }
     val strippedContent =
-        remember(note.content, imageUrls) {
+        remember(note.content, mediaUrls) {
             var text = note.content
-            for (url in imageUrls) {
+            for (url in mediaUrls) {
                 text = text.replace(url, "").trim()
             }
             text
         }
     val strippedUrls =
-        remember(urls, imageUrls) {
-            val imageSet = imageUrls.toSet()
+        remember(urls, mediaUrls) {
             Urls(
-                withScheme = urls.withScheme - imageSet,
+                withScheme = urls.withScheme - mediaUrls,
                 withoutScheme = urls.withoutScheme,
                 emails = urls.emails,
                 bech32s = urls.bech32s,
@@ -180,6 +185,22 @@ fun NoteCard(
                         contentScale = ContentScale.FillWidth,
                     )
                     if (url != imageUrls.last()) {
+                        Spacer(Modifier.height(4.dp))
+                    }
+                }
+            }
+
+            // Inline videos
+            if (videoUrls.isNotEmpty()) {
+                if (strippedContent.isNotBlank() || imageUrls.isNotEmpty()) {
+                    Spacer(Modifier.height(8.dp))
+                }
+                for (url in videoUrls) {
+                    DesktopVideoPlayer(
+                        url = url,
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp),
+                    )
+                    if (url != videoUrls.last()) {
                         Spacer(Modifier.height(4.dp))
                     }
                 }
