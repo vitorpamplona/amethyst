@@ -78,6 +78,7 @@ fun NoteCard(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
     onAuthorClick: ((String) -> Unit)? = null,
+    onImageClick: ((List<String>, Int) -> Unit)? = null,
 ) {
     val urls = remember(note.content) { UrlParser().parseValidUrls(note.content) }
     val imageUrls =
@@ -173,7 +174,7 @@ fun NoteCard(
                 if (strippedContent.isNotBlank()) {
                     Spacer(Modifier.height(8.dp))
                 }
-                for (url in imageUrls) {
+                for ((index, url) in imageUrls.withIndex()) {
                     AsyncImage(
                         model = url,
                         contentDescription = null,
@@ -181,7 +182,14 @@ fun NoteCard(
                             Modifier
                                 .fillMaxWidth()
                                 .heightIn(max = 400.dp)
-                                .clip(RoundedCornerShape(8.dp)),
+                                .clip(RoundedCornerShape(8.dp))
+                                .then(
+                                    if (onImageClick != null) {
+                                        Modifier.clickable { onImageClick(imageUrls, index) }
+                                    } else {
+                                        Modifier
+                                    },
+                                ),
                         contentScale = ContentScale.FillWidth,
                     )
                     if (url != imageUrls.last()) {

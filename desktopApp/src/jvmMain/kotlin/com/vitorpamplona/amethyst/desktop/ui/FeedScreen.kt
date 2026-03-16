@@ -75,6 +75,7 @@ import com.vitorpamplona.amethyst.desktop.subscriptions.createRepliesSubscriptio
 import com.vitorpamplona.amethyst.desktop.subscriptions.createRepostsSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.createZapsSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
+import com.vitorpamplona.amethyst.desktop.ui.media.LightboxOverlay
 import com.vitorpamplona.amethyst.desktop.ui.note.NoteCard
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
@@ -100,6 +101,7 @@ fun FeedNoteCard(
     onZapFeedback: (ZapFeedback) -> Unit,
     onNavigateToProfile: (String) -> Unit = {},
     onNavigateToThread: (String) -> Unit = {},
+    onImageClick: ((List<String>, Int) -> Unit)? = null,
     zapReceipts: List<ZapReceipt> = emptyList(),
     reactionCount: Int = 0,
     replyCount: Int = 0,
@@ -119,6 +121,7 @@ fun FeedNoteCard(
         NoteCard(
             note = event.toNoteDisplayData(localCache),
             onAuthorClick = onNavigateToProfile,
+            onImageClick = onImageClick,
         )
 
         // Action buttons (only if logged in)
@@ -180,6 +183,7 @@ fun FeedScreen(
         }
     val events by eventState.items.collectAsState()
     var replyToEvent by remember { mutableStateOf<Event?>(null) }
+    var lightboxState by remember { mutableStateOf<Pair<List<String>, Int>?>(null) }
     var feedMode by remember { mutableStateOf(initialFeedMode ?: DesktopPreferences.feedMode) }
     var followedUsers by remember { mutableStateOf<Set<String>>(emptySet()) }
     var zapsByEvent by remember { mutableStateOf<Map<String, List<ZapReceipt>>>(emptyMap()) }
@@ -601,6 +605,7 @@ fun FeedScreen(
                         onZapFeedback = onZapFeedback,
                         onNavigateToProfile = onNavigateToProfile,
                         onNavigateToThread = onNavigateToThread,
+                        onImageClick = { urls, index -> lightboxState = urls to index },
                         zapReceipts = zapsByEvent[event.id] ?: emptyList(),
                         reactionCount = reactionsByEvent[event.id] ?: 0,
                         replyCount = repliesByEvent[event.id] ?: 0,
@@ -629,6 +634,15 @@ fun FeedScreen(
                 relayManager = relayManager,
                 account = account,
                 replyTo = replyToEvent,
+            )
+        }
+
+        // Lightbox overlay
+        lightboxState?.let { (urls, index) ->
+            LightboxOverlay(
+                urls = urls,
+                initialIndex = index,
+                onDismiss = { lightboxState = null },
             )
         }
     }
