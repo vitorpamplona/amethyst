@@ -92,6 +92,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip17Dm.NIP17Factory
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
+import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import kotlinx.coroutines.launch
 
 private val isMacOS = System.getProperty("os.name").lowercase().contains("mac")
@@ -436,12 +437,20 @@ private fun MessageWithReactions(
                     }
                 },
             ) { _ ->
-                SelectionContainer {
-                    Text(
-                        text = decryptedContent ?: "",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
+                when (note.event) {
+                    is ChatMessageEncryptedFileHeaderEvent -> {
+                        ChatFileAttachment(event = note.event as ChatMessageEncryptedFileHeaderEvent)
+                    }
+
+                    else -> {
+                        SelectionContainer {
+                            Text(
+                                text = decryptedContent ?: "",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
+                    }
                 }
             }
         }

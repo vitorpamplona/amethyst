@@ -91,6 +91,7 @@ import com.vitorpamplona.amethyst.desktop.ui.deck.DeckState
 import com.vitorpamplona.amethyst.desktop.ui.deck.SinglePaneLayout
 import com.vitorpamplona.amethyst.desktop.ui.profile.ProfileInfoCard
 import com.vitorpamplona.amethyst.desktop.ui.relay.RelayStatusCard
+import com.vitorpamplona.amethyst.desktop.ui.settings.MediaServerSettings
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import kotlinx.coroutines.CoroutineScope
@@ -873,6 +874,15 @@ fun RelaySettingsScreen(
             }
         }
 
+        Spacer(Modifier.height(24.dp))
+        HorizontalDivider()
+        Spacer(Modifier.height(24.dp))
+
+        // Media Server Settings
+        MediaServerSettings(
+            initialServers = DesktopPreferences.blossomServers,
+            onServersChanged = { DesktopPreferences.blossomServers = it },
+        )
         Spacer(Modifier.height(24.dp))
         HorizontalDivider()
         Spacer(Modifier.height(24.dp))

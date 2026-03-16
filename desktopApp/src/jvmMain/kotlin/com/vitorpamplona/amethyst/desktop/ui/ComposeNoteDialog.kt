@@ -46,6 +46,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.vitorpamplona.amethyst.commons.model.nip10TextNotes.PublishAction
+import com.vitorpamplona.amethyst.desktop.DesktopPreferences
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.service.upload.DesktopUploadOrchestrator
@@ -57,8 +58,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
-
-private const val DEFAULT_BLOSSOM_SERVER = "https://blossom.primal.net"
 
 @Composable
 fun ComposeNoteDialog(
@@ -189,7 +188,7 @@ fun ComposeNoteDialog(
                                             orchestrator.upload(
                                                 file = file,
                                                 alt = null,
-                                                serverBaseUrl = DEFAULT_BLOSSOM_SERVER,
+                                                serverBaseUrl = DesktopPreferences.preferredBlossomServer,
                                                 signer = account.signer,
                                             )
                                         uploadTracker.onSuccess(result)
