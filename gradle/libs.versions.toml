@@ -69,6 +69,7 @@ kotlinTest = "2.3.0"
 core = "1.7.0"
 mavenPublish = "0.36.0"
 spmForKmpVersion = "1.4.10"
+stabilityAnalyser = "0.7.0"
 
 [libraries]
 abedElazizShe-video-compressor-fork = { group = "com.github.davotoula", name = "LightCompressor-enhanced", version.ref = "lightcompressor-enhanced" }
@@ -187,6 +188,6 @@ serialization = { id = 'org.jetbrains.kotlin.plugin.serialization', version.ref 
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 androidKotlinMultiplatformLibrary = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
 vanniktech-mavenPublish = { id = "com.vanniktech.maven.publish", version.ref = "mavenPublish" }
-stability-analyzer = { id = "com.github.skydoves.compose.stability.analyzer", version = "0.7.0" }
+stability-analyzer = { id = "com.github.skydoves.compose.stability.analyzer", version.ref = "stabilityAnalyser" }
 composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }
 frankois944-spmForKmp = { id = "io.github.frankois944.spmForKmp", version.ref = "spmForKmpVersion" }
