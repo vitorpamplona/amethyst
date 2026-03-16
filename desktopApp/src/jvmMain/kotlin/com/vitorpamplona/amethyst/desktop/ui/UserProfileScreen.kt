@@ -49,12 +49,15 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -79,12 +82,16 @@ import com.vitorpamplona.amethyst.desktop.subscriptions.SubscriptionConfig
 import com.vitorpamplona.amethyst.desktop.subscriptions.createContactListSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.createMetadataSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.createUserPostsSubscription
+import com.vitorpamplona.amethyst.desktop.subscriptions.generateSubId
 import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
+import com.vitorpamplona.amethyst.desktop.ui.media.LightboxOverlay
+import com.vitorpamplona.amethyst.desktop.ui.profile.GalleryTab
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArrayOrNull
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
+import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -140,6 +147,11 @@ fun UserProfileScreen(
     var postsLoading by remember { mutableStateOf(true) }
     var postsError by remember { mutableStateOf<String?>(null) }
     var retryTrigger by remember { mutableStateOf(0) }
+
+    // Tab and gallery state
+    var selectedTab by remember { mutableStateOf(0) }
+    var lightboxState by remember { mutableStateOf<Pair<List<String>, Int>?>(null) }
+    val pictureEvents = remember { mutableStateListOf<PictureEvent>() }
 
     // Follow state
     val followState =
@@ -296,6 +308,33 @@ fun UserProfileScreen(
         } else {
             postsLoading = false
             postsError = "No relays configured"
+            null
+        }
+    }
+
+    // Subscribe to picture events (kind 20) for gallery tab
+    rememberSubscription(connectedRelays, pubKeyHex, retryTrigger, relayManager = relayManager) {
+        if (connectedRelays.isNotEmpty()) {
+            pictureEvents.clear()
+            SubscriptionConfig(
+                subId = generateSubId("pics-${pubKeyHex.take(8)}"),
+                filters =
+                    listOf(
+                        FilterBuilders.byAuthors(
+                            authors = listOf(pubKeyHex),
+                            kinds = listOf(PictureEvent.KIND),
+                            limit = 100,
+                        ),
+                    ),
+                relays = connectedRelays,
+                onEvent = { event, _, _, _ ->
+                    if (event is PictureEvent && pictureEvents.none { it.id == event.id }) {
+                        pictureEvents.add(event)
+                    }
+                },
+                onEose = { _, _ -> },
+            )
+        } else {
             null
         }
     }
@@ -550,93 +589,117 @@ fun UserProfileScreen(
 
             Spacer(Modifier.height(16.dp))
 
-            // User's posts
-            Text(
-                "Posts",
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(bottom = 8.dp),
-            )
+            // Notes / Gallery tabs
+            PrimaryTabRow(selectedTabIndex = selectedTab) {
+                Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }) {
+                    Text("Notes", modifier = Modifier.padding(12.dp))
+                }
+                Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }) {
+                    Text("Gallery", modifier = Modifier.padding(12.dp))
+                }
+            }
 
-            when {
-                postsError != null -> {
-                    // Error state with retry
-                    Box(
-                        modifier = Modifier.fillMaxWidth().padding(32.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                "Failed to load posts",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.error,
-                            )
-                            Spacer(Modifier.height(8.dp))
-                            Text(
-                                postsError!!,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            Spacer(Modifier.height(16.dp))
-                            OutlinedButton(onClick = { retryTrigger++ }) {
-                                Text("Retry")
+            Spacer(Modifier.height(8.dp))
+
+            when (selectedTab) {
+                0 -> {
+                    when {
+                        postsError != null -> {
+                            Box(
+                                modifier = Modifier.fillMaxWidth().padding(32.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(
+                                        "Failed to load posts",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = MaterialTheme.colorScheme.error,
+                                    )
+                                    Spacer(Modifier.height(8.dp))
+                                    Text(
+                                        postsError!!,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    Spacer(Modifier.height(16.dp))
+                                    OutlinedButton(onClick = { retryTrigger++ }) {
+                                        Text("Retry")
+                                    }
+                                }
+                            }
+                        }
+
+                        postsLoading -> {
+                            Box(
+                                modifier = Modifier.fillMaxWidth().padding(32.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    androidx.compose.material3.CircularProgressIndicator()
+                                    Spacer(Modifier.height(16.dp))
+                                    Text(
+                                        "Loading posts...",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                        }
+
+                        events.isEmpty() -> {
+                            Box(
+                                modifier = Modifier.fillMaxWidth().padding(32.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    "No posts yet",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+
+                        else -> {
+                            LazyColumn(
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                items(events.distinctBy { it.id }, key = { it.id }) { event ->
+                                    FeedNoteCard(
+                                        event = event,
+                                        relayManager = relayManager,
+                                        localCache = localCache,
+                                        account = account,
+                                        nwcConnection = nwcConnection,
+                                        onReply = onCompose,
+                                        onZapFeedback = onZapFeedback,
+                                        onNavigateToProfile = onNavigateToProfile,
+                                        onImageClick = { urls, index ->
+                                            lightboxState = urls to index
+                                        },
+                                    )
+                                }
                             }
                         }
                     }
                 }
 
-                postsLoading -> {
-                    // Loading state
-                    Box(
-                        modifier = Modifier.fillMaxWidth().padding(32.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            androidx.compose.material3.CircularProgressIndicator()
-                            Spacer(Modifier.height(16.dp))
-                            Text(
-                                "Loading posts...",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-                }
-
-                events.isEmpty() -> {
-                    // Empty state (loaded but no posts)
-                    Box(
-                        modifier = Modifier.fillMaxWidth().padding(32.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            "No posts yet",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-
-                else -> {
-                    // Posts loaded successfully
-                    LazyColumn(
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        items(events.distinctBy { it.id }, key = { it.id }) { event ->
-                            FeedNoteCard(
-                                event = event,
-                                relayManager = relayManager,
-                                localCache = localCache,
-                                account = account,
-                                nwcConnection = nwcConnection,
-                                onReply = onCompose,
-                                onZapFeedback = onZapFeedback,
-                                onNavigateToProfile = onNavigateToProfile,
-                            )
-                        }
-                    }
+                1 -> {
+                    GalleryTab(
+                        pictureEvents = pictureEvents,
+                        onImageClick = { urls, index -> lightboxState = urls to index },
+                    )
                 }
             }
         }
+    }
+
+    // Lightbox overlay
+    lightboxState?.let { (urls, index) ->
+        LightboxOverlay(
+            urls = urls,
+            initialIndex = index,
+            onDismiss = { lightboxState = null },
+        )
     }
 
     // Edit Profile Dialog
