@@ -94,13 +94,13 @@ class ResponseTest {
         val response = OptimizedJsonMapper.fromJsonTo<Response>(json)
         assertIs<MakeInvoiceSuccessResponse>(response)
         assertNotNull(response.result)
-        assertEquals("incoming", response.result?.type)
-        assertEquals("lnbc50n1...", response.result?.invoice)
-        assertEquals("test", response.result?.description)
-        assertEquals("abc", response.result?.payment_hash)
-        assertEquals(5000L, response.result?.amount)
-        assertEquals(1693876497L, response.result?.created_at)
-        assertEquals(1694876497L, response.result?.expires_at)
+        assertEquals("incoming", response.result.type)
+        assertEquals("lnbc50n1...", response.result.invoice)
+        assertEquals("test", response.result.description)
+        assertEquals("abc", response.result.payment_hash)
+        assertEquals(5000L, response.result.amount)
+        assertEquals(1693876497L, response.result.created_at)
+        assertEquals(1694876497L, response.result.expires_at)
     }
 
     // --- LookupInvoice Success ---
@@ -111,11 +111,11 @@ class ResponseTest {
         val response = OptimizedJsonMapper.fromJsonTo<Response>(json)
         assertIs<LookupInvoiceSuccessResponse>(response)
         assertNotNull(response.result)
-        assertEquals("incoming", response.result?.type)
-        assertEquals("settled", response.result?.state)
-        assertEquals("hash123", response.result?.payment_hash)
-        assertEquals(1000L, response.result?.amount)
-        assertEquals(1694876497L, response.result?.settled_at)
+        assertEquals("incoming", response.result.type)
+        assertEquals("settled", response.result.state)
+        assertEquals("hash123", response.result.payment_hash)
+        assertEquals(1000L, response.result.amount)
+        assertEquals(1694876497L, response.result.settled_at)
     }
 
     // --- ListTransactions Success ---
@@ -127,34 +127,22 @@ class ResponseTest {
         val response = OptimizedJsonMapper.fromJsonTo<Response>(json)
         assertIs<ListTransactionsSuccessResponse>(response)
         assertNotNull(response.result?.transactions)
-        assertEquals(2, response.result?.transactions?.size)
+        assertEquals(2, response.result.transactions.size)
         assertEquals(
             "incoming",
-            response.result
-                ?.transactions
-                ?.get(0)
-                ?.type,
+            response.result.transactions[0].type,
         )
         assertEquals(
             100L,
-            response.result
-                ?.transactions
-                ?.get(0)
-                ?.amount,
+            response.result.transactions[0].amount,
         )
         assertEquals(
             "outgoing",
-            response.result
-                ?.transactions
-                ?.get(1)
-                ?.type,
+            response.result.transactions[1].type,
         )
         assertEquals(
             200L,
-            response.result
-                ?.transactions
-                ?.get(1)
-                ?.amount,
+            response.result.transactions[1].amount,
         )
     }
 
@@ -164,7 +152,7 @@ class ResponseTest {
         val response = OptimizedJsonMapper.fromJsonTo<Response>(json)
         assertIs<ListTransactionsSuccessResponse>(response)
         assertNotNull(response.result?.transactions)
-        assertEquals(0, response.result?.transactions?.size)
+        assertEquals(0, response.result.transactions.size)
     }
 
     // --- GetBalance Success ---
@@ -194,14 +182,14 @@ class ResponseTest {
         val response = OptimizedJsonMapper.fromJsonTo<Response>(json)
         assertIs<GetInfoSuccessResponse>(response)
         assertNotNull(response.result)
-        assertEquals("MyNode", response.result?.alias)
-        assertEquals("#ff9900", response.result?.color)
-        assertEquals("abc123", response.result?.pubkey)
-        assertEquals("mainnet", response.result?.network)
-        assertEquals(800000L, response.result?.block_height)
-        assertEquals("hash", response.result?.block_hash)
-        assertEquals(listOf("pay_invoice", "get_balance"), response.result?.methods)
-        assertEquals(listOf("payment_received"), response.result?.notifications)
+        assertEquals("MyNode", response.result.alias)
+        assertEquals("#ff9900", response.result.color)
+        assertEquals("abc123", response.result.pubkey)
+        assertEquals("mainnet", response.result.network)
+        assertEquals(800000L, response.result.block_height)
+        assertEquals("hash", response.result.block_hash)
+        assertEquals(listOf("pay_invoice", "get_balance"), response.result.methods)
+        assertEquals(listOf("payment_received"), response.result.notifications)
     }
 
     // --- MakeHoldInvoice Success ---
@@ -212,8 +200,8 @@ class ResponseTest {
         val response = OptimizedJsonMapper.fromJsonTo<Response>(json)
         assertIs<MakeHoldInvoiceSuccessResponse>(response)
         assertNotNull(response.result)
-        assertEquals("lnbc...", response.result?.invoice)
-        assertEquals("hash", response.result?.payment_hash)
+        assertEquals("lnbc...", response.result.invoice)
+        assertEquals("hash", response.result.payment_hash)
     }
 
     // --- CancelHoldInvoice Success ---
@@ -287,10 +275,10 @@ class ResponseTest {
         val response = OptimizedJsonMapper.fromJsonTo<Response>(json)
         assertIs<GetBudgetSuccessResponse>(response)
         assertNotNull(response.result)
-        assertEquals(50000L, response.result?.used_budget)
-        assertEquals(100000L, response.result?.total_budget)
-        assertEquals(1700000000L, response.result?.renews_at)
-        assertEquals("monthly", response.result?.renewal_period)
+        assertEquals(50000L, response.result.used_budget)
+        assertEquals(100000L, response.result.total_budget)
+        assertEquals(1700000000L, response.result.renews_at)
+        assertEquals("monthly", response.result.renewal_period)
     }
 
     @Test
@@ -312,8 +300,8 @@ class ResponseTest {
         val response = OptimizedJsonMapper.fromJsonTo<Response>(json)
         assertIs<SignMessageSuccessResponse>(response)
         assertNotNull(response.result)
-        assertEquals("Hello Nostr", response.result?.message)
-        assertEquals("sig123abc", response.result?.signature)
+        assertEquals("Hello Nostr", response.result.message)
+        assertEquals("sig123abc", response.result.signature)
     }
 
     // --- CreateConnection Success ---
@@ -324,7 +312,7 @@ class ResponseTest {
         val response = OptimizedJsonMapper.fromJsonTo<Response>(json)
         assertIs<CreateConnectionSuccessResponse>(response)
         assertNotNull(response.result)
-        assertEquals("walletpub123", response.result?.wallet_pubkey)
+        assertEquals("walletpub123", response.result.wallet_pubkey)
     }
 
     // --- GetInfo with extended fields ---
