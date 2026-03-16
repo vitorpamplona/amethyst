@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui
 
+import androidx.compose.foundation.border
+import androidx.compose.foundation.draganddrop.dragAndDropTarget
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -28,6 +30,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
@@ -42,29 +45,50 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draganddrop.DragAndDropEvent
+import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import com.vitorpamplona.amethyst.commons.model.nip10TextNotes.PublishAction
 import com.vitorpamplona.amethyst.desktop.DesktopPreferences
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.service.upload.DesktopUploadOrchestrator
 import com.vitorpamplona.amethyst.desktop.service.upload.DesktopUploadTracker
+import com.vitorpamplona.amethyst.desktop.service.upload.UploadResult
 import com.vitorpamplona.amethyst.desktop.ui.media.ClipboardPasteHandler
 import com.vitorpamplona.amethyst.desktop.ui.media.DesktopFilePicker
 import com.vitorpamplona.amethyst.desktop.ui.media.MediaAttachmentRow
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip01Core.tags.events.eTag
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
+import com.vitorpamplona.quartz.nip01Core.tags.references.references
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
+import com.vitorpamplona.quartz.nip10Notes.content.findURLs
+import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.awt.datatransfer.DataFlavor
+import java.awt.dnd.DnDConstants
+import java.awt.dnd.DropTargetDropEvent
 import java.io.File
 
+private val MEDIA_EXTENSIONS =
+    setOf("jpg", "jpeg", "png", "gif", "webp", "svg", "avif", "mp4", "webm", "mov", "mp3", "ogg", "wav", "flac")
+
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun ComposeNoteDialog(
     onDismiss: () -> Unit,
     relayManager: DesktopRelayConnectionManager,
     account: AccountState.LoggedIn,
-    replyTo: com.vitorpamplona.quartz.nip01Core.core.Event? = null,
+    replyTo: Event? = null,
 ) {
     var content by remember { mutableStateOf("") }
     var isPosting by remember { mutableStateOf(false) }
@@ -75,9 +99,51 @@ fun ComposeNoteDialog(
     val uploadState by uploadTracker.state.collectAsState()
     val orchestrator = remember { DesktopUploadOrchestrator() }
 
+    // Drag-and-drop state
+    var isDragOver by remember { mutableStateOf(false) }
+    val dropTarget =
+        remember {
+            object : DragAndDropTarget {
+                override fun onDrop(event: DragAndDropEvent): Boolean {
+                    isDragOver = false
+                    val dropEvent = event.nativeEvent as? DropTargetDropEvent ?: return false
+                    dropEvent.acceptDrop(DnDConstants.ACTION_COPY)
+                    val transferable = dropEvent.transferable
+                    if (transferable.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) {
+                        @Suppress("UNCHECKED_CAST")
+                        val files = transferable.getTransferData(DataFlavor.javaFileListFlavor) as List<File>
+                        attachedFiles.addAll(files.filter { it.extension.lowercase() in MEDIA_EXTENSIONS })
+                        dropEvent.dropComplete(true)
+                        return true
+                    }
+                    dropEvent.dropComplete(false)
+                    return false
+                }
+
+                override fun onStarted(event: DragAndDropEvent) {
+                    isDragOver = true
+                }
+
+                override fun onEnded(event: DragAndDropEvent) {
+                    isDragOver = false
+                }
+            }
+        }
+
     Dialog(onDismissRequest = { if (!isPosting) onDismiss() }) {
         Card(
-            modifier = Modifier.width(600.dp).padding(16.dp),
+            modifier =
+                Modifier
+                    .width(600.dp)
+                    .padding(16.dp)
+                    .dragAndDropTarget(shouldStartDragAndDrop = { true }, target = dropTarget)
+                    .then(
+                        if (isDragOver) {
+                            Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(12.dp))
+                        } else {
+                            Modifier
+                        },
+                    ),
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
                 Text(
@@ -180,8 +246,8 @@ fun ComposeNoteDialog(
                                 errorMessage = null
 
                                 try {
-                                    // Upload attached files first
-                                    val uploadedUrls = mutableListOf<String>()
+                                    // Upload attached files and collect results
+                                    val uploadResults = mutableListOf<UploadResult>()
                                     for (file in attachedFiles) {
                                         uploadTracker.startUpload(file.name)
                                         val result =
@@ -192,24 +258,30 @@ fun ComposeNoteDialog(
                                                 signer = account.signer,
                                             )
                                         uploadTracker.onSuccess(result)
-                                        result.blossom.url?.let { uploadedUrls.add(it) }
+                                        uploadResults.add(result)
                                     }
 
                                     // Append uploaded URLs to content
                                     val finalContent =
                                         buildString {
                                             append(content)
-                                            for (url in uploadedUrls) {
-                                                if (isNotBlank()) append("\n")
-                                                append(url)
+                                            for (result in uploadResults) {
+                                                result.blossom.url?.let { url ->
+                                                    if (isNotBlank()) append("\n")
+                                                    append(url)
+                                                }
                                             }
                                         }
+
+                                    // Build imeta tags from upload metadata
+                                    val imetaTags = buildIMetaTags(uploadResults)
 
                                     publishNote(
                                         content = finalContent,
                                         account = account,
                                         relayManager = relayManager,
                                         replyTo = replyTo,
+                                        imetaTags = imetaTags,
                                     )
                                     onDismiss()
                                 } catch (e: Exception) {
@@ -230,19 +302,50 @@ fun ComposeNoteDialog(
     }
 }
 
+private fun buildIMetaTags(results: List<UploadResult>): List<IMetaTag> =
+    results.mapNotNull { result ->
+        val url = result.blossom.url ?: return@mapNotNull null
+        val meta = result.metadata
+        val props = mutableMapOf<String, List<String>>()
+        props["m"] = listOf(meta.mimeType)
+        props["x"] = listOf(meta.sha256)
+        props["size"] = listOf(meta.size.toString())
+        if (meta.width != null && meta.height != null) {
+            props["dim"] = listOf("${meta.width}x${meta.height}")
+        }
+        meta.blurhash?.let { props["blurhash"] = listOf(it) }
+        IMetaTag(url = url, properties = props)
+    }
+
 private suspend fun publishNote(
     content: String,
     account: AccountState.LoggedIn,
     relayManager: DesktopRelayConnectionManager,
-    replyTo: com.vitorpamplona.quartz.nip01Core.core.Event?,
+    replyTo: Event?,
+    imetaTags: List<IMetaTag> = emptyList(),
 ) {
     withContext(Dispatchers.IO) {
         if (account.isReadOnly) {
             throw IllegalStateException("Cannot post in read-only mode")
         }
 
-        val signedEvent = PublishAction.publishTextNote(content, account.signer, replyTo)
+        val template =
+            TextNoteEvent.build(content) {
+                if (replyTo != null) {
+                    val etag = ETag(replyTo.id)
+                    etag.relay = null
+                    etag.author = replyTo.pubKey
+                    eTag(etag)
+                    pTag(PTag(replyTo.pubKey, relayHint = null))
+                }
+                hashtags(findHashtags(content))
+                references(findURLs(content))
+                for (imeta in imetaTags) {
+                    add(imeta.toTagArray())
+                }
+            }
 
+        val signedEvent = account.signer.sign(template)
         relayManager.broadcastToAll(signedEvent)
     }
 }
