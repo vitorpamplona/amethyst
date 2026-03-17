@@ -47,6 +47,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.desktop.service.media.VideoThumbnailCache
 import com.vitorpamplona.amethyst.desktop.service.media.VlcjPlayerPool
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -72,7 +73,9 @@ fun DesktopVideoPlayer(
     autoPlay: Boolean = false,
     initialSeekPosition: Float = 0f,
     onFullscreen: ((Float) -> Unit)? = null,
-    isFullscreen: Boolean = false,
+    viewMode: ViewMode = ViewMode.DEFAULT,
+    onViewModeChange: ((ViewMode) -> Unit)? = null,
+    trailingControls: @Composable (() -> Unit)? = null,
 ) {
     var frame by remember { mutableStateOf<ImageBitmap?>(null) }
     var isPlaying by remember { mutableStateOf(false) }
@@ -91,6 +94,14 @@ fun DesktopVideoPlayer(
 
     // Lazy activation — don't touch VLC until user clicks play (or autoPlay)
     var activated by remember { mutableStateOf(autoPlay) }
+
+    // Load thumbnail when not activated
+    var thumbnail by remember(url) { mutableStateOf(VideoThumbnailCache.getCached(url)) }
+    LaunchedEffect(url, activated) {
+        if (!activated && thumbnail == null) {
+            thumbnail = VideoThumbnailCache.getThumbnail(url)
+        }
+    }
 
     // Pause when another player becomes active
     val activeId by ActiveMediaManager.activeId.collectAsState()
@@ -248,7 +259,8 @@ fun DesktopVideoPlayer(
                 ),
         contentAlignment = Alignment.Center,
     ) {
-        frame?.let { bitmap ->
+        val displayBitmap = frame ?: thumbnail
+        displayBitmap?.let { bitmap ->
             Image(
                 bitmap = bitmap,
                 contentDescription = "Video",
@@ -268,7 +280,7 @@ fun DesktopVideoPlayer(
             currentTime = currentTime,
             volume = volume,
             isMuted = isMuted,
-            isFullscreen = isFullscreen,
+            viewMode = viewMode,
             onPlayPause = {
                 val p = player
                 if (p != null) {
@@ -305,6 +317,8 @@ fun DesktopVideoPlayer(
                 } else {
                     null
                 },
+            onViewModeChange = onViewModeChange,
+            trailingControls = trailingControls,
         )
     }
 }
