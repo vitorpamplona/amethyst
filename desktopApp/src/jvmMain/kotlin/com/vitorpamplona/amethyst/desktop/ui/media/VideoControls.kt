@@ -83,16 +83,16 @@ fun VideoControls(
     onViewModeChange: ((ViewMode) -> Unit)? = null,
     trailingControls: @Composable (() -> Unit)? = null,
 ) {
-    var showControls by remember { mutableStateOf(true) }
     var hovering by remember { mutableStateOf(false) }
+    var showControls by remember { mutableStateOf(false) }
 
-    // Auto-hide controls after 2s when playing
-    LaunchedEffect(isPlaying, hovering) {
-        if (isPlaying && !hovering) {
+    // Show controls on hover, auto-hide 2s after mouse leaves
+    LaunchedEffect(hovering) {
+        if (hovering) {
+            showControls = true
+        } else {
             delay(2000)
             showControls = false
-        } else {
-            showControls = true
         }
     }
 
@@ -119,14 +119,14 @@ fun VideoControls(
                     }
                 },
     ) {
-        // Center play/buffering indicator
+        // Center play/buffering indicator — only on hover
         if (isBuffering) {
             CircularProgressIndicator(
                 modifier = Modifier.align(Alignment.Center).size(48.dp),
                 color = Color.White,
                 strokeWidth = 3.dp,
             )
-        } else if (!isPlaying) {
+        } else if (!isPlaying && showControls) {
             IconButton(
                 onClick = onPlayPause,
                 modifier = Modifier.align(Alignment.Center).size(64.dp),
