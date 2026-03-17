@@ -97,7 +97,10 @@ fun WalletTransactionsScreen(
 
     val shouldLoadMore by remember {
         derivedStateOf {
-            val lastVisibleIndex = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            val lastVisibleIndex =
+                listState.layoutInfo.visibleItemsInfo
+                    .lastOrNull()
+                    ?.index ?: 0
             val totalItems = listState.layoutInfo.totalItemsCount
             lastVisibleIndex >= totalItems - 5 && !isLoadingMore && hasMore && transactions.isNotEmpty()
         }
@@ -386,7 +389,7 @@ private fun TransactionUserName(
             )
         } else {
             Text(
-                text = fallbackName ?: pubkeyHex.take(8) + "...",
+                text = fallbackName ?: (pubkeyHex.take(8) + "..."),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
                 maxLines = 1,
