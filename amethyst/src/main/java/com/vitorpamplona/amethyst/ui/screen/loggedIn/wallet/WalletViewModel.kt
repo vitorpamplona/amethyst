@@ -118,7 +118,7 @@ class WalletViewModel : ViewModel() {
     private val _hasMoreTransactions = MutableStateFlow(true)
     val hasMoreTransactions = _hasMoreTransactions.asStateFlow()
 
-    private val pageSize = 100
+    private val pageSize = 20
 
     private val _error = MutableStateFlow<String?>(null)
     val error = _error.asStateFlow()
@@ -258,7 +258,8 @@ class WalletViewModel : ViewModel() {
                     when (response) {
                         is ListTransactionsSuccessResponse -> {
                             val newTxs = response.result?.transactions ?: emptyList()
-                            allTransactions.value = allTransactions.value + newTxs
+
+                            allTransactions.value += newTxs
                             val totalCount = response.result?.total_count
                             _hasMoreTransactions.value =
                                 if (totalCount != null) {
