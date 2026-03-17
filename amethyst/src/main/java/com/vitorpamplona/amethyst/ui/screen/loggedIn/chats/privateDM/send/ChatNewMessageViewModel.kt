@@ -403,7 +403,16 @@ class ChatNewMessageViewModel :
 
         accountViewModel.launchSigner {
             if (nip17) {
-                ChatFileUploader(account).justUploadNIP17(uploadState, onError, context) {
+                ChatFileUploader(account).justUploadNIP17(
+                    uploadState,
+                    onError,
+                    onEncryptedUploadError = { title, message ->
+                        encryptedUploadErrorTitle = title
+                        encryptedUploadErrorMessage = message
+                        pendingRetryMode = RetryMode.HOLD
+                    },
+                    context,
+                ) {
                     uploadsWaitingToBeSent += it
                     draftTag.newVersion()
                     onceUploaded()
@@ -428,7 +437,19 @@ class ChatNewMessageViewModel :
 
         accountViewModel.launchSigner {
             if (nip17) {
-                ChatFileUploader(account).justUploadNIP17(uploadState, onError, context) {
+                ChatFileUploader(account).justUploadNIP17(
+                    uploadState,
+                    onError,
+                    onEncryptedUploadError = { title, message ->
+                        encryptedUploadErrorTitle = title
+                        encryptedUploadErrorMessage = message
+                        pendingRetryMode = RetryMode.SEND
+                        pendingRetryOnError = onError
+                        pendingRetryContext = context
+                        pendingRetryOnceUploaded = onceUploaded
+                    },
+                    context,
+                ) {
                     ChatFileSender(room, account).sendNIP17(it)
                     draftTag.newVersion()
                     onceUploaded()
@@ -438,6 +459,69 @@ class ChatNewMessageViewModel :
                     ChatFileSender(room, account).sendNIP04(it)
                     draftTag.newVersion()
                     onceUploaded()
+                }
+            }
+        }
+    }
+
+    // Encrypted upload error state for retry dialog
+    var encryptedUploadErrorTitle by mutableStateOf<String?>(null)
+    var encryptedUploadErrorMessage by mutableStateOf<String?>(null)
+    var pendingRetryMode by mutableStateOf<RetryMode?>(null)
+    var pendingRetryOnError by mutableStateOf<((String, String) -> Unit)?>(null)
+    var pendingRetryContext by mutableStateOf<Context?>(null)
+    var pendingRetryOnceUploaded by mutableStateOf<(() -> Unit)?>(null)
+
+    enum class RetryMode { HOLD, SEND }
+
+    fun dismissEncryptedUploadError() {
+        encryptedUploadErrorTitle = null
+        encryptedUploadErrorMessage = null
+        pendingRetryMode = null
+        pendingRetryOnError = null
+        pendingRetryContext = null
+        pendingRetryOnceUploaded = null
+    }
+
+    fun retryWithoutEncryption() {
+        val mode = pendingRetryMode ?: return
+        val onError = pendingRetryOnError
+        val context = pendingRetryContext
+        val onceUploaded = pendingRetryOnceUploaded
+        val room = room
+        val uploadState = uploadState
+
+        dismissEncryptedUploadError()
+
+        if (uploadState == null || context == null) return
+
+        uploadState.encryptFiles = false
+
+        accountViewModel.launchSigner {
+            when (mode) {
+                RetryMode.HOLD -> {
+                    ChatFileUploader(account).justUploadNIP17Unencrypted(
+                        uploadState,
+                        onError ?: accountViewModel.toastManager::toast,
+                        context,
+                    ) {
+                        uploadsWaitingToBeSent += it
+                        draftTag.newVersion()
+                        onceUploaded?.invoke()
+                    }
+                }
+
+                RetryMode.SEND -> {
+                    if (room == null) return@launchSigner
+                    ChatFileUploader(account).justUploadNIP17Unencrypted(
+                        uploadState,
+                        onError ?: accountViewModel.toastManager::toast,
+                        context,
+                    ) {
+                        ChatFileSender(room, account).sendNIP17(it)
+                        draftTag.newVersion()
+                        onceUploaded?.invoke()
+                    }
                 }
             }
         }
@@ -562,6 +646,8 @@ class ChatNewMessageViewModel :
 
         uploadsWaitingToBeSent = emptyList()
         uploadState?.reset()
+
+        dismissEncryptedUploadError()
 
         iMetaAttachments.reset()
 

@@ -55,6 +55,8 @@ class ChatFileUploadState(
     // 0 = Low, 1 = Medium, 2 = High, 3=UNCOMPRESSED
     var mediaQualitySlider by mutableIntStateOf(1)
 
+    var encryptFiles by mutableStateOf(true)
+
     fun load(uris: ImmutableList<SelectedMedia>) {
         reset()
         this.multiOrchestrator = MultiOrchestrator(uris)
@@ -70,6 +72,7 @@ class ChatFileUploadState(
         mediaUploadTracker.finishUpload()
         caption = ""
         selectedServer = defaultServer
+        encryptFiles = true
     }
 
     fun deleteMediaToUpload(selected: SelectedMediaProcessing) {

@@ -37,8 +37,13 @@ import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceErrorResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceSuccessResponse
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 sealed class SendState {
@@ -70,6 +75,14 @@ sealed class ReceiveState {
     ) : ReceiveState()
 }
 
+enum class TransactionFilter {
+    ALL,
+    ZAPS,
+    NON_ZAPS,
+}
+
+private const val NWC_TIMEOUT_MS = 30_000L
+
 class WalletViewModel : ViewModel() {
     private var account: Account? = null
 
@@ -82,11 +95,30 @@ class WalletViewModel : ViewModel() {
     private val _walletAlias = MutableStateFlow<String?>(null)
     val walletAlias = _walletAlias.asStateFlow()
 
-    private val _transactions = MutableStateFlow<List<NwcTransaction>>(emptyList())
-    val transactions = _transactions.asStateFlow()
+    private val allTransactions = MutableStateFlow<List<NwcTransaction>>(emptyList())
+
+    private val _transactionFilter = MutableStateFlow(TransactionFilter.ALL)
+    val transactionFilter = _transactionFilter.asStateFlow()
+
+    val filteredTransactions =
+        combine(allTransactions, _transactionFilter) { txs, filter ->
+            when (filter) {
+                TransactionFilter.ALL -> txs
+                TransactionFilter.ZAPS -> txs.filter { it.parsedMetadata()?.nostr != null }
+                TransactionFilter.NON_ZAPS -> txs.filter { it.parsedMetadata()?.nostr == null }
+            }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading = _isLoading.asStateFlow()
+
+    private val _isLoadingMore = MutableStateFlow(false)
+    val isLoadingMore = _isLoadingMore.asStateFlow()
+
+    private val _hasMoreTransactions = MutableStateFlow(true)
+    val hasMoreTransactions = _hasMoreTransactions.asStateFlow()
+
+    private val pageSize = 20
 
     private val _error = MutableStateFlow<String?>(null)
     val error = _error.asStateFlow()
@@ -96,6 +128,13 @@ class WalletViewModel : ViewModel() {
 
     private val _receiveState = MutableStateFlow<ReceiveState>(ReceiveState.Idle)
     val receiveState = _receiveState.asStateFlow()
+
+    private fun launchTimeout(onTimeout: () -> Unit): Job =
+        viewModelScope.launch(Dispatchers.IO) {
+            delay(NWC_TIMEOUT_MS)
+            _error.value = "Wallet request timed out"
+            onTimeout()
+        }
 
     fun init(account: Account) {
         this.account = account
@@ -111,8 +150,10 @@ class WalletViewModel : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             _isLoading.value = true
             _error.value = null
+            val timeoutJob = launchTimeout { _isLoading.value = false }
             try {
                 acc.sendNwcRequest(GetBalanceMethod.create()) { response ->
+                    timeoutJob.cancel()
                     when (response) {
                         is GetBalanceSuccessResponse -> {
                             // NWC balance is in millisats, convert to sats
@@ -128,6 +169,7 @@ class WalletViewModel : ViewModel() {
                     _isLoading.value = false
                 }
             } catch (e: Exception) {
+                timeoutJob.cancel()
                 _error.value = e.message
                 _isLoading.value = false
             }
@@ -153,24 +195,32 @@ class WalletViewModel : ViewModel() {
         }
     }
 
-    fun fetchTransactions(
-        limit: Int = 20,
-        offset: Int = 0,
-    ) {
+    fun fetchTransactions() {
         val acc = account ?: return
         viewModelScope.launch(Dispatchers.IO) {
             _isLoading.value = true
+            _hasMoreTransactions.value = true
+            val timeoutJob = launchTimeout { _isLoading.value = false }
             try {
                 acc.sendNwcRequest(
                     ListTransactionsMethod.create(
-                        limit = limit,
-                        offset = offset,
+                        limit = pageSize,
+                        offset = 0,
                         unpaid = false,
                     ),
                 ) { response ->
+                    timeoutJob.cancel()
                     when (response) {
                         is ListTransactionsSuccessResponse -> {
-                            _transactions.value = response.result?.transactions ?: emptyList()
+                            val txs = response.result?.transactions ?: emptyList()
+                            allTransactions.value = txs
+                            val totalCount = response.result?.total_count
+                            _hasMoreTransactions.value =
+                                if (totalCount != null) {
+                                    txs.size < totalCount
+                                } else {
+                                    txs.size >= pageSize
+                                }
                         }
 
                         is NwcErrorResponse -> {
@@ -182,8 +232,55 @@ class WalletViewModel : ViewModel() {
                     _isLoading.value = false
                 }
             } catch (e: Exception) {
+                timeoutJob.cancel()
                 _error.value = e.message
                 _isLoading.value = false
+            }
+        }
+    }
+
+    fun loadMoreTransactions() {
+        if (_isLoadingMore.value || !_hasMoreTransactions.value) return
+        val acc = account ?: return
+        val currentOffset = allTransactions.value.size
+        viewModelScope.launch(Dispatchers.IO) {
+            _isLoadingMore.value = true
+            val timeoutJob = launchTimeout { _isLoadingMore.value = false }
+            try {
+                acc.sendNwcRequest(
+                    ListTransactionsMethod.create(
+                        limit = pageSize,
+                        offset = currentOffset,
+                        unpaid = false,
+                    ),
+                ) { response ->
+                    timeoutJob.cancel()
+                    when (response) {
+                        is ListTransactionsSuccessResponse -> {
+                            val newTxs = response.result?.transactions ?: emptyList()
+
+                            allTransactions.value += newTxs
+                            val totalCount = response.result?.total_count
+                            _hasMoreTransactions.value =
+                                if (totalCount != null) {
+                                    allTransactions.value.size < totalCount
+                                } else {
+                                    newTxs.size >= pageSize
+                                }
+                        }
+
+                        is NwcErrorResponse -> {
+                            _error.value = response.error?.message ?: "Failed to load more transactions"
+                        }
+
+                        else -> {}
+                    }
+                    _isLoadingMore.value = false
+                }
+            } catch (e: Exception) {
+                timeoutJob.cancel()
+                _error.value = e.message
+                _isLoadingMore.value = false
             }
         }
     }
@@ -279,5 +376,9 @@ class WalletViewModel : ViewModel() {
 
     fun clearError() {
         _error.value = null
+    }
+
+    fun setTransactionFilter(filter: TransactionFilter) {
+        _transactionFilter.value = filter
     }
 }

@@ -27,8 +27,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -114,6 +116,15 @@ fun PrivateMessageEditFieldRow(
                 nav = nav,
             )
         }
+    }
+
+    channelScreenModel.encryptedUploadErrorTitle?.let { title ->
+        EncryptedUploadErrorDialog(
+            title = title,
+            message = channelScreenModel.encryptedUploadErrorMessage ?: "",
+            onDismiss = channelScreenModel::dismissEncryptedUploadError,
+            onRetryWithoutEncryption = channelScreenModel::retryWithoutEncryption,
+        )
     }
 
     Column(
@@ -216,4 +227,37 @@ fun KeyboardLeadingIcon(
 
         ToggleNip17Button(channelScreenModel, accountViewModel)
     }
+}
+
+@Composable
+fun EncryptedUploadErrorDialog(
+    title: String,
+    message: String,
+    onDismiss: () -> Unit,
+    onRetryWithoutEncryption: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(message)
+                Text(
+                    stringRes(R.string.upload_without_encryption_warning),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onRetryWithoutEncryption) {
+                Text(stringRes(R.string.retry_without_encryption))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringRes(R.string.cancel))
+            }
+        },
+    )
 }
