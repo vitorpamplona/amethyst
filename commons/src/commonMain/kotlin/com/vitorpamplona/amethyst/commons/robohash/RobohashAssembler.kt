@@ -32,6 +32,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathData
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.robohash.parts.accessory0Seven
 import com.vitorpamplona.amethyst.commons.robohash.parts.accessory1Nose
@@ -86,7 +87,6 @@ import com.vitorpamplona.amethyst.commons.robohash.parts.mouth9Closed
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.sha256.sha256
-import org.jetbrains.compose.ui.tooling.preview.Preview
 
 val Black = SolidColor(Color.Black)
 val Gray = SolidColor(Color(0xFF6d6e70))

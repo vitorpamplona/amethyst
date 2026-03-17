@@ -237,7 +237,7 @@ fun LiveChessGameScreen(
             ) {
                 // Game info - use currentPosition.activeColor for turn display
                 GameInfoHeader(
-                    gameId = gameState.gameId,
+                    gameId = gameState.startEventId,
                     opponentName = opponentName,
                     playerColor = gameState.playerColor,
                     currentTurn = currentPosition.activeColor,
@@ -463,7 +463,7 @@ private fun GameInfoHeader(
                 // Show turn or game result
                 when (gameStatus) {
                     is GameStatus.Finished -> {
-                        val result = (gameStatus as GameStatus.Finished).result
+                        val result = gameStatus.result
                         val resultText =
                             when {
                                 result == GameResult.DRAW -> "Draw"

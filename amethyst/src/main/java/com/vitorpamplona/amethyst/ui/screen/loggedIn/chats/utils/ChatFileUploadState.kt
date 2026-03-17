@@ -28,6 +28,7 @@ import androidx.compose.runtime.setValue
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
+import com.vitorpamplona.amethyst.ui.actions.uploads.MediaUploadTracker
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
 import kotlinx.collections.immutable.ImmutableList
@@ -37,7 +38,9 @@ class ChatFileUploadState(
     val defaultServer: ServerName,
     defaultStripLocationMetadata: Boolean = true,
 ) {
-    var isUploadingImage by mutableStateOf(false)
+    val mediaUploadTracker = MediaUploadTracker()
+    val isUploadingImage: Boolean get() = mediaUploadTracker.isUploadingImage
+    val isUploadingFile: Boolean get() = mediaUploadTracker.isUploadingFile
 
     var selectedServer by mutableStateOf(defaultServer)
     var caption by mutableStateOf("")
@@ -53,8 +56,8 @@ class ChatFileUploadState(
     // 0 = Low, 1 = Medium, 2 = High, 3=UNCOMPRESSED
     var mediaQualitySlider by mutableIntStateOf(1)
 
-    // Strip location and sensitive metadata from files before upload
     var stripLocationMetadata by mutableStateOf(defaultStripLocationMetadata)
+    var encryptFiles by mutableStateOf(true)
 
     fun load(uris: ImmutableList<SelectedMedia>) {
         reset()
@@ -68,16 +71,17 @@ class ChatFileUploadState(
 
     fun reset() {
         multiOrchestrator = null
-        isUploadingImage = false
+        mediaUploadTracker.finishUpload()
         caption = ""
         selectedServer = defaultServer
+        encryptFiles = true
     }
 
     fun deleteMediaToUpload(selected: SelectedMediaProcessing) {
         multiOrchestrator?.remove(selected)
     }
 
-    fun canPost(): Boolean = !isUploadingImage && multiOrchestrator != null
+    fun canPost(): Boolean = !mediaUploadTracker.isUploading && multiOrchestrator != null
 
     fun hasPickedMedia() = multiOrchestrator != null
 

@@ -33,6 +33,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Text
+import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.rememberTooltipState
@@ -69,14 +70,10 @@ fun BunkerHeartbeatIndicator(
             is SignerConnectionState.Disconnected -> {
                 "Bunker disconnected"
             }
-
-            else -> {
-                ""
-            }
         }
 
     TooltipBox(
-        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(),
+        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
         tooltip = { PlainTooltip { Text(tooltipText) } },
         state = tooltipState,
         modifier = modifier,
@@ -110,8 +107,6 @@ fun BunkerHeartbeatIndicator(
                     modifier = Modifier.size(20.dp),
                 )
             }
-
-            else -> {}
         }
     }
 }

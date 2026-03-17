@@ -110,8 +110,8 @@ Think of source sets as a dependency graph, not folders.
    │ - Jackson         │  │                  │
    │ - OkHttp          │  └────┬─────────────┘
    └───┬───────────┬───┘       │
-       │           │            ├─→ iosX64Main
-       ▼           ▼            ├─→ iosArm64Main
+       │           │           │
+       ▼           ▼           ├─→ iosArm64Main
   ┌─────────┐ ┌──────────┐     └─→ iosSimulatorArm64Main
   │android  │ │jvmMain   │
   │Main     │ │(Desktop) │
@@ -252,7 +252,7 @@ expect fun currentTimeSeconds(): Long
 
 **iOS (iosMain):**
 - Active development, framework configured
-- Architecture targets: iosX64Main, iosArm64Main, iosSimulatorArm64Main
+- Architecture targets: macosArm64Main, iosArm64Main, iosSimulatorArm64Main
 - Platform APIs via platform.posix, Security framework
 
 ### Web, wasm - Future Targets

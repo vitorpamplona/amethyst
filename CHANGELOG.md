@@ -15,13 +15,15 @@ Redesigns Media Player
 - Turn video controller creation into a flow to fix playback lifecycle issues
 - Adds support for uploading audio
 
-Adds support for NIP events (kind 30817)
+Adds support for NIP-47 Wallets
 
 Adds support for NIP-52 Calendar appointments
 
 Adds support for NIP-39 External Identities with kind 10011
 
 Adds support for NIP-C0 Code Snippets
+
+Adds support for NIPs on Nostr (event kind 30817)
 
 Adds support for NIP-A3 Payment targets (PayTo: 10133) by @npub1w4uswmv6lu9yel005l3qgheysmr7tk9uvwluddznju3nuxalevvs2d0jr5
 

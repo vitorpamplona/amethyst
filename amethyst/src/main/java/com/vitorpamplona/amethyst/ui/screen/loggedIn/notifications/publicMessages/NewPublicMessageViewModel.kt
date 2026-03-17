@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
+import com.vitorpamplona.amethyst.ui.actions.uploads.MediaUploadTracker
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.ui.note.creators.draftTags.DraftTagState
@@ -149,7 +150,9 @@ class NewPublicMessageViewModel :
 
     val urlPreviews = PreviewState()
 
-    var isUploadingImage by mutableStateOf(false)
+    val mediaUploadTracker = MediaUploadTracker()
+    val isUploadingImage: Boolean get() = mediaUploadTracker.isUploadingImage
+    val isUploadingFile: Boolean get() = mediaUploadTracker.isUploadingFile
 
     var userSuggestions: UserSuggestionState? = null
     var userSuggestionsMainMessage: UserSuggestionAnchor? = null
@@ -319,7 +322,7 @@ class NewPublicMessageViewModel :
     }
 
     suspend fun sendPostSync() {
-        val template = createTemplate() ?: return
+        val template = createTemplate()
         val extraNotesToBroadcast = mutableListOf<Event>()
 
         if (nip95attachments.isNotEmpty()) {
@@ -351,7 +354,7 @@ class NewPublicMessageViewModel :
                 broadcast.add(it.second)
             }
 
-            val template = createTemplate() ?: return
+            val template = createTemplate()
             accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template, broadcast)
         }
     }
@@ -439,7 +442,7 @@ class NewPublicMessageViewModel :
         viewModelScope.launch(Dispatchers.IO) {
             val myMultiOrchestrator = multiOrchestrator ?: return@launch
 
-            isUploadingImage = true
+            mediaUploadTracker.startUpload(myMultiOrchestrator.hasNonMedia())
 
             val results =
                 myMultiOrchestrator.upload(
@@ -456,7 +459,7 @@ class NewPublicMessageViewModel :
                     if (state.result is UploadOrchestrator.OrchestratorResult.NIP95Result) {
                         val nip95 = account.createNip95(state.result.bytes, headerInfo = state.result.fileHeader, alt, contentWarningReason)
                         nip95attachments = nip95attachments + nip95
-                        val note = nip95.let { it1 -> account?.consumeNip95(it1.first, it1.second) }
+                        val note = nip95.let { it1 -> account.consumeNip95(it1.first, it1.second) }
 
                         note?.let {
                             message = message.insertUrlAtCursor("nostr:" + it.toNEvent())
@@ -494,7 +497,7 @@ class NewPublicMessageViewModel :
                 onError(stringRes(context, R.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
             }
 
-            isUploadingImage = false
+            mediaUploadTracker.finishUpload()
         }
     }
 
@@ -522,6 +525,8 @@ class NewPublicMessageViewModel :
 
         userSuggestions?.reset()
         userSuggestionsMainMessage = null
+
+        mediaUploadTracker.finishUpload()
 
         iMetaAttachments.reset()
 
@@ -628,7 +633,7 @@ class NewPublicMessageViewModel :
 
     fun canPost(): Boolean =
         message.text.isNotBlank() &&
-            !isUploadingImage &&
+            !mediaUploadTracker.isUploading &&
             !wantsInvoice &&
             (!wantsZapraiser || zapRaiserAmount.value != null) &&
             (toUsers.text.isNotBlank()) &&

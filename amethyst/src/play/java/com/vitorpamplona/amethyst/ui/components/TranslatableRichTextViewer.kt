@@ -178,9 +178,9 @@ private fun TranslationMessage(
                 buildAnnotatedString {
                     appendLink(stringRes(R.string.translations_auto), textColor) { langSettingsPopupExpanded = !langSettingsPopupExpanded }
                     append(" ${stringRes(R.string.translations_translated_from)} ")
-                    appendLink(Locale(source).displayName, textColor) { onChangeWhatToShow(true) }
+                    appendLink(Locale.forLanguageTag(source).displayName, textColor) { onChangeWhatToShow(true) }
                     append(" ${stringRes(R.string.translations_to)} ")
-                    appendLink(Locale(target).displayName, textColor) { onChangeWhatToShow(false) }
+                    appendLink(Locale.forLanguageTag(target).displayName, textColor) { onChangeWhatToShow(false) }
                 },
             style =
                 LocalTextStyle.current.copy(
@@ -213,7 +213,7 @@ private fun TranslationMessage(
                         Text(
                             stringRes(
                                 R.string.translations_never_translate_from_lang,
-                                Locale(source).displayName,
+                                Locale.forLanguageTag(source).displayName,
                             ),
                         )
                     }
@@ -242,7 +242,7 @@ private fun TranslationMessage(
                         Text(
                             stringRes(
                                 R.string.translations_show_in_lang_first,
-                                Locale(source).displayName,
+                                Locale.forLanguageTag(source).displayName,
                             ),
                         )
                     }
@@ -272,7 +272,7 @@ private fun TranslationMessage(
                         Text(
                             stringRes(
                                 R.string.translations_show_in_lang_first,
-                                Locale(target).displayName,
+                                Locale.forLanguageTag(target).displayName,
                             ),
                         )
                     }
@@ -292,7 +292,7 @@ private fun TranslationMessage(
                     DropdownMenuItem(
                         text = {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                if (accountViewModel.account.settings.translateToContains(lang)) {
+                                if (accountViewModel.account.settings.translateToContains(lang.language)) {
                                     Icon(
                                         imageVector = Icons.Default.Check,
                                         contentDescription = null,
@@ -314,7 +314,7 @@ private fun TranslationMessage(
                         },
                         onClick = {
                             langSettingsPopupExpanded = false
-                            accountViewModel.updateTranslateTo(lang)
+                            accountViewModel.updateTranslateTo(lang.language)
                         },
                     )
                 }

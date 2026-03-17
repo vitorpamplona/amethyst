@@ -1,3 +1,0 @@
-package = Clibsodium
-staticLibraries = libsodium.a libsodium-simulator.a
-libraryPaths = src/nativeInterop/libsodium/ios/lib src/nativeInterop/libsodium/ios-simulators/lib

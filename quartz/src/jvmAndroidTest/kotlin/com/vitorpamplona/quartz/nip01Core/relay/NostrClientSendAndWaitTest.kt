@@ -48,7 +48,7 @@ class NostrClientSendAndWaitTest : BaseNostrClientTest() {
             val resultDamus =
                 client.sendAndWaitForResponse(
                     event = event,
-                    relayList = setOf("wss://relay.damus.io".normalizeRelayUrl()),
+                    relayList = setOf("wss://nostr.bitcoiner.social".normalizeRelayUrl()),
                 )
 
             val resultNos =

@@ -26,32 +26,32 @@ import platform.Foundation.NSURLQueryItem
 actual class UriParser actual constructor(
     uri: String,
 ) {
-    private val nsUrlComponents: NSURLComponents? = NSURLComponents(string = uri)
+    private val nsUrlComponents: NSURLComponents = NSURLComponents(string = uri)
 
-    actual fun scheme(): String? = nsUrlComponents?.scheme
+    actual fun scheme(): String? = nsUrlComponents.scheme
 
-    actual fun host(): String? = nsUrlComponents?.host
+    actual fun host(): String? = nsUrlComponents.host
 
     actual fun port(): Int? {
         // The NSNumber?.intValue is a way to handle a nullable port and convert it
         // from a platform-specific number type to a Kotlin Int.
-        return nsUrlComponents?.port?.intValue
+        return nsUrlComponents.port?.intValue
     }
 
-    actual fun path(): String? = nsUrlComponents?.path
+    actual fun path(): String? = nsUrlComponents.path
 
     actual fun queryParameterNames(): Set<String> {
-        val queryItems = nsUrlComponents?.queryItems ?: return emptySet()
+        val queryItems = nsUrlComponents.queryItems ?: return emptySet()
         return queryItems.mapNotNull { (it as? NSURLQueryItem)?.name }.toSet()
     }
 
     actual fun getQueryParameter(param: String): String? {
-        val queryItems = nsUrlComponents?.queryItems ?: return null
+        val queryItems = nsUrlComponents.queryItems ?: return null
         return (queryItems.firstOrNull { (it as? NSURLQueryItem)?.name == param } as? NSURLQueryItem)?.value
     }
 
     val fragments: Map<String, String> by lazy {
-        nsUrlComponents?.fragment()?.ifBlank { null }?.let { keyValuePair ->
+        nsUrlComponents.fragment()?.ifBlank { null }?.let { keyValuePair ->
             keyValuePair.split('&').associate { paramValue ->
                 val parts = paramValue.split("=", limit = 2)
                 if (parts.size == 2) {

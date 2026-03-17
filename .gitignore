@@ -22,6 +22,7 @@
 /.idea/AndroidProjectSystem.xml
 /.idea/deviceManager.xml
 /.idea/inspectionProfiles/
+/.idea/migrations.xml
 /commons/.idea/gradle.xml
 /commons/.idea/misc.xml
 /commons/.idea/workspace.xml
@@ -149,3 +150,6 @@ lint/tmp/
 
 # Local task tracking
 TASKS.md
+
+# Claude Code local settings
+.claude/settings.local.json

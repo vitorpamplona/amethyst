@@ -70,7 +70,7 @@ class NostrClientManualSubTest : BaseNostrClientTest() {
 
             val filters =
                 mapOf(
-                    RelayUrlNormalizer.normalize("wss://relay.damus.io") to
+                    RelayUrlNormalizer.normalize("wss://nos.lol") to
                         listOf(
                             Filter(
                                 kinds = listOf(MetadataEvent.KIND),
@@ -81,7 +81,7 @@ class NostrClientManualSubTest : BaseNostrClientTest() {
 
             client.openReqSubscription(mySubId, filters, listener)
 
-            withTimeoutOrNull(30000) {
+            withTimeoutOrNull(10000) {
                 while (events.size < 101) {
                     val event = resultChannel.receive()
                     events.add(event)

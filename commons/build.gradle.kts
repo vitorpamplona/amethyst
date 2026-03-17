@@ -49,12 +49,12 @@ kotlin {
                 implementation(project(":quartz"))
 
                 // Compose Multiplatform
-                implementation(compose.ui)
-                implementation(compose.foundation)
-                implementation(compose.runtime)
-                implementation(compose.material3)
-                implementation(compose.materialIconsExtended)
-                implementation(compose.components.uiToolingPreview)
+                implementation(libs.jetbrains.compose.ui)
+                implementation(libs.jetbrains.compose.foundation)
+                implementation(libs.jetbrains.compose.runtime)
+                implementation(libs.jetbrains.compose.material3)
+                implementation(libs.jetbrains.compose.material.icons.extended)
+                implementation(libs.jetbrains.compose.ui.tooling.preview)
 
                 // Lifecycle ViewModel (KMP since 2.8.0)
                 implementation(libs.androidx.lifecycle.viewmodel.compose)
@@ -71,7 +71,7 @@ kotlin {
                 api(libs.kotlinx.collections.immutable)
 
                 // Compose Multiplatform Resources
-                implementation(compose.components.resources)
+                implementation(libs.jetbrains.compose.components.resources)
             }
         }
 
@@ -94,7 +94,7 @@ kotlin {
             dependencies {
                 // Desktop-specific Compose
                 implementation(compose.desktop.currentOs)
-                implementation(compose.uiTooling)
+                implementation(libs.jetbrains.compose.ui.tooling)
 
                 // Secure key storage via OS keychain (macOS/Windows/Linux)
                 implementation(libs.java.keyring)

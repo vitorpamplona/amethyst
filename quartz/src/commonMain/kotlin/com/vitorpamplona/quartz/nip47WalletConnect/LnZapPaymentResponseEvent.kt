@@ -26,6 +26,8 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
+import com.vitorpamplona.quartz.nip31Alts.AltTag
+import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
 class LnZapPaymentResponseEvent(
@@ -55,6 +57,43 @@ class LnZapPaymentResponseEvent(
 
     companion object {
         const val KIND = 23195
-        const val ALT = "Zap payment response"
+        const val ALT = "NWC response"
+
+        /**
+         * Creates an NWC response event (server-side).
+         *
+         * @param response the NWC response object to send
+         * @param requestEvent the original request event being responded to
+         * @param signer the wallet service signer
+         * @param useNip44 whether to use NIP-44 encryption (default: false for NIP-04)
+         * @param createdAt event timestamp
+         */
+        suspend fun createResponse(
+            response: Response,
+            requestEvent: LnZapPaymentRequestEvent,
+            signer: NostrSigner,
+            useNip44: Boolean = false,
+            createdAt: Long = TimeUtils.now(),
+        ): LnZapPaymentResponseEvent {
+            val serializedResponse = OptimizedJsonMapper.toJson(response)
+
+            val clientPubkey = requestEvent.pubKey
+
+            val tags =
+                arrayOf(
+                    arrayOf("p", clientPubkey),
+                    arrayOf("e", requestEvent.id),
+                    AltTag.assemble(ALT),
+                )
+
+            val encrypted =
+                if (useNip44) {
+                    signer.nip44Encrypt(serializedResponse, clientPubkey)
+                } else {
+                    signer.nip04Encrypt(serializedResponse, clientPubkey)
+                }
+
+            return signer.sign(createdAt, KIND, tags, encrypted)
+        }
     }
 }

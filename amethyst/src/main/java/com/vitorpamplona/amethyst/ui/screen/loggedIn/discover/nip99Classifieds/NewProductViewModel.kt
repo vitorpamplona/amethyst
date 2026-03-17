@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
+import com.vitorpamplona.amethyst.ui.actions.uploads.MediaUploadTracker
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.ui.note.creators.draftTags.DraftTagState
@@ -133,7 +134,9 @@ open class NewProductViewModel :
 
     val urlPreviews = PreviewState()
 
-    var isUploadingImage by mutableStateOf(false)
+    val mediaUploadTracker = MediaUploadTracker()
+    val isUploadingImage: Boolean get() = mediaUploadTracker.isUploadingImage
+    val isUploadingFile: Boolean get() = mediaUploadTracker.isUploadingFile
 
     var userSuggestions: UserSuggestionState? = null
     var userSuggestionsMainMessage: UserSuggestionAnchor? = null
@@ -217,7 +220,7 @@ open class NewProductViewModel :
     }
 
     open fun quote(quote: Note) {
-        val accountViewModel = accountViewModel ?: return
+        val accountViewModel = accountViewModel
 
         message = TextFieldValue(message.text + "\nnostr:${quote.toNEvent()}")
 
@@ -304,7 +307,6 @@ open class NewProductViewModel :
     }
 
     suspend fun sendPostSync() {
-        val accountViewModel = accountViewModel ?: return
         val template = createTemplate() ?: return
 
         val version = draftTag.current
@@ -317,8 +319,6 @@ open class NewProductViewModel :
     }
 
     suspend fun sendDraftSync() {
-        val accountViewModel = accountViewModel ?: return
-
         if (message.text.isBlank()) {
             accountViewModel.account.deleteDraftIgnoreErrors(draftTag.current)
         } else {
@@ -328,7 +328,7 @@ open class NewProductViewModel :
     }
 
     private suspend fun createTemplate(): EventTemplate<out Event>? {
-        val accountViewModel = accountViewModel ?: return null
+        val accountViewModel = accountViewModel
 
         val tagger =
             NewMessageTagger(
@@ -337,7 +337,7 @@ open class NewProductViewModel :
             )
         tagger.run()
 
-        val emojis = findEmoji(tagger.message, account?.emoji?.myEmojis?.value)
+        val emojis = findEmoji(tagger.message, account.emoji.myEmojis.value)
         val urls = findURLs(tagger.message)
         val usedAttachments = iMetaDescription.filterIsIn(urls.toSet()) + productImages.map { it.toIMeta() }
 
@@ -396,10 +396,10 @@ open class NewProductViewModel :
         context: Context,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            val myAccount = account ?: return@launch
+            val myAccount = account
             val myMultiOrchestrator = multiOrchestrator ?: return@launch
 
-            isUploadingImage = true
+            mediaUploadTracker.startUpload(myMultiOrchestrator.hasNonMedia())
 
             val results =
                 myMultiOrchestrator.upload(
@@ -444,7 +444,7 @@ open class NewProductViewModel :
                 onError(stringRes(context, R.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
             }
 
-            isUploadingImage = false
+            mediaUploadTracker.finishUpload()
         }
     }
 
@@ -454,7 +454,7 @@ open class NewProductViewModel :
         message = TextFieldValue("")
 
         multiOrchestrator = null
-        isUploadingImage = false
+        mediaUploadTracker.finishUpload()
 
         wantsInvoice = false
         wantsZapraiser = false
@@ -498,8 +498,8 @@ open class NewProductViewModel :
         this.multiOrchestrator?.remove(selected)
     }
 
-    override fun updateMessage(it: TextFieldValue) {
-        message = it
+    override fun updateMessage(newMessage: TextFieldValue) {
+        message = newMessage
         urlPreviews.update(message)
 
         if (message.selection.collapsed) {
@@ -575,7 +575,7 @@ open class NewProductViewModel :
 
     fun canPost(): Boolean =
         message.text.isNotBlank() &&
-            !isUploadingImage &&
+            !mediaUploadTracker.isUploading &&
             !wantsInvoice &&
             (!wantsZapraiser || zapRaiserAmount.value != null) &&
             title.text.isNotBlank() &&
@@ -613,7 +613,7 @@ open class NewProductViewModel :
 
     override fun updateZapFromText() {
         viewModelScope.launch(Dispatchers.IO) {
-            val tagger = NewMessageTagger(message.text, emptyList(), emptyList(), accountViewModel!!)
+            val tagger = NewMessageTagger(message.text, emptyList(), emptyList(), accountViewModel)
             tagger.run()
             tagger.pTags?.forEach { taggedUser ->
                 if (!forwardZapTo.value.items.any { it.key == taggedUser }) {

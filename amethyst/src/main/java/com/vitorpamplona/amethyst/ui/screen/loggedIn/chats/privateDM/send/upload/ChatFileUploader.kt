@@ -39,59 +39,62 @@ class ChatFileUploader(
     suspend fun justUploadNIP17(
         viewState: ChatFileUploadState,
         onError: (title: String, message: String) -> Unit,
+        onEncryptedUploadError: (title: String, message: String) -> Unit,
         context: Context,
         onceUploaded: suspend (List<SuccessfulUploads>) -> Unit,
     ) {
         val orchestrator = viewState.multiOrchestrator ?: return
-        viewState.isUploadingImage = true
+        viewState.mediaUploadTracker.startUpload(orchestrator.hasNonMedia())
 
-        val cipher = AESGCM()
+        if (viewState.encryptFiles) {
+            val cipher = AESGCM()
 
-        val results =
-            orchestrator.uploadEncrypted(
-                viewState.caption,
-                viewState.contentWarningReason,
-                MediaCompressor.intToCompressorQuality(viewState.mediaQualitySlider),
-                cipher,
-                viewState.selectedServer,
-                account,
-                context,
-                stripMetadata = viewState.stripLocationMetadata,
-            )
+            val results =
+                orchestrator.uploadEncrypted(
+                    viewState.caption,
+                    viewState.contentWarningReason,
+                    MediaCompressor.intToCompressorQuality(viewState.mediaQualitySlider),
+                    cipher,
+                    viewState.selectedServer,
+                    account,
+                    context,
+                )
 
-        if (results.allGood) {
-            val list =
-                results.successful.mapNotNull { state ->
-                    if (state.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
-                        SuccessfulUploads(state.result, viewState.caption, viewState.contentWarningReason, cipher)
-                    } else {
-                        null
+            if (results.allGood) {
+                val list =
+                    results.successful.mapNotNull { state ->
+                        if (state.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
+                            SuccessfulUploads(state.result, viewState.caption, viewState.contentWarningReason, cipher)
+                        } else {
+                            null
+                        }
                     }
-                }
 
-            onceUploaded(list)
-            viewState.reset()
+                onceUploaded(list)
+                viewState.reset()
+            } else {
+                val errorMessages = results.errors.map { stringRes(context, it.errorResource, *it.params) }.distinct()
+
+                onEncryptedUploadError(
+                    stringRes(context, R.string.failed_to_upload_encrypted_media_title),
+                    stringRes(context, R.string.failed_to_upload_encrypted_media_message) + "\n\n" + errorMessages.joinToString(".\n"),
+                )
+            }
         } else {
-            val errorMessages = results.errors.map { stringRes(context, it.errorResource, *it.params) }.distinct()
-
-            onError(stringRes(context, R.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
+            justUploadNIP17Unencrypted(viewState, onError, context, onceUploaded)
         }
 
-        viewState.isUploadingImage = false
+        viewState.mediaUploadTracker.finishUpload()
     }
 
-    // ------
-    // NIP 04
-    // ------
-
-    suspend fun justUploadNIP04(
+    suspend fun justUploadNIP17Unencrypted(
         viewState: ChatFileUploadState,
         onError: (title: String, message: String) -> Unit,
         context: Context,
         onceUploaded: suspend (List<SuccessfulUploads>) -> Unit,
     ) {
         val orchestrator = viewState.multiOrchestrator ?: return
-        viewState.isUploadingImage = true
+        viewState.mediaUploadTracker.startUpload(orchestrator.hasNonMedia())
 
         val results =
             orchestrator.upload(
@@ -122,6 +125,51 @@ class ChatFileUploader(
             onError(stringRes(context, R.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
         }
 
-        viewState.isUploadingImage = false
+        viewState.mediaUploadTracker.finishUpload()
+    }
+
+    // ------
+    // NIP 04
+    // ------
+
+    suspend fun justUploadNIP04(
+        viewState: ChatFileUploadState,
+        onError: (title: String, message: String) -> Unit,
+        context: Context,
+        onceUploaded: suspend (List<SuccessfulUploads>) -> Unit,
+    ) {
+        val orchestrator = viewState.multiOrchestrator ?: return
+        viewState.mediaUploadTracker.startUpload(orchestrator.hasNonMedia())
+
+        val results =
+            orchestrator.upload(
+                viewState.caption,
+                viewState.contentWarningReason,
+                MediaCompressor.intToCompressorQuality(viewState.mediaQualitySlider),
+                viewState.selectedServer,
+                account,
+                context,
+                stripMetadata = viewState.stripLocationMetadata,
+            )
+
+        if (results.allGood) {
+            val list =
+                results.successful.mapNotNull { state ->
+                    if (state.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
+                        SuccessfulUploads(state.result, viewState.caption, viewState.contentWarningReason, null)
+                    } else {
+                        null
+                    }
+                }
+
+            onceUploaded(list)
+            viewState.reset()
+        } else {
+            val errorMessages = results.errors.map { stringRes(context, it.errorResource, *it.params) }.distinct()
+
+            onError(stringRes(context, R.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
+        }
+
+        viewState.mediaUploadTracker.finishUpload()
     }
 }

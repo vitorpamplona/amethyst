@@ -75,5 +75,6 @@ fun RoomChatFileUploadDialog(
         onCancel,
         accountViewModel,
         nav,
+        isNip17 = channelScreenModel.nip17,
     )
 }

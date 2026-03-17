@@ -49,6 +49,7 @@ import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
+import com.vitorpamplona.amethyst.ui.actions.uploads.MediaUploadTracker
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordingResult
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
@@ -178,7 +179,9 @@ open class ShortNotePostViewModel :
 
     val urlPreviews = PreviewState()
 
-    var isUploadingImage by mutableStateOf(false)
+    val mediaUploadTracker = MediaUploadTracker()
+    val isUploadingImage: Boolean get() = mediaUploadTracker.isUploadingImage
+    val isUploadingFile: Boolean get() = mediaUploadTracker.isUploadingFile
 
     var userSuggestions: UserSuggestionState? = null
     var userSuggestionsMainMessage: UserSuggestionAnchor? = null
@@ -829,7 +832,7 @@ open class ShortNotePostViewModel :
         viewModelScope.launch(Dispatchers.IO) {
             val myMultiOrchestrator = multiOrchestrator ?: return@launch
 
-            isUploadingImage = true
+            mediaUploadTracker.startUpload(myMultiOrchestrator.hasNonMedia())
 
             val results =
                 myMultiOrchestrator.upload(
@@ -885,7 +888,7 @@ open class ShortNotePostViewModel :
                 onError(stringRes(context, R.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
             }
 
-            isUploadingImage = false
+            mediaUploadTracker.finishUpload()
         }
     }
 
@@ -897,7 +900,7 @@ open class ShortNotePostViewModel :
         forkedFromNote = null
 
         multiOrchestrator = null
-        isUploadingImage = false
+        mediaUploadTracker.finishUpload()
         voiceAnonymization.clear()
         deleteVoiceLocalFile()
         voiceRecording = null
@@ -1032,19 +1035,20 @@ open class ShortNotePostViewModel :
     fun canPost(): Boolean {
         // Voice messages can be posted without text (with either uploaded or pending recording)
         if (voiceMetadata != null || voiceRecording != null) {
-            return !isUploadingVoice && !isUploadingImage && processingPreset == null
+            return !isUploadingVoice && !mediaUploadTracker.isUploading && processingPreset == null
         }
 
         // Regular text/media posts require text
         return message.text.isNotBlank() &&
-            !isUploadingImage &&
+            !mediaUploadTracker.isUploading &&
             !isUploadingVoice &&
             !wantsInvoice &&
             (!wantsZapRaiser || zapRaiserAmount.value != null) &&
             (
                 !wantsPoll ||
                     (
-                        pollOptions.isNotEmpty() && pollOptions.all { it.value.label.isNotEmpty() } &&
+                        pollOptions.isNotEmpty() &&
+                            pollOptions.all { it.value.label.isNotEmpty() } &&
                             closedAt > TimeUtils.oneMinuteFromNow()
                     )
             ) &&

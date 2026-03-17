@@ -119,7 +119,7 @@ Create 8 hybrid domain skills combining general expertise with AmethystMultiplat
 **Focus:** iosMain patterns, Swift/KMP interop, XCFramework generation
 
 **SKILL.md sections:**
-- iOS source sets: iosMain, iosX64Main, iosArm64Main
+- iOS source sets: iosMain, iosArm64Main
 - Swift interop: type mapping, nullability
 - expect/actual iOS: 10+ examples from quartz/iosMain
 - XCFramework setup: baseName = "quartz-kmpKit"

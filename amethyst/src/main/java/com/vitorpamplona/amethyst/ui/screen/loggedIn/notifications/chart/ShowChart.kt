@@ -21,34 +21,34 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.chart
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.sp
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
+import com.patrykandpatrick.vico.compose.cartesian.axis.Axis
+import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
+import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisLabelComponent
-import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
-import com.patrykandpatrick.vico.compose.cartesian.axis.rememberEnd
-import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStart
+import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModel
+import com.patrykandpatrick.vico.compose.cartesian.layer.LineCartesianLayer
+import com.patrykandpatrick.vico.compose.cartesian.layer.LineCartesianLayer.AreaFill.Companion.single
+import com.patrykandpatrick.vico.compose.cartesian.layer.LineCartesianLayer.Line
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
-import com.patrykandpatrick.vico.compose.common.fill
-import com.patrykandpatrick.vico.core.cartesian.axis.Axis
-import com.patrykandpatrick.vico.core.cartesian.axis.HorizontalAxis
-import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
-import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModel
-import com.patrykandpatrick.vico.core.cartesian.layer.LineCartesianLayer
-import com.patrykandpatrick.vico.core.common.shader.ShaderProvider
+import com.patrykandpatrick.vico.compose.common.Fill
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.RoyalBlue
 
-fun makeLine(color: Color): LineCartesianLayer.Line =
-    LineCartesianLayer.Line(
-        fill = LineCartesianLayer.LineFill.single(fill(color)),
+fun makeLine(color: Color): Line =
+    Line(
+        fill = LineCartesianLayer.LineFill.single(Fill(color)),
         areaFill =
-            LineCartesianLayer.AreaFill.single(
-                fill(
-                    ShaderProvider.verticalGradient(
-                        color.copy(alpha = 0.4f).toArgb(),
-                        Color.Transparent.toArgb(),
-                    ),
+            single(
+                Fill(
+                    brush =
+                        Brush.verticalGradient(
+                            colors = listOf(color.copy(alpha = 0.4f), Color.Transparent),
+                        ),
                 ),
             ),
         pointConnector = LineCartesianLayer.PointConnector.cubic(),
@@ -84,7 +84,10 @@ fun ShowChart(model: CartesianChartModel) {
                 ),
             endAxis =
                 VerticalAxis.rememberEnd(
-                    label = rememberAxisLabelComponent(color = BitcoinOrange),
+                    label =
+                        rememberAxisLabelComponent(
+                            style = TextStyle(color = BitcoinOrange, fontSize = 12.sp),
+                        ),
                     valueFormatter = AmountValueFormatter(),
                     itemPlacer = VerticalAxis.ItemPlacer.count({ 7 }),
                 ),

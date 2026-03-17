@@ -81,6 +81,7 @@ fun ChatFileUploadDialog(
     onCancel: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: INav,
+    isNip17: Boolean = false,
 ) {
     val scrollState = rememberScrollState()
 
@@ -132,7 +133,7 @@ fun ChatFileUploadDialog(
             ) {
                 Column(Modifier.fillMaxSize().padding(start = 10.dp, end = 10.dp, bottom = 10.dp)) {
                     Column(Modifier.fillMaxWidth().verticalScroll(scrollState)) {
-                        ImageVideoPostChat(state, accountViewModel)
+                        ImageVideoPostChat(state, accountViewModel, isNip17)
                     }
                 }
             }
@@ -144,6 +145,7 @@ fun ChatFileUploadDialog(
 private fun ImageVideoPostChat(
     fileUploadState: ChatFileUploadState,
     accountViewModel: AccountViewModel,
+    isNip17: Boolean = false,
 ) {
     val fileServers by accountViewModel.account.blossomServers.hostNameFlow
         .collectAsState()
@@ -189,6 +191,16 @@ private fun ImageVideoPostChat(
         checked = fileUploadState.contentWarning,
         onCheckedChange = fileUploadState::updateContentWarning,
     )
+
+    if (isNip17) {
+        SettingSwitchItem(
+            title = R.string.encrypt_files_label,
+            description = R.string.encrypt_files_description,
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            checked = fileUploadState.encryptFiles,
+            onCheckedChange = { fileUploadState.encryptFiles = it },
+        )
+    }
 
     SettingsRow(R.string.file_server, R.string.file_server_description) {
         TextSpinner(
