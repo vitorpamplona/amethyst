@@ -1,4 +1,4 @@
-name: Build Benchmark APK
+name: Build APK For Claude
 
 on:
   push:
