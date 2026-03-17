@@ -12,12 +12,11 @@
  * copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync
 
@@ -32,11 +31,14 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
+import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
@@ -47,6 +49,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
+import kotlin.coroutines.coroutineContext
 
 /**
  * Syncs the user's events across all known relays:
@@ -72,7 +75,7 @@ import java.util.concurrent.atomic.AtomicLong
  *
  * Scoped to the AccountViewModel so the sync survives navigation within the same session.
  */
-class EventSyncViewModel(
+class EventSync(
     val account: Account,
     private val scope: CoroutineScope,
 ) {
@@ -160,7 +163,9 @@ class EventSyncViewModel(
 
     /** Destination relay sets, set at the start of each sync run. */
     @Volatile private var liveOutboxTargets: Set<NormalizedRelayUrl> = emptySet()
+
     @Volatile private var liveInboxTargets: Set<NormalizedRelayUrl> = emptySet()
+
     @Volatile private var liveDmTargets: Set<NormalizedRelayUrl> = emptySet()
 
     private fun emitLiveSnapshot() {
@@ -228,10 +233,13 @@ class EventSyncViewModel(
         val startTime = System.currentTimeMillis()
         val myPubKey = account.signer.pubKey
 
-        val allRelays =
-            account.cache.relayHints.relayDB
+        val allRelays = listOf("wss://relay.damus.io".normalizeRelayUrl())
+
+        /*
+                    account.cache.relayHints.relayDB
                 .keys()
                 .toList()
+         */
 
         if (allRelays.isEmpty()) {
             _syncState.value =
@@ -317,10 +325,7 @@ class EventSyncViewModel(
                             totalSent.incrementAndGet()
                         }
                     }
-                    val pTagsMe =
-                        event.tags.any { tag ->
-                            tag.size >= 2 && tag[0] == "p" && tag[1] == myPubKey
-                        }
+                    val pTagsMe = event.tags.isTaggedUser(myPubKey)
                     if (pTagsMe) {
                         if (event.kind == 4 || event.kind == 1059) {
                             if (dmTargets.isNotEmpty() && dmSent.add(event.id)) {
@@ -475,7 +480,7 @@ class EventSyncViewModel(
             done.close()
 
             val count = pageCount.get()
-            if (count == 0) break  // relay exhausted or unreachable
+            if (count == 0) break // relay exhausted or unreachable
 
             totalEvents += count
 

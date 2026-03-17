@@ -12,12 +12,11 @@
  * copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync
 
@@ -59,10 +58,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
@@ -72,14 +71,13 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import androidx.compose.ui.tooling.preview.Preview
 
 @Composable
 fun EventSyncScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val syncViewModel = accountViewModel.eventSyncViewModel
+    val syncViewModel = accountViewModel.eventSync
 
     val syncState by syncViewModel.syncState.collectAsStateWithLifecycle()
     val liveActivity by syncViewModel.liveActivity.collectAsStateWithLifecycle()
@@ -103,68 +101,66 @@ fun EventSyncScreen(
                     .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Spacer(Modifier.height(8.dp))
-
-            // ---- Explanation card ----
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = stringRes(R.string.event_sync_what_happens_title),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        text = stringRes(R.string.event_sync_what_happens_body),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    Spacer(Modifier.height(12.dp))
-                    StepRow(number = "1", text = stringRes(R.string.event_sync_step1))
-                    Spacer(Modifier.height(4.dp))
-                    StepRow(number = "2", text = stringRes(R.string.event_sync_step2))
-                    Spacer(Modifier.height(4.dp))
-                    StepRow(number = "3", text = stringRes(R.string.event_sync_step3))
-                }
-            }
-
-            // ---- WiFi warning ----
-            if (isMobileOrMetered) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors =
-                        CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer,
-                        ),
-                ) {
-                    Text(
-                        text = stringRes(R.string.event_sync_wifi_warning),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onErrorContainer,
-                        modifier = Modifier.padding(16.dp),
-                    )
-                }
-            }
-
             // ---- Progress / Status area ----
             when (val state = syncState) {
-                is EventSyncViewModel.SyncState.Idle -> Unit
+                is EventSync.SyncState.Idle -> {
+                    // ---- Explanation card ----
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = stringRes(R.string.event_sync_what_happens_title),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                text = stringRes(R.string.event_sync_what_happens_body),
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                            Spacer(Modifier.height(12.dp))
+                            StepRow(number = "1", text = stringRes(R.string.event_sync_step1))
+                            Spacer(Modifier.height(4.dp))
+                            StepRow(number = "2", text = stringRes(R.string.event_sync_step2))
+                            Spacer(Modifier.height(4.dp))
+                            StepRow(number = "3", text = stringRes(R.string.event_sync_step3))
+                        }
+                    }
 
-                is EventSyncViewModel.SyncState.Running -> {
+                    // ---- WiFi warning ----
+                    if (isMobileOrMetered) {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors =
+                                CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                                ),
+                        ) {
+                            Text(
+                                text = stringRes(R.string.event_sync_wifi_warning),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                modifier = Modifier.padding(16.dp),
+                            )
+                        }
+                    }
+                }
+
+                is EventSync.SyncState.Running -> {
                     SyncProgressCard(state = state)
                 }
 
-                is EventSyncViewModel.SyncState.Paused -> {
+                is EventSync.SyncState.Paused -> {
                     PausedCard(state = state)
                 }
 
-                is EventSyncViewModel.SyncState.Done -> {
+                is EventSync.SyncState.Done -> {
                     DoneCard(state = state)
                 }
 
-                is EventSyncViewModel.SyncState.Error -> {
+                is EventSync.SyncState.Error -> {
                     ErrorCard(message = state.message)
                 }
             }
@@ -183,9 +179,9 @@ fun EventSyncScreen(
 
             // ---- Action buttons ----
             when (val state = syncState) {
-                is EventSyncViewModel.SyncState.Idle,
-                is EventSyncViewModel.SyncState.Done,
-                is EventSyncViewModel.SyncState.Error,
+                is EventSync.SyncState.Idle,
+                is EventSync.SyncState.Done,
+                is EventSync.SyncState.Error,
                 -> {
                     Button(
                         onClick = {
@@ -201,7 +197,7 @@ fun EventSyncScreen(
                     }
                 }
 
-                is EventSyncViewModel.SyncState.Paused -> {
+                is EventSync.SyncState.Paused -> {
                     Button(
                         onClick = {
                             if (isMobileOrMetered) {
@@ -222,7 +218,7 @@ fun EventSyncScreen(
                     }
                 }
 
-                is EventSyncViewModel.SyncState.Running -> {
+                is EventSync.SyncState.Running -> {
                     OutlinedButton(
                         onClick = { syncViewModel.cancel() },
                         modifier = Modifier.fillMaxWidth(),
@@ -238,7 +234,7 @@ fun EventSyncScreen(
 
             // ---- Mobile-data confirmation dialog ----
             if (showMobileDataDialog) {
-                val isPaused = syncState is EventSyncViewModel.SyncState.Paused
+                val isPaused = syncState is EventSync.SyncState.Paused
                 AlertDialog(
                     onDismissRequest = { showMobileDataDialog = false },
                     title = { Text(stringRes(R.string.event_sync_mobile_data_dialog_title)) },
@@ -271,7 +267,7 @@ fun EventSyncScreen(
 // -------------------------------------------------------------------------
 
 @Composable
-private fun SyncProgressCard(state: EventSyncViewModel.SyncState.Running) {
+private fun SyncProgressCard(state: EventSync.SyncState.Running) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -305,7 +301,7 @@ private fun SyncProgressCard(state: EventSyncViewModel.SyncState.Running) {
 }
 
 @Composable
-private fun PausedCard(state: EventSyncViewModel.SyncState.Paused) {
+private fun PausedCard(state: EventSync.SyncState.Paused) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors =
@@ -337,7 +333,7 @@ private fun PausedCard(state: EventSyncViewModel.SyncState.Paused) {
 }
 
 @Composable
-private fun DoneCard(state: EventSyncViewModel.SyncState.Done) {
+private fun DoneCard(state: EventSync.SyncState.Done) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors =
@@ -409,7 +405,7 @@ private fun ErrorCard(message: String) {
  * Shows where events are being sent: outbox, inbox, and DM relay lists.
  */
 @Composable
-private fun DestinationRelaysCard(activity: EventSyncViewModel.LiveSyncActivity) {
+private fun DestinationRelaysCard(activity: EventSync.LiveSyncActivity) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -500,9 +496,7 @@ private fun DestinationSection(
  * Uses a fixed-height inner scroll area so it doesn't compete with the outer scroll.
  */
 @Composable
-private fun ActivityLogCard(
-    completions: List<EventSyncViewModel.LiveSyncActivity.CompletedRelayInfo>,
-) {
+private fun ActivityLogCard(completions: List<EventSync.LiveSyncActivity.CompletedRelayInfo>) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -539,7 +533,7 @@ private fun ActivityLogCard(
 }
 
 @Composable
-private fun ActivityLogRow(info: EventSyncViewModel.LiveSyncActivity.CompletedRelayInfo) {
+private fun ActivityLogRow(info: EventSync.LiveSyncActivity.CompletedRelayInfo) {
     val hasEvents = info.eventsFound > 0
     val dotColor =
         if (hasEvents) {
@@ -652,16 +646,16 @@ private fun formatCount(n: Int): String =
 
 private val previewCompletions =
     listOf(
-        EventSyncViewModel.LiveSyncActivity.CompletedRelayInfo(NormalizedRelayUrl("wss://relay.damus.io"), 1247, 891),
-        EventSyncViewModel.LiveSyncActivity.CompletedRelayInfo(NormalizedRelayUrl("wss://nos.lol"), 892, 45),
-        EventSyncViewModel.LiveSyncActivity.CompletedRelayInfo(NormalizedRelayUrl("wss://relay.nostr.band"), 3500, 3498),
-        EventSyncViewModel.LiveSyncActivity.CompletedRelayInfo(NormalizedRelayUrl("wss://slow.relay.example.com"), 0, 0),
-        EventSyncViewModel.LiveSyncActivity.CompletedRelayInfo(NormalizedRelayUrl("wss://nostr.bitcoiner.social"), 15, 0),
-        EventSyncViewModel.LiveSyncActivity.CompletedRelayInfo(NormalizedRelayUrl("wss://unreachable.relay.xyz"), 0, 0),
+        EventSync.LiveSyncActivity.CompletedRelayInfo(NormalizedRelayUrl("wss://relay.damus.io"), 1247, 891),
+        EventSync.LiveSyncActivity.CompletedRelayInfo(NormalizedRelayUrl("wss://nos.lol"), 892, 45),
+        EventSync.LiveSyncActivity.CompletedRelayInfo(NormalizedRelayUrl("wss://relay.nostr.band"), 3500, 3498),
+        EventSync.LiveSyncActivity.CompletedRelayInfo(NormalizedRelayUrl("wss://slow.relay.example.com"), 0, 0),
+        EventSync.LiveSyncActivity.CompletedRelayInfo(NormalizedRelayUrl("wss://nostr.bitcoiner.social"), 15, 0),
+        EventSync.LiveSyncActivity.CompletedRelayInfo(NormalizedRelayUrl("wss://unreachable.relay.xyz"), 0, 0),
     )
 
 private val previewActivity =
-    EventSyncViewModel.LiveSyncActivity(
+    EventSync.LiveSyncActivity(
         recentCompletions = previewCompletions,
         outboxTargets =
             setOf(
@@ -689,7 +683,7 @@ fun SyncProgressCardPreview() {
     ThemeComparisonColumn {
         SyncProgressCard(
             state =
-                EventSyncViewModel.SyncState.Running(
+                EventSync.SyncState.Running(
                     relaysCompleted = 312,
                     totalRelays = 1024,
                     eventsSent = 4821,
@@ -704,7 +698,7 @@ fun PausedCardPreview() {
     ThemeComparisonColumn {
         PausedCard(
             state =
-                EventSyncViewModel.SyncState.Paused(
+                EventSync.SyncState.Paused(
                     nextRelayIndex = 260,
                     totalRelays = 1024,
                     eventsSent = 3200,
@@ -719,7 +713,7 @@ fun DoneCardPreview() {
     ThemeComparisonColumn {
         DoneCard(
             state =
-                EventSyncViewModel.SyncState.Done(
+                EventSync.SyncState.Done(
                     totalEventsSent = 18_432,
                     totalEventsAccepted = 14_891,
                     durationMs = 187_000,
