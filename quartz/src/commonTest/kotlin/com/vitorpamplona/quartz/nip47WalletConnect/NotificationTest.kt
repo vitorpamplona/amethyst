@@ -21,6 +21,10 @@
 package com.vitorpamplona.quartz.nip47WalletConnect
 
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.HoldInvoiceAcceptedNotification
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Notification
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PaymentReceivedNotification
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PaymentSentNotification
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith

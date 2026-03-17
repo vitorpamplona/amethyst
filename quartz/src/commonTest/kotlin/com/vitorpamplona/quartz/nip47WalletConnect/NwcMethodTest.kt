@@ -20,6 +20,13 @@
  */
 package com.vitorpamplona.quartz.nip47WalletConnect
 
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcBudgetRenewal
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcError
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcErrorCode
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcNotificationType
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcTransactionState
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcTransactionType
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse

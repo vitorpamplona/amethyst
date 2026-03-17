@@ -20,12 +20,12 @@
  */
 package com.vitorpamplona.quartz.nip47WalletConnect.kotlinSerialization
 
-import com.vitorpamplona.quartz.nip47WalletConnect.HoldInvoiceAcceptedData
-import com.vitorpamplona.quartz.nip47WalletConnect.HoldInvoiceAcceptedNotification
-import com.vitorpamplona.quartz.nip47WalletConnect.Notification
-import com.vitorpamplona.quartz.nip47WalletConnect.NwcNotificationType
-import com.vitorpamplona.quartz.nip47WalletConnect.PaymentReceivedNotification
-import com.vitorpamplona.quartz.nip47WalletConnect.PaymentSentNotification
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.HoldInvoiceAcceptedData
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.HoldInvoiceAcceptedNotification
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Notification
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcNotificationType
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PaymentReceivedNotification
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PaymentSentNotification
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.descriptors.buildClassSerialDescriptor

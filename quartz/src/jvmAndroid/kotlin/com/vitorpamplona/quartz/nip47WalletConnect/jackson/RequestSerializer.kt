@@ -23,17 +23,17 @@ package com.vitorpamplona.quartz.nip47WalletConnect.jackson
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
-import com.vitorpamplona.quartz.nip47WalletConnect.CancelHoldInvoiceMethod
-import com.vitorpamplona.quartz.nip47WalletConnect.CreateConnectionMethod
-import com.vitorpamplona.quartz.nip47WalletConnect.ListTransactionsMethod
-import com.vitorpamplona.quartz.nip47WalletConnect.LookupInvoiceMethod
-import com.vitorpamplona.quartz.nip47WalletConnect.MakeHoldInvoiceMethod
-import com.vitorpamplona.quartz.nip47WalletConnect.MakeInvoiceMethod
-import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceMethod
-import com.vitorpamplona.quartz.nip47WalletConnect.PayKeysendMethod
-import com.vitorpamplona.quartz.nip47WalletConnect.Request
-import com.vitorpamplona.quartz.nip47WalletConnect.SettleHoldInvoiceMethod
-import com.vitorpamplona.quartz.nip47WalletConnect.SignMessageMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.CancelHoldInvoiceMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.CreateConnectionMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.ListTransactionsMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.LookupInvoiceMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.MakeHoldInvoiceMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.MakeInvoiceMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayKeysendMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.SettleHoldInvoiceMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.SignMessageMethod
 
 class RequestSerializer : StdSerializer<Request>(Request::class.java) {
     override fun serialize(

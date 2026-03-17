@@ -24,11 +24,11 @@ import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
-import com.vitorpamplona.quartz.nip47WalletConnect.HoldInvoiceAcceptedNotification
-import com.vitorpamplona.quartz.nip47WalletConnect.Notification
-import com.vitorpamplona.quartz.nip47WalletConnect.NwcNotificationType
-import com.vitorpamplona.quartz.nip47WalletConnect.PaymentReceivedNotification
-import com.vitorpamplona.quartz.nip47WalletConnect.PaymentSentNotification
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.HoldInvoiceAcceptedNotification
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Notification
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcNotificationType
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PaymentReceivedNotification
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PaymentSentNotification
 import com.vitorpamplona.quartz.utils.asTextOrNull
 
 class NotificationDeserializer : StdDeserializer<Notification>(Notification::class.java) {

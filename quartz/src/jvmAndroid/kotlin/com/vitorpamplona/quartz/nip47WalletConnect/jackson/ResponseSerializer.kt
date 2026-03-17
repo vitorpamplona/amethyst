@@ -23,22 +23,22 @@ package com.vitorpamplona.quartz.nip47WalletConnect.jackson
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
-import com.vitorpamplona.quartz.nip47WalletConnect.CancelHoldInvoiceSuccessResponse
-import com.vitorpamplona.quartz.nip47WalletConnect.CreateConnectionSuccessResponse
-import com.vitorpamplona.quartz.nip47WalletConnect.GetBalanceSuccessResponse
-import com.vitorpamplona.quartz.nip47WalletConnect.GetBudgetSuccessResponse
-import com.vitorpamplona.quartz.nip47WalletConnect.GetInfoSuccessResponse
-import com.vitorpamplona.quartz.nip47WalletConnect.ListTransactionsSuccessResponse
-import com.vitorpamplona.quartz.nip47WalletConnect.LookupInvoiceSuccessResponse
-import com.vitorpamplona.quartz.nip47WalletConnect.MakeHoldInvoiceSuccessResponse
-import com.vitorpamplona.quartz.nip47WalletConnect.MakeInvoiceSuccessResponse
-import com.vitorpamplona.quartz.nip47WalletConnect.NwcErrorResponse
-import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceErrorResponse
-import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceSuccessResponse
-import com.vitorpamplona.quartz.nip47WalletConnect.PayKeysendSuccessResponse
-import com.vitorpamplona.quartz.nip47WalletConnect.Response
-import com.vitorpamplona.quartz.nip47WalletConnect.SettleHoldInvoiceSuccessResponse
-import com.vitorpamplona.quartz.nip47WalletConnect.SignMessageSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.CancelHoldInvoiceSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.CreateConnectionSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetBalanceSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetBudgetSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetInfoSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.ListTransactionsSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.LookupInvoiceSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.MakeHoldInvoiceSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.MakeInvoiceSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcErrorResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceErrorResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayKeysendSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.SettleHoldInvoiceSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.SignMessageSuccessResponse
 
 class ResponseSerializer : StdSerializer<Response>(Response::class.java) {
     override fun serialize(
