@@ -48,6 +48,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -89,6 +90,9 @@ import com.vitorpamplona.amethyst.desktop.ui.deck.DeckLayout
 import com.vitorpamplona.amethyst.desktop.ui.deck.DeckSidebar
 import com.vitorpamplona.amethyst.desktop.ui.deck.DeckState
 import com.vitorpamplona.amethyst.desktop.ui.deck.SinglePaneLayout
+import com.vitorpamplona.amethyst.desktop.ui.media.LocalAwtWindow
+import com.vitorpamplona.amethyst.desktop.ui.media.LocalIsImmersiveFullscreen
+import com.vitorpamplona.amethyst.desktop.ui.media.LocalWindowState
 import com.vitorpamplona.amethyst.desktop.ui.profile.ProfileInfoCard
 import com.vitorpamplona.amethyst.desktop.ui.relay.RelayStatusCard
 import com.vitorpamplona.amethyst.desktop.ui.settings.MediaServerSettings
@@ -370,25 +374,32 @@ fun main() {
                 }
             }
 
-            App(
-                layoutMode = layoutMode,
-                deckState = deckState,
-                accountManager = accountManager,
-                showComposeDialog = showComposeDialog,
-                showAddColumnDialog = showAddColumnDialog,
-                onShowComposeDialog = { showComposeDialog = true },
-                onShowReplyDialog = { event ->
-                    replyToNote = event
-                    showComposeDialog = true
-                },
-                onDismissComposeDialog = {
-                    showComposeDialog = false
-                    replyToNote = null
-                },
-                onDismissAddColumnDialog = { showAddColumnDialog = false },
-                onShowAddColumnDialog = { showAddColumnDialog = true },
-                replyToNote = replyToNote,
-            )
+            val immersiveFullscreenState = remember { mutableStateOf(false) }
+            CompositionLocalProvider(
+                LocalWindowState provides windowState,
+                LocalAwtWindow provides window,
+                LocalIsImmersiveFullscreen provides immersiveFullscreenState,
+            ) {
+                App(
+                    layoutMode = layoutMode,
+                    deckState = deckState,
+                    accountManager = accountManager,
+                    showComposeDialog = showComposeDialog,
+                    showAddColumnDialog = showAddColumnDialog,
+                    onShowComposeDialog = { showComposeDialog = true },
+                    onShowReplyDialog = { event ->
+                        replyToNote = event
+                        showComposeDialog = true
+                    },
+                    onDismissComposeDialog = {
+                        showComposeDialog = false
+                        replyToNote = null
+                    },
+                    onDismissAddColumnDialog = { showAddColumnDialog = false },
+                    onShowAddColumnDialog = { showAddColumnDialog = true },
+                    replyToNote = replyToNote,
+                )
+            }
         }
     }
 }
@@ -673,6 +684,8 @@ fun MainContent(
         }
     }
 
+    val isImmersive by com.vitorpamplona.amethyst.desktop.ui.media.LocalIsImmersiveFullscreen.current
+
     Box(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxSize()) {
             when (layoutMode) {
@@ -695,20 +708,22 @@ fun MainContent(
                 }
 
                 LayoutMode.DECK -> {
-                    DeckSidebar(
-                        onAddColumn = onShowAddColumnDialog,
-                        onOpenSettings = {
-                            if (deckState.hasColumnOfType(DeckColumnType.Settings)) {
-                                deckState.focusExistingColumn(DeckColumnType.Settings)
-                            } else {
-                                deckState.addColumn(DeckColumnType.Settings)
-                            }
-                        },
-                        signerConnectionState = signerConnectionState,
-                        lastPingTimeSec = lastPingTimeSec,
-                    )
+                    if (!isImmersive) {
+                        DeckSidebar(
+                            onAddColumn = onShowAddColumnDialog,
+                            onOpenSettings = {
+                                if (deckState.hasColumnOfType(DeckColumnType.Settings)) {
+                                    deckState.focusExistingColumn(DeckColumnType.Settings)
+                                } else {
+                                    deckState.addColumn(DeckColumnType.Settings)
+                                }
+                            },
+                            signerConnectionState = signerConnectionState,
+                            lastPingTimeSec = lastPingTimeSec,
+                        )
 
-                    VerticalDivider()
+                        VerticalDivider()
+                    }
 
                     DeckLayout(
                         deckState = deckState,

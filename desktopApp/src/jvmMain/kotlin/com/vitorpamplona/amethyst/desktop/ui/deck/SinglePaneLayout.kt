@@ -65,6 +65,7 @@ import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.desktop.ui.ZapFeedback
+import com.vitorpamplona.amethyst.desktop.ui.media.LocalIsImmersiveFullscreen
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect.Nip47URINorm
 import kotlinx.coroutines.CoroutineScope
 
@@ -108,50 +109,56 @@ fun SinglePaneLayout(
     val navStack by navState.stack.collectAsState()
     val currentOverlay = navStack.lastOrNull()
 
+    val isImmersive by LocalIsImmersiveFullscreen.current
+
     Row(modifier = modifier.fillMaxSize()) {
-        NavigationRail(
-            modifier = Modifier.width(80.dp).fillMaxHeight(),
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-        ) {
-            navItems.forEach { item ->
-                NavigationRailItem(
-                    selected = currentColumnType == item.type && navStack.isEmpty(),
-                    onClick = {
-                        currentColumnType = item.type
-                        navState.clear()
-                    },
-                    icon = {
-                        Icon(
-                            item.icon,
-                            contentDescription = item.label,
-                            modifier = Modifier.size(22.dp),
-                        )
-                    },
-                    label = {
-                        Text(
-                            item.label,
-                            style = MaterialTheme.typography.labelSmall,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    },
+        if (!isImmersive) {
+            NavigationRail(
+                modifier = Modifier.width(80.dp).fillMaxHeight(),
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            ) {
+                navItems.forEach { item ->
+                    NavigationRailItem(
+                        selected = currentColumnType == item.type && navStack.isEmpty(),
+                        onClick = {
+                            currentColumnType = item.type
+                            navState.clear()
+                        },
+                        icon = {
+                            Icon(
+                                item.icon,
+                                contentDescription = item.label,
+                                modifier = Modifier.size(22.dp),
+                            )
+                        },
+                        label = {
+                            Text(
+                                item.label,
+                                style = MaterialTheme.typography.labelSmall,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        },
+                    )
+                }
+
+                Spacer(Modifier.weight(1f))
+
+                BunkerHeartbeatIndicator(
+                    signerConnectionState = signerConnectionState,
+                    lastPingTimeSec = lastPingTimeSec,
+                    modifier = Modifier.padding(bottom = 12.dp),
                 )
             }
-
-            Spacer(Modifier.weight(1f))
-
-            BunkerHeartbeatIndicator(
-                signerConnectionState = signerConnectionState,
-                lastPingTimeSec = lastPingTimeSec,
-                modifier = Modifier.padding(bottom = 12.dp),
-            )
         }
 
-        VerticalDivider()
+        if (!isImmersive) {
+            VerticalDivider()
+        }
 
         Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
             Box(
-                modifier = Modifier.fillMaxSize().padding(12.dp),
+                modifier = Modifier.fillMaxSize().padding(if (isImmersive) 0.dp else 12.dp),
             ) {
                 // Always keep RootContent composed so state (e.g. search results) survives navigation
                 RootContent(

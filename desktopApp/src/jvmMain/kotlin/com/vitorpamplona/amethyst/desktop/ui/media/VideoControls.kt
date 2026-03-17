@@ -37,8 +37,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.CloseFullscreen
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
+import androidx.compose.material.icons.filled.OpenInFull
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.CircularProgressIndicator
@@ -77,7 +79,9 @@ fun VideoControls(
     onVolumeChange: ((Int) -> Unit)? = null,
     onMuteToggle: (() -> Unit)? = null,
     onFullscreen: (() -> Unit)? = null,
-    isFullscreen: Boolean = false,
+    viewMode: ViewMode = ViewMode.DEFAULT,
+    onViewModeChange: ((ViewMode) -> Unit)? = null,
+    trailingControls: @Composable (() -> Unit)? = null,
 ) {
     var showControls by remember { mutableStateOf(true) }
     var hovering by remember { mutableStateOf(false) }
@@ -220,17 +224,66 @@ fun VideoControls(
                         )
                     }
 
-                    // Fullscreen
-                    if (onFullscreen != null) {
+                    // Two separate toggle buttons (lightbox) or simple fullscreen (inline)
+                    if (onViewModeChange != null) {
+                        // Theater toggle — hidden during fullscreen
+                        if (viewMode != ViewMode.FULLSCREEN) {
+                            IconButton(
+                                onClick = {
+                                    onViewModeChange(
+                                        if (viewMode == ViewMode.THEATER) ViewMode.DEFAULT else ViewMode.THEATER,
+                                    )
+                                },
+                                modifier = Modifier.size(32.dp),
+                            ) {
+                                Icon(
+                                    if (viewMode == ViewMode.THEATER) {
+                                        Icons.Default.CloseFullscreen
+                                    } else {
+                                        Icons.Default.OpenInFull
+                                    },
+                                    contentDescription =
+                                        if (viewMode == ViewMode.THEATER) "Exit theater" else "Theater mode",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                            }
+                        }
+
+                        // Fullscreen toggle — always visible
+                        IconButton(
+                            onClick = {
+                                onViewModeChange(
+                                    if (viewMode == ViewMode.FULLSCREEN) ViewMode.DEFAULT else ViewMode.FULLSCREEN,
+                                )
+                            },
+                            modifier = Modifier.size(32.dp),
+                        ) {
+                            Icon(
+                                if (viewMode == ViewMode.FULLSCREEN) {
+                                    Icons.Default.FullscreenExit
+                                } else {
+                                    Icons.Default.Fullscreen
+                                },
+                                contentDescription =
+                                    if (viewMode == ViewMode.FULLSCREEN) "Exit fullscreen" else "Fullscreen",
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
+                    } else if (onFullscreen != null) {
                         IconButton(onClick = onFullscreen, modifier = Modifier.size(32.dp)) {
                             Icon(
-                                if (isFullscreen) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,
-                                contentDescription = if (isFullscreen) "Exit Fullscreen" else "Fullscreen",
+                                Icons.Default.Fullscreen,
+                                contentDescription = "Fullscreen",
                                 tint = Color.White,
                                 modifier = Modifier.size(20.dp),
                             )
                         }
                     }
+
+                    // Trailing controls (e.g. more-options menu)
+                    trailingControls?.invoke()
                 }
             }
         }
