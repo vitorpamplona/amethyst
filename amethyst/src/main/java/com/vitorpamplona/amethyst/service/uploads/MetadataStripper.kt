@@ -147,6 +147,8 @@ class MetadataStripper {
             try {
                 extractor.setDataSource(tempInputFile.absolutePath)
 
+                if (extractor.trackCount == 0) return uri
+
                 muxer = MediaMuxer(tempOutputFile.absolutePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
 
                 val trackIndexMap = mutableMapOf<Int, Int>()
