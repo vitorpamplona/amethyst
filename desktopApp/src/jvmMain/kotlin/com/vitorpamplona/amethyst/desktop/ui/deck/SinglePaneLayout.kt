@@ -20,20 +20,16 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui.deck
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Email
@@ -43,12 +39,11 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
@@ -57,7 +52,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
@@ -156,90 +150,47 @@ fun SinglePaneLayout(
         VerticalDivider()
 
         Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
-            // Show header with back button when navigated into overlay
-            if (navStack.isNotEmpty()) {
-                SinglePaneHeader(
-                    title =
-                        when (currentOverlay) {
-                            is DesktopScreen.UserProfile -> "Profile"
-                            is DesktopScreen.Thread -> "Thread"
-                            else -> currentColumnType.title()
-                        },
-                    onBack = { navState.pop() },
-                )
-                HorizontalDivider()
-            }
-
             Box(
                 modifier = Modifier.fillMaxSize().padding(12.dp),
             ) {
+                // Always keep RootContent composed so state (e.g. search results) survives navigation
+                RootContent(
+                    columnType = currentColumnType,
+                    relayManager = relayManager,
+                    localCache = localCache,
+                    accountManager = accountManager,
+                    account = account,
+                    nwcConnection = nwcConnection,
+                    subscriptionsCoordinator = subscriptionsCoordinator,
+                    appScope = appScope,
+                    onShowComposeDialog = onShowComposeDialog,
+                    onShowReplyDialog = onShowReplyDialog,
+                    onZapFeedback = onZapFeedback,
+                    onNavigateToProfile = { navState.push(DesktopScreen.UserProfile(it)) },
+                    onNavigateToThread = { navState.push(DesktopScreen.Thread(it)) },
+                )
                 if (currentOverlay != null) {
-                    OverlayContent(
-                        screen = currentOverlay,
-                        relayManager = relayManager,
-                        localCache = localCache,
-                        account = account,
-                        nwcConnection = nwcConnection,
-                        subscriptionsCoordinator = subscriptionsCoordinator,
-                        onShowComposeDialog = onShowComposeDialog,
-                        onShowReplyDialog = onShowReplyDialog,
-                        onZapFeedback = onZapFeedback,
-                        onNavigateToProfile = { navState.push(DesktopScreen.UserProfile(it)) },
-                        onNavigateToThread = { navState.push(DesktopScreen.Thread(it)) },
-                        onBack = { navState.pop() },
-                    )
-                } else {
-                    RootContent(
-                        columnType = currentColumnType,
-                        relayManager = relayManager,
-                        localCache = localCache,
-                        accountManager = accountManager,
-                        account = account,
-                        nwcConnection = nwcConnection,
-                        subscriptionsCoordinator = subscriptionsCoordinator,
-                        appScope = appScope,
-                        onShowComposeDialog = onShowComposeDialog,
-                        onShowReplyDialog = onShowReplyDialog,
-                        onZapFeedback = onZapFeedback,
-                        onNavigateToProfile = { navState.push(DesktopScreen.UserProfile(it)) },
-                        onNavigateToThread = { navState.push(DesktopScreen.Thread(it)) },
-                    )
+                    Surface(
+                        color = MaterialTheme.colorScheme.background,
+                        modifier = Modifier.fillMaxSize(),
+                    ) {
+                        OverlayContent(
+                            screen = currentOverlay,
+                            relayManager = relayManager,
+                            localCache = localCache,
+                            account = account,
+                            nwcConnection = nwcConnection,
+                            subscriptionsCoordinator = subscriptionsCoordinator,
+                            onShowComposeDialog = onShowComposeDialog,
+                            onShowReplyDialog = onShowReplyDialog,
+                            onZapFeedback = onZapFeedback,
+                            onNavigateToProfile = { navState.push(DesktopScreen.UserProfile(it)) },
+                            onNavigateToThread = { navState.push(DesktopScreen.Thread(it)) },
+                            onBack = { navState.pop() },
+                        )
+                    }
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun SinglePaneHeader(
-    title: String,
-    onBack: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .height(40.dp)
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                .padding(horizontal = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        IconButton(onClick = onBack, modifier = Modifier.size(28.dp)) {
-            Icon(
-                Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Back",
-                modifier = Modifier.size(16.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        Spacer(Modifier.width(8.dp))
-        Text(
-            text = title,
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
     }
 }

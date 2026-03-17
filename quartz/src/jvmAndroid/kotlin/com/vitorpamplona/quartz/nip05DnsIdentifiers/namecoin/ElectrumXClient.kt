@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin
 
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -277,7 +278,7 @@ class ElectrumXClient(
      */
     private fun electrumScriptHash(script: ByteArray): String {
         val digest = MessageDigest.getInstance("SHA-256").digest(script)
-        return digest.reversedArray().joinToString("") { "%02x".format(it) }
+        return digest.reversedArray().toHexKey()
     }
 
     /**

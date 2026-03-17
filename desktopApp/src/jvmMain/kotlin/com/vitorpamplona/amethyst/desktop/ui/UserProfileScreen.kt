@@ -214,7 +214,7 @@ fun UserProfileScreen(
                                     latestMetadataEvent = event
                                 }
                             }
-                        } catch (e: Exception) {
+                        } catch (_: Exception) {
                             // Ignore parse errors
                         }
                     }
@@ -332,7 +332,7 @@ fun UserProfileScreen(
             }
 
             // Edit button for own profile
-            if (isOwnProfile && account?.isReadOnly == false) {
+            if (isOwnProfile && account.isReadOnly == false) {
                 OutlinedButton(
                     onClick = {
                         editingDisplayName = displayName ?: ""

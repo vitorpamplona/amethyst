@@ -62,7 +62,7 @@ class NwcTransaction(
     var expires_at: Long? = null,
     var settled_at: Long? = null,
     var settle_deadline: Long? = null,
-    var metadata: Any? = null,
+    var metadata: Map<String, Any?>? = null,
 ) {
     fun parsedMetadata(): NwcTransactionMetadata? = NwcTransactionMetadata.parse(metadata)
 }

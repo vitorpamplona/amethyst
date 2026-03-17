@@ -418,7 +418,7 @@
     <string name="move_bookmark_to_public_label">Áthelyezés a nyilvános könyvjelzőkbe</string>
     <string name="move_bookmark_to_private_label">Áthelyezés a privát könyvjelzőkbe</string>
     <string name="wallet_connect_service">Wallet Connect szolgáltatás</string>
-    <string name="wallet_connect_service_explainer">Hitelesíti, hogy a Nostr Secret az alkalmazásból való kilépés nélkül fizessen a Zap-et. Tartsa biztonságban a titkot, és lehetőség szerint használjon privát átjátszót</string>
+    <string name="wallet_connect_service_explainer">Lehetővé teszi az Amethyst számára, hogy az alkalmazásból kilépés nélkül fizessen. Tartsa biztonságos helyen a titkot!</string>
     <string name="wallet_connect_service_pubkey">Wallet Connect nyilvános kulcs</string>
     <string name="wallet_connect_service_relay">Wallet Connect átjátszó</string>
     <string name="wallet_connect_service_secret">Wallet Connect titok</string>
@@ -673,6 +673,7 @@
     <string name="write_to_relay">Írás az átjátszóra</string>
     <string name="write_to_relay_description">Az átjátszónak küldött bájt-mennyiség, beleértve a szűrőket és eseményeket is</string>
     <string name="read_from_relay_description">Az átjátszótól kapott bájt-mennyiség, beleértve a szűrőket és eseményeket is</string>
+    <string name="relay_event_count">Tárolt események</string>
     <string name="an_error_occurred_trying_to_get_relay_information">Hiba lépett fel, amikor megpróbálta lekérni az átjátszó-információt innen: %1$s</string>
     <string name="owner">Tulajdonos</string>
     <string name="used_by">Használat a következővel:</string>
@@ -1052,6 +1053,29 @@
     <string name="route_global">Globális</string>
     <string name="route_video">Rövidek</string>
     <string name="route_chess">Sakk</string>
+    <string name="wallet">Pénztárca</string>
+    <string name="wallet_balance">Egyenleg</string>
+    <string name="wallet_send">Küldés</string>
+    <string name="wallet_receive">Fogadás</string>
+    <string name="wallet_transactions">Tranzakciók</string>
+    <string name="wallet_no_connection">Nincs pénztárca összekapcsolva</string>
+    <string name="wallet_no_connection_description">A pénztárca használatához állítson be egy Nostr Wallet Connect (NWC) kapcsolatot a zap-beállításokban.</string>
+    <string name="wallet_setup">Pénztárca beállítása</string>
+    <string name="wallet_sats">satoshik</string>
+    <string name="wallet_paste_invoice">Egy BOLT-11 számla beillesztése</string>
+    <string name="wallet_pay">Fizetés</string>
+    <string name="wallet_payment_success">Sikeres fizetés</string>
+    <string name="wallet_payment_sending">Fizetés küldése…</string>
+    <string name="wallet_amount_sats">Összeg (satoshiban)</string>
+    <string name="wallet_description">Leírás (nem kötelező)</string>
+    <string name="wallet_create_invoice">Számla létrehozása</string>
+    <string name="wallet_creating_invoice">Számla létrehozása…</string>
+    <string name="wallet_copy_invoice">Számla másolása</string>
+    <string name="wallet_no_transactions">Még nincsenek tranzakciók</string>
+    <string name="wallet_loading">Betöltés…</string>
+    <string name="wallet_incoming">Fogadott</string>
+    <string name="wallet_outgoing">Elküldött</string>
+    <string name="wallet_refresh">Frissítés</string>
     <string name="route_security_filters">Biztonsági szűrők</string>
     <string name="route_import_follows">Követettek importálása</string>
     <string name="new_post">Új bejegyzés</string>
@@ -1535,4 +1559,8 @@
     <string name="uptime">Üzemidő: %1$d%%</string>
     <string name="namecoin_settings">Namecoin-beállítások</string>
     <string name="ots_explorer_settings">Bitcoin felfedező (OTS)</string>
+    <string name="events">események</string>
+    <string name="dms">Közvetlen üzenetek</string>
+    <string name="profiles">profilok</string>
+    <string name="relay_settings_lower">átjátszóbeállítások</string>
 </resources>

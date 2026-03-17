@@ -188,6 +188,14 @@ fun MappedAllRelayListView(
     val proxyRelays by proxyViewModel.relays.collectAsStateWithLifecycle()
     val relayFeedsFeedState by relayFeedsViewModel.relays.collectAsStateWithLifecycle()
 
+    val outboxCounts by nip65ViewModel.homeCountResults.collectAsStateWithLifecycle()
+    val inboxCounts by nip65ViewModel.notifCountResults.collectAsStateWithLifecycle()
+    val dmCounts by dmViewModel.countResults.collectAsStateWithLifecycle()
+    val privateHomeCounts by privateOutboxViewModel.countResults.collectAsStateWithLifecycle()
+    val proxyCounts by proxyViewModel.countResults.collectAsStateWithLifecycle()
+    val indexerCounts by indexerViewModel.countResults.collectAsStateWithLifecycle()
+    val searchCounts by searchViewModel.countResults.collectAsStateWithLifecycle()
+
     Scaffold(
         topBar = {
             SavingTopBar(
@@ -261,7 +269,7 @@ fun MappedAllRelayListView(
                     SettingsCategoryFirstModifier,
                 )
             }
-            renderNip65HomeItems(homeFeedState, nip65ViewModel, accountViewModel, nav)
+            renderNip65HomeItems(homeFeedState, nip65ViewModel, accountViewModel, nav, outboxCounts)
 
             item {
                 SettingsCategory(
@@ -270,7 +278,7 @@ fun MappedAllRelayListView(
                     SettingsCategorySpacingModifier,
                 )
             }
-            renderNip65NotifItems(notifFeedState, nip65ViewModel, accountViewModel, nav)
+            renderNip65NotifItems(notifFeedState, nip65ViewModel, accountViewModel, nav, inboxCounts)
 
             item {
                 SettingsCategoryWithButton(
@@ -282,7 +290,7 @@ fun MappedAllRelayListView(
                     },
                 )
             }
-            renderDMItems(dmFeedState, dmViewModel, accountViewModel, nav)
+            renderDMItems(dmFeedState, dmViewModel, accountViewModel, nav, dmCounts)
 
             item {
                 SettingsCategory(
@@ -291,7 +299,7 @@ fun MappedAllRelayListView(
                     SettingsCategorySpacingModifier,
                 )
             }
-            renderPrivateOutboxItems(privateOutboxFeedState, privateOutboxViewModel, accountViewModel, nav)
+            renderPrivateOutboxItems(privateOutboxFeedState, privateOutboxViewModel, accountViewModel, nav, privateHomeCounts)
 
             item {
                 SettingsCategory(
@@ -300,7 +308,7 @@ fun MappedAllRelayListView(
                     SettingsCategorySpacingModifier,
                 )
             }
-            renderProxyItems(proxyRelays, proxyViewModel, accountViewModel, nav)
+            renderProxyItems(proxyRelays, proxyViewModel, accountViewModel, nav, proxyCounts)
 
             item {
                 SettingsCategory(
@@ -320,7 +328,7 @@ fun MappedAllRelayListView(
                     ResetIndexerRelays(indexerViewModel)
                 }
             }
-            renderIndexerItems(indexerRelays, indexerViewModel, accountViewModel, nav)
+            renderIndexerItems(indexerRelays, indexerViewModel, accountViewModel, nav, indexerCounts)
 
             item {
                 SettingsCategoryWithButton(
@@ -331,7 +339,7 @@ fun MappedAllRelayListView(
                     ResetSearchRelays(searchViewModel)
                 }
             }
-            renderSearchItems(searchFeedState, searchViewModel, accountViewModel, nav)
+            renderSearchItems(searchFeedState, searchViewModel, accountViewModel, nav, searchCounts)
 
             item {
                 SettingsCategory(

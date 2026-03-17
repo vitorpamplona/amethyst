@@ -26,8 +26,8 @@ class CountResultDeserializer {
     companion object {
         fun fromJson(jsonObject: JsonNode): CountResult =
             CountResult(
-                count = jsonObject.get("count").asInt(),
-                approximate = jsonObject.get("approximate").asBoolean(),
+                count = jsonObject.get("count")?.asInt() ?: 0,
+                approximate = jsonObject.get("approximate")?.asBoolean() ?: false,
             )
     }
 }

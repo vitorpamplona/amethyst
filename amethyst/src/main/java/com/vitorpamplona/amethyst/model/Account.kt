@@ -226,7 +226,6 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
-import java.util.Locale
 import kotlin.coroutines.cancellation.CancellationException
 
 @OptIn(DelicateCoroutinesApi::class)
@@ -508,7 +507,7 @@ class Account(
         sendNewAppSpecificData()
     }
 
-    suspend fun updateTranslateTo(languageCode: Locale) {
+    suspend fun updateTranslateTo(languageCode: String) {
         if (settings.updateTranslateTo(languageCode)) {
             sendNewAppSpecificData()
         }
@@ -2017,6 +2016,7 @@ class Account(
         }
 
         scope.launch(Dispatchers.IO) {
+            @OptIn(kotlinx.coroutines.FlowPreview::class)
             settings.saveable.debounce(1000).collect {
                 if (it.accountSettings != null) {
                     LocalPreferences.saveToEncryptedStorage(it.accountSettings)

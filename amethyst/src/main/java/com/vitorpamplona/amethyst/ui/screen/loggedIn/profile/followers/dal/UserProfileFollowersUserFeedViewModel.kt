@@ -63,6 +63,7 @@ class UserProfileFollowersUserFeedViewModel(
             }
         }
 
+    @OptIn(kotlinx.coroutines.FlowPreview::class)
     val followersFlow: StateFlow<List<User>> =
         account.cache
             .observeEvents(followerFilter)

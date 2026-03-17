@@ -29,15 +29,15 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
-public class NIP49Test {
+class NIP49Test {
     companion object {
-        val TEST_CASE = "ncryptsec1qgg9947rlpvqu76pj5ecreduf9jxhselq2nae2kghhvd5g7dgjtcxfqtd67p9m0w57lspw8gsq6yphnm8623nsl8xn9j4jdzz84zm3frztj3z7s35vpzmqf6ksu8r89qk5z2zxfmu5gv8th8wclt0h4p"
+        const val TEST_CASE = "ncryptsec1qgg9947rlpvqu76pj5ecreduf9jxhselq2nae2kghhvd5g7dgjtcxfqtd67p9m0w57lspw8gsq6yphnm8623nsl8xn9j4jdzz84zm3frztj3z7s35vpzmqf6ksu8r89qk5z2zxfmu5gv8th8wclt0h4p"
 
-        val TEST_CASE_EXPECTED = "3501454135014541350145413501453fefb02227e449e57cf4d3a3ce05378683"
-        val TEST_CASE_PASSWORD = "nostr"
+        const val TEST_CASE_EXPECTED = "3501454135014541350145413501453fefb02227e449e57cf4d3a3ce05378683"
+        const val TEST_CASE_PASSWORD = "nostr"
 
         val MAIN_TEST_CASES =
-            listOf<Nip49TestCase>(
+            listOf(
                 Nip49TestCase(".ksjabdk.aselqwe", "14c226dbdd865d5e1645e72c7470fd0a17feb42cc87b750bab6538171b3a3f8a", 1, 0x00),
                 Nip49TestCase("skjdaklrnçurbç l", "f7f2f77f98890885462764afb15b68eb5f69979c8046ecb08cad7c4ae6b221ab", 2, 0x01),
                 Nip49TestCase("777z7z7z7z7z7z7z", "11b25a101667dd9208db93c0827c6bdad66729a5b521156a7e9d3b22b3ae8944", 3, 0x02),
@@ -55,12 +55,9 @@ public class NIP49Test {
 
     @Test
     fun decodeBech32() {
-        val data =
-            Nip49.EncryptedInfo.decodePayload(
-                TEST_CASE,
-            )!!
+        val data = Nip49.EncryptedInfo.decodePayload(TEST_CASE)
 
-        assertEquals(2.toByte(), data.version)
+        assertEquals(2.toByte(), data!!.version)
         assertEquals(16.toByte(), data.logn)
         assertEquals("52d7c3f8580e7b41953381e5bc49646b", data.salt.toHexKey())
         assertEquals("c33f02a7dcaac8bdd8da23cd449783240b6ebc12edeea7bf", data.nonce.toHexKey())
@@ -77,7 +74,7 @@ public class NIP49Test {
     @Test
     fun encryptDecryptTestCase() {
         val encrypted = nip49.encrypt(TEST_CASE_EXPECTED, TEST_CASE_PASSWORD, 16, 0)
-        val decrypted = nip49.decrypt(encrypted!!, TEST_CASE_PASSWORD)
+        val decrypted = nip49.decrypt(encrypted, TEST_CASE_PASSWORD)
 
         assertEquals(TEST_CASE_EXPECTED, decrypted)
     }
@@ -89,7 +86,7 @@ public class NIP49Test {
 
             assertNotNull(encrypted)
 
-            val decrypted = nip49.decrypt(encrypted!!, it.password)
+            val decrypted = nip49.decrypt(encrypted, it.password)
 
             assertEquals(it.secretKey, decrypted)
         }
@@ -108,7 +105,7 @@ public class NIP49Test {
 
         assertNotNull(encrypted)
 
-        val decrypted = nip49.decrypt(encrypted!!, samePassword2)
+        val decrypted = nip49.decrypt(encrypted, samePassword2)
 
         assertEquals(TEST_CASE_EXPECTED, decrypted)
     }

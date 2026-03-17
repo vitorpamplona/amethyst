@@ -678,7 +678,8 @@ class QueryBuilder(
         val search: String? = null,
     ) {
         fun isSimpleSearch() =
-            search != null && search.isNotEmpty() &&
+            search != null &&
+                search.isNotEmpty() &&
                 (nonDTagsIn == null || nonDTagsIn.isEmpty()) &&
                 (nonDTagsAll == null || nonDTagsAll.isEmpty())
 

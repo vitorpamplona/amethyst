@@ -45,6 +45,7 @@ object DefaultRelays {
             "wss://nos.lol",
             "wss://relay.snort.social",
             "wss://nostr.wine",
+            "wss://relay.noswhere.com",
             "wss://relay.primal.net",
         )
 }

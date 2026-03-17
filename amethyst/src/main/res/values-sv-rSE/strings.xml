@@ -668,6 +668,7 @@
     <string name="write_to_relay">Skriv till Relay</string>
     <string name="write_to_relay_description">Mängden data i byte som skickades till detta relä, inklusive filter och händelser</string>
     <string name="read_from_relay_description">Mängden data i byte som mottogs från detta relä, inklusive filter och händelser</string>
+    <string name="relay_event_count">Lagrade händelser</string>
     <string name="an_error_occurred_trying_to_get_relay_information">Ett fel inträffade vid försök att hämta information från Relay %1$s</string>
     <string name="owner">Ägare</string>
     <string name="used_by">Används av</string>
@@ -1552,4 +1553,8 @@
     <string name="uptime">%1$d%% drifttid</string>
     <string name="namecoin_settings">Namecoin-inställningar</string>
     <string name="ots_explorer_settings">Bitcoin Explorer (OTS)</string>
+    <string name="events">händelser</string>
+    <string name="dms">DMs</string>
+    <string name="profiles">profiler</string>
+    <string name="relay_settings_lower">relä inställningar</string>
 </resources>

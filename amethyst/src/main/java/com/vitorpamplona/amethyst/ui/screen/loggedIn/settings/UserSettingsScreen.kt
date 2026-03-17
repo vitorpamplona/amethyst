@@ -213,7 +213,7 @@ fun TranslateToSetting(accountViewModel: AccountViewModel) {
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = JavaLocale(currentTranslateTo).displayName,
+                        text = JavaLocale.forLanguageTag(currentTranslateTo).displayName,
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium,
                     )
@@ -227,7 +227,7 @@ fun TranslateToSetting(accountViewModel: AccountViewModel) {
             SearchableLanguageList(
                 languages = allLanguages,
                 onSelect = { locale ->
-                    accountViewModel.updateTranslateTo(locale)
+                    accountViewModel.updateTranslateTo(locale.language)
                     showPicker = false
                 },
             )
@@ -265,7 +265,7 @@ fun DontTranslateFromSetting(accountViewModel: AccountViewModel) {
                 InputChip(
                     selected = true,
                     onClick = { accountViewModel.removeDontTranslateFrom(languageCode) },
-                    label = { Text(JavaLocale(languageCode).displayName) },
+                    label = { Text(JavaLocale.forLanguageTag(languageCode).displayName) },
                     trailingIcon = {
                         Icon(
                             imageVector = Icons.Default.Close,
@@ -367,8 +367,8 @@ private fun LanguagePreferenceCard(
     preference: String,
     accountViewModel: AccountViewModel,
 ) {
-    val sourceName = JavaLocale(source).displayName
-    val targetName = JavaLocale(target).displayName
+    val sourceName = JavaLocale.forLanguageTag(source).displayName
+    val targetName = JavaLocale.forLanguageTag(target).displayName
 
     OutlinedCard(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(12.dp)) {

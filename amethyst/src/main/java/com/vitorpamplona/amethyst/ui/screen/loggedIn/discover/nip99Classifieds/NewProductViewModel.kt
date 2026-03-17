@@ -220,7 +220,7 @@ open class NewProductViewModel :
     }
 
     open fun quote(quote: Note) {
-        val accountViewModel = accountViewModel ?: return
+        val accountViewModel = accountViewModel
 
         message = TextFieldValue(message.text + "\nnostr:${quote.toNEvent()}")
 
@@ -307,7 +307,6 @@ open class NewProductViewModel :
     }
 
     suspend fun sendPostSync() {
-        val accountViewModel = accountViewModel ?: return
         val template = createTemplate() ?: return
 
         val version = draftTag.current
@@ -320,8 +319,6 @@ open class NewProductViewModel :
     }
 
     suspend fun sendDraftSync() {
-        val accountViewModel = accountViewModel ?: return
-
         if (message.text.isBlank()) {
             accountViewModel.account.deleteDraftIgnoreErrors(draftTag.current)
         } else {
@@ -331,7 +328,7 @@ open class NewProductViewModel :
     }
 
     private suspend fun createTemplate(): EventTemplate<out Event>? {
-        val accountViewModel = accountViewModel ?: return null
+        val accountViewModel = accountViewModel
 
         val tagger =
             NewMessageTagger(
@@ -340,7 +337,7 @@ open class NewProductViewModel :
             )
         tagger.run()
 
-        val emojis = findEmoji(tagger.message, account?.emoji?.myEmojis?.value)
+        val emojis = findEmoji(tagger.message, account.emoji.myEmojis.value)
         val urls = findURLs(tagger.message)
         val usedAttachments = iMetaDescription.filterIsIn(urls.toSet()) + productImages.map { it.toIMeta() }
 
@@ -399,7 +396,7 @@ open class NewProductViewModel :
         context: Context,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            val myAccount = account ?: return@launch
+            val myAccount = account
             val myMultiOrchestrator = multiOrchestrator ?: return@launch
 
             mediaUploadTracker.startUpload(myMultiOrchestrator.hasNonMedia())
@@ -501,8 +498,8 @@ open class NewProductViewModel :
         this.multiOrchestrator?.remove(selected)
     }
 
-    override fun updateMessage(it: TextFieldValue) {
-        message = it
+    override fun updateMessage(newMessage: TextFieldValue) {
+        message = newMessage
         urlPreviews.update(message)
 
         if (message.selection.collapsed) {
@@ -616,7 +613,7 @@ open class NewProductViewModel :
 
     override fun updateZapFromText() {
         viewModelScope.launch(Dispatchers.IO) {
-            val tagger = NewMessageTagger(message.text, emptyList(), emptyList(), accountViewModel!!)
+            val tagger = NewMessageTagger(message.text, emptyList(), emptyList(), accountViewModel)
             tagger.run()
             tagger.pTags?.forEach { taggedUser ->
                 if (!forwardZapTo.value.items.any { it.key == taggedUser }) {
