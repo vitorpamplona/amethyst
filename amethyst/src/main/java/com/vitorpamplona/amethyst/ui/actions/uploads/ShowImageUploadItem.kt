@@ -64,6 +64,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.tooling.preview.Preview
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
@@ -77,6 +78,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size40Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -352,3 +354,84 @@ fun FilePreviewPlaceholder(
         }
     }
 }
+
+// region Previews
+
+@Preview
+@Composable
+fun DeleteButtonPreview() {
+    ThemeComparisonColumn {
+        Box(Modifier.size(120.dp).background(MaterialTheme.colorScheme.surfaceVariant)) {
+            DeleteButton {}
+        }
+    }
+}
+
+@Preview
+@Composable
+fun EditMediaButtonPreview() {
+    ThemeComparisonColumn {
+        Box(Modifier.size(120.dp).background(MaterialTheme.colorScheme.surfaceVariant)) {
+            EditMediaButton {}
+        }
+    }
+}
+
+@Preview
+@Composable
+fun EditAndDeleteButtonsPreview() {
+    ThemeComparisonColumn {
+        Box(Modifier.size(120.dp).background(MaterialTheme.colorScheme.surfaceVariant)) {
+            DeleteButton {}
+            EditMediaButton {}
+        }
+    }
+}
+
+@Preview
+@Composable
+fun UploadingStateCompressingPreview() {
+    ThemeComparisonColumn {
+        Box(Modifier.size(120.dp).background(MaterialTheme.colorScheme.surfaceVariant)) {
+            UploadingState(0.3, UploadingState.Compressing)
+        }
+    }
+}
+
+@Preview
+@Composable
+fun UploadingStateUploadingPreview() {
+    ThemeComparisonColumn {
+        Box(Modifier.size(120.dp).background(MaterialTheme.colorScheme.surfaceVariant)) {
+            UploadingState(0.6, UploadingState.Uploading)
+        }
+    }
+}
+
+@Preview
+@Composable
+fun FilePreviewPlaceholderAudioPreview() {
+    ThemeComparisonColumn {
+        Box(Modifier.size(120.dp)) {
+            FilePreviewPlaceholder(
+                icon = Icons.Default.AudioFile,
+                label = "audio/mp3",
+            )
+        }
+    }
+}
+
+@Preview
+@Composable
+fun FilePreviewPlaceholderPdfPreview() {
+    ThemeComparisonColumn {
+        Box(Modifier.size(120.dp)) {
+            FilePreviewPlaceholder(
+                icon = Icons.Default.PictureAsPdf,
+                label = "application/pdf",
+            )
+        }
+    }
+}
+
+// endregion

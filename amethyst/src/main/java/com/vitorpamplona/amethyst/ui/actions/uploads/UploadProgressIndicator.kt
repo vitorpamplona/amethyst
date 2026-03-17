@@ -37,12 +37,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
+import com.vitorpamplona.amethyst.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 
 @Composable
 fun UploadProgressIndicator(
@@ -97,5 +100,24 @@ fun UploadProgressIndicator(
                 textAlign = TextAlign.Center,
             )
         }
+    }
+}
+
+@Preview
+@Composable
+fun UploadProgressIndicatorReadyPreview() {
+    ThemeComparisonColumn {
+        val orchestrator = UploadOrchestrator()
+        UploadProgressIndicator(orchestrator)
+    }
+}
+
+@Preview
+@Composable
+fun UploadProgressIndicatorUploadingPreview() {
+    ThemeComparisonColumn {
+        val orchestrator = UploadOrchestrator()
+        orchestrator.updateState(0.5, UploadingState.Uploading)
+        UploadProgressIndicator(orchestrator)
     }
 }

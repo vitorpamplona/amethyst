@@ -60,6 +60,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -71,6 +72,7 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TitleIconModifier
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -164,149 +166,193 @@ fun VideoTrimDialog(
                 )
             },
         ) { padding ->
-            Column(
+            VideoTrimContent(
+                durationMs = durationMs,
+                rangeStart = rangeStart,
+                rangeEnd = rangeEnd,
+                thumbnails = thumbnails,
+                isTrimming = isTrimming,
+                onRangeChange = { start, end ->
+                    rangeStart = start
+                    rangeEnd = end
+                },
+                onApply = {
+                    isTrimming = true
+                    scope.launch {
+                        val result =
+                            withContext(Dispatchers.IO) {
+                                VideoTrimmer.trim(
+                                    context,
+                                    videoUri,
+                                    rangeStart.toLong(),
+                                    rangeEnd.toLong(),
+                                )
+                            }
+                        isTrimming = false
+                        if (result != null) {
+                            onTrimmed(result)
+                        } else {
+                            onCancel()
+                        }
+                    }
+                },
                 modifier =
                     Modifier
                         .fillMaxSize()
                         .padding(padding)
                         .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun VideoTrimContent(
+    durationMs: Float,
+    rangeStart: Float,
+    rangeEnd: Float,
+    thumbnails: List<Bitmap>,
+    isTrimming: Boolean,
+    onRangeChange: (Float, Float) -> Unit,
+    onApply: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        if (durationMs > 0f) {
+            ThumbnailFilmstrip(thumbnails)
+
+            RangeSlider(
+                value = rangeStart..rangeEnd,
+                onValueChange = { range ->
+                    onRangeChange(range.start, range.endInclusive)
+                },
+                valueRange = 0f..durationMs,
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            TrimTimeLabels(rangeStart, rangeEnd)
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            TrimApplyButton(isTrimming, rangeEnd > rangeStart, onApply)
+        } else {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
             ) {
-                if (durationMs > 0f) {
-                    // Thumbnail filmstrip
-                    if (thumbnails.isNotEmpty()) {
-                        LazyRow(
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .height(60.dp),
-                            horizontalArrangement = Arrangement.spacedBy(1.dp),
-                        ) {
-                            itemsIndexed(thumbnails) { _, bitmap ->
-                                Image(
-                                    bitmap = bitmap.asImageBitmap(),
-                                    contentDescription = null,
-                                    contentScale = ContentScale.Crop,
-                                    modifier =
-                                        Modifier
-                                            .width(48.dp)
-                                            .height(60.dp),
-                                )
-                            }
-                        }
-                    } else {
-                        Box(
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .height(60.dp)
-                                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            CircularProgressIndicator()
-                        }
-                    }
-
-                    // Range slider
-                    RangeSlider(
-                        value = rangeStart..rangeEnd,
-                        onValueChange = { range ->
-                            rangeStart = range.start
-                            rangeEnd = range.endInclusive
-                        },
-                        valueRange = 0f..durationMs,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-
-                    // Time labels
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                    ) {
-                        Column {
-                            Text(
-                                text = stringRes(R.string.trim_start),
-                                style = MaterialTheme.typography.bodySmall,
-                            )
-                            Text(
-                                text = formatMsToTime(rangeStart.toLong()),
-                                fontSize = 14.sp,
-                            )
-                        }
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = stringRes(R.string.trim_duration),
-                                style = MaterialTheme.typography.bodySmall,
-                            )
-                            Text(
-                                text = formatMsToTime((rangeEnd - rangeStart).toLong()),
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                            )
-                        }
-                        Column(horizontalAlignment = Alignment.End) {
-                            Text(
-                                text = stringRes(R.string.trim_end),
-                                style = MaterialTheme.typography.bodySmall,
-                            )
-                            Text(
-                                text = formatMsToTime(rangeEnd.toLong()),
-                                fontSize = 14.sp,
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.weight(1f))
-
-                    // Apply button
-                    Button(
-                        onClick = {
-                            isTrimming = true
-                            scope.launch {
-                                val result =
-                                    withContext(Dispatchers.IO) {
-                                        VideoTrimmer.trim(
-                                            context,
-                                            videoUri,
-                                            rangeStart.toLong(),
-                                            rangeEnd.toLong(),
-                                        )
-                                    }
-                                isTrimming = false
-                                if (result != null) {
-                                    onTrimmed(result)
-                                } else {
-                                    onCancel()
-                                }
-                            }
-                        },
-                        enabled = !isTrimming && rangeEnd > rangeStart,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        if (isTrimming) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.height(20.dp).width(20.dp),
-                                    strokeWidth = 2.dp,
-                                )
-                                Text(text = stringRes(R.string.video_trimming_in_progress))
-                            }
-                        } else {
-                            Text(text = stringRes(R.string.apply_trim))
-                        }
-                    }
-                } else {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        CircularProgressIndicator()
-                    }
-                }
+                CircularProgressIndicator()
             }
+        }
+    }
+}
+
+@Composable
+fun ThumbnailFilmstrip(thumbnails: List<Bitmap>) {
+    if (thumbnails.isNotEmpty()) {
+        LazyRow(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(60.dp),
+            horizontalArrangement = Arrangement.spacedBy(1.dp),
+        ) {
+            itemsIndexed(thumbnails) { _, bitmap ->
+                Image(
+                    bitmap = bitmap.asImageBitmap(),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier =
+                        Modifier
+                            .width(48.dp)
+                            .height(60.dp),
+                )
+            }
+        }
+    } else {
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(60.dp)
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+            contentAlignment = Alignment.Center,
+        ) {
+            CircularProgressIndicator()
+        }
+    }
+}
+
+@Composable
+fun TrimTimeLabels(
+    rangeStart: Float,
+    rangeEnd: Float,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Column {
+            Text(
+                text = stringRes(R.string.trim_start),
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Text(
+                text = formatMsToTime(rangeStart.toLong()),
+                fontSize = 14.sp,
+            )
+        }
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = stringRes(R.string.trim_duration),
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Text(
+                text = formatMsToTime((rangeEnd - rangeStart).toLong()),
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+        Column(horizontalAlignment = Alignment.End) {
+            Text(
+                text = stringRes(R.string.trim_end),
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Text(
+                text = formatMsToTime(rangeEnd.toLong()),
+                fontSize = 14.sp,
+            )
+        }
+    }
+}
+
+@Composable
+fun TrimApplyButton(
+    isTrimming: Boolean,
+    isEnabled: Boolean,
+    onApply: () -> Unit,
+) {
+    Button(
+        onClick = onApply,
+        enabled = !isTrimming && isEnabled,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        if (isTrimming) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.height(20.dp).width(20.dp),
+                    strokeWidth = 2.dp,
+                )
+                Text(text = stringRes(R.string.video_trimming_in_progress))
+            }
+        } else {
+            Text(text = stringRes(R.string.apply_trim))
         }
     }
 }
@@ -315,3 +361,56 @@ private fun formatMsToTime(ms: Long): String {
     val totalSeconds = (ms / 1000).toInt()
     return formatSecondsToTime(totalSeconds)
 }
+
+// region Previews
+
+@Preview
+@Composable
+fun TrimTimeLabelsPreview() {
+    ThemeComparisonColumn {
+        TrimTimeLabels(
+            rangeStart = 5000f,
+            rangeEnd = 45000f,
+        )
+    }
+}
+
+@Preview
+@Composable
+fun TrimApplyButtonPreview() {
+    ThemeComparisonColumn {
+        Column {
+            TrimApplyButton(isTrimming = false, isEnabled = true, onApply = {})
+            TrimApplyButton(isTrimming = true, isEnabled = true, onApply = {})
+            TrimApplyButton(isTrimming = false, isEnabled = false, onApply = {})
+        }
+    }
+}
+
+@Preview
+@Composable
+fun ThumbnailFilmstripLoadingPreview() {
+    ThemeComparisonColumn {
+        ThumbnailFilmstrip(thumbnails = emptyList())
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Preview
+@Composable
+fun VideoTrimContentPreview() {
+    ThemeComparisonColumn {
+        VideoTrimContent(
+            durationMs = 60000f,
+            rangeStart = 5000f,
+            rangeEnd = 45000f,
+            thumbnails = emptyList(),
+            isTrimming = false,
+            onRangeChange = { _, _ -> },
+            onApply = {},
+            modifier = Modifier.height(400.dp).padding(16.dp),
+        )
+    }
+}
+
+// endregion
