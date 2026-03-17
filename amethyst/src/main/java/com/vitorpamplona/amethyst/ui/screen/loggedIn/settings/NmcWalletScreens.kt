@@ -822,7 +822,7 @@ private fun FileExportButtons(walletService: NmcWalletService) {
             }
         }
 
-    // SAF launcher for WIF private key export
+    // SAF launcher for raw WIF export
     val wifLauncher =
         androidx.activity.compose.rememberLauncherForActivityResult(
             contract =
@@ -836,20 +836,133 @@ private fun FileExportButtons(walletService: NmcWalletService) {
                         val address = walletService.wallet.address ?: "unknown"
                         val content = "# Namecoin WIF private key — KEEP SECRET\n# Address: $address\n$wif\n"
                         context.contentResolver.openOutputStream(uri)?.use { it.write(content.toByteArray()) }
-                        "✓ Private key saved"
+                        "✓ Private key saved (WIF)"
                     } catch (e: Exception) {
                         "Error: ${e.message}"
                     }
             }
         }
 
-    Text("Export to file", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Medium)
-    Text(
-        "Opens file browser to choose save location.",
-        fontSize = 10.sp,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
+    // SAF launcher for Electrum-NMC import script
+    val electrumLauncher =
+        androidx.activity.compose.rememberLauncherForActivityResult(
+            contract =
+                androidx.activity.result.contract.ActivityResultContracts
+                    .CreateDocument("text/plain"),
+        ) { uri ->
+            if (uri != null) {
+                exportStatus =
+                    try {
+                        val wif = walletService.exportWif()
+                        val p2pkhAddr =
+                            com.vitorpamplona.quartz.nip05.namecoin.wallet.NmcKeyManager
+                                .addressFromPubKey(
+                                    com.vitorpamplona.quartz.utils.Hex
+                                        .decode(walletService.wallet.pubKeyHex!!),
+                                )
+                        val segwitAddr = walletService.wallet.address ?: "unknown"
+                        val content =
+                            buildString {
+                                appendLine("# Electrum-NMC Import Instructions")
+                                appendLine("# =================================")
+                                appendLine("#")
+                                appendLine("# Method 1: Electrum-NMC Console (Wallet → Console)")
+                                appendLine("#   For p2wpkh (native SegWit, recommended):")
+                                appendLine("#     wallet.import_privkey('p2wpkh:$wif')")
+                                appendLine("#")
+                                appendLine("#   For p2wpkh-p2sh (wrapped SegWit):")
+                                appendLine("#     wallet.import_privkey('p2wpkh-p2sh:$wif')")
+                                appendLine("#")
+                                appendLine("#   For p2pkh (legacy):")
+                                appendLine("#     wallet.import_privkey('p2pkh:$wif')")
+                                appendLine("#")
+                                appendLine("# Method 2: Electrum-NMC CLI")
+                                appendLine("#   electrum-nmc importprivkey 'p2wpkh:$wif'")
+                                appendLine("#")
+                                appendLine("# Addresses derived from this key:")
+                                appendLine("#   Native SegWit (P2WPKH): $segwitAddr")
+                                appendLine("#   Legacy (P2PKH):         $p2pkhAddr")
+                                appendLine("#")
+                                appendLine("# WIF key (Namecoin, compressed):")
+                                appendLine(wif)
+                            }
+                        context.contentResolver.openOutputStream(uri)?.use { it.write(content.toByteArray()) }
+                        "✓ Electrum-NMC import file saved"
+                    } catch (e: Exception) {
+                        "Error: ${e.message}"
+                    }
+            }
+        }
 
+    // SAF launcher for Namecoin Core import script
+    val coreLauncher =
+        androidx.activity.compose.rememberLauncherForActivityResult(
+            contract =
+                androidx.activity.result.contract.ActivityResultContracts
+                    .CreateDocument("text/plain"),
+        ) { uri ->
+            if (uri != null) {
+                exportStatus =
+                    try {
+                        val wif = walletService.exportWif()
+                        val privKeyHex = walletService.exportPrivKeyHex()
+                        val p2pkhAddr =
+                            com.vitorpamplona.quartz.nip05.namecoin.wallet.NmcKeyManager
+                                .addressFromPubKey(
+                                    com.vitorpamplona.quartz.utils.Hex
+                                        .decode(walletService.wallet.pubKeyHex!!),
+                                )
+                        val segwitAddr = walletService.wallet.address ?: "unknown"
+                        val pubKeyHex = walletService.wallet.pubKeyHex ?: ""
+                        val content =
+                            buildString {
+                                appendLine("# Namecoin Core Import Instructions")
+                                appendLine("# ==================================")
+                                appendLine("#")
+                                appendLine("# IMPORTANT: Namecoin Core uses descriptor wallets by default")
+                                appendLine("# since v23.0. Legacy wallet import (importprivkey) is deprecated.")
+                                appendLine("#")
+                                appendLine("# Option A: Import as descriptor (recommended for Core ≥23.0)")
+                                appendLine("#   1. Create a new descriptor wallet:")
+                                appendLine("#      namecoin-cli createwallet \"imported\" false true \"\" false true")
+                                appendLine("#")
+                                appendLine("#   2. Import the key as a descriptor:")
+                                appendLine("#      namecoin-cli -rpcwallet=imported importdescriptors '[{")
+                                appendLine("#        \"desc\": \"wpkh($privKeyHex)#CHECKSUM\",")
+                                appendLine("#        \"timestamp\": \"now\",")
+                                appendLine("#        \"label\": \"amethyst-import\"")
+                                appendLine("#      }]'")
+                                appendLine("#")
+                                appendLine("#   Note: Replace #CHECKSUM with the output of:")
+                                appendLine("#      namecoin-cli getdescriptorinfo \"wpkh($privKeyHex)\"")
+                                appendLine("#")
+                                appendLine("# Option B: Legacy wallet import (Core <23.0 or legacy wallet)")
+                                appendLine("#   namecoin-cli importprivkey '$wif' 'amethyst-import' true")
+                                appendLine("#   (⚠ Only imports as P2PKH. Not recommended for new wallets.)")
+                                appendLine("#")
+                                appendLine("# Option C: Import as watch-only (public key only)")
+                                appendLine("#   namecoin-cli importpubkey '$pubKeyHex' 'amethyst-watch' true")
+                                appendLine("#")
+                                appendLine("# Addresses:")
+                                appendLine("#   Native SegWit (P2WPKH): $segwitAddr")
+                                appendLine("#   Legacy (P2PKH):         $p2pkhAddr")
+                                appendLine("#")
+                                appendLine("# Raw keys:")
+                                appendLine("#   WIF (compressed): $wif")
+                                appendLine("#   Private key hex:  $privKeyHex")
+                                appendLine("#   Public key hex:   $pubKeyHex")
+                            }
+                        context.contentResolver.openOutputStream(uri)?.use { it.write(content.toByteArray()) }
+                        "✓ Namecoin Core import file saved"
+                    } catch (e: Exception) {
+                        "Error: ${e.message}"
+                    }
+            }
+        }
+
+    Text("Export keys", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Medium)
+
+    // Row 1: Basic exports
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         OutlinedButton(
             onClick = {
@@ -858,9 +971,8 @@ private fun FileExportButtons(walletService: NmcWalletService) {
             },
             modifier = Modifier.weight(1f),
         ) {
-            Text("Export pubkey", fontSize = 11.sp)
+            Text("Public key", fontSize = 11.sp)
         }
-
         OutlinedButton(
             onClick = {
                 val address = walletService.wallet.address?.take(8) ?: "nmc"
@@ -869,7 +981,32 @@ private fun FileExportButtons(walletService: NmcWalletService) {
             modifier = Modifier.weight(1f),
             colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
         ) {
-            Text("Export WIF", fontSize = 11.sp)
+            Text("Raw WIF", fontSize = 11.sp)
+        }
+    }
+
+    // Row 2: Wallet-specific exports
+    Text("Import into external wallets", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedButton(
+            onClick = {
+                val address = walletService.wallet.address?.take(8) ?: "nmc"
+                electrumLauncher.launch("nmc_electrum_import_$address.txt")
+            },
+            modifier = Modifier.weight(1f),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = NmcBlue),
+        ) {
+            Text("Electrum-NMC", fontSize = 11.sp)
+        }
+        OutlinedButton(
+            onClick = {
+                val address = walletService.wallet.address?.take(8) ?: "nmc"
+                coreLauncher.launch("nmc_core_import_$address.txt")
+            },
+            modifier = Modifier.weight(1f),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = NmcBlue),
+        ) {
+            Text("Namecoin Core", fontSize = 11.sp)
         }
     }
 
