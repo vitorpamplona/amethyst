@@ -172,7 +172,7 @@ fun NmcWalletFullScreen(
             HorizontalDivider()
 
             // Address type settings
-            AddressTypeSection()
+            AddressTypeSection(walletService)
 
             HorizontalDivider()
 
@@ -195,8 +195,8 @@ fun NmcWalletFullScreen(
 }
 
 @Composable
-private fun AddressTypeSection() {
-    var selectedType by rememberSaveable { mutableStateOf("P2WPKH") }
+private fun AddressTypeSection(walletService: NmcWalletService) {
+    var selectedType by rememberSaveable { mutableStateOf(walletService.wallet.addressType.name) }
     var expanded by remember { mutableStateOf(false) }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -256,7 +256,13 @@ private fun AddressTypeSection() {
                             Icon(Icons.Default.Check, null, tint = NmcBlue, modifier = Modifier.size(20.dp))
                         } else {
                             OutlinedButton(
-                                onClick = { selectedType = id },
+                                onClick = {
+                                    selectedType = id
+                                    val type =
+                                        com.vitorpamplona.quartz.nip05.namecoin.wallet.NmcAddressType
+                                            .valueOf(id)
+                                    walletService.setAddressType(type)
+                                },
                                 contentPadding =
                                     androidx.compose.foundation.layout
                                         .PaddingValues(horizontal = 12.dp, vertical = 4.dp),

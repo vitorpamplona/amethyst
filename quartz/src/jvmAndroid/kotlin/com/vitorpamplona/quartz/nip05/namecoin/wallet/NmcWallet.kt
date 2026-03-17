@@ -91,19 +91,36 @@ class NmcWallet(
     private var pubKey: ByteArray? = null
     private var nmcAddress: String? = null
     private var scripthash: String? = null
+    private var currentAddressType: NmcAddressType = NmcAddressType.P2WPKH
 
     val isLoaded: Boolean get() = privKey != null
     val address: String? get() = nmcAddress
     val pubKeyHex: String? get() = pubKey?.toHexKey()
+    val addressType: NmcAddressType get() = currentAddressType
 
     // ── Key Management ─────────────────────────────────────────────────
 
     /** Load wallet from a raw 32-byte private key. */
-    fun loadFromPrivateKey(key: ByteArray) {
+    fun loadFromPrivateKey(
+        key: ByteArray,
+        type: NmcAddressType = NmcAddressType.P2WPKH,
+    ) {
         privKey = key.copyOf()
         pubKey = NmcKeyManager.compressedPubKey(key)
-        nmcAddress = NmcKeyManager.addressFromPubKey(pubKey!!)
-        scripthash = computeScripthash(pubKey!!)
+        currentAddressType = type
+        nmcAddress = NmcAddressGenerator.addressFromPubKey(pubKey!!, type)
+        scripthash = computeScripthash(pubKey!!, type)
+    }
+
+    /**
+     * Switch the address type for the loaded wallet.
+     * Regenerates address and scripthash without reloading the key.
+     */
+    fun setAddressType(type: NmcAddressType) {
+        val pk = pubKey ?: return
+        currentAddressType = type
+        nmcAddress = NmcAddressGenerator.addressFromPubKey(pk, type)
+        scripthash = computeScripthash(pk, type)
     }
 
     /** Load wallet from a BIP39 mnemonic using BIP44 m/44'/7'/0'/0/0. */
@@ -530,9 +547,12 @@ class NmcWallet(
         requireNotNull(privKey) { "Wallet not loaded — call loadFromPrivateKey/loadFromMnemonic/loadFromNostrKey first" }
     }
 
-    private fun computeScripthash(compressedPubKey: ByteArray): String {
+    private fun computeScripthash(
+        compressedPubKey: ByteArray,
+        type: NmcAddressType = currentAddressType,
+    ): String {
         val hash160 = NmcKeyManager.hash160(compressedPubKey)
-        val script = NmcTransactionBuilder.buildP2PKHScript(hash160)
+        val script = NmcAddressGenerator.scriptPubKeyForType(hash160, type)
         val sha256 = MessageDigest.getInstance("SHA-256").digest(script)
         return sha256.reversedArray().toHexKey()
     }

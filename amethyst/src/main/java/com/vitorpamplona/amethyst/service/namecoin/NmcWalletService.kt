@@ -110,6 +110,13 @@ class NmcWalletService(
         _address.value = wallet.address
     }
 
+    /** Switch address type and update displayed address. */
+    fun setAddressType(type: com.vitorpamplona.quartz.nip05.namecoin.wallet.NmcAddressType) {
+        wallet.setAddressType(type)
+        _address.value = wallet.address
+        refreshAll()
+    }
+
     fun lock() {
         wallet.lock()
         _isLoaded.value = false
