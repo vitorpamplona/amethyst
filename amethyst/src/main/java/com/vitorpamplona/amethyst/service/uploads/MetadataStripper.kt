@@ -149,6 +149,9 @@ class MetadataStripper {
 
                 if (extractor.trackCount == 0) return uri
 
+                // Note: MediaMuxer may still write a creation timestamp and encoder info into
+                // the new container. This is not controllable via the Android API and is a
+                // known residual privacy limitation of the remux approach.
                 muxer = MediaMuxer(tempOutputFile.absolutePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
 
                 val trackIndexMap = mutableMapOf<Int, Int>()
