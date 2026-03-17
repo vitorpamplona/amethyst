@@ -36,30 +36,69 @@ jobs:
       - name: Build Benchmark APK
         run: ./gradlew assemblePlayBenchmark
 
-      - name: Upload Play Benchmark APK
+      - name: Upload APK to prerelease
         id: upload
-        uses: actions/upload-artifact@v6
-        with:
-          name: Play Benchmark APK
-          path: amethyst/build/outputs/apk/play/benchmark/amethyst-play-universal-benchmark.apk
-
-      - name: Comment on commit with APK link
         uses: actions/github-script@v7
         with:
           script: |
-            const artifactId = `${{ steps.upload.outputs.artifact-id }}`;
-            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-            const downloadUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}/artifacts/${artifactId}`;
-            const body = `📦 **Benchmark APK ready!**\n\nDownload: [Play Benchmark APK](${downloadUrl})\n\nOr view all artifacts in the [workflow run](${runUrl}#artifacts).`;
+            const fs = require('fs');
+            const apkPath = 'amethyst/build/outputs/apk/play/benchmark/amethyst-play-universal-benchmark.apk';
+            const sha = context.sha.substring(0, 7);
+            const tag = `benchmark-${sha}`;
 
-            await github.rest.repos.createCommitComment({
+            // Delete existing release with this tag if it exists
+            try {
+              const { data: existing } = await github.rest.repos.getReleaseByTag({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                tag
+              });
+              await github.rest.repos.deleteRelease({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                release_id: existing.id
+              });
+              await github.rest.git.deleteRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: `tags/${tag}`
+              });
+            } catch (e) {
+              // Release doesn't exist yet, that's fine
+            }
+
+            const { data: release } = await github.rest.repos.createRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              commit_sha: context.sha,
-              body
+              tag_name: tag,
+              target_commitish: context.sha,
+              name: `Benchmark APK (${sha})`,
+              body: `Auto-generated benchmark APK for commit ${context.sha}`,
+              prerelease: true
             });
 
-            // Find open PRs for this branch and comment on them
+            const apkData = fs.readFileSync(apkPath);
+            const { data: asset } = await github.rest.repos.uploadReleaseAsset({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: release.id,
+              name: 'amethyst-play-universal-benchmark.apk',
+              data: apkData,
+              headers: {
+                'content-type': 'application/vnd.android.package-archive',
+                'content-length': apkData.length
+              }
+            });
+
+            core.setOutput('apk-url', asset.browser_download_url);
+
+      - name: Comment on PR with APK link
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const apkUrl = `${{ steps.upload.outputs.apk-url }}`;
+            const body = `📦 **Benchmark APK ready!**\n\nDownload: [Play Benchmark APK](${apkUrl})`;
+
             const branch = context.ref.replace('refs/heads/', '');
             const { data: prs } = await github.rest.pulls.list({
               owner: context.repo.owner,
