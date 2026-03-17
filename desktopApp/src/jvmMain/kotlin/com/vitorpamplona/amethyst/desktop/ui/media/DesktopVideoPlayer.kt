@@ -23,9 +23,10 @@ package com.vitorpamplona.amethyst.desktop.ui.media
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -248,77 +249,84 @@ fun DesktopVideoPlayer(
         return
     }
 
-    Box(
-        modifier =
-            modifier
-                .aspectRatio(aspectRatio)
-                .background(
-                    MaterialTheme.colorScheme.surfaceContainerHigh,
-                    RoundedCornerShape(8.dp),
-                ),
-        contentAlignment = Alignment.Center,
-    ) {
-        val displayBitmap = frame ?: thumbnail
-        displayBitmap?.let { bitmap ->
-            Image(
-                bitmap = bitmap,
-                contentDescription = "Video",
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .clip(RoundedCornerShape(8.dp)),
-                contentScale = ContentScale.Fit,
+    BoxWithConstraints(modifier = modifier) {
+        // Calculate height from aspect ratio, clamped to max constraints
+        val desiredHeight = maxWidth / aspectRatio
+        val constrainedHeight = if (constraints.hasBoundedHeight) minOf(desiredHeight, maxHeight) else desiredHeight
+
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(constrainedHeight)
+                    .background(
+                        MaterialTheme.colorScheme.surfaceContainerHigh,
+                        RoundedCornerShape(8.dp),
+                    ),
+            contentAlignment = Alignment.Center,
+        ) {
+            val displayBitmap = frame ?: thumbnail
+            displayBitmap?.let { bitmap ->
+                Image(
+                    bitmap = bitmap,
+                    contentDescription = "Video",
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(8.dp)),
+                    contentScale = ContentScale.Fit,
+                )
+            }
+
+            VideoControls(
+                isPlaying = isPlaying,
+                isBuffering = isBuffering,
+                position = position,
+                duration = duration,
+                currentTime = currentTime,
+                volume = volume,
+                isMuted = isMuted,
+                viewMode = viewMode,
+                onPlayPause = {
+                    val p = player
+                    if (p != null) {
+                        if (isPlaying) {
+                            p.controls().pause()
+                        } else {
+                            ActiveMediaManager.activate(playerId)
+                            if (position <= 0f && !p.status().isPlaying) {
+                                p.media().play(url)
+                                isBuffering = true
+                            } else {
+                                p.controls().play()
+                            }
+                        }
+                    } else {
+                        // First play — activate lazy init
+                        activated = true
+                    }
+                },
+                onSeek = { pos ->
+                    player?.controls()?.setPosition(pos)
+                },
+                onVolumeChange = { vol ->
+                    volume = vol
+                    player?.audio()?.setVolume(vol)
+                },
+                onMuteToggle = {
+                    isMuted = !isMuted
+                    player?.audio()?.isMute = isMuted
+                },
+                onFullscreen =
+                    if (onFullscreen != null) {
+                        { onFullscreen(position) }
+                    } else {
+                        null
+                    },
+                onViewModeChange = onViewModeChange,
+                trailingControls = trailingControls,
             )
         }
-
-        VideoControls(
-            isPlaying = isPlaying,
-            isBuffering = isBuffering,
-            position = position,
-            duration = duration,
-            currentTime = currentTime,
-            volume = volume,
-            isMuted = isMuted,
-            viewMode = viewMode,
-            onPlayPause = {
-                val p = player
-                if (p != null) {
-                    if (isPlaying) {
-                        p.controls().pause()
-                    } else {
-                        ActiveMediaManager.activate(playerId)
-                        if (position <= 0f && !p.status().isPlaying) {
-                            p.media().play(url)
-                            isBuffering = true
-                        } else {
-                            p.controls().play()
-                        }
-                    }
-                } else {
-                    // First play — activate lazy init
-                    activated = true
-                }
-            },
-            onSeek = { pos ->
-                player?.controls()?.setPosition(pos)
-            },
-            onVolumeChange = { vol ->
-                volume = vol
-                player?.audio()?.setVolume(vol)
-            },
-            onMuteToggle = {
-                isMuted = !isMuted
-                player?.audio()?.isMute = isMuted
-            },
-            onFullscreen =
-                if (onFullscreen != null) {
-                    { onFullscreen(position) }
-                } else {
-                    null
-                },
-            onViewModeChange = onViewModeChange,
-            trailingControls = trailingControls,
-        )
     }
 }
 
