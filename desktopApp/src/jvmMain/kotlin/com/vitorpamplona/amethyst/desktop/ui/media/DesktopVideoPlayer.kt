@@ -251,7 +251,6 @@ fun DesktopVideoPlayer(
     Box(
         modifier =
             modifier
-                .fillMaxWidth()
                 .aspectRatio(aspectRatio)
                 .background(
                     MaterialTheme.colorScheme.surfaceContainerHigh,
