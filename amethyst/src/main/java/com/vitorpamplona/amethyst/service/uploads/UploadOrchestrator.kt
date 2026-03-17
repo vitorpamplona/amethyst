@@ -296,13 +296,18 @@ class UploadOrchestrator {
         uri: Uri,
         mimeType: String?,
         stripMetadata: Boolean,
+        compressionQuality: CompressorQuality,
         context: Context,
-    ): Uri =
-        if (stripMetadata) {
-            MetadataStripper().strip(uri, mimeType, context.applicationContext)
-        } else {
-            uri
+    ): Uri {
+        if (!stripMetadata) return uri
+        // Video compression already strips metadata; only strip manually when uncompressed
+        if (mimeType?.startsWith("video/", ignoreCase = true) == true &&
+            compressionQuality != CompressorQuality.UNCOMPRESSED
+        ) {
+            return uri
         }
+        return MetadataStripper().strip(uri, mimeType, context.applicationContext)
+    }
 
     suspend fun upload(
         uri: Uri,
@@ -316,7 +321,7 @@ class UploadOrchestrator {
         useH265: Boolean = false,
         stripMetadata: Boolean = true,
     ): UploadingFinalState {
-        val stripped = stripMetadataIfNeeded(uri, mimeType, stripMetadata, context)
+        val stripped = stripMetadataIfNeeded(uri, mimeType, stripMetadata, compressionQuality, context)
         val compressed = compressIfNeeded(stripped, mimeType, compressionQuality, context, useH265)
 
         return when (server.type) {
@@ -339,7 +344,7 @@ class UploadOrchestrator {
         useH265: Boolean = false,
         stripMetadata: Boolean = true,
     ): UploadingFinalState {
-        val stripped = stripMetadataIfNeeded(uri, mimeType, stripMetadata, context)
+        val stripped = stripMetadataIfNeeded(uri, mimeType, stripMetadata, compressionQuality, context)
         val compressed = compressIfNeeded(stripped, mimeType, compressionQuality, context, useH265)
         val encrypted = EncryptFiles().encryptFile(context, compressed.uri, encrypt)
 

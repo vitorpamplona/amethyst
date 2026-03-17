@@ -34,6 +34,8 @@ import java.io.File
 
 class MetadataStripper {
     companion object {
+        private const val REMUX_BUFFER_SIZE = 8 * 1024 * 1024
+
         private val SENSITIVE_EXIF_TAGS =
             arrayOf(
                 ExifInterface.TAG_GPS_LATITUDE,
@@ -164,8 +166,7 @@ class MetadataStripper {
                 muxer.start()
                 muxerStarted = true
 
-                val bufferSize = 1024 * 1024
-                val buffer = java.nio.ByteBuffer.allocate(bufferSize)
+                val buffer = java.nio.ByteBuffer.allocate(REMUX_BUFFER_SIZE)
                 val bufferInfo = MediaCodec.BufferInfo()
 
                 while (true) {
@@ -216,53 +217,60 @@ class MetadataStripper {
             } ?: return uri
 
             val extractor = MediaExtractor()
-            extractor.setDataSource(tempInputFile.absolutePath)
+            var muxer: MediaMuxer? = null
+            var muxerStarted = false
+            var succeeded = false
+            var tempOutputFile: File? = null
+            try {
+                extractor.setDataSource(tempInputFile.absolutePath)
 
-            if (extractor.trackCount == 0) {
-                extractor.release()
-                tempInputFile.delete()
-                return uri
-            }
+                if (extractor.trackCount == 0) return uri
 
-            val format = extractor.getTrackFormat(0)
-            val mime = format.getString(MediaFormat.KEY_MIME) ?: ""
-            val extension =
-                when {
-                    mime.contains("mp4a") || mime.contains("aac") -> ".m4a"
-                    else -> ".mp4"
+                val format = extractor.getTrackFormat(0)
+                val mime = format.getString(MediaFormat.KEY_MIME) ?: ""
+                val extension =
+                    when {
+                        mime.contains("mp4a") || mime.contains("aac") -> ".m4a"
+                        else -> ".mp4"
+                    }
+
+                tempOutputFile = File.createTempFile("stripped_audio_", extension, context.cacheDir)
+                muxer = MediaMuxer(tempOutputFile.absolutePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
+
+                extractor.selectTrack(0)
+                val outputTrack = muxer.addTrack(format)
+                muxer.start()
+                muxerStarted = true
+
+                val buffer = java.nio.ByteBuffer.allocate(REMUX_BUFFER_SIZE)
+                val bufferInfo = MediaCodec.BufferInfo()
+
+                while (true) {
+                    val sampleSize = extractor.readSampleData(buffer, 0)
+                    if (sampleSize < 0) break
+
+                    bufferInfo.offset = 0
+                    bufferInfo.size = sampleSize
+                    bufferInfo.presentationTimeUs = extractor.sampleTime
+                    bufferInfo.flags = extractorToCodecFlags(extractor.sampleFlags)
+
+                    muxer.writeSampleData(outputTrack, buffer, bufferInfo)
+                    extractor.advance()
                 }
 
-            val tempOutputFile = File.createTempFile("stripped_audio_", extension, context.cacheDir)
-            val muxer = MediaMuxer(tempOutputFile.absolutePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
-
-            extractor.selectTrack(0)
-            val outputTrack = muxer.addTrack(format)
-            muxer.start()
-
-            val bufferSize = 1024 * 1024
-            val buffer = java.nio.ByteBuffer.allocate(bufferSize)
-            val bufferInfo = MediaCodec.BufferInfo()
-
-            while (true) {
-                val sampleSize = extractor.readSampleData(buffer, 0)
-                if (sampleSize < 0) break
-
-                bufferInfo.offset = 0
-                bufferInfo.size = sampleSize
-                bufferInfo.presentationTimeUs = extractor.sampleTime
-                bufferInfo.flags = extractorToCodecFlags(extractor.sampleFlags)
-
-                muxer.writeSampleData(outputTrack, buffer, bufferInfo)
-                extractor.advance()
+                muxer.stop()
+                muxerStarted = false
+                succeeded = true
+            } finally {
+                if (muxerStarted) runCatching { muxer?.stop() }
+                muxer?.release()
+                extractor.release()
+                tempInputFile.delete()
+                if (!succeeded) tempOutputFile?.delete()
             }
 
-            muxer.stop()
-            muxer.release()
-            extractor.release()
-            tempInputFile.delete()
-
             Log.d("MetadataStripper", "Stripped metadata from audio")
-            tempOutputFile.toUri()
+            tempOutputFile!!.toUri()
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.d("MetadataStripper", "Failed to strip audio metadata: ${e.message}")
