@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -58,12 +59,14 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import kotlinx.coroutines.launch
 
 @Composable
 fun LightboxOverlay(
     urls: List<String>,
     initialIndex: Int = 0,
+    initialSeekPosition: Float = 0f,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -74,6 +77,9 @@ fun LightboxOverlay(
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
     }
+
+    val currentUrl = urls[currentIndex]
+    val isVideo = RichTextParser.isVideoUrl(currentUrl)
 
     Box(
         modifier =
@@ -121,11 +127,27 @@ fun LightboxOverlay(
                     // Click on backdrop doesn't close — use X button or Esc
                 },
     ) {
-        // Main image
-        ZoomableImage(
-            url = urls[currentIndex],
-            modifier = Modifier.fillMaxSize().padding(48.dp),
-        )
+        // Main content — video or image
+        if (isVideo) {
+            Box(
+                modifier = Modifier.fillMaxSize().padding(48.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                DesktopVideoPlayer(
+                    url = currentUrl,
+                    autoPlay = true,
+                    initialSeekPosition = if (currentIndex == initialIndex) initialSeekPosition else 0f,
+                    isFullscreen = true,
+                    onFullscreen = { onDismiss() },
+                    modifier = Modifier.widthIn(max = 1200.dp),
+                )
+            }
+        } else {
+            ZoomableImage(
+                url = currentUrl,
+                modifier = Modifier.fillMaxSize().padding(48.dp),
+            )
+        }
 
         // Top bar
         Row(

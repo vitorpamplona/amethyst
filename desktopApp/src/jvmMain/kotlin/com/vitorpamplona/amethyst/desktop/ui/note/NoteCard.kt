@@ -82,6 +82,7 @@ fun NoteCard(
     onClick: (() -> Unit)? = null,
     onAuthorClick: ((String) -> Unit)? = null,
     onImageClick: ((List<String>, Int) -> Unit)? = null,
+    onMediaClick: ((List<String>, Int, Float) -> Unit)? = null,
 ) {
     val urls = remember(note.content) { UrlParser().parseValidUrls(note.content) }
     val imageUrls =
@@ -221,10 +222,16 @@ fun NoteCard(
                 if (strippedContent.isNotBlank() || imageUrls.isNotEmpty()) {
                     Spacer(Modifier.height(8.dp))
                 }
-                for (url in videoUrls) {
+                for ((index, url) in videoUrls.withIndex()) {
                     DesktopVideoPlayer(
                         url = url,
                         modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp),
+                        onFullscreen =
+                            if (onMediaClick != null) {
+                                { seekPos -> onMediaClick(videoUrls, index, seekPos) }
+                            } else {
+                                null
+                            },
                     )
                     if (url != videoUrls.last()) {
                         Spacer(Modifier.height(4.dp))

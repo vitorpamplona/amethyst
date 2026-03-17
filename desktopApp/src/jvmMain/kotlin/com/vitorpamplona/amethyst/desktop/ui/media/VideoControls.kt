@@ -27,14 +27,21 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.Fullscreen
+import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -64,6 +71,13 @@ fun VideoControls(
     onPlayPause: () -> Unit,
     onSeek: (Float) -> Unit,
     modifier: Modifier = Modifier,
+    isBuffering: Boolean = false,
+    volume: Int = 100,
+    isMuted: Boolean = false,
+    onVolumeChange: ((Int) -> Unit)? = null,
+    onMuteToggle: (() -> Unit)? = null,
+    onFullscreen: (() -> Unit)? = null,
+    isFullscreen: Boolean = false,
 ) {
     var showControls by remember { mutableStateOf(true) }
     var hovering by remember { mutableStateOf(false) }
@@ -101,8 +115,14 @@ fun VideoControls(
                     }
                 },
     ) {
-        // Center play button when paused
-        if (!isPlaying) {
+        // Center play/buffering indicator
+        if (isBuffering) {
+            CircularProgressIndicator(
+                modifier = Modifier.align(Alignment.Center).size(48.dp),
+                color = Color.White,
+                strokeWidth = 3.dp,
+            )
+        } else if (!isPlaying) {
             IconButton(
                 onClick = onPlayPause,
                 modifier = Modifier.align(Alignment.Center).size(64.dp),
@@ -116,41 +136,25 @@ fun VideoControls(
             }
         }
 
-        // Bottom controls bar
+        // Bottom controls — two rows: seek slider on top, buttons below
         AnimatedVisibility(
             visible = showControls,
             enter = fadeIn(),
             exit = fadeOut(),
             modifier = Modifier.align(Alignment.BottomCenter),
         ) {
-            Row(
+            Column(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .background(Color.Black.copy(alpha = 0.5f))
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        .background(Color.Black.copy(alpha = 0.6f))
+                        .padding(horizontal = 8.dp),
             ) {
-                IconButton(onClick = onPlayPause, modifier = Modifier.size(32.dp)) {
-                    Icon(
-                        if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = if (isPlaying) "Pause" else "Play",
-                        tint = Color.White,
-                        modifier = Modifier.size(20.dp),
-                    )
-                }
-
-                Text(
-                    text = formatTime(currentTime),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Color.White,
-                )
-
+                // Seek slider (full width, no horizontal competition)
                 Slider(
                     value = position,
                     onValueChange = onSeek,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.fillMaxWidth(),
                     colors =
                         SliderDefaults.colors(
                             thumbColor = Color.White,
@@ -159,11 +163,75 @@ fun VideoControls(
                         ),
                 )
 
-                Text(
-                    text = formatTime(duration),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Color.White,
-                )
+                // Buttons row
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    IconButton(onClick = onPlayPause, modifier = Modifier.size(32.dp)) {
+                        Icon(
+                            if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            contentDescription = if (isPlaying) "Pause" else "Play",
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+
+                    Text(
+                        text = "${formatTime(currentTime)} / ${formatTime(duration)}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White,
+                    )
+
+                    // Spacer pushes right-side controls to the end
+                    Box(Modifier.weight(1f))
+
+                    // Volume
+                    if (onMuteToggle != null) {
+                        IconButton(onClick = onMuteToggle, modifier = Modifier.size(32.dp)) {
+                            Icon(
+                                if (isMuted) {
+                                    Icons.AutoMirrored.Filled.VolumeOff
+                                } else {
+                                    Icons.AutoMirrored.Filled.VolumeUp
+                                },
+                                contentDescription = if (isMuted) "Unmute" else "Mute",
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
+                    }
+
+                    if (onVolumeChange != null) {
+                        Slider(
+                            value = volume / 100f,
+                            onValueChange = { onVolumeChange((it * 100).toInt()) },
+                            modifier = Modifier.width(80.dp),
+                            colors =
+                                SliderDefaults.colors(
+                                    thumbColor = Color.White,
+                                    activeTrackColor = Color.White.copy(alpha = 0.7f),
+                                    inactiveTrackColor = Color.White.copy(alpha = 0.3f),
+                                ),
+                        )
+                    }
+
+                    // Fullscreen
+                    if (onFullscreen != null) {
+                        IconButton(onClick = onFullscreen, modifier = Modifier.size(32.dp)) {
+                            Icon(
+                                if (isFullscreen) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,
+                                contentDescription = if (isFullscreen) "Exit Fullscreen" else "Fullscreen",
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
+                    }
+                }
             }
         }
     }

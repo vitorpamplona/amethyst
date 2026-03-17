@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.desktop.service.media
 
 import uk.co.caprica.vlcj.factory.MediaPlayerFactory
+import uk.co.caprica.vlcj.factory.discovery.NativeDiscovery
 import uk.co.caprica.vlcj.player.base.MediaPlayer
 import uk.co.caprica.vlcj.player.embedded.EmbeddedMediaPlayer
 import uk.co.caprica.vlcj.player.embedded.videosurface.VideoSurface
@@ -57,11 +58,37 @@ object VlcjPlayerPool {
     fun init(): Boolean {
         if (available.get()) return true
         return try {
+            // Try bundled VLC first, then fall through to system VLC
+            val discovery =
+                try {
+                    val nd =
+                        NativeDiscovery(
+                            BundledVlcDiscoverer(),
+                            MacOsVlcDiscoverer(),
+                        )
+                    val found = nd.discover()
+                    if (found) {
+                        println("VLC: bundled discovery succeeded at ${nd.discoveredPath()}")
+                    } else {
+                        println("VLC: bundled discovery failed, falling back to system VLC")
+                    }
+                    found
+                } catch (e: Throwable) {
+                    println("VLC: bundled discovery threw ${e.message}")
+                    false
+                }
+            if (!discovery) {
+                // Try default system discovery
+                val systemDiscovery = NativeDiscovery().discover()
+                println("VLC: system discovery ${if (systemDiscovery) "succeeded" else "failed"}")
+            }
             val f = MediaPlayerFactory("--no-xlib")
             factory = f
             available.set(true)
+            println("VLC: MediaPlayerFactory created successfully")
             true
-        } catch (_: Exception) {
+        } catch (e: Throwable) {
+            println("VLC: init failed — ${e.message}")
             available.set(false)
             false
         }
@@ -115,7 +142,7 @@ object VlcjPlayerPool {
             val af =
                 audioFactory ?: try {
                     MediaPlayerFactory("--no-video", "--no-xlib").also { audioFactory = it }
-                } catch (_: Exception) {
+                } catch (_: Throwable) {
                     return null
                 }
 

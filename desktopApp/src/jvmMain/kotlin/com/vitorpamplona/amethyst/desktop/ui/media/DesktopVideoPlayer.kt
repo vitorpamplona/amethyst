@@ -24,6 +24,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -31,8 +32,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,9 +45,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.desktop.service.media.VlcjPlayerPool
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import org.jetbrains.skia.Bitmap
 import org.jetbrains.skia.ColorAlphaType
 import org.jetbrains.skia.ImageInfo
@@ -56,6 +62,7 @@ import uk.co.caprica.vlcj.player.embedded.videosurface.callback.BufferFormatCall
 import uk.co.caprica.vlcj.player.embedded.videosurface.callback.RenderCallback
 import uk.co.caprica.vlcj.player.embedded.videosurface.callback.format.RV32BufferFormat
 import java.nio.ByteBuffer
+import java.util.UUID
 import org.jetbrains.skia.Image as SkiaImage
 
 @Composable
@@ -63,32 +70,56 @@ fun DesktopVideoPlayer(
     url: String,
     modifier: Modifier = Modifier,
     autoPlay: Boolean = false,
+    initialSeekPosition: Float = 0f,
+    onFullscreen: ((Float) -> Unit)? = null,
+    isFullscreen: Boolean = false,
 ) {
     var frame by remember { mutableStateOf<ImageBitmap?>(null) }
     var isPlaying by remember { mutableStateOf(false) }
+    var isBuffering by remember { mutableStateOf(false) }
     var position by remember { mutableFloatStateOf(0f) }
     var duration by remember { mutableLongStateOf(0L) }
     var currentTime by remember { mutableLongStateOf(0L) }
     var aspectRatio by remember { mutableFloatStateOf(16f / 9f) }
     var vlcAvailable by remember { mutableStateOf(true) }
     var player by remember { mutableStateOf<EmbeddedMediaPlayer?>(null) }
+    var volume by remember { mutableIntStateOf(100) }
+    var isMuted by remember { mutableStateOf(false) }
 
-    // Acquire player
-    DisposableEffect(url) {
-        if (!VlcjPlayerPool.init()) {
-            vlcAvailable = false
-            return@DisposableEffect onDispose {}
+    // Unique ID for single-player enforcement
+    val playerId = remember { UUID.randomUUID().toString() }
+
+    // Lazy activation — don't touch VLC until user clicks play (or autoPlay)
+    var activated by remember { mutableStateOf(autoPlay) }
+
+    // Pause when another player becomes active
+    val activeId by ActiveMediaManager.activeId.collectAsState()
+    LaunchedEffect(activeId) {
+        if (activeId != null && activeId != playerId && isPlaying) {
+            player?.controls()?.pause()
         }
+    }
 
-        val acquired = VlcjPlayerPool.acquire()
+    // Set up player off the UI thread when activated
+    LaunchedEffect(url, activated) {
+        if (!activated) return@LaunchedEffect
+        isBuffering = true
+
+        val acquired =
+            withContext(Dispatchers.IO) {
+                if (!VlcjPlayerPool.init()) return@withContext null
+                VlcjPlayerPool.acquire()
+            }
+
         if (acquired == null) {
             vlcAvailable = false
-            return@DisposableEffect onDispose {}
+            isBuffering = false
+            return@LaunchedEffect
         }
 
-        // Skia bitmap for DirectRendering — pre-allocated to avoid per-frame GC
         var skBitmap: Bitmap? = null
         var pixelBytes: ByteArray? = null
+        var didSeek = initialSeekPosition <= 0f
 
         val bufferFormatCallback =
             object : BufferFormatCallback {
@@ -100,17 +131,13 @@ fun DesktopVideoPlayer(
                         aspectRatio = sourceWidth.toFloat() / sourceHeight.toFloat()
                     }
                     val bmp = Bitmap()
-                    bmp.allocPixels(
-                        ImageInfo.makeN32(sourceWidth, sourceHeight, ColorAlphaType.PREMUL),
-                    )
+                    bmp.allocPixels(ImageInfo.makeN32(sourceWidth, sourceHeight, ColorAlphaType.PREMUL))
                     skBitmap = bmp
                     pixelBytes = ByteArray(sourceWidth * sourceHeight * 4)
                     return RV32BufferFormat(sourceWidth, sourceHeight)
                 }
 
-                override fun allocatedBuffers(buffers: Array<out ByteBuffer>) {
-                    // No-op: we copy from the buffer in render callback
-                }
+                override fun allocatedBuffers(buffers: Array<out ByteBuffer>) {}
             }
 
         val renderCallback =
@@ -124,19 +151,20 @@ fun DesktopVideoPlayer(
                 frame = SkiaImage.makeFromBitmap(bmp).toComposeImageBitmap()
             }
 
-        val surface =
-            VlcjPlayerPool.createVideoSurface(
-                bufferFormatCallback,
-                renderCallback,
-            )
-
+        val surface = VlcjPlayerPool.createVideoSurface(bufferFormatCallback, renderCallback)
         acquired.videoSurface().set(surface)
 
-        val listener =
+        acquired.events().addMediaPlayerEventListener(
             object : MediaPlayerEventAdapter() {
                 override fun playing(mediaPlayer: MediaPlayer) {
                     isPlaying = true
+                    isBuffering = false
                     duration = mediaPlayer.status().length()
+                    // Seek to initial position on first play
+                    if (!didSeek) {
+                        didSeek = true
+                        mediaPlayer.controls().setPosition(initialSeekPosition)
+                    }
                 }
 
                 override fun paused(mediaPlayer: MediaPlayer) {
@@ -145,6 +173,14 @@ fun DesktopVideoPlayer(
 
                 override fun stopped(mediaPlayer: MediaPlayer) {
                     isPlaying = false
+                    isBuffering = false
+                }
+
+                override fun buffering(
+                    mediaPlayer: MediaPlayer,
+                    newCache: Float,
+                ) {
+                    isBuffering = newCache < 100f
                 }
 
                 override fun positionChanged(
@@ -157,25 +193,31 @@ fun DesktopVideoPlayer(
 
                 override fun finished(mediaPlayer: MediaPlayer) {
                     isPlaying = false
+                    isBuffering = false
                     position = 0f
                     currentTime = 0L
                 }
-            }
 
-        acquired.events().addMediaPlayerEventListener(listener)
+                override fun error(mediaPlayer: MediaPlayer) {
+                    isBuffering = false
+                    println("VLC: playback error for $url")
+                }
+            },
+        )
 
         player = acquired
+        ActiveMediaManager.activate(playerId)
+        acquired.media().play(url)
+    }
 
-        if (autoPlay) {
-            acquired.media().play(url)
-        } else {
-            acquired.media().prepare(url)
-        }
-
+    // Clean up player on leave or URL change
+    DisposableEffect(url) {
         onDispose {
-            player = null
-            acquired.events().removeMediaPlayerEventListener(listener)
-            VlcjPlayerPool.release(acquired)
+            ActiveMediaManager.deactivate(playerId)
+            player?.let { p ->
+                VlcjPlayerPool.release(p)
+                player = null
+            }
         }
     }
 
@@ -200,39 +242,69 @@ fun DesktopVideoPlayer(
             modifier
                 .fillMaxWidth()
                 .aspectRatio(aspectRatio)
-                .clip(RoundedCornerShape(8.dp))
-                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                .background(
+                    MaterialTheme.colorScheme.surfaceContainerHigh,
+                    RoundedCornerShape(8.dp),
+                ),
         contentAlignment = Alignment.Center,
     ) {
         frame?.let { bitmap ->
             Image(
                 bitmap = bitmap,
                 contentDescription = "Video",
-                modifier = Modifier.fillMaxWidth(),
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(8.dp)),
+                contentScale = ContentScale.Fit,
             )
         }
 
         VideoControls(
             isPlaying = isPlaying,
+            isBuffering = isBuffering,
             position = position,
             duration = duration,
             currentTime = currentTime,
+            volume = volume,
+            isMuted = isMuted,
+            isFullscreen = isFullscreen,
             onPlayPause = {
-                player?.let { p ->
+                val p = player
+                if (p != null) {
                     if (isPlaying) {
                         p.controls().pause()
                     } else {
+                        ActiveMediaManager.activate(playerId)
                         if (position <= 0f && !p.status().isPlaying) {
                             p.media().play(url)
+                            isBuffering = true
                         } else {
                             p.controls().play()
                         }
                     }
+                } else {
+                    // First play — activate lazy init
+                    activated = true
                 }
             },
             onSeek = { pos ->
                 player?.controls()?.setPosition(pos)
             },
+            onVolumeChange = { vol ->
+                volume = vol
+                player?.audio()?.setVolume(vol)
+            },
+            onMuteToggle = {
+                isMuted = !isMuted
+                player?.audio()?.isMute = isMuted
+            },
+            onFullscreen =
+                if (onFullscreen != null) {
+                    { onFullscreen(position) }
+                } else {
+                    null
+                },
         )
     }
 }
@@ -246,8 +318,10 @@ private fun VlcNotAvailableMessage(
         modifier =
             modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(8.dp))
-                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                .background(
+                    MaterialTheme.colorScheme.surfaceContainerHigh,
+                    RoundedCornerShape(8.dp),
+                ),
         contentAlignment = Alignment.Center,
     ) {
         Text(

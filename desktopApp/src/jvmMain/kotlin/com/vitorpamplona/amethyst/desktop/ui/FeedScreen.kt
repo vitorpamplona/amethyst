@@ -87,6 +87,12 @@ import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 
+data class LightboxState(
+    val urls: List<String>,
+    val index: Int,
+    val seekPosition: Float = 0f,
+)
+
 /**
  * Note card with action buttons.
  */
@@ -102,6 +108,7 @@ fun FeedNoteCard(
     onNavigateToProfile: (String) -> Unit = {},
     onNavigateToThread: (String) -> Unit = {},
     onImageClick: ((List<String>, Int) -> Unit)? = null,
+    onMediaClick: ((List<String>, Int, Float) -> Unit)? = null,
     zapReceipts: List<ZapReceipt> = emptyList(),
     reactionCount: Int = 0,
     replyCount: Int = 0,
@@ -122,6 +129,7 @@ fun FeedNoteCard(
             note = event.toNoteDisplayData(localCache),
             onAuthorClick = onNavigateToProfile,
             onImageClick = onImageClick,
+            onMediaClick = onMediaClick,
         )
 
         // Action buttons (only if logged in)
@@ -183,7 +191,7 @@ fun FeedScreen(
         }
     val events by eventState.items.collectAsState()
     var replyToEvent by remember { mutableStateOf<Event?>(null) }
-    var lightboxState by remember { mutableStateOf<Pair<List<String>, Int>?>(null) }
+    var lightboxState by remember { mutableStateOf<LightboxState?>(null) }
     var feedMode by remember { mutableStateOf(initialFeedMode ?: DesktopPreferences.feedMode) }
     var followedUsers by remember { mutableStateOf<Set<String>>(emptySet()) }
     var zapsByEvent by remember { mutableStateOf<Map<String, List<ZapReceipt>>>(emptyMap()) }
@@ -605,7 +613,8 @@ fun FeedScreen(
                         onZapFeedback = onZapFeedback,
                         onNavigateToProfile = onNavigateToProfile,
                         onNavigateToThread = onNavigateToThread,
-                        onImageClick = { urls, index -> lightboxState = urls to index },
+                        onImageClick = { urls, index -> lightboxState = LightboxState(urls, index) },
+                        onMediaClick = { urls, index, seekPos -> lightboxState = LightboxState(urls, index, seekPos) },
                         zapReceipts = zapsByEvent[event.id] ?: emptyList(),
                         reactionCount = reactionsByEvent[event.id] ?: 0,
                         replyCount = repliesByEvent[event.id] ?: 0,
@@ -638,10 +647,11 @@ fun FeedScreen(
         }
 
         // Lightbox overlay
-        lightboxState?.let { (urls, index) ->
+        lightboxState?.let { state ->
             LightboxOverlay(
-                urls = urls,
-                initialIndex = index,
+                urls = state.urls,
+                initialIndex = state.index,
+                initialSeekPosition = state.seekPosition,
                 onDismiss = { lightboxState = null },
             )
         }

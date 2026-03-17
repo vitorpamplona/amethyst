@@ -143,6 +143,8 @@ sealed class DesktopScreen {
 fun main() {
     DesktopImageLoaderSetup.setup()
     Runtime.getRuntime().addShutdownHook(Thread { VlcjPlayerPool.shutdown() })
+    // Pre-init VLC on background thread so first play is fast
+    Thread { VlcjPlayerPool.init() }.start()
     application {
         val windowState =
             rememberWindowState(

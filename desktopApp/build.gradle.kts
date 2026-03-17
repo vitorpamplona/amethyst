@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.jetbrainsKotlinJvm)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.jetbrainsComposeCompiler)
+    id("ir.mahozad.vlc-setup") version "0.1.0"
 }
 
 sourceSets {
@@ -77,8 +78,10 @@ dependencies {
 compose.desktop {
     application {
         mainClass = "com.vitorpamplona.amethyst.desktop.MainKt"
+        jvmArgs += "--add-opens=java.base/java.nio=ALL-UNNAMED"
 
         nativeDistributions {
+            appResourcesRootDir.set(project.layout.projectDirectory.dir("src/jvmMain/appResources"))
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
 
             packageName = "Amethyst"
@@ -102,4 +105,13 @@ compose.desktop {
             }
         }
     }
+}
+
+vlcSetup {
+    vlcVersion.set("3.0.21")
+    shouldCompressVlcFiles.set(true)
+    shouldIncludeAllVlcFiles.set(true)
+    pathToCopyVlcLinuxFilesTo.set(file("src/jvmMain/appResources/linux/vlc"))
+    pathToCopyVlcMacosFilesTo.set(file("src/jvmMain/appResources/macos/vlc"))
+    pathToCopyVlcWindowsFilesTo.set(file("src/jvmMain/appResources/windows/vlc"))
 }

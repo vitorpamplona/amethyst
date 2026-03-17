@@ -150,7 +150,7 @@ fun UserProfileScreen(
 
     // Tab and gallery state
     var selectedTab by remember { mutableStateOf(0) }
-    var lightboxState by remember { mutableStateOf<Pair<List<String>, Int>?>(null) }
+    var lightboxState by remember { mutableStateOf<LightboxState?>(null) }
     val pictureEvents = remember { mutableStateListOf<PictureEvent>() }
 
     // Follow state
@@ -674,7 +674,10 @@ fun UserProfileScreen(
                                         onZapFeedback = onZapFeedback,
                                         onNavigateToProfile = onNavigateToProfile,
                                         onImageClick = { urls, index ->
-                                            lightboxState = urls to index
+                                            lightboxState = LightboxState(urls, index)
+                                        },
+                                        onMediaClick = { urls, index, seekPos ->
+                                            lightboxState = LightboxState(urls, index, seekPos)
                                         },
                                     )
                                 }
@@ -686,7 +689,7 @@ fun UserProfileScreen(
                 1 -> {
                     GalleryTab(
                         pictureEvents = pictureEvents,
-                        onImageClick = { urls, index -> lightboxState = urls to index },
+                        onImageClick = { urls, index -> lightboxState = LightboxState(urls, index) },
                     )
                 }
             }
@@ -694,10 +697,11 @@ fun UserProfileScreen(
     }
 
     // Lightbox overlay
-    lightboxState?.let { (urls, index) ->
+    lightboxState?.let { state ->
         LightboxOverlay(
-            urls = urls,
-            initialIndex = index,
+            urls = state.urls,
+            initialIndex = state.index,
+            initialSeekPosition = state.seekPosition,
             onDismiss = { lightboxState = null },
         )
     }
