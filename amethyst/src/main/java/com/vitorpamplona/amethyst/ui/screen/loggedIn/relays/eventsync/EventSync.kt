@@ -23,10 +23,9 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.downloadFromRelay
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -37,15 +36,12 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
@@ -407,11 +403,7 @@ class EventSync(
 
     /**
      * Fetches all pages from a single [relay] using paginated `until` cursors.
-     *
-     * Sends [baseFilters] and waits for EOSE. If events were returned, the oldest
-     * [Event.createdAt] minus one becomes the next `until` and the query repeats.
-     * Stops when EOSE arrives with no new events (relay exhausted) or the relay
-     * cannot be reached.
+     * Delegates to the Quartz [downloadFromRelay] extension.
      *
      * @return total number of events received across all pages.
      */
@@ -419,75 +411,5 @@ class EventSync(
         relay: NormalizedRelayUrl,
         baseFilters: List<Filter>,
         onEvent: (Event) -> Unit,
-    ): Int {
-        var until: Long? = null
-        var totalEvents = 0
-
-        while (true) {
-            coroutineContext.ensureActive()
-            val pageCount = AtomicInteger(0)
-            val pageMinTs = AtomicLong(Long.MAX_VALUE)
-            val done = Channel<Unit>(Channel.CONFLATED)
-            val subId = newSubId()
-
-            val filters =
-                if (until == null) {
-                    baseFilters
-                } else {
-                    baseFilters.map { it.copy(until = until) }
-                }
-
-            val listener =
-                object : IRequestListener {
-                    override fun onEvent(
-                        event: Event,
-                        isLive: Boolean,
-                        relay: NormalizedRelayUrl,
-                        forFilters: List<Filter>?,
-                    ) {
-                        onEvent(event)
-                        pageCount.incrementAndGet()
-                        pageMinTs.updateAndGet { minOf(it, event.createdAt) }
-                    }
-
-                    override fun onEose(
-                        relay: NormalizedRelayUrl,
-                        forFilters: List<Filter>?,
-                    ) {
-                        done.trySend(Unit)
-                    }
-
-                    override fun onClosed(
-                        message: String,
-                        relay: NormalizedRelayUrl,
-                        forFilters: List<Filter>?,
-                    ) {
-                        done.trySend(Unit)
-                    }
-
-                    override fun onCannotConnect(
-                        relay: NormalizedRelayUrl,
-                        message: String,
-                        forFilters: List<Filter>?,
-                    ) {
-                        done.trySend(Unit)
-                    }
-                }
-
-            account.client.openReqSubscription(subId, mapOf(relay to filters), listener)
-            withTimeoutOrNull(RELAY_TIMEOUT_MS) { done.receive() }
-            account.client.close(subId)
-            done.close()
-
-            val count = pageCount.get()
-            if (count == 0) break // relay exhausted or unreachable
-
-            totalEvents += count
-
-            // Advance cursor: next page starts just before the oldest event seen.
-            until = pageMinTs.get() - 1
-        }
-
-        return totalEvents
-    }
+    ): Int = account.client.downloadFromRelay(relay, baseFilters, RELAY_TIMEOUT_MS, onEvent)
 }
