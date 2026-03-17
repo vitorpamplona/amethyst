@@ -83,7 +83,8 @@ class HashtagFeedFilter(
                 event is PrivateDmEvent ||
                 event is PollNoteEvent ||
                 event is AudioHeaderEvent
-        ) && event.isTaggedHash(hashTag)
+        ) &&
+            event.isTaggedHash(hashTag)
 
     fun acceptableViaScope(
         event: Event?,
