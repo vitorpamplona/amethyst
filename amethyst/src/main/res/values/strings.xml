@@ -1216,6 +1216,13 @@
     <string name="compression_cancelled">Compression Cancelled</string>
     <string name="compression_returned_null">Compression failed to return a file</string>
 
+    <string name="encrypt_files_label">Encrypt files</string>
+    <string name="encrypt_files_description">Encrypt files before uploading for privacy. Some servers may not accept encrypted files on free accounts.</string>
+    <string name="failed_to_upload_encrypted_media_title">Encrypted upload failed</string>
+    <string name="failed_to_upload_encrypted_media_message">Many servers do not accept encrypted files on free accounts. You can retry without encryption.</string>
+    <string name="retry_without_encryption">Retry without encryption</string>
+    <string name="upload_without_encryption_warning">Warning: Without encryption, anyone with the file link can see the content.</string>
+
     <string name="media_compression_quality_label">Media Quality</string>
     <string name="media_compression_quality_explainer">Select Low quality to compress your media to a smaller file with less quality, High quality to compress to a larger file with higher quality or Uncompressed to upload the media without compression.</string>
     <string name="media_compression_quality_low">Low</string>

@@ -297,8 +297,10 @@ fun ChessLobbyContent(
     val userPubkey = accountViewModel.account.userProfile().pubkeyHex
 
     val hasContent =
-        activeGames.isNotEmpty() || spectatingGames.isNotEmpty() ||
-            publicGames.isNotEmpty() || challenges.isNotEmpty()
+        activeGames.isNotEmpty() ||
+            spectatingGames.isNotEmpty() ||
+            publicGames.isNotEmpty() ||
+            challenges.isNotEmpty()
 
     if (!hasContent) {
         // Empty state - use LazyColumn so pull-to-refresh works

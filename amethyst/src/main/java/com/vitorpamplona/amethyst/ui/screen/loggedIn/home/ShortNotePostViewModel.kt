@@ -1047,7 +1047,8 @@ open class ShortNotePostViewModel :
             (
                 !wantsPoll ||
                     (
-                        pollOptions.isNotEmpty() && pollOptions.all { it.value.label.isNotEmpty() } &&
+                        pollOptions.isNotEmpty() &&
+                            pollOptions.all { it.value.label.isNotEmpty() } &&
                             closedAt > TimeUtils.oneMinuteFromNow()
                     )
             ) &&
