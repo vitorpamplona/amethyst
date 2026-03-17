@@ -345,8 +345,11 @@ private fun ChessLobby(
     listState: LazyListState = rememberLazyListState(),
 ) {
     val hasContent =
-        activeGames.isNotEmpty() || spectatingGames.isNotEmpty() ||
-            publicGames.isNotEmpty() || challenges.isNotEmpty() || completedGames.isNotEmpty()
+        activeGames.isNotEmpty() ||
+            spectatingGames.isNotEmpty() ||
+            publicGames.isNotEmpty() ||
+            challenges.isNotEmpty() ||
+            completedGames.isNotEmpty()
 
     if (!hasContent) {
         // Empty state

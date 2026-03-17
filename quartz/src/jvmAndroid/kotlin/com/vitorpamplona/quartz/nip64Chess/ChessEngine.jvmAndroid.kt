@@ -212,7 +212,8 @@ actual class ChessEngine {
             board.getPiece(toSquare) != Piece.NONE ||
                 (
                     pt == com.github.bhlangonijr.chesslib.PieceType.PAWN &&
-                        epTarget != Square.NONE && toSquare == epTarget
+                        epTarget != Square.NONE &&
+                        toSquare == epTarget
                 )
 
         if (pt != com.github.bhlangonijr.chesslib.PieceType.PAWN) {
