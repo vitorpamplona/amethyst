@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDownward
@@ -49,6 +50,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -86,6 +88,24 @@ fun WalletTransactionsScreen(
 
     val transactions by walletViewModel.transactions.collectAsState()
     val isLoading by walletViewModel.isLoading.collectAsState()
+    val isLoadingMore by walletViewModel.isLoadingMore.collectAsState()
+    val hasMore by walletViewModel.hasMoreTransactions.collectAsState()
+
+    val listState = rememberLazyListState()
+
+    val shouldLoadMore by remember {
+        derivedStateOf {
+            val lastVisibleIndex = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            val totalItems = listState.layoutInfo.totalItemsCount
+            lastVisibleIndex >= totalItems - 5 && !isLoadingMore && hasMore && transactions.isNotEmpty()
+        }
+    }
+
+    LaunchedEffect(shouldLoadMore) {
+        if (shouldLoadMore) {
+            walletViewModel.loadMoreTransactions()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -144,10 +164,24 @@ fun WalletTransactionsScreen(
         } else {
             LazyColumn(
                 modifier = Modifier.padding(padding),
+                state = listState,
             ) {
                 items(transactions) { tx ->
                     TransactionItem(tx, accountViewModel, nav)
                     HorizontalDivider()
+                }
+                if (isLoadingMore) {
+                    item {
+                        Column(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                        }
+                    }
                 }
             }
         }

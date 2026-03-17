@@ -88,6 +88,14 @@ class WalletViewModel : ViewModel() {
     private val _isLoading = MutableStateFlow(false)
     val isLoading = _isLoading.asStateFlow()
 
+    private val _isLoadingMore = MutableStateFlow(false)
+    val isLoadingMore = _isLoadingMore.asStateFlow()
+
+    private val _hasMoreTransactions = MutableStateFlow(true)
+    val hasMoreTransactions = _hasMoreTransactions.asStateFlow()
+
+    private val pageSize = 20
+
     private val _error = MutableStateFlow<String?>(null)
     val error = _error.asStateFlow()
 
@@ -153,24 +161,30 @@ class WalletViewModel : ViewModel() {
         }
     }
 
-    fun fetchTransactions(
-        limit: Int = 20,
-        offset: Int = 0,
-    ) {
+    fun fetchTransactions() {
         val acc = account ?: return
         viewModelScope.launch(Dispatchers.IO) {
             _isLoading.value = true
+            _hasMoreTransactions.value = true
             try {
                 acc.sendNwcRequest(
                     ListTransactionsMethod.create(
-                        limit = limit,
-                        offset = offset,
+                        limit = pageSize,
+                        offset = 0,
                         unpaid = false,
                     ),
                 ) { response ->
                     when (response) {
                         is ListTransactionsSuccessResponse -> {
-                            _transactions.value = response.result?.transactions ?: emptyList()
+                            val txs = response.result?.transactions ?: emptyList()
+                            _transactions.value = txs
+                            val totalCount = response.result?.total_count
+                            _hasMoreTransactions.value =
+                                if (totalCount != null) {
+                                    txs.size < totalCount
+                                } else {
+                                    txs.size >= pageSize
+                                }
                         }
 
                         is NwcErrorResponse -> {
@@ -184,6 +198,48 @@ class WalletViewModel : ViewModel() {
             } catch (e: Exception) {
                 _error.value = e.message
                 _isLoading.value = false
+            }
+        }
+    }
+
+    fun loadMoreTransactions() {
+        if (_isLoadingMore.value || !_hasMoreTransactions.value) return
+        val acc = account ?: return
+        val currentOffset = _transactions.value.size
+        viewModelScope.launch(Dispatchers.IO) {
+            _isLoadingMore.value = true
+            try {
+                acc.sendNwcRequest(
+                    ListTransactionsMethod.create(
+                        limit = pageSize,
+                        offset = currentOffset,
+                        unpaid = false,
+                    ),
+                ) { response ->
+                    when (response) {
+                        is ListTransactionsSuccessResponse -> {
+                            val newTxs = response.result?.transactions ?: emptyList()
+                            _transactions.value = _transactions.value + newTxs
+                            val totalCount = response.result?.total_count
+                            _hasMoreTransactions.value =
+                                if (totalCount != null) {
+                                    _transactions.value.size < totalCount
+                                } else {
+                                    newTxs.size >= pageSize
+                                }
+                        }
+
+                        is NwcErrorResponse -> {
+                            _error.value = response.error?.message ?: "Failed to load more transactions"
+                        }
+
+                        else -> {}
+                    }
+                    _isLoadingMore.value = false
+                }
+            } catch (e: Exception) {
+                _error.value = e.message
+                _isLoadingMore.value = false
             }
         }
     }
