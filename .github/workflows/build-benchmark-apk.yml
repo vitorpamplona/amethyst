@@ -48,7 +48,7 @@ jobs:
         with:
           script: |
             const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-            const artifactUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}/artifacts/${{ steps.upload.outputs.artifact-id }}`;
+            const artifactUrl = `${{ steps.upload.outputs.artifact-url }}`;
             const body = `📦 **Benchmark APK ready!**\n\nDownload: [Play Benchmark APK](${artifactUrl})\n\nOr view all artifacts in the [workflow run](${runUrl}#artifacts).`;
 
             await github.rest.repos.createCommitComment({
