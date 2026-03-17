@@ -1267,6 +1267,9 @@
     <string name="wallet_incoming">Received</string>
     <string name="wallet_outgoing">Sent</string>
     <string name="wallet_refresh">Refresh</string>
+    <string name="wallet_filter_all">All</string>
+    <string name="wallet_filter_zaps">Zaps</string>
+    <string name="wallet_filter_non_zaps">Non-Zaps</string>
     <string name="route_security_filters">Security Filters</string>
     <string name="route_import_follows">Import Follows</string>
 

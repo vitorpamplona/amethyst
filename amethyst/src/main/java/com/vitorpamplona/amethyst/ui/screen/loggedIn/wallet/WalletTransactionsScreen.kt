@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDownward
@@ -39,6 +40,7 @@ import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -49,6 +51,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -84,8 +87,30 @@ fun WalletTransactionsScreen(
         walletViewModel.fetchTransactions()
     }
 
-    val transactions by walletViewModel.transactions.collectAsState()
+    val transactions by walletViewModel.filteredTransactions.collectAsState()
     val isLoading by walletViewModel.isLoading.collectAsState()
+    val isLoadingMore by walletViewModel.isLoadingMore.collectAsState()
+    val hasMore by walletViewModel.hasMoreTransactions.collectAsState()
+    val currentFilter by walletViewModel.transactionFilter.collectAsState()
+
+    val listState = rememberLazyListState()
+
+    val shouldLoadMore by remember {
+        derivedStateOf {
+            val lastVisibleIndex =
+                listState.layoutInfo.visibleItemsInfo
+                    .lastOrNull()
+                    ?.index ?: 0
+            val totalItems = listState.layoutInfo.totalItemsCount
+            lastVisibleIndex >= totalItems - 5 && !isLoadingMore && hasMore && transactions.isNotEmpty()
+        }
+    }
+
+    LaunchedEffect(shouldLoadMore) {
+        if (shouldLoadMore) {
+            walletViewModel.loadMoreTransactions()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -144,13 +169,60 @@ fun WalletTransactionsScreen(
         } else {
             LazyColumn(
                 modifier = Modifier.padding(padding),
+                state = listState,
             ) {
+                item {
+                    TransactionFilterRow(currentFilter) { walletViewModel.setTransactionFilter(it) }
+                }
                 items(transactions) { tx ->
                     TransactionItem(tx, accountViewModel, nav)
                     HorizontalDivider()
                 }
+                if (isLoadingMore) {
+                    item {
+                        Column(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                        }
+                    }
+                }
             }
         }
+    }
+}
+
+@Composable
+private fun TransactionFilterRow(
+    currentFilter: TransactionFilter,
+    onFilterSelected: (TransactionFilter) -> Unit,
+) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        FilterChip(
+            selected = currentFilter == TransactionFilter.ALL,
+            onClick = { onFilterSelected(TransactionFilter.ALL) },
+            label = { Text(stringRes(R.string.wallet_filter_all)) },
+        )
+        FilterChip(
+            selected = currentFilter == TransactionFilter.ZAPS,
+            onClick = { onFilterSelected(TransactionFilter.ZAPS) },
+            label = { Text(stringRes(R.string.wallet_filter_zaps)) },
+        )
+        FilterChip(
+            selected = currentFilter == TransactionFilter.NON_ZAPS,
+            onClick = { onFilterSelected(TransactionFilter.NON_ZAPS) },
+            label = { Text(stringRes(R.string.wallet_filter_non_zaps)) },
+        )
     }
 }
 
@@ -317,7 +389,7 @@ private fun TransactionUserName(
             )
         } else {
             Text(
-                text = fallbackName ?: pubkeyHex.take(8) + "...",
+                text = fallbackName ?: (pubkeyHex.take(8) + "..."),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
                 maxLines = 1,
