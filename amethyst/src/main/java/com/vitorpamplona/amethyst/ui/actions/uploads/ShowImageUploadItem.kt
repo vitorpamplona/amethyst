@@ -40,6 +40,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AudioFile
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -86,9 +87,10 @@ fun ShowImageUploadGallery(
     list: MultiOrchestrator,
     onDelete: (SelectedMediaProcessing) -> Unit,
     accountViewModel: AccountViewModel,
+    onEdit: ((SelectedMediaProcessing) -> Unit)? = null,
 ) {
     AutoNonlazyGrid(list.size()) {
-        ShowImageUploadItem(list.get(it), onDelete, accountViewModel)
+        ShowImageUploadItem(list.get(it), onDelete, accountViewModel, onEdit)
     }
 }
 
@@ -183,24 +185,35 @@ fun ShowImageUploadItem(
     item: SelectedMediaProcessing,
     onDelete: (SelectedMediaProcessing) -> Unit,
     accountViewModel: AccountViewModel,
+    onEdit: ((SelectedMediaProcessing) -> Unit)? = null,
 ) {
     ShowImageGallery(item.media, accountViewModel)
 
-    OrchestratorOverlay(item.orchestrator) {
-        onDelete(item)
-    }
+    OrchestratorOverlay(
+        orchestrator = item.orchestrator,
+        showEdit = onEdit != null && (item.media.isImage() == true || item.media.isVideo() == true),
+        onEdit = { onEdit?.invoke(item) },
+        onDelete = { onDelete(item) },
+    )
 }
 
 @Composable
 fun OrchestratorOverlay(
     orchestrator: UploadOrchestrator,
+    showEdit: Boolean = false,
+    onEdit: () -> Unit = {},
     onDelete: () -> Unit,
 ) {
     val progress by orchestrator.progress.collectAsState()
     val progressState by orchestrator.progressState.collectAsState()
 
     if (progressState is UploadingState.Ready) {
-        DeleteButton(onDelete)
+        Box(modifier = Modifier.fillMaxSize()) {
+            DeleteButton(onDelete)
+            if (showEdit) {
+                EditMediaButton(onEdit)
+            }
+        }
     } else {
         UploadingState(progress, progressState)
     }
@@ -226,6 +239,36 @@ fun DeleteButton(onDelete: () -> Unit) {
                 onClick = onDelete,
             ) {
                 CloseIcon()
+            }
+        }
+    }
+}
+
+@Composable
+fun EditMediaButton(onEdit: () -> Unit) {
+    Box(
+        contentAlignment = Alignment.TopStart,
+        modifier = Modifier.fillMaxSize(),
+    ) {
+        Box(Size40Modifier, contentAlignment = Alignment.Center) {
+            Box(
+                Modifier
+                    .clip(CircleShape)
+                    .fillMaxSize(0.6f)
+                    .align(Alignment.Center)
+                    .background(MaterialTheme.colorScheme.background),
+            )
+
+            IconButton(
+                modifier = Size20Modifier,
+                onClick = onEdit,
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Edit,
+                    contentDescription = stringRes(R.string.edit_media),
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.onBackground,
+                )
             }
         }
     }

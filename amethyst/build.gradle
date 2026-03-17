@@ -297,6 +297,10 @@ dependencies {
     // important for proxy / tor
     implementation libs.androidx.media3.datasource.okhttp
 
+    // Video trimming and effects
+    implementation libs.androidx.media3.transformer
+    implementation libs.androidx.media3.effect
+
     // Load images from the web.
     implementation libs.coil.compose
     // view gifs
@@ -360,6 +364,8 @@ dependencies {
     implementation libs.abedElazizShe.video.compressor.fork
     // Image compression lib
     implementation libs.zelory.image.compressor
+    // Image cropping
+    implementation libs.ucrop
 
     // Voice anonymization DSP
     implementation libs.tarsosdsp

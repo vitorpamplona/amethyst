@@ -45,7 +45,9 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -56,7 +58,11 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
+import com.vitorpamplona.amethyst.ui.actions.uploads.ImageCropLauncher
+import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.ui.actions.uploads.ShowImageUploadGallery
+import com.vitorpamplona.amethyst.ui.actions.uploads.VideoTrimDialog
 import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge
 import com.vitorpamplona.amethyst.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.ui.components.TitleExplainer
@@ -156,11 +162,39 @@ private fun ImageVideoPostChat(
                 }.toImmutableList()
         }
 
+    // Edit state for crop/trim
+    var editingItem by remember { mutableStateOf<SelectedMediaProcessing?>(null) }
+
+    editingItem?.let { item ->
+        fileUploadState.multiOrchestrator?.let { orchestrator ->
+            if (item.media.isImage() == true) {
+                ImageCropLauncher(
+                    sourceUri = item.media.uri,
+                    onCropped = { croppedUri ->
+                        orchestrator.replace(item, SelectedMedia(croppedUri, "image/jpeg"))
+                        editingItem = null
+                    },
+                    onCancel = { editingItem = null },
+                )
+            } else if (item.media.isVideo() == true) {
+                VideoTrimDialog(
+                    videoUri = item.media.uri,
+                    onTrimmed = { trimmedUri ->
+                        orchestrator.replace(item, SelectedMedia(trimmedUri, item.media.mimeType))
+                        editingItem = null
+                    },
+                    onCancel = { editingItem = null },
+                )
+            }
+        }
+    }
+
     fileUploadState.multiOrchestrator?.let {
         ShowImageUploadGallery(
             it,
             fileUploadState::deleteMediaToUpload,
             accountViewModel,
+            onEdit = { editingItem = it },
         )
     }
 

@@ -1225,6 +1225,18 @@
     <string name="video_codec_h265_label">Use H.265/HEVC Codec</string>
     <string name="video_codec_h265_description">Better quality at smaller file sizes but not all devices support H.265 playback.</string>
 
+    <string name="crop_image">Crop Image</string>
+    <string name="trim_video">Trim Video</string>
+    <string name="edit_media">Edit</string>
+    <string name="trim_start">Start</string>
+    <string name="trim_end">End</string>
+    <string name="trim_duration">Duration</string>
+    <string name="apply_trim">Apply</string>
+    <string name="video_trim_title">Trim Video</string>
+    <string name="video_trimming_in_progress">Trimming video…</string>
+    <string name="video_trim_failed">Video trimming failed</string>
+    <string name="image_crop_failed">Image cropping failed</string>
+
     <string name="edit_draft">Edit draft</string>
 
     <string name="login_with_qr_code">Login with QR Code</string>

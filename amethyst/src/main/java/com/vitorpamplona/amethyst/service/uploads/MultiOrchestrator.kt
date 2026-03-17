@@ -134,6 +134,20 @@ class MultiOrchestrator(
         list = list.filter { it != selected }
     }
 
+    fun replace(
+        old: SelectedMediaProcessing,
+        newMedia: SelectedMedia,
+    ) {
+        list =
+            list.map {
+                if (it == old) {
+                    SelectedMediaProcessing(newMedia)
+                } else {
+                    it
+                }
+            }
+    }
+
     fun size() = list.size
 
     fun get(index: Int) = list[index]

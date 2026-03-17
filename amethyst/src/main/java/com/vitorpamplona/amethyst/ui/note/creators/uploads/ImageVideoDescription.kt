@@ -59,8 +59,11 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
+import com.vitorpamplona.amethyst.ui.actions.uploads.ImageCropLauncher
+import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.ui.actions.uploads.ShowImageUploadGallery
+import com.vitorpamplona.amethyst.ui.actions.uploads.VideoTrimDialog
 import com.vitorpamplona.amethyst.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.ui.note.CancelIcon
@@ -107,6 +110,31 @@ fun ImageVideoDescription(
 
     // Codec selection: false = H264, true = H265
     var useH265Codec by remember { mutableStateOf(false) }
+
+    // Edit state for crop/trim
+    var editingItem by remember { mutableStateOf<SelectedMediaProcessing?>(null) }
+
+    editingItem?.let { item ->
+        if (item.media.isImage() == true) {
+            ImageCropLauncher(
+                sourceUri = item.media.uri,
+                onCropped = { croppedUri ->
+                    uris.replace(item, SelectedMedia(croppedUri, "image/jpeg"))
+                    editingItem = null
+                },
+                onCancel = { editingItem = null },
+            )
+        } else if (item.media.isVideo() == true) {
+            VideoTrimDialog(
+                videoUri = item.media.uri,
+                onTrimmed = { trimmedUri ->
+                    uris.replace(item, SelectedMedia(trimmedUri, item.media.mimeType))
+                    editingItem = null
+                },
+                onCancel = { editingItem = null },
+            )
+        }
+    }
 
     Column(
         modifier =
@@ -180,7 +208,12 @@ fun ImageVideoDescription(
                         .padding(bottom = 10.dp)
                         .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
             ) {
-                ShowImageUploadGallery(uris, onDelete, accountViewModel)
+                ShowImageUploadGallery(
+                    uris,
+                    onDelete,
+                    accountViewModel,
+                    onEdit = { editingItem = it },
+                )
             }
 
             Row(

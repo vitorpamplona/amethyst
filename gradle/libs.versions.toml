@@ -58,6 +58,7 @@ translate = "17.0.3"
 jetbrainsCompose = "1.10.2"
 unifiedpush = "3.0.10"
 vico-charts-compose = "3.0.3"
+ucrop = "2.2.9"
 zelory = "3.0.1"
 zoomable = "2.11.1"
 zxing = "3.5.4"
@@ -104,6 +105,8 @@ androidx-media3-datasource-okhttp = { group = "androidx.media3", name = "media3-
 androidx-media3-exoplayer = { group = "androidx.media3", name = "media3-exoplayer", version.ref = "media3" }
 androidx-media3-exoplayer-hls = { group = "androidx.media3", name = "media3-exoplayer-hls", version.ref = "media3" }
 androidx-media3-session = { group = "androidx.media3", name = "media3-session", version.ref = "media3" }
+androidx-media3-transformer = { group = "androidx.media3", name = "media3-transformer", version.ref = "media3" }
+androidx-media3-effect = { group = "androidx.media3", name = "media3-effect", version.ref = "media3" }
 androidx-media3-ui-compose-material3 = { group = "androidx.media3", name = "media3-ui-compose-material3", version.ref = "media3" }
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
 androidx-runner = { group = "androidx.test", name = "runner", version.ref = "runner" }
@@ -167,6 +170,7 @@ unifiedpush = { group = "com.github.UnifiedPush", name = "android-connector", ve
 vico-charts-compose = { group = "com.patrykandpatrick.vico", name = "compose", version.ref = "vico-charts-compose" }
 vico-charts-m3 = { group = "com.patrykandpatrick.vico", name = "compose-m3", version.ref = "vico-charts-compose" }
 vico-charts-views = { group = "com.patrykandpatrick.vico", name = "views", version.ref = "vico-charts-compose" }
+ucrop = { group = "com.github.yalantis", name = "ucrop", version.ref = "ucrop" }
 zelory-image-compressor = { group = "id.zelory", name = "compressor", version.ref = "zelory" }
 zoomable = { group = "net.engawapg.lib", name = "zoomable", version.ref = "zoomable" }
 zxing = { group = "com.google.zxing", name = "core", version.ref = "zxing" }
