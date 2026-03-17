@@ -154,8 +154,8 @@ class MetadataStripper {
                 val trackIndexMap = mutableMapOf<Int, Int>()
                 for (i in 0 until extractor.trackCount) {
                     val format = extractor.getTrackFormat(i)
-                    val newTrackIndex = muxer.addTrack(format)
-                    trackIndexMap[i] = newTrackIndex
+                    trackIndexMap[i] = muxer.addTrack(format)
+                    extractor.selectTrack(i)
                 }
 
                 muxer.start()
@@ -165,24 +165,19 @@ class MetadataStripper {
                 val buffer = java.nio.ByteBuffer.allocate(bufferSize)
                 val bufferInfo = MediaCodec.BufferInfo()
 
-                for (i in 0 until extractor.trackCount) {
-                    extractor.selectTrack(i)
-                    val outputTrack = trackIndexMap[i] ?: continue
+                while (true) {
+                    val sampleSize = extractor.readSampleData(buffer, 0)
+                    if (sampleSize < 0) break
 
-                    while (true) {
-                        val sampleSize = extractor.readSampleData(buffer, 0)
-                        if (sampleSize < 0) break
+                    val outputTrack = trackIndexMap[extractor.sampleTrackIndex] ?: break
 
-                        bufferInfo.offset = 0
-                        bufferInfo.size = sampleSize
-                        bufferInfo.presentationTimeUs = extractor.sampleTime
-                        bufferInfo.flags = extractorToCodecFlags(extractor.sampleFlags)
+                    bufferInfo.offset = 0
+                    bufferInfo.size = sampleSize
+                    bufferInfo.presentationTimeUs = extractor.sampleTime
+                    bufferInfo.flags = extractorToCodecFlags(extractor.sampleFlags)
 
-                        muxer.writeSampleData(outputTrack, buffer, bufferInfo)
-                        extractor.advance()
-                    }
-
-                    extractor.unselectTrack(i)
+                    muxer.writeSampleData(outputTrack, buffer, bufferInfo)
+                    extractor.advance()
                 }
 
                 muxer.stop()
