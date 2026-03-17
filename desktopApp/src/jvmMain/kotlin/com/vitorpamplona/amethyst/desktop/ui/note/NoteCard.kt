@@ -56,6 +56,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
 import com.vitorpamplona.amethyst.commons.util.toTimeAgo
 import com.vitorpamplona.amethyst.desktop.ui.media.AudioPlayer
 import com.vitorpamplona.amethyst.desktop.ui.media.DesktopVideoPlayer
+import com.vitorpamplona.amethyst.desktop.ui.media.LocalWindowState
 
 private val AUDIO_EXTENSIONS = setOf("mp3", "ogg", "wav", "flac", "aac", "opus", "m4a")
 
@@ -129,6 +130,10 @@ fun NoteCard(
             )
         }
 
+    // Cap media height to 70% of window height so controls are never clipped
+    val windowState = LocalWindowState.current
+    val maxMediaHeight = if (windowState != null) windowState.size.height * 0.7f else 400.dp
+
     Card(
         modifier = modifier.fillMaxWidth(),
         colors =
@@ -200,7 +205,7 @@ fun NoteCard(
                         modifier =
                             Modifier
                                 .fillMaxWidth()
-                                .heightIn(max = 400.dp)
+                                .heightIn(max = maxMediaHeight)
                                 .clip(RoundedCornerShape(8.dp))
                                 .then(
                                     if (onImageClick != null) {
@@ -225,7 +230,7 @@ fun NoteCard(
                 for ((index, url) in videoUrls.withIndex()) {
                     DesktopVideoPlayer(
                         url = url,
-                        modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp),
+                        modifier = Modifier.fillMaxWidth().heightIn(max = maxMediaHeight),
                         onFullscreen =
                             if (onMediaClick != null) {
                                 { seekPos -> onMediaClick(videoUrls, index, seekPos) }
