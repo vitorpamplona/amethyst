@@ -40,6 +40,11 @@ import kotlin.coroutines.coroutineContext
  * After EOSE the oldest [Event.createdAt] seen in that page minus one becomes the
  * next `until`, and the query repeats until the relay returns no new events.
  *
+ * Event counting is tracked per filter using [Filter.match]. A filter is considered
+ * fulfilled when the number of matching events reaches its [Filter.limit]. Pagination
+ * stops when all filters with limits are fulfilled or when a page returns no events.
+ * Filters without a limit are considered unbounded and only stop on empty pages.
+ *
  * @param relay       The relay to query.
  * @param baseFilters Filters to apply on every page (the `until` field is overwritten per page).
  * @param timeoutMs   Maximum time to wait for a single page's EOSE before giving up.
@@ -55,8 +60,22 @@ suspend fun INostrClient.downloadFromRelay(
     var until: Long? = null
     var totalEvents = 0
 
+    // Track how many matching events each filter has received so far.
+    val matchCountPerFilter = IntArray(baseFilters.size)
+
     while (true) {
         coroutineContext.ensureActive()
+
+        // Only include filters that still need more events.
+        val activeFilterIndices =
+            baseFilters.indices.filter { i ->
+                val limit = baseFilters[i].limit
+                limit == null || matchCountPerFilter[i] < limit
+            }
+
+        if (activeFilterIndices.isEmpty()) break
+
+        val activeBaseFilters = activeFilterIndices.map { baseFilters[it] }
 
         val eventChannel = Channel<Event>(UNLIMITED)
         val doneChannel = Channel<Unit>(Channel.CONFLATED)
@@ -64,9 +83,9 @@ suspend fun INostrClient.downloadFromRelay(
 
         val filters =
             if (until == null) {
-                baseFilters
+                activeBaseFilters
             } else {
-                baseFilters.map { it.copy(until = until) }
+                activeBaseFilters.map { it.copy(until = until) }
             }
 
         val listener =
@@ -116,6 +135,13 @@ suspend fun INostrClient.downloadFromRelay(
             onEvent(event)
             pageCount++
             if (event.createdAt < pageMinTs) pageMinTs = event.createdAt
+
+            // Count this event against every base filter it matches.
+            for (i in baseFilters.indices) {
+                if (baseFilters[i].match(event)) {
+                    matchCountPerFilter[i]++
+                }
+            }
         }
 
         if (pageCount == 0) break
