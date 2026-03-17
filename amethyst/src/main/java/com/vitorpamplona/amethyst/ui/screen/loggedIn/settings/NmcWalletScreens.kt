@@ -196,22 +196,22 @@ fun NmcWalletFullScreen(
 
 @Composable
 private fun AddressTypeSection() {
-    var selectedType by rememberSaveable { mutableStateOf("P2PKH") }
+    var selectedType by rememberSaveable { mutableStateOf("P2WPKH") }
     var expanded by remember { mutableStateOf(false) }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("Address type", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
         Text(
-            "Choose the default address format. Legacy (P2PKH) is required for name operations.",
+            "Choose the default address format. Native SegWit (P2WPKH) is recommended for lowest fees.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
         val types =
             listOf(
-                Triple("P2PKH", "Legacy (P2PKH)", "N… addresses — most compatible, required for name ops"),
-                Triple("P2SH_P2WPKH", "Wrapped SegWit", "6… addresses — better fees, good compatibility"),
-                Triple("P2WPKH", "Native SegWit", "nc1… addresses — best fees, limited name op support"),
+                Triple("P2WPKH", "Native SegWit (P2WPKH)", "nc1… addresses — lowest fees, recommended default"),
+                Triple("P2SH_P2WPKH", "Wrapped SegWit (P2SH-P2WPKH)", "6… addresses — good fees, wide compatibility"),
+                Triple("P2PKH", "Legacy (P2PKH)", "N… addresses — required for name ops"),
             )
 
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -237,11 +237,18 @@ private fun AddressTypeSection() {
                         Column(Modifier.weight(1f)) {
                             Text(label, fontWeight = FontWeight.Medium, fontSize = 14.sp)
                             Text(desc, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            if (id != "P2PKH") {
+                            if (id == "P2PKH") {
                                 Text(
-                                    "⚠ Name operations require Legacy (P2PKH)",
+                                    "⚠ Legacy keys are no longer easily imported into Namecoin Core",
                                     fontSize = 10.sp,
                                     color = NmcOrange,
+                                )
+                            }
+                            if (id != "P2PKH") {
+                                Text(
+                                    "⚠ Name operations require Legacy (P2PKH) for the name output",
+                                    fontSize = 10.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                                 )
                             }
                         }

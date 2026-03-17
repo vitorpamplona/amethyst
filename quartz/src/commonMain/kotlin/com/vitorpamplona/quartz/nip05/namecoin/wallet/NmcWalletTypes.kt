@@ -95,7 +95,7 @@ sealed class NameAvailability {
  */
 @Serializable
 data class NmcWalletSettings(
-    val defaultAddressType: String = "P2PKH",
+    val defaultAddressType: String = "P2WPKH",
     val multisigConfigs: List<String> = emptyList(),
     val cosignerPaths: List<String> = emptyList(),
 )
