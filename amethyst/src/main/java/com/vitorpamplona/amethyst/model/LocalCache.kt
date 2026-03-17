@@ -135,8 +135,8 @@ import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
 import com.vitorpamplona.quartz.nip39ExtIdentities.ExternalIdentitiesEvent
 import com.vitorpamplona.quartz.nip40Expiration.isExpirationBefore
 import com.vitorpamplona.quartz.nip40Expiration.isExpired
-import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentRequestEvent
-import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentResponseEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentRequestEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent

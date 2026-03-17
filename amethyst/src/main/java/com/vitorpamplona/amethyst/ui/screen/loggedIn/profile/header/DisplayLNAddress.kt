@@ -46,8 +46,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
-import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceErrorResponse
-import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceErrorResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceSuccessResponse
 
 @Composable
 fun DisplayLNAddress(

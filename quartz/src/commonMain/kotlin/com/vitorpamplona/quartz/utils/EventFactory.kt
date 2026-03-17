@@ -76,10 +76,10 @@ import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
 import com.vitorpamplona.quartz.nip39ExtIdentities.ExternalIdentitiesEvent
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
-import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentRequestEvent
-import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentResponseEvent
-import com.vitorpamplona.quartz.nip47WalletConnect.NwcInfoEvent
-import com.vitorpamplona.quartz.nip47WalletConnect.NwcNotificationEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentRequestEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcInfoEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcNotificationEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent

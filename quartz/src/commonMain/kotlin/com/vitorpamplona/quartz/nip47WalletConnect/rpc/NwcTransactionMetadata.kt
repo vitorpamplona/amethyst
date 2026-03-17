@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip47WalletConnect
+package com.vitorpamplona.quartz.nip47WalletConnect.rpc
 
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 

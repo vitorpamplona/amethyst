@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip47WalletConnect
 
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcInfoEvent
 import com.vitorpamplona.quartz.utils.DeterministicSigner
 import com.vitorpamplona.quartz.utils.nsecToKeyPair
 import kotlin.test.Test
