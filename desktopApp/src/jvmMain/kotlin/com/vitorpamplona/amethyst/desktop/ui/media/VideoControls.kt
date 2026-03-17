@@ -81,35 +81,25 @@ fun VideoControls(
     onViewModeChange: ((ViewMode) -> Unit)? = null,
     trailingControls: @Composable (() -> Unit)? = null,
 ) {
-    var hoveringCenter by remember { mutableStateOf(false) }
-    var hoveringBottom by remember { mutableStateOf(false) }
+    var hovering by remember { mutableStateOf(false) }
 
     Box(
         modifier =
             modifier
                 .fillMaxSize()
-                .clickable { onPlayPause() },
-    ) {
-        // Center hover zone — top 70% of the video
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .fillMaxSize(0.7f)
-                    .align(Alignment.TopCenter)
-                    .pointerInput(Unit) {
-                        awaitPointerEventScope {
-                            while (true) {
-                                val event = awaitPointerEvent()
-                                when (event.type) {
-                                    PointerEventType.Enter -> hoveringCenter = true
-                                    PointerEventType.Exit -> hoveringCenter = false
-                                }
+                .clickable { onPlayPause() }
+                .pointerInput(Unit) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            when (event.type) {
+                                PointerEventType.Enter -> hovering = true
+                                PointerEventType.Exit -> hovering = false
                             }
                         }
-                    },
-        )
-
+                    }
+                },
+    ) {
         // Center play/buffering indicator
         if (isBuffering) {
             CircularProgressIndicator(
@@ -130,40 +120,14 @@ fun VideoControls(
                     modifier = Modifier.size(48.dp),
                 )
             }
-        } else if (hoveringCenter) {
-            // Show pause button on center hover when playing
-            IconButton(
-                onClick = onPlayPause,
-                modifier = Modifier.align(Alignment.Center).size(64.dp),
-            ) {
-                Icon(
-                    Icons.Default.Pause,
-                    contentDescription = "Pause",
-                    tint = Color.White,
-                    modifier = Modifier.size(48.dp),
-                )
-            }
         }
 
-        // Bottom controls — show on hover over bottom area
+        // Bottom controls — show on hover
         AnimatedVisibility(
-            visible = hoveringBottom || !isPlaying,
+            visible = hovering,
             enter = fadeIn(),
             exit = fadeOut(),
-            modifier =
-                Modifier
-                    .align(Alignment.BottomCenter)
-                    .pointerInput(Unit) {
-                        awaitPointerEventScope {
-                            while (true) {
-                                val event = awaitPointerEvent()
-                                when (event.type) {
-                                    PointerEventType.Enter -> hoveringBottom = true
-                                    PointerEventType.Exit -> hoveringBottom = false
-                                }
-                            }
-                        }
-                    },
+            modifier = Modifier.align(Alignment.BottomCenter),
         ) {
             Column(
                 modifier =

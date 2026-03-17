@@ -129,10 +129,14 @@ fun NoteCard(
             )
         }
 
-    // Cap media height so each media item fits in the visible window
-    // Subtract ~200dp for card chrome (header, text preview, actions, padding)
+    // Cap media height to half the window so text is never pushed off-screen
     val windowState = LocalWindowState.current
-    val maxMediaHeight = if (windowState != null) (windowState.size.height - 200.dp) else 400.dp
+    val maxMediaHeight =
+        if (windowState != null) {
+            (windowState.size.height * 0.5f).coerceAtLeast(200.dp)
+        } else {
+            400.dp
+        }
 
     Card(
         modifier = modifier.fillMaxWidth(),
