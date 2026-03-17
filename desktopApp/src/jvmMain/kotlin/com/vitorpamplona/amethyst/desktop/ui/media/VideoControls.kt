@@ -51,7 +51,6 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -62,7 +61,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.delay
 
 @Composable
 fun VideoControls(
@@ -83,50 +81,44 @@ fun VideoControls(
     onViewModeChange: ((ViewMode) -> Unit)? = null,
     trailingControls: @Composable (() -> Unit)? = null,
 ) {
-    var hovering by remember { mutableStateOf(false) }
-    var showControls by remember { mutableStateOf(false) }
-
-    // Show controls on hover, auto-hide 2s after mouse leaves
-    LaunchedEffect(hovering) {
-        if (hovering) {
-            showControls = true
-        } else {
-            delay(2000)
-            showControls = false
-        }
-    }
+    var hoveringCenter by remember { mutableStateOf(false) }
+    var hoveringBottom by remember { mutableStateOf(false) }
 
     Box(
         modifier =
             modifier
                 .fillMaxSize()
-                .clickable { onPlayPause() }
-                .pointerInput(Unit) {
-                    awaitPointerEventScope {
-                        while (true) {
-                            val event = awaitPointerEvent()
-                            when (event.type) {
-                                PointerEventType.Enter -> {
-                                    hovering = true
-                                    showControls = true
-                                }
-
-                                PointerEventType.Exit -> {
-                                    hovering = false
+                .clickable { onPlayPause() },
+    ) {
+        // Center hover zone — top 70% of the video
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .fillMaxSize(0.7f)
+                    .align(Alignment.TopCenter)
+                    .pointerInput(Unit) {
+                        awaitPointerEventScope {
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                when (event.type) {
+                                    PointerEventType.Enter -> hoveringCenter = true
+                                    PointerEventType.Exit -> hoveringCenter = false
                                 }
                             }
                         }
-                    }
-                },
-    ) {
-        // Center play/buffering indicator — only on hover
+                    },
+        )
+
+        // Center play/buffering indicator
         if (isBuffering) {
             CircularProgressIndicator(
                 modifier = Modifier.align(Alignment.Center).size(48.dp),
                 color = Color.White,
                 strokeWidth = 3.dp,
             )
-        } else if (!isPlaying && showControls) {
+        } else if (!isPlaying) {
+            // Always show play button when paused
             IconButton(
                 onClick = onPlayPause,
                 modifier = Modifier.align(Alignment.Center).size(64.dp),
@@ -138,14 +130,40 @@ fun VideoControls(
                     modifier = Modifier.size(48.dp),
                 )
             }
+        } else if (hoveringCenter) {
+            // Show pause button on center hover when playing
+            IconButton(
+                onClick = onPlayPause,
+                modifier = Modifier.align(Alignment.Center).size(64.dp),
+            ) {
+                Icon(
+                    Icons.Default.Pause,
+                    contentDescription = "Pause",
+                    tint = Color.White,
+                    modifier = Modifier.size(48.dp),
+                )
+            }
         }
 
-        // Bottom controls — two rows: seek slider on top, buttons below
+        // Bottom controls — show on hover over bottom area
         AnimatedVisibility(
-            visible = showControls,
+            visible = hoveringBottom || !isPlaying,
             enter = fadeIn(),
             exit = fadeOut(),
-            modifier = Modifier.align(Alignment.BottomCenter),
+            modifier =
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .pointerInput(Unit) {
+                        awaitPointerEventScope {
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                when (event.type) {
+                                    PointerEventType.Enter -> hoveringBottom = true
+                                    PointerEventType.Exit -> hoveringBottom = false
+                                }
+                            }
+                        }
+                    },
         ) {
             Column(
                 modifier =
