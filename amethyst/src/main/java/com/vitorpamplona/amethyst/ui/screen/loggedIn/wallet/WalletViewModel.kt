@@ -90,13 +90,13 @@ class WalletViewModel : ViewModel() {
     private val _walletAlias = MutableStateFlow<String?>(null)
     val walletAlias = _walletAlias.asStateFlow()
 
-    private val _transactions = MutableStateFlow<List<NwcTransaction>>(emptyList())
+    private val allTransactions = MutableStateFlow<List<NwcTransaction>>(emptyList())
 
     private val _transactionFilter = MutableStateFlow(TransactionFilter.ALL)
     val transactionFilter = _transactionFilter.asStateFlow()
 
     val filteredTransactions =
-        combine(_transactions, _transactionFilter) { txs, filter ->
+        combine(allTransactions, _transactionFilter) { txs, filter ->
             when (filter) {
                 TransactionFilter.ALL -> txs
                 TransactionFilter.ZAPS -> txs.filter { it.parsedMetadata()?.nostr != null }
@@ -196,7 +196,7 @@ class WalletViewModel : ViewModel() {
                     when (response) {
                         is ListTransactionsSuccessResponse -> {
                             val txs = response.result?.transactions ?: emptyList()
-                            _transactions.value = txs
+                            allTransactions.value = txs
                             val totalCount = response.result?.total_count
                             _hasMoreTransactions.value =
                                 if (totalCount != null) {
@@ -224,7 +224,7 @@ class WalletViewModel : ViewModel() {
     fun loadMoreTransactions() {
         if (_isLoadingMore.value || !_hasMoreTransactions.value) return
         val acc = account ?: return
-        val currentOffset = _transactions.value.size
+        val currentOffset = allTransactions.value.size
         viewModelScope.launch(Dispatchers.IO) {
             _isLoadingMore.value = true
             try {
@@ -238,11 +238,11 @@ class WalletViewModel : ViewModel() {
                     when (response) {
                         is ListTransactionsSuccessResponse -> {
                             val newTxs = response.result?.transactions ?: emptyList()
-                            _transactions.value = _transactions.value + newTxs
+                            allTransactions.value = allTransactions.value + newTxs
                             val totalCount = response.result?.total_count
                             _hasMoreTransactions.value =
                                 if (totalCount != null) {
-                                    _transactions.value.size < totalCount
+                                    allTransactions.value.size < totalCount
                                 } else {
                                     newTxs.size >= pageSize
                                 }
