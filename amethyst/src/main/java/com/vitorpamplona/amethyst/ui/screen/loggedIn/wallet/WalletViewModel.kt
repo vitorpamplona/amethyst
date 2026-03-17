@@ -94,7 +94,7 @@ class WalletViewModel : ViewModel() {
     private val _hasMoreTransactions = MutableStateFlow(true)
     val hasMoreTransactions = _hasMoreTransactions.asStateFlow()
 
-    private val pageSize = 20
+    private val pageSize = 100
 
     private val _error = MutableStateFlow<String?>(null)
     val error = _error.asStateFlow()
