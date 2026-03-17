@@ -24,6 +24,7 @@ import android.content.Context
 import android.media.MediaCodec
 import android.media.MediaExtractor
 import android.media.MediaFormat
+import android.media.MediaMetadataRetriever
 import android.media.MediaMuxer
 import android.net.Uri
 import androidx.core.net.toUri
@@ -161,6 +162,20 @@ class MetadataStripper {
                     val format = extractor.getTrackFormat(i)
                     trackIndexMap[i] = muxer.addTrack(format)
                     extractor.selectTrack(i)
+                }
+
+                // Rotation is a container-level property not included in track formats;
+                // read it explicitly and reapply so the output plays back with the correct orientation.
+                val retriever = MediaMetadataRetriever()
+                try {
+                    retriever.setDataSource(tempInputFile.absolutePath)
+                    val rotation =
+                        retriever
+                            .extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)
+                            ?.toIntOrNull() ?: 0
+                    if (rotation != 0) muxer.setOrientationHint(rotation)
+                } finally {
+                    retriever.release()
                 }
 
                 muxer.start()
