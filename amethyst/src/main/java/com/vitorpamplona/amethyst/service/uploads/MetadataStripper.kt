@@ -141,47 +141,55 @@ class MetadataStripper {
             val tempOutputFile = File.createTempFile("stripped_video_", ".mp4", context.cacheDir)
 
             val extractor = MediaExtractor()
-            extractor.setDataSource(tempInputFile.absolutePath)
+            var muxer: MediaMuxer? = null
+            var muxerStarted = false
+            try {
+                extractor.setDataSource(tempInputFile.absolutePath)
 
-            val muxer = MediaMuxer(tempOutputFile.absolutePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
+                muxer = MediaMuxer(tempOutputFile.absolutePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
 
-            val trackIndexMap = mutableMapOf<Int, Int>()
-            for (i in 0 until extractor.trackCount) {
-                val format = extractor.getTrackFormat(i)
-                val newTrackIndex = muxer.addTrack(format)
-                trackIndexMap[i] = newTrackIndex
-            }
-
-            muxer.start()
-
-            val bufferSize = 1024 * 1024
-            val buffer = java.nio.ByteBuffer.allocate(bufferSize)
-            val bufferInfo = MediaCodec.BufferInfo()
-
-            for (i in 0 until extractor.trackCount) {
-                extractor.selectTrack(i)
-                val outputTrack = trackIndexMap[i] ?: continue
-
-                while (true) {
-                    val sampleSize = extractor.readSampleData(buffer, 0)
-                    if (sampleSize < 0) break
-
-                    bufferInfo.offset = 0
-                    bufferInfo.size = sampleSize
-                    bufferInfo.presentationTimeUs = extractor.sampleTime
-                    bufferInfo.flags = extractorToCodecFlags(extractor.sampleFlags)
-
-                    muxer.writeSampleData(outputTrack, buffer, bufferInfo)
-                    extractor.advance()
+                val trackIndexMap = mutableMapOf<Int, Int>()
+                for (i in 0 until extractor.trackCount) {
+                    val format = extractor.getTrackFormat(i)
+                    val newTrackIndex = muxer.addTrack(format)
+                    trackIndexMap[i] = newTrackIndex
                 }
 
-                extractor.unselectTrack(i)
-            }
+                muxer.start()
+                muxerStarted = true
 
-            muxer.stop()
-            muxer.release()
-            extractor.release()
-            tempInputFile.delete()
+                val bufferSize = 1024 * 1024
+                val buffer = java.nio.ByteBuffer.allocate(bufferSize)
+                val bufferInfo = MediaCodec.BufferInfo()
+
+                for (i in 0 until extractor.trackCount) {
+                    extractor.selectTrack(i)
+                    val outputTrack = trackIndexMap[i] ?: continue
+
+                    while (true) {
+                        val sampleSize = extractor.readSampleData(buffer, 0)
+                        if (sampleSize < 0) break
+
+                        bufferInfo.offset = 0
+                        bufferInfo.size = sampleSize
+                        bufferInfo.presentationTimeUs = extractor.sampleTime
+                        bufferInfo.flags = extractorToCodecFlags(extractor.sampleFlags)
+
+                        muxer.writeSampleData(outputTrack, buffer, bufferInfo)
+                        extractor.advance()
+                    }
+
+                    extractor.unselectTrack(i)
+                }
+
+                muxer.stop()
+                muxerStarted = false
+            } finally {
+                if (muxerStarted) runCatching { muxer?.stop() }
+                muxer?.release()
+                extractor.release()
+                tempInputFile.delete()
+            }
 
             Log.d("MetadataStripper", "Stripped metadata from video")
             tempOutputFile.toUri()
