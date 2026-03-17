@@ -82,6 +82,7 @@ enum class TransactionFilter {
 }
 
 private const val NWC_TIMEOUT_MS = 30_000L
+private const val PAYMENT_FAILED = "Payment failed"
 
 class WalletViewModel : ViewModel() {
     private var account: Account? = null
@@ -301,14 +302,14 @@ class WalletViewModel : ViewModel() {
                         is PayInvoiceErrorResponse -> {
                             _sendState.value =
                                 SendState.Error(
-                                    response.error?.message ?: "Payment failed",
+                                    response.error?.message ?: PAYMENT_FAILED,
                                 )
                         }
 
                         is NwcErrorResponse -> {
                             _sendState.value =
                                 SendState.Error(
-                                    response.error?.message ?: "Payment failed",
+                                    response.error?.message ?: PAYMENT_FAILED,
                                 )
                         }
 
@@ -318,7 +319,7 @@ class WalletViewModel : ViewModel() {
                     }
                 }
             } catch (e: Exception) {
-                _sendState.value = SendState.Error(e.message ?: "Payment failed")
+                _sendState.value = SendState.Error(e.message ?: PAYMENT_FAILED)
             }
         }
     }
