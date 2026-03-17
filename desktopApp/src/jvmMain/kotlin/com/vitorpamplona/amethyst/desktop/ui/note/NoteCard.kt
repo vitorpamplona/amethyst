@@ -45,7 +45,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
@@ -130,9 +129,10 @@ fun NoteCard(
             )
         }
 
-    // Cap media height to 70% of window height so controls are never clipped
+    // Cap media height so each media item fits in the visible window
+    // Subtract ~200dp for card chrome (header, text preview, actions, padding)
     val windowState = LocalWindowState.current
-    val maxMediaHeight = if (windowState != null) windowState.size.height * 0.7f else 400.dp
+    val maxMediaHeight = if (windowState != null) (windowState.size.height - 200.dp) else 400.dp
 
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -214,7 +214,7 @@ fun NoteCard(
                                         Modifier
                                     },
                                 ),
-                        contentScale = ContentScale.FillWidth,
+                        contentScale = ContentScale.Fit,
                     )
                     if (url != imageUrls.last()) {
                         Spacer(Modifier.height(4.dp))
@@ -285,15 +285,12 @@ fun RichTextContent(
     content: String,
     urls: Urls,
     modifier: Modifier = Modifier,
-    maxLines: Int = Int.MAX_VALUE,
 ) {
     if (urls.withScheme.isEmpty()) {
         Text(
             text = content,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface,
-            maxLines = maxLines,
-            overflow = TextOverflow.Ellipsis,
             modifier = modifier,
         )
     } else {
@@ -334,8 +331,6 @@ fun RichTextContent(
             text = annotatedText,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface,
-            maxLines = maxLines,
-            overflow = TextOverflow.Ellipsis,
             modifier = modifier,
         )
     }
