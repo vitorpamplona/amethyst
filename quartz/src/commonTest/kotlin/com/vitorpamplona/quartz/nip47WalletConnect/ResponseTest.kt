@@ -21,6 +21,23 @@
 package com.vitorpamplona.quartz.nip47WalletConnect
 
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.CancelHoldInvoiceSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.CreateConnectionSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetBalanceSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetBudgetSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetInfoSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.ListTransactionsSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.LookupInvoiceSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.MakeHoldInvoiceSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.MakeInvoiceSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcErrorCode
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcErrorResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceErrorResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayKeysendSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.SettleHoldInvoiceSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.SignMessageSuccessResponse
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs

@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.commons.services.nwc
 
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentResponseEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
 import java.util.concurrent.ConcurrentHashMap
 
 /**

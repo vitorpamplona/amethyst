@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip47WalletConnect
 
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcNotificationEvent
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse

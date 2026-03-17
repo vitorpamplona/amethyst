@@ -18,20 +18,25 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip47WalletConnect
+package com.vitorpamplona.quartz.nip47WalletConnect.rpc
 
-object NwcMethod {
-    const val PAY_INVOICE = "pay_invoice"
-    const val PAY_KEYSEND = "pay_keysend"
-    const val MAKE_INVOICE = "make_invoice"
-    const val LOOKUP_INVOICE = "lookup_invoice"
-    const val LIST_TRANSACTIONS = "list_transactions"
-    const val GET_BALANCE = "get_balance"
-    const val GET_INFO = "get_info"
-    const val GET_BUDGET = "get_budget"
-    const val SIGN_MESSAGE = "sign_message"
-    const val CREATE_CONNECTION = "create_connection"
-    const val MAKE_HOLD_INVOICE = "make_hold_invoice"
-    const val CANCEL_HOLD_INVOICE = "cancel_hold_invoice"
-    const val SETTLE_HOLD_INVOICE = "settle_hold_invoice"
+enum class NwcErrorCode {
+    RATE_LIMITED,
+    NOT_IMPLEMENTED,
+    INSUFFICIENT_BALANCE,
+    PAYMENT_FAILED,
+    QUOTA_EXCEEDED,
+    RESTRICTED,
+    UNAUTHORIZED,
+    INTERNAL,
+    UNSUPPORTED_ENCRYPTION,
+    BAD_REQUEST,
+    NOT_FOUND,
+    EXPIRED,
+    OTHER,
 }
+
+class NwcError(
+    var code: NwcErrorCode? = null,
+    var message: String? = null,
+)

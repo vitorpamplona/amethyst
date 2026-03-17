@@ -67,8 +67,8 @@ import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.quartz.nip47WalletConnect.NwcTransaction
-import com.vitorpamplona.quartz.nip47WalletConnect.NwcTransactionType
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcTransaction
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcTransactionType
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Date
