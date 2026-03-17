@@ -141,6 +141,7 @@ class MetadataStripper {
             val tempOutputFile = File.createTempFile("stripped_video_", ".mp4", context.cacheDir)
 
             val extractor = MediaExtractor()
+            var succeeded = false
             var muxer: MediaMuxer? = null
             var muxerStarted = false
             try {
@@ -184,11 +185,13 @@ class MetadataStripper {
 
                 muxer.stop()
                 muxerStarted = false
+                succeeded = true
             } finally {
                 if (muxerStarted) runCatching { muxer?.stop() }
                 muxer?.release()
                 extractor.release()
                 tempInputFile.delete()
+                if (!succeeded) tempOutputFile.delete()
             }
 
             Log.d("MetadataStripper", "Stripped metadata from video")
