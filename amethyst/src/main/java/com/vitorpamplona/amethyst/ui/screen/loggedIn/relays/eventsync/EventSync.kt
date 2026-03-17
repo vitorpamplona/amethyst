@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.downloadFromRelay
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.reqBypassingRelayLimits
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
@@ -126,9 +126,9 @@ class EventSync(
      */
     data class LiveSyncActivity(
         val recentCompletions: List<CompletedRelayInfo> = emptyList(),
-        val outboxTargets: Set<NormalizedRelayUrl> = emptySet(),
-        val inboxTargets: Set<NormalizedRelayUrl> = emptySet(),
-        val dmTargets: Set<NormalizedRelayUrl> = emptySet(),
+        val outboxTargets: List<DestinationRelayInfo> = emptyList(),
+        val inboxTargets: List<DestinationRelayInfo> = emptyList(),
+        val dmTargets: List<DestinationRelayInfo> = emptyList(),
     ) {
         /**
          * @param eventsFound  Total events received from this relay across all pages.
@@ -139,6 +139,17 @@ class EventSync(
         data class CompletedRelayInfo(
             val relay: NormalizedRelayUrl,
             val eventsFound: Int,
+            val eventsAccepted: Int,
+        )
+
+        /**
+         * @param relay  The destination relay URL.
+         * @param eventsSent  Number of events sent to this relay.
+         * @param eventsAccepted  Number of OK=true responses received from this relay.
+         */
+        data class DestinationRelayInfo(
+            val relay: NormalizedRelayUrl,
+            val eventsSent: Int,
             val eventsAccepted: Int,
         )
     }
@@ -163,14 +174,28 @@ class EventSync(
 
     @Volatile private var liveDmTargets: Set<NormalizedRelayUrl> = emptySet()
 
+    /** Per-destination-relay counters, updated atomically during a sync run. */
+    private val liveSentCountPerDestRelay = ConcurrentHashMap<NormalizedRelayUrl, AtomicInteger>()
+    private val liveAcceptedCountPerDestRelay = ConcurrentHashMap<NormalizedRelayUrl, AtomicInteger>()
+
     private fun emitLiveSnapshot() {
         val completions = synchronized(trackingLock) { trackingCompletions.toList() }
+
+        fun buildDestInfo(relays: Set<NormalizedRelayUrl>) =
+            relays.map { relay ->
+                LiveSyncActivity.DestinationRelayInfo(
+                    relay = relay,
+                    eventsSent = liveSentCountPerDestRelay[relay]?.get() ?: 0,
+                    eventsAccepted = liveAcceptedCountPerDestRelay[relay]?.get() ?: 0,
+                )
+            }
+
         _liveActivity.value =
             LiveSyncActivity(
                 recentCompletions = completions,
-                outboxTargets = liveOutboxTargets,
-                inboxTargets = liveInboxTargets,
-                dmTargets = liveDmTargets,
+                outboxTargets = buildDestInfo(liveOutboxTargets),
+                inboxTargets = buildDestInfo(liveInboxTargets),
+                dmTargets = buildDestInfo(liveDmTargets),
             )
     }
 
@@ -183,6 +208,8 @@ class EventSync(
     fun start() {
         if (_syncState.value is SyncState.Running) return
         synchronized(trackingLock) { trackingCompletions.clear() }
+        liveSentCountPerDestRelay.clear()
+        liveAcceptedCountPerDestRelay.clear()
         _liveActivity.value = LiveSyncActivity()
         syncJob =
             scope.launch(Dispatchers.IO) {
@@ -294,6 +321,7 @@ class EventSync(
                         val sourceRelay = sourceRelayOfEvent.remove(msg.eventId) ?: return
                         acceptedCountPerRelay.getOrPut(sourceRelay) { AtomicInteger(0) }.incrementAndGet()
                         totalAccepted.incrementAndGet()
+                        liveAcceptedCountPerDestRelay.getOrPut(relay.url) { AtomicInteger(0) }.incrementAndGet()
                     }
                 }
             }
@@ -318,6 +346,9 @@ class EventSync(
                             sourceRelayOfEvent[event.id] = sourceRelay
                             account.client.send(event, outboxTargets)
                             totalSent.incrementAndGet()
+                            outboxTargets.forEach { dest ->
+                                liveSentCountPerDestRelay.getOrPut(dest) { AtomicInteger(0) }.incrementAndGet()
+                            }
                         }
                     }
                     val pTagsMe = event.tags.isTaggedUser(myPubKey)
@@ -327,12 +358,18 @@ class EventSync(
                                 sourceRelayOfEvent[event.id] = sourceRelay
                                 account.client.send(event, dmTargets)
                                 totalSent.incrementAndGet()
+                                dmTargets.forEach { dest ->
+                                    liveSentCountPerDestRelay.getOrPut(dest) { AtomicInteger(0) }.incrementAndGet()
+                                }
                             }
                         } else {
                             if (inboxTargets.isNotEmpty() && inboxSent.add(event.id)) {
                                 sourceRelayOfEvent[event.id] = sourceRelay
                                 account.client.send(event, inboxTargets)
                                 totalSent.incrementAndGet()
+                                inboxTargets.forEach { dest ->
+                                    liveSentCountPerDestRelay.getOrPut(dest) { AtomicInteger(0) }.incrementAndGet()
+                                }
                             }
                         }
                     }
@@ -410,5 +447,5 @@ class EventSync(
         relay: NormalizedRelayUrl,
         baseFilters: List<Filter>,
         onEvent: (Event) -> Unit,
-    ): Int = account.client.downloadFromRelay(relay, baseFilters, RELAY_TIMEOUT_MS, onEvent)
+    ): Int = account.client.reqBypassingRelayLimits(relay, baseFilters, RELAY_TIMEOUT_MS, onEvent)
 }

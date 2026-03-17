@@ -34,7 +34,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.coroutineContext
 
 /**
- * Downloads all pages of events matching [baseFilters] from a single [relay] using
+ * Downloads all pages of events matching [filters] from a single [relay] using
  * paginated `until` cursors.
  *
  * After EOSE the oldest [Event.createdAt] seen in that page minus one becomes the
@@ -46,14 +46,14 @@ import kotlin.coroutines.coroutineContext
  * Filters without a limit are considered unbounded and only stop on empty pages.
  *
  * @param relay       The relay to query.
- * @param baseFilters Filters to apply on every page (the `until` field is overwritten per page).
+ * @param filters Filters to apply on every page (the `until` field is overwritten per page).
  * @param timeoutMs   Maximum time to wait for a single page's EOSE before giving up.
  * @param onEvent     Called for every event received (in page order, after each EOSE).
  * @return Total number of events received across all pages.
  */
-suspend fun INostrClient.downloadFromRelay(
+suspend fun INostrClient.reqBypassingRelayLimits(
     relay: NormalizedRelayUrl,
-    baseFilters: List<Filter>,
+    filters: List<Filter>,
     timeoutMs: Long = 30_000L,
     onEvent: (Event) -> Unit,
 ): Int {
@@ -61,31 +61,29 @@ suspend fun INostrClient.downloadFromRelay(
     var totalEvents = 0
 
     // Track how many matching events each filter has received so far.
-    val matchCountPerFilter = IntArray(baseFilters.size)
+    val matchCountPerFilter = IntArray(filters.size)
 
     while (true) {
         coroutineContext.ensureActive()
 
         // Only include filters that still need more events.
-        val activeFilterIndices =
-            baseFilters.indices.filter { i ->
-                val limit = baseFilters[i].limit
-                limit == null || matchCountPerFilter[i] < limit
+        val remainingFilters =
+            filters.filterIndexed { index, filter ->
+                val limit = filter.limit
+                limit == null || matchCountPerFilter[index] < limit
             }
 
-        if (activeFilterIndices.isEmpty()) break
-
-        val activeBaseFilters = activeFilterIndices.map { baseFilters[it] }
+        if (remainingFilters.isEmpty()) break
 
         val eventChannel = Channel<Event>(UNLIMITED)
         val doneChannel = Channel<Unit>(Channel.CONFLATED)
         val subId = newSubId()
 
-        val filters =
+        val activeFilters =
             if (until == null) {
-                activeBaseFilters
+                remainingFilters
             } else {
-                activeBaseFilters.map { it.copy(until = until) }
+                remainingFilters.map { it.copy(until = until) }
             }
 
         val listener =
@@ -119,11 +117,12 @@ suspend fun INostrClient.downloadFromRelay(
                     message: String,
                     forFilters: List<Filter>?,
                 ) {
+                    println("AABBCC $message")
                     doneChannel.trySend(Unit)
                 }
             }
 
-        openReqSubscription(subId, mapOf(relay to filters), listener)
+        openReqSubscription(subId, mapOf(relay to activeFilters), listener)
         withTimeoutOrNull(timeoutMs) { doneChannel.receive() }
         close(subId)
         eventChannel.close()
@@ -137,9 +136,15 @@ suspend fun INostrClient.downloadFromRelay(
             if (event.createdAt < pageMinTs) pageMinTs = event.createdAt
 
             // Count this event against every base filter it matches.
-            for (i in baseFilters.indices) {
-                if (baseFilters[i].match(event)) {
-                    matchCountPerFilter[i]++
+            if (matchCountPerFilter.size == 1) {
+                // no need to run the match.
+                matchCountPerFilter[0]++
+            } else {
+                for (i in filters.indices) {
+                    val limit = filters[i].limit
+                    if ((limit == null || matchCountPerFilter[i] < limit) && filters[i].match(event)) {
+                        matchCountPerFilter[i]++
+                    }
                 }
             }
         }
@@ -155,15 +160,15 @@ suspend fun INostrClient.downloadFromRelay(
     return totalEvents
 }
 
-suspend fun INostrClient.downloadFromRelay(
+suspend fun INostrClient.reqBypassingRelayLimits(
     relay: String,
-    baseFilters: List<Filter>,
+    filters: List<Filter>,
     timeoutMs: Long = 30_000L,
     onEvent: (Event) -> Unit,
 ): Int =
-    downloadFromRelay(
+    reqBypassingRelayLimits(
         relay = RelayUrlNormalizer.normalize(relay),
-        baseFilters = baseFilters,
+        filters = filters,
         timeoutMs = timeoutMs,
         onEvent = onEvent,
     )

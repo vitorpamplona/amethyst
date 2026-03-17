@@ -24,8 +24,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -47,8 +45,6 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SuggestionChip
-import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -452,11 +448,10 @@ private fun DestinationRelaysCard(activity: EventSync.LiveSyncActivity) {
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun DestinationSection(
     label: String,
-    relays: Set<NormalizedRelayUrl>,
+    relays: List<EventSync.LiveSyncActivity.DestinationRelayInfo>,
     color: androidx.compose.ui.graphics.Color,
 ) {
     Text(
@@ -466,26 +461,58 @@ private fun DestinationSection(
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
     Spacer(Modifier.height(6.dp))
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        relays.forEachIndexed { index, info ->
+            if (index > 0) {
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                )
+            }
+            DestinationRelayRow(info = info, color = color)
+        }
+    }
+}
+
+@Composable
+private fun DestinationRelayRow(
+    info: EventSync.LiveSyncActivity.DestinationRelayInfo,
+    color: androidx.compose.ui.graphics.Color,
+) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        relays.forEach { relay ->
-            SuggestionChip(
-                onClick = {},
-                label = {
-                    Text(
-                        text = relay.displayHost(),
-                        style = MaterialTheme.typography.labelSmall,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                },
-                colors =
-                    SuggestionChipDefaults.suggestionChipColors(
-                        containerColor = color.copy(alpha = 0.12f),
-                        labelColor = color,
-                    ),
+        Box(
+            modifier =
+                Modifier
+                    .size(8.dp)
+                    .clip(CircleShape)
+                    .background(color),
+        )
+        Text(
+            text = info.relay.displayHost(),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
+        if (info.eventsSent > 0) {
+            Text(
+                text = stringRes(R.string.event_sync_log_recv, formatCount(info.eventsSent)),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = stringRes(R.string.event_sync_log_new, formatCount(info.eventsAccepted)),
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = if (info.eventsAccepted > 0) FontWeight.SemiBold else FontWeight.Normal,
+                color = if (info.eventsAccepted > 0) color else MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
@@ -658,18 +685,18 @@ private val previewActivity =
     EventSync.LiveSyncActivity(
         recentCompletions = previewCompletions,
         outboxTargets =
-            setOf(
-                NormalizedRelayUrl("wss://outbox.nostr.com"),
-                NormalizedRelayUrl("wss://relay.damus.io"),
+            listOf(
+                EventSync.LiveSyncActivity.DestinationRelayInfo(NormalizedRelayUrl("wss://outbox.nostr.com"), 1247, 891),
+                EventSync.LiveSyncActivity.DestinationRelayInfo(NormalizedRelayUrl("wss://relay.damus.io"), 892, 45),
             ),
         inboxTargets =
-            setOf(
-                NormalizedRelayUrl("wss://inbox.nostr.com"),
-                NormalizedRelayUrl("wss://nos.lol"),
+            listOf(
+                EventSync.LiveSyncActivity.DestinationRelayInfo(NormalizedRelayUrl("wss://inbox.nostr.com"), 500, 500),
+                EventSync.LiveSyncActivity.DestinationRelayInfo(NormalizedRelayUrl("wss://nos.lol"), 0, 0),
             ),
         dmTargets =
-            setOf(
-                NormalizedRelayUrl("wss://dm.nostr.com"),
+            listOf(
+                EventSync.LiveSyncActivity.DestinationRelayInfo(NormalizedRelayUrl("wss://dm.nostr.com"), 15, 10),
             ),
     )
 
