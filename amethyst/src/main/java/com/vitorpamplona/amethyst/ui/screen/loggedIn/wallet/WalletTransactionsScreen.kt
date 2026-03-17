@@ -87,7 +87,7 @@ fun WalletTransactionsScreen(
         walletViewModel.fetchTransactions()
     }
 
-    val transactions by walletViewModel.filteredTransactions.collectAsState(emptyList())
+    val transactions by walletViewModel.filteredTransactions.collectAsState()
     val isLoading by walletViewModel.isLoading.collectAsState()
     val isLoadingMore by walletViewModel.isLoadingMore.collectAsState()
     val hasMore by walletViewModel.hasMoreTransactions.collectAsState()
