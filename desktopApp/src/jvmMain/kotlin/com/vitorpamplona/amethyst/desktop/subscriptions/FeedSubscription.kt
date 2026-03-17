@@ -145,6 +145,7 @@ fun createSearchPeopleSubscription(
     limit: Int = 50,
     onEvent: (Event, Boolean, NormalizedRelayUrl, List<Filter>?) -> Unit,
     onEose: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
+    onClosed: (NormalizedRelayUrl, String, List<Filter>?) -> Unit = { _, _, _ -> },
 ): SubscriptionConfig? {
     if (searchQuery.isBlank()) return null
 
@@ -154,6 +155,7 @@ fun createSearchPeopleSubscription(
         relays = relays,
         onEvent = onEvent,
         onEose = onEose,
+        onClosed = onClosed,
     )
 }
 

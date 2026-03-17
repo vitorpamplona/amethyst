@@ -38,7 +38,6 @@ import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -501,7 +500,15 @@ fun observeUserStatuses(
     // Subscribe in the relay for changes in the metadata of this user.
     UserFinderFilterAssemblerSubscription(user, accountViewModel)
 
-    return user.statusState().statuses.collectAsStateWithLifecycle(persistentListOf())
+    val flow =
+        remember(user) {
+            user.statusState().statuses.onStart {
+                user.statusState().removeExpired()
+            }
+        }
+
+    @SuppressLint("StateFlowValueCalledInComposition")
+    return flow.collectAsStateWithLifecycle(user.statusState().statuses.value)
 }
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
@@ -520,5 +527,6 @@ fun observeUserRelayIntoList(
                 .flowOn(Dispatchers.IO)
         }
 
-    return flow.collectAsStateWithLifecycle(false)
+    @SuppressLint("StateFlowValueCalledInComposition")
+    return flow.collectAsStateWithLifecycle(relayUrl in accountViewModel.account.trustedRelays.flow.value)
 }

@@ -76,7 +76,6 @@ fun main() = application {
 
 **Source sets:**
 - iosMain (common iOS code)
-- iosX64Main (Intel simulator)
 - iosArm64Main (device - iPhone/iPad)
 - iosSimulatorArm64Main (Apple Silicon simulator)
 
@@ -110,7 +109,7 @@ actual object Secp256k1Instance {
 ```kotlin
 // quartz/build.gradle.kts
 kotlin {
-    listOf(iosX64(), iosArm64(), iosSimulatorArm64())
+    listOf(macosArm64(), iosArm64(), iosSimulatorArm64())
         .forEach { target ->
             target.binaries.framework {
                 baseName = "quartz-kmpKit"
@@ -310,7 +309,7 @@ fun parseJson(json: String): Event {
 - Manual desktop app testing
 
 **iOS:**
-- Unit tests: iosTest (iosX64Test, iosArm64Test, etc.)
+- Unit tests: iosTest (iosArm64Test, etc.)
 - Simulator/device testing
 
 **Web (future):**

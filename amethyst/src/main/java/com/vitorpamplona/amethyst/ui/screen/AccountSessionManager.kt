@@ -101,6 +101,8 @@ class AccountSessionManager(
     private val _accountContent = MutableStateFlow<AccountState>(AccountState.Loading)
     val accountContent = _accountContent.asStateFlow()
 
+    fun loggedInAccount() = (_accountContent.value as? AccountState.LoggedIn)?.account
+
     fun loginWithDefaultAccountIfLoggedOff() {
         // pulls account from storage.
         if (_accountContent.value !is AccountState.LoggedIn) {

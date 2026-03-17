@@ -171,6 +171,7 @@ import com.vitorpamplona.quartz.nip37Drafts.DraftEventCache
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
+import com.vitorpamplona.quartz.nip47WalletConnect.Request
 import com.vitorpamplona.quartz.nip47WalletConnect.Response
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
@@ -225,7 +226,6 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
-import java.util.Locale
 import kotlin.coroutines.cancellation.CancellationException
 
 @OptIn(DelicateCoroutinesApi::class)
@@ -497,7 +497,17 @@ class Account(
         sendNewAppSpecificData()
     }
 
-    suspend fun updateTranslateTo(languageCode: Locale) {
+    suspend fun addDontTranslateFrom(languageCode: String) {
+        settings.addDontTranslateFrom(languageCode)
+        sendNewAppSpecificData()
+    }
+
+    suspend fun removeDontTranslateFrom(languageCode: String) {
+        settings.removeDontTranslateFrom(languageCode)
+        sendNewAppSpecificData()
+    }
+
+    suspend fun updateTranslateTo(languageCode: String) {
         if (settings.updateTranslateTo(languageCode)) {
             sendNewAppSpecificData()
         }
@@ -580,6 +590,14 @@ class Account(
     ): Boolean = zappedNote?.isZappedBy(userProfile(), afterTimeInSeconds, this) == true
 
     suspend fun calculateZappedAmount(zappedNote: Note): BigDecimal = zappedNote.zappedAmountWithNWCPayments(nip47SignerState)
+
+    suspend fun sendNwcRequest(
+        request: Request,
+        onResponse: (Response?) -> Unit,
+    ) {
+        val (event, relay) = nip47SignerState.sendNwcRequest(request, onResponse)
+        client.send(event, setOf(relay))
+    }
 
     suspend fun sendZapPaymentRequestFor(
         bolt11: String,
@@ -1998,6 +2016,7 @@ class Account(
         }
 
         scope.launch(Dispatchers.IO) {
+            @OptIn(kotlinx.coroutines.FlowPreview::class)
             settings.saveable.debounce(1000).collect {
                 if (it.accountSettings != null) {
                     LocalPreferences.saveToEncryptedStorage(it.accountSettings)

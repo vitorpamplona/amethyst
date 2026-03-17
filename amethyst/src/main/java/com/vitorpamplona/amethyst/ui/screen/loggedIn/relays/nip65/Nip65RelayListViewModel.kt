@@ -24,11 +24,16 @@ import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.replace
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfo
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayCountResult
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.queryCountSuspend
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayInfo
 import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayType
 import kotlinx.coroutines.Dispatchers
@@ -48,6 +53,12 @@ class Nip65RelayListViewModel : ViewModel() {
     private val _notificationRelays = MutableStateFlow<List<BasicRelaySetupInfo>>(emptyList())
     val notificationRelays = _notificationRelays.asStateFlow()
 
+    private val _homeCountResults = MutableStateFlow<Map<NormalizedRelayUrl, RelayCountResult>>(emptyMap())
+    val homeCountResults = _homeCountResults.asStateFlow()
+
+    private val _notifCountResults = MutableStateFlow<Map<NormalizedRelayUrl, RelayCountResult>>(emptyMap())
+    val notifCountResults = _notifCountResults.asStateFlow()
+
     var hasModified = false
 
     fun init(accountViewModel: AccountViewModel) {
@@ -58,6 +69,7 @@ class Nip65RelayListViewModel : ViewModel() {
     fun load() {
         clear()
         loadRelayDocuments()
+        loadCounts()
     }
 
     fun create() {
@@ -107,6 +119,51 @@ class Nip65RelayListViewModel : ViewModel() {
                     },
                     onError = { url, errorCode, exceptionMessage -> },
                 )
+            }
+        }
+    }
+
+    private fun loadCounts() {
+        _homeCountResults.value = emptyMap()
+        _notifCountResults.value = emptyMap()
+
+        val client = Amethyst.instance.client
+
+        _homeRelays.value.forEach { item ->
+            viewModelScope.launch(Dispatchers.IO) {
+                val result = client.queryCountSuspend(item.relay, Filter(authors = listOf(account.pubKey)))
+                if (result != null) {
+                    val countResult =
+                        RelayCountResult(
+                            listOf(
+                                RelayCountResult.CountEntry(
+                                    label = R.string.events,
+                                    count = result.count,
+                                    approximate = result.approximate,
+                                ),
+                            ),
+                        )
+                    _homeCountResults.update { it + (item.relay to countResult) }
+                }
+            }
+        }
+
+        _notificationRelays.value.forEach { item ->
+            viewModelScope.launch(Dispatchers.IO) {
+                val result = client.queryCountSuspend(item.relay, Filter(tags = mapOf("p" to listOf(account.pubKey))))
+                if (result != null) {
+                    val countResult =
+                        RelayCountResult(
+                            listOf(
+                                RelayCountResult.CountEntry(
+                                    label = R.string.events,
+                                    count = result.count,
+                                    approximate = result.approximate,
+                                ),
+                            ),
+                        )
+                    _notifCountResults.update { it + (item.relay to countResult) }
+                }
             }
         }
     }

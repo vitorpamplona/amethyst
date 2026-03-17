@@ -31,7 +31,8 @@ class UserStatusAction {
         suspend fun create(
             newStatus: String,
             signer: NostrSigner,
-        ): StatusEvent = StatusEvent.create(newStatus, "general", expiration = null, signer)
+            type: String = StatusEvent.GENERAL,
+        ): StatusEvent = StatusEvent.create(newStatus, type, signer = signer)
 
         suspend fun update(
             oldStatus: AddressableNote,

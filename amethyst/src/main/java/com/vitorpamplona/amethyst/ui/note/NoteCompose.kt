@@ -30,6 +30,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Timer
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -47,6 +52,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
@@ -201,6 +207,7 @@ import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
+import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
@@ -1345,6 +1352,27 @@ fun SecondUserInfoRow(
 }
 
 @Composable
+fun DisplayExpiration(expirationDate: Long) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.Timer,
+            contentDescription = stringRes(R.string.expiration_date_label),
+            modifier = Modifier.padding(start = 5.dp).size(15.dp),
+            tint = MaterialTheme.colorScheme.placeholderText,
+        )
+        val context = LocalContext.current
+        Text(
+            text = timeAheadNoDot(expirationDate, context),
+            color = MaterialTheme.colorScheme.placeholderText,
+            maxLines = 1,
+            modifier = Modifier.padding(start = 3.dp),
+        )
+    }
+}
+
+@Composable
 fun DisplayOtsIfInOriginal(
     note: Note,
     editState: State<GenericLoadable<EditState>>,
@@ -1440,12 +1468,25 @@ fun FirstUserInfoRow(
             DisplayDraft()
         }
 
+        Expiration(baseNote)
+
         TimeAgo(baseNote)
 
         if (moreOptions == null) {
             MoreOptionsButton(baseNote, editState, accountViewModel, nav)
         } else {
             moreOptions()
+        }
+    }
+}
+
+@Composable
+fun Expiration(note: Note) {
+    val event = note.event
+    if (event != null) {
+        val expires = remember(event) { event.expiration() }
+        if (expires != null) {
+            DisplayExpiration(expires)
         }
     }
 }

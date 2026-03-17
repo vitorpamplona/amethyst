@@ -29,7 +29,6 @@ import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
@@ -49,7 +48,7 @@ class NipA3PaymentTargetsState(
         settings.backupNipA3PaymentTargets?.let {
             Log.d("AccountRegisterObservers", "Loading saved nipA3 Payment targets ${it.toJson()}")
             @OptIn(DelicateCoroutinesApi::class)
-            GlobalScope.launch(Dispatchers.IO) { cache.justConsumeMyOwnEvent(it) }
+            scope.launch(Dispatchers.IO) { cache.justConsumeMyOwnEvent(it) }
         }
 
         scope.launch(Dispatchers.IO) {

@@ -86,9 +86,9 @@ class DesktopIAccount(
 
     override val privateZapsDecryptionCache: IPrivateZapsDecryptionCache =
         object : IPrivateZapsDecryptionCache {
-            override fun cachedPrivateZap(zapRequest: LnZapRequestEvent): com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent? = null
+            override fun cachedPrivateZap(event: LnZapRequestEvent): com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent? = null
 
-            override suspend fun decryptPrivateZap(zapRequest: LnZapRequestEvent): com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent? = null
+            override suspend fun decryptPrivateZap(event: LnZapRequestEvent): com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent? = null
         }
 
     override fun userProfile(): User = localCache.getOrCreateUser(pubKey)
@@ -108,7 +108,7 @@ class DesktopIAccount(
     override suspend fun sendNip04PrivateMessage(eventTemplate: EventTemplate<PrivateDmEvent>) {
         if (!isWriteable()) return
 
-        val signedEvent = signer.sign<PrivateDmEvent>(eventTemplate)
+        val signedEvent = signer.sign(eventTemplate)
         val recipient = signedEvent.verifiedRecipientPubKey()
 
         // Optimistic local add so the message appears immediately

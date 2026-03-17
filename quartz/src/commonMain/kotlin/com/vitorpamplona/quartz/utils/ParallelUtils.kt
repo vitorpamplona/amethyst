@@ -21,11 +21,15 @@
 package com.vitorpamplona.quartz.utils
 
 import kotlinx.coroutines.CancellableContinuation
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
@@ -219,23 +223,24 @@ suspend fun <T> anyAsync(
         // Use select to wait for the first deferred to complete with 'true'
         val foundTrue =
             withTimeoutOrNull(timeoutMillis) {
-                select {
-                    deferredResults.forEach { deferred ->
-                        // For each deferred, if it completes and its result is 'true',
-                        // this branch of the select expression will be chosen.
-                        deferred.onAwait { result ->
-                            if (result) {
-                                true // Return true from the select expression
-                            } else {
-                                // If a deferred completes with false, we don't want to
-                                // immediately end the select, so we return false, which
-                                // lets select continue waiting for other branches.
-                                false
+                val remaining = deferredResults.toMutableList()
+                var found = false
+
+                while (remaining.isNotEmpty() && !found) {
+                    val (winner, value) =
+                        select {
+                            remaining.forEach { deferred ->
+                                deferred.onAwait { value ->
+                                    deferred to value
+                                }
                             }
                         }
-                    }
+                    remaining.remove(winner)
+                    if (value) found = true
                 }
-            }
+
+                found
+            } ?: false
 
         // Once select returns (either with true or after all deferreds complete/are cancelled),
         // cancel any remaining ongoing operations.
@@ -243,5 +248,51 @@ suspend fun <T> anyAsync(
         // If foundTrue is false, it means all completed with false or were cancelled.
         deferredResults.forEach { it.cancel() } // Ensure all are cancelled.
 
-        return@coroutineScope foundTrue == true
+        return@coroutineScope foundTrue
     }
+
+/**
+ * Executes a mapping function asynchronously on each input in the list.
+ * Returns the first result as soon as the first mapping returns not null, cancelling all other ongoing operations.
+ *
+ * @param inputs A list of input objects to process.
+ * @param map A suspend function that takes an input object and returns a Boolean.
+ * @return True if any mapping function returns true, false otherwise.
+ */
+suspend fun <T, U> firstNotNullOrNullAsync(
+    inputs: List<T>,
+    timeoutMillis: Long = 30000,
+    map: suspend (T) -> U?,
+): U? {
+    if (inputs.isEmpty()) {
+        return null
+    }
+
+    return withTimeoutOrNull(timeoutMillis) {
+        val channel = Channel<U>(capacity = Channel.UNLIMITED)
+
+        val jobs =
+            inputs.map { input ->
+                launch(Dispatchers.IO) {
+                    val result = map(input)
+                    if (result != null) {
+                        channel.trySend(result)
+                    }
+                }
+            }
+
+        // Close channel when all jobs complete (handles all-null case)
+        launch {
+            jobs.joinAll()
+            channel.close()
+        }
+
+        // Wait for first non-null result or null if channel closes
+        val result = channel.receiveCatching().getOrNull()
+
+        // Cancel all remaining jobs
+        jobs.forEach { it.cancel() }
+
+        result
+    }
+}

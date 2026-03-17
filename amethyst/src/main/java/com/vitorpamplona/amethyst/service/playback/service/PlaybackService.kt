@@ -20,35 +20,69 @@
  */
 package com.vitorpamplona.amethyst.service.playback.service
 
+import android.net.Uri
 import androidx.annotation.OptIn
+import androidx.core.net.toUri
 import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DataSource
+import androidx.media3.datasource.DataSpec
+import androidx.media3.datasource.ResolvingDataSource
+import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.service.okhttp.DynamicCallFactory
+import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCache
 import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
 import com.vitorpamplona.amethyst.service.playback.playerPool.ExoPlayerBuilder
 import com.vitorpamplona.amethyst.service.playback.playerPool.ExoPlayerPool
 import com.vitorpamplona.amethyst.service.playback.playerPool.MediaSessionPool
 import com.vitorpamplona.amethyst.service.playback.playerPool.SimultaneousPlaybackCalculator
+import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.BlossomServerResolver
 import com.vitorpamplona.quartz.utils.Log
-import okhttp3.OkHttpClient
+import kotlinx.coroutines.runBlocking
 
 class PlaybackService : MediaSessionService() {
     private var poolNoProxy: MediaSessionPool? = null
     private var poolWithProxy: MediaSessionPool? = null
 
     @OptIn(UnstableApi::class)
-    fun newPool(okHttp: OkHttpClient): MediaSessionPool =
-        MediaSessionPool(
+    fun newPool(
+        videoCache: VideoCache,
+        okHttpClient: DynamicCallFactory,
+        blossomServerResolver: BlossomServerResolver,
+    ): MediaSessionPool {
+        val dataSourceFactory = OkHttpDataSource.Factory(okHttpClient)
+
+        val resolvingDataSourceFactory: DataSource.Factory =
+            ResolvingDataSource.Factory(
+                dataSourceFactory,
+                ResolvingDataSource.Resolver { dataSpec: DataSpec ->
+                    val originalUri: Uri = dataSpec.uri
+                    val scheme = originalUri.scheme
+                    if (scheme != null && blossomServerResolver.canResolve(scheme)) {
+                        val serverUrl =
+                            runBlocking {
+                                blossomServerResolver.findServers(originalUri.toString())
+                            }
+                        if (serverUrl != null) {
+                            return@Resolver dataSpec.withUri(serverUrl.serverUrl.toUri())
+                        }
+                    }
+                    dataSpec
+                },
+            )
+
+        return MediaSessionPool(
             exoPlayerPool =
                 ExoPlayerPool(
-                    ExoPlayerBuilder(okHttp),
+                    ExoPlayerBuilder(videoCache, resolvingDataSourceFactory),
                     poolSize = SimultaneousPlaybackCalculator.max(applicationContext),
                 ),
-            okHttpClient = okHttp,
+            dataSourceFactory = resolvingDataSourceFactory,
             appContext = applicationContext,
             reset = { session, keepPlaying ->
                 (session.player as ExoPlayer).apply {
@@ -58,6 +92,7 @@ class PlaybackService : MediaSessionService() {
                 }
             },
         )
+    }
 
     @OptIn(UnstableApi::class)
     fun lazyPool(proxyPort: Int): MediaSessionPool {
@@ -65,22 +100,23 @@ class PlaybackService : MediaSessionService() {
             // no proxy
             poolNoProxy?.let { return it }
 
-            // creates new
-            return newPool(Amethyst.instance.okHttpClients.getHttpClient(false)).also { poolNoProxy = it }
-        } else {
-            poolWithProxy?.let { pool ->
-                // with proxy, check if the port is the same.
-                val okHttp = Amethyst.instance.okHttpClients.getHttpClient(true)
-                if (okHttp.proxy != null && okHttp.proxy == pool.exoPlayerPool.builder.okHttp.proxy) {
-                    return pool
-                }
+            val okHttpClient = Amethyst.instance.okHttpClients.getDynamicCallFactory(false)
+            val videoCache = Amethyst.instance.videoCache
+            val blossomServerResolver = Amethyst.instance.blossomResolver
 
-                pool.destroy()
-                return newPool(okHttp).also { poolWithProxy = it }
-            }
+            // creates new
+            return newPool(videoCache, okHttpClient, blossomServerResolver).also { poolNoProxy = it }
+        } else {
+            poolWithProxy?.let { return it }
 
             // creates brand new
-            return newPool(Amethyst.instance.okHttpClients.getHttpClient(true)).also { poolWithProxy = it }
+            // proxy port can change without affecting the pool because
+            // the choice of okhttp is resolved in newCall
+            val okHttpClient = Amethyst.instance.okHttpClients.getDynamicCallFactory(true)
+            val videoCache = Amethyst.instance.videoCache
+            val blossomServerResolver = Amethyst.instance.blossomResolver
+
+            return newPool(videoCache, okHttpClient, blossomServerResolver).also { poolWithProxy = it }
         }
     }
 

@@ -27,32 +27,35 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.quartz.nip39ExtIdentities.ExternalIdentitiesEvent
-import com.vitorpamplona.quartz.nip39ExtIdentities.IdentityClaimTag
 import com.vitorpamplona.quartz.nip39ExtIdentities.identityClaims
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 
 @Stable
 class UserExternalIdentitiesViewModel(
     val user: User,
 ) : ViewModel() {
-    private val _identities = MutableStateFlow<List<IdentityClaimTag>>(emptyList())
-    val identities = _identities.asStateFlow()
-
     private val note =
         LocalCache.getOrCreateAddressableNote(
             ExternalIdentitiesEvent.createAddress(user.pubkeyHex),
         )
 
-    init {
-        viewModelScope.launch {
-            note.flow().metadata.stateFlow.collect { state ->
+    val identities =
+        note
+            .flow()
+            .metadata.stateFlow
+            .map { state ->
                 val event = state.note.event as? ExternalIdentitiesEvent
-                _identities.value = event?.identityClaims() ?: emptyList()
-            }
-        }
-    }
+                event?.identityClaims() ?: emptyList()
+            }.flowOn(Dispatchers.IO)
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5000),
+                initialValue = emptyList(),
+            )
 
     class Factory(
         val user: User,

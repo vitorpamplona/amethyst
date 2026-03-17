@@ -21,8 +21,13 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.indexer
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.CountFilter
+import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 
 @Stable
 class IndexerRelayListViewModel : BasicRelaySetupInfoModel() {
@@ -33,4 +38,16 @@ class IndexerRelayListViewModel : BasicRelaySetupInfoModel() {
     override suspend fun saveRelayList(urlList: List<NormalizedRelayUrl>) {
         account.saveIndexerRelayList(urlList)
     }
+
+    override fun countFilters(relayUrl: NormalizedRelayUrl): List<CountFilter> =
+        listOf(
+            CountFilter(
+                label = R.string.profiles,
+                filter = Filter(kinds = listOf(MetadataEvent.KIND)),
+            ),
+            CountFilter(
+                label = R.string.relay_settings_lower,
+                filter = Filter(kinds = listOf(AdvertisedRelayListEvent.KIND)),
+            ),
+        )
 }

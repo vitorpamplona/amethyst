@@ -27,49 +27,131 @@ abstract class Response(
     val resultType: String,
 ) : OptimizedSerializable
 
-// PayInvoice Call
+// Generic error response for any method
+class NwcErrorResponse(
+    resultType: String,
+    val error: NwcError? = null,
+) : Response(resultType)
 
+// pay_invoice success response
 class PayInvoiceSuccessResponse(
     val result: PayInvoiceResultParams? = null,
-) : Response("pay_invoice") {
+) : Response(NwcMethod.PAY_INVOICE) {
     class PayInvoiceResultParams(
         val preimage: String? = null,
+        val fees_paid: Long? = null,
     )
 }
 
+// pay_invoice error response (kept for backward compatibility)
 class PayInvoiceErrorResponse(
     val error: PayInvoiceErrorParams? = null,
-) : Response("pay_invoice") {
+) : Response(NwcMethod.PAY_INVOICE) {
     class PayInvoiceErrorParams(
-        val code: ErrorType? = null,
+        val code: NwcErrorCode? = null,
         val message: String? = null,
     )
+}
 
-    enum class ErrorType {
-        RATE_LIMITED,
+// pay_keysend success response
+class PayKeysendSuccessResponse(
+    val result: PayKeysendResult? = null,
+) : Response(NwcMethod.PAY_KEYSEND) {
+    class PayKeysendResult(
+        val preimage: String? = null,
+        val fees_paid: Long? = null,
+    )
+}
 
-        // The client is sending commands too fast. It should retry in a few seconds.
-        NOT_IMPLEMENTED,
+// make_invoice success response
+class MakeInvoiceSuccessResponse(
+    val result: NwcTransaction? = null,
+) : Response(NwcMethod.MAKE_INVOICE)
 
-        // The command is not known or is intentionally not implemented.
-        INSUFFICIENT_BALANCE,
+// lookup_invoice success response
+class LookupInvoiceSuccessResponse(
+    val result: NwcTransaction? = null,
+) : Response(NwcMethod.LOOKUP_INVOICE)
 
-        // The command is not known or is intentionally not implemented.
-        PAYMENT_FAILED,
+// list_transactions success response
+class ListTransactionsSuccessResponse(
+    val result: ListTransactionsResult? = null,
+) : Response(NwcMethod.LIST_TRANSACTIONS) {
+    class ListTransactionsResult(
+        val transactions: List<NwcTransaction>? = null,
+        val total_count: Long? = null,
+    )
+}
 
-        // The wallet does not have enough funds to cover a fee reserve or the payment amount.
-        QUOTA_EXCEEDED,
+// get_balance success response
+class GetBalanceSuccessResponse(
+    val result: GetBalanceResult? = null,
+) : Response(NwcMethod.GET_BALANCE) {
+    class GetBalanceResult(
+        val balance: Long? = null,
+    )
+}
 
-        // The wallet has exceeded its spending quota.
-        RESTRICTED,
+// get_info success response
+class GetInfoSuccessResponse(
+    val result: GetInfoResult? = null,
+) : Response(NwcMethod.GET_INFO) {
+    class GetInfoResult(
+        val alias: String? = null,
+        val color: String? = null,
+        val pubkey: String? = null,
+        val network: String? = null,
+        val block_height: Long? = null,
+        val block_hash: String? = null,
+        val methods: List<String>? = null,
+        val notifications: List<String>? = null,
+        val metadata: Map<String, Any?>? = null,
+        val lud16: String? = null,
+    )
+}
 
-        // This public key is not allowed to do this operation.
-        UNAUTHORIZED,
+// make_hold_invoice success response
+class MakeHoldInvoiceSuccessResponse(
+    val result: NwcTransaction? = null,
+) : Response(NwcMethod.MAKE_HOLD_INVOICE)
 
-        // This public key has no wallet connected.
-        INTERNAL,
+// cancel_hold_invoice success response
+class CancelHoldInvoiceSuccessResponse(
+    val result: Any? = null,
+) : Response(NwcMethod.CANCEL_HOLD_INVOICE)
 
-        // An internal error.
-        OTHER, // Other error.
-    }
+// settle_hold_invoice success response
+class SettleHoldInvoiceSuccessResponse(
+    val result: Any? = null,
+) : Response(NwcMethod.SETTLE_HOLD_INVOICE)
+
+// get_budget success response
+class GetBudgetSuccessResponse(
+    val result: GetBudgetResult? = null,
+) : Response(NwcMethod.GET_BUDGET) {
+    class GetBudgetResult(
+        val used_budget: Long? = null,
+        val total_budget: Long? = null,
+        val renews_at: Long? = null,
+        val renewal_period: String? = null,
+    )
+}
+
+// sign_message success response
+class SignMessageSuccessResponse(
+    val result: SignMessageResult? = null,
+) : Response(NwcMethod.SIGN_MESSAGE) {
+    class SignMessageResult(
+        val message: String? = null,
+        val signature: String? = null,
+    )
+}
+
+// create_connection success response
+class CreateConnectionSuccessResponse(
+    val result: CreateConnectionResult? = null,
+) : Response(NwcMethod.CREATE_CONNECTION) {
+    class CreateConnectionResult(
+        val wallet_pubkey: String? = null,
+    )
 }

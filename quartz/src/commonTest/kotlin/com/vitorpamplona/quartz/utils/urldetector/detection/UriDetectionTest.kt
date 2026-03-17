@@ -735,6 +735,25 @@ class UriDetectionTest {
     }
 
     @Test
+    fun testBlossomShema2() {
+        runTest("blossom:9584b6d64e43747364b10276f4b821e5df09f46477b3b8c60cced3e8c647fbef.jpg?xs=blossom.primal.net", "blossom:9584b6d64e43747364b10276f4b821e5df09f46477b3b8c60cced3e8c647fbef.jpg?xs=blossom.primal.net")
+    }
+
+    @Test
+    fun testFullText() {
+        val text =
+            """
+            Did you know you can embed #Nostr live streams into #Nostr long-form posts? Sounds like an obvious thing, but it's only supported by nostr:npub1048qg5p6kfnpth2l98kq3dffg097tutm4npsz2exygx25ge2k9xqf5x3nf at the moment.
+
+            See how it can be done here: https://lnshort.it/live-stream-embeds/
+
+            https://nostr.build/i/fd53fcf5ad950fbe45127e4bcee1b59e8301d41de6beee211f45e344db214e8a.jpg
+            """.trimIndent()
+
+        runTest(text, "nostr:npub1048qg5p6kfnpth2l98kq3dffg097tutm4npsz2exygx25ge2k9xqf5x3nf", "https://lnshort.it/live-stream-embeds/", "https://nostr.build/i/fd53fcf5ad950fbe45127e4bcee1b59e8301d41de6beee211f45e344db214e8a.jpg")
+    }
+
+    @Test
     fun testBasicIPv6() {
         runTest("I saw this on http://[2001:db8:1f70:0:999:de8:7648:6e8] I think it is really cool", "http://[2001:db8:1f70:0:999:de8:7648:6e8]")
         runTest("I saw this on http://[2001:db8::1]:80 I think it is really cool", "http://[2001:db8::1]:80")

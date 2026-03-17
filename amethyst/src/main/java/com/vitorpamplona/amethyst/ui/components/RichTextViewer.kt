@@ -47,6 +47,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFontFamilyResolver
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -54,18 +55,21 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.compose.produceCachedState
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.richtext.Base64Segment
 import com.vitorpamplona.amethyst.commons.richtext.BechSegment
+import com.vitorpamplona.amethyst.commons.richtext.BlossomUriSegment
 import com.vitorpamplona.amethyst.commons.richtext.CashuSegment
 import com.vitorpamplona.amethyst.commons.richtext.EmailSegment
 import com.vitorpamplona.amethyst.commons.richtext.EmojiSegment
@@ -93,6 +97,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.checkForHashtagWithIcon
 import com.vitorpamplona.amethyst.service.CachedRichTextParser
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
+import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.openBlossomUriAsIntent
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.markdown.RenderContentAsMarkdown
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
@@ -112,6 +117,7 @@ import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.inlinePlaceholder
 import com.vitorpamplona.amethyst.ui.theme.innerPostModifier
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nipB7Blossom.BlossomUri
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -167,6 +173,10 @@ fun RenderStrangeNamePreview() {
                     }
 
                     is RelayUrlSegment -> {
+                        ClickableRelayUrl(word.segmentText, EmptyNav())
+                    }
+
+                    is BlossomUriSegment -> {
                         ClickableRelayUrl(word.segmentText, EmptyNav())
                     }
 
@@ -500,6 +510,8 @@ private fun RenderWordWithoutPreview(
 
         is RelayUrlSegment -> ClickableRelayUrl(word.segmentText, nav)
 
+        is BlossomUriSegment -> BlossomUriRendererNoPreview(word.segmentText, accountViewModel)
+
         is SchemelessUrlSegment -> NoProtocolUrlRenderer(word.segmentText)
     }
 }
@@ -532,7 +544,79 @@ private fun RenderWordWithPreview(
         is RegularTextSegment -> Text(word.segmentText)
         is Base64Segment -> ZoomableContentView(word.segmentText, state, accountViewModel)
         is RelayUrlSegment -> ClickableRelayUrl(word.segmentText, nav)
+        is BlossomUriSegment -> BlossomUriRenderer(word.segmentText, state, callbackUri, accountViewModel)
         is SchemelessUrlSegment -> NoProtocolUrlRenderer(word.segmentText)
+    }
+}
+
+@Composable
+fun BlossomUriRenderer(
+    word: String,
+    state: RichTextViewerState,
+    callbackUri: String? = null,
+    accountViewModel: AccountViewModel,
+) {
+    val isMedia = state.mediaForPager.contains(word)
+
+    if (isMedia) {
+        ZoomableContentView(word, state, accountViewModel)
+    } else {
+        val serverResultState =
+            remember(word) {
+                mutableStateOf(Amethyst.instance.blossomResolver.cachedFindServer(word))
+            }
+
+        if (serverResultState.value == null) {
+            LaunchedEffect(word) {
+                serverResultState.value = Amethyst.instance.blossomResolver.findServers(word)
+            }
+        }
+
+        val serverResult = serverResultState.value
+        if (serverResult != null && serverResult.serverUrl.isNotBlank()) {
+            LoadUrlPreview(serverResult.serverUrl, serverResult.uri.filename(), callbackUri, accountViewModel)
+        } else {
+            ClickableBlossomUri(word, accountViewModel)
+        }
+    }
+}
+
+@Composable
+fun ClickableBlossomUri(
+    blossomUri: String,
+    accountViewModel: AccountViewModel,
+) {
+    val context = LocalContext.current
+
+    ClickableTextPrimary(
+        text = remember { BlossomUri.parse(blossomUri)?.filename() ?: blossomUri },
+        maxLines = 1,
+        overflow = TextOverflow.MiddleEllipsis,
+        onClick = { openBlossomUriAsIntent(context, blossomUri, accountViewModel.toastManager::toast) },
+    )
+}
+
+@Composable
+fun BlossomUriRendererNoPreview(
+    word: String,
+    accountViewModel: AccountViewModel,
+) {
+    val serverResultState =
+        remember(word) {
+            mutableStateOf(Amethyst.instance.blossomResolver.cachedFindServer(word))
+        }
+
+    if (serverResultState.value == null) {
+        LaunchedEffect(word) {
+            serverResultState.value = Amethyst.instance.blossomResolver.findServers(word)
+        }
+    }
+
+    val serverResult = serverResultState.value
+    if (serverResult != null && serverResult.serverUrl.isNotBlank()) {
+        ClickableUrl(serverResult.uri.filename(), serverResult.serverUrl)
+    } else {
+        ClickableBlossomUri(word, accountViewModel)
     }
 }
 
@@ -542,9 +626,9 @@ private fun ZoomableContentView(
     state: RichTextViewerState,
     accountViewModel: AccountViewModel,
 ) {
-    state.imagesForPager[word]?.let {
+    state.mediaForPager[word]?.let {
         Box(modifier = HalfVertPadding) {
-            ZoomableContentView(it, state.imageList, roundedCorner = true, contentScale = ContentScale.FillWidth, accountViewModel)
+            ZoomableContentView(it, state.mediaList, roundedCorner = true, contentScale = ContentScale.FillWidth, accountViewModel)
         }
     }
 }

@@ -31,13 +31,15 @@ class TorAwareOkHttpOtsResolverBuilder(
     val okHttpClient: (url: String) -> OkHttpClient,
     val isTorActive: (url: String) -> Boolean,
     val cache: OtsBlockHeightCache,
+    val customExplorerUrl: () -> String? = { null },
 ) : OtsResolverBuilder {
-    fun getAPI(usingTor: Boolean) =
-        if (usingTor) {
-            OkHttpBitcoinExplorer.MEMPOOL_API_URL
-        } else {
-            OkHttpBitcoinExplorer.BLOCKSTREAM_API_URL
-        }
+    fun getAPI(usingTor: Boolean): String =
+        customExplorerUrl()
+            ?: if (usingTor) {
+                OkHttpBitcoinExplorer.MEMPOOL_API_URL
+            } else {
+                OkHttpBitcoinExplorer.BLOCKSTREAM_API_URL
+            }
 
     override fun build(): OtsResolver =
         OtsResolver(

@@ -34,6 +34,9 @@ class UrlParserTest {
         assertEquals(expected.withScheme, urlSet.withScheme)
         assertEquals(expected.withoutScheme, urlSet.withoutScheme)
         assertEquals(expected.emails, urlSet.emails)
+        assertEquals(expected.bech32s, urlSet.bech32s)
+        assertEquals(expected.blossomUris, urlSet.blossomUris)
+        assertEquals(expected.relayUrls, urlSet.relayUrls)
     }
 
     @Test
@@ -286,9 +289,14 @@ class UrlParserTest {
         )
 
     @Test
-    fun testBlossom() =
-        test(
-            "blossom:b1674191a88ec5cdd733e4240a81803105dc412d6c6708d53ab94fc248f4f553.pdf?xs=cdn.satellite.earth",
-            Urls(withScheme = setOf("blossom:b1674191a88ec5cdd733e4240a81803105dc412d6c6708d53ab94fc248f4f553.pdf?xs=cdn.satellite.earth")),
-        )
+    fun testBlossom() {
+        val blossom = "blossom:b1674191a88ec5cdd733e4240a81803105dc412d6c6708d53ab94fc248f4f553.pdf?xs=cdn.satellite.earth"
+        test(blossom, Urls(blossomUris = setOf(blossom)))
+    }
+
+    @Test
+    fun testBlossomComplete() {
+        val blossom = "blossom:a7b3c2d1e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1.png?xs=cdn.example.com&xs=media.nostr.build&as=781208004e09102d7da3b7345e64fd193cd1bc3fce8fdae6008d77f9cabcd036&as=b53185b9f27962ebdf76b8a9b0a84cd8b27f9f3d4abd59f715788a3bf9e7f75e&sz=2547831"
+        test(blossom, Urls(blossomUris = setOf(blossom)))
+    }
 }

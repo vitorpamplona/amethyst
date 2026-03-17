@@ -20,16 +20,29 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed
 
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Timer
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.note.timeAgoShort
+import com.vitorpamplona.amethyst.ui.note.timeAheadNoDot
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Font12SP
+import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.nip40Expiration.expiration
 
 @Composable
 fun ChatTimeAgo(baseNote: Note) {
@@ -42,4 +55,37 @@ fun ChatTimeAgo(baseNote: Note) {
         fontSize = Font12SP,
         maxLines = 1,
     )
+}
+
+@Composable
+fun ChatExpiration(note: Note) {
+    val event = note.event
+    if (event != null) {
+        val expires = remember(event) { event.expiration() }
+        if (expires != null) {
+            ChatDisplayExpiration(expires)
+        }
+    }
+}
+
+@Composable
+fun ChatDisplayExpiration(expirationDate: Long) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Spacer(modifier = StdHorzSpacer)
+        Icon(
+            imageVector = Icons.Outlined.Timer,
+            contentDescription = stringRes(R.string.expiration_date_label),
+            modifier = Modifier.size(12.dp),
+            tint = MaterialTheme.colorScheme.placeholderText,
+        )
+        val context = LocalContext.current
+        Text(
+            text = timeAheadNoDot(expirationDate, context),
+            color = MaterialTheme.colorScheme.placeholderText,
+            fontSize = Font12SP,
+            maxLines = 1,
+        )
+    }
 }

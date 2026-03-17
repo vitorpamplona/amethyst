@@ -358,19 +358,19 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     fun load(keys: Set<String>): Set<User> = keys.mapNotNullTo(mutableSetOf(), ::checkGetOrCreateUser)
 
-    override fun getOrCreateUser(key: HexKey): User {
-        require(isValidHex(key = key)) { "$key is not a valid hex" }
+    override fun getOrCreateUser(pubkey: HexKey): User {
+        require(isValidHex(key = pubkey)) { "$pubkey is not a valid hex" }
 
-        return users.getOrCreate(key) {
-            val nip65RelayListNote = getOrCreateAddressableNoteInternal(AdvertisedRelayListEvent.createAddress(key))
-            val dmRelayListNote = getOrCreateAddressableNoteInternal(ChatMessageRelayListEvent.createAddress(key))
+        return users.getOrCreate(pubkey) {
+            val nip65RelayListNote = getOrCreateAddressableNoteInternal(AdvertisedRelayListEvent.createAddress(pubkey))
+            val dmRelayListNote = getOrCreateAddressableNoteInternal(ChatMessageRelayListEvent.createAddress(pubkey))
             User(it, nip65RelayListNote, dmRelayListNote)
         }
     }
 
-    override fun getUserIfExists(key: String): User? {
-        if (key.isEmpty()) return null
-        return users.get(key)
+    override fun getUserIfExists(pubkey: String): User? {
+        if (pubkey.isEmpty()) return null
+        return users.get(pubkey)
     }
 
     override fun countUsers(predicate: (String, User) -> Boolean): Int {
@@ -394,7 +394,7 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     fun getAddressableNoteIfExists(address: Address): AddressableNote? = addressables.get(address)
 
-    override fun getNoteIfExists(key: String): Note? = if (key.length == 64) notes.get(key) else Address.parse(key)?.let { addressables.get(it) }
+    override fun getNoteIfExists(hexKey: String): Note? = if (hexKey.length == 64) notes.get(hexKey) else Address.parse(hexKey)?.let { addressables.get(it) }
 
     fun getNoteIfExists(key: ETag): Note? = notes.get(key.eventId)
 
@@ -2250,6 +2250,7 @@ object LocalCache : ILocalCache, ICacheProvider {
 
             requestNote?.let { request -> zappedNote?.addZapPayment(request, note) }
 
+            @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
             GlobalScope.launch(Dispatchers.IO) {
                 responseCallback(event)
             }
@@ -2298,12 +2299,17 @@ object LocalCache : ILocalCache, ICacheProvider {
                 }
             }
 
+        val findsFollowing = finds.associateWith { forAccount?.isFollowing(it) == true }
+        val anyNameStartsWith = finds.associateWith { it.metadataOrNull()?.anyNameStartsWith(dualCase) == true }
+        val anyAddressStartsWith = finds.associateWith { it.metadataOrNull()?.anyAddressStartsWith(dualCase) == true }
+        val displayNames = finds.associateWith { it.toBestDisplayName().lowercase() }
+
         return finds.sortedWith(
             compareBy(
-                { forAccount?.isFollowing(it) == false },
-                { it.metadataOrNull()?.anyNameStartsWith(dualCase) == false },
-                { it.metadataOrNull()?.anyAddressStartsWith(dualCase) == false },
-                { it.toBestDisplayName().lowercase() },
+                { findsFollowing[it] == false },
+                { anyNameStartsWith[it] == false },
+                { anyAddressStartsWith[it] == false },
+                { displayNames[it] },
                 { it.pubkeyHex },
             ),
         )

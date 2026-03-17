@@ -36,6 +36,17 @@ def generateVersionName(String baseVersion) {
     }
 }
 
+// Workaround: stability.analyzer plugin doesn't declare task dependencies properly for Gradle 9.x
+afterEvaluate {
+    def stabilityNames = tasks.names.findAll { it.contains("StabilityCheck") }
+    def compileNames = tasks.names.findAll { it.matches("compile.*UnitTestKotlin") }
+    stabilityNames.each { scName ->
+        compileNames.each { ctName ->
+            tasks.named(scName).configure { mustRunAfter(tasks.named(ctName)) }
+        }
+    }
+}
+
 android {
     namespace = 'com.vitorpamplona.amethyst'
     compileSdk = libs.versions.android.compileSdk.get().toInteger()
@@ -336,9 +347,7 @@ dependencies {
     fdroidImplementation libs.unifiedpush
 
     // Charts
-    implementation libs.vico.charts.core
     implementation libs.vico.charts.compose
-    implementation libs.vico.charts.views
     implementation libs.vico.charts.m3
 
     // GeoHash

@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.publicMessag
 import android.content.Context
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.input.TextFieldValue
@@ -44,10 +45,12 @@ import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
+import com.vitorpamplona.amethyst.ui.actions.uploads.MediaUploadTracker
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.ui.note.creators.draftTags.DraftTagState
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.EmojiSuggestionState
+import com.vitorpamplona.amethyst.ui.note.creators.expiration.IExpiration
 import com.vitorpamplona.amethyst.ui.note.creators.location.ILocationGrabber
 import com.vitorpamplona.amethyst.ui.note.creators.messagefield.IMessageField
 import com.vitorpamplona.amethyst.ui.note.creators.previews.PreviewState
@@ -86,6 +89,7 @@ import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarningReason
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitive
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
+import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
 import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitSetup
 import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplits
@@ -104,6 +108,7 @@ import com.vitorpamplona.quartz.nip94FileMetadata.sensitiveContent
 import com.vitorpamplona.quartz.nip94FileMetadata.size
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
@@ -116,7 +121,8 @@ class NewPublicMessageViewModel :
     ILocationGrabber,
     IMessageField,
     IZapField,
-    IZapRaiser {
+    IZapRaiser,
+    IExpiration {
     val draftTag = DraftTagState()
 
     lateinit var accountViewModel: AccountViewModel
@@ -144,7 +150,9 @@ class NewPublicMessageViewModel :
 
     val urlPreviews = PreviewState()
 
-    var isUploadingImage by mutableStateOf(false)
+    val mediaUploadTracker = MediaUploadTracker()
+    val isUploadingImage: Boolean get() = mediaUploadTracker.isUploadingImage
+    val isUploadingFile: Boolean get() = mediaUploadTracker.isUploadingFile
 
     var userSuggestions: UserSuggestionState? = null
     var userSuggestionsMainMessage: UserSuggestionAnchor? = null
@@ -170,6 +178,10 @@ class NewPublicMessageViewModel :
     // NSFW, Sensitive
     var wantsToMarkAsSensitive by mutableStateOf(false)
     var contentWarningDescription by mutableStateOf("")
+
+    // Expiration Date (NIP-40)
+    var wantsExpirationDate by mutableStateOf(false)
+    override var expirationDate by mutableLongStateOf(TimeUtils.oneDayAhead())
 
     // GeoHash
     var wantsToAddGeoHash by mutableStateOf(false)
@@ -270,6 +282,10 @@ class NewPublicMessageViewModel :
         wantsToMarkAsSensitive = draftEvent.isSensitive()
         contentWarningDescription = draftEvent.contentWarningReason() ?: ""
 
+        val draftExpiration = draftEvent.expiration()
+        wantsExpirationDate = draftExpiration != null
+        expirationDate = draftExpiration ?: TimeUtils.oneDayAhead()
+
         val geohash = draftEvent.getGeoHash()
         wantsToAddGeoHash = geohash != null
 
@@ -306,7 +322,7 @@ class NewPublicMessageViewModel :
     }
 
     suspend fun sendPostSync() {
-        val template = createTemplate() ?: return
+        val template = createTemplate()
         val extraNotesToBroadcast = mutableListOf<Event>()
 
         if (nip95attachments.isNotEmpty()) {
@@ -338,7 +354,7 @@ class NewPublicMessageViewModel :
                 broadcast.add(it.second)
             }
 
-            val template = createTemplate() ?: return
+            val template = createTemplate()
             accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template, broadcast)
         }
     }
@@ -368,6 +384,7 @@ class NewPublicMessageViewModel :
         val usedAttachments = iMetaAttachments.filterIsIn(urls.toSet())
 
         val contentWarningReason = if (wantsToMarkAsSensitive) contentWarningDescription else null
+        val localExpirationDate = if (wantsExpirationDate) expirationDate else null
 
         return PublicMessageEvent.build(
             to = toUsers.toList(),
@@ -381,6 +398,7 @@ class NewPublicMessageViewModel :
             localZapRaiserAmount?.let { zapraiser(it) }
             zapReceiver?.let { zapSplits(it) }
             contentWarningReason?.let { contentWarning(it) }
+            localExpirationDate?.let { expiration(it) }
 
             emojis(emojis)
             imetas(usedAttachments)
@@ -424,7 +442,7 @@ class NewPublicMessageViewModel :
         viewModelScope.launch(Dispatchers.IO) {
             val myMultiOrchestrator = multiOrchestrator ?: return@launch
 
-            isUploadingImage = true
+            mediaUploadTracker.startUpload(myMultiOrchestrator.hasNonMedia())
 
             val results =
                 myMultiOrchestrator.upload(
@@ -441,7 +459,7 @@ class NewPublicMessageViewModel :
                     if (state.result is UploadOrchestrator.OrchestratorResult.NIP95Result) {
                         val nip95 = account.createNip95(state.result.bytes, headerInfo = state.result.fileHeader, alt, contentWarningReason)
                         nip95attachments = nip95attachments + nip95
-                        val note = nip95.let { it1 -> account?.consumeNip95(it1.first, it1.second) }
+                        val note = nip95.let { it1 -> account.consumeNip95(it1.first, it1.second) }
 
                         note?.let {
                             message = message.insertUrlAtCursor("nostr:" + it.toNEvent())
@@ -479,7 +497,7 @@ class NewPublicMessageViewModel :
                 onError(stringRes(context, R.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
             }
 
-            isUploadingImage = false
+            mediaUploadTracker.finishUpload()
         }
     }
 
@@ -507,6 +525,8 @@ class NewPublicMessageViewModel :
 
         userSuggestions?.reset()
         userSuggestionsMainMessage = null
+
+        mediaUploadTracker.finishUpload()
 
         iMetaAttachments.reset()
 
@@ -613,7 +633,7 @@ class NewPublicMessageViewModel :
 
     fun canPost(): Boolean =
         message.text.isNotBlank() &&
-            !isUploadingImage &&
+            !mediaUploadTracker.isUploading &&
             !wantsInvoice &&
             (!wantsZapraiser || zapRaiserAmount.value != null) &&
             (toUsers.text.isNotBlank()) &&
@@ -660,6 +680,14 @@ class NewPublicMessageViewModel :
 
     fun toggleMarkAsSensitive() {
         wantsToMarkAsSensitive = !wantsToMarkAsSensitive
+        draftTag.newVersion()
+    }
+
+    fun toggleExpirationDate() {
+        wantsExpirationDate = !wantsExpirationDate
+        if (wantsExpirationDate) {
+            expirationDate = TimeUtils.oneDayAhead()
+        }
         draftTag.newVersion()
     }
 

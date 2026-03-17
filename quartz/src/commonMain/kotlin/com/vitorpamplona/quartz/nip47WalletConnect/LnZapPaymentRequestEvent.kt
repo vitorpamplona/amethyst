@@ -52,25 +52,47 @@ class LnZapPaymentRequestEvent(
         return OptimizedJsonMapper.fromJsonTo<Request>(jsonText)
     }
 
+    fun encryptionScheme() = tags.firstOrNull { it.size > 1 && it[0] == "encryption" }?.get(1)
+
     companion object {
         const val KIND = 23194
-        const val ALT = "Zap payment request"
+        const val ALT = "NWC request"
 
         suspend fun create(
             lnInvoice: String,
             walletServicePubkey: String,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-        ): LnZapPaymentRequestEvent {
-            val serializedRequest = OptimizedJsonMapper.toJson(PayInvoiceMethod.create(lnInvoice))
+        ): LnZapPaymentRequestEvent =
+            createRequest(
+                PayInvoiceMethod.create(lnInvoice),
+                walletServicePubkey,
+                signer,
+                createdAt,
+            )
 
-            val tags = arrayOf(arrayOf("p", walletServicePubkey), AltTag.assemble(ALT))
+        suspend fun createRequest(
+            request: Request,
+            walletServicePubkey: String,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            useNip44: Boolean = false,
+        ): LnZapPaymentRequestEvent {
+            val serializedRequest = OptimizedJsonMapper.toJson(request)
+
+            val tags =
+                if (useNip44) {
+                    arrayOf(arrayOf("p", walletServicePubkey), AltTag.assemble(ALT), arrayOf("encryption", "nip44_v2"))
+                } else {
+                    arrayOf(arrayOf("p", walletServicePubkey), AltTag.assemble(ALT))
+                }
 
             val encrypted =
-                signer.nip04Encrypt(
-                    serializedRequest,
-                    walletServicePubkey,
-                )
+                if (useNip44) {
+                    signer.nip44Encrypt(serializedRequest, walletServicePubkey)
+                } else {
+                    signer.nip04Encrypt(serializedRequest, walletServicePubkey)
+                }
 
             return signer.sign(createdAt, KIND, tags, encrypted)
         }

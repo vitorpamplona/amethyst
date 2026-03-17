@@ -20,7 +20,9 @@
  */
 package com.vitorpamplona.quartz.nipB7Blossom
 
+import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.utils.Hex
 
 /**
  * Parsed representation of a BUD-10 Blossom URI.
@@ -33,6 +35,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
  * @param authors     Hex pubkeys of blob uploaders used for BUD-03 server-list lookup (`as` params).
  * @param size        Blob size in bytes for verification and progress display (`sz` param).
  */
+@Stable
 data class BlossomUri(
     val sha256: HexKey,
     val extension: String,
@@ -40,6 +43,17 @@ data class BlossomUri(
     val authors: List<HexKey>,
     val size: Long?,
 ) {
+    fun filename(): String = "$sha256.$extension"
+
+    fun toServerUrl(): String? {
+        val server = servers.firstOrNull()?.removeSuffix("/") ?: return null
+        return if (server.startsWith("http")) {
+            "$server/$sha256.$extension"
+        } else {
+            "https://$server/$sha256.$extension"
+        }
+    }
+
     /**
      * Serialises back to a canonical `blossom:` URI string.
      * Server URLs are percent-encoded so that `&`, `=`, and `#` inside them
@@ -55,7 +69,7 @@ data class BlossomUri(
                 buildList {
                     servers.forEach { add("xs=${percentEncodeQueryValue(it)}") }
                     authors.forEach { add("as=$it") }
-                    size?.let { add("sz=$it") }
+                    this@BlossomUri.size?.let { add("sz=$it") }
                 }
             if (params.isNotEmpty()) {
                 append('?')
@@ -65,7 +79,6 @@ data class BlossomUri(
 
     companion object {
         private const val SCHEME = "blossom:"
-        private val SHA256_REGEX = Regex("^[0-9a-f]{64}$")
 
         /**
          * Parses a BUD-10 URI string into a [BlossomUri], or returns `null` if the
@@ -93,7 +106,7 @@ data class BlossomUri(
                 extension = "bin"
             }
 
-            if (!SHA256_REGEX.matches(sha256)) return null
+            if (sha256.length != 64 || !Hex.isHex64(sha256)) return null
 
             // Collect repeated query parameters.
             val servers = mutableListOf<String>()

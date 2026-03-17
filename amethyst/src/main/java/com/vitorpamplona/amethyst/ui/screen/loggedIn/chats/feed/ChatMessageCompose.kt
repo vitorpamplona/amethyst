@@ -204,6 +204,7 @@ fun NormalChatNote(
                 ) {
                     IncognitoBadge(note)
                     ChatTimeAgo(note)
+                    ChatExpiration(note)
                     RelayBadgesHorizontal(note, accountViewModel, nav = nav)
 
                     Spacer(modifier = DoubleHorzSpacer)

@@ -39,6 +39,7 @@ import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
+import com.vitorpamplona.amethyst.ui.actions.uploads.MediaUploadTracker
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
@@ -61,6 +62,7 @@ import com.vitorpamplona.quartz.nip94FileMetadata.originalHash
 import com.vitorpamplona.quartz.nip94FileMetadata.sensitiveContent
 import com.vitorpamplona.quartz.nip94FileMetadata.size
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Stable
@@ -78,7 +80,9 @@ open class EditPostViewModel : ViewModel() {
 
     var message by mutableStateOf(TextFieldValue(""))
     var urlPreview by mutableStateOf<String?>(null)
-    var isUploadingImage by mutableStateOf(false)
+    val mediaUploadTracker = MediaUploadTracker()
+    val isUploadingImage: Boolean get() = mediaUploadTracker.isUploadingImage
+    val isUploadingFile: Boolean get() = mediaUploadTracker.isUploadingFile
 
     var userSuggestions: UserSuggestionState? = null
     var userSuggestionsMainMessage: UserSuggestionAnchor? = null
@@ -175,11 +179,11 @@ open class EditPostViewModel : ViewModel() {
         onError: (String, String) -> Unit,
         context: Context,
     ) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             val myAccount = account
             val myMultiOrchestrator = multiOrchestrator ?: return@launch
 
-            isUploadingImage = true
+            mediaUploadTracker.startUpload(myMultiOrchestrator.hasNonMedia())
 
             val results =
                 myMultiOrchestrator.upload(
@@ -242,7 +246,7 @@ open class EditPostViewModel : ViewModel() {
                 onError(stringRes(context, R.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
             }
 
-            isUploadingImage = false
+            mediaUploadTracker.finishUpload()
         }
     }
 
@@ -254,7 +258,7 @@ open class EditPostViewModel : ViewModel() {
 
         multiOrchestrator = null
         urlPreview = null
-        isUploadingImage = false
+        mediaUploadTracker.finishUpload()
 
         wantsInvoice = false
 
@@ -295,7 +299,7 @@ open class EditPostViewModel : ViewModel() {
         }
     }
 
-    fun canPost() = message.text.isNotBlank() && !isUploadingImage && !wantsInvoice && multiOrchestrator == null
+    fun canPost() = message.text.isNotBlank() && !mediaUploadTracker.isUploading && !wantsInvoice && multiOrchestrator == null
 
     fun selectImage(uris: ImmutableList<SelectedMedia>) {
         multiOrchestrator = MultiOrchestrator(uris)

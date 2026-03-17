@@ -79,6 +79,7 @@ class MergedFollowListsState(
             communities = community.mapTo(mutableSetOf()) { it.address.toValue() },
         )
 
+    @OptIn(kotlinx.coroutines.FlowPreview::class)
     val flow: StateFlow<AllFollows> =
         combine(
             listOf(

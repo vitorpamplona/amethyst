@@ -63,7 +63,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.serialization.Serializable
-import java.util.Locale
 
 val DefaultChannels =
     listOf(
@@ -322,9 +321,21 @@ class AccountSettings(
         saveAccountSettings()
     }
 
-    fun translateToContains(languageCode: Locale) = syncedSettings.languages.translateTo.contains(languageCode.language)
+    fun addDontTranslateFrom(languageCode: String) {
+        syncedSettings.languages.addDontTranslateFrom(languageCode)
+        saveAccountSettings()
+    }
 
-    fun updateTranslateTo(languageCode: Locale): Boolean {
+    fun removeDontTranslateFrom(languageCode: String) {
+        syncedSettings.languages.removeDontTranslateFrom(languageCode)
+        saveAccountSettings()
+    }
+
+    fun translateToContains(languageCode: String) =
+        syncedSettings.languages.translateTo.value
+            .contains(languageCode)
+
+    fun updateTranslateTo(languageCode: String): Boolean {
         if (syncedSettings.languages.updateTranslateTo(languageCode)) {
             saveAccountSettings()
             return true

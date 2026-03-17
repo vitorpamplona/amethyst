@@ -118,13 +118,13 @@ class PollNoteViewModel : ViewModel() {
                 it.zappedValue.value = zappedValue
                 it.tally.value = tallyValue.toFloat()
                 it.consensusThreadhold.value = consensusThreshold != null && tallyValue >= consensusThreshold!!
-                it.zappedByLoggedIn.value = account?.userProfile()?.let { it1 -> cachedIsPollOptionZappedBy(it.option, it1) } ?: false
+                it.zappedByLoggedIn.value = account.userProfile().let { it1 -> cachedIsPollOptionZappedBy(it.option, it1) }
             }
         }
     }
 
     fun checkIfCanZap(): Boolean {
-        val account = account ?: return false
+        val account = account
         val note = pollNote ?: return false
         return account.userProfile() != note.author && !wasZappedByLoggedInAccount
     }

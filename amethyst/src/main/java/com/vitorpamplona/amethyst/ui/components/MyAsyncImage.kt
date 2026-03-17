@@ -82,7 +82,7 @@ fun MyAsyncImage(
                                         LoadingAnimation(Size40dp, Size6dp)
                                     }
                                 } else {
-                                    DisplayUrlWithLoadingSymbol(imageUrl)
+                                    DisplayUrlWithLoadingSymbol(imageUrl, accountViewModel.toastManager::toast)
                                 }
                             }
                         }

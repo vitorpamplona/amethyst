@@ -21,24 +21,32 @@
 package com.vitorpamplona.amethyst.ui.components
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextOverflow
+import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.openBlossomUriAsIntent
 
 @Composable
 fun ClickableUrl(
     urlText: String,
     url: String,
+    onError: (Int, Int) -> Unit = { _, _ -> },
 ) {
     val uri = LocalUriHandler.current
+    val context = LocalContext.current
 
     ClickableTextPrimary(
         text = urlText,
         maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
+        overflow = TextOverflow.MiddleEllipsis,
         onClick = {
-            runCatching {
-                val doubleCheckedUrl = if (url.contains("://")) url else "https://$url"
-                uri.openUri(doubleCheckedUrl)
+            if (url.startsWith("blossom:")) {
+                openBlossomUriAsIntent(context, url, onError)
+            } else {
+                runCatching {
+                    val doubleCheckedUrl = if (url.contains("://")) url else "https://$url"
+                    uri.openUri(doubleCheckedUrl)
+                }
             }
         },
     )

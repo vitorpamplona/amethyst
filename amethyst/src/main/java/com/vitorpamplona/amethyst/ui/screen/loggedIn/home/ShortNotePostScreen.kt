@@ -80,6 +80,8 @@ import com.vitorpamplona.amethyst.ui.note.creators.contentWarning.ContentSensiti
 import com.vitorpamplona.amethyst.ui.note.creators.contentWarning.MarkAsSensitiveButton
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.WatchAndLoadMyEmojiList
+import com.vitorpamplona.amethyst.ui.note.creators.expiration.ExpirationDateButton
+import com.vitorpamplona.amethyst.ui.note.creators.expiration.ExpirationDatePicker
 import com.vitorpamplona.amethyst.ui.note.creators.invoice.AddLnInvoiceButton
 import com.vitorpamplona.amethyst.ui.note.creators.invoice.InvoiceRequest
 import com.vitorpamplona.amethyst.ui.note.creators.location.AddGeoHashButton
@@ -311,6 +313,15 @@ private fun NewPostScreenBody(
                     }
                 }
 
+                if (postViewModel.wantsExpirationDate) {
+                    Row(
+                        verticalAlignment = CenterVertically,
+                        modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
+                    ) {
+                        ExpirationDatePicker(postViewModel)
+                    }
+                }
+
                 if (postViewModel.wantsToAddGeoHash) {
                     Row(
                         verticalAlignment = CenterVertically,
@@ -345,6 +356,7 @@ private fun NewPostScreenBody(
                         ImageVideoDescription(
                             it,
                             accountViewModel.account.settings.defaultFileServer,
+                            isUploading = postViewModel.mediaUploadTracker.isUploading,
                             onAdd = { alt, server, sensitiveContent, mediaQuality, useH265 ->
                                 postViewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, server, accountViewModel.toastManager::toast, context, useH265)
                                 accountViewModel.account.settings.changeDefaultFileServer(server)
@@ -483,6 +495,7 @@ private fun BottomRowActions(postViewModel: ShortNotePostViewModel) {
     ) {
         SelectFromGallery(
             isUploading = postViewModel.isUploadingImage,
+            enabled = !postViewModel.isUploadingFile,
             tint = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier,
         ) {
@@ -490,7 +503,8 @@ private fun BottomRowActions(postViewModel: ShortNotePostViewModel) {
         }
 
         SelectFromFiles(
-            isUploading = postViewModel.isUploadingImage,
+            isUploading = postViewModel.isUploadingFile,
+            enabled = !postViewModel.isUploadingImage,
             tint = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier,
         ) {
@@ -537,6 +551,10 @@ private fun BottomRowActions(postViewModel: ShortNotePostViewModel) {
 
         MarkAsSensitiveButton(postViewModel.wantsToMarkAsSensitive) {
             postViewModel.toggleMarkAsSensitive()
+        }
+
+        ExpirationDateButton(postViewModel.wantsExpirationDate) {
+            postViewModel.toggleExpirationDate()
         }
 
         AddGeoHashButton(postViewModel.wantsToAddGeoHash) {

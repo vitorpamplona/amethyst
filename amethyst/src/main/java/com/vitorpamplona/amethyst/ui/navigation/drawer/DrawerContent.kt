@@ -46,6 +46,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material.icons.outlined.CollectionsBookmark
 import androidx.compose.material.icons.outlined.Drafts
 import androidx.compose.material.icons.outlined.GroupAdd
@@ -462,6 +463,14 @@ fun ListContent(
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
             route = Route.Drafts,
+        )
+
+        NavigationRow(
+            title = R.string.wallet,
+            icon = Icons.Outlined.AccountBalanceWallet,
+            tint = MaterialTheme.colorScheme.onBackground,
+            nav = nav,
+            route = Route.Wallet,
         )
 
         NavigationRow(

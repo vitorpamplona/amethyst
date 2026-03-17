@@ -34,7 +34,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flowOn
@@ -158,7 +157,7 @@ class CommunityListState(
         settings.backupCommunityList?.let { event ->
             Log.d("AccountRegisterObservers", "Loading saved Community list ${event.toJson()}")
             @OptIn(DelicateCoroutinesApi::class)
-            GlobalScope.launch(Dispatchers.IO) {
+            scope.launch(Dispatchers.IO) {
                 LocalCache.justConsumeMyOwnEvent(event)
             }
         }

@@ -776,6 +776,7 @@
     <string name="write_to_relay">Write to Relay</string>
     <string name="write_to_relay_description">The amount in bytes that was sent to this relay, including filters and events</string>
     <string name="read_from_relay_description">The amount in bytes that was received from this relay, including filters and events</string>
+    <string name="relay_event_count">Events stored</string>
     <string name="an_error_occurred_trying_to_get_relay_information">An error occurred trying to get relay information from %1$s</string>
     <string name="owner">Owner</string>
     <string name="used_by">Used By</string>
@@ -1081,6 +1082,9 @@
     <string name="no_wallet_found_with_error">No Wallets found to pay a lightning invoice (Error: %1$s). Please install a Lightning wallet to use zaps</string>
     <string name="no_wallet_found">No Wallets found to pay a lightning invoice. Please install a Lightning wallet to use zaps</string>
 
+    <string name="no_blossom_apps_found_title">Can\'t open Blossom links</string>
+    <string name="no_blossom_apps_found_description">Blossom apps were not found. Please install a local Blossom app to see this file</string>
+
     <string name="hidden_words">Hidden Words</string>
     <string name="hide_new_word_label">Hide new word or sentence</string>
     <string name="automatically_show_profile_picture">Profile Picture</string>
@@ -1233,6 +1237,29 @@
     <string name="route_global">Global</string>
     <string name="route_video">Shorts</string>
     <string name="route_chess">Chess</string>
+    <string name="wallet">Wallet</string>
+    <string name="wallet_balance">Balance</string>
+    <string name="wallet_send">Send</string>
+    <string name="wallet_receive">Receive</string>
+    <string name="wallet_transactions">Transactions</string>
+    <string name="wallet_no_connection">No wallet connected</string>
+    <string name="wallet_no_connection_description">Set up a Nostr Wallet Connect (NWC) connection in your zap settings to use the wallet.</string>
+    <string name="wallet_setup">Set Up Wallet</string>
+    <string name="wallet_sats">sats</string>
+    <string name="wallet_paste_invoice">Paste a BOLT-11 invoice</string>
+    <string name="wallet_pay">Pay</string>
+    <string name="wallet_payment_success">Payment successful</string>
+    <string name="wallet_payment_sending">Sending payment…</string>
+    <string name="wallet_amount_sats">Amount (sats)</string>
+    <string name="wallet_description">Description (optional)</string>
+    <string name="wallet_create_invoice">Create Invoice</string>
+    <string name="wallet_creating_invoice">Creating invoice…</string>
+    <string name="wallet_copy_invoice">Copy Invoice</string>
+    <string name="wallet_no_transactions">No transactions yet</string>
+    <string name="wallet_loading">Loading…</string>
+    <string name="wallet_incoming">Received</string>
+    <string name="wallet_outgoing">Sent</string>
+    <string name="wallet_refresh">Refresh</string>
     <string name="route_security_filters">Security Filters</string>
     <string name="route_import_follows">Import Follows</string>
 
@@ -1291,6 +1318,14 @@
 
     <string name="add_content_warning">Add content warning</string>
     <string name="remove_content_warning">Remove content warning</string>
+
+    <string name="add_expiration_date">Add expiration date</string>
+    <string name="remove_expiration_date">Remove expiration date</string>
+    <string name="expiration_date_label">Expiration Date</string>
+    <string name="expiration_date_explainer">Post will be hidden by clients after this date (NIP-40)</string>
+    <string name="expiration_date_select">Select expiration date and time</string>
+    <string name="expiration_expires_in">Expires in %1$s</string>
+    <string name="expiration_time">Expiration Time</string>
     <string name="show_npub_as_a_qr_code">Show npub as a QR code</string>
     <string name="show_nprofile_as_a_qr_code">Show nprofile as a QR code</string>
 
@@ -1375,6 +1410,10 @@
     <string name="blocked_relays_title">Blocked Relays</string>
     <string name="blocked_section">Blocked Relays</string>
     <string name="blocked_section_explainer">Amethyst will never connect to these relays</string>
+
+    <string name="export_relay_settings">Export relay settings</string>
+    <string name="export_as_text">Export as text</string>
+    <string name="export_as_zip">Export as ZIP (JSON)</string>
 
     <string name="zap_the_devs_title">Zap the Devs!</string>
     <string name="zap_the_devs_description">Your donation helps us make a difference. Every sat counts!</string>
@@ -1500,6 +1539,19 @@
 
     <string name="dont_translate_from">Don\'t Translate From</string>
     <string name="dont_translate_from_description">Languages shown here will not be translated. Select a language to remove it and have it translated again.</string>
+    <string name="translate_to">Translate To</string>
+    <string name="translate_to_description">Choose the language to translate content into.</string>
+    <string name="language_preferences">Language Display Preferences</string>
+    <string name="language_preferences_description">For each translated language pair, choose which language to show first.</string>
+    <string name="language_preference_pair">%1$s → %2$s</string>
+    <string name="search_languages">Search languages</string>
+    <string name="add_language">Add language</string>
+    <string name="add_language_pair">Add language pair</string>
+    <string name="source_language">Source language</string>
+    <string name="target_language">Target language</string>
+    <string name="show_first">Show %1$s first</string>
+    <string name="no_language_preferences">No language display preferences yet. These are created automatically when translations occur, or you can add them manually.</string>
+    <string name="delete_preference">Delete preference</string>
     <string name="pause">Pause</string>
     <string name="play">Play</string>
     <string name="open_dropdown_menu">Open dropdown menu</string>
@@ -1510,6 +1562,7 @@
     <string name="crashreport_found">Crash Report found</string>
     <string name="would_you_like_to_send_the_recent_crash_report_to_amethyst_in_a_dm_no_personal_information_will_be_shared">Would you like to send the recent crash report to Amethyst in a DM? No personal information will be shared</string>
     <string name="crashreport_found_send">Send it</string>
+    <string name="this_message_will_disappear_in">This message will disappear in %1$s</string>
     <string name="this_message_will_disappear_in_days">This message will disappear in %1$d days</string>
     <string name="select_signer">Select Signer</string>
 
@@ -1748,8 +1801,6 @@
     <string name="select_all">Select All</string>
     <string name="uptime">%1$d%% uptime</string>
     <string name="namecoin_settings">Namecoin Settings</string>
-
-    <!-- Event Sync Screen -->
     <string name="event_sync_title">Relay Sync</string>
     <string name="event_sync_section">Relay Sync</string>
     <string name="event_sync_section_explainer">Re-publish your events across all known relays to keep your outbox, inbox, and DM relays up to date. Requires Wi-Fi — this may use a lot of data.</string>
@@ -1784,4 +1835,9 @@
     <string name="event_sync_log_recv">recv %1$s</string>
     <string name="event_sync_log_new">new %1$s</string>
     <string name="event_sync_no_events">no events</string>
+    <string name="ots_explorer_settings">Bitcoin Explorer (OTS)</string>
+    <string name="events">events</string>
+    <string name="dms">DMs</string>
+    <string name="profiles">profiles</string>
+    <string name="relay_settings_lower">relay settings</string>
 </resources>

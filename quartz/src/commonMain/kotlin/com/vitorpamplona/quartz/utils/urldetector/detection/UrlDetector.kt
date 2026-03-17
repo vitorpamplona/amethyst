@@ -334,6 +334,17 @@ class UrlDetector(
             } else if (originalLength > 0 || numSlashes > 0 || !CharUtils.isAlpha(curr)) {
                 // if it's not a character a-z or A-Z then assume we aren't matching scheme, but instead
                 // matching username and password.
+                // Add the slashes to the end of the scheme so it matches what's in the scheme list
+                val schemeStartIndex = findValidSchemeNoSlashesStartIndex(buffer.toString())
+                if (schemeStartIndex >= 0) {
+                    if (schemeStartIndex > 0) {
+                        buffer.deleteRange(0, schemeStartIndex)
+                    }
+                    currentUrlMarker.setIndex(UrlPart.SCHEME, 0)
+                    reader.goBack()
+                    return true
+                }
+
                 reader.goBack()
                 return readUserPass(0)
             }

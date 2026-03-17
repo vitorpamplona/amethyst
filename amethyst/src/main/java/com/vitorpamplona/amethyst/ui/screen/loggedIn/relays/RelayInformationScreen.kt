@@ -47,6 +47,7 @@ import androidx.compose.material.icons.automirrored.filled.Feed
 import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.automirrored.filled.Message
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Code
@@ -61,7 +62,6 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Payment
 import androidx.compose.material.icons.filled.PrivacyTip
-import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material.icons.filled.Topic
@@ -931,7 +931,7 @@ private fun OutboxEventsCard(eventIds: Set<HexKey>) {
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Send,
+                            imageVector = Icons.AutoMirrored.Filled.Send,
                             contentDescription = null,
                             modifier = Modifier.size(12.dp),
                             tint = MaterialTheme.colorScheme.onTertiaryContainer,

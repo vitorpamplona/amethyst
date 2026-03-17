@@ -119,11 +119,12 @@ object ShareHelper {
                         bytesRead >= 12 && matchesMagicNumbers(header, 4, MOV_FTYP) -> detectMp4OrMov(header)
 
                         // MP4/MOV alternative: moov, mdat, or free at offset 4
-                        bytesRead >= 8 && (
-                            matchesMagicNumbers(header, 4, MOV_MOOV) ||
-                                matchesMagicNumbers(header, 4, MOV_MDAT) ||
-                                matchesMagicNumbers(header, 4, MOV_FREE)
-                        ) -> "mp4"
+                        bytesRead >= 8 &&
+                            (
+                                matchesMagicNumbers(header, 4, MOV_MOOV) ||
+                                    matchesMagicNumbers(header, 4, MOV_MDAT) ||
+                                    matchesMagicNumbers(header, 4, MOV_FREE)
+                            ) -> "mp4"
 
                         else -> defaultExtension
                     }

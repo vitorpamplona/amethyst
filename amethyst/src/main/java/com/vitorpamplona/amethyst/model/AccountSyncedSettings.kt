@@ -27,7 +27,6 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
-import java.util.Locale
 
 @Stable
 class AccountSyncedSettings(
@@ -45,9 +44,9 @@ class AccountSyncedSettings(
         )
     val languages =
         AccountLanguagePreferences(
-            internalSettings.languages.dontTranslateFrom,
-            internalSettings.languages.languagePreferences,
-            internalSettings.languages.translateTo,
+            MutableStateFlow(internalSettings.languages.dontTranslateFrom),
+            MutableStateFlow(internalSettings.languages.languagePreferences),
+            MutableStateFlow(internalSettings.languages.translateTo),
         )
     val security =
         AccountSecurityPreferences(
@@ -66,9 +65,9 @@ class AccountSyncedSettings(
                 ),
             languages =
                 AccountLanguagePreferencesInternal(
-                    languages.dontTranslateFrom,
-                    languages.languagePreferences,
-                    languages.translateTo,
+                    languages.dontTranslateFrom.value,
+                    languages.languagePreferences.value,
+                    languages.translateTo.value,
                 ),
             security =
                 AccountSecurityPreferencesInternal(
@@ -98,16 +97,16 @@ class AccountSyncedSettings(
             zaps.defaultZapType.tryEmit(syncedSettingsInternal.zaps.defaultZapType)
         }
 
-        if (languages.dontTranslateFrom != syncedSettingsInternal.languages.dontTranslateFrom) {
-            languages.dontTranslateFrom = syncedSettingsInternal.languages.dontTranslateFrom
+        if (languages.dontTranslateFrom.value != syncedSettingsInternal.languages.dontTranslateFrom) {
+            languages.dontTranslateFrom.value = syncedSettingsInternal.languages.dontTranslateFrom
         }
 
-        if (languages.languagePreferences != syncedSettingsInternal.languages.languagePreferences) {
-            languages.languagePreferences = syncedSettingsInternal.languages.languagePreferences
+        if (languages.languagePreferences.value != syncedSettingsInternal.languages.languagePreferences) {
+            languages.languagePreferences.value = syncedSettingsInternal.languages.languagePreferences
         }
 
-        if (languages.translateTo != syncedSettingsInternal.languages.translateTo) {
-            languages.translateTo = syncedSettingsInternal.languages.translateTo
+        if (languages.translateTo.value != syncedSettingsInternal.languages.translateTo) {
+            languages.translateTo.value = syncedSettingsInternal.languages.translateTo
         }
 
         if (security.showSensitiveContent.value != syncedSettingsInternal.security.showSensitiveContent) {
@@ -123,7 +122,7 @@ class AccountSyncedSettings(
         }
     }
 
-    fun dontTranslateFromFilteredBySpokenLanguages(): Set<String> = languages.dontTranslateFrom - getLanguagesSpokenByUser()
+    fun dontTranslateFromFilteredBySpokenLanguages(): Set<String> = languages.dontTranslateFrom.value - getLanguagesSpokenByUser()
 }
 
 @Stable
@@ -140,27 +139,36 @@ class AccountZapPreferences(
 
 @Stable
 class AccountLanguagePreferences(
-    var dontTranslateFrom: Set<String>,
-    var languagePreferences: Map<String, String>,
-    var translateTo: String,
+    var dontTranslateFrom: MutableStateFlow<Set<String>>,
+    var languagePreferences: MutableStateFlow<Map<String, String>>,
+    var translateTo: MutableStateFlow<String>,
 ) {
     // ---
     // language services
     // ---
     fun toggleDontTranslateFrom(languageCode: String) {
-        dontTranslateFrom =
-            if (!dontTranslateFrom.contains(languageCode)) {
-                dontTranslateFrom.plus(languageCode)
+        dontTranslateFrom.update {
+            if (it.contains(languageCode)) {
+                it - languageCode
             } else {
-                dontTranslateFrom.minus(languageCode)
+                it + languageCode
             }
+        }
     }
 
-    fun translateToContains(languageCode: Locale) = translateTo.contains(languageCode.language)
+    fun addDontTranslateFrom(languageCode: String) {
+        dontTranslateFrom.update { it + languageCode }
+    }
 
-    fun updateTranslateTo(languageCode: Locale): Boolean {
-        if (translateTo != languageCode.language) {
-            translateTo = languageCode.language
+    fun removeDontTranslateFrom(languageCode: String) {
+        dontTranslateFrom.update { it - languageCode }
+    }
+
+    fun translateToContains(languageCode: String) = translateTo.value.contains(languageCode)
+
+    fun updateTranslateTo(languageCode: String): Boolean {
+        if (translateTo.value != languageCode) {
+            translateTo.tryEmit(languageCode)
             return true
         }
         return false
@@ -172,13 +180,15 @@ class AccountLanguagePreferences(
         preference: String,
     ) {
         val key = "$source,$target"
-        if (key !in languagePreferences) {
-            languagePreferences = languagePreferences + Pair(key, preference)
-        } else {
-            if (languagePreferences.get(key) == preference) {
-                languagePreferences = languagePreferences.minus(key)
+        languagePreferences.update {
+            if (key !in it) {
+                it + Pair(key, preference)
             } else {
-                languagePreferences = languagePreferences + Pair(key, preference)
+                if (it.get(key) == preference) {
+                    it.minus(key)
+                } else {
+                    it + Pair(key, preference)
+                }
             }
         }
     }
@@ -186,7 +196,7 @@ class AccountLanguagePreferences(
     fun preferenceBetween(
         source: String,
         target: String,
-    ): String? = languagePreferences["$source,$target"]
+    ): String? = languagePreferences.value["$source,$target"]
 }
 
 @Stable

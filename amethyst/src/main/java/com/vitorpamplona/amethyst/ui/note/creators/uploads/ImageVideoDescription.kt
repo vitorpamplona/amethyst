@@ -78,6 +78,7 @@ import kotlinx.collections.immutable.toImmutableList
 fun ImageVideoDescription(
     uris: MultiOrchestrator,
     defaultServer: ServerName,
+    isUploading: Boolean,
     onAdd: (String, ServerName, Boolean, Int, Boolean) -> Unit,
     onDelete: (SelectedMediaProcessing) -> Unit,
     onCancel: () -> Unit,
@@ -319,6 +320,7 @@ fun ImageVideoDescription(
                     Modifier
                         .fillMaxWidth()
                         .padding(vertical = 10.dp),
+                enabled = !isUploading,
                 onClick = { onAdd(message, selectedServer, sensitiveContent, mediaQualitySlider, useH265Codec) },
                 shape = QuoteBorder,
                 colors =

@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.note.nip22Comments
 import android.content.Context
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.input.TextFieldValue
@@ -44,10 +45,12 @@ import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
+import com.vitorpamplona.amethyst.ui.actions.uploads.MediaUploadTracker
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.ui.note.creators.draftTags.DraftTagState
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.EmojiSuggestionState
+import com.vitorpamplona.amethyst.ui.note.creators.expiration.IExpiration
 import com.vitorpamplona.amethyst.ui.note.creators.location.ILocationGrabber
 import com.vitorpamplona.amethyst.ui.note.creators.messagefield.IMessageField
 import com.vitorpamplona.amethyst.ui.note.creators.previews.PreviewState
@@ -84,6 +87,7 @@ import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarningReason
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitive
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
+import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplits
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiser
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
@@ -101,6 +105,7 @@ import com.vitorpamplona.quartz.nip94FileMetadata.mimeType
 import com.vitorpamplona.quartz.nip94FileMetadata.originalHash
 import com.vitorpamplona.quartz.nip94FileMetadata.sensitiveContent
 import com.vitorpamplona.quartz.nip94FileMetadata.size
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
@@ -113,7 +118,8 @@ open class CommentPostViewModel :
     ILocationGrabber,
     IMessageField,
     IZapField,
-    IZapRaiser {
+    IZapRaiser,
+    IExpiration {
     val draftTag = DraftTagState()
 
     init {
@@ -144,7 +150,9 @@ open class CommentPostViewModel :
 
     val urlPreviews = PreviewState()
 
-    var isUploadingImage by mutableStateOf(false)
+    val mediaUploadTracker = MediaUploadTracker()
+    val isUploadingImage: Boolean get() = mediaUploadTracker.isUploadingImage
+    val isUploadingFile: Boolean get() = mediaUploadTracker.isUploadingFile
 
     var userSuggestions: UserSuggestionState? = null
     var userSuggestionsMainMessage: UserSuggestionAnchor? = null
@@ -168,6 +176,10 @@ open class CommentPostViewModel :
     // NSFW, Sensitive
     var wantsToMarkAsSensitive by mutableStateOf(false)
     var contentWarningDescription by mutableStateOf("")
+
+    // Expiration Date (NIP-40)
+    var wantsExpirationDate by mutableStateOf(false)
+    override var expirationDate by mutableLongStateOf(TimeUtils.oneDayAhead())
 
     // GeoHash
     var wantsToAddGeoHash by mutableStateOf(false)
@@ -274,6 +286,10 @@ open class CommentPostViewModel :
         wantsToMarkAsSensitive = draftEvent.isSensitive()
         contentWarningDescription = draftEvent.contentWarningReason() ?: ""
 
+        val draftExpiration = draftEvent.expiration()
+        wantsExpirationDate = draftExpiration != null
+        expirationDate = draftExpiration ?: TimeUtils.oneDayAhead()
+
         val zapraiser = draftEvent.zapraiserAmount()
         wantsZapraiser = zapraiser != null
         zapRaiserAmount.value = null
@@ -363,6 +379,7 @@ open class CommentPostViewModel :
         val zapReceiver = if (wantsForwardZapTo) forwardZapTo.value.toZapSplitSetup() else null
         val localZapRaiserAmount = if (wantsZapraiser) zapRaiserAmount.value else null
         val contentWarningReason = if (wantsToMarkAsSensitive) contentWarningDescription else null
+        val localExpirationDate = if (wantsExpirationDate) expirationDate else null
 
         val replyingTo = replyingTo
         val replyingToEvent = replyingTo?.event
@@ -399,6 +416,7 @@ open class CommentPostViewModel :
                     localZapRaiserAmount?.let { zapraiser(it) }
                     zapReceiver?.let { zapSplits(it) }
                     contentWarningReason?.let { contentWarning(it) }
+                    localExpirationDate?.let { expiration(it) }
 
                     emojis(emojis)
                     imetas(usedAttachments)
@@ -419,6 +437,7 @@ open class CommentPostViewModel :
                     localZapRaiserAmount?.let { zapraiser(it) }
                     zapReceiver?.let { zapSplits(it) }
                     contentWarningReason?.let { contentWarning(it) }
+                    localExpirationDate?.let { expiration(it) }
 
                     emojis(emojis)
                     imetas(usedAttachments)
@@ -471,7 +490,7 @@ open class CommentPostViewModel :
         viewModelScope.launch(Dispatchers.IO) {
             val myMultiOrchestrator = multiOrchestrator ?: return@launch
 
-            isUploadingImage = true
+            mediaUploadTracker.startUpload(myMultiOrchestrator.hasNonMedia())
 
             val results =
                 myMultiOrchestrator.upload(
@@ -535,7 +554,7 @@ open class CommentPostViewModel :
                 onError(stringRes(context, R.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
             }
 
-            isUploadingImage = false
+            mediaUploadTracker.finishUpload()
         }
     }
 
@@ -548,7 +567,7 @@ open class CommentPostViewModel :
         externalIdentity = null
 
         multiOrchestrator = null
-        isUploadingImage = false
+        mediaUploadTracker.finishUpload()
 
         notifying = null
 
@@ -660,7 +679,7 @@ open class CommentPostViewModel :
 
     fun canPost(): Boolean =
         message.text.isNotBlank() &&
-            !isUploadingImage &&
+            !mediaUploadTracker.isUploading &&
             !wantsInvoice &&
             (!wantsZapraiser || zapRaiserAmount.value != null) &&
             multiOrchestrator == null
@@ -700,6 +719,14 @@ open class CommentPostViewModel :
 
     fun toggleMarkAsSensitive() {
         wantsToMarkAsSensitive = !wantsToMarkAsSensitive
+        draftTag.newVersion()
+    }
+
+    fun toggleExpirationDate() {
+        wantsExpirationDate = !wantsExpirationDate
+        if (wantsExpirationDate) {
+            expirationDate = TimeUtils.oneDayAhead()
+        }
         draftTag.newVersion()
     }
 

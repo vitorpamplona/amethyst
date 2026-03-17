@@ -33,8 +33,10 @@ class Urls(
     val emails: Set<String> = emptySet(),
     val bech32s: Set<String> = emptySet(),
     val relayUrls: Set<String> = emptySet(),
+    val blossomUris: Set<String> = emptySet(),
 )
 
+val httpScheme = listOf(DualCase("http"))
 val websocketScheme = listOf(DualCase("ws"))
 val nostrScheme = listOf(DualCase("nostr"))
 val blossomScheme = listOf(DualCase("blossom"))
@@ -72,25 +74,31 @@ class UrlParser {
         val emails = mutableSetOf<String>()
         val bech32 = mutableSetOf<String>()
         val relays = mutableSetOf<String>()
+        val blossom = mutableSetOf<String>()
 
-        urls.forEach {
-            if (it.isValidTopLevelDomain()) {
-                if (it.wroteWithSchema()) {
-                    if (it.originalUrl.startsWithAny(nostrScheme)) {
-                        bech32.add(it.originalUrl)
-                    } else if (it.originalUrl.startsWithAny(websocketScheme)) {
-                        relays.add(it.originalUrl)
+        urls.forEach { url ->
+            if (url.isValidTopLevelDomain()) {
+                if (url.wroteWithSchema()) {
+                    if (url.originalUrl.startsWithAny(httpScheme)) {
+                        // quick exit
+                        completeUrls.add(url.originalUrl)
+                    } else if (url.originalUrl.startsWithAny(nostrScheme)) {
+                        bech32.add(url.originalUrl)
+                    } else if (url.originalUrl.startsWithAny(websocketScheme)) {
+                        relays.add(url.originalUrl)
+                    } else if (url.originalUrl.startsWithAny(blossomScheme)) {
+                        blossom.add(url.originalUrl)
                     } else {
-                        completeUrls.add(it.originalUrl)
+                        completeUrls.add(url.originalUrl)
                     }
                 } else {
                     // emails are understood as urls from the detector.
-                    if (it.isEmail()) {
-                        Patterns.EMAIL_ADDRESS.findAll(it.originalUrl).forEach {
+                    if (url.isEmail()) {
+                        Patterns.EMAIL_ADDRESS.findAll(url.originalUrl).forEach {
                             emails.add(it.value)
                         }
                     } else {
-                        urlsWithoutScheme.add(it.originalUrl)
+                        urlsWithoutScheme.add(url.originalUrl)
                     }
                 }
             }
@@ -102,6 +110,7 @@ class UrlParser {
             emails = emails,
             bech32s = bech32,
             relayUrls = relays,
+            blossomUris = blossom,
         )
     }
 }

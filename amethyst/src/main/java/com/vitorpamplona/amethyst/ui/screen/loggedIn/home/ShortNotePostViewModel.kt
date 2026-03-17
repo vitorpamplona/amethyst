@@ -49,6 +49,7 @@ import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
+import com.vitorpamplona.amethyst.ui.actions.uploads.MediaUploadTracker
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordingResult
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
@@ -56,6 +57,7 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceAnonymizationControlle
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoicePreset
 import com.vitorpamplona.amethyst.ui.note.creators.draftTags.DraftTagState
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.EmojiSuggestionState
+import com.vitorpamplona.amethyst.ui.note.creators.expiration.IExpiration
 import com.vitorpamplona.amethyst.ui.note.creators.location.ILocationGrabber
 import com.vitorpamplona.amethyst.ui.note.creators.messagefield.IMessageField
 import com.vitorpamplona.amethyst.ui.note.creators.previews.PreviewState
@@ -98,6 +100,7 @@ import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarningReason
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitive
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
+import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
 import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetupLnAddress
 import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitSetup
@@ -143,7 +146,8 @@ open class ShortNotePostViewModel :
     ILocationGrabber,
     IMessageField,
     IZapField,
-    IZapRaiser {
+    IZapRaiser,
+    IExpiration {
     val draftTag = DraftTagState()
 
     lateinit var accountViewModel: AccountViewModel
@@ -175,7 +179,9 @@ open class ShortNotePostViewModel :
 
     val urlPreviews = PreviewState()
 
-    var isUploadingImage by mutableStateOf(false)
+    val mediaUploadTracker = MediaUploadTracker()
+    val isUploadingImage: Boolean get() = mediaUploadTracker.isUploadingImage
+    val isUploadingFile: Boolean get() = mediaUploadTracker.isUploadingFile
 
     var userSuggestions: UserSuggestionState? = null
     var userSuggestionsMainMessage: UserSuggestionAnchor? = null
@@ -238,6 +244,10 @@ open class ShortNotePostViewModel :
     // NSFW, Sensitive
     var wantsToMarkAsSensitive by mutableStateOf(false)
     var contentWarningDescription by mutableStateOf("")
+
+    // Expiration Date (NIP-40)
+    var wantsExpirationDate by mutableStateOf(false)
+    override var expirationDate by mutableLongStateOf(TimeUtils.oneDayAhead())
 
     // GeoHash
     var wantsToAddGeoHash by mutableStateOf(false)
@@ -427,6 +437,10 @@ open class ShortNotePostViewModel :
         wantsToMarkAsSensitive = draftEvent.isSensitive()
         contentWarningDescription = draftEvent.contentWarningReason() ?: ""
 
+        val draftExpiration = draftEvent.tags.expiration()
+        wantsExpirationDate = draftExpiration != null
+        expirationDate = draftExpiration ?: TimeUtils.oneDayAhead()
+
         val geohash = draftEvent.getGeoHash()
         wantsToAddGeoHash = geohash != null
         if (geohash != null) {
@@ -506,6 +520,10 @@ open class ShortNotePostViewModel :
 
         wantsToMarkAsSensitive = draftEvent.isSensitive()
         contentWarningDescription = draftEvent.contentWarningReason() ?: ""
+
+        val draftExpiration = draftEvent.tags.expiration()
+        wantsExpirationDate = draftExpiration != null
+        expirationDate = draftExpiration ?: TimeUtils.oneDayAhead()
 
         val geohash = draftEvent.getGeoHash()
         wantsToAddGeoHash = geohash != null
@@ -593,7 +611,7 @@ open class ShortNotePostViewModel :
             val (event, relays, extras) = accountViewModel.account.createPostEvent(template, extraNotesToBroadcast)
 
             // Launch broadcast in background - don't wait for completion
-            accountViewModel.viewModelScope.launch {
+            accountViewModel.viewModelScope.launch(Dispatchers.IO) {
                 accountViewModel.broadcastTracker.trackBroadcast(
                     event = event,
                     relays = relays,
@@ -690,6 +708,7 @@ open class ShortNotePostViewModel :
         val usedAttachments = iMetaAttachments.filterIsIn(urls.toSet())
 
         val contentWarningReason = if (wantsToMarkAsSensitive) contentWarningDescription else null
+        val localExpirationDate = if (wantsExpirationDate) expirationDate else null
 
         return if (wantsPoll) {
             val options = pollOptions.map { it.value }
@@ -710,6 +729,7 @@ open class ShortNotePostViewModel :
                 localZapRaiserAmount?.let { zapraiser(it) }
                 zapReceiver?.let { zapSplits(it) }
                 contentWarningReason?.let { contentWarning(it) }
+                localExpirationDate?.let { expiration(it) }
 
                 emojis(emojis)
                 imetas(usedAttachments)
@@ -765,6 +785,7 @@ open class ShortNotePostViewModel :
                 localZapRaiserAmount?.let { zapraiser(it) }
                 zapReceiver?.let { zapSplits(it) }
                 contentWarningReason?.let { contentWarning(it) }
+                localExpirationDate?.let { expiration(it) }
 
                 emojis(emojis)
                 imetas(usedAttachments)
@@ -811,7 +832,7 @@ open class ShortNotePostViewModel :
         viewModelScope.launch(Dispatchers.IO) {
             val myMultiOrchestrator = multiOrchestrator ?: return@launch
 
-            isUploadingImage = true
+            mediaUploadTracker.startUpload(myMultiOrchestrator.hasNonMedia())
 
             val results =
                 myMultiOrchestrator.upload(
@@ -867,7 +888,7 @@ open class ShortNotePostViewModel :
                 onError(stringRes(context, R.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
             }
 
-            isUploadingImage = false
+            mediaUploadTracker.finishUpload()
         }
     }
 
@@ -879,7 +900,7 @@ open class ShortNotePostViewModel :
         forkedFromNote = null
 
         multiOrchestrator = null
-        isUploadingImage = false
+        mediaUploadTracker.finishUpload()
         voiceAnonymization.clear()
         deleteVoiceLocalFile()
         voiceRecording = null
@@ -1014,19 +1035,20 @@ open class ShortNotePostViewModel :
     fun canPost(): Boolean {
         // Voice messages can be posted without text (with either uploaded or pending recording)
         if (voiceMetadata != null || voiceRecording != null) {
-            return !isUploadingVoice && !isUploadingImage && processingPreset == null
+            return !isUploadingVoice && !mediaUploadTracker.isUploading && processingPreset == null
         }
 
         // Regular text/media posts require text
         return message.text.isNotBlank() &&
-            !isUploadingImage &&
+            !mediaUploadTracker.isUploading &&
             !isUploadingVoice &&
             !wantsInvoice &&
             (!wantsZapRaiser || zapRaiserAmount.value != null) &&
             (
                 !wantsPoll ||
                     (
-                        pollOptions.isNotEmpty() && pollOptions.all { it.value.label.isNotEmpty() } &&
+                        pollOptions.isNotEmpty() &&
+                            pollOptions.all { it.value.label.isNotEmpty() } &&
                             closedAt > TimeUtils.oneMinuteFromNow()
                     )
             ) &&
@@ -1234,6 +1256,14 @@ open class ShortNotePostViewModel :
 
     fun toggleMarkAsSensitive() {
         wantsToMarkAsSensitive = !wantsToMarkAsSensitive
+        draftTag.newVersion()
+    }
+
+    fun toggleExpirationDate() {
+        wantsExpirationDate = !wantsExpirationDate
+        if (wantsExpirationDate) {
+            expirationDate = TimeUtils.oneDayAhead()
+        }
         draftTag.newVersion()
     }
 

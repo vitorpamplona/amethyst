@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip99Classifieds
 import android.content.Context
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.input.TextFieldValue
@@ -44,10 +45,12 @@ import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
+import com.vitorpamplona.amethyst.ui.actions.uploads.MediaUploadTracker
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.ui.note.creators.draftTags.DraftTagState
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.EmojiSuggestionState
+import com.vitorpamplona.amethyst.ui.note.creators.expiration.IExpiration
 import com.vitorpamplona.amethyst.ui.note.creators.location.ILocationGrabber
 import com.vitorpamplona.amethyst.ui.note.creators.messagefield.IMessageField
 import com.vitorpamplona.amethyst.ui.note.creators.previews.PreviewState
@@ -79,6 +82,7 @@ import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarningReason
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitive
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
+import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplits
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiser
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
@@ -89,6 +93,7 @@ import com.vitorpamplona.quartz.nip99Classifieds.image
 import com.vitorpamplona.quartz.nip99Classifieds.tags.ConditionTag
 import com.vitorpamplona.quartz.nip99Classifieds.tags.PriceTag
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
@@ -102,7 +107,8 @@ open class NewProductViewModel :
     ILocationGrabber,
     IMessageField,
     IZapField,
-    IZapRaiser {
+    IZapRaiser,
+    IExpiration {
     val draftTag = DraftTagState()
 
     lateinit var accountViewModel: AccountViewModel
@@ -128,7 +134,9 @@ open class NewProductViewModel :
 
     val urlPreviews = PreviewState()
 
-    var isUploadingImage by mutableStateOf(false)
+    val mediaUploadTracker = MediaUploadTracker()
+    val isUploadingImage: Boolean get() = mediaUploadTracker.isUploadingImage
+    val isUploadingFile: Boolean get() = mediaUploadTracker.isUploadingFile
 
     var userSuggestions: UserSuggestionState? = null
     var userSuggestionsMainMessage: UserSuggestionAnchor? = null
@@ -159,6 +167,10 @@ open class NewProductViewModel :
     // NSFW, Sensitive
     var wantsToMarkAsSensitive by mutableStateOf(false)
     var contentWarningDescription by mutableStateOf("")
+
+    // Expiration Date (NIP-40)
+    var wantsExpirationDate by mutableStateOf(false)
+    override var expirationDate by mutableLongStateOf(TimeUtils.oneDayAhead())
 
     // GeoHash
     var wantsToAddGeoHash by mutableStateOf(false)
@@ -208,7 +220,7 @@ open class NewProductViewModel :
     }
 
     open fun quote(quote: Note) {
-        val accountViewModel = accountViewModel ?: return
+        val accountViewModel = accountViewModel
 
         message = TextFieldValue(message.text + "\nnostr:${quote.toNEvent()}")
 
@@ -254,6 +266,10 @@ open class NewProductViewModel :
         wantsToMarkAsSensitive = draftEvent.isSensitive()
         contentWarningDescription = draftEvent.contentWarningReason() ?: ""
 
+        val draftExpiration = draftEvent.expiration()
+        wantsExpirationDate = draftExpiration != null
+        expirationDate = draftExpiration ?: TimeUtils.oneDayAhead()
+
         val geohash = draftEvent.getGeoHash()
         wantsToAddGeoHash = geohash != null
 
@@ -291,7 +307,6 @@ open class NewProductViewModel :
     }
 
     suspend fun sendPostSync() {
-        val accountViewModel = accountViewModel ?: return
         val template = createTemplate() ?: return
 
         val version = draftTag.current
@@ -304,8 +319,6 @@ open class NewProductViewModel :
     }
 
     suspend fun sendDraftSync() {
-        val accountViewModel = accountViewModel ?: return
-
         if (message.text.isBlank()) {
             accountViewModel.account.deleteDraftIgnoreErrors(draftTag.current)
         } else {
@@ -315,7 +328,7 @@ open class NewProductViewModel :
     }
 
     private suspend fun createTemplate(): EventTemplate<out Event>? {
-        val accountViewModel = accountViewModel ?: return null
+        val accountViewModel = accountViewModel
 
         val tagger =
             NewMessageTagger(
@@ -324,7 +337,7 @@ open class NewProductViewModel :
             )
         tagger.run()
 
-        val emojis = findEmoji(tagger.message, account?.emoji?.myEmojis?.value)
+        val emojis = findEmoji(tagger.message, account.emoji.myEmojis.value)
         val urls = findURLs(tagger.message)
         val usedAttachments = iMetaDescription.filterIsIn(urls.toSet()) + productImages.map { it.toIMeta() }
 
@@ -333,6 +346,7 @@ open class NewProductViewModel :
         val zapReceiver = if (wantsForwardZapTo) forwardZapTo.value.toZapSplitSetup() else null
         val localZapRaiserAmount = if (wantsZapraiser) zapRaiserAmount.value else null
         val contentWarningReason = if (wantsToMarkAsSensitive) contentWarningDescription else null
+        val localExpirationDate = if (wantsExpirationDate) expirationDate else null
 
         val quotes = findNostrUris(tagger.message)
 
@@ -353,6 +367,7 @@ open class NewProductViewModel :
                 localZapRaiserAmount?.let { zapraiser(it) }
                 zapReceiver?.let { zapSplits(it) }
                 contentWarningReason?.let { contentWarning(it) }
+                localExpirationDate?.let { expiration(it) }
 
                 emojis(emojis)
                 imetas(usedAttachments)
@@ -381,10 +396,10 @@ open class NewProductViewModel :
         context: Context,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            val myAccount = account ?: return@launch
+            val myAccount = account
             val myMultiOrchestrator = multiOrchestrator ?: return@launch
 
-            isUploadingImage = true
+            mediaUploadTracker.startUpload(myMultiOrchestrator.hasNonMedia())
 
             val results =
                 myMultiOrchestrator.upload(
@@ -429,7 +444,7 @@ open class NewProductViewModel :
                 onError(stringRes(context, R.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
             }
 
-            isUploadingImage = false
+            mediaUploadTracker.finishUpload()
         }
     }
 
@@ -439,7 +454,7 @@ open class NewProductViewModel :
         message = TextFieldValue("")
 
         multiOrchestrator = null
-        isUploadingImage = false
+        mediaUploadTracker.finishUpload()
 
         wantsInvoice = false
         wantsZapraiser = false
@@ -483,8 +498,8 @@ open class NewProductViewModel :
         this.multiOrchestrator?.remove(selected)
     }
 
-    override fun updateMessage(it: TextFieldValue) {
-        message = it
+    override fun updateMessage(newMessage: TextFieldValue) {
+        message = newMessage
         urlPreviews.update(message)
 
         if (message.selection.collapsed) {
@@ -560,7 +575,7 @@ open class NewProductViewModel :
 
     fun canPost(): Boolean =
         message.text.isNotBlank() &&
-            !isUploadingImage &&
+            !mediaUploadTracker.isUploading &&
             !wantsInvoice &&
             (!wantsZapraiser || zapRaiserAmount.value != null) &&
             title.text.isNotBlank() &&
@@ -598,7 +613,7 @@ open class NewProductViewModel :
 
     override fun updateZapFromText() {
         viewModelScope.launch(Dispatchers.IO) {
-            val tagger = NewMessageTagger(message.text, emptyList(), emptyList(), accountViewModel!!)
+            val tagger = NewMessageTagger(message.text, emptyList(), emptyList(), accountViewModel)
             tagger.run()
             tagger.pTags?.forEach { taggedUser ->
                 if (!forwardZapTo.value.items.any { it.key == taggedUser }) {
@@ -615,6 +630,14 @@ open class NewProductViewModel :
 
     fun toggleMarkAsSensitive() {
         wantsToMarkAsSensitive = !wantsToMarkAsSensitive
+        draftTag.newVersion()
+    }
+
+    fun toggleExpirationDate() {
+        wantsExpirationDate = !wantsExpirationDate
+        if (wantsExpirationDate) {
+            expirationDate = TimeUtils.oneDayAhead()
+        }
         draftTag.newVersion()
     }
 
