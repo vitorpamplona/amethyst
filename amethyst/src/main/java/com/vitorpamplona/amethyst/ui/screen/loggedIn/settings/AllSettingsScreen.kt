@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material.icons.outlined.CloudUpload
 import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.Settings
@@ -102,6 +103,13 @@ fun AllSettingsScreen(nav: INav) {
                 icon = Icons.Outlined.Translate,
                 tint = tint,
                 onClick = { nav.nav(Route.UserSettings) },
+            )
+            HorizontalDivider()
+            SettingsNavigationRow(
+                title = R.string.nmc_wallet,
+                icon = Icons.Outlined.AccountBalanceWallet,
+                tint = tint,
+                onClick = { nav.nav(Route.NmcWallet) },
             )
         }
     }

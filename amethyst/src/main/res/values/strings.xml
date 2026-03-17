@@ -873,6 +873,7 @@
 
     <string name="preferences">App Preferences</string>
     <string name="user_preferences">User Preferences</string>
+    <string name="nmc_wallet">NMC Wallet</string>
 
     <string name="settings">Settings</string>
     <string name="connectivity_type_always">Always</string>

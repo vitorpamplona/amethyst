@@ -158,7 +158,24 @@ class AppModules(
             },
         )
     val namecoinNameService =
-        com.vitorpamplona.amethyst.service.namecoin.NamecoinNameService.init(namecoinElectrumxClient)
+        com.vitorpamplona.amethyst.service.namecoin.NamecoinNameService
+            .init(namecoinElectrumxClient)
+    val nmcWallet =
+        com.vitorpamplona.quartz.nip05.namecoin.wallet.NmcWallet(
+            electrumClient = namecoinElectrumxClient,
+            socketFactory = { roleBasedHttpClientBuilder.socketFactoryForNip05() },
+        )
+    val nmcWalletService =
+        com.vitorpamplona.amethyst.service.namecoin.NmcWalletService(
+            wallet = nmcWallet,
+            serverListProvider = {
+                if (roleBasedHttpClientBuilder.shouldUseTorForNIP05("https://electrumx.example.com")) {
+                    com.vitorpamplona.quartz.nip05.namecoin.ElectrumxClient.TOR_SERVERS
+                } else {
+                    com.vitorpamplona.quartz.nip05.namecoin.ElectrumxClient.DEFAULT_SERVERS
+                }
+            },
+        )
     val nip05Client = Nip05Client(nip05Fetcher, namecoinResolver)
 
     // Application-wide block height request cache

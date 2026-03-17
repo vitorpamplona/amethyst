@@ -107,6 +107,8 @@ sealed class Route {
         val userToAdd: HexKey,
     ) : Route()
 
+    @Serializable object NmcWallet : Route()
+
     @Serializable object EditProfile : Route()
 
     @Serializable object EditRelays : Route()
@@ -363,6 +365,7 @@ fun getRouteWithArguments(navController: NavHostController): Route? {
         dest.hasRoute<Route.PeopleListManagement>() -> entry.toRoute<Route.PeopleListManagement>()
         dest.hasRoute<Route.NewGroupDM>() -> entry.toRoute<Route.NewGroupDM>()
         dest.hasRoute<Route.UserSettings>() -> entry.toRoute<Route.UserSettings>()
+        dest.hasRoute<Route.NmcWallet>() -> entry.toRoute<Route.NmcWallet>()
         dest.hasRoute<Route.ManualZapSplitPayment>() -> entry.toRoute<Route.ManualZapSplitPayment>()
         else -> null
     }
