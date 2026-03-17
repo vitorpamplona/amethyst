@@ -20,6 +20,10 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,6 +37,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
@@ -339,330 +344,362 @@ fun UserProfileScreen(
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        // Broadcast banner for profile updates
-        ProfileBroadcastBanner(
-            status = broadcastStatus,
-            onTap = {
-                // Clear banner on tap (could add retry logic for failed)
-                if (broadcastStatus is ProfileBroadcastStatus.Success ||
-                    broadcastStatus is ProfileBroadcastStatus.Failed
-                ) {
-                    broadcastStatus = ProfileBroadcastStatus.Idle
-                }
-            },
-        )
+    // Scroll state for detecting scroll direction
+    val listState = rememberLazyListState()
+    var showFloatingHeader by remember { mutableStateOf(false) }
+    var previousFirstVisibleItemIndex by remember { mutableStateOf(0) }
+    var previousFirstVisibleItemScrollOffset by remember { mutableStateOf(0) }
 
-        // Header with back button
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
-                }
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    "Profile",
-                    style = MaterialTheme.typography.headlineMedium,
-                )
-            }
+    // Show floating header when scrolling up and header is scrolled out of view
+    LaunchedEffect(listState.firstVisibleItemIndex, listState.firstVisibleItemScrollOffset) {
+        val currentIndex = listState.firstVisibleItemIndex
+        val currentOffset = listState.firstVisibleItemScrollOffset
+        val scrollingUp =
+            currentIndex < previousFirstVisibleItemIndex ||
+                (currentIndex == previousFirstVisibleItemIndex && currentOffset < previousFirstVisibleItemScrollOffset)
 
-            // Edit button for own profile
-            if (isOwnProfile && account.isReadOnly == false) {
-                OutlinedButton(
-                    onClick = {
-                        editingDisplayName = displayName ?: ""
-                        showEditDialog = true
-                    },
-                ) {
-                    Icon(
-                        Icons.Default.Edit,
-                        contentDescription = "Edit profile",
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text("Edit Profile")
-                }
-            }
+        // Header items are indices 0-3, so if first visible >= 3, header is out of view
+        showFloatingHeader = scrollingUp && currentIndex >= 3
+        if (!scrollingUp && currentIndex < 3) showFloatingHeader = false
 
-            // Follow/Unfollow button for other profiles
-            if (account != null && !account.isReadOnly && pubKeyHex != account.pubKeyHex) {
-                Column(horizontalAlignment = Alignment.End) {
-                    Button(
-                        onClick = {
-                            scope.launch {
-                                val currentStatus = followState.currentStatusOrNull()
+        previousFirstVisibleItemIndex = currentIndex
+        previousFirstVisibleItemScrollOffset = currentOffset
+    }
 
-                                followState.setFollowLoading()
-                                try {
-                                    val updatedEvent =
-                                        if (currentStatus?.isFollowing == true) {
-                                            unfollowUser(pubKeyHex, account, relayManager, myContactList)
-                                        } else {
-                                            followUser(pubKeyHex, account, relayManager, myContactList)
-                                        }
-
-                                    // Update both stored contact list and followState
-                                    myContactList = updatedEvent
-                                    followState.setFollowSuccess(updatedEvent, pubKeyHex)
-                                } catch (e: Exception) {
-                                    e.printStackTrace()
-                                    followState.setFollowError(e.message ?: "Failed to update follow status", e)
-                                }
-                            }
-                        },
-                        enabled = contactListLoaded && followState.state.value !is com.vitorpamplona.amethyst.commons.state.LoadingState.Loading,
-                    ) {
-                        val state = followState.state.collectAsState().value
-                        val isFollowing = (state as? com.vitorpamplona.amethyst.commons.state.LoadingState.Success)?.data?.isFollowing ?: false
-                        val isLoading = state is com.vitorpamplona.amethyst.commons.state.LoadingState.Loading
-
-                        when {
-                            !contactListLoaded -> {
-                                androidx.compose.material3.CircularProgressIndicator(
-                                    modifier = Modifier.size(16.dp),
-                                    strokeWidth = 2.dp,
-                                    color = MaterialTheme.colorScheme.onPrimary,
-                                )
-                                Spacer(Modifier.width(8.dp))
-                                Text("Loading...")
-                            }
-
-                            isLoading -> {
-                                androidx.compose.material3.CircularProgressIndicator(
-                                    modifier = Modifier.size(16.dp),
-                                    strokeWidth = 2.dp,
-                                    color = MaterialTheme.colorScheme.onPrimary,
-                                )
-                                Spacer(Modifier.width(8.dp))
-                                Text(if (isFollowing) "Unfollowing..." else "Following...")
-                            }
-
-                            else -> {
-                                Icon(
-                                    if (isFollowing) Icons.Default.PersonRemove else Icons.Default.PersonAdd,
-                                    contentDescription = if (isFollowing) "Unfollow" else "Follow",
-                                    modifier = Modifier.size(18.dp),
-                                )
-                                Spacer(Modifier.width(8.dp))
-                                Text(if (isFollowing) "Unfollow" else "Follow")
-                            }
-                        }
-                    }
-
-                    val errorMessage =
-                        followState.state
-                            .collectAsState()
-                            .value
-                            .errorOrNull()
-                    errorMessage?.let { error ->
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            error,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                    }
-                }
-            }
-        }
-
+    Box(modifier = Modifier.fillMaxSize()) {
         if (connectedRelays.isEmpty()) {
             LoadingState("Connecting to relays...")
         } else {
-            // Profile card
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors =
-                    CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    ),
+            LazyColumn(
+                state = listState,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxSize(),
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                // Broadcast banner
+                item(key = "broadcast") {
+                    ProfileBroadcastBanner(
+                        status = broadcastStatus,
+                        onTap = {
+                            if (broadcastStatus is ProfileBroadcastStatus.Success ||
+                                broadcastStatus is ProfileBroadcastStatus.Failed
+                            ) {
+                                broadcastStatus = ProfileBroadcastStatus.Idle
+                            }
+                        },
+                    )
+                }
+
+                // Header with back button
+                item(key = "header") {
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.Top,
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        // Profile picture with robohash fallback
-                        UserAvatar(
-                            userHex = pubKeyHex,
-                            pictureUrl = picture,
-                            size = 56.dp,
-                            contentDescription = "Profile picture",
-                        )
-
-                        Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(onClick = onBack) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                            }
+                            Spacer(Modifier.width(8.dp))
                             Text(
-                                displayName ?: (pubKeyHex.hexToByteArrayOrNull()?.toNpub()?.take(20) ?: pubKeyHex.take(20)),
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
+                                "Profile",
+                                style = MaterialTheme.typography.headlineMedium,
                             )
-                            Spacer(Modifier.height(4.dp))
-                            val npub = pubKeyHex.hexToByteArrayOrNull()?.toNpub()
-                            var copied by remember { mutableStateOf(false) }
+                        }
 
-                            // Reset copied state after delay
-                            LaunchedEffect(copied) {
-                                if (copied) {
-                                    delay(2000)
-                                    copied = false
+                        // Edit button for own profile
+                        if (isOwnProfile && account.isReadOnly == false) {
+                            OutlinedButton(
+                                onClick = {
+                                    editingDisplayName = displayName ?: ""
+                                    showEditDialog = true
+                                },
+                            ) {
+                                Icon(
+                                    Icons.Default.Edit,
+                                    contentDescription = "Edit profile",
+                                    modifier = Modifier.size(18.dp),
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text("Edit Profile")
+                            }
+                        }
+
+                        // Follow/Unfollow button for other profiles
+                        if (account != null && !account.isReadOnly && pubKeyHex != account.pubKeyHex) {
+                            Column(horizontalAlignment = Alignment.End) {
+                                Button(
+                                    onClick = {
+                                        scope.launch {
+                                            val currentStatus = followState.currentStatusOrNull()
+
+                                            followState.setFollowLoading()
+                                            try {
+                                                val updatedEvent =
+                                                    if (currentStatus?.isFollowing == true) {
+                                                        unfollowUser(pubKeyHex, account, relayManager, myContactList)
+                                                    } else {
+                                                        followUser(pubKeyHex, account, relayManager, myContactList)
+                                                    }
+
+                                                // Update both stored contact list and followState
+                                                myContactList = updatedEvent
+                                                followState.setFollowSuccess(updatedEvent, pubKeyHex)
+                                            } catch (e: Exception) {
+                                                e.printStackTrace()
+                                                followState.setFollowError(e.message ?: "Failed to update follow status", e)
+                                            }
+                                        }
+                                    },
+                                    enabled = contactListLoaded && followState.state.value !is com.vitorpamplona.amethyst.commons.state.LoadingState.Loading,
+                                ) {
+                                    val state = followState.state.collectAsState().value
+                                    val isFollowing = (state as? com.vitorpamplona.amethyst.commons.state.LoadingState.Success)?.data?.isFollowing ?: false
+                                    val isLoading = state is com.vitorpamplona.amethyst.commons.state.LoadingState.Loading
+
+                                    when {
+                                        !contactListLoaded -> {
+                                            androidx.compose.material3.CircularProgressIndicator(
+                                                modifier = Modifier.size(16.dp),
+                                                strokeWidth = 2.dp,
+                                                color = MaterialTheme.colorScheme.onPrimary,
+                                            )
+                                            Spacer(Modifier.width(8.dp))
+                                            Text("Loading...")
+                                        }
+
+                                        isLoading -> {
+                                            androidx.compose.material3.CircularProgressIndicator(
+                                                modifier = Modifier.size(16.dp),
+                                                strokeWidth = 2.dp,
+                                                color = MaterialTheme.colorScheme.onPrimary,
+                                            )
+                                            Spacer(Modifier.width(8.dp))
+                                            Text(if (isFollowing) "Unfollowing..." else "Following...")
+                                        }
+
+                                        else -> {
+                                            Icon(
+                                                if (isFollowing) Icons.Default.PersonRemove else Icons.Default.PersonAdd,
+                                                contentDescription = if (isFollowing) "Unfollow" else "Follow",
+                                                modifier = Modifier.size(18.dp),
+                                            )
+                                            Spacer(Modifier.width(8.dp))
+                                            Text(if (isFollowing) "Unfollow" else "Follow")
+                                        }
+                                    }
+                                }
+
+                                val errorMessage =
+                                    followState.state
+                                        .collectAsState()
+                                        .value
+                                        .errorOrNull()
+                                errorMessage?.let { error ->
+                                    Spacer(Modifier.height(4.dp))
+                                    Text(
+                                        error,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.error,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Profile card
+                item(key = "profile-card") {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors =
+                            CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            ),
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalAlignment = Alignment.Top,
+                            ) {
+                                UserAvatar(
+                                    userHex = pubKeyHex,
+                                    pictureUrl = picture,
+                                    size = 56.dp,
+                                    contentDescription = "Profile picture",
+                                )
+
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        displayName ?: (pubKeyHex.hexToByteArrayOrNull()?.toNpub()?.take(20) ?: pubKeyHex.take(20)),
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.Bold,
+                                    )
+                                    Spacer(Modifier.height(4.dp))
+                                    val npub = pubKeyHex.hexToByteArrayOrNull()?.toNpub()
+                                    var copied by remember { mutableStateOf(false) }
+
+                                    LaunchedEffect(copied) {
+                                        if (copied) {
+                                            delay(2000)
+                                            copied = false
+                                        }
+                                    }
+
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                    ) {
+                                        Text(
+                                            (npub?.take(32) ?: pubKeyHex.take(32)) + "...",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                        if (npub != null) {
+                                            IconButton(
+                                                onClick = {
+                                                    val clipboard = Toolkit.getDefaultToolkit().systemClipboard
+                                                    clipboard.setContents(StringSelection(npub), null)
+                                                    copied = true
+                                                },
+                                                modifier = Modifier.size(20.dp),
+                                            ) {
+                                                Icon(
+                                                    if (copied) Icons.Default.Check else Icons.Default.ContentCopy,
+                                                    contentDescription = if (copied) "Copied" else "Copy npub",
+                                                    modifier = Modifier.size(14.dp),
+                                                    tint =
+                                                        if (copied) {
+                                                            MaterialTheme.colorScheme.primary
+                                                        } else {
+                                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                                        },
+                                                )
+                                            }
+                                        }
+                                    }
                                 }
                             }
 
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            ) {
+                            if (about != null) {
+                                Spacer(Modifier.height(12.dp))
                                 Text(
-                                    (npub?.take(32) ?: pubKeyHex.take(32)) + "...",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    about!!,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
                                 )
-                                if (npub != null) {
-                                    IconButton(
-                                        onClick = {
-                                            val clipboard = Toolkit.getDefaultToolkit().systemClipboard
-                                            clipboard.setContents(StringSelection(npub), null)
-                                            copied = true
-                                        },
-                                        modifier = Modifier.size(20.dp),
+                            }
+
+                            Spacer(Modifier.height(12.dp))
+
+                            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                                Column {
+                                    Text(
+                                        "$followersCount",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold,
+                                    )
+                                    Text(
+                                        "Followers",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                                Column {
+                                    Text(
+                                        "$followingCount",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold,
+                                    )
+                                    Text(
+                                        "Following",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Tabs
+                item(key = "tabs") {
+                    PrimaryTabRow(selectedTabIndex = selectedTab) {
+                        Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }) {
+                            Text("Notes", modifier = Modifier.padding(12.dp))
+                        }
+                        Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }) {
+                            Text("Gallery", modifier = Modifier.padding(12.dp))
+                        }
+                    }
+                }
+
+                // Tab content
+                when (selectedTab) {
+                    0 -> {
+                        when {
+                            postsError != null -> {
+                                item(key = "error") {
+                                    Box(
+                                        modifier = Modifier.fillMaxWidth().padding(32.dp),
+                                        contentAlignment = Alignment.Center,
                                     ) {
-                                        Icon(
-                                            if (copied) Icons.Default.Check else Icons.Default.ContentCopy,
-                                            contentDescription = if (copied) "Copied" else "Copy npub",
-                                            modifier = Modifier.size(14.dp),
-                                            tint =
-                                                if (copied) {
-                                                    MaterialTheme.colorScheme.primary
-                                                } else {
-                                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                                },
+                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                            Text(
+                                                "Failed to load posts",
+                                                style = MaterialTheme.typography.titleMedium,
+                                                color = MaterialTheme.colorScheme.error,
+                                            )
+                                            Spacer(Modifier.height(8.dp))
+                                            Text(
+                                                postsError!!,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                            Spacer(Modifier.height(16.dp))
+                                            OutlinedButton(onClick = { retryTrigger++ }) {
+                                                Text("Retry")
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            postsLoading -> {
+                                item(key = "loading") {
+                                    Box(
+                                        modifier = Modifier.fillMaxWidth().padding(32.dp),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                            androidx.compose.material3.CircularProgressIndicator()
+                                            Spacer(Modifier.height(16.dp))
+                                            Text(
+                                                "Loading posts...",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            events.isEmpty() -> {
+                                item(key = "empty") {
+                                    Box(
+                                        modifier = Modifier.fillMaxWidth().padding(32.dp),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Text(
+                                            "No posts yet",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                     }
                                 }
                             }
-                        }
-                    }
 
-                    if (about != null) {
-                        Spacer(Modifier.height(12.dp))
-                        Text(
-                            about!!,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                    }
-
-                    Spacer(Modifier.height(12.dp))
-
-                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        Column {
-                            Text(
-                                "$followersCount",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                            )
-                            Text(
-                                "Followers",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        Column {
-                            Text(
-                                "$followingCount",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                            )
-                            Text(
-                                "Following",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-                }
-            }
-
-            Spacer(Modifier.height(16.dp))
-
-            // Notes / Gallery tabs
-            PrimaryTabRow(selectedTabIndex = selectedTab) {
-                Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }) {
-                    Text("Notes", modifier = Modifier.padding(12.dp))
-                }
-                Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }) {
-                    Text("Gallery", modifier = Modifier.padding(12.dp))
-                }
-            }
-
-            Spacer(Modifier.height(8.dp))
-
-            when (selectedTab) {
-                0 -> {
-                    when {
-                        postsError != null -> {
-                            Box(
-                                modifier = Modifier.fillMaxWidth().padding(32.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text(
-                                        "Failed to load posts",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = MaterialTheme.colorScheme.error,
-                                    )
-                                    Spacer(Modifier.height(8.dp))
-                                    Text(
-                                        postsError!!,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                    Spacer(Modifier.height(16.dp))
-                                    OutlinedButton(onClick = { retryTrigger++ }) {
-                                        Text("Retry")
-                                    }
-                                }
-                            }
-                        }
-
-                        postsLoading -> {
-                            Box(
-                                modifier = Modifier.fillMaxWidth().padding(32.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    androidx.compose.material3.CircularProgressIndicator()
-                                    Spacer(Modifier.height(16.dp))
-                                    Text(
-                                        "Loading posts...",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                            }
-                        }
-
-                        events.isEmpty() -> {
-                            Box(
-                                modifier = Modifier.fillMaxWidth().padding(32.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Text(
-                                    "No posts yet",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                        }
-
-                        else -> {
-                            LazyColumn(
-                                verticalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
+                            else -> {
                                 items(events.distinctBy { it.id }, key = { it.id }) { event ->
                                     FeedNoteCard(
                                         event = event,
@@ -684,14 +721,51 @@ fun UserProfileScreen(
                             }
                         }
                     }
-                }
 
-                1 -> {
-                    GalleryTab(
-                        pictureEvents = pictureEvents,
-                        onImageClick = { urls, index -> lightboxState = LightboxState(urls, index) },
-                    )
+                    1 -> {
+                        item(key = "gallery") {
+                            GalleryTab(
+                                pictureEvents = pictureEvents,
+                                onImageClick = { urls, index -> lightboxState = LightboxState(urls, index) },
+                            )
+                        }
+                    }
                 }
+            }
+        }
+
+        // Floating header — appears on scroll up when profile header is out of view
+        AnimatedVisibility(
+            visible = showFloatingHeader,
+            enter = slideInVertically { -it },
+            exit = slideOutVertically { -it },
+            modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth(),
+        ) {
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.95f))
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                }
+                Spacer(Modifier.width(8.dp))
+                UserAvatar(
+                    userHex = pubKeyHex,
+                    pictureUrl = picture,
+                    size = 28.dp,
+                    contentDescription = "Profile picture",
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    displayName ?: pubKeyHex.take(12) + "...",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                )
             }
         }
     }

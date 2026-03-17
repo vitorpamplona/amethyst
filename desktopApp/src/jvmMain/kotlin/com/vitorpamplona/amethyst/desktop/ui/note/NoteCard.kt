@@ -285,7 +285,7 @@ fun RichTextContent(
     content: String,
     urls: Urls,
     modifier: Modifier = Modifier,
-    maxLines: Int = 10,
+    maxLines: Int = Int.MAX_VALUE,
 ) {
     if (urls.withScheme.isEmpty()) {
         Text(
