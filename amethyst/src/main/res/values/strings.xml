@@ -732,6 +732,11 @@
     <string name="app_notification_zaps_channel_message_from">From %1$s</string>
     <string name="app_notification_zaps_channel_message_for">for %1$s</string>
 
+    <string name="app_notification_reply_label">Reply</string>
+    <string name="app_notification_mark_read_label">Mark Read</string>
+    <string name="app_notification_dms_summary">New messages</string>
+    <string name="app_notification_zaps_summary">New zaps</string>
+
     <string name="reply_notify">Notify: </string>
 
     <string name="channel_list_join_conversation">Join Conversation</string>

@@ -183,7 +183,7 @@ class EventNotificationConsumer(
         }
     }
 
-    private fun notify(
+    private suspend fun notify(
         event: ChatMessageEncryptedFileHeaderEvent,
         account: Account,
     ) {
@@ -210,13 +210,10 @@ class EventNotificationConsumer(
                 val content = chatNote.event?.content ?: ""
                 val user = chatNote.author?.toBestDisplayName() ?: ""
                 val userPicture = chatNote.author?.profilePicture()
-                val noteUri =
-                    chatNote.toNEvent() + ACCOUNT_QUERY_PARAM +
-                        account.signer.pubKey
-                            .hexToByteArray()
-                            .toNpub()
+                val accountNpub = account.signer.pubKey.hexToByteArray().toNpub()
+                val chatroomMembers = chatRoom.users.joinToString(",")
+                val noteUri = chatNote.toNEvent() + ACCOUNT_QUERY_PARAM + accountNpub
 
-                // TODO: Show Image on notification
                 notificationManager()
                     .sendDMNotification(
                         event.id,
@@ -226,12 +223,14 @@ class EventNotificationConsumer(
                         userPicture,
                         noteUri,
                         applicationContext,
+                        accountNpub = accountNpub,
+                        chatroomMembers = chatroomMembers,
                     )
             }
         }
     }
 
-    private fun notify(
+    private suspend fun notify(
         event: ChatMessageEvent,
         account: Account,
     ) {
@@ -255,11 +254,10 @@ class EventNotificationConsumer(
                 val content = chatNote.event?.content ?: ""
                 val user = chatNote.author?.toBestDisplayName() ?: ""
                 val userPicture = chatNote.author?.profilePicture()
-                val noteUri =
-                    chatNote.toNEvent() + ACCOUNT_QUERY_PARAM +
-                        account.signer.pubKey
-                            .hexToByteArray()
-                            .toNpub()
+                val accountNpub = account.signer.pubKey.hexToByteArray().toNpub()
+                val chatroomMembers = chatRoom.users.joinToString(",")
+                val noteUri = chatNote.toNEvent() + ACCOUNT_QUERY_PARAM + accountNpub
+
                 notificationManager()
                     .sendDMNotification(
                         event.id,
@@ -269,6 +267,8 @@ class EventNotificationConsumer(
                         userPicture,
                         noteUri,
                         applicationContext,
+                        accountNpub = accountNpub,
+                        chatroomMembers = chatroomMembers,
                     )
             }
         }
@@ -297,13 +297,21 @@ class EventNotificationConsumer(
                     decryptContent(note, account.signer)?.let { content ->
                         val user = note.author?.toBestDisplayName() ?: ""
                         val userPicture = note.author?.profilePicture()
-                        val noteUri =
-                            note.toNEvent() + ACCOUNT_QUERY_PARAM +
-                                account.signer.pubKey
-                                    .hexToByteArray()
-                                    .toNpub()
+                        val accountNpub = account.signer.pubKey.hexToByteArray().toNpub()
+                        val noteUri = note.toNEvent() + ACCOUNT_QUERY_PARAM + accountNpub
+
                         notificationManager()
-                            .sendDMNotification(event.id, content, user, event.createdAt, userPicture, noteUri, applicationContext)
+                            .sendDMNotification(
+                                event.id,
+                                content,
+                                user,
+                                event.createdAt,
+                                userPicture,
+                                noteUri,
+                                applicationContext,
+                                accountNpub = accountNpub,
+                                chatroomMembers = null,
+                            )
                     }
                 }
             }
