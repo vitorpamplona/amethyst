@@ -40,6 +40,7 @@ import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -86,10 +87,11 @@ fun WalletTransactionsScreen(
         walletViewModel.fetchTransactions()
     }
 
-    val transactions by walletViewModel.transactions.collectAsState()
+    val transactions by walletViewModel.filteredTransactions.collectAsState(emptyList())
     val isLoading by walletViewModel.isLoading.collectAsState()
     val isLoadingMore by walletViewModel.isLoadingMore.collectAsState()
     val hasMore by walletViewModel.hasMoreTransactions.collectAsState()
+    val currentFilter by walletViewModel.transactionFilter.collectAsState()
 
     val listState = rememberLazyListState()
 
@@ -166,6 +168,9 @@ fun WalletTransactionsScreen(
                 modifier = Modifier.padding(padding),
                 state = listState,
             ) {
+                item {
+                    TransactionFilterRow(currentFilter) { walletViewModel.setTransactionFilter(it) }
+                }
                 items(transactions) { tx ->
                     TransactionItem(tx, accountViewModel, nav)
                     HorizontalDivider()
@@ -185,6 +190,36 @@ fun WalletTransactionsScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun TransactionFilterRow(
+    currentFilter: TransactionFilter,
+    onFilterSelected: (TransactionFilter) -> Unit,
+) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        FilterChip(
+            selected = currentFilter == TransactionFilter.ALL,
+            onClick = { onFilterSelected(TransactionFilter.ALL) },
+            label = { Text(stringRes(R.string.wallet_filter_all)) },
+        )
+        FilterChip(
+            selected = currentFilter == TransactionFilter.ZAPS,
+            onClick = { onFilterSelected(TransactionFilter.ZAPS) },
+            label = { Text(stringRes(R.string.wallet_filter_zaps)) },
+        )
+        FilterChip(
+            selected = currentFilter == TransactionFilter.NON_ZAPS,
+            onClick = { onFilterSelected(TransactionFilter.NON_ZAPS) },
+            label = { Text(stringRes(R.string.wallet_filter_non_zaps)) },
+        )
     }
 }
 

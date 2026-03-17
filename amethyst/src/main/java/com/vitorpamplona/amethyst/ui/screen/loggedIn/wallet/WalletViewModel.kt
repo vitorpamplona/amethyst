@@ -39,6 +39,8 @@ import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceSuccessResponse
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 sealed class SendState {
@@ -70,6 +72,12 @@ sealed class ReceiveState {
     ) : ReceiveState()
 }
 
+enum class TransactionFilter {
+    ALL,
+    ZAPS,
+    NON_ZAPS,
+}
+
 class WalletViewModel : ViewModel() {
     private var account: Account? = null
 
@@ -83,7 +91,18 @@ class WalletViewModel : ViewModel() {
     val walletAlias = _walletAlias.asStateFlow()
 
     private val _transactions = MutableStateFlow<List<NwcTransaction>>(emptyList())
-    val transactions = _transactions.asStateFlow()
+
+    private val _transactionFilter = MutableStateFlow(TransactionFilter.ALL)
+    val transactionFilter = _transactionFilter.asStateFlow()
+
+    val filteredTransactions =
+        combine(_transactions, _transactionFilter) { txs, filter ->
+            when (filter) {
+                TransactionFilter.ALL -> txs
+                TransactionFilter.ZAPS -> txs.filter { it.parsedMetadata()?.nostr != null }
+                TransactionFilter.NON_ZAPS -> txs.filter { it.parsedMetadata()?.nostr == null }
+            }
+        }
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading = _isLoading.asStateFlow()
@@ -335,5 +354,9 @@ class WalletViewModel : ViewModel() {
 
     fun clearError() {
         _error.value = null
+    }
+
+    fun setTransactionFilter(filter: TransactionFilter) {
+        _transactionFilter.value = filter
     }
 }
