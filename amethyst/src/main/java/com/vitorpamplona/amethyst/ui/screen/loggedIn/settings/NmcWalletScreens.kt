@@ -848,46 +848,36 @@ private fun FileExportButtons(walletService: NmcWalletService) {
         androidx.activity.compose.rememberLauncherForActivityResult(
             contract =
                 androidx.activity.result.contract.ActivityResultContracts
-                    .CreateDocument("text/plain"),
+                    .CreateDocument("application/json"),
         ) { uri ->
             if (uri != null) {
                 exportStatus =
                     try {
                         val wif = walletService.exportWif()
-                        val p2pkhAddr =
-                            com.vitorpamplona.quartz.nip05.namecoin.wallet.NmcKeyManager
-                                .addressFromPubKey(
-                                    com.vitorpamplona.quartz.utils.Hex
-                                        .decode(walletService.wallet.pubKeyHex!!),
-                                )
-                        val segwitAddr = walletService.wallet.address ?: "unknown"
+                        val pubKeyHex = walletService.wallet.pubKeyHex!!
+                        // Electrum-NMC imported_keys wallet format:
+                        // A valid wallet JSON with keystore type "imported"
+                        // containing the private key with script type prefix.
                         val content =
                             buildString {
-                                appendLine("# Electrum-NMC Import Instructions")
-                                appendLine("# =================================")
-                                appendLine("#")
-                                appendLine("# Method 1: Electrum-NMC Console (Wallet → Console)")
-                                appendLine("#   For p2wpkh (native SegWit, recommended):")
-                                appendLine("#     wallet.import_privkey('p2wpkh:$wif')")
-                                appendLine("#")
-                                appendLine("#   For p2wpkh-p2sh (wrapped SegWit):")
-                                appendLine("#     wallet.import_privkey('p2wpkh-p2sh:$wif')")
-                                appendLine("#")
-                                appendLine("#   For p2pkh (legacy):")
-                                appendLine("#     wallet.import_privkey('p2pkh:$wif')")
-                                appendLine("#")
-                                appendLine("# Method 2: Electrum-NMC CLI")
-                                appendLine("#   electrum-nmc importprivkey 'p2wpkh:$wif'")
-                                appendLine("#")
-                                appendLine("# Addresses derived from this key:")
-                                appendLine("#   Native SegWit (P2WPKH): $segwitAddr")
-                                appendLine("#   Legacy (P2PKH):         $p2pkhAddr")
-                                appendLine("#")
-                                appendLine("# WIF key (Namecoin, compressed):")
-                                appendLine(wif)
+                                appendLine("{")
+                                appendLine("    \"wallet_type\": \"imported\",")
+                                appendLine("    \"keystore\": {")
+                                appendLine("        \"type\": \"imported\",")
+                                appendLine("        \"keypairs\": {")
+                                appendLine("            \"$pubKeyHex\": \"p2wpkh:$wif\"")
+                                appendLine("        }")
+                                appendLine("    },")
+                                appendLine("    \"addresses\": {")
+                                appendLine("        \"change\": [],")
+                                appendLine("        \"receiving\": [\"p2wpkh:$wif\"]")
+                                appendLine("    },")
+                                appendLine("    \"seed_version\": 17,")
+                                appendLine("    \"use_encryption\": false")
+                                appendLine("}")
                             }
                         context.contentResolver.openOutputStream(uri)?.use { it.write(content.toByteArray()) }
-                        "✓ Electrum-NMC import file saved"
+                        "✓ Electrum-NMC wallet file saved — open with File → Open in Electrum-NMC"
                     } catch (e: Exception) {
                         "Error: ${e.message}"
                     }
@@ -991,7 +981,7 @@ private fun FileExportButtons(walletService: NmcWalletService) {
         OutlinedButton(
             onClick = {
                 val address = walletService.wallet.address?.take(8) ?: "nmc"
-                electrumLauncher.launch("nmc_electrum_import_$address.txt")
+                electrumLauncher.launch("nmc_electrum_wallet_$address.json")
             },
             modifier = Modifier.weight(1f),
             colors = ButtonDefaults.outlinedButtonColors(contentColor = NmcBlue),
