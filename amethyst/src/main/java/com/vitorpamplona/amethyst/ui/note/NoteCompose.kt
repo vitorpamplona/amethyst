@@ -270,6 +270,7 @@ fun NoteCompose(
     accountViewModel: AccountViewModel,
     nav: INav,
     moreOptions: (@Composable () -> Unit)? = null,
+    onClick: (() -> Unit)? = null,
 ) {
     WatchNoteEvent(
         baseNote = baseNote,
@@ -299,6 +300,7 @@ fun NoteCompose(
                 accountViewModel = accountViewModel,
                 nav = nav,
                 moreOptions = moreOptions,
+                onClick = onClick,
             )
         }
     }
@@ -319,6 +321,7 @@ fun AcceptableNote(
     accountViewModel: AccountViewModel,
     nav: INav,
     moreOptions: (@Composable () -> Unit)?,
+    onClick: (() -> Unit)? = null,
 ) {
     if (isQuotedNote || isBoostedNote) {
         val noteEvent = baseNote.event
@@ -374,6 +377,7 @@ fun AcceptableNote(
                         showPopup = showPopup,
                         nav = nav,
                         moreOptions = moreOptions,
+                        onClick = onClick,
                     )
                 }
             }
@@ -431,6 +435,7 @@ fun AcceptableNote(
                         showPopup = showPopup,
                         nav = nav,
                         moreOptions = moreOptions,
+                        onClick = onClick,
                     )
                 }
             }
@@ -492,6 +497,7 @@ private fun CheckNewAndRenderNote(
     showPopup: () -> Unit,
     nav: INav,
     moreOptions: (@Composable () -> Unit)? = null,
+    onClick: (() -> Unit)? = null,
 ) {
     val backgroundColor =
         calculateBackgroundColor(
@@ -508,6 +514,7 @@ private fun CheckNewAndRenderNote(
         accountViewModel = accountViewModel,
         showPopup = showPopup,
         nav = nav,
+        onClick = onClick,
     ) {
         InnerNoteWithReactions(
             baseNote = baseNote,
@@ -534,30 +541,33 @@ fun ClickableNote(
     accountViewModel: AccountViewModel,
     showPopup: () -> Unit,
     nav: INav,
+    onClick: (() -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
+    val defaultOnClick: () -> Unit = {
+        val redirectToNote =
+            if (baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent) {
+                baseNote.replyTo?.lastOrNull() ?: baseNote
+            } else {
+                baseNote
+            }
+
+        nav.nav {
+            if (redirectToNote.event is DraftWrapEvent) {
+                withContext(Dispatchers.IO) {
+                    routeEditDraftTo(redirectToNote, accountViewModel.account)
+                }
+            } else {
+                routeFor(redirectToNote, accountViewModel.account)
+            }
+        }
+    }
+
     val updatedModifier =
-        remember(baseNote, modifier) {
+        remember(baseNote, modifier, onClick) {
             modifier
                 .combinedClickable(
-                    onClick = {
-                        val redirectToNote =
-                            if (baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent) {
-                                baseNote.replyTo?.lastOrNull() ?: baseNote
-                            } else {
-                                baseNote
-                            }
-
-                        nav.nav {
-                            if (redirectToNote.event is DraftWrapEvent) {
-                                withContext(Dispatchers.IO) {
-                                    routeEditDraftTo(redirectToNote, accountViewModel.account)
-                                }
-                            } else {
-                                routeFor(redirectToNote, accountViewModel.account)
-                            }
-                        }
-                    },
+                    onClick = onClick ?: defaultOnClick,
                     onLongClick = showPopup,
                 )
         }

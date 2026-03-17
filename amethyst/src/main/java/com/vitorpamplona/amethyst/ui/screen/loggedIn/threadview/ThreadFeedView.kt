@@ -38,6 +38,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalTextStyle
@@ -287,27 +289,21 @@ fun RenderThreadFeed(
     nav: INav,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
+    val levelCache by viewModel.levelCacheFlow.collectAsStateWithLifecycle()
+    val foldedNotes = remember { mutableStateOf(setOf<String>()) }
 
-    val position = items.list.indexOfFirst { it.idHex == noteId }
+    val visibleItems by remember(items, foldedNotes.value, levelCache) {
+        derivedStateOf {
+            computeVisibleItems(items.list, foldedNotes.value, levelCache)
+        }
+    }
+
+    val position = visibleItems.indexOfFirst { it.note.idHex == noteId }
 
     LaunchedEffect(noteId, position) {
-        // hack to allow multiple scrolls to Item while posts on the screen load.
-        // This is important when clicking on a reply of an older thread in Notifications
-        // In that case, this screen will open with 0-1 items, and the scrollToItem below
-        // will not change the state of the screen (too few items, scroll is not available)
-        // as the app loads the reaming of the thread the position of the reply changes
-        // and because there wasn't a possibility to scroll before and now there is one,
-        // the screen stays at the top. Once the thread has enough replies, the lazy column
-        // updates with new items correctly. It just needs a few items to start the scroll.
-        //
-        // This hack allows the list 1 second to fill up with more
-        // records before setting up the position on the feed.
-        //
-        // It jumps around, but it is the best we can do.
-
         if (position >= 0 && !viewModel.hasDragged.value) {
             val offset =
-                if (position > items.list.size - 3) {
+                if (position > visibleItems.size - 3) {
                     0
                 } else {
                     -200
@@ -322,7 +318,8 @@ fun RenderThreadFeed(
         contentPadding = FeedPadding,
         state = listState,
     ) {
-        itemsIndexed(items.list, key = { _, item -> item.idHex }) { index, item ->
+        itemsIndexed(visibleItems, key = { _, item -> item.note.idHex }) { index, threadItem ->
+            val item = threadItem.note
             val level = viewModel.levelFlowForItem(item).collectAsStateWithLifecycle(0)
 
             val modifier =
@@ -348,10 +345,27 @@ fun RenderThreadFeed(
                     )
                 }
             } else {
+                val isFolded = item.idHex in foldedNotes.value
+                val hasChildren = threadItem.childCount > 0
                 val selectedNoteColor = MaterialTheme.colorScheme.selectedNote
                 val background =
                     remember {
                         if (item.idHex == noteId) mutableStateOf(selectedNoteColor) else null
+                    }
+
+                val onClickHandler: (() -> Unit)? =
+                    if (hasChildren) {
+                        {
+                            val current = foldedNotes.value
+                            foldedNotes.value =
+                                if (isFolded) {
+                                    current - item.idHex
+                                } else {
+                                    current + item.idHex
+                                }
+                        }
+                    } else {
+                        null
                     }
 
                 NoteCompose(
@@ -363,13 +377,103 @@ fun RenderThreadFeed(
                     parentBackgroundColor = background,
                     accountViewModel = accountViewModel,
                     nav = nav,
+                    onClick = onClickHandler,
                 )
+
+                if (isFolded && hasChildren) {
+                    FoldedRepliesSummary(
+                        hiddenCount = threadItem.childCount,
+                        modifier = modifier,
+                    )
+                }
             }
 
             HorizontalDivider(
                 thickness = DividerThickness,
             )
         }
+    }
+}
+
+data class ThreadItem(
+    val note: Note,
+    val childCount: Int,
+)
+
+private fun computeVisibleItems(
+    allItems: List<Note>,
+    foldedNotes: Set<String>,
+    levelCache: Map<Note, Int>,
+): List<ThreadItem> {
+    if (allItems.isEmpty()) return emptyList()
+
+    val result = mutableListOf<ThreadItem>()
+    var i = 0
+
+    while (i < allItems.size) {
+        val item = allItems[i]
+        val itemLevel = levelCache[item] ?: 0
+
+        // Count children that would follow this note
+        var childCount = 0
+        var j = i + 1
+        while (j < allItems.size) {
+            val nextLevel = levelCache[allItems[j]] ?: 0
+            if (nextLevel > itemLevel) {
+                childCount++
+                j++
+            } else {
+                break
+            }
+        }
+
+        result.add(ThreadItem(item, childCount))
+
+        if (item.idHex in foldedNotes && childCount > 0) {
+            // Skip all children
+            i = j
+        } else {
+            i++
+        }
+    }
+
+    return result
+}
+
+@Composable
+private fun FoldedRepliesSummary(
+    hiddenCount: Int,
+    modifier: Modifier = Modifier,
+) {
+    val text =
+        if (hiddenCount == 1) {
+            "$hiddenCount reply hidden"
+        } else {
+            "$hiddenCount replies hidden"
+        }
+
+    Row(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        Icon(
+            imageVector = Icons.Default.ExpandMore,
+            contentDescription = stringRes(R.string.expand),
+            modifier = Modifier.size(16.dp),
+            tint = MaterialTheme.colorScheme.placeholderText,
+        )
+
+        Spacer(modifier = Modifier.padding(horizontal = 4.dp))
+
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.placeholderText,
+        )
     }
 }
 
