@@ -82,6 +82,9 @@ import java.io.File
 private val MEDIA_EXTENSIONS =
     setOf("jpg", "jpeg", "png", "gif", "webp", "svg", "avif", "mp4", "webm", "mov", "mp3", "ogg", "wav", "flac")
 
+private val IMAGE_EXTENSIONS =
+    setOf("jpg", "jpeg", "png", "gif", "webp", "svg", "avif")
+
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun ComposeNoteDialog(
@@ -99,6 +102,7 @@ fun ComposeNoteDialog(
     val uploadState by uploadTracker.state.collectAsState()
     val orchestrator = remember { DesktopUploadOrchestrator() }
     var selectedServer by remember { mutableStateOf(DesktopPreferences.preferredBlossomServer) }
+    var postAsPicture by remember { mutableStateOf(false) }
 
     // Drag-and-drop state
     var isDragOver by remember { mutableStateOf(false) }
@@ -165,16 +169,20 @@ fun ComposeNoteDialog(
                 Spacer(Modifier.height(16.dp))
 
                 OutlinedTextField(
-                    value = content,
+                    value = if (postAsPicture) "" else content,
                     onValueChange = {
                         content = it
                         errorMessage = null
                     },
-                    modifier = Modifier.fillMaxWidth().height(200.dp),
-                    label = { Text("What's on your mind?") },
-                    placeholder = { Text("Write your note...") },
-                    enabled = !isPosting,
-                    maxLines = 10,
+                    modifier = Modifier.fillMaxWidth().height(if (postAsPicture) 60.dp else 200.dp),
+                    label = {
+                        Text(
+                            if (postAsPicture) "Text disabled for picture posts" else "What's on your mind?",
+                        )
+                    },
+                    placeholder = { Text(if (postAsPicture) "" else "Write your note...") },
+                    enabled = !isPosting && !postAsPicture,
+                    maxLines = if (postAsPicture) 1 else 10,
                 )
 
                 Spacer(Modifier.height(8.dp))
@@ -193,13 +201,31 @@ fun ComposeNoteDialog(
                     onRemove = { attachedFiles.remove(it) },
                 )
 
-                // Server selector — shown when files are attached
+                // Server selector + post type — shown when files are attached
                 if (attachedFiles.isNotEmpty()) {
                     Spacer(Modifier.height(4.dp))
-                    ServerSelector(
-                        selectedServer = selectedServer,
-                        onServerSelected = { selectedServer = it },
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                    ) {
+                        ServerSelector(
+                            selectedServer = selectedServer,
+                            onServerSelected = { selectedServer = it },
+                        )
+
+                        // Post type toggle — only when images are attached
+                        val hasImages =
+                            attachedFiles.any {
+                                it.extension.lowercase() in IMAGE_EXTENSIONS
+                            }
+                        if (hasImages) {
+                            PostTypeSelector(
+                                isPicture = postAsPicture,
+                                onToggle = { postAsPicture = it },
+                            )
+                        }
+                    }
                 }
 
                 Spacer(Modifier.height(4.dp))
@@ -283,16 +309,24 @@ fun ComposeNoteDialog(
                                             }
                                         }
 
-                                    // Build imeta tags from upload metadata
-                                    val imetaTags = buildIMetaTags(uploadResults)
-
-                                    publishNote(
-                                        content = finalContent,
-                                        account = account,
-                                        relayManager = relayManager,
-                                        replyTo = replyTo,
-                                        imetaTags = imetaTags,
-                                    )
+                                    if (postAsPicture) {
+                                        val pictureMetas = buildPictureMetas(uploadResults)
+                                        publishPicture(
+                                            description = content,
+                                            images = pictureMetas,
+                                            account = account,
+                                            relayManager = relayManager,
+                                        )
+                                    } else {
+                                        val imetaTags = buildIMetaTags(uploadResults)
+                                        publishNote(
+                                            content = finalContent,
+                                            account = account,
+                                            relayManager = relayManager,
+                                            replyTo = replyTo,
+                                            imetaTags = imetaTags,
+                                        )
+                                    }
                                     onDismiss()
                                 } catch (e: Exception) {
                                     errorMessage = "Failed: ${e.message}"
@@ -379,6 +413,77 @@ private fun ServerSelector(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun PostTypeSelector(
+    isPicture: Boolean,
+    onToggle: (Boolean) -> Unit,
+) {
+    Row(
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(
+            "Post as:",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        androidx.compose.material3.FilterChip(
+            selected = !isPicture,
+            onClick = { onToggle(false) },
+            label = { Text("Note", style = MaterialTheme.typography.labelSmall) },
+        )
+        androidx.compose.material3.FilterChip(
+            selected = isPicture,
+            onClick = { onToggle(true) },
+            label = { Text("Picture", style = MaterialTheme.typography.labelSmall) },
+        )
+    }
+}
+
+private fun buildPictureMetas(results: List<UploadResult>): List<com.vitorpamplona.quartz.nip68Picture.PictureMeta> =
+    results.mapNotNull { result ->
+        val url = result.blossom.url ?: return@mapNotNull null
+        val meta = result.metadata
+        com.vitorpamplona.quartz.nip68Picture.PictureMeta(
+            url = url,
+            mimeType = meta.mimeType,
+            blurhash = meta.blurhash,
+            dimension =
+                if (meta.width != null && meta.height != null) {
+                    com.vitorpamplona.quartz.nip94FileMetadata.tags
+                        .DimensionTag(meta.width, meta.height)
+                } else {
+                    null
+                },
+            hash = meta.sha256,
+            size = meta.size.toInt(),
+        )
+    }
+
+private suspend fun publishPicture(
+    description: String,
+    images: List<com.vitorpamplona.quartz.nip68Picture.PictureMeta>,
+    account: AccountState.LoggedIn,
+    relayManager: DesktopRelayConnectionManager,
+) {
+    withContext(Dispatchers.IO) {
+        if (account.isReadOnly) {
+            throw IllegalStateException("Cannot post in read-only mode")
+        }
+
+        val template =
+            com.vitorpamplona.quartz.nip68Picture.PictureEvent.build(
+                images = images,
+                description = description,
+            ) {
+                hashtags(findHashtags(description))
+            }
+
+        val signedEvent = account.signer.sign(template)
+        relayManager.broadcastToAll(signedEvent)
     }
 }
 

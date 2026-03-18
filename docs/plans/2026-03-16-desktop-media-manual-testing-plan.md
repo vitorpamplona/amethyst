@@ -20,13 +20,13 @@ Branch has 13 commits implementing Phases 0-9 of desktop media: image display, u
 
 | # | Test | Steps | Expected | Status |
 |---|------|-------|----------|--------|
-| 1.1 | Images load in feed | Open feed with image notes | Blurhash placeholder shows first, then full image fades in | ⬜ TODO |
-| 1.2 | User avatars render | Browse feed/profile | All profile pictures display correctly | ⬜ TODO |
+| 1.1 | Images load in feed | Open feed with image notes | Blurhash placeholder shows first, then full image fades in | ✅ PASS |
+| 1.2 | User avatars render | Browse feed/profile | All profile pictures display correctly | ✅ PASS |
 | 1.3 | Animated GIF | Open note with GIF URL | GIF animates with all frames | ✅ PASS (was static-only, fixed with AnimatedGifImage composable) |
-| 1.4 | Base64 inline images | Open note with base64 data URI | Image decodes and displays | ⬜ TODO |
-| 1.5 | Cache persistence | Close app, reopen, revisit same feed | Previously loaded images appear instantly (disk cache) | ⬜ TODO |
-| 1.6 | Cache location | Check OS cache dir | macOS: `~/Library/Caches/amethyst/`, Linux: `~/.cache/amethyst/` | ⬜ TODO |
-| 1.7 | Broken image URL | Note with 404 image URL | Graceful fallback (no crash, placeholder or blank) | ⬜ TODO |
+| 1.4 | Base64 inline images | Open note with base64 data URI | Image decodes and displays | ✅ PASS |
+| 1.5 | Cache persistence | Close app, reopen, revisit same feed | Previously loaded images appear instantly (disk cache) | ✅ PASS |
+| 1.6 | Cache location | Check OS cache dir | macOS: `~/Library/Caches/AmethystDesktop/image_cache/` | ✅ PASS |
+| 1.7 | Broken image URL | Note with 404 image URL | Graceful fallback (no crash, placeholder or blank) | ✅ PASS |
 
 ---
 
