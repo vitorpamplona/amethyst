@@ -210,7 +210,7 @@ class ChannelMetadataViewModel : ViewModel() {
 
         val strippedUri =
             if (account.settings.stripLocationOnUpload) {
-                MetadataStripper().strip(galleryUri.uri, galleryUri.mimeType, context.applicationContext)
+                MetadataStripper().strip(galleryUri.uri, galleryUri.mimeType, context.applicationContext).uri
             } else {
                 galleryUri.uri
             }
