@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui.settings
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -29,8 +30,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -40,12 +39,17 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -106,15 +110,19 @@ fun MediaServerSettings(
         Spacer(Modifier.height(16.dp))
 
         // Server list
-        LazyColumn(
+        Column(
             verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.weight(1f, fill = false),
         ) {
-            items(servers) { server ->
+            for (server in servers.toList()) {
                 ServerRow(
                     server = server,
                     status = serverStatuses[server] ?: ServerHealthCheck.ServerStatus.UNKNOWN,
                     isDefault = servers.indexOf(server) == 0,
+                    onSetDefault = {
+                        servers.remove(server)
+                        servers.add(0, server)
+                        onServersChanged(servers.toList())
+                    },
                     onRemove = {
                         servers.remove(server)
                         serverStatuses.remove(server)
@@ -152,7 +160,7 @@ fun MediaServerSettings(
             Button(
                 onClick = {
                     val url = newServerUrl.trim().removeSuffix("/")
-                    if (url.isNotBlank() && url !in servers) {
+                    if (url.isNotBlank() && url !in servers && isValidServerUrl(url)) {
                         servers.add(url)
                         newServerUrl = ""
                         onServersChanged(servers.toList())
@@ -162,7 +170,7 @@ fun MediaServerSettings(
                         }
                     }
                 },
-                enabled = newServerUrl.isNotBlank(),
+                enabled = newServerUrl.isNotBlank() && isValidServerUrl(newServerUrl.trim()),
             ) {
                 Icon(Icons.Default.Add, contentDescription = "Add")
                 Spacer(Modifier.width(4.dp))
@@ -202,11 +210,23 @@ fun MediaServerSettings(
     }
 }
 
+private fun isValidServerUrl(url: String): Boolean {
+    val trimmed = url.trim().removeSuffix("/")
+    return try {
+        val uri = java.net.URI(trimmed)
+        uri.scheme in listOf("https", "http") && uri.host != null && uri.host.contains(".")
+    } catch (_: Exception) {
+        false
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ServerRow(
     server: String,
     status: ServerHealthCheck.ServerStatus,
     isDefault: Boolean,
+    onSetDefault: () -> Unit,
     onRemove: () -> Unit,
     onRefresh: () -> Unit,
 ) {
@@ -221,17 +241,33 @@ private fun ServerRow(
             modifier = Modifier.fillMaxWidth().padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Status indicator
-            Surface(
-                modifier = Modifier.size(12.dp),
-                shape = CircleShape,
-                color =
-                    when (status) {
-                        ServerHealthCheck.ServerStatus.ONLINE -> Color(0xFF4CAF50)
-                        ServerHealthCheck.ServerStatus.OFFLINE -> Color(0xFFF44336)
-                        ServerHealthCheck.ServerStatus.UNKNOWN -> Color(0xFF9E9E9E)
-                    },
-            ) {}
+            // Status indicator with tooltip
+            TooltipBox(
+                positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+                tooltip = {
+                    PlainTooltip {
+                        Text(
+                            when (status) {
+                                ServerHealthCheck.ServerStatus.ONLINE -> "Online"
+                                ServerHealthCheck.ServerStatus.OFFLINE -> "Offline — server unreachable"
+                                ServerHealthCheck.ServerStatus.UNKNOWN -> "Checking..."
+                            },
+                        )
+                    }
+                },
+                state = rememberTooltipState(),
+            ) {
+                Surface(
+                    modifier = Modifier.size(12.dp),
+                    shape = CircleShape,
+                    color =
+                        when (status) {
+                            ServerHealthCheck.ServerStatus.ONLINE -> Color(0xFF4CAF50)
+                            ServerHealthCheck.ServerStatus.OFFLINE -> Color(0xFFF44336)
+                            ServerHealthCheck.ServerStatus.UNKNOWN -> Color(0xFF9E9E9E)
+                        },
+                ) {}
+            }
 
             Spacer(Modifier.width(12.dp))
 
@@ -245,6 +281,13 @@ private fun ServerRow(
                         "Default server",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary,
+                    )
+                } else {
+                    Text(
+                        "Set as default",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.clickable { onSetDefault() },
                     )
                 }
             }

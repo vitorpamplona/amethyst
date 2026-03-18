@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.desktop.ui.note
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -57,9 +58,11 @@ import com.vitorpamplona.amethyst.commons.richtext.Urls
 import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
 import com.vitorpamplona.amethyst.commons.util.toTimeAgo
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
+import com.vitorpamplona.amethyst.desktop.ui.media.AnimatedGifImage
 import com.vitorpamplona.amethyst.desktop.ui.media.AudioPlayer
 import com.vitorpamplona.amethyst.desktop.ui.media.DesktopVideoPlayer
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalWindowState
+import com.vitorpamplona.amethyst.desktop.ui.media.isAnimatedGifUrl
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
@@ -155,60 +158,69 @@ fun NoteCard(
             CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant,
             ),
-        onClick = onClick ?: {},
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
+            // Header + text area — clickable to navigate to thread
+            Column(
+                modifier =
+                    if (onClick != null) {
+                        Modifier.clickable { onClick() }
+                    } else {
+                        Modifier
+                    },
             ) {
-                // Author with avatar
                 Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier =
-                        if (onAuthorClick != null) {
-                            Modifier.clickable { onAuthorClick(note.pubKeyHex) }
-                        } else {
-                            Modifier
-                        },
                 ) {
-                    UserAvatar(
-                        userHex = note.pubKeyHex,
-                        pictureUrl = note.profilePictureUrl,
-                        size = 32.dp,
-                        contentDescription = "Profile picture of ${note.pubKeyDisplay}",
-                    )
+                    // Author with avatar
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier =
+                            if (onAuthorClick != null) {
+                                Modifier.clickable { onAuthorClick(note.pubKeyHex) }
+                            } else {
+                                Modifier
+                            },
+                    ) {
+                        UserAvatar(
+                            userHex = note.pubKeyHex,
+                            pictureUrl = note.profilePictureUrl,
+                            size = 32.dp,
+                            contentDescription = "Profile picture of ${note.pubKeyDisplay}",
+                        )
 
-                    Spacer(Modifier.width(8.dp))
+                        Spacer(Modifier.width(8.dp))
 
+                        Text(
+                            text = note.pubKeyDisplay.take(20) + if (note.pubKeyDisplay.length > 20) "..." else "",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            maxLines = 1,
+                        )
+                    }
+
+                    // Timestamp
                     Text(
-                        text = note.pubKeyDisplay.take(20) + if (note.pubKeyDisplay.length > 20) "..." else "",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        maxLines = 1,
+                        text = note.createdAt.toTimeAgo(withDot = false),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
 
-                // Timestamp
-                Text(
-                    text = note.createdAt.toTimeAgo(withDot = false),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+                Spacer(Modifier.height(8.dp))
 
-            Spacer(Modifier.height(8.dp))
-
-            if (strippedContent.isNotBlank()) {
-                RichTextContent(
-                    content = strippedContent,
-                    urls = strippedUrls,
-                    localCache = localCache,
-                    onMentionClick = onMentionClick,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
+                if (strippedContent.isNotBlank()) {
+                    RichTextContent(
+                        content = strippedContent,
+                        urls = strippedUrls,
+                        localCache = localCache,
+                        onMentionClick = onMentionClick,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            } // end clickable header+text column
 
             // Inline images
             if (imageUrls.isNotEmpty()) {
@@ -216,9 +228,7 @@ fun NoteCard(
                     Spacer(Modifier.height(8.dp))
                 }
                 for ((index, url) in imageUrls.withIndex()) {
-                    AsyncImage(
-                        model = url,
-                        contentDescription = null,
+                    Box(
                         modifier =
                             Modifier
                                 .fillMaxWidth()
@@ -231,8 +241,23 @@ fun NoteCard(
                                         Modifier
                                     },
                                 ),
-                        contentScale = ContentScale.Fit,
-                    )
+                    ) {
+                        if (isAnimatedGifUrl(url)) {
+                            AnimatedGifImage(
+                                url = url,
+                                contentDescription = null,
+                                modifier = Modifier.fillMaxWidth(),
+                                contentScale = ContentScale.Fit,
+                            )
+                        } else {
+                            AsyncImage(
+                                model = url,
+                                contentDescription = null,
+                                modifier = Modifier.fillMaxWidth(),
+                                contentScale = ContentScale.Fit,
+                            )
+                        }
+                    }
                     if (url != imageUrls.last()) {
                         Spacer(Modifier.height(4.dp))
                     }

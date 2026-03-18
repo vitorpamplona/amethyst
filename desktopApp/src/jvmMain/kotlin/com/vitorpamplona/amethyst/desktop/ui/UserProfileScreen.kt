@@ -714,7 +714,10 @@ fun UserProfileScreen(
                                             lightboxState = LightboxState(urls, index)
                                         },
                                         onMediaClick = { urls, index, seekPos ->
-                                            lightboxState = LightboxState(urls, index, seekPos, fullscreen = true)
+                                            com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
+                                                .playVideo(urls[index], seekPos)
+                                            com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
+                                                .toggleFullscreen()
                                         },
                                     )
                                 }

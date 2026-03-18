@@ -194,7 +194,7 @@ fun VideoControls(
                         Slider(
                             value = volume / 100f,
                             onValueChange = { onVolumeChange((it * 100).toInt()) },
-                            modifier = Modifier.width(80.dp),
+                            modifier = Modifier.width(240.dp),
                             colors =
                                 SliderDefaults.colors(
                                     thumbColor = Color.White,

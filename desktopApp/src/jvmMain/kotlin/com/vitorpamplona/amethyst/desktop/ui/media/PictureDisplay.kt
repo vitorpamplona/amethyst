@@ -66,30 +66,40 @@ fun PictureDisplay(
         Column {
             // Images
             for ((index, url) in imageUrls.withIndex()) {
-                AsyncImage(
-                    model = url,
-                    contentDescription = title,
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .heightIn(max = 500.dp)
-                            .clip(
-                                if (index == 0 && title == null && description.isBlank()) {
-                                    RoundedCornerShape(8.dp)
-                                } else if (index == 0) {
-                                    RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)
-                                } else {
-                                    RoundedCornerShape(0.dp)
-                                },
-                            ).then(
-                                if (onImageClick != null) {
-                                    Modifier.clickable { onImageClick(imageUrls, index) }
-                                } else {
-                                    Modifier
-                                },
-                            ),
-                    contentScale = ContentScale.FillWidth,
-                )
+                val imageModifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 500.dp)
+                        .clip(
+                            if (index == 0 && title == null && description.isBlank()) {
+                                RoundedCornerShape(8.dp)
+                            } else if (index == 0) {
+                                RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)
+                            } else {
+                                RoundedCornerShape(0.dp)
+                            },
+                        ).then(
+                            if (onImageClick != null) {
+                                Modifier.clickable { onImageClick(imageUrls, index) }
+                            } else {
+                                Modifier
+                            },
+                        )
+                if (isAnimatedGifUrl(url)) {
+                    AnimatedGifImage(
+                        url = url,
+                        contentDescription = title,
+                        modifier = imageModifier,
+                        contentScale = ContentScale.FillWidth,
+                    )
+                } else {
+                    AsyncImage(
+                        model = url,
+                        contentDescription = title,
+                        modifier = imageModifier,
+                        contentScale = ContentScale.FillWidth,
+                    )
+                }
             }
 
             // Title + description below images

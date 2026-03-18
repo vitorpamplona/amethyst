@@ -37,106 +37,26 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.desktop.service.media.VlcjPlayerPool
-import kotlinx.coroutines.delay
-import uk.co.caprica.vlcj.player.base.MediaPlayer
-import uk.co.caprica.vlcj.player.base.MediaPlayerEventAdapter
+import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
 
-/**
- * Audio-only player using VLCJ with pooled audio players.
- * Uses VlcjPlayerPool's shared audio factory instead of creating one per instance.
- */
 @Composable
 fun AudioPlayer(
     url: String,
     modifier: Modifier = Modifier,
 ) {
-    var isPlaying by remember { mutableStateOf(false) }
-    var position by remember { mutableFloatStateOf(0f) }
-    var duration by remember { mutableLongStateOf(0L) }
-    var currentTime by remember { mutableLongStateOf(0L) }
-    var vlcAvailable by remember { mutableStateOf(true) }
-    var player by remember { mutableStateOf<MediaPlayer?>(null) }
+    val audioState by GlobalMediaPlayer.audioState.collectAsState()
+    val isActiveAudio = audioState.url == url
 
-    DisposableEffect(url) {
-        val mp = VlcjPlayerPool.acquireAudioPlayer()
-        if (mp == null) {
-            vlcAvailable = false
-            return@DisposableEffect onDispose {}
-        }
-
-        val listener =
-            object : MediaPlayerEventAdapter() {
-                override fun playing(mediaPlayer: MediaPlayer) {
-                    isPlaying = true
-                    duration = mediaPlayer.status().length()
-                }
-
-                override fun paused(mediaPlayer: MediaPlayer) {
-                    isPlaying = false
-                }
-
-                override fun stopped(mediaPlayer: MediaPlayer) {
-                    isPlaying = false
-                }
-
-                override fun positionChanged(
-                    mediaPlayer: MediaPlayer,
-                    newPosition: Float,
-                ) {
-                    position = newPosition
-                    currentTime = (newPosition * duration).toLong()
-                }
-
-                override fun finished(mediaPlayer: MediaPlayer) {
-                    isPlaying = false
-                    position = 0f
-                    currentTime = 0L
-                }
-            }
-
-        mp.events().addMediaPlayerEventListener(listener)
-        player = mp
-
-        onDispose {
-            player = null
-            mp.events().removeMediaPlayerEventListener(listener)
-            VlcjPlayerPool.releaseAudioPlayer(mp)
-        }
-    }
-
-    // Position polling
-    LaunchedEffect(isPlaying) {
-        while (isPlaying) {
-            delay(500)
-            player?.let {
-                position = it.status().position()
-                currentTime = it.status().time()
-            }
-        }
-    }
-
-    if (!vlcAvailable) {
-        Text(
-            "Audio: $url (install VLC to play)",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = modifier,
-        )
-        return
-    }
+    val isPlaying = if (isActiveAudio) audioState.isPlaying else false
+    val position = if (isActiveAudio) audioState.position else 0f
+    val duration = if (isActiveAudio) audioState.duration else 0L
+    val currentTime = if (isActiveAudio) audioState.currentTime else 0L
 
     Row(
         modifier =
@@ -157,16 +77,10 @@ fun AudioPlayer(
 
         IconButton(
             onClick = {
-                player?.let { p ->
-                    if (isPlaying) {
-                        p.controls().pause()
-                    } else {
-                        if (position <= 0f && !p.status().isPlaying) {
-                            p.media().play(url)
-                        } else {
-                            p.controls().play()
-                        }
-                    }
+                if (isActiveAudio) {
+                    GlobalMediaPlayer.toggleAudioPlayPause()
+                } else {
+                    GlobalMediaPlayer.playAudio(url)
                 }
             },
             modifier = Modifier.size(32.dp),
@@ -185,7 +99,7 @@ fun AudioPlayer(
 
         Slider(
             value = position,
-            onValueChange = { player?.controls()?.setPosition(it) },
+            onValueChange = { GlobalMediaPlayer.seekAudio(it) },
             modifier = Modifier.weight(1f),
         )
 

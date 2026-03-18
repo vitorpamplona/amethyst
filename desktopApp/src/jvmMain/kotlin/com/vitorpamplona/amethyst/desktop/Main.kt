@@ -31,6 +31,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
@@ -146,7 +148,13 @@ sealed class DesktopScreen {
 
 fun main() {
     DesktopImageLoaderSetup.setup()
-    Runtime.getRuntime().addShutdownHook(Thread { VlcjPlayerPool.shutdown() })
+    Runtime.getRuntime().addShutdownHook(
+        Thread {
+            com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
+                .shutdown()
+            VlcjPlayerPool.shutdown()
+        },
+    )
     // Pre-init VLC on background thread so first play is fast
     Thread { VlcjPlayerPool.init() }.start()
     application {
@@ -687,61 +695,71 @@ fun MainContent(
     val isImmersive by com.vitorpamplona.amethyst.desktop.ui.media.LocalIsImmersiveFullscreen.current
 
     Box(Modifier.fillMaxSize()) {
-        Row(Modifier.fillMaxSize()) {
-            when (layoutMode) {
-                LayoutMode.SINGLE_PANE -> {
-                    SinglePaneLayout(
-                        relayManager = relayManager,
-                        localCache = localCache,
-                        accountManager = accountManager,
-                        account = account,
-                        nwcConnection = nwcConnection,
-                        subscriptionsCoordinator = subscriptionsCoordinator,
-                        appScope = appScope,
-                        onShowComposeDialog = onShowComposeDialog,
-                        onShowReplyDialog = onShowReplyDialog,
-                        onZapFeedback = onZapFeedback,
-                        signerConnectionState = signerConnectionState,
-                        lastPingTimeSec = lastPingTimeSec,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-
-                LayoutMode.DECK -> {
-                    if (!isImmersive) {
-                        DeckSidebar(
-                            onAddColumn = onShowAddColumnDialog,
-                            onOpenSettings = {
-                                if (deckState.hasColumnOfType(DeckColumnType.Settings)) {
-                                    deckState.focusExistingColumn(DeckColumnType.Settings)
-                                } else {
-                                    deckState.addColumn(DeckColumnType.Settings)
-                                }
-                            },
+        Column(Modifier.fillMaxSize()) {
+            Row(Modifier.fillMaxSize().weight(1f)) {
+                when (layoutMode) {
+                    LayoutMode.SINGLE_PANE -> {
+                        SinglePaneLayout(
+                            relayManager = relayManager,
+                            localCache = localCache,
+                            accountManager = accountManager,
+                            account = account,
+                            nwcConnection = nwcConnection,
+                            subscriptionsCoordinator = subscriptionsCoordinator,
+                            appScope = appScope,
+                            onShowComposeDialog = onShowComposeDialog,
+                            onShowReplyDialog = onShowReplyDialog,
+                            onZapFeedback = onZapFeedback,
                             signerConnectionState = signerConnectionState,
                             lastPingTimeSec = lastPingTimeSec,
+                            modifier = Modifier.weight(1f),
                         )
-
-                        VerticalDivider()
                     }
 
-                    DeckLayout(
-                        deckState = deckState,
-                        relayManager = relayManager,
-                        localCache = localCache,
-                        accountManager = accountManager,
-                        account = account,
-                        nwcConnection = nwcConnection,
-                        subscriptionsCoordinator = subscriptionsCoordinator,
-                        appScope = appScope,
-                        onShowComposeDialog = onShowComposeDialog,
-                        onShowReplyDialog = onShowReplyDialog,
-                        onZapFeedback = onZapFeedback,
-                        modifier = Modifier.weight(1f),
-                    )
+                    LayoutMode.DECK -> {
+                        if (!isImmersive) {
+                            DeckSidebar(
+                                onAddColumn = onShowAddColumnDialog,
+                                onOpenSettings = {
+                                    if (deckState.hasColumnOfType(DeckColumnType.Settings)) {
+                                        deckState.focusExistingColumn(DeckColumnType.Settings)
+                                    } else {
+                                        deckState.addColumn(DeckColumnType.Settings)
+                                    }
+                                },
+                                signerConnectionState = signerConnectionState,
+                                lastPingTimeSec = lastPingTimeSec,
+                            )
+
+                            VerticalDivider()
+                        }
+
+                        DeckLayout(
+                            deckState = deckState,
+                            relayManager = relayManager,
+                            localCache = localCache,
+                            accountManager = accountManager,
+                            account = account,
+                            nwcConnection = nwcConnection,
+                            subscriptionsCoordinator = subscriptionsCoordinator,
+                            appScope = appScope,
+                            onShowComposeDialog = onShowComposeDialog,
+                            onShowReplyDialog = onShowReplyDialog,
+                            onZapFeedback = onZapFeedback,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
                 }
-            }
-        }
+            } // end Row
+
+            // Persistent media control bar
+            com.vitorpamplona.amethyst.desktop.ui.media
+                .NowPlayingBar()
+        } // end Column
+
+        // Global fullscreen video overlay
+        com.vitorpamplona.amethyst.desktop.ui.media
+            .GlobalFullscreenOverlay()
 
         // Snackbar for zap feedback
         SnackbarHost(
@@ -804,7 +822,9 @@ fun RelaySettingsScreen(
         accountManager.loadNwcConnection()
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+    ) {
         Text(
             "Settings",
             style = MaterialTheme.typography.headlineMedium,

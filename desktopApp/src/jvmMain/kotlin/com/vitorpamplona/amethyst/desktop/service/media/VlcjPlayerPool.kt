@@ -48,7 +48,7 @@ object VlcjPlayerPool {
     // Video player pool (for actual playback)
     private val allPlayers = mutableListOf<EmbeddedMediaPlayer>()
     private val idlePlayers = ConcurrentLinkedQueue<EmbeddedMediaPlayer>()
-    private const val MAX_POOL_SIZE = 4
+    private const val MAX_POOL_SIZE = 1
 
     // Thumbnail player pool (separate so thumbnails don't compete with playback)
     private val allThumbPlayers = mutableListOf<EmbeddedMediaPlayer>()
@@ -59,7 +59,7 @@ object VlcjPlayerPool {
     private var audioFactory: MediaPlayerFactory? = null
     private val allAudioPlayers = mutableListOf<MediaPlayer>()
     private val idleAudioPlayers = ConcurrentLinkedQueue<MediaPlayer>()
-    private const val MAX_AUDIO_POOL_SIZE = 5
+    private const val MAX_AUDIO_POOL_SIZE = 1
 
     /**
      * Initialize the pool. Thread-safe — only runs once.

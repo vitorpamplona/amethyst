@@ -37,10 +37,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.MoreVert
@@ -71,6 +73,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.isMetaPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
@@ -231,7 +234,7 @@ fun LightboxOverlay(
                         }
 
                         Key.S -> {
-                            if (event.isCtrlPressed) {
+                            if (event.isCtrlPressed || event.isMetaPressed) {
                                 triggerSave()
                                 true
                             } else {
@@ -247,13 +250,19 @@ fun LightboxOverlay(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
                 ) {
-                    // Click on backdrop doesn't close — use X button or Esc
+                    if (viewMode != ViewMode.FULLSCREEN) onDismiss()
                 },
     ) {
         // Main content — video or image
         if (isVideo) {
             Box(
-                modifier = contentModifier,
+                modifier =
+                    contentModifier.clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                    ) {
+                        // Consume clicks so backdrop dismiss doesn't fire
+                    },
                 contentAlignment = Alignment.Center,
             ) {
                 DesktopVideoPlayer(
@@ -395,6 +404,36 @@ fun LightboxOverlay(
                     },
                 )
             }
+        }
+
+        // Close button (top-left) — hidden in fullscreen
+        if (viewMode != ViewMode.FULLSCREEN) {
+            IconButton(
+                onClick = onDismiss,
+                modifier = Modifier.align(Alignment.TopStart).padding(8.dp),
+            ) {
+                Icon(
+                    Icons.Default.Close,
+                    contentDescription = "Close",
+                    tint = Color.White,
+                    modifier = Modifier.size(32.dp),
+                )
+            }
+        }
+
+        // Image counter (bottom-center) — hidden in fullscreen
+        if (urls.size > 1 && viewMode != ViewMode.FULLSCREEN) {
+            Text(
+                text = "${currentIndex + 1} / ${urls.size}",
+                color = Color.White,
+                style = MaterialTheme.typography.labelLarge,
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(16.dp)
+                        .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
+            )
         }
 
         // Navigation arrows — hidden in fullscreen

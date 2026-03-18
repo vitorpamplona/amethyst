@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.desktop.ui.media
 
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -52,6 +53,17 @@ fun ZoomableImage(
             modifier
                 .fillMaxSize()
                 .pointerInput(Unit) {
+                    detectTapGestures(
+                        onDoubleTap = {
+                            scale = 1f
+                            offsetX = 0f
+                            offsetY = 0f
+                        },
+                        onTap = {
+                            // Consume single taps so they don't propagate to backdrop
+                        },
+                    )
+                }.pointerInput(Unit) {
                     awaitPointerEventScope {
                         while (true) {
                             val event = awaitPointerEvent()
@@ -77,19 +89,29 @@ fun ZoomableImage(
                 },
         contentAlignment = Alignment.Center,
     ) {
-        AsyncImage(
-            model = url,
-            contentDescription = null,
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .graphicsLayer(
-                        scaleX = scale,
-                        scaleY = scale,
-                        translationX = offsetX,
-                        translationY = offsetY,
-                    ),
-            contentScale = ContentScale.Fit,
-        )
+        val imageModifier =
+            Modifier
+                .fillMaxSize()
+                .graphicsLayer(
+                    scaleX = scale,
+                    scaleY = scale,
+                    translationX = offsetX,
+                    translationY = offsetY,
+                )
+        if (isAnimatedGifUrl(url)) {
+            AnimatedGifImage(
+                url = url,
+                contentDescription = null,
+                modifier = imageModifier,
+                contentScale = ContentScale.Fit,
+            )
+        } else {
+            AsyncImage(
+                model = url,
+                contentDescription = null,
+                modifier = imageModifier,
+                contentScale = ContentScale.Fit,
+            )
+        }
     }
 }
