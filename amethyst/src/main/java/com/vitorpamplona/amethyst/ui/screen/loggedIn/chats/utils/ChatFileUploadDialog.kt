@@ -262,8 +262,8 @@ private fun ImageVideoPostChat(
     }
 
     SettingSwitchItem(
-        title = R.string.strip_location_metadata_label,
-        description = R.string.strip_location_metadata_description,
+        title = R.string.strip_metadata_label,
+        description = R.string.strip_metadata_description,
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
         checked = fileUploadState.stripLocationMetadata,
         onCheckedChange = { fileUploadState.stripLocationMetadata = it },
