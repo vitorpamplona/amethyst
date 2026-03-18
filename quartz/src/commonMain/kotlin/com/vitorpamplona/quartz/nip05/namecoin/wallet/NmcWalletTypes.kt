@@ -102,6 +102,22 @@ data class DerivedAddress(
 )
 
 /**
+ * Full details of a registered name, used for update/transfer operations.
+ */
+@Serializable
+data class NameDetails(
+    val name: String,
+    val value: String,
+    val txid: String,
+    val vout: Int,
+    val height: Int,
+    val expiresIn: Int,
+) {
+    val daysRemaining: Int get() = expiresIn / 144
+    val isExpiringSoon: Boolean get() = expiresIn in 1..4320
+}
+
+/**
  * Wallet settings persisted across sessions.
  */
 @Serializable

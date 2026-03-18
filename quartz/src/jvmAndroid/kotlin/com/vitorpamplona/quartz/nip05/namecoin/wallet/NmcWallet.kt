@@ -277,6 +277,30 @@ class NmcWallet(
     // ── Name Availability ──────────────────────────────────────────────
 
     /**
+     * Look up a name and return full details needed for update/transfer.
+     * Returns null if the name doesn't exist or is expired.
+     */
+    suspend fun lookupNameDetails(
+        name: String,
+        servers: List<ElectrumxServer> = ElectrumxClient.DEFAULT_SERVERS,
+    ): NameDetails? =
+        try {
+            val result = electrumClient.nameShowWithFallback(name, servers) ?: return null
+            val expiresIn = result.expiresIn ?: 0
+            if (expiresIn <= 0) return null
+            NameDetails(
+                name = result.name,
+                value = result.value,
+                txid = result.txid ?: return null,
+                vout = 0, // name ops are typically output index 0
+                height = result.height ?: 0,
+                expiresIn = expiresIn,
+            )
+        } catch (_: Exception) {
+            null
+        }
+
+    /**
      * Check whether a name is available for registration.
      * Delegates to the existing [ElectrumxClient.nameShowWithFallback].
      */

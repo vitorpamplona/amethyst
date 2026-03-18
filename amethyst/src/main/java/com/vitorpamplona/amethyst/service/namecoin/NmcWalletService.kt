@@ -158,6 +158,9 @@ class NmcWalletService(
 
     suspend fun checkNameAvailability(name: String): NameAvailability = wallet.checkNameAvailability(name, servers())
 
+    /** Look up full name details (txid, vout, value, expiry) for update/transfer. */
+    suspend fun lookupNameDetails(name: String): com.vitorpamplona.quartz.nip05.namecoin.wallet.NameDetails? = wallet.lookupNameDetails(name, servers())
+
     /**
      * Register a name (step 1): broadcasts NAME_NEW and stores the
      * pending registration for step 2.

@@ -335,10 +335,10 @@ private fun ManageNamesSection(walletService: NmcWalletService) {
     var nameToLookup by rememberSaveable { mutableStateOf("") }
     var lookupResult by remember { mutableStateOf<String?>(null) }
     var updateName by rememberSaveable { mutableStateOf("") }
-    var updateTxid by rememberSaveable { mutableStateOf("") }
-    var updateVout by rememberSaveable { mutableStateOf("0") }
+    var nameDetails by remember { mutableStateOf<com.vitorpamplona.quartz.nip05.namecoin.wallet.NameDetails?>(null) }
     var updateValue by rememberSaveable { mutableStateOf("") }
     var updateStatus by remember { mutableStateOf<String?>(null) }
+    var loadingDetails by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -431,123 +431,135 @@ private fun ManageNamesSection(walletService: NmcWalletService) {
                     Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("Update name value", fontWeight = FontWeight.Medium, fontSize = 14.sp)
                         Text(
-                            "Update the JSON value of a name you own. Also renews the name for another ~250 days.",
+                            "Update the JSON value of a name you own. Also renews the name for another ~250 days. UTXO details are fetched automatically.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         OutlinedTextField(
                             value = updateName,
-                            onValueChange = { updateName = it.lowercase().trim() },
+                            onValueChange = {
+                                updateName = it.lowercase().trim()
+                                nameDetails = null
+                                updateStatus = null
+                            },
                             label = { Text("Name (e.g. d/example)") },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                             textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
                         )
-                        OutlinedTextField(
-                            value = updateValue,
-                            onValueChange = { updateValue = it },
-                            label = { Text("New JSON value") },
-                            minLines = 3,
-                            modifier = Modifier.fillMaxWidth(),
-                            textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
-                            supportingText = {
-                                val bytes = updateValue.toByteArray(Charsets.UTF_8).size
-                                Text(
-                                    "$bytes / 520 bytes",
-                                    fontSize = 10.sp,
-                                    color = if (bytes > 520) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            },
-                        )
 
-                        // Link Nostr pubkey helper
-                        val pubKeyHex = walletService.wallet.pubKeyHex
-                        if (pubKeyHex != null && updateName.startsWith("d/")) {
-                            OutlinedButton(
-                                onClick = {
-                                    updateValue =
-                                        com.vitorpamplona.quartz.nip05.namecoin.wallet.NmcNameScripts
-                                            .buildDomainValue(pubKeyHex, existingValue = updateValue.ifBlank { null })
-                                },
-                                modifier = Modifier.fillMaxWidth(),
-                            ) {
-                                Text("Set NIP-05 Nostr value for this domain", fontSize = 11.sp)
-                            }
-                        }
-                        if (pubKeyHex != null && updateName.startsWith("id/")) {
-                            OutlinedButton(
-                                onClick = {
-                                    updateValue =
-                                        com.vitorpamplona.quartz.nip05.namecoin.wallet.NmcNameScripts
-                                            .buildIdentityValue(pubKeyHex, existingValue = updateValue.ifBlank { null })
-                                },
-                                modifier = Modifier.fillMaxWidth(),
-                            ) {
-                                Text("Set Nostr identity value", fontSize = 11.sp)
-                            }
-                        }
-
-                        Card(
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-                        ) {
-                            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Text("Current name UTXO", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Medium)
-                                OutlinedTextField(
-                                    value = updateTxid,
-                                    onValueChange = { updateTxid = it.trim() },
-                                    label = { Text("Transaction ID") },
-                                    singleLine = true,
-                                    modifier = Modifier.fillMaxWidth(),
-                                    textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
-                                )
-                                OutlinedTextField(
-                                    value = updateVout,
-                                    onValueChange = { updateVout = it.filter { c -> c.isDigit() } },
-                                    label = { Text("Output index (vout)") },
-                                    singleLine = true,
-                                    modifier = Modifier.fillMaxWidth(),
-                                )
-                            }
-                        }
-
+                        // Fetch name details button
                         Button(
                             onClick = {
                                 scope.launch {
-                                    updateStatus = "Broadcasting…"
-                                    updateStatus =
-                                        try {
-                                            val myPubKey =
-                                                com.vitorpamplona.quartz.utils.Hex
-                                                    .decode(walletService.wallet.pubKeyHex!!)
-                                            val myHash160 =
-                                                com.vitorpamplona.quartz.nip05.namecoin.wallet.NmcKeyManager
-                                                    .hash160(myPubKey)
-                                            val currentScript =
-                                                com.vitorpamplona.quartz.nip05.namecoin.wallet.NmcNameScripts
-                                                    .buildNameUpdateScript(updateName, updateValue, myHash160)
-                                            val txid =
-                                                walletService.updateName(
-                                                    nameTxid = updateTxid,
-                                                    nameVout = updateVout.toIntOrNull() ?: 0,
-                                                    name = updateName,
-                                                    currentScript = currentScript,
-                                                    currentOutputValue = com.vitorpamplona.quartz.nip05.namecoin.wallet.NmcNameScripts.NAME_NEW_COST,
-                                                    newValue = updateValue,
-                                                )
-                                            walletService.refreshAll()
-                                            "✓ Updated! txid: ${txid.take(24)}…"
-                                        } catch (e: Exception) {
-                                            "✗ ${e.message}"
-                                        }
+                                    loadingDetails = true
+                                    nameDetails = walletService.lookupNameDetails(updateName)
+                                    if (nameDetails != null) {
+                                        updateValue = nameDetails!!.value
+                                    } else {
+                                        updateStatus = "✗ Name not found or expired"
+                                    }
+                                    loadingDetails = false
                                 }
                             },
-                            enabled =
-                                updateName.isNotBlank() && updateTxid.isNotBlank() && updateValue.isNotBlank() &&
-                                    updateValue.toByteArray(Charsets.UTF_8).size <= 520,
+                            enabled = updateName.isNotBlank() && !loadingDetails,
                             modifier = Modifier.fillMaxWidth(),
                             colors = ButtonDefaults.buttonColors(containerColor = NmcBlue),
                         ) {
-                            Text("Update name value")
+                            if (loadingDetails) {
+                                CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
+                                Spacer(Modifier.width(8.dp))
+                            }
+                            Text("Fetch name details")
+                        }
+
+                        // Show fetched details
+                        nameDetails?.let { details ->
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = NmcGreen.copy(alpha = 0.08f)),
+                            ) {
+                                Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    Text("Name found", fontWeight = FontWeight.SemiBold, fontSize = 12.sp, color = NmcGreen)
+                                    Text("txid: ${details.txid.take(24)}…  vout: ${details.vout}", fontSize = 10.sp, fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text("Block: ${details.height}  Expires in ~${details.daysRemaining} days", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+
+                            OutlinedTextField(
+                                value = updateValue,
+                                onValueChange = { updateValue = it },
+                                label = { Text("New JSON value") },
+                                minLines = 3,
+                                modifier = Modifier.fillMaxWidth(),
+                                textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                                supportingText = {
+                                    val bytes = updateValue.toByteArray(Charsets.UTF_8).size
+                                    Text(
+                                        "$bytes / 520 bytes",
+                                        fontSize = 10.sp,
+                                        color = if (bytes > 520) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                },
+                            )
+
+                            // Link Nostr pubkey helper
+                            val pubKeyHex = walletService.wallet.pubKeyHex
+                            if (pubKeyHex != null && updateName.startsWith("d/")) {
+                                OutlinedButton(
+                                    onClick = {
+                                        updateValue =
+                                            com.vitorpamplona.quartz.nip05.namecoin.wallet.NmcNameScripts
+                                                .buildDomainValue(pubKeyHex, existingValue = updateValue.ifBlank { null })
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) { Text("Set NIP-05 Nostr value for this domain", fontSize = 11.sp) }
+                            }
+                            if (pubKeyHex != null && updateName.startsWith("id/")) {
+                                OutlinedButton(
+                                    onClick = {
+                                        updateValue =
+                                            com.vitorpamplona.quartz.nip05.namecoin.wallet.NmcNameScripts
+                                                .buildIdentityValue(pubKeyHex, existingValue = updateValue.ifBlank { null })
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) { Text("Set Nostr identity value", fontSize = 11.sp) }
+                            }
+
+                            Button(
+                                onClick = {
+                                    scope.launch {
+                                        updateStatus = "Broadcasting…"
+                                        updateStatus =
+                                            try {
+                                                val myPubKey =
+                                                    com.vitorpamplona.quartz.utils.Hex
+                                                        .decode(walletService.wallet.pubKeyHex!!)
+                                                val myHash160 =
+                                                    com.vitorpamplona.quartz.nip05.namecoin.wallet.NmcKeyManager
+                                                        .hash160(myPubKey)
+                                                val currentScript =
+                                                    com.vitorpamplona.quartz.nip05.namecoin.wallet.NmcNameScripts
+                                                        .buildNameUpdateScript(details.name, details.value, myHash160)
+                                                val txid =
+                                                    walletService.updateName(
+                                                        nameTxid = details.txid,
+                                                        nameVout = details.vout,
+                                                        name = details.name,
+                                                        currentScript = currentScript,
+                                                        currentOutputValue = com.vitorpamplona.quartz.nip05.namecoin.wallet.NmcNameScripts.NAME_NEW_COST,
+                                                        newValue = updateValue,
+                                                    )
+                                                walletService.refreshAll()
+                                                "✓ Updated! txid: ${txid.take(24)}…"
+                                            } catch (e: Exception) {
+                                                "✗ ${e.message}"
+                                            }
+                                    }
+                                },
+                                enabled = updateValue.isNotBlank() && updateValue.toByteArray(Charsets.UTF_8).size <= 520,
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.buttonColors(containerColor = NmcBlue),
+                            ) { Text("Update name value") }
                         }
 
                         updateStatus?.let { status ->
@@ -1663,9 +1675,8 @@ private fun SendNameSection(walletService: NmcWalletService) {
     var showSection by rememberSaveable { mutableStateOf(false) }
     var nameInput by rememberSaveable { mutableStateOf("") }
     var recipientAddress by rememberSaveable { mutableStateOf("") }
-    var nameTxid by rememberSaveable { mutableStateOf("") }
-    var nameVout by rememberSaveable { mutableStateOf("0") }
-    var nameValue by rememberSaveable { mutableStateOf("") }
+    var transferNameDetails by remember { mutableStateOf<com.vitorpamplona.quartz.nip05.namecoin.wallet.NameDetails?>(null) }
+    var loadingTransfer by remember { mutableStateOf(false) }
     var transferState by remember { mutableStateOf<TransferState>(TransferState.Idle) }
     val scope = rememberCoroutineScope()
 
@@ -1691,7 +1702,11 @@ private fun SendNameSection(walletService: NmcWalletService) {
 
                 OutlinedTextField(
                     value = nameInput,
-                    onValueChange = { nameInput = it.lowercase().trim() },
+                    onValueChange = {
+                        nameInput = it.lowercase().trim()
+                        transferNameDetails = null
+                        transferState = TransferState.Idle
+                    },
                     label = { Text("Name (e.g. d/example)") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
@@ -1705,86 +1720,66 @@ private fun SendNameSection(walletService: NmcWalletService) {
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
-                    supportingText = { Text("N… or 6… address of the new owner", fontSize = 10.sp) },
+                    supportingText = { Text("N…, 6…, or nc1… address of the new owner", fontSize = 10.sp) },
                 )
 
-                Card(
-                    colors =
-                        CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                        ),
+                // Fetch name details
+                Button(
+                    onClick = {
+                        scope.launch {
+                            loadingTransfer = true
+                            transferNameDetails = walletService.lookupNameDetails(nameInput)
+                            if (transferNameDetails == null) {
+                                transferState = TransferState.Error("Name not found or expired")
+                            }
+                            loadingTransfer = false
+                        }
+                    },
+                    enabled = nameInput.isNotBlank() && !loadingTransfer,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = NmcBlue),
                 ) {
-                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(
-                            "Current name UTXO",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Medium,
-                        )
-                        Text(
-                            "Find this in a block explorer: search the name and use the latest NAME_UPDATE/NAME_FIRSTUPDATE transaction.",
-                            fontSize = 10.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                    if (loadingTransfer) {
+                        CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
+                        Spacer(Modifier.width(8.dp))
+                    }
+                    Text("Fetch name details")
+                }
 
-                        OutlinedTextField(
-                            value = nameTxid,
-                            onValueChange = { nameTxid = it.trim() },
-                            label = { Text("Transaction ID (txid)") },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
-                            textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
-                        )
-
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedTextField(
-                                value = nameVout,
-                                onValueChange = { nameVout = it.filter { c -> c.isDigit() } },
-                                label = { Text("Vout") },
-                                singleLine = true,
-                                modifier = Modifier.weight(1f),
-                            )
-                            OutlinedTextField(
-                                value = nameValue,
-                                onValueChange = { nameValue = it },
-                                label = { Text("Current value (JSON)") },
-                                singleLine = true,
-                                modifier = Modifier.weight(2f),
-                                textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
-                                supportingText = { Text("Leave blank to preserve existing", fontSize = 10.sp) },
-                            )
+                transferNameDetails?.let { details ->
+                    Card(colors = CardDefaults.cardColors(containerColor = NmcGreen.copy(alpha = 0.08f))) {
+                        Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text("Name found", fontWeight = FontWeight.SemiBold, fontSize = 12.sp, color = NmcGreen)
+                            Text("txid: ${details.txid.take(24)}…  vout: ${details.vout}", fontSize = 10.sp, fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("Value: ${details.value.take(80)}${if (details.value.length > 80) "…" else ""}", fontSize = 10.sp, fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("Expires in ~${details.daysRemaining} days", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
 
                 Button(
                     onClick = {
+                        val details = transferNameDetails ?: return@Button
                         scope.launch {
                             transferState = TransferState.Sending
                             try {
-                                val value = nameValue.ifBlank { "{}" }
-                                val myPubKeyHex =
-                                    walletService.wallet.pubKeyHex
-                                        ?: throw IllegalStateException("Wallet not loaded")
                                 val myPubKey =
                                     com.vitorpamplona.quartz.utils.Hex
-                                        .decode(myPubKeyHex)
+                                        .decode(walletService.wallet.pubKeyHex!!)
                                 val myHash160 =
                                     com.vitorpamplona.quartz.nip05.namecoin.wallet.NmcKeyManager
                                         .hash160(myPubKey)
-
-                                // Current name output is a NAME_UPDATE script owned by us
                                 val currentScript =
                                     com.vitorpamplona.quartz.nip05.namecoin.wallet.NmcNameScripts
-                                        .buildNameUpdateScript(nameInput, value, myHash160)
-
+                                        .buildNameUpdateScript(details.name, details.value, myHash160)
                                 val txid =
                                     walletService.transferName(
-                                        nameTxid = nameTxid,
-                                        nameVout = nameVout.toIntOrNull() ?: 0,
-                                        name = nameInput,
+                                        nameTxid = details.txid,
+                                        nameVout = details.vout,
+                                        name = details.name,
                                         currentScript = currentScript,
                                         currentOutputValue = com.vitorpamplona.quartz.nip05.namecoin.wallet.NmcNameScripts.NAME_NEW_COST,
-                                        currentNameValue = value,
+                                        currentNameValue = details.value,
                                         newOwnerAddress = recipientAddress,
                                     )
                                 transferState = TransferState.Success(txid)
@@ -1794,7 +1789,7 @@ private fun SendNameSection(walletService: NmcWalletService) {
                             }
                         }
                     },
-                    enabled = nameInput.isNotBlank() && recipientAddress.isNotBlank() && nameTxid.isNotBlank(),
+                    enabled = transferNameDetails != null && recipientAddress.isNotBlank(),
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = NmcOrange),
                 ) {
