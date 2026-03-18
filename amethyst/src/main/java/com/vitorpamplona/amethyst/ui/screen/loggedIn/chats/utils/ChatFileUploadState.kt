@@ -36,7 +36,7 @@ import kotlinx.collections.immutable.ImmutableList
 @Stable
 class ChatFileUploadState(
     val defaultServer: ServerName,
-    defaultStripLocationMetadata: Boolean = true,
+    defaultStripMetadata: Boolean = true,
 ) {
     val mediaUploadTracker = MediaUploadTracker()
     val isUploadingImage: Boolean get() = mediaUploadTracker.isUploadingImage
@@ -56,7 +56,7 @@ class ChatFileUploadState(
     // 0 = Low, 1 = Medium, 2 = High, 3=UNCOMPRESSED
     var mediaQualitySlider by mutableIntStateOf(1)
 
-    var stripLocationMetadata by mutableStateOf(defaultStripLocationMetadata)
+    var stripMetadata by mutableStateOf(defaultStripMetadata)
     var encryptFiles by mutableStateOf(true)
 
     fun load(uris: ImmutableList<SelectedMedia>) {

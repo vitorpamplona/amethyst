@@ -66,7 +66,7 @@ open class NewMediaModel : ViewModel() {
     var useH265Codec by mutableStateOf(false)
 
     // Strip location and sensitive metadata from files before upload
-    var stripLocationMetadata by mutableStateOf(true)
+    var stripMetadata by mutableStateOf(true)
 
     open fun load(
         account: Account,
@@ -76,7 +76,7 @@ open class NewMediaModel : ViewModel() {
         this.account = account
         this.multiOrchestrator = MultiOrchestrator(uris)
         this.selectedServer = defaultServer()
-        this.stripLocationMetadata = account.settings.stripLocationOnUpload
+        this.stripMetadata = account.settings.stripLocationOnUpload
     }
 
     fun isImage(
@@ -119,7 +119,7 @@ open class NewMediaModel : ViewModel() {
                     myAccount,
                     context,
                     useH265Codec,
-                    stripLocationMetadata,
+                    stripMetadata,
                 )
 
             if (results.allGood) {

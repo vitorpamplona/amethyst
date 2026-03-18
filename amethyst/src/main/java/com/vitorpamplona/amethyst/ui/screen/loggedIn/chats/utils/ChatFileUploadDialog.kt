@@ -265,8 +265,8 @@ private fun ImageVideoPostChat(
         title = R.string.strip_metadata_label,
         description = R.string.strip_metadata_description,
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-        checked = fileUploadState.stripLocationMetadata,
-        onCheckedChange = { fileUploadState.stripLocationMetadata = it },
+        checked = fileUploadState.stripMetadata,
+        onCheckedChange = { fileUploadState.stripMetadata = it },
     )
 }
 

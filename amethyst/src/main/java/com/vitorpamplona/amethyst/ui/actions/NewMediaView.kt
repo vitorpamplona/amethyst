@@ -112,7 +112,7 @@ fun NewMediaView(
                         postViewModel.selectedServer?.let {
                             account.settings.changeDefaultFileServer(it)
                         }
-                        account.settings.changeStripLocationOnUpload(postViewModel.stripLocationMetadata)
+                        account.settings.changeStripLocationOnUpload(postViewModel.stripMetadata)
                     },
                 )
             },
@@ -278,7 +278,7 @@ fun ImageVideoPost(
             Modifier
                 .fillMaxWidth()
                 .padding(top = 8.dp),
-        checked = postViewModel.stripLocationMetadata,
-        onCheckedChange = { postViewModel.stripLocationMetadata = it },
+        checked = postViewModel.stripMetadata,
+        onCheckedChange = { postViewModel.stripMetadata = it },
     )
 }

@@ -348,7 +348,7 @@ open class ChannelNewMessageViewModel :
                     uploadState.selectedServer,
                     account,
                     context,
-                    stripMetadata = uploadState.stripLocationMetadata,
+                    stripMetadata = uploadState.stripMetadata,
                 )
 
             if (results.allGood) {

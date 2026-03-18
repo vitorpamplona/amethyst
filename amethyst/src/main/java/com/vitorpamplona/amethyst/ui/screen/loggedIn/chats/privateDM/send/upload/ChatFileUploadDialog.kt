@@ -70,7 +70,7 @@ fun RoomChatFileUploadDialog(
             )
 
             accountViewModel.account.settings.changeDefaultFileServer(state.selectedServer)
-            accountViewModel.account.settings.changeStripLocationOnUpload(state.stripLocationMetadata)
+            accountViewModel.account.settings.changeStripLocationOnUpload(state.stripMetadata)
         },
         onCancel,
         accountViewModel,

@@ -104,7 +104,7 @@ class ChatFileUploader(
                 viewState.selectedServer,
                 account,
                 context,
-                stripMetadata = viewState.stripLocationMetadata,
+                stripMetadata = viewState.stripMetadata,
             )
 
         if (results.allGood) {
@@ -149,7 +149,7 @@ class ChatFileUploader(
                 viewState.selectedServer,
                 account,
                 context,
-                stripMetadata = viewState.stripLocationMetadata,
+                stripMetadata = viewState.stripMetadata,
             )
 
         if (results.allGood) {
