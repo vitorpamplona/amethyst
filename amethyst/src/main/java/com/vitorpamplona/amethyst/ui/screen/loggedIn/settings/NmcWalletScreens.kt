@@ -855,9 +855,16 @@ private fun FileExportButtons(walletService: NmcWalletService) {
                     try {
                         val wif = walletService.exportWif()
                         val pubKeyHex = walletService.wallet.pubKeyHex!!
-                        // Electrum-NMC imported_keys wallet format:
-                        // A valid wallet JSON with keystore type "imported"
-                        // containing the private key with script type prefix.
+                        // Derive the nc1... address for the addresses dict
+                        val pubKeyBytes =
+                            com.vitorpamplona.quartz.utils.Hex
+                                .decode(pubKeyHex)
+                        val segwitAddr =
+                            com.vitorpamplona.quartz.nip05.namecoin.wallet.NmcAddressGenerator
+                                .addressFromPubKey(pubKeyBytes, com.vitorpamplona.quartz.nip05.namecoin.wallet.NmcAddressType.P2WPKH)
+                        // Electrum-NMC imported wallet format (seed_version 17):
+                        // - keystore.keypairs: pubkey_hex → "script_type:WIF"
+                        // - addresses: address → {type, pubkey}
                         val content =
                             buildString {
                                 appendLine("{")
@@ -869,8 +876,10 @@ private fun FileExportButtons(walletService: NmcWalletService) {
                                 appendLine("        }")
                                 appendLine("    },")
                                 appendLine("    \"addresses\": {")
-                                appendLine("        \"change\": [],")
-                                appendLine("        \"receiving\": [\"p2wpkh:$wif\"]")
+                                appendLine("        \"$segwitAddr\": {")
+                                appendLine("            \"type\": \"p2wpkh\",")
+                                appendLine("            \"pubkey\": \"$pubKeyHex\"")
+                                appendLine("        }")
                                 appendLine("    },")
                                 appendLine("    \"seed_version\": 17,")
                                 appendLine("    \"use_encryption\": false")
