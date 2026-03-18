@@ -58,24 +58,25 @@ object VideoThumbnailCache {
     }
 
     private fun extractFirstFrame(url: String): ImageBitmap? {
-        if (!VlcjPlayerPool.init()) return null
-        val player = VlcjPlayerPool.acquire() ?: return null
+        if (!VlcjPlayerPool.init()) {
+            println("VLC thumbnail: init failed for $url")
+            return null
+        }
+        val player = VlcjPlayerPool.acquireForThumbnail()
+        if (player == null) {
+            println("VLC thumbnail: pool exhausted for $url")
+            return null
+        }
 
         var result: ImageBitmap? = null
         val latch = CountDownLatch(1)
-        var aspectRatio = 16f / 9f
 
         val bufferFormatCallback =
             object : BufferFormatCallback {
                 override fun getBufferFormat(
                     sourceWidth: Int,
                     sourceHeight: Int,
-                ): uk.co.caprica.vlcj.player.embedded.videosurface.callback.BufferFormat {
-                    if (sourceHeight > 0) {
-                        aspectRatio = sourceWidth.toFloat() / sourceHeight.toFloat()
-                    }
-                    return RV32BufferFormat(sourceWidth, sourceHeight)
-                }
+                ): uk.co.caprica.vlcj.player.embedded.videosurface.callback.BufferFormat = RV32BufferFormat(sourceWidth, sourceHeight)
 
                 override fun allocatedBuffers(buffers: Array<out ByteBuffer>) {}
             }
@@ -84,8 +85,10 @@ object VideoThumbnailCache {
             RenderCallback { _, nativeBuffers, bufferFormat ->
                 if (result != null) return@RenderCallback
                 try {
+                    if (nativeBuffers.isEmpty()) return@RenderCallback
                     val w = bufferFormat.width
                     val h = bufferFormat.height
+                    if (w <= 0 || h <= 0) return@RenderCallback
                     val bmp = Bitmap()
                     bmp.allocPixels(ImageInfo.makeN32(w, h, ColorAlphaType.PREMUL))
                     val bytes = ByteArray(w * h * 4)
@@ -95,13 +98,15 @@ object VideoThumbnailCache {
                     bmp.installPixels(bytes)
                     result = SkiaImage.makeFromBitmap(bmp).toComposeImageBitmap()
                     latch.countDown()
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    println("VLC thumbnail: render error for $url — ${e.message}")
                     latch.countDown()
                 }
             }
 
         val surface = VlcjPlayerPool.createVideoSurface(bufferFormatCallback, renderCallback)
         if (surface == null) {
+            println("VLC thumbnail: surface creation failed for $url")
             VlcjPlayerPool.release(player)
             return null
         }
@@ -113,6 +118,7 @@ object VideoThumbnailCache {
         player.events().addMediaPlayerEventListener(
             object : MediaPlayerEventAdapter() {
                 override fun error(mediaPlayer: MediaPlayer) {
+                    println("VLC thumbnail: playback error for $url")
                     latch.countDown()
                 }
             },
@@ -120,8 +126,12 @@ object VideoThumbnailCache {
 
         player.media().play(url)
 
-        // Wait up to 5 seconds for first frame
-        latch.await(5, TimeUnit.SECONDS)
+        // Wait up to 8 seconds for first frame (network videos can be slow)
+        latch.await(8, TimeUnit.SECONDS)
+
+        if (result == null) {
+            println("VLC thumbnail: timed out or failed for $url")
+        }
 
         VlcjPlayerPool.release(player)
         return result

@@ -55,6 +55,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.richtext.UrlParser
 import com.vitorpamplona.amethyst.commons.state.EventCollectionState
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
@@ -77,6 +78,7 @@ import com.vitorpamplona.amethyst.desktop.subscriptions.createZapsSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
 import com.vitorpamplona.amethyst.desktop.ui.media.LightboxOverlay
 import com.vitorpamplona.amethyst.desktop.ui.note.NoteCard
+import com.vitorpamplona.amethyst.desktop.ui.note.extractMentionedPubkeys
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
@@ -91,6 +93,7 @@ data class LightboxState(
     val urls: List<String>,
     val index: Int,
     val seekPosition: Float = 0f,
+    val fullscreen: Boolean = false,
 )
 
 /**
@@ -127,7 +130,9 @@ fun FeedNoteCard(
     ) {
         NoteCard(
             note = event.toNoteDisplayData(localCache),
+            localCache = localCache,
             onAuthorClick = onNavigateToProfile,
+            onMentionClick = onNavigateToProfile,
             onImageClick = onImageClick,
             onMediaClick = onMediaClick,
         )
@@ -446,30 +451,40 @@ fun FeedScreen(
         )
     }
 
-    // Subscribe to metadata for note authors (to enable zaps and populate search cache)
+    // Subscribe to metadata for note authors + mentioned users
     val authorPubkeys = events.map { it.pubKey }.distinct()
+    val mentionedPubkeys =
+        remember(events) {
+            val parser = UrlParser()
+            events
+                .flatMap { event ->
+                    val urls = parser.parseValidUrls(event.content)
+                    extractMentionedPubkeys(urls.bech32s)
+                }.distinct()
+        }
+    val allPubkeys = remember(authorPubkeys, mentionedPubkeys) { (authorPubkeys + mentionedPubkeys).distinct() }
 
     // Use coordinator for rate-limited metadata loading (preferred)
-    LaunchedEffect(authorPubkeys, subscriptionsCoordinator) {
-        if (subscriptionsCoordinator != null && authorPubkeys.isNotEmpty()) {
-            subscriptionsCoordinator.loadMetadataForPubkeys(authorPubkeys)
+    LaunchedEffect(allPubkeys, subscriptionsCoordinator) {
+        if (subscriptionsCoordinator != null && allPubkeys.isNotEmpty()) {
+            subscriptionsCoordinator.loadMetadataForPubkeys(allPubkeys)
         }
     }
 
     // Fallback subscription if coordinator not available
-    rememberSubscription(configuredRelays, authorPubkeys, subscriptionsCoordinator, relayManager = relayManager) {
+    rememberSubscription(configuredRelays, allPubkeys, subscriptionsCoordinator, relayManager = relayManager) {
         // Skip if using coordinator
         if (subscriptionsCoordinator != null) {
             return@rememberSubscription null
         }
 
-        if (configuredRelays.isEmpty() || authorPubkeys.isEmpty()) {
+        if (configuredRelays.isEmpty() || allPubkeys.isEmpty()) {
             return@rememberSubscription null
         }
 
         // Only fetch metadata for users we don't have yet
         val missingPubkeys =
-            authorPubkeys.filter { pubkey ->
+            allPubkeys.filter { pubkey ->
                 localCache
                     .getUserIfExists(pubkey)
                     ?.metadataOrNull()
@@ -614,7 +629,7 @@ fun FeedScreen(
                         onNavigateToProfile = onNavigateToProfile,
                         onNavigateToThread = onNavigateToThread,
                         onImageClick = { urls, index -> lightboxState = LightboxState(urls, index) },
-                        onMediaClick = { urls, index, seekPos -> lightboxState = LightboxState(urls, index, seekPos) },
+                        onMediaClick = { urls, index, seekPos -> lightboxState = LightboxState(urls, index, seekPos, fullscreen = true) },
                         zapReceipts = zapsByEvent[event.id] ?: emptyList(),
                         reactionCount = reactionsByEvent[event.id] ?: 0,
                         replyCount = repliesByEvent[event.id] ?: 0,
@@ -652,6 +667,7 @@ fun FeedScreen(
                 urls = state.urls,
                 initialIndex = state.index,
                 initialSeekPosition = state.seekPosition,
+                initialFullscreen = state.fullscreen,
                 onDismiss = { lightboxState = null },
             )
         }

@@ -38,6 +38,7 @@ object SaveMediaAction {
     suspend fun saveMedia(
         url: String,
         suggestedFilename: String? = null,
+        onProgress: ((downloaded: Long, total: Long) -> Unit)? = null,
     ): File? {
         val filename = suggestedFilename ?: url.substringAfterLast('/').substringBefore('?').ifBlank { "media" }
 
@@ -61,9 +62,17 @@ object SaveMediaAction {
                 val response = httpClient.newCall(request).execute()
                 response.use { resp ->
                     if (!resp.isSuccessful) return@withContext null
+                    val total = resp.body.contentLength()
                     resp.body.byteStream().use { input ->
                         file.outputStream().use { output ->
-                            input.copyTo(output)
+                            val buffer = ByteArray(8192)
+                            var downloaded = 0L
+                            var bytesRead: Int
+                            while (input.read(buffer).also { bytesRead = it } != -1) {
+                                output.write(buffer, 0, bytesRead)
+                                downloaded += bytesRead
+                                onProgress?.invoke(downloaded, total)
+                            }
                         }
                     }
                 }

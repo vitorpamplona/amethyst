@@ -28,6 +28,8 @@ import uk.co.caprica.vlcj.player.embedded.videosurface.VideoSurface
 import uk.co.caprica.vlcj.player.embedded.videosurface.callback.BufferFormatCallback
 import uk.co.caprica.vlcj.player.embedded.videosurface.callback.RenderCallback
 import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -39,12 +41,19 @@ import java.util.concurrent.atomic.AtomicBoolean
  */
 object VlcjPlayerPool {
     private val available = AtomicBoolean(false)
+    private val initAttempted = AtomicBoolean(false)
+    private val initLatch = CountDownLatch(1)
     private var factory: MediaPlayerFactory? = null
 
-    // Video player pool
+    // Video player pool (for actual playback)
     private val allPlayers = mutableListOf<EmbeddedMediaPlayer>()
     private val idlePlayers = ConcurrentLinkedQueue<EmbeddedMediaPlayer>()
-    private const val MAX_POOL_SIZE = 3
+    private const val MAX_POOL_SIZE = 4
+
+    // Thumbnail player pool (separate so thumbnails don't compete with playback)
+    private val allThumbPlayers = mutableListOf<EmbeddedMediaPlayer>()
+    private val idleThumbPlayers = ConcurrentLinkedQueue<EmbeddedMediaPlayer>()
+    private const val MAX_THUMB_POOL_SIZE = 2
 
     // Audio player pool (shared factory with --no-video)
     private var audioFactory: MediaPlayerFactory? = null
@@ -53,10 +62,18 @@ object VlcjPlayerPool {
     private const val MAX_AUDIO_POOL_SIZE = 5
 
     /**
-     * Initialize the pool. Returns false if VLC is not installed.
+     * Initialize the pool. Thread-safe — only runs once.
+     * Returns false if VLC is not installed.
      */
     fun init(): Boolean {
         if (available.get()) return true
+
+        // Only one thread performs init; others wait
+        if (!initAttempted.compareAndSet(false, true)) {
+            initLatch.await(10, TimeUnit.SECONDS)
+            return available.get()
+        }
+
         return try {
             // Try bundled VLC first, then fall through to system VLC
             val discovery =
@@ -91,6 +108,8 @@ object VlcjPlayerPool {
             println("VLC: init failed — ${e.message}")
             available.set(false)
             false
+        } finally {
+            initLatch.countDown()
         }
     }
 
@@ -121,6 +140,30 @@ object VlcjPlayerPool {
             return try {
                 val player = f.mediaPlayers().newEmbeddedMediaPlayer()
                 allPlayers.add(player)
+                player
+            } catch (_: Exception) {
+                null
+            }
+        }
+    }
+
+    /**
+     * Acquire a player dedicated to thumbnail extraction.
+     * Separate pool so thumbnails don't compete with playback.
+     */
+    fun acquireForThumbnail(): EmbeddedMediaPlayer? {
+        if (!available.get()) return null
+        val f = factory ?: return null
+
+        synchronized(allThumbPlayers) {
+            idleThumbPlayers.poll()?.let { return it }
+            if (allThumbPlayers.size >= MAX_THUMB_POOL_SIZE) {
+                // Fall back to main pool if thumb pool is full
+                return acquire()
+            }
+            return try {
+                val player = f.mediaPlayers().newEmbeddedMediaPlayer()
+                allThumbPlayers.add(player)
                 player
             } catch (_: Exception) {
                 null
@@ -162,6 +205,13 @@ object VlcjPlayerPool {
     fun release(player: EmbeddedMediaPlayer) {
         try {
             player.controls().stop()
+            // Return to correct pool
+            synchronized(allThumbPlayers) {
+                if (player in allThumbPlayers) {
+                    idleThumbPlayers.offer(player)
+                    return
+                }
+            }
             idlePlayers.offer(player)
         } catch (_: Exception) {
             // Player may already be disposed
@@ -195,6 +245,18 @@ object VlcjPlayerPool {
                 }
             }
             allPlayers.clear()
+        }
+        synchronized(allThumbPlayers) {
+            idleThumbPlayers.clear()
+            for (player in allThumbPlayers) {
+                try {
+                    player.controls().stop()
+                    player.release()
+                } catch (_: Exception) {
+                    // Ignore
+                }
+            }
+            allThumbPlayers.clear()
         }
         synchronized(allAudioPlayers) {
             idleAudioPlayers.clear()

@@ -91,7 +91,7 @@ val LocalAwtWindow = compositionLocalOf<java.awt.Window?> { null }
 
 val LocalIsImmersiveFullscreen = compositionLocalOf { mutableStateOf(false) }
 
-enum class ViewMode { DEFAULT, THEATER, FULLSCREEN }
+enum class ViewMode { DEFAULT, FULLSCREEN }
 
 private sealed class DownloadState {
     data object Idle : DownloadState()
@@ -115,6 +115,7 @@ fun LightboxOverlay(
     urls: List<String>,
     initialIndex: Int = 0,
     initialSeekPosition: Float = 0f,
+    initialFullscreen: Boolean = false,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -123,12 +124,9 @@ fun LightboxOverlay(
     val focusRequester = remember { FocusRequester() }
     var menuExpanded by remember { mutableStateOf(false) }
     var downloadState by remember { mutableStateOf<DownloadState>(DownloadState.Idle) }
-    var viewMode by remember { mutableStateOf(ViewMode.DEFAULT) }
+    var viewMode by remember { mutableStateOf(if (initialFullscreen) ViewMode.FULLSCREEN else ViewMode.DEFAULT) }
     val awtWindow = LocalAwtWindow.current
     val isImmersiveFullscreen = LocalIsImmersiveFullscreen.current
-
-    // Track what mode we came from before fullscreen, so Esc returns there
-    var preFullscreenMode by remember { mutableStateOf(ViewMode.DEFAULT) }
 
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
@@ -187,20 +185,16 @@ fun LightboxOverlay(
     }
 
     fun toggleFullscreen() {
-        if (viewMode == ViewMode.FULLSCREEN) {
-            viewMode = preFullscreenMode
-        } else {
-            preFullscreenMode = viewMode
-            viewMode = ViewMode.FULLSCREEN
-        }
+        viewMode =
+            if (viewMode == ViewMode.FULLSCREEN) ViewMode.DEFAULT else ViewMode.FULLSCREEN
     }
 
     // Content modifier based on view mode
     val contentModifier =
-        when (viewMode) {
-            ViewMode.DEFAULT -> Modifier.fillMaxSize().padding(48.dp)
-            ViewMode.THEATER -> Modifier.fillMaxSize()
-            ViewMode.FULLSCREEN -> Modifier.fillMaxSize()
+        if (viewMode == ViewMode.DEFAULT) {
+            Modifier.fillMaxSize().padding(48.dp)
+        } else {
+            Modifier.fillMaxSize()
         }
 
     Box(
@@ -214,28 +208,11 @@ fun LightboxOverlay(
                     when (event.key) {
                         Key.Escape -> {
                             if (viewMode == ViewMode.FULLSCREEN) {
-                                viewMode = preFullscreenMode
-                            } else if (viewMode == ViewMode.THEATER) {
                                 viewMode = ViewMode.DEFAULT
                             } else {
                                 onDismiss()
                             }
                             true
-                        }
-
-                        Key.T -> {
-                            if (viewMode == ViewMode.FULLSCREEN) {
-                                // Don't toggle theater while fullscreen
-                                false
-                            } else {
-                                viewMode =
-                                    if (viewMode == ViewMode.THEATER) {
-                                        ViewMode.DEFAULT
-                                    } else {
-                                        ViewMode.THEATER
-                                    }
-                                true
-                            }
                         }
 
                         Key.F -> {
@@ -285,9 +262,6 @@ fun LightboxOverlay(
                     initialSeekPosition = if (currentIndex == initialIndex) initialSeekPosition else 0f,
                     viewMode = viewMode,
                     onViewModeChange = { newMode ->
-                        if (newMode == ViewMode.FULLSCREEN && viewMode != ViewMode.FULLSCREEN) {
-                            preFullscreenMode = viewMode
-                        }
                         viewMode = newMode
                     },
                     modifier =

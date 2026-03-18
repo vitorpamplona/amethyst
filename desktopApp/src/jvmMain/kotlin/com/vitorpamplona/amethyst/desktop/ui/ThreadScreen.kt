@@ -51,6 +51,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.richtext.UrlParser
 import com.vitorpamplona.amethyst.commons.state.EventCollectionState
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
@@ -69,6 +70,7 @@ import com.vitorpamplona.amethyst.desktop.subscriptions.createThreadRepliesSubsc
 import com.vitorpamplona.amethyst.desktop.subscriptions.createZapsSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
 import com.vitorpamplona.amethyst.desktop.ui.note.NoteCard
+import com.vitorpamplona.amethyst.desktop.ui.note.extractMentionedPubkeys
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
@@ -135,12 +137,22 @@ fun ThreadScreen(
     var bookmarkList by remember { mutableStateOf<BookmarkListEvent?>(null) }
     var bookmarkedEventIds by remember { mutableStateOf<Set<String>>(emptySet()) }
 
-    // Load metadata for thread authors via coordinator
+    // Load metadata for thread authors + mentioned users via coordinator
     LaunchedEffect(rootNote, replyEvents, subscriptionsCoordinator) {
         if (subscriptionsCoordinator != null) {
             val pubkeys = mutableListOf<String>()
             rootNote?.let { pubkeys.add(it.pubKey) }
             pubkeys.addAll(replyEvents.map { it.pubKey })
+
+            // Also load metadata for users mentioned in note content
+            val parser = UrlParser()
+            val allEvents = listOfNotNull(rootNote) + replyEvents
+            val mentionedPubkeys =
+                allEvents.flatMap { event ->
+                    extractMentionedPubkeys(parser.parseValidUrls(event.content).bech32s)
+                }
+            pubkeys.addAll(mentionedPubkeys)
+
             if (pubkeys.isNotEmpty()) {
                 subscriptionsCoordinator.loadMetadataForPubkeys(pubkeys.distinct())
             }
@@ -377,7 +389,9 @@ fun ThreadScreen(
                     ) {
                         NoteCard(
                             note = rootNote!!.toNoteDisplayData(localCache),
+                            localCache = localCache,
                             onAuthorClick = onNavigateToProfile,
+                            onMentionClick = onNavigateToProfile,
                         )
                         if (account != null) {
                             val rootZaps = zapsByEvent[noteId] ?: emptyList()
@@ -436,7 +450,9 @@ fun ThreadScreen(
                     ) {
                         NoteCard(
                             note = event.toNoteDisplayData(localCache),
+                            localCache = localCache,
                             onAuthorClick = onNavigateToProfile,
+                            onMentionClick = onNavigateToProfile,
                         )
                         if (account != null) {
                             val eventZaps = zapsByEvent[event.id] ?: emptyList()

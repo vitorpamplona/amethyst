@@ -714,7 +714,7 @@ fun UserProfileScreen(
                                             lightboxState = LightboxState(urls, index)
                                         },
                                         onMediaClick = { urls, index, seekPos ->
-                                            lightboxState = LightboxState(urls, index, seekPos)
+                                            lightboxState = LightboxState(urls, index, seekPos, fullscreen = true)
                                         },
                                     )
                                 }
@@ -776,6 +776,7 @@ fun UserProfileScreen(
             urls = state.urls,
             initialIndex = state.index,
             initialSeekPosition = state.seekPosition,
+            initialFullscreen = state.fullscreen,
             onDismiss = { lightboxState = null },
         )
     }

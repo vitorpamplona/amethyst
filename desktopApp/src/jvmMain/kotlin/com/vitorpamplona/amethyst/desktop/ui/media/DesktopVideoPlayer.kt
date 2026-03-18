@@ -96,11 +96,19 @@ fun DesktopVideoPlayer(
     // Lazy activation — don't touch VLC until user clicks play (or autoPlay)
     var activated by remember { mutableStateOf(autoPlay) }
 
-    // Load thumbnail when not activated
+    // Load thumbnail when not activated, with retry on failure
     var thumbnail by remember(url) { mutableStateOf(VideoThumbnailCache.getCached(url)) }
     LaunchedEffect(url, activated) {
         if (!activated && thumbnail == null) {
-            thumbnail = VideoThumbnailCache.getThumbnail(url)
+            // Retry up to 3 times with increasing delay
+            for (attempt in 1..3) {
+                val result = VideoThumbnailCache.getThumbnail(url)
+                if (result != null) {
+                    thumbnail = result
+                    break
+                }
+                if (attempt < 3) delay(2000L * attempt)
+            }
         }
     }
 

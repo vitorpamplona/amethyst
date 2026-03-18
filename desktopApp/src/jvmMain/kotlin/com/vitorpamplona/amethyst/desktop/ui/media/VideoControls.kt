@@ -37,10 +37,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
-import androidx.compose.material.icons.filled.CloseFullscreen
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
-import androidx.compose.material.icons.filled.OpenInFull
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.CircularProgressIndicator
@@ -206,33 +204,8 @@ fun VideoControls(
                         )
                     }
 
-                    // Two separate toggle buttons (lightbox) or simple fullscreen (inline)
+                    // Fullscreen toggle (lightbox) or simple fullscreen (inline)
                     if (onViewModeChange != null) {
-                        // Theater toggle — hidden during fullscreen
-                        if (viewMode != ViewMode.FULLSCREEN) {
-                            IconButton(
-                                onClick = {
-                                    onViewModeChange(
-                                        if (viewMode == ViewMode.THEATER) ViewMode.DEFAULT else ViewMode.THEATER,
-                                    )
-                                },
-                                modifier = Modifier.size(32.dp),
-                            ) {
-                                Icon(
-                                    if (viewMode == ViewMode.THEATER) {
-                                        Icons.Default.CloseFullscreen
-                                    } else {
-                                        Icons.Default.OpenInFull
-                                    },
-                                    contentDescription =
-                                        if (viewMode == ViewMode.THEATER) "Exit theater" else "Theater mode",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(20.dp),
-                                )
-                            }
-                        }
-
-                        // Fullscreen toggle — always visible
                         IconButton(
                             onClick = {
                                 onViewModeChange(

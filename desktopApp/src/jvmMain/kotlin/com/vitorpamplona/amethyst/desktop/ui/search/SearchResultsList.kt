@@ -160,8 +160,10 @@ fun SearchResultsList(
                 items(displayNotes, key = { "note-${it.id}" }) { event ->
                     NoteCard(
                         note = event.toNoteDisplayData(localCache),
+                        localCache = localCache,
                         onClick = { onNavigateToThread(event.id) },
                         onAuthorClick = onNavigateToProfile,
+                        onMentionClick = onNavigateToProfile,
                     )
                 }
                 if (textNotes.size > 5) {
@@ -202,8 +204,10 @@ fun SearchResultsList(
                 items(articles.take(5), key = { "article-${it.id}" }) { event ->
                     NoteCard(
                         note = event.toNoteDisplayData(localCache),
+                        localCache = localCache,
                         onClick = { onNavigateToThread(event.id) },
                         onAuthorClick = onNavigateToProfile,
+                        onMentionClick = onNavigateToProfile,
                     )
                 }
                 if (articles.size > 5) {
@@ -242,8 +246,10 @@ fun SearchResultsList(
                 items(otherNotes.take(5), key = { "other-${it.id}" }) { event ->
                     NoteCard(
                         note = event.toNoteDisplayData(localCache),
+                        localCache = localCache,
                         onClick = { onNavigateToThread(event.id) },
                         onAuthorClick = onNavigateToProfile,
+                        onMentionClick = onNavigateToProfile,
                     )
                 }
             }
