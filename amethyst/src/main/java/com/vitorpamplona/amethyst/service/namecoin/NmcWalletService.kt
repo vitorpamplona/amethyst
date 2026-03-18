@@ -64,8 +64,10 @@ import kotlinx.coroutines.launch
 class NmcWalletService(
     val wallet: NmcWallet,
     private val serverListProvider: () -> List<ElectrumxServer> = { ElectrumxClient.DEFAULT_SERVERS },
+    private val pollIntervalMs: Long = 30_000L,
 ) {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private var pollingJob: kotlinx.coroutines.Job? = null
 
     private val _balance = MutableStateFlow(NmcBalance())
     val balance: StateFlow<NmcBalance> = _balance.asStateFlow()
@@ -88,6 +90,11 @@ class NmcWalletService(
     private val _pendingRegistrations = MutableStateFlow<List<PendingNameRegistration>>(emptyList())
     val pendingRegistrations: StateFlow<List<PendingNameRegistration>> = _pendingRegistrations.asStateFlow()
 
+    private val _hasUnconfirmed = MutableStateFlow(false)
+    val hasUnconfirmed: StateFlow<Boolean> = _hasUnconfirmed.asStateFlow()
+
+    private var lastKnownTxCount = 0
+
     private fun servers() = serverListProvider()
 
     // ── Key Loading ────────────────────────────────────────────────────
@@ -96,18 +103,21 @@ class NmcWalletService(
         wallet.loadFromNostrKey(nostrPrivKey)
         _isLoaded.value = true
         _address.value = wallet.address
+        startPolling()
     }
 
     fun loadFromMnemonic(mnemonic: String) {
         wallet.loadFromMnemonic(mnemonic)
         _isLoaded.value = true
         _address.value = wallet.address
+        startPolling()
     }
 
     fun loadFromWif(wif: String) {
         wallet.loadFromWif(wif)
         _isLoaded.value = true
         _address.value = wallet.address
+        startPolling()
     }
 
     /** Switch address type and update displayed address. */
@@ -118,12 +128,15 @@ class NmcWalletService(
     }
 
     fun lock() {
+        stopPolling()
         wallet.lock()
         _isLoaded.value = false
         _address.value = null
         _balance.value = NmcBalance()
         _history.value = emptyList()
         _utxos.value = emptyList()
+        _hasUnconfirmed.value = false
+        lastKnownTxCount = 0
     }
 
     /** Export private key as WIF for Electrum-NMC import. */
@@ -136,11 +149,20 @@ class NmcWalletService(
     fun refreshAll() {
         scope.launch {
             try {
-                _balance.value = wallet.getBalance(servers())
+                val bal = wallet.getBalance(servers())
+                _balance.value = bal
+                _hasUnconfirmed.value = bal.unconfirmed != 0L
             } catch (_: Exception) {
             }
             try {
-                _history.value = wallet.getHistory(servers()).sortedByDescending { it.height }
+                val hist = wallet.getHistory(servers()).sortedByDescending { it.height }
+                // Detect new transactions (unconfirmed have height <= 0)
+                if (hist.size != lastKnownTxCount && lastKnownTxCount > 0) {
+                    // New transaction detected — history changed
+                    _hasUnconfirmed.value = true
+                }
+                lastKnownTxCount = hist.size
+                _history.value = hist
             } catch (_: Exception) {
             }
             try {
@@ -255,4 +277,43 @@ class NmcWalletService(
     fun isValueWithinLimit(value: String) = NmcNameScripts.isValueWithinLimit(value)
 
     fun estimateRegistrationCost() = NmcNameScripts.NAME_NEW_COST
+
+    // ── Polling ────────────────────────────────────────────────────────
+
+    /**
+     * Start polling ElectrumX for balance/transaction changes.
+     * Polls every [pollIntervalMs] (default 30s). Automatically detects
+     * new unconfirmed transactions and updates UI state.
+     */
+    private fun startPolling() {
+        stopPolling()
+        pollingJob =
+            scope.launch {
+                // Initial fetch
+                refreshAll()
+                // Poll loop
+                while (true) {
+                    kotlinx.coroutines.delay(pollIntervalMs)
+                    if (!wallet.isLoaded) break
+                    try {
+                        val bal = wallet.getBalance(servers())
+                        val prevBal = _balance.value
+                        _balance.value = bal
+                        _hasUnconfirmed.value = bal.unconfirmed != 0L
+
+                        // If balance changed, do a full refresh
+                        if (bal.confirmed != prevBal.confirmed || bal.unconfirmed != prevBal.unconfirmed) {
+                            refreshAll()
+                        }
+                    } catch (_: Exception) {
+                        // Server unreachable — skip this cycle
+                    }
+                }
+            }
+    }
+
+    private fun stopPolling() {
+        pollingJob?.cancel()
+        pollingJob = null
+    }
 }

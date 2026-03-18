@@ -105,6 +105,7 @@ fun NmcWalletFullScreen(
     val history by walletService.history.collectAsState()
     val blockHeight by walletService.blockHeight.collectAsState()
     val pending by walletService.pendingRegistrations.collectAsState()
+    val hasUnconfirmed by walletService.hasUnconfirmed.collectAsState()
     val scope = rememberCoroutineScope()
 
     Column(
@@ -123,6 +124,30 @@ fun NmcWalletFullScreen(
         } else {
             // Balance card
             BalanceCard(balance, address, blockHeight)
+
+            // Unconfirmed transaction banner
+            if (hasUnconfirmed) {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = NmcOrange.copy(alpha = 0.12f)),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Row(
+                        Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp, color = NmcOrange)
+                        Spacer(Modifier.width(10.dp))
+                        Column {
+                            Text("Unconfirmed transaction", fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = NmcOrange)
+                            Text(
+                                "%.8f NMC pending confirmation".format(balance.unconfirmedNmc),
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+            }
 
             // Action buttons row
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
@@ -169,10 +194,29 @@ fun NmcWalletFullScreen(
             // Transaction history
             if (history.isNotEmpty()) {
                 Text("Recent transactions", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                history.take(10).forEach { entry ->
-                    Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text(entry.txHash.take(20) + "…", style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace, modifier = Modifier.weight(1f))
-                        Text("block ${entry.height}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                history.take(15).forEach { entry ->
+                    val isUnconfirmed = entry.height <= 0
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .then(
+                                if (isUnconfirmed) Modifier.background(NmcOrange.copy(alpha = 0.06f), RoundedCornerShape(4.dp)) else Modifier,
+                            ).padding(vertical = 3.dp, horizontal = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            entry.txHash.take(20) + "…",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontFamily = FontFamily.Monospace,
+                            modifier = Modifier.weight(1f),
+                            color = if (isUnconfirmed) NmcOrange else MaterialTheme.colorScheme.onSurface,
+                        )
+                        if (isUnconfirmed) {
+                            Text("⏳ unconfirmed", style = MaterialTheme.typography.labelSmall, color = NmcOrange, fontWeight = FontWeight.Medium)
+                        } else {
+                            Text("block ${entry.height}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
                 }
             }
