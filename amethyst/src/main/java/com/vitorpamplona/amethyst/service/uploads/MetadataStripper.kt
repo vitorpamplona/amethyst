@@ -257,8 +257,13 @@ class MetadataStripper {
                 tempOutputFile = File.createTempFile("stripped_audio_", extension, context.cacheDir)
                 muxer = MediaMuxer(tempOutputFile.absolutePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
 
-                extractor.selectTrack(0)
-                val outputTrack = muxer.addTrack(format)
+                val trackIndexMap = mutableMapOf<Int, Int>()
+                for (i in 0 until extractor.trackCount) {
+                    val trackFormat = extractor.getTrackFormat(i)
+                    trackIndexMap[i] = muxer.addTrack(trackFormat)
+                    extractor.selectTrack(i)
+                }
+
                 muxer.start()
                 muxerStarted = true
 
@@ -268,6 +273,8 @@ class MetadataStripper {
                 while (true) {
                     val sampleSize = extractor.readSampleData(buffer, 0)
                     if (sampleSize < 0) break
+
+                    val outputTrack = trackIndexMap[extractor.sampleTrackIndex] ?: break
 
                     bufferInfo.offset = 0
                     bufferInfo.size = sampleSize
