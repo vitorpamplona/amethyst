@@ -108,7 +108,7 @@ fun ImageVideoDescription(
     // Codec selection: false = H264, true = H265
     var useH265Codec by remember { mutableStateOf(false) }
 
-    var stripMetadata by remember { mutableStateOf(true) }
+    var stripMetadata by remember { mutableStateOf(accountViewModel.account.settings.stripLocationOnUpload) }
 
     Column(
         modifier =
