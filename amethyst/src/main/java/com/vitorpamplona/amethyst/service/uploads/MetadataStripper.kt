@@ -110,14 +110,33 @@ class MetadataStripper {
         uri: Uri,
         context: Context,
     ): StrippingResult {
+        var tempFile: File? = null
         return try {
-            val tempFile = File.createTempFile("stripped_", ".jpg", context.cacheDir)
+            val mimeType = context.contentResolver.getType(uri) ?: ""
+            val extension =
+                when {
+                    mimeType.endsWith("jpeg", ignoreCase = true) ||
+                        mimeType.endsWith("jpg", ignoreCase = true) -> ".jpg"
 
-            context.contentResolver.openInputStream(uri)?.use { input ->
+                    mimeType.endsWith("png", ignoreCase = true) -> ".png"
+
+                    mimeType.endsWith("webp", ignoreCase = true) -> ".webp"
+
+                    else -> ".tmp"
+                }
+            tempFile = File.createTempFile("stripped_", extension, context.cacheDir)
+
+            val inputStream =
+                context.contentResolver.openInputStream(uri)
+                    ?: run {
+                        tempFile.delete()
+                        return StrippingResult(uri, false)
+                    }
+            inputStream.use { input ->
                 tempFile.outputStream().use { output ->
                     input.copyTo(output)
                 }
-            } ?: return StrippingResult(uri, false)
+            }
 
             val exif = ExifInterface(tempFile.absolutePath)
             for (tag in SENSITIVE_EXIF_TAGS) {
@@ -129,6 +148,7 @@ class MetadataStripper {
             StrippingResult(tempFile.toUri(), true)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
+            tempFile?.delete()
             Log.d("MetadataStripper", "Failed to strip image metadata: ${e.message}")
             StrippingResult(uri, false)
         }
