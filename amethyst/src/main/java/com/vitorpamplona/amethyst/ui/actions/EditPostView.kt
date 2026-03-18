@@ -125,7 +125,7 @@ fun EditPostView(
         postViewModel.load(edit, versionLookingAt)
     }
 
-    StrippingFailureDialog(postViewModel.strippingFailureDialog)
+    StrippingFailureDialog(postViewModel.strippingFailureConfirmation)
 
     Dialog(
         onDismissRequest = { onClose() },

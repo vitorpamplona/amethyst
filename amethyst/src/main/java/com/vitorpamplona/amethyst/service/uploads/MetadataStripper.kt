@@ -32,68 +32,67 @@ import androidx.exifinterface.media.ExifInterface
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import java.io.File
+import java.nio.ByteBuffer
 
 data class StrippingResult(
     val uri: Uri,
     val stripped: Boolean,
 )
 
-class MetadataStripper {
-    companion object {
-        private const val REMUX_BUFFER_SIZE = 8 * 1024 * 1024
+object MetadataStripper {
+    private const val DEFAULT_REMUX_BUFFER_SIZE = 8 * 1024 * 1024
 
-        private val SENSITIVE_EXIF_TAGS =
-            arrayOf(
-                ExifInterface.TAG_GPS_LATITUDE,
-                ExifInterface.TAG_GPS_LATITUDE_REF,
-                ExifInterface.TAG_GPS_LONGITUDE,
-                ExifInterface.TAG_GPS_LONGITUDE_REF,
-                ExifInterface.TAG_GPS_ALTITUDE,
-                ExifInterface.TAG_GPS_ALTITUDE_REF,
-                ExifInterface.TAG_GPS_TIMESTAMP,
-                ExifInterface.TAG_GPS_DATESTAMP,
-                ExifInterface.TAG_GPS_PROCESSING_METHOD,
-                ExifInterface.TAG_GPS_AREA_INFORMATION,
-                ExifInterface.TAG_GPS_SPEED,
-                ExifInterface.TAG_GPS_SPEED_REF,
-                ExifInterface.TAG_GPS_TRACK,
-                ExifInterface.TAG_GPS_TRACK_REF,
-                ExifInterface.TAG_GPS_IMG_DIRECTION,
-                ExifInterface.TAG_GPS_IMG_DIRECTION_REF,
-                ExifInterface.TAG_GPS_DEST_LATITUDE,
-                ExifInterface.TAG_GPS_DEST_LATITUDE_REF,
-                ExifInterface.TAG_GPS_DEST_LONGITUDE,
-                ExifInterface.TAG_GPS_DEST_LONGITUDE_REF,
-                ExifInterface.TAG_GPS_DEST_BEARING,
-                ExifInterface.TAG_GPS_DEST_BEARING_REF,
-                ExifInterface.TAG_GPS_DEST_DISTANCE,
-                ExifInterface.TAG_GPS_DEST_DISTANCE_REF,
-                ExifInterface.TAG_GPS_MAP_DATUM,
-                ExifInterface.TAG_GPS_DOP,
-                ExifInterface.TAG_GPS_MEASURE_MODE,
-                ExifInterface.TAG_GPS_SATELLITES,
-                ExifInterface.TAG_GPS_STATUS,
-                ExifInterface.TAG_GPS_VERSION_ID,
-                ExifInterface.TAG_MAKE,
-                ExifInterface.TAG_MODEL,
-                ExifInterface.TAG_SOFTWARE,
-                ExifInterface.TAG_ARTIST,
-                ExifInterface.TAG_COPYRIGHT,
-                ExifInterface.TAG_CAMERA_OWNER_NAME,
-                ExifInterface.TAG_BODY_SERIAL_NUMBER,
-                ExifInterface.TAG_LENS_SERIAL_NUMBER,
-                ExifInterface.TAG_LENS_MAKE,
-                ExifInterface.TAG_LENS_MODEL,
-                ExifInterface.TAG_DATETIME,
-                ExifInterface.TAG_DATETIME_ORIGINAL,
-                ExifInterface.TAG_DATETIME_DIGITIZED,
-                ExifInterface.TAG_OFFSET_TIME,
-                ExifInterface.TAG_OFFSET_TIME_ORIGINAL,
-                ExifInterface.TAG_OFFSET_TIME_DIGITIZED,
-                ExifInterface.TAG_IMAGE_UNIQUE_ID,
-                ExifInterface.TAG_USER_COMMENT,
-            )
-    }
+    private val SENSITIVE_EXIF_TAGS =
+        arrayOf(
+            ExifInterface.TAG_GPS_LATITUDE,
+            ExifInterface.TAG_GPS_LATITUDE_REF,
+            ExifInterface.TAG_GPS_LONGITUDE,
+            ExifInterface.TAG_GPS_LONGITUDE_REF,
+            ExifInterface.TAG_GPS_ALTITUDE,
+            ExifInterface.TAG_GPS_ALTITUDE_REF,
+            ExifInterface.TAG_GPS_TIMESTAMP,
+            ExifInterface.TAG_GPS_DATESTAMP,
+            ExifInterface.TAG_GPS_PROCESSING_METHOD,
+            ExifInterface.TAG_GPS_AREA_INFORMATION,
+            ExifInterface.TAG_GPS_SPEED,
+            ExifInterface.TAG_GPS_SPEED_REF,
+            ExifInterface.TAG_GPS_TRACK,
+            ExifInterface.TAG_GPS_TRACK_REF,
+            ExifInterface.TAG_GPS_IMG_DIRECTION,
+            ExifInterface.TAG_GPS_IMG_DIRECTION_REF,
+            ExifInterface.TAG_GPS_DEST_LATITUDE,
+            ExifInterface.TAG_GPS_DEST_LATITUDE_REF,
+            ExifInterface.TAG_GPS_DEST_LONGITUDE,
+            ExifInterface.TAG_GPS_DEST_LONGITUDE_REF,
+            ExifInterface.TAG_GPS_DEST_BEARING,
+            ExifInterface.TAG_GPS_DEST_BEARING_REF,
+            ExifInterface.TAG_GPS_DEST_DISTANCE,
+            ExifInterface.TAG_GPS_DEST_DISTANCE_REF,
+            ExifInterface.TAG_GPS_MAP_DATUM,
+            ExifInterface.TAG_GPS_DOP,
+            ExifInterface.TAG_GPS_MEASURE_MODE,
+            ExifInterface.TAG_GPS_SATELLITES,
+            ExifInterface.TAG_GPS_STATUS,
+            ExifInterface.TAG_GPS_VERSION_ID,
+            ExifInterface.TAG_MAKE,
+            ExifInterface.TAG_MODEL,
+            ExifInterface.TAG_SOFTWARE,
+            ExifInterface.TAG_ARTIST,
+            ExifInterface.TAG_COPYRIGHT,
+            ExifInterface.TAG_CAMERA_OWNER_NAME,
+            ExifInterface.TAG_BODY_SERIAL_NUMBER,
+            ExifInterface.TAG_LENS_SERIAL_NUMBER,
+            ExifInterface.TAG_LENS_MAKE,
+            ExifInterface.TAG_LENS_MODEL,
+            ExifInterface.TAG_DATETIME,
+            ExifInterface.TAG_DATETIME_ORIGINAL,
+            ExifInterface.TAG_DATETIME_DIGITIZED,
+            ExifInterface.TAG_OFFSET_TIME,
+            ExifInterface.TAG_OFFSET_TIME_ORIGINAL,
+            ExifInterface.TAG_OFFSET_TIME_DIGITIZED,
+            ExifInterface.TAG_IMAGE_UNIQUE_ID,
+            ExifInterface.TAG_USER_COMMENT,
+        )
 
     private fun extractorToCodecFlags(sampleFlags: Int): Int {
         var flags = 0
@@ -104,6 +103,77 @@ class MetadataStripper {
             flags = flags or MediaCodec.BUFFER_FLAG_PARTIAL_FRAME
         }
         return flags
+    }
+
+    private fun remuxTracks(
+        uri: Uri,
+        context: Context,
+        outputFile: File,
+        preStart: (MediaMuxer, MediaExtractor, Context, Uri) -> Unit = { _, _, _, _ -> },
+    ): Boolean {
+        val extractor = MediaExtractor()
+        var muxer: MediaMuxer? = null
+        var muxerStarted = false
+        var succeeded = false
+        try {
+            extractor.setDataSource(context, uri, null)
+
+            if (extractor.trackCount == 0) return false
+
+            // Note: MediaMuxer may still write a creation timestamp and encoder info into
+            // the new container. This is not controllable via the Android API and is a
+            // known residual privacy limitation of the remux approach.
+            muxer = MediaMuxer(outputFile.absolutePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
+
+            val trackIndexMap = mutableMapOf<Int, Int>()
+            for (i in 0 until extractor.trackCount) {
+                val format = extractor.getTrackFormat(i)
+                trackIndexMap[i] = muxer.addTrack(format)
+                extractor.selectTrack(i)
+            }
+
+            preStart(muxer, extractor, context, uri)
+
+            muxer.start()
+            muxerStarted = true
+
+            // Size buffer to the largest track's KEY_MAX_INPUT_SIZE (covers 4K keyframes),
+            // falling back to 8MB if the format doesn't report it.
+            var maxInputSize = DEFAULT_REMUX_BUFFER_SIZE
+            for (i in 0 until extractor.trackCount) {
+                val fmt = extractor.getTrackFormat(i)
+                if (fmt.containsKey(MediaFormat.KEY_MAX_INPUT_SIZE)) {
+                    maxInputSize = maxOf(maxInputSize, fmt.getInteger(MediaFormat.KEY_MAX_INPUT_SIZE))
+                }
+            }
+            val buffer = ByteBuffer.allocateDirect(maxInputSize)
+            val bufferInfo = MediaCodec.BufferInfo()
+
+            while (true) {
+                val sampleSize = extractor.readSampleData(buffer, 0)
+                if (sampleSize < 0) break
+
+                val outputTrack = trackIndexMap[extractor.sampleTrackIndex] ?: break
+
+                bufferInfo.offset = 0
+                bufferInfo.size = sampleSize
+                bufferInfo.presentationTimeUs = extractor.sampleTime
+                bufferInfo.flags = extractorToCodecFlags(extractor.sampleFlags)
+
+                muxer.writeSampleData(outputTrack, buffer, bufferInfo)
+                extractor.advance()
+            }
+
+            muxer.stop()
+            muxerStarted = false
+            succeeded = true
+        } finally {
+            if (muxerStarted) runCatching { muxer?.stop() }
+            muxer?.release()
+            extractor.release()
+            if (!succeeded) outputFile.delete()
+        }
+        return succeeded
     }
 
     fun stripImageMetadata(
@@ -159,81 +229,26 @@ class MetadataStripper {
         context: Context,
     ): StrippingResult {
         return try {
-            val tempInputFile = File.createTempFile("video_input_", ".mp4", context.cacheDir)
-            context.contentResolver.openInputStream(uri)?.use { input ->
-                tempInputFile.outputStream().use { output ->
-                    input.copyTo(output)
-                }
-            } ?: return StrippingResult(uri, false)
-
             val tempOutputFile = File.createTempFile("stripped_video_", ".mp4", context.cacheDir)
 
-            val extractor = MediaExtractor()
-            var succeeded = false
-            var muxer: MediaMuxer? = null
-            var muxerStarted = false
-            try {
-                extractor.setDataSource(tempInputFile.absolutePath)
-
-                if (extractor.trackCount == 0) return StrippingResult(uri, false)
-
-                // Note: MediaMuxer may still write a creation timestamp and encoder info into
-                // the new container. This is not controllable via the Android API and is a
-                // known residual privacy limitation of the remux approach.
-                muxer = MediaMuxer(tempOutputFile.absolutePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
-
-                val trackIndexMap = mutableMapOf<Int, Int>()
-                for (i in 0 until extractor.trackCount) {
-                    val format = extractor.getTrackFormat(i)
-                    trackIndexMap[i] = muxer.addTrack(format)
-                    extractor.selectTrack(i)
+            val succeeded =
+                remuxTracks(uri, context, tempOutputFile) { muxer, _, ctx, sourceUri ->
+                    // Rotation is a container-level property not included in track formats;
+                    // read it explicitly and reapply so the output plays back with the correct orientation.
+                    val retriever = MediaMetadataRetriever()
+                    try {
+                        retriever.setDataSource(ctx, sourceUri)
+                        val rotation =
+                            retriever
+                                .extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)
+                                ?.toIntOrNull() ?: 0
+                        if (rotation != 0) muxer.setOrientationHint(rotation)
+                    } finally {
+                        retriever.release()
+                    }
                 }
 
-                // Rotation is a container-level property not included in track formats;
-                // read it explicitly and reapply so the output plays back with the correct orientation.
-                val retriever = MediaMetadataRetriever()
-                try {
-                    retriever.setDataSource(tempInputFile.absolutePath)
-                    val rotation =
-                        retriever
-                            .extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)
-                            ?.toIntOrNull() ?: 0
-                    if (rotation != 0) muxer.setOrientationHint(rotation)
-                } finally {
-                    retriever.release()
-                }
-
-                muxer.start()
-                muxerStarted = true
-
-                val buffer = java.nio.ByteBuffer.allocate(REMUX_BUFFER_SIZE)
-                val bufferInfo = MediaCodec.BufferInfo()
-
-                while (true) {
-                    val sampleSize = extractor.readSampleData(buffer, 0)
-                    if (sampleSize < 0) break
-
-                    val outputTrack = trackIndexMap[extractor.sampleTrackIndex] ?: break
-
-                    bufferInfo.offset = 0
-                    bufferInfo.size = sampleSize
-                    bufferInfo.presentationTimeUs = extractor.sampleTime
-                    bufferInfo.flags = extractorToCodecFlags(extractor.sampleFlags)
-
-                    muxer.writeSampleData(outputTrack, buffer, bufferInfo)
-                    extractor.advance()
-                }
-
-                muxer.stop()
-                muxerStarted = false
-                succeeded = true
-            } finally {
-                if (muxerStarted) runCatching { muxer?.stop() }
-                muxer?.release()
-                extractor.release()
-                tempInputFile.delete()
-                if (!succeeded) tempOutputFile.delete()
-            }
+            if (!succeeded) return StrippingResult(uri, false)
 
             Log.d("MetadataStripper", "Stripped metadata from video")
             StrippingResult(tempOutputFile.toUri(), true)
@@ -249,75 +264,27 @@ class MetadataStripper {
         context: Context,
     ): StrippingResult {
         return try {
-            val tempInputFile = File.createTempFile("audio_input_", ".tmp", context.cacheDir)
-            context.contentResolver.openInputStream(uri)?.use { input ->
-                tempInputFile.outputStream().use { output ->
-                    input.copyTo(output)
-                }
-            } ?: return StrippingResult(uri, false)
-
+            // Verify the primary track is AAC/MP4A before remuxing
             val extractor = MediaExtractor()
-            var muxer: MediaMuxer? = null
-            var muxerStarted = false
-            var succeeded = false
-            var tempOutputFile: File? = null
             try {
-                extractor.setDataSource(tempInputFile.absolutePath)
-
+                extractor.setDataSource(context, uri, null)
                 if (extractor.trackCount == 0) return StrippingResult(uri, false)
-
-                val primaryFormat = extractor.getTrackFormat(0)
-                val primaryMime = primaryFormat.getString(MediaFormat.KEY_MIME) ?: ""
+                val primaryMime = extractor.getTrackFormat(0).getString(MediaFormat.KEY_MIME) ?: ""
                 if (!primaryMime.contains("mp4a") && !primaryMime.contains("aac")) {
                     return StrippingResult(uri, false)
                 }
-
-                val extension = ".m4a"
-
-                tempOutputFile = File.createTempFile("stripped_audio_", extension, context.cacheDir)
-                muxer = MediaMuxer(tempOutputFile.absolutePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
-
-                val trackIndexMap = mutableMapOf<Int, Int>()
-                for (i in 0 until extractor.trackCount) {
-                    val trackFormat = extractor.getTrackFormat(i)
-                    trackIndexMap[i] = muxer.addTrack(trackFormat)
-                    extractor.selectTrack(i)
-                }
-
-                muxer.start()
-                muxerStarted = true
-
-                val buffer = java.nio.ByteBuffer.allocate(REMUX_BUFFER_SIZE)
-                val bufferInfo = MediaCodec.BufferInfo()
-
-                while (true) {
-                    val sampleSize = extractor.readSampleData(buffer, 0)
-                    if (sampleSize < 0) break
-
-                    val outputTrack = trackIndexMap[extractor.sampleTrackIndex] ?: break
-
-                    bufferInfo.offset = 0
-                    bufferInfo.size = sampleSize
-                    bufferInfo.presentationTimeUs = extractor.sampleTime
-                    bufferInfo.flags = extractorToCodecFlags(extractor.sampleFlags)
-
-                    muxer.writeSampleData(outputTrack, buffer, bufferInfo)
-                    extractor.advance()
-                }
-
-                muxer.stop()
-                muxerStarted = false
-                succeeded = true
             } finally {
-                if (muxerStarted) runCatching { muxer?.stop() }
-                muxer?.release()
                 extractor.release()
-                tempInputFile.delete()
-                if (!succeeded) tempOutputFile?.delete()
             }
 
+            val tempOutputFile = File.createTempFile("stripped_audio_", ".m4a", context.cacheDir)
+
+            val succeeded = remuxTracks(uri, context, tempOutputFile)
+
+            if (!succeeded) return StrippingResult(uri, false)
+
             Log.d("MetadataStripper", "Stripped metadata from audio")
-            StrippingResult(tempOutputFile!!.toUri(), true)
+            StrippingResult(tempOutputFile.toUri(), true)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.d("MetadataStripper", "Failed to strip audio metadata: ${e.message}")
@@ -329,16 +296,20 @@ class MetadataStripper {
         uri: Uri,
         context: Context,
     ): StrippingResult {
+        var tempInputFile: File? = null
         return try {
-            val tempInputFile = File.createTempFile("mp3_input_", ".mp3", context.cacheDir)
+            tempInputFile = File.createTempFile("mp3_input_", ".mp3", context.cacheDir)
             context.contentResolver.openInputStream(uri)?.use { input ->
                 tempInputFile.outputStream().use { output ->
                     input.copyTo(output)
                 }
-            } ?: return StrippingResult(uri, false)
+            } ?: run {
+                tempInputFile.delete()
+                return StrippingResult(uri, false)
+            }
 
-            val fileSize = tempInputFile.length().toInt()
-            var startOffset = 0
+            val fileSize = tempInputFile.length()
+            var startOffset = 0L
             var endOffset = fileSize
 
             // Read first 10 bytes to check for ID3v2 header
@@ -355,14 +326,14 @@ class MetadataStripper {
                         (header[7].toInt() and 0x7F shl 14) or
                         (header[8].toInt() and 0x7F shl 7) or
                         (header[9].toInt() and 0x7F)
-                startOffset = 10 + size
+                startOffset = 10L + size
             }
 
             // Read last 128 bytes to check for ID3v1 tag
             if (endOffset - startOffset >= 128) {
                 val tail = ByteArray(128)
                 java.io.RandomAccessFile(tempInputFile, "r").use { raf ->
-                    raf.seek((endOffset - 128).toLong())
+                    raf.seek(endOffset - 128)
                     raf.readFully(tail)
                 }
                 if (tail[0] == 'T'.code.toByte() &&
@@ -373,19 +344,20 @@ class MetadataStripper {
                 }
             }
 
-            if (startOffset == 0 && endOffset == fileSize) {
+            if (startOffset == 0L && endOffset == fileSize) {
                 tempInputFile.delete()
+                tempInputFile = null
                 return StrippingResult(uri, true) // no tags found, already clean
             }
 
             val tempOutputFile = File.createTempFile("stripped_mp3_", ".mp3", context.cacheDir)
             java.io.RandomAccessFile(tempInputFile, "r").use { raf ->
-                raf.seek(startOffset.toLong())
+                raf.seek(startOffset)
                 tempOutputFile.outputStream().use { output ->
                     val buffer = ByteArray(8192)
                     var remaining = endOffset - startOffset
                     while (remaining > 0) {
-                        val toRead = minOf(buffer.size, remaining)
+                        val toRead = minOf(buffer.size.toLong(), remaining).toInt()
                         val read = raf.read(buffer, 0, toRead)
                         if (read <= 0) break
                         output.write(buffer, 0, read)
@@ -394,11 +366,13 @@ class MetadataStripper {
                 }
             }
             tempInputFile.delete()
+            tempInputFile = null
 
             Log.d("MetadataStripper", "Stripped ID3 tags from MP3")
             StrippingResult(tempOutputFile.toUri(), true)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
+            tempInputFile?.delete()
             Log.d("MetadataStripper", "Failed to strip MP3 metadata: ${e.message}")
             StrippingResult(uri, false)
         }

@@ -45,7 +45,7 @@ import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
-import com.vitorpamplona.amethyst.service.uploads.StrippingFailureState
+import com.vitorpamplona.amethyst.service.uploads.SuspendableConfirmation
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
@@ -134,7 +134,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
 
 enum class UserSuggestionAnchor {
     MAIN_MESSAGE,
@@ -194,23 +193,7 @@ open class ShortNotePostViewModel :
     var multiOrchestrator by mutableStateOf<MultiOrchestrator?>(null)
 
     // Stripping failure dialog
-    var strippingFailureDialog by mutableStateOf<StrippingFailureState?>(null)
-        private set
-
-    private suspend fun showStrippingFailureDialog(): Boolean =
-        suspendCancellableCoroutine { continuation ->
-            strippingFailureDialog =
-                StrippingFailureState(
-                    onConfirm = {
-                        strippingFailureDialog = null
-                        continuation.resume(true) {}
-                    },
-                    onCancel = {
-                        strippingFailureDialog = null
-                        continuation.resume(false) {}
-                    },
-                )
-        }
+    val strippingFailureConfirmation = SuspendableConfirmation()
 
     // Voice Messages
     var voiceRecording by mutableStateOf<RecordingResult?>(null)
@@ -867,7 +850,7 @@ open class ShortNotePostViewModel :
                     context,
                     useH265,
                     stripMetadata,
-                    onStrippingFailed = ::showStrippingFailureDialog,
+                    onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
                 )
 
             if (results.allGood) {

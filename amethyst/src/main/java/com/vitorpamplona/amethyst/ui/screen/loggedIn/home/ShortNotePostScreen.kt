@@ -180,7 +180,7 @@ private fun NewPostScreenInner(
 ) {
     WatchAndLoadMyEmojiList(accountViewModel)
 
-    StrippingFailureDialog(postViewModel.strippingFailureDialog)
+    StrippingFailureDialog(postViewModel.strippingFailureConfirmation)
 
     BackHandler {
         accountViewModel.launchSigner {

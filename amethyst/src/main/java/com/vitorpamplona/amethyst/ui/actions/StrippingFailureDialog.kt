@@ -25,13 +25,18 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.service.uploads.StrippingFailureState
+import com.vitorpamplona.amethyst.service.uploads.ConfirmationCallbacks
+import com.vitorpamplona.amethyst.service.uploads.SuspendableConfirmation
 import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
-fun StrippingFailureDialog(dialogState: StrippingFailureState?) {
-    dialogState ?: return
+fun StrippingFailureDialog(confirmation: SuspendableConfirmation) {
+    val dialogState = confirmation.state ?: return
+    StrippingFailureDialog(dialogState)
+}
 
+@Composable
+fun StrippingFailureDialog(dialogState: ConfirmationCallbacks) {
     AlertDialog(
         onDismissRequest = { dialogState.onCancel() },
         title = { Text(stringRes(R.string.metadata_strip_failed_title)) },

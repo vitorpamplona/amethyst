@@ -71,7 +71,7 @@ fun EditFieldRow(
         nav.popBack()
     }
 
-    StrippingFailureDialog(channelScreenModel.strippingFailureDialog)
+    StrippingFailureDialog(channelScreenModel.strippingFailureConfirmation)
 
     channelScreenModel.replyTo.value?.let {
         DisplayReplyingToNote(it, accountViewModel, nav) {

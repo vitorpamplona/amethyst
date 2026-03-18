@@ -139,13 +139,22 @@ class BookmarkGroupMetadataViewModel : ViewModel() {
     ) {
         onUploading(true)
 
-        val strippedUri =
+        val sourceUri =
             if (account.settings.stripLocationOnUpload) {
-                MetadataStripper().strip(galleryUri.uri, galleryUri.mimeType, context.applicationContext).uri
+                val result = MetadataStripper.strip(galleryUri.uri, galleryUri.mimeType, context.applicationContext)
+                if (!result.stripped) {
+                    onError(
+                        stringRes(context, R.string.metadata_strip_failed_title),
+                        stringRes(context, R.string.metadata_strip_failed_upload_cancelled),
+                    )
+                    onUploading(false)
+                    return
+                }
+                result.uri
             } else {
                 galleryUri.uri
             }
-        val compResult = MediaCompressor().compress(strippedUri, galleryUri.mimeType, CompressorQuality.MEDIUM, context.applicationContext)
+        val compResult = MediaCompressor().compress(sourceUri, galleryUri.mimeType, CompressorQuality.MEDIUM, context.applicationContext)
 
         try {
             val result =

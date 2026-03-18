@@ -118,7 +118,7 @@ fun PrivateMessageEditFieldRow(
         }
     }
 
-    StrippingFailureDialog(channelScreenModel.strippingFailureDialog)
+    StrippingFailureDialog(channelScreenModel.strippingFailureConfirmation)
 
     channelScreenModel.encryptedUploadErrorTitle?.let { title ->
         EncryptedUploadErrorDialog(

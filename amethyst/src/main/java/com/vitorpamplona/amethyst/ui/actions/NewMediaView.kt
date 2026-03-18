@@ -89,7 +89,7 @@ fun NewMediaView(
         postViewModel.load(account, uris)
     }
 
-    StrippingFailureDialog(postViewModel.strippingFailureDialog)
+    StrippingFailureDialog(postViewModel.strippingFailureConfirmation)
 
     Dialog(
         onDismissRequest = { onClose() },

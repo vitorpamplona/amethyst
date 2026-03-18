@@ -213,7 +213,7 @@ class NewUserMetadataViewModel : ViewModel() {
 
         val strippingResult =
             if (account.settings.stripLocationOnUpload) {
-                MetadataStripper().strip(galleryUri.uri, galleryUri.mimeType, context.applicationContext)
+                MetadataStripper.strip(galleryUri.uri, galleryUri.mimeType, context.applicationContext)
             } else {
                 null
             }
