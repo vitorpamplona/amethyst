@@ -288,7 +288,7 @@ fun GroupDMScreenContent(
                             selectedFiles,
                             accountViewModel.account.settings.defaultFileServer,
                             isUploading = uploading.mediaUploadTracker.isUploading,
-                            onAdd = { alt, server, sensitiveContent, mediaQuality, _ ->
+                            onAdd = { alt, server, sensitiveContent, mediaQuality, _, _ ->
                                 postViewModel.uploadAndHold(
                                     accountViewModel.toastManager::toast,
                                     context,

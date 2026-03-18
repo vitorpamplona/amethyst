@@ -265,7 +265,7 @@ fun EditPostView(
                                             it,
                                             accountViewModel.account.settings.defaultFileServer,
                                             isUploading = postViewModel.mediaUploadTracker.isUploading,
-                                            onAdd = { alt, server, sensitiveContent, mediaQuality, _ ->
+                                            onAdd = { alt, server, sensitiveContent, mediaQuality, _, _ ->
                                                 postViewModel.upload(alt, sensitiveContent, mediaQuality, false, server, accountViewModel.toastManager::toast, context)
                                                 accountViewModel.account.settings.changeDefaultFileServer(server)
                                             },

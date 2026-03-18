@@ -270,7 +270,7 @@ private fun NewProductBody(
                         uris = it,
                         defaultServer = accountViewModel.account.settings.defaultFileServer,
                         isUploading = postViewModel.mediaUploadTracker.isUploading,
-                        onAdd = { alt, server, sensitiveContent, mediaQuality, _ ->
+                        onAdd = { alt, server, sensitiveContent, mediaQuality, _, _ ->
                             postViewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, server, accountViewModel.toastManager::toast, context)
                             accountViewModel.account.settings.changeDefaultFileServer(server)
                         },
