@@ -204,9 +204,13 @@ fun NmcWalletFullScreen(
 
 @Composable
 private fun ReceiveAddressesSection(walletService: NmcWalletService) {
-    var showAddresses by rememberSaveable { mutableStateOf(false) }
+    var showAddresses by rememberSaveable { mutableStateOf(true) }
     var mnemonicForDerivation by rememberSaveable { mutableStateOf("") }
-    var addresses by remember { mutableStateOf<List<com.vitorpamplona.quartz.nip05.namecoin.wallet.DerivedAddress>>(emptyList()) }
+    var addresses by remember {
+        mutableStateOf(
+            walletService.wallet.generateReceiveAddresses(mnemonic = null, count = 5),
+        )
+    }
     val clipboard = LocalClipboardManager.current
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -216,16 +220,7 @@ private fun ReceiveAddressesSection(walletService: NmcWalletService) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text("Receive addresses", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-            TextButton(onClick = {
-                showAddresses = !showAddresses
-                if (showAddresses && addresses.isEmpty()) {
-                    addresses =
-                        walletService.wallet.generateReceiveAddresses(
-                            mnemonic = mnemonicForDerivation.ifBlank { null },
-                            count = 5,
-                        )
-                }
-            }) {
+            TextButton(onClick = { showAddresses = !showAddresses }) {
                 Text(if (showAddresses) "Hide" else "Show")
             }
         }

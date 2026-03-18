@@ -161,12 +161,31 @@ class NmcWallet(
         result.add(DerivedAddress(0, nmcAddress ?: "", pubKeyHex ?: "", isPrimary = true))
 
         if (mnemonic != null) {
+            // BIP44 derivation from mnemonic at m/44'/7'/0'/0/<index>
             for (i in 1 until count) {
                 val key = NmcKeyManager.privateKeyFromMnemonic(mnemonic, account = 0, index = i.toLong())
                 val pk = NmcKeyManager.compressedPubKey(key)
                 val addr = NmcAddressGenerator.addressFromPubKey(pk, currentAddressType)
                 result.add(DerivedAddress(i, addr, pk.toHexKey()))
-                key.fill(0) // clear derived key
+                key.fill(0)
+            }
+        } else if (privKey != null) {
+            // Derive additional addresses from loaded key via HMAC
+            // HMAC-SHA512("NMC-receive-<index>", privkey) → deterministic child keys
+            val bip32 =
+                com.vitorpamplona.quartz.nip06KeyDerivation
+                    .Bip32SeedDerivation()
+            for (i in 1 until count) {
+                val hmac = bip32.hmac512("NMC-receive-$i".toByteArray(), privKey!!)
+                val childKey = hmac.copyOfRange(0, 32)
+                if (com.vitorpamplona.quartz.utils.Secp256k1Instance
+                        .isPrivateKeyValid(childKey)
+                ) {
+                    val pk = NmcKeyManager.compressedPubKey(childKey)
+                    val addr = NmcAddressGenerator.addressFromPubKey(pk, currentAddressType)
+                    result.add(DerivedAddress(i, addr, pk.toHexKey()))
+                }
+                childKey.fill(0)
             }
         }
         return result
