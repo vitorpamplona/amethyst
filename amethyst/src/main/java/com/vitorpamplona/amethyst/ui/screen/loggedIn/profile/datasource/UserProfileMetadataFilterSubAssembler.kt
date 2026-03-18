@@ -52,6 +52,7 @@ class UserProfileMetadataFilterSubAssembler(
         return listOfNotNull(
             filterUserProfileMetadata(userPerRelay, since),
             filterUserProfileLists(userPerRelay, since),
+            filterUserProfileLastSeen(userPerRelay, since),
         ).flatten()
     }
 

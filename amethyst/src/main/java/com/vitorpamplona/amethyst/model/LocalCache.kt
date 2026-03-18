@@ -325,7 +325,7 @@ object LocalCache : ILocalCache, ICacheProvider {
 
             newFilter.init()
 
-            observables.put(newFilter, newFilter)
+            observables[newFilter] = newFilter
 
             awaitClose {
                 observables.remove(newFilter)

@@ -1824,4 +1824,5 @@
     <string name="dms">DMs</string>
     <string name="profiles">profiles</string>
     <string name="relay_settings_lower">relay settings</string>
+    <string name="last_seen">Last seen %1$s ago</string>
 </resources>

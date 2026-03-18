@@ -71,6 +71,7 @@ fun DrawBanner(
             contentDescription = stringRes(id = R.string.profile_image),
             contentScale = ContentScale.Crop,
             placeholder = painterRes(R.drawable.profile_banner, 1),
+            error = painterRes(R.drawable.profile_banner, 1),
             modifier =
                 Modifier
                     .fillMaxWidth()
