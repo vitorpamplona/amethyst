@@ -1232,7 +1232,7 @@
     <string name="video_codec_h265_label">Use H.265/HEVC Codec</string>
     <string name="video_codec_h265_description">Better quality at smaller file sizes but not all devices support H.265 playback.</string>
     <string name="strip_metadata_label">Remove private metadata</string>
-    <string name="strip_metadata_description">Private metadata will be attempted stripped from supported media files</string>
+    <string name="strip_metadata_description">Attempts to strip private metadata from supported media files before uploading</string>
 
     <string name="metadata_strip_failed_title">Metadata could not be removed</string>
     <string name="metadata_strip_failed_body">This file format does not support metadata stripping. Private information such as location and device info may be included. Upload anyway?</string>
