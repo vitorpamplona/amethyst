@@ -79,7 +79,7 @@ fun ImageVideoDescription(
     uris: MultiOrchestrator,
     defaultServer: ServerName,
     isUploading: Boolean,
-    onAdd: (String, ServerName, Boolean, Int, Boolean) -> Unit,
+    onAdd: (String, ServerName, Boolean, Int, Boolean, Boolean) -> Unit,
     onDelete: (SelectedMediaProcessing) -> Unit,
     onCancel: () -> Unit,
     accountViewModel: AccountViewModel,
@@ -107,6 +107,8 @@ fun ImageVideoDescription(
 
     // Codec selection: false = H264, true = H265
     var useH265Codec by remember { mutableStateOf(false) }
+
+    var stripMetadata by remember { mutableStateOf(true) }
 
     Column(
         modifier =
@@ -248,6 +250,17 @@ fun ImageVideoDescription(
                 )
             }
 
+            SettingSwitchItem(
+                title = R.string.strip_metadata_label,
+                description = R.string.strip_metadata_description,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                checked = stripMetadata,
+                onCheckedChange = { stripMetadata = it },
+            )
+
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier =
@@ -321,7 +334,7 @@ fun ImageVideoDescription(
                         .fillMaxWidth()
                         .padding(vertical = 10.dp),
                 enabled = !isUploading,
-                onClick = { onAdd(message, selectedServer, sensitiveContent, mediaQualitySlider, useH265Codec) },
+                onClick = { onAdd(message, selectedServer, sensitiveContent, mediaQualitySlider, useH265Codec, stripMetadata) },
                 shape = QuoteBorder,
                 colors =
                     ButtonDefaults.buttonColors(
