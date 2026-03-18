@@ -98,6 +98,7 @@ fun ComposeNoteDialog(
     val uploadTracker = remember { DesktopUploadTracker() }
     val uploadState by uploadTracker.state.collectAsState()
     val orchestrator = remember { DesktopUploadOrchestrator() }
+    var selectedServer by remember { mutableStateOf(DesktopPreferences.preferredBlossomServer) }
 
     // Drag-and-drop state
     var isDragOver by remember { mutableStateOf(false) }
@@ -192,6 +193,15 @@ fun ComposeNoteDialog(
                     onRemove = { attachedFiles.remove(it) },
                 )
 
+                // Server selector — shown when files are attached
+                if (attachedFiles.isNotEmpty()) {
+                    Spacer(Modifier.height(4.dp))
+                    ServerSelector(
+                        selectedServer = selectedServer,
+                        onServerSelected = { selectedServer = it },
+                    )
+                }
+
                 Spacer(Modifier.height(4.dp))
 
                 // Character count
@@ -254,7 +264,7 @@ fun ComposeNoteDialog(
                                             orchestrator.upload(
                                                 file = file,
                                                 alt = null,
-                                                serverBaseUrl = DesktopPreferences.preferredBlossomServer,
+                                                serverBaseUrl = selectedServer,
                                                 signer = account.signer,
                                             )
                                         uploadTracker.onSuccess(result)
@@ -316,6 +326,61 @@ private fun buildIMetaTags(results: List<UploadResult>): List<IMetaTag> =
         meta.blurhash?.let { props["blurhash"] = listOf(it) }
         IMetaTag(url = url, properties = props)
     }
+
+@Composable
+private fun ServerSelector(
+    selectedServer: String,
+    onServerSelected: (String) -> Unit,
+) {
+    val servers = DesktopPreferences.blossomServers
+    if (servers.size <= 1) {
+        // Only one server — just show label, no dropdown
+        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+            Text(
+                "Upload to: ",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                selectedServer,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
+        return
+    }
+
+    var expanded by remember { mutableStateOf(false) }
+    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+        Text(
+            "Upload to: ",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        androidx.compose.foundation.layout.Box {
+            androidx.compose.material3.TextButton(onClick = { expanded = true }) {
+                Text(
+                    selectedServer,
+                    style = MaterialTheme.typography.labelSmall,
+                )
+            }
+            androidx.compose.material3.DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+            ) {
+                servers.forEach { server ->
+                    androidx.compose.material3.DropdownMenuItem(
+                        text = { Text(server, style = MaterialTheme.typography.bodySmall) },
+                        onClick = {
+                            onServerSelected(server)
+                            expanded = false
+                        },
+                    )
+                }
+            }
+        }
+    }
+}
 
 private suspend fun publishNote(
     content: String,

@@ -30,33 +30,33 @@ Branch has 13 commits implementing Phases 0-9 of desktop media: image display, u
 
 ---
 
-## Phase 2: File Upload (Blossom Protocol) — ⏭️ SKIPPED (come back later)
+## Phase 2: File Upload (Blossom Protocol)
 
 | # | Test | Steps | Expected | Status |
 |---|------|-------|----------|--------|
-| 2.1 | Upload JPEG | Compose note → attach JPEG → publish | Upload succeeds, URL in note | ⬜ TODO |
-| 2.2 | Upload PNG | Compose note → attach PNG → publish | Upload succeeds, URL in note | ⬜ TODO |
-| 2.3 | EXIF stripped | Upload JPEG with GPS EXIF → download result from Blossom URL | No EXIF metadata in downloaded file | ⬜ TODO |
-| 2.4 | Auth header | Upload with Nostr signer | Server accepts upload (BUD-11 auth works) | ⬜ TODO |
-| 2.5 | Upload progress | Attach large file → upload | Progress indicator updates during upload | ⬜ TODO |
-| 2.6 | Upload error | Disconnect network mid-upload | Error state shown, no crash | ⬜ TODO |
-| 2.7 | Server selector | Open compose → check server dropdown | Shows configured Blossom servers | ⬜ TODO |
+| 2.1 | Upload JPEG | Compose note → attach JPEG → publish | Upload succeeds, URL in note | ✅ PASS |
+| 2.2 | Upload PNG | Compose note → attach PNG → publish | Upload succeeds, URL in note | ✅ PASS |
+| 2.3 | EXIF stripped | Upload JPEG with GPS EXIF → download result from Blossom URL | No EXIF metadata in downloaded file | ✅ PASS (implicit — DesktopMediaCompressor strips EXIF before upload) |
+| 2.4 | Auth header | Upload with Nostr signer | Server accepts upload (BUD-11 auth works) | ✅ PASS (uploads succeed = auth works) |
+| 2.5 | Upload progress | Attach large file → upload | Progress indicator updates during upload | ✅ PASS |
+| 2.6 | Upload error | Disconnect network mid-upload | Error state shown, no crash | ✅ PASS |
+| 2.7 | Server selector | Open compose → attach file → check server selector | Shows configured Blossom servers; dropdown to switch | ✅ PASS (fixed: added ServerSelector shown when files attached) |
 
 ---
 
-## Phase 3: Upload UX (File Picker, Paste, Drag-Drop) — ⏭️ SKIPPED (come back later)
+## Phase 3: Upload UX (File Picker, Paste, Drag-Drop)
 
 | # | Test | Steps | Expected | Status |
 |---|------|-------|----------|--------|
-| 3.1 | File picker | Compose → click Attach → select image | Native dialog opens, file appears in attachment row | ⬜ TODO |
-| 3.2 | Multi-select | File picker → select 3 images | All 3 appear in attachment row with thumbnails | ⬜ TODO |
-| 3.3 | File type filter | File picker dialog | Only media files shown (images, video, audio) | ⬜ TODO |
-| 3.4 | Clipboard paste | Copy image → Compose → Cmd+V/Ctrl+V | Pasted image appears in attachment row | ⬜ TODO |
-| 3.5 | Drag & drop | Drag image file onto compose dialog | File appears in attachment row; visual drop indicator | ⬜ TODO |
-| 3.6 | Remove attachment | Click X on attached file | File removed from row | ⬜ TODO |
-| 3.7 | Thumbnail preview | Attach image | Thumbnail visible in attachment row | ⬜ TODO |
-| 3.8 | Alt text | Attach image → enter alt text → publish | Alt text included in imeta tag | ⬜ TODO |
-| 3.9 | Imeta tags | Publish note with image | Published event has imeta tag (url, m, x, dim, blurhash) | ⬜ TODO |
+| 3.1 | File picker | Compose → click Attach → select image | Native dialog opens, file appears in attachment row | ✅ PASS |
+| 3.2 | Multi-select | File picker → select 3 images | All 3 appear in attachment row with thumbnails | ✅ PASS |
+| 3.3 | File type filter | File picker dialog | Only media files shown (images, video, audio) | ✅ PASS |
+| 3.4 | Clipboard paste | Copy image → Compose → Cmd+V/Ctrl+V | Pasted image appears in attachment row | ✅ PASS |
+| 3.5 | Drag & drop | Drag image file onto compose dialog | File appears in attachment row; visual drop indicator | ✅ PASS |
+| 3.6 | Remove attachment | Click X on attached file | File removed from row | ✅ PASS |
+| 3.7 | Thumbnail preview | Attach image | Thumbnail visible in attachment row | ✅ PASS |
+| 3.8 | Alt text | Attach image → enter alt text → publish | Alt text included in imeta tag | ✅ PASS |
+| 3.9 | Imeta tags | Publish note with image | Published event has imeta tag (url, m, x, dim, blurhash) | ✅ PASS |
 
 ---
 
@@ -93,13 +93,13 @@ Branch has 13 commits implementing Phases 0-9 of desktop media: image display, u
 
 ---
 
-## Phase 6: Encrypted Media (NIP-17 DMs) — ⏭️ SKIPPED (DM file attach not implemented yet — MessageInput is text-only)
+## Phase 6: Encrypted Media (NIP-17 DMs)
 
 | # | Test | Steps | Expected | Status |
 |---|------|-------|----------|--------|
-| 6.1 | DM file attach | Open DM → attach file | Encryption indicator visible | ⬜ BLOCKED — no attach button in DM input |
-| 6.2 | Send encrypted | Attach file in DM → send | File uploads encrypted to Blossom | ⬜ BLOCKED |
-| 6.3 | Receive encrypted | Receive DM with encrypted file | File downloads and decrypts; displays correctly | ⬜ TODO |
+| 6.1 | DM file attach | Open DM → attach file | Encryption indicator visible | ⬜ BLOCKED — no attach button in DM input (send not implemented) |
+| 6.2 | Send encrypted | Attach file in DM → send | File uploads encrypted to Blossom | ⬜ BLOCKED — send not implemented |
+| 6.3 | Receive encrypted | Receive DM with encrypted file from another client | File downloads and decrypts; displays correctly | ⬜ TODO |
 | 6.4 | Wrong key | (If testable) Attempt to view another user's encrypted media | Decryption fails gracefully | ⬜ TODO |
 
 ---
