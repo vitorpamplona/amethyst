@@ -33,6 +33,11 @@ import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import java.io.File
 
+data class StrippingResult(
+    val uri: Uri,
+    val stripped: Boolean,
+)
+
 class MetadataStripper {
     companion object {
         private const val REMUX_BUFFER_SIZE = 8 * 1024 * 1024
@@ -104,7 +109,7 @@ class MetadataStripper {
     fun stripImageMetadata(
         uri: Uri,
         context: Context,
-    ): Uri {
+    ): StrippingResult {
         return try {
             val tempFile = File.createTempFile("stripped_", ".jpg", context.cacheDir)
 
@@ -112,7 +117,7 @@ class MetadataStripper {
                 tempFile.outputStream().use { output ->
                     input.copyTo(output)
                 }
-            } ?: return uri
+            } ?: return StrippingResult(uri, false)
 
             val exif = ExifInterface(tempFile.absolutePath)
             for (tag in SENSITIVE_EXIF_TAGS) {
@@ -121,25 +126,25 @@ class MetadataStripper {
             exif.saveAttributes()
 
             Log.d("MetadataStripper", "Stripped EXIF metadata from image")
-            tempFile.toUri()
+            StrippingResult(tempFile.toUri(), true)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.d("MetadataStripper", "Failed to strip image metadata: ${e.message}")
-            uri
+            StrippingResult(uri, false)
         }
     }
 
     fun stripVideoMetadata(
         uri: Uri,
         context: Context,
-    ): Uri {
+    ): StrippingResult {
         return try {
             val tempInputFile = File.createTempFile("video_input_", ".mp4", context.cacheDir)
             context.contentResolver.openInputStream(uri)?.use { input ->
                 tempInputFile.outputStream().use { output ->
                     input.copyTo(output)
                 }
-            } ?: return uri
+            } ?: return StrippingResult(uri, false)
 
             val tempOutputFile = File.createTempFile("stripped_video_", ".mp4", context.cacheDir)
 
@@ -150,7 +155,7 @@ class MetadataStripper {
             try {
                 extractor.setDataSource(tempInputFile.absolutePath)
 
-                if (extractor.trackCount == 0) return uri
+                if (extractor.trackCount == 0) return StrippingResult(uri, false)
 
                 // Note: MediaMuxer may still write a creation timestamp and encoder info into
                 // the new container. This is not controllable via the Android API and is a
@@ -211,25 +216,25 @@ class MetadataStripper {
             }
 
             Log.d("MetadataStripper", "Stripped metadata from video")
-            tempOutputFile.toUri()
+            StrippingResult(tempOutputFile.toUri(), true)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.d("MetadataStripper", "Failed to strip video metadata: ${e.message}")
-            uri
+            StrippingResult(uri, false)
         }
     }
 
     fun stripAudioMetadata(
         uri: Uri,
         context: Context,
-    ): Uri {
+    ): StrippingResult {
         return try {
             val tempInputFile = File.createTempFile("audio_input_", ".tmp", context.cacheDir)
             context.contentResolver.openInputStream(uri)?.use { input ->
                 tempInputFile.outputStream().use { output ->
                     input.copyTo(output)
                 }
-            } ?: return uri
+            } ?: return StrippingResult(uri, false)
 
             val extractor = MediaExtractor()
             var muxer: MediaMuxer? = null
@@ -239,7 +244,7 @@ class MetadataStripper {
             try {
                 extractor.setDataSource(tempInputFile.absolutePath)
 
-                if (extractor.trackCount == 0) return uri
+                if (extractor.trackCount == 0) return StrippingResult(uri, false)
 
                 val format = extractor.getTrackFormat(0)
                 val mime = format.getString(MediaFormat.KEY_MIME) ?: ""
@@ -285,11 +290,11 @@ class MetadataStripper {
             }
 
             Log.d("MetadataStripper", "Stripped metadata from audio")
-            tempOutputFile!!.toUri()
+            StrippingResult(tempOutputFile!!.toUri(), true)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.d("MetadataStripper", "Failed to strip audio metadata: ${e.message}")
-            uri
+            StrippingResult(uri, false)
         }
     }
 
@@ -297,11 +302,11 @@ class MetadataStripper {
         uri: Uri,
         mimeType: String?,
         context: Context,
-    ): Uri =
+    ): StrippingResult =
         when {
             mimeType?.startsWith("image/", ignoreCase = true) == true -> stripImageMetadata(uri, context)
             mimeType?.startsWith("video/", ignoreCase = true) == true -> stripVideoMetadata(uri, context)
             mimeType?.startsWith("audio/", ignoreCase = true) == true -> stripAudioMetadata(uri, context)
-            else -> uri
+            else -> StrippingResult(uri, false)
         }
 }
