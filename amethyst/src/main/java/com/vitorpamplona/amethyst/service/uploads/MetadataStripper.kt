@@ -246,11 +246,15 @@ class MetadataStripper {
 
                 if (extractor.trackCount == 0) return StrippingResult(uri, false)
 
-                val format = extractor.getTrackFormat(0)
-                val mime = format.getString(MediaFormat.KEY_MIME) ?: ""
+                val primaryFormat = extractor.getTrackFormat(0)
+                val primaryMime = primaryFormat.getString(MediaFormat.KEY_MIME) ?: ""
+                if (!primaryMime.contains("mp4a") && !primaryMime.contains("aac")) {
+                    return StrippingResult(uri, false)
+                }
+
                 val extension =
                     when {
-                        mime.contains("mp4a") || mime.contains("aac") -> ".m4a"
+                        primaryMime.contains("mp4a") || primaryMime.contains("aac") -> ".m4a"
                         else -> ".mp4"
                     }
 
@@ -305,6 +309,65 @@ class MetadataStripper {
         }
     }
 
+    fun stripMp3Metadata(
+        uri: Uri,
+        context: Context,
+    ): StrippingResult {
+        return try {
+            val tempInputFile = File.createTempFile("mp3_input_", ".mp3", context.cacheDir)
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                tempInputFile.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            } ?: return StrippingResult(uri, false)
+
+            val bytes = tempInputFile.readBytes()
+            var startOffset = 0
+            var endOffset = bytes.size
+
+            // Strip ID3v2 header (at beginning of file)
+            if (bytes.size >= 10 &&
+                bytes[0] == 'I'.code.toByte() &&
+                bytes[1] == 'D'.code.toByte() &&
+                bytes[2] == '3'.code.toByte()
+            ) {
+                val size =
+                    (bytes[6].toInt() and 0x7F shl 21) or
+                        (bytes[7].toInt() and 0x7F shl 14) or
+                        (bytes[8].toInt() and 0x7F shl 7) or
+                        (bytes[9].toInt() and 0x7F)
+                startOffset = 10 + size
+            }
+
+            // Strip ID3v1 tag (last 128 bytes)
+            if (endOffset - startOffset >= 128 &&
+                bytes[endOffset - 128] == 'T'.code.toByte() &&
+                bytes[endOffset - 127] == 'A'.code.toByte() &&
+                bytes[endOffset - 126] == 'G'.code.toByte()
+            ) {
+                endOffset -= 128
+            }
+
+            if (startOffset == 0 && endOffset == bytes.size) {
+                tempInputFile.delete()
+                return StrippingResult(uri, true) // no tags found, already clean
+            }
+
+            val tempOutputFile = File.createTempFile("stripped_mp3_", ".mp3", context.cacheDir)
+            tempOutputFile.outputStream().use { output ->
+                output.write(bytes, startOffset, endOffset - startOffset)
+            }
+            tempInputFile.delete()
+
+            Log.d("MetadataStripper", "Stripped ID3 tags from MP3")
+            StrippingResult(tempOutputFile.toUri(), true)
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.d("MetadataStripper", "Failed to strip MP3 metadata: ${e.message}")
+            StrippingResult(uri, false)
+        }
+    }
+
     fun strip(
         uri: Uri,
         mimeType: String?,
@@ -313,6 +376,7 @@ class MetadataStripper {
         when {
             mimeType?.startsWith("image/", ignoreCase = true) == true -> stripImageMetadata(uri, context)
             mimeType?.startsWith("video/", ignoreCase = true) == true -> stripVideoMetadata(uri, context)
+            mimeType?.equals("audio/mpeg", ignoreCase = true) == true -> stripMp3Metadata(uri, context)
             mimeType?.startsWith("audio/", ignoreCase = true) == true -> stripAudioMetadata(uri, context)
             else -> StrippingResult(uri, false)
         }
