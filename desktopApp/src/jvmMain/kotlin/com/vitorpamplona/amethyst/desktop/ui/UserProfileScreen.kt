@@ -730,6 +730,7 @@ fun UserProfileScreen(
                             GalleryTab(
                                 pictureEvents = pictureEvents,
                                 onImageClick = { urls, index -> lightboxState = LightboxState(urls, index) },
+                                modifier = Modifier.fillParentMaxHeight(),
                             )
                         }
                     }
