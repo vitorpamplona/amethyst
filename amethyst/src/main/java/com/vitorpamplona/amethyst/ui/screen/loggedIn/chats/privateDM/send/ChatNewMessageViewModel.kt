@@ -39,6 +39,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.location.LocationState
+import com.vitorpamplona.amethyst.service.uploads.StrippingFailureState
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.note.creators.draftTags.DraftTagState
@@ -99,6 +100,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 
 @Stable
 class ChatNewMessageViewModel :
@@ -133,6 +135,11 @@ class ChatNewMessageViewModel :
     val replyTo = mutableStateOf<Note?>(null)
 
     var uploadState by mutableStateOf<ChatFileUploadState?>(null)
+
+    // Stripping failure dialog
+    var strippingFailureDialog by mutableStateOf<StrippingFailureState?>(null)
+        private set
+
     val iMetaAttachments = IMetaAttachments()
 
     var uploadsWaitingToBeSent by mutableStateOf<List<SuccessfulUploads>>(emptyList())
@@ -395,6 +402,21 @@ class ChatNewMessageViewModel :
         return location!!
     }
 
+    private suspend fun showStrippingFailureDialog(): Boolean =
+        suspendCancellableCoroutine { continuation ->
+            strippingFailureDialog =
+                StrippingFailureState(
+                    onConfirm = {
+                        strippingFailureDialog = null
+                        continuation.resume(true) {}
+                    },
+                    onCancel = {
+                        strippingFailureDialog = null
+                        continuation.resume(false) {}
+                    },
+                )
+        }
+
     fun uploadAndHold(
         onError: (title: String, message: String) -> Unit,
         context: Context,
@@ -413,13 +435,14 @@ class ChatNewMessageViewModel :
                         pendingRetryMode = RetryMode.HOLD
                     },
                     context,
+                    onStrippingFailed = ::showStrippingFailureDialog,
                 ) {
                     uploadsWaitingToBeSent += it
                     draftTag.newVersion()
                     onceUploaded()
                 }
             } else {
-                ChatFileUploader(account).justUploadNIP04(uploadState, onError, context) {
+                ChatFileUploader(account).justUploadNIP04(uploadState, onError, context, onStrippingFailed = ::showStrippingFailureDialog) {
                     uploadsWaitingToBeSent += it
                     draftTag.newVersion()
                     onceUploaded()
@@ -450,13 +473,14 @@ class ChatNewMessageViewModel :
                         pendingRetryOnceUploaded = onceUploaded
                     },
                     context,
+                    onStrippingFailed = ::showStrippingFailureDialog,
                 ) {
                     ChatFileSender(room, account).sendNIP17(it)
                     draftTag.newVersion()
                     onceUploaded()
                 }
             } else {
-                ChatFileUploader(account).justUploadNIP04(uploadState, onError, context) {
+                ChatFileUploader(account).justUploadNIP04(uploadState, onError, context, onStrippingFailed = ::showStrippingFailureDialog) {
                     ChatFileSender(room, account).sendNIP04(it)
                     draftTag.newVersion()
                     onceUploaded()
@@ -505,6 +529,7 @@ class ChatNewMessageViewModel :
                         uploadState,
                         onError ?: accountViewModel.toastManager::toast,
                         context,
+                        onStrippingFailed = ::showStrippingFailureDialog,
                     ) {
                         uploadsWaitingToBeSent += it
                         draftTag.newVersion()
@@ -518,6 +543,7 @@ class ChatNewMessageViewModel :
                         uploadState,
                         onError ?: accountViewModel.toastManager::toast,
                         context,
+                        onStrippingFailed = ::showStrippingFailureDialog,
                     ) {
                         ChatFileSender(room, account).sendNIP17(it)
                         draftTag.newVersion()

@@ -37,6 +37,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
+import com.vitorpamplona.amethyst.service.uploads.StrippingFailureState
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.uploads.MediaUploadTracker
@@ -64,6 +65,7 @@ import com.vitorpamplona.quartz.nip94FileMetadata.size
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 
 @Stable
 open class EditPostViewModel : ViewModel() {
@@ -89,6 +91,10 @@ open class EditPostViewModel : ViewModel() {
 
     // Images and Videos
     var multiOrchestrator by mutableStateOf<MultiOrchestrator?>(null)
+
+    // Stripping failure dialog
+    var strippingFailureDialog by mutableStateOf<StrippingFailureState?>(null)
+        private set
 
     // Codec selection: false = H264, true = H265
     var useH265Codec by mutableStateOf(false)
@@ -197,6 +203,21 @@ open class EditPostViewModel : ViewModel() {
                     context,
                     useH265Codec,
                     stripMetadata,
+                    onStrippingFailed = {
+                        suspendCancellableCoroutine { continuation ->
+                            strippingFailureDialog =
+                                StrippingFailureState(
+                                    onConfirm = {
+                                        strippingFailureDialog = null
+                                        continuation.resume(true) {}
+                                    },
+                                    onCancel = {
+                                        strippingFailureDialog = null
+                                        continuation.resume(false) {}
+                                    },
+                                )
+                        }
+                    },
                 )
 
             if (results.allGood) {

@@ -118,6 +118,24 @@ fun PrivateMessageEditFieldRow(
         }
     }
 
+    channelScreenModel.strippingFailureDialog?.let { dialogState ->
+        AlertDialog(
+            onDismissRequest = { dialogState.onCancel() },
+            title = { Text(stringRes(R.string.metadata_strip_failed_title)) },
+            text = { Text(stringRes(R.string.metadata_strip_failed_body)) },
+            confirmButton = {
+                TextButton(onClick = { dialogState.onConfirm() }) {
+                    Text(stringRes(R.string.metadata_strip_failed_upload))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { dialogState.onCancel() }) {
+                    Text(stringRes(R.string.cancel))
+                }
+            },
+        )
+    }
+
     channelScreenModel.encryptedUploadErrorTitle?.let { title ->
         EncryptedUploadErrorDialog(
             title = title,

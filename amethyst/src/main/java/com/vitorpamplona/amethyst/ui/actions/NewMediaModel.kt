@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
+import com.vitorpamplona.amethyst.service.uploads.StrippingFailureState
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
@@ -44,6 +45,7 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 
 @Stable
 open class NewMediaModel : ViewModel() {
@@ -58,6 +60,10 @@ open class NewMediaModel : ViewModel() {
     // Images and Videos
     var multiOrchestrator by mutableStateOf<MultiOrchestrator?>(null)
     var onceUploaded: () -> Unit = {}
+
+    // Stripping failure dialog
+    var strippingFailureDialog by mutableStateOf<StrippingFailureState?>(null)
+        private set
 
     // 0 = Low, 1 = Medium, 2 = High, 3=UNCOMPRESSED
     var mediaQualitySlider by mutableIntStateOf(1)
@@ -120,6 +126,21 @@ open class NewMediaModel : ViewModel() {
                     context,
                     useH265Codec,
                     stripMetadata,
+                    onStrippingFailed = {
+                        suspendCancellableCoroutine { continuation ->
+                            strippingFailureDialog =
+                                StrippingFailureState(
+                                    onConfirm = {
+                                        strippingFailureDialog = null
+                                        continuation.resume(true) {}
+                                    },
+                                    onCancel = {
+                                        strippingFailureDialog = null
+                                        continuation.resume(false) {}
+                                    },
+                                )
+                        }
+                    },
                 )
 
             if (results.allGood) {

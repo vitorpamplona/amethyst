@@ -37,6 +37,11 @@ import kotlinx.coroutines.flow.map
 import okhttp3.OkHttpClient
 import kotlin.coroutines.cancellation.CancellationException
 
+data class StrippingFailureState(
+    val onConfirm: () -> Unit,
+    val onCancel: () -> Unit,
+)
+
 sealed class UploadingState {
     data object Ready : UploadingState()
 

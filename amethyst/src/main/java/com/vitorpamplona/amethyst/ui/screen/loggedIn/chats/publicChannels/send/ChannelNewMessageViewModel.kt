@@ -46,6 +46,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
+import com.vitorpamplona.amethyst.service.uploads.StrippingFailureState
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
@@ -101,6 +102,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 
 @Stable
 open class ChannelNewMessageViewModel :
@@ -129,6 +131,11 @@ open class ChannelNewMessageViewModel :
     val replyTo = mutableStateOf<Note?>(null)
 
     var uploadState by mutableStateOf<ChatFileUploadState?>(null)
+
+    // Stripping failure dialog
+    var strippingFailureDialog by mutableStateOf<StrippingFailureState?>(null)
+        private set
+
     val iMetaAttachments = IMetaAttachments()
     var nip95attachments by mutableStateOf<List<Pair<FileStorageEvent, FileStorageHeaderEvent>>>(emptyList())
 
@@ -349,6 +356,21 @@ open class ChannelNewMessageViewModel :
                     account,
                     context,
                     stripMetadata = uploadState.stripMetadata,
+                    onStrippingFailed = {
+                        suspendCancellableCoroutine { continuation ->
+                            strippingFailureDialog =
+                                StrippingFailureState(
+                                    onConfirm = {
+                                        strippingFailureDialog = null
+                                        continuation.resume(true) {}
+                                    },
+                                    onCancel = {
+                                        strippingFailureDialog = null
+                                        continuation.resume(false) {}
+                                    },
+                                )
+                        }
+                    },
                 )
 
             if (results.allGood) {

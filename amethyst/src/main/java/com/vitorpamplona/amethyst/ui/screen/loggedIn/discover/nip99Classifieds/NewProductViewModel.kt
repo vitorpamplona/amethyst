@@ -42,6 +42,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
+import com.vitorpamplona.amethyst.service.uploads.StrippingFailureState
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
@@ -100,6 +101,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 
 @Stable
 open class NewProductViewModel :
@@ -145,6 +147,10 @@ open class NewProductViewModel :
 
     // Images and Videos
     var multiOrchestrator by mutableStateOf<MultiOrchestrator?>(null)
+
+    // Stripping failure dialog
+    var strippingFailureDialog by mutableStateOf<StrippingFailureState?>(null)
+        private set
 
     // Classifieds
     var title by mutableStateOf(TextFieldValue(""))
@@ -411,6 +417,21 @@ open class NewProductViewModel :
                     myAccount,
                     context,
                     stripMetadata = stripMetadata,
+                    onStrippingFailed = {
+                        suspendCancellableCoroutine { continuation ->
+                            strippingFailureDialog =
+                                StrippingFailureState(
+                                    onConfirm = {
+                                        strippingFailureDialog = null
+                                        continuation.resume(true) {}
+                                    },
+                                    onCancel = {
+                                        strippingFailureDialog = null
+                                        continuation.resume(false) {}
+                                    },
+                                )
+                        }
+                    },
                 )
 
             if (results.allGood) {
