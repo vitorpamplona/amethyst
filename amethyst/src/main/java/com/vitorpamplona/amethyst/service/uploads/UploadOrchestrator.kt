@@ -320,8 +320,16 @@ class UploadOrchestrator {
         context: Context,
         useH265: Boolean = false,
         stripMetadata: Boolean = true,
+        onStrippingFailed: suspend () -> Boolean = { true },
     ): UploadingFinalState {
         val strippingResult = stripMetadataIfNeeded(uri, mimeType, stripMetadata, compressionQuality, context)
+
+        if (stripMetadata && !strippingResult.stripped) {
+            if (!onStrippingFailed()) {
+                return error(R.string.upload_cancelled)
+            }
+        }
+
         val compressed = compressIfNeeded(strippingResult.uri, mimeType, compressionQuality, context, useH265)
 
         return when (server.type) {
@@ -343,8 +351,16 @@ class UploadOrchestrator {
         context: Context,
         useH265: Boolean = false,
         stripMetadata: Boolean = true,
+        onStrippingFailed: suspend () -> Boolean = { true },
     ): UploadingFinalState {
         val strippingResult = stripMetadataIfNeeded(uri, mimeType, stripMetadata, compressionQuality, context)
+
+        if (stripMetadata && !strippingResult.stripped) {
+            if (!onStrippingFailed()) {
+                return error(R.string.upload_cancelled)
+            }
+        }
+
         val compressed = compressIfNeeded(strippingResult.uri, mimeType, compressionQuality, context, useH265)
         val encrypted = EncryptFiles().encryptFile(context, compressed.uri, encrypt)
 
