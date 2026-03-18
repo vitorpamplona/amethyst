@@ -298,13 +298,13 @@ class UploadOrchestrator {
         stripMetadata: Boolean,
         compressionQuality: CompressorQuality,
         context: Context,
-    ): Uri {
-        if (!stripMetadata) return uri
+    ): StrippingResult {
+        if (!stripMetadata) return StrippingResult(uri, false)
         // Video compression already strips metadata; only strip manually when uncompressed
         if (mimeType?.startsWith("video/", ignoreCase = true) == true &&
             compressionQuality != CompressorQuality.UNCOMPRESSED
         ) {
-            return uri
+            return StrippingResult(uri, true) // compression will handle it
         }
         return MetadataStripper().strip(uri, mimeType, context.applicationContext)
     }
@@ -321,8 +321,8 @@ class UploadOrchestrator {
         useH265: Boolean = false,
         stripMetadata: Boolean = true,
     ): UploadingFinalState {
-        val stripped = stripMetadataIfNeeded(uri, mimeType, stripMetadata, compressionQuality, context)
-        val compressed = compressIfNeeded(stripped, mimeType, compressionQuality, context, useH265)
+        val strippingResult = stripMetadataIfNeeded(uri, mimeType, stripMetadata, compressionQuality, context)
+        val compressed = compressIfNeeded(strippingResult.uri, mimeType, compressionQuality, context, useH265)
 
         return when (server.type) {
             ServerType.NIP95 -> uploadNIP95(compressed.uri, compressed.contentType, null, null, context)
@@ -344,8 +344,8 @@ class UploadOrchestrator {
         useH265: Boolean = false,
         stripMetadata: Boolean = true,
     ): UploadingFinalState {
-        val stripped = stripMetadataIfNeeded(uri, mimeType, stripMetadata, compressionQuality, context)
-        val compressed = compressIfNeeded(stripped, mimeType, compressionQuality, context, useH265)
+        val strippingResult = stripMetadataIfNeeded(uri, mimeType, stripMetadata, compressionQuality, context)
+        val compressed = compressIfNeeded(strippingResult.uri, mimeType, compressionQuality, context, useH265)
         val encrypted = EncryptFiles().encryptFile(context, compressed.uri, encrypt)
 
         return when (server.type) {
