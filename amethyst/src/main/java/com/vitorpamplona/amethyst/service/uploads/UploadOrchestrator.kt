@@ -301,16 +301,12 @@ class UploadOrchestrator {
         uri: Uri,
         mimeType: String?,
         stripMetadata: Boolean,
-        compressionQuality: CompressorQuality,
         context: Context,
     ): StrippingResult {
         if (!stripMetadata) return StrippingResult(uri, false)
-        // Video compression already strips metadata; only strip manually when uncompressed
-        if (mimeType?.startsWith("video/", ignoreCase = true) == true &&
-            compressionQuality != CompressorQuality.UNCOMPRESSED
-        ) {
-            return StrippingResult(uri, true) // compression will handle it
-        }
+        // Always perform actual metadata stripping when requested.
+        // Compression decisions must be made by the caller based on the
+        // already-compressed media, not deferred here.
         return MetadataStripper().strip(uri, mimeType, context.applicationContext)
     }
 
@@ -327,20 +323,48 @@ class UploadOrchestrator {
         stripMetadata: Boolean = true,
         onStrippingFailed: suspend () -> Boolean = { true },
     ): UploadingFinalState {
-        val strippingResult = stripMetadataIfNeeded(uri, mimeType, stripMetadata, compressionQuality, context)
+        // First, compress if needed; MediaCompressor may fall back to the original URI.
+        val compressed = compressIfNeeded(uri, mimeType, compressionQuality, context, useH265)
 
-        if (stripMetadata && !strippingResult.stripped) {
-            if (!onStrippingFailed()) {
-                return error(R.string.upload_cancelled)
+        val effectiveMimeType = compressed.contentType ?: mimeType
+        var finalUri = compressed.uri
+
+        if (stripMetadata) {
+            val isVideo = effectiveMimeType?.startsWith("video/", ignoreCase = true) == true
+            val compressionRequested = compressionQuality != CompressorQuality.UNCOMPRESSED
+            val compressionApplied = compressionRequested && compressed.uri != uri
+
+            val strippingResult =
+                if (isVideo && compressionApplied) {
+                    // Compression was requested and actually applied to a video;
+                    // assume it stripped metadata successfully.
+                    StrippingResult(finalUri, true)
+                } else {
+                    // Either not a video, compression wasn't requested, or compression
+                    // did not actually change the URI (fallback). In these cases,
+                    // perform explicit metadata stripping on the current URI.
+                    stripMetadataIfNeeded(
+                        finalUri,
+                        effectiveMimeType,
+                        stripMetadata,
+                        context,
+                    )
+                }
+
+            finalUri = strippingResult.uri
+
+            if (!strippingResult.stripped) {
+                // Stripping was requested but did not succeed; confirm with the user.
+                if (!onStrippingFailed()) {
+                    return error(R.string.upload_cancelled)
+                }
             }
         }
 
-        val compressed = compressIfNeeded(strippingResult.uri, mimeType, compressionQuality, context, useH265)
-
         return when (server.type) {
-            ServerType.NIP95 -> uploadNIP95(compressed.uri, compressed.contentType, null, null, context)
-            ServerType.NIP96 -> uploadNIP96(compressed.uri, compressed.contentType, compressed.size, alt, contentWarningReason, server.baseUrl, null, null, account, context)
-            ServerType.Blossom -> uploadBlossom(compressed.uri, compressed.contentType, compressed.size, alt, contentWarningReason, server.baseUrl, null, null, account, context)
+            ServerType.NIP95 -> uploadNIP95(finalUri, compressed.contentType, null, null, context)
+            ServerType.NIP96 -> uploadNIP96(finalUri, compressed.contentType, compressed.size, alt, contentWarningReason, server.baseUrl, null, null, account, context)
+            ServerType.Blossom -> uploadBlossom(finalUri, compressed.contentType, compressed.size, alt, contentWarningReason, server.baseUrl, null, null, account, context)
         }
     }
 
@@ -358,16 +382,45 @@ class UploadOrchestrator {
         stripMetadata: Boolean = true,
         onStrippingFailed: suspend () -> Boolean = { true },
     ): UploadingFinalState {
-        val strippingResult = stripMetadataIfNeeded(uri, mimeType, stripMetadata, compressionQuality, context)
+        // First, compress if needed; MediaCompressor may fall back to the original URI.
+        val compressed = compressIfNeeded(uri, mimeType, compressionQuality, context, useH265)
 
-        if (stripMetadata && !strippingResult.stripped) {
-            if (!onStrippingFailed()) {
-                return error(R.string.upload_cancelled)
+        val effectiveMimeType = compressed.contentType ?: mimeType
+        var finalUri = compressed.uri
+
+        if (stripMetadata) {
+            val isVideo = effectiveMimeType?.startsWith("video/", ignoreCase = true) == true
+            val compressionRequested = compressionQuality != CompressorQuality.UNCOMPRESSED
+            val compressionApplied = compressionRequested && compressed.uri != uri
+
+            val strippingResult =
+                if (isVideo && compressionApplied) {
+                    // Compression was requested and actually applied to a video;
+                    // assume it stripped metadata successfully.
+                    StrippingResult(finalUri, true)
+                } else {
+                    // Either not a video, compression wasn't requested, or compression
+                    // did not actually change the URI (fallback). In these cases,
+                    // perform explicit metadata stripping on the current URI.
+                    stripMetadataIfNeeded(
+                        finalUri,
+                        effectiveMimeType,
+                        stripMetadata,
+                        context,
+                    )
+                }
+
+            finalUri = strippingResult.uri
+
+            if (!strippingResult.stripped) {
+                // Stripping was requested but did not succeed; confirm with the user.
+                if (!onStrippingFailed()) {
+                    return error(R.string.upload_cancelled)
+                }
             }
         }
 
-        val compressed = compressIfNeeded(strippingResult.uri, mimeType, compressionQuality, context, useH265)
-        val encrypted = EncryptFiles().encryptFile(context, compressed.uri, encrypt)
+        val encrypted = EncryptFiles().encryptFile(context, finalUri, encrypt)
 
         return when (server.type) {
             ServerType.NIP95 -> uploadNIP95(encrypted.uri, encrypted.contentType, compressed.contentType, encrypted.originalHash, context)
