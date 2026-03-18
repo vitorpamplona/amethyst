@@ -143,6 +143,35 @@ class NmcWallet(
         loadFromPrivateKey(NmcKeyManager.privateKeyFromNostrKey(nostrPrivKey))
     }
 
+    /**
+     * Generate additional receive addresses at different BIP44 indices.
+     * Only works if wallet was loaded from a mnemonic (needs the seed for derivation).
+     * For non-mnemonic wallets, returns just the primary address.
+     *
+     * @param mnemonic The BIP39 mnemonic (caller must provide; wallet doesn't store it)
+     * @param count Number of addresses to generate
+     * @return List of (index, address) pairs
+     */
+    fun generateReceiveAddresses(
+        mnemonic: String? = null,
+        count: Int = 5,
+    ): List<DerivedAddress> {
+        val result = mutableListOf<DerivedAddress>()
+        // Index 0 is always the primary loaded address
+        result.add(DerivedAddress(0, nmcAddress ?: "", pubKeyHex ?: "", isPrimary = true))
+
+        if (mnemonic != null) {
+            for (i in 1 until count) {
+                val key = NmcKeyManager.privateKeyFromMnemonic(mnemonic, account = 0, index = i.toLong())
+                val pk = NmcKeyManager.compressedPubKey(key)
+                val addr = NmcAddressGenerator.addressFromPubKey(pk, currentAddressType)
+                result.add(DerivedAddress(i, addr, pk.toHexKey()))
+                key.fill(0) // clear derived key
+            }
+        }
+        return result
+    }
+
     /** Export the private key as WIF (for import into Electrum-NMC). */
     fun exportWif(): String {
         val key = privKey ?: throw IllegalStateException("No key loaded")

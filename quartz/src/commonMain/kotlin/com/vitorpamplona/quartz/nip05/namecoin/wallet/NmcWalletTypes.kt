@@ -91,6 +91,17 @@ sealed class NameAvailability {
 }
 
 /**
+ * A derived receive address at a BIP44 index.
+ */
+@Serializable
+data class DerivedAddress(
+    val index: Int,
+    val address: String,
+    val pubKeyHex: String,
+    val isPrimary: Boolean = false,
+)
+
+/**
  * Wallet settings persisted across sessions.
  */
 @Serializable

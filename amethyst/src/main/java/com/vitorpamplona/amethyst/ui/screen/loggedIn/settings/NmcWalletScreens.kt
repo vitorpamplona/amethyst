@@ -133,6 +133,9 @@ fun NmcWalletFullScreen(
                 }
             }
 
+            // Receive addresses
+            ReceiveAddressesSection(walletService)
+
             // Key export section
             KeyExportSection(walletService)
 
@@ -150,6 +153,11 @@ fun NmcWalletFullScreen(
             if (pending.isNotEmpty()) {
                 PendingRegistrationsSection(pending, blockHeight, walletService)
             }
+
+            HorizontalDivider()
+
+            // Manage existing names
+            ManageNamesSection(walletService)
 
             HorizontalDivider()
 
@@ -189,6 +197,379 @@ fun NmcWalletFullScreen(
                 Icon(Icons.Default.Lock, null, Modifier.size(16.dp))
                 Spacer(Modifier.width(4.dp))
                 Text("Lock wallet")
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReceiveAddressesSection(walletService: NmcWalletService) {
+    var showAddresses by rememberSaveable { mutableStateOf(false) }
+    var mnemonicForDerivation by rememberSaveable { mutableStateOf("") }
+    var addresses by remember { mutableStateOf<List<com.vitorpamplona.quartz.nip05.namecoin.wallet.DerivedAddress>>(emptyList()) }
+    val clipboard = LocalClipboardManager.current
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("Receive addresses", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            TextButton(onClick = {
+                showAddresses = !showAddresses
+                if (showAddresses && addresses.isEmpty()) {
+                    addresses =
+                        walletService.wallet.generateReceiveAddresses(
+                            mnemonic = mnemonicForDerivation.ifBlank { null },
+                            count = 5,
+                        )
+                }
+            }) {
+                Text(if (showAddresses) "Hide" else "Show")
+            }
+        }
+
+        AnimatedVisibility(showAddresses) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (addresses.size <= 1) {
+                    Text(
+                        "Enter your mnemonic to derive additional addresses. Without a mnemonic, only the primary address is shown.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    OutlinedTextField(
+                        value = mnemonicForDerivation,
+                        onValueChange = { mnemonicForDerivation = it },
+                        label = { Text("Mnemonic (optional)") },
+                        minLines = 2,
+                        modifier = Modifier.fillMaxWidth(),
+                        textStyle = MaterialTheme.typography.bodySmall,
+                        visualTransformation = PasswordVisualTransformation(),
+                    )
+                    Button(
+                        onClick = {
+                            addresses =
+                                walletService.wallet.generateReceiveAddresses(
+                                    mnemonic = mnemonicForDerivation.ifBlank { null },
+                                    count = 5,
+                                )
+                        },
+                        enabled = mnemonicForDerivation.isNotBlank(),
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = NmcBlue),
+                    ) {
+                        Text("Generate addresses")
+                    }
+                }
+
+                addresses.forEach { addr ->
+                    Card(
+                        Modifier.fillMaxWidth(),
+                        colors =
+                            CardDefaults.cardColors(
+                                containerColor = if (addr.isPrimary) NmcBlue.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surface,
+                            ),
+                    ) {
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        if (addr.isPrimary) "Primary" else "#${addr.index}",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = if (addr.isPrimary) NmcBlue else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    if (addr.isPrimary) {
+                                        Spacer(Modifier.width(6.dp))
+                                        Text("m/44'/7'/0'/0/0", fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    } else {
+                                        Spacer(Modifier.width(6.dp))
+                                        Text("m/44'/7'/0'/0/${addr.index}", fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
+                                SelectionContainer {
+                                    Text(
+                                        addr.address,
+                                        fontFamily = FontFamily.Monospace,
+                                        fontSize = 12.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
+                            }
+                            IconButton(
+                                onClick = { clipboard.setText(AnnotatedString(addr.address)) },
+                                modifier = Modifier.size(32.dp),
+                            ) {
+                                Icon(Icons.Default.ContentCopy, "Copy", Modifier.size(16.dp))
+                            }
+                        }
+                    }
+                }
+
+                if (addresses.size > 1) {
+                    OutlinedButton(
+                        onClick = {
+                            addresses =
+                                walletService.wallet.generateReceiveAddresses(
+                                    mnemonic = mnemonicForDerivation.ifBlank { null },
+                                    count = addresses.size + 5,
+                                )
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("Show more addresses", fontSize = 12.sp)
+                    }
+                }
+            }
+        }
+    }
+
+    HorizontalDivider()
+}
+
+@Composable
+private fun ManageNamesSection(walletService: NmcWalletService) {
+    var showSection by rememberSaveable { mutableStateOf(false) }
+    var nameToLookup by rememberSaveable { mutableStateOf("") }
+    var lookupResult by remember { mutableStateOf<String?>(null) }
+    var updateName by rememberSaveable { mutableStateOf("") }
+    var updateTxid by rememberSaveable { mutableStateOf("") }
+    var updateVout by rememberSaveable { mutableStateOf("0") }
+    var updateValue by rememberSaveable { mutableStateOf("") }
+    var updateStatus by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("Manage names", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            TextButton(onClick = { showSection = !showSection }) {
+                Text(if (showSection) "Hide" else "Show")
+            }
+        }
+
+        AnimatedVisibility(showSection) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                // Name lookup
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Lookup name", fontWeight = FontWeight.Medium, fontSize = 14.sp)
+                        Text(
+                            "Check current value and expiry of any Namecoin name.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        OutlinedTextField(
+                            value = nameToLookup,
+                            onValueChange = { nameToLookup = it.lowercase().trim() },
+                            label = { Text("Name (e.g. d/example)") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                        )
+                        Button(
+                            onClick = {
+                                scope.launch {
+                                    lookupResult =
+                                        try {
+                                            val avail = walletService.checkNameAvailability(nameToLookup)
+                                            when (avail) {
+                                                is NameAvailability.Available -> {
+                                                    "✓ $nameToLookup is available for registration"
+                                                }
+
+                                                is NameAvailability.Expired -> {
+                                                    "⚠ $nameToLookup has expired — can re-register"
+                                                }
+
+                                                is NameAvailability.Taken -> {
+                                                    val days = avail.expiresIn / 144
+                                                    "● $nameToLookup is registered\n  Value: ${avail.currentValue.take(120)}${if (avail.currentValue.length > 120) "…" else ""}\n  Expires in ~$days days (${avail.expiresIn} blocks)"
+                                                }
+
+                                                is NameAvailability.Error -> {
+                                                    "✗ Error: ${avail.message}"
+                                                }
+                                            }
+                                        } catch (e: Exception) {
+                                            "✗ Lookup failed: ${e.message}"
+                                        }
+                                }
+                            },
+                            enabled = nameToLookup.isNotBlank(),
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = NmcBlue),
+                        ) {
+                            Text("Lookup")
+                        }
+                        lookupResult?.let { result ->
+                            SelectionContainer {
+                                Text(
+                                    result,
+                                    fontSize = 12.sp,
+                                    fontFamily = FontFamily.Monospace,
+                                    color =
+                                        when {
+                                            result.startsWith("✓") -> NmcGreen
+                                            result.startsWith("✗") -> MaterialTheme.colorScheme.error
+                                            result.startsWith("⚠") -> NmcOrange
+                                            else -> MaterialTheme.colorScheme.onSurface
+                                        },
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Update name value
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Update name value", fontWeight = FontWeight.Medium, fontSize = 14.sp)
+                        Text(
+                            "Update the JSON value of a name you own. Also renews the name for another ~250 days.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        OutlinedTextField(
+                            value = updateName,
+                            onValueChange = { updateName = it.lowercase().trim() },
+                            label = { Text("Name (e.g. d/example)") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                        )
+                        OutlinedTextField(
+                            value = updateValue,
+                            onValueChange = { updateValue = it },
+                            label = { Text("New JSON value") },
+                            minLines = 3,
+                            modifier = Modifier.fillMaxWidth(),
+                            textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                            supportingText = {
+                                val bytes = updateValue.toByteArray(Charsets.UTF_8).size
+                                Text(
+                                    "$bytes / 520 bytes",
+                                    fontSize = 10.sp,
+                                    color = if (bytes > 520) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            },
+                        )
+
+                        // Link Nostr pubkey helper
+                        val pubKeyHex = walletService.wallet.pubKeyHex
+                        if (pubKeyHex != null && updateName.startsWith("d/")) {
+                            OutlinedButton(
+                                onClick = {
+                                    updateValue =
+                                        com.vitorpamplona.quartz.nip05.namecoin.wallet.NmcNameScripts
+                                            .buildDomainValue(pubKeyHex, existingValue = updateValue.ifBlank { null })
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text("Set NIP-05 Nostr value for this domain", fontSize = 11.sp)
+                            }
+                        }
+                        if (pubKeyHex != null && updateName.startsWith("id/")) {
+                            OutlinedButton(
+                                onClick = {
+                                    updateValue =
+                                        com.vitorpamplona.quartz.nip05.namecoin.wallet.NmcNameScripts
+                                            .buildIdentityValue(pubKeyHex, existingValue = updateValue.ifBlank { null })
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text("Set Nostr identity value", fontSize = 11.sp)
+                            }
+                        }
+
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                        ) {
+                            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text("Current name UTXO", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Medium)
+                                OutlinedTextField(
+                                    value = updateTxid,
+                                    onValueChange = { updateTxid = it.trim() },
+                                    label = { Text("Transaction ID") },
+                                    singleLine = true,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                                )
+                                OutlinedTextField(
+                                    value = updateVout,
+                                    onValueChange = { updateVout = it.filter { c -> c.isDigit() } },
+                                    label = { Text("Output index (vout)") },
+                                    singleLine = true,
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
+                            }
+                        }
+
+                        Button(
+                            onClick = {
+                                scope.launch {
+                                    updateStatus = "Broadcasting…"
+                                    updateStatus =
+                                        try {
+                                            val myPubKey =
+                                                com.vitorpamplona.quartz.utils.Hex
+                                                    .decode(walletService.wallet.pubKeyHex!!)
+                                            val myHash160 =
+                                                com.vitorpamplona.quartz.nip05.namecoin.wallet.NmcKeyManager
+                                                    .hash160(myPubKey)
+                                            val currentScript =
+                                                com.vitorpamplona.quartz.nip05.namecoin.wallet.NmcNameScripts
+                                                    .buildNameUpdateScript(updateName, updateValue, myHash160)
+                                            val txid =
+                                                walletService.updateName(
+                                                    nameTxid = updateTxid,
+                                                    nameVout = updateVout.toIntOrNull() ?: 0,
+                                                    name = updateName,
+                                                    currentScript = currentScript,
+                                                    currentOutputValue = com.vitorpamplona.quartz.nip05.namecoin.wallet.NmcNameScripts.NAME_NEW_COST,
+                                                    newValue = updateValue,
+                                                )
+                                            walletService.refreshAll()
+                                            "✓ Updated! txid: ${txid.take(24)}…"
+                                        } catch (e: Exception) {
+                                            "✗ ${e.message}"
+                                        }
+                                }
+                            },
+                            enabled =
+                                updateName.isNotBlank() && updateTxid.isNotBlank() && updateValue.isNotBlank() &&
+                                    updateValue.toByteArray(Charsets.UTF_8).size <= 520,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = NmcBlue),
+                        ) {
+                            Text("Update name value")
+                        }
+
+                        updateStatus?.let { status ->
+                            Text(
+                                status,
+                                fontSize = 12.sp,
+                                fontFamily = FontFamily.Monospace,
+                                color =
+                                    when {
+                                        status.startsWith("✓") -> NmcGreen
+                                        status.startsWith("✗") -> MaterialTheme.colorScheme.error
+                                        else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                    },
+                            )
+                        }
+                    }
+                }
             }
         }
     }
