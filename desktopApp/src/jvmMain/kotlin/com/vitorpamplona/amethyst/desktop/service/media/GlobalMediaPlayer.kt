@@ -153,9 +153,8 @@ object GlobalMediaPlayer {
                 player.events().addMediaPlayerEventListener(seekListener)
             }
 
-            player.media().play(url)
-            // Set volume after play — VLC resets volume on new media
-            player.audio().setVolume(_videoState.value.volume)
+            val vol = _videoState.value.volume
+            player.media().play(url, ":start-volume=$vol")
             startVideoPolling()
         }
     }
@@ -192,9 +191,8 @@ object GlobalMediaPlayer {
                 audioPlayer = player
             }
 
-            player.media().play(url)
-            // Set volume after play — VLC resets volume on new media
-            player.audio().setVolume(_audioState.value.volume)
+            val vol = _audioState.value.volume
+            player.media().play(url, ":start-volume=$vol")
             startAudioPolling()
         }
     }
@@ -364,16 +362,6 @@ object GlobalMediaPlayer {
                             isBuffering = false,
                             duration = mediaPlayer.status().length(),
                         )
-                    // Enforce volume after a short delay — VLC's audio output
-                    // may not be ready immediately when the playing event fires
-                    scope.launch {
-                        delay(100)
-                        try {
-                            mediaPlayer.audio().setVolume(state.volume)
-                            mediaPlayer.audio().isMute = state.isMuted
-                        } catch (_: Exception) {
-                        }
-                    }
                 }
 
                 override fun paused(mediaPlayer: MediaPlayer) {
@@ -424,23 +412,12 @@ object GlobalMediaPlayer {
         player.events().addMediaPlayerEventListener(
             object : MediaPlayerEventAdapter() {
                 override fun playing(mediaPlayer: MediaPlayer) {
-                    val state = _audioState.value
                     _audioState.value =
-                        state.copy(
+                        _audioState.value.copy(
                             isPlaying = true,
                             isBuffering = false,
                             duration = mediaPlayer.status().length(),
                         )
-                    // Enforce volume after a short delay — VLC's audio output
-                    // may not be ready immediately when the playing event fires
-                    scope.launch {
-                        delay(100)
-                        try {
-                            mediaPlayer.audio().setVolume(state.volume)
-                            mediaPlayer.audio().isMute = state.isMuted
-                        } catch (_: Exception) {
-                        }
-                    }
                 }
 
                 override fun paused(mediaPlayer: MediaPlayer) {

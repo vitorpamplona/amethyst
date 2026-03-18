@@ -138,12 +138,13 @@ Branch has 13 commits implementing Phases 0-9 of desktop media: image display, u
 
 | # | Test | Steps | Expected | Status |
 |---|------|-------|----------|--------|
-| 9.1 | Inline audio | Note with MP3 URL | Audio player renders inline | |
-| 9.2 | Play/pause | Click play | Audio plays; click again pauses | |
-| 9.3 | Seek | Drag seek bar | Playback jumps to position | |
-| 9.4 | Time display | Play audio file | Shows current/total time | |
-| 9.5 | Multiple formats | Notes with OGG, WAV, FLAC, AAC, OPUS, M4A | All play (where VLC supports) | |
-| 9.6 | Audio pool | Scroll past 6+ audio notes | Max 5 audio players; earlier ones release | |
+| 9.1 | Inline audio | Note with MP3 URL | Audio player renders inline | ✅ PASS |
+| 9.2 | Play/pause | Click play | Audio plays; click again pauses | ✅ PASS |
+| 9.3 | Seek | Drag seek bar | Playback jumps to position | ✅ PASS |
+| 9.4 | Time display | Play audio file | Shows current/total time | ✅ PASS |
+| 9.5 | Multiple formats | Notes with OGG, WAV, FLAC, AAC, OPUS, M4A | All play (where VLC supports) | ⬜ TODO |
+| 9.6 | Audio pool | Scroll past 6+ audio notes | Max 5 audio players; earlier ones release | N/A — GlobalMediaPlayer uses single shared player now |
+| 9.7 | Initial volume | Play audio without touching volume slider | Audio audible at 100% on first play | 🐛 BUG — VLC starts silent; moving volume slider fixes it. Tried `:start-volume`, `setVolume` in playing callback, delayed retries — none work. Needs investigation into VLCJ audio output init timing on macOS. |
 
 ---
 
