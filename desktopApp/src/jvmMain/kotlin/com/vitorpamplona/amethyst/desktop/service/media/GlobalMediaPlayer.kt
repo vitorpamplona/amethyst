@@ -364,9 +364,16 @@ object GlobalMediaPlayer {
                             isBuffering = false,
                             duration = mediaPlayer.status().length(),
                         )
-                    // Enforce volume — VLC can reset it on new media
-                    mediaPlayer.audio().setVolume(state.volume)
-                    mediaPlayer.audio().isMute = state.isMuted
+                    // Enforce volume after a short delay — VLC's audio output
+                    // may not be ready immediately when the playing event fires
+                    scope.launch {
+                        delay(100)
+                        try {
+                            mediaPlayer.audio().setVolume(state.volume)
+                            mediaPlayer.audio().isMute = state.isMuted
+                        } catch (_: Exception) {
+                        }
+                    }
                 }
 
                 override fun paused(mediaPlayer: MediaPlayer) {
@@ -424,9 +431,16 @@ object GlobalMediaPlayer {
                             isBuffering = false,
                             duration = mediaPlayer.status().length(),
                         )
-                    // Enforce volume — VLC can reset it on new media
-                    mediaPlayer.audio().setVolume(state.volume)
-                    mediaPlayer.audio().isMute = state.isMuted
+                    // Enforce volume after a short delay — VLC's audio output
+                    // may not be ready immediately when the playing event fires
+                    scope.launch {
+                        delay(100)
+                        try {
+                            mediaPlayer.audio().setVolume(state.volume)
+                            mediaPlayer.audio().isMute = state.isMuted
+                        } catch (_: Exception) {
+                        }
+                    }
                 }
 
                 override fun paused(mediaPlayer: MediaPlayer) {
