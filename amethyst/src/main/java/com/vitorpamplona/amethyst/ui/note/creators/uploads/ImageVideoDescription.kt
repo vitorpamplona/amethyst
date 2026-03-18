@@ -277,7 +277,7 @@ fun ImageVideoDescription(
 
             val firstMedia = uris.first().media
 
-            if (firstMedia.isVideo() == true || firstMedia.isImage() == true || firstMedia.isAudio() == true) {
+            if (firstMedia.isVideo() == true || firstMedia.isImage() == true) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Box(modifier = Modifier.fillMaxWidth()) {
                         Text(
