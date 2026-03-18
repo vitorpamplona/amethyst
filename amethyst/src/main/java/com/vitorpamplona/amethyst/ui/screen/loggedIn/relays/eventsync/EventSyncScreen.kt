@@ -31,10 +31,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -56,6 +55,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -66,6 +66,7 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 @Composable
@@ -74,11 +75,9 @@ fun EventSyncScreen(
     nav: INav,
 ) {
     val syncViewModel = accountViewModel.eventSync
-
+    val isMobileOrMetered by accountViewModel.settings.isMobileOrMeteredConnection.collectAsStateWithLifecycle()
     val syncState by syncViewModel.syncState.collectAsStateWithLifecycle()
     val liveActivity by syncViewModel.liveActivity.collectAsStateWithLifecycle()
-    val isMobileOrMetered by accountViewModel.settings.isMobileOrMeteredConnection.collectAsStateWithLifecycle()
-    var showMobileDataDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -88,172 +87,192 @@ fun EventSyncScreen(
             )
         },
     ) { padding ->
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(horizontal = 16.dp)
-                    .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
+        Column(Modifier.fillMaxSize().padding(padding)) {
+            EventScreenBody(
+                syncState = syncState,
+                liveActivity = liveActivity,
+                isMobileOrMetered = isMobileOrMetered,
+                onStart = syncViewModel::start,
+                onCancel = syncViewModel::cancel,
+            )
+        }
+    }
+}
+
+@Composable
+fun EventScreenBody(
+    syncState: EventSync.SyncState,
+    liveActivity: EventSync.LiveSyncActivity,
+    isMobileOrMetered: Boolean = false,
+    onStart: () -> Unit = {},
+    onCancel: () -> Unit = {},
+) {
+    LazyColumn(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        item {
             // ---- Progress / Status area ----
-            when (val state = syncState) {
-                is EventSync.SyncState.Idle -> {
-                    // ---- Explanation card ----
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text(
-                                text = stringRes(R.string.event_sync_what_happens_title),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                            )
-                            Spacer(Modifier.height(8.dp))
-                            Text(
-                                text = stringRes(R.string.event_sync_what_happens_body),
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                            Spacer(Modifier.height(12.dp))
-                            StepRow(number = "1", text = stringRes(R.string.event_sync_step1))
-                            Spacer(Modifier.height(4.dp))
-                            StepRow(number = "2", text = stringRes(R.string.event_sync_step2))
-                            Spacer(Modifier.height(4.dp))
-                            StepRow(number = "3", text = stringRes(R.string.event_sync_step3))
-                        }
-                    }
-
-                    // ---- WiFi warning ----
-                    if (isMobileOrMetered) {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors =
-                                CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.errorContainer,
-                                ),
-                        ) {
-                            Text(
-                                text = stringRes(R.string.event_sync_wifi_warning),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onErrorContainer,
-                                modifier = Modifier.padding(16.dp),
-                            )
-                        }
-                    }
-                }
-
-                is EventSync.SyncState.Running -> {
-                    SyncProgressCard(state = state)
-                }
-
-                is EventSync.SyncState.Paused -> {
-                    PausedCard(state = state)
-                }
-
-                is EventSync.SyncState.Done -> {
-                    DoneCard(state = state)
-                }
-
-                is EventSync.SyncState.Error -> {
-                    ErrorCard(message = state.message)
-                }
+            when (syncState) {
+                is EventSync.SyncState.Idle -> ExplanationCard(isMobileOrMetered, onStart)
+                is EventSync.SyncState.Running -> SyncProgressCard(state = syncState, onCancel)
+                is EventSync.SyncState.Done -> DoneCard(state = syncState, isMobileOrMetered, onStart)
+                is EventSync.SyncState.Error -> ErrorCard(syncState.message, isMobileOrMetered, onStart)
             }
+        }
 
-            // ---- Live relay activity (shown during and after sync) ----
-            if (liveActivity.outboxTargets.isNotEmpty() ||
-                liveActivity.inboxTargets.isNotEmpty() ||
-                liveActivity.dmTargets.isNotEmpty()
-            ) {
+        // ---- Live relay activity (shown during and after sync) ----
+        if (liveActivity.outboxTargets.isNotEmpty() ||
+            liveActivity.inboxTargets.isNotEmpty() ||
+            liveActivity.dmTargets.isNotEmpty()
+        ) {
+            item {
+                Spacer(Modifier.height(16.dp))
                 DestinationRelaysCard(activity = liveActivity)
             }
+        }
 
-            if (liveActivity.recentCompletions.isNotEmpty()) {
-                ActivityLogCard(completions = liveActivity.recentCompletions)
-            }
-
-            // ---- Action buttons ----
-            when (val state = syncState) {
-                is EventSync.SyncState.Idle,
-                is EventSync.SyncState.Done,
-                is EventSync.SyncState.Error,
-                -> {
-                    Button(
-                        onClick = {
-                            if (isMobileOrMetered) {
-                                showMobileDataDialog = true
-                            } else {
-                                syncViewModel.start()
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(stringRes(R.string.event_sync_start))
-                    }
-                }
-
-                is EventSync.SyncState.Paused -> {
-                    Button(
-                        onClick = {
-                            if (isMobileOrMetered) {
-                                showMobileDataDialog = true
-                            } else {
-                                syncViewModel.resume()
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(stringRes(R.string.event_sync_resume))
-                    }
-                    OutlinedButton(
-                        onClick = { syncViewModel.start() },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(stringRes(R.string.event_sync_start_over))
-                    }
-                }
-
-                is EventSync.SyncState.Running -> {
-                    OutlinedButton(
-                        onClick = { syncViewModel.cancel() },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors =
-                            ButtonDefaults.outlinedButtonColors(
-                                contentColor = MaterialTheme.colorScheme.error,
-                            ),
-                    ) {
-                        Text(stringRes(R.string.event_sync_pause))
-                    }
-                }
-            }
-
-            // ---- Mobile-data confirmation dialog ----
-            if (showMobileDataDialog) {
-                val isPaused = syncState is EventSync.SyncState.Paused
-                AlertDialog(
-                    onDismissRequest = { showMobileDataDialog = false },
-                    title = { Text(stringRes(R.string.event_sync_mobile_data_dialog_title)) },
-                    text = { Text(stringRes(R.string.event_sync_wifi_warning)) },
-                    confirmButton = {
-                        Button(
-                            onClick = {
-                                showMobileDataDialog = false
-                                if (isPaused) syncViewModel.resume() else syncViewModel.start()
-                            },
-                        ) {
-                            Text(stringRes(R.string.event_sync_start_anyway))
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { showMobileDataDialog = false }) {
-                            Text(stringRes(R.string.event_sync_cancel))
-                        }
-                    },
+        val runningSize = liveActivity.runningRelays.size
+        if (runningSize > 0) {
+            item {
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    text = stringRes(R.string.event_sync_activity_log, runningSize),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
                 )
+                Spacer(Modifier.height(5.dp))
             }
 
-            Spacer(Modifier.height(16.dp))
+            itemsIndexed(liveActivity.runningRelays.values.toList(), key = { _, item -> item.relay.url }) { index, info ->
+                if (index > 0) {
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                    )
+                }
+                ActivityLogRow(info = info)
+            }
+        }
+
+        val completedSize = liveActivity.completedRelays.size
+        if (completedSize > 0) {
+            item {
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    text = stringRes(R.string.event_sync_activity_log_finished, completedSize),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Spacer(Modifier.height(5.dp))
+            }
+
+            itemsIndexed(liveActivity.sortedCompletedRelays, key = { _, item -> item.relay.url }) { index, info ->
+                if (index > 0) {
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                    )
+                }
+                ActivityLogRow(info = info)
+            }
+        }
+    }
+}
+
+@Composable
+private fun StartSyncButton(
+    isMobileOrMetered: Boolean,
+    onClick: () -> Unit,
+) {
+    var showMobileDataDialog by remember { mutableStateOf(false) }
+
+    Button(
+        onClick = {
+            if (isMobileOrMetered) {
+                showMobileDataDialog = true
+            } else {
+                onClick()
+            }
+        },
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Text(stringRes(R.string.event_sync_start))
+    }
+
+    // ---- Mobile-data confirmation dialog ----
+    if (showMobileDataDialog) {
+        AlertDialog(
+            onDismissRequest = { showMobileDataDialog = false },
+            title = { Text(stringRes(R.string.event_sync_mobile_data_dialog_title)) },
+            text = { Text(stringRes(R.string.event_sync_wifi_warning)) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showMobileDataDialog = false
+                        onClick()
+                    },
+                ) {
+                    Text(stringRes(R.string.event_sync_start_anyway))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showMobileDataDialog = false }) {
+                    Text(stringRes(R.string.event_sync_cancel))
+                }
+            },
+        )
+    }
+}
+
+@Composable
+private fun ExplanationCard(
+    isMobileOrMetered: Boolean,
+    onStart: () -> Unit,
+) {
+    // ---- Explanation card ----
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = stringRes(R.string.event_sync_what_happens_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = stringRes(R.string.event_sync_what_happens_body),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Spacer(Modifier.height(12.dp))
+            StepRow(number = "1", text = stringRes(R.string.event_sync_step1))
+            Spacer(Modifier.height(4.dp))
+            StepRow(number = "2", text = stringRes(R.string.event_sync_step2))
+            Spacer(Modifier.height(4.dp))
+            StepRow(number = "3", text = stringRes(R.string.event_sync_step3))
+            Spacer(Modifier.height(10.dp))
+            // ---- WiFi warning ----
+            if (isMobileOrMetered) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors =
+                        CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer,
+                        ),
+                ) {
+                    Text(
+                        text = stringRes(R.string.event_sync_wifi_warning),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.padding(16.dp),
+                    )
+                }
+                Spacer(Modifier.height(10.dp))
+            }
+            StartSyncButton(isMobileOrMetered = isMobileOrMetered, onStart)
         }
     }
 }
@@ -263,7 +282,10 @@ fun EventSyncScreen(
 // -------------------------------------------------------------------------
 
 @Composable
-private fun SyncProgressCard(state: EventSync.SyncState.Running) {
+private fun SyncProgressCard(
+    state: EventSync.SyncState.Running,
+    onCancel: () -> Unit,
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -292,44 +314,27 @@ private fun SyncProgressCard(state: EventSync.SyncState.Running) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-        }
-    }
-}
-
-@Composable
-private fun PausedCard(state: EventSync.SyncState.Paused) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors =
-            CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-            ),
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = stringRes(R.string.event_sync_paused_title),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSecondaryContainer,
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text =
-                    stringRes(
-                        R.string.event_sync_paused_body,
-                        state.nextRelayIndex,
-                        state.totalRelays,
-                        state.eventsSent,
+            Spacer(Modifier.height(10.dp))
+            OutlinedButton(
+                onClick = onCancel,
+                modifier = Modifier.fillMaxWidth(),
+                colors =
+                    ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error,
                     ),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSecondaryContainer,
-            )
+            ) {
+                Text(stringRes(R.string.event_sync_cancel))
+            }
         }
     }
 }
 
 @Composable
-private fun DoneCard(state: EventSync.SyncState.Done) {
+private fun DoneCard(
+    state: EventSync.SyncState.Done,
+    isMobileOrMetered: Boolean = false,
+    onStart: () -> Unit = { },
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors =
@@ -363,12 +368,18 @@ private fun DoneCard(state: EventSync.SyncState.Done) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
             )
+            Spacer(Modifier.height(10.dp))
+            StartSyncButton(isMobileOrMetered, onStart)
         }
     }
 }
 
 @Composable
-private fun ErrorCard(message: String) {
+private fun ErrorCard(
+    message: String,
+    isMobileOrMetered: Boolean = false,
+    onStart: () -> Unit = {},
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors =
@@ -389,6 +400,8 @@ private fun ErrorCard(message: String) {
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onErrorContainer,
             )
+            Spacer(Modifier.height(10.dp))
+            StartSyncButton(isMobileOrMetered, onStart)
         }
     }
 }
@@ -418,7 +431,7 @@ private fun DestinationRelaysCard(activity: EventSync.LiveSyncActivity) {
                 Spacer(Modifier.height(10.dp))
                 DestinationSection(
                     label = stringRes(R.string.event_sync_outbox_relays),
-                    relays = activity.outboxTargets,
+                    relays = activity.outboxTargets.values,
                     color = MaterialTheme.colorScheme.primary,
                 )
             }
@@ -429,7 +442,7 @@ private fun DestinationRelaysCard(activity: EventSync.LiveSyncActivity) {
                 Spacer(Modifier.height(10.dp))
                 DestinationSection(
                     label = stringRes(R.string.event_sync_inbox_relays),
-                    relays = activity.inboxTargets,
+                    relays = activity.inboxTargets.values,
                     color = MaterialTheme.colorScheme.secondary,
                 )
             }
@@ -440,7 +453,7 @@ private fun DestinationRelaysCard(activity: EventSync.LiveSyncActivity) {
                 Spacer(Modifier.height(10.dp))
                 DestinationSection(
                     label = stringRes(R.string.event_sync_dm_relays),
-                    relays = activity.dmTargets,
+                    relays = activity.dmTargets.values,
                     color = MaterialTheme.colorScheme.tertiary,
                 )
             }
@@ -451,7 +464,7 @@ private fun DestinationRelaysCard(activity: EventSync.LiveSyncActivity) {
 @Composable
 private fun DestinationSection(
     label: String,
-    relays: List<EventSync.LiveSyncActivity.DestinationRelayInfo>,
+    relays: Collection<EventSync.LiveSyncActivity.DestinationRelayInfo>,
     color: androidx.compose.ui.graphics.Color,
 ) {
     Text(
@@ -478,6 +491,8 @@ private fun DestinationRelayRow(
     info: EventSync.LiveSyncActivity.DestinationRelayInfo,
     color: androidx.compose.ui.graphics.Color,
 ) {
+    val eventsSent by info.eventsSent.collectAsStateWithLifecycle()
+
     Row(
         modifier =
             Modifier
@@ -498,70 +513,39 @@ private fun DestinationRelayRow(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurface,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
+            overflow = TextOverflow.StartEllipsis,
             modifier = Modifier.weight(1f),
         )
-        if (info.eventsSent > 0) {
+        if (eventsSent > 0) {
+            val eventsAccepted by info.eventsAccepted.collectAsStateWithLifecycle()
             Text(
-                text = stringRes(R.string.event_sync_log_recv, formatCount(info.eventsSent)),
+                text = stringRes(R.string.event_sync_log_sent, formatCount(eventsSent)),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(0.3f),
+                textAlign = TextAlign.End,
+                maxLines = 1,
+                overflow = TextOverflow.StartEllipsis,
             )
-            Spacer(Modifier.width(8.dp))
             Text(
-                text = stringRes(R.string.event_sync_log_new, formatCount(info.eventsAccepted)),
+                text = stringRes(R.string.event_sync_log_new, formatCount(eventsAccepted)),
                 style = MaterialTheme.typography.bodySmall,
-                fontWeight = if (info.eventsAccepted > 0) FontWeight.SemiBold else FontWeight.Normal,
-                color = if (info.eventsAccepted > 0) color else MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = if (eventsAccepted > 0) FontWeight.SemiBold else FontWeight.Normal,
+                color = if (eventsAccepted > 0) color else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(0.3f),
+                textAlign = TextAlign.End,
+                maxLines = 1,
+                overflow = TextOverflow.StartEllipsis,
             )
         }
     }
 }
 
-/**
- * Scrollable log of recently completed relays, newest at the top.
- * Uses a fixed-height inner scroll area so it doesn't compete with the outer scroll.
- */
 @Composable
-private fun ActivityLogCard(completions: List<EventSync.LiveSyncActivity.CompletedRelayInfo>) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = stringRes(R.string.event_sync_activity_log, completions.size),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Spacer(Modifier.height(10.dp))
-
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .height(260.dp)
-                        .verticalScroll(rememberScrollState()),
-            ) {
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    completions.forEachIndexed { index, info ->
-                        if (index > 0) {
-                            HorizontalDivider(
-                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                            )
-                        }
-                        ActivityLogRow(info = info)
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ActivityLogRow(info: EventSync.LiveSyncActivity.CompletedRelayInfo) {
-    val hasEvents = info.eventsFound > 0
+private fun ActivityLogRow(info: EventSync.LiveSyncActivity.SourceRelayInfo) {
+    val eventsFound by info.eventsFound.collectAsStateWithLifecycle()
+    val status by info.status.collectAsStateWithLifecycle()
+    val hasEvents = eventsFound > 0
     val dotColor =
         if (hasEvents) {
             MaterialTheme.colorScheme.primary
@@ -595,32 +579,51 @@ private fun ActivityLogRow(info: EventSync.LiveSyncActivity.CompletedRelayInfo) 
             style = MaterialTheme.typography.bodySmall,
             color = textColor,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f),
+            overflow = TextOverflow.StartEllipsis,
+            modifier = Modifier.weight(0.6f),
         )
         if (hasEvents) {
+            val eventsAccepted by info.eventsAccepted.collectAsStateWithLifecycle()
             Text(
-                text = stringRes(R.string.event_sync_log_recv, formatCount(info.eventsFound)),
+                text = stringRes(R.string.event_sync_log_recv, formatCount(eventsFound)),
                 style = MaterialTheme.typography.bodySmall,
                 color = textColor,
+                modifier = Modifier.weight(0.2f),
+                maxLines = 1,
+                textAlign = TextAlign.End,
+                overflow = TextOverflow.StartEllipsis,
             )
-            Spacer(Modifier.width(8.dp))
             Text(
-                text = stringRes(R.string.event_sync_log_new, formatCount(info.eventsAccepted)),
+                text = stringRes(R.string.event_sync_log_new, formatCount(eventsAccepted)),
                 style = MaterialTheme.typography.bodySmall,
-                fontWeight = if (info.eventsAccepted > 0) FontWeight.SemiBold else FontWeight.Normal,
+                fontWeight = if (eventsAccepted > 0) FontWeight.SemiBold else FontWeight.Normal,
                 color =
-                    if (info.eventsAccepted > 0) {
+                    if (eventsAccepted > 0) {
                         MaterialTheme.colorScheme.primary
                     } else {
                         MaterialTheme.colorScheme.onSurfaceVariant
                     },
+                maxLines = 1,
+                textAlign = TextAlign.End,
+                overflow = TextOverflow.StartEllipsis,
+                modifier = Modifier.weight(0.2f),
             )
         } else {
+            val status by info.status.collectAsStateWithLifecycle()
             Text(
-                text = stringRes(R.string.event_sync_no_events),
+                text =
+                    when (status) {
+                        EventSync.LiveSyncActivity.ConnectionStatus.Connecting -> stringRes(R.string.event_sync_status_connecting)
+                        EventSync.LiveSyncActivity.ConnectionStatus.Querying -> stringRes(R.string.event_sync_status_downloading)
+                        is EventSync.LiveSyncActivity.ConnectionStatus.Error -> (status as EventSync.LiveSyncActivity.ConnectionStatus.Error).msg.ifBlank { stringRes(R.string.event_sync_status_error) }
+                        EventSync.LiveSyncActivity.ConnectionStatus.Completed -> stringRes(R.string.event_sync_status_completed)
+                    },
                 style = MaterialTheme.typography.bodySmall,
                 color = textColor,
+                textAlign = TextAlign.End,
+                maxLines = 1,
+                overflow = TextOverflow.StartEllipsis,
+                modifier = Modifier.weight(0.45f),
             )
         }
     }
@@ -662,8 +665,7 @@ private fun NormalizedRelayUrl.displayHost(): String =
 /** Formats a count with K/M suffix for large numbers. */
 private fun formatCount(n: Int): String =
     when {
-        n >= 1_000_000 -> "${n / 1_000_000}M"
-        n >= 1_000 -> "${n / 1_000}K"
+        n >= 1_000_000 -> "${n / 1_000}K"
         else -> n.toString()
     }
 
@@ -671,19 +673,25 @@ private fun formatCount(n: Int): String =
 // Preview data
 // -------------------------------------------------------------------------
 
+private val previewRunning =
+    listOf(
+        EventSync.LiveSyncActivity.SourceRelayInfo(NormalizedRelayUrl("wss://relay.damus.io"), EventSync.LiveSyncActivity.ConnectionStatus.Querying, 1247, 891),
+        EventSync.LiveSyncActivity.SourceRelayInfo(NormalizedRelayUrl("wss://nos.lol"), EventSync.LiveSyncActivity.ConnectionStatus.Querying, 892, 45),
+        EventSync.LiveSyncActivity.SourceRelayInfo(NormalizedRelayUrl("wss://nos2.lol"), EventSync.LiveSyncActivity.ConnectionStatus.Connecting, 0, 0),
+    )
+
 private val previewCompletions =
     listOf(
-        EventSync.LiveSyncActivity.CompletedRelayInfo(NormalizedRelayUrl("wss://relay.damus.io"), 1247, 891),
-        EventSync.LiveSyncActivity.CompletedRelayInfo(NormalizedRelayUrl("wss://nos.lol"), 892, 45),
-        EventSync.LiveSyncActivity.CompletedRelayInfo(NormalizedRelayUrl("wss://relay.nostr.band"), 3500, 3498),
-        EventSync.LiveSyncActivity.CompletedRelayInfo(NormalizedRelayUrl("wss://slow.relay.example.com"), 0, 0),
-        EventSync.LiveSyncActivity.CompletedRelayInfo(NormalizedRelayUrl("wss://nostr.bitcoiner.social"), 15, 0),
-        EventSync.LiveSyncActivity.CompletedRelayInfo(NormalizedRelayUrl("wss://unreachable.relay.xyz"), 0, 0),
+        EventSync.LiveSyncActivity.SourceRelayInfo(NormalizedRelayUrl("wss://relay.nostr.band"), EventSync.LiveSyncActivity.ConnectionStatus.Completed, 3500, 3498),
+        EventSync.LiveSyncActivity.SourceRelayInfo(NormalizedRelayUrl("wss://slow.relay.example.com"), EventSync.LiveSyncActivity.ConnectionStatus.Completed, 0, 0),
+        EventSync.LiveSyncActivity.SourceRelayInfo(NormalizedRelayUrl("wss://nostr.bitcoiner.social"), EventSync.LiveSyncActivity.ConnectionStatus.Completed, 15, 0),
+        EventSync.LiveSyncActivity.SourceRelayInfo(NormalizedRelayUrl("wss://unreachable.relay.xyz"), EventSync.LiveSyncActivity.ConnectionStatus.Error("connection failed"), 0, 0),
     )
 
 private val previewActivity =
     EventSync.LiveSyncActivity(
-        recentCompletions = previewCompletions,
+        runningRelays = previewRunning,
+        completedRelays = previewCompletions,
         outboxTargets =
             listOf(
                 EventSync.LiveSyncActivity.DestinationRelayInfo(NormalizedRelayUrl("wss://outbox.nostr.com"), 1247, 891),
@@ -706,6 +714,22 @@ private val previewActivity =
 
 @Composable
 @Preview
+fun IdleCardWifiPreview() {
+    ThemeComparisonColumn {
+        ExplanationCard(false, {})
+    }
+}
+
+@Composable
+@Preview
+fun IdleCardMobilePreview() {
+    ThemeComparisonColumn {
+        ExplanationCard(true, {})
+    }
+}
+
+@Composable
+@Preview
 fun SyncProgressCardPreview() {
     ThemeComparisonColumn {
         SyncProgressCard(
@@ -715,21 +739,7 @@ fun SyncProgressCardPreview() {
                     totalRelays = 1024,
                     eventsSent = 4821,
                 ),
-        )
-    }
-}
-
-@Composable
-@Preview
-fun PausedCardPreview() {
-    ThemeComparisonColumn {
-        PausedCard(
-            state =
-                EventSync.SyncState.Paused(
-                    nextRelayIndex = 260,
-                    totalRelays = 1024,
-                    eventsSent = 3200,
-                ),
+            onCancel = {},
         )
     }
 }
@@ -766,9 +776,23 @@ fun DestinationRelaysCardPreview() {
 }
 
 @Composable
-@Preview
-fun ActivityLogCardPreview() {
-    ThemeComparisonColumn {
-        ActivityLogCard(completions = previewCompletions)
+@Preview(device = "spec:width=1800px,height=2340px,dpi=440")
+fun EventScreenBodyPreview() {
+    ThemeComparisonRow {
+        EventScreenBody(
+            EventSync.SyncState.Idle,
+            EventSync.LiveSyncActivity(emptyList(), emptyList(), emptyList(), emptyList(), emptyList()),
+        )
+    }
+}
+
+@Composable
+@Preview(device = "spec:width=1800px,height=2340px,dpi=440")
+fun EventScreenBody2Preview() {
+    ThemeComparisonRow {
+        EventScreenBody(
+            EventSync.SyncState.Running(1247, 1024, 4821),
+            previewActivity,
+        )
     }
 }

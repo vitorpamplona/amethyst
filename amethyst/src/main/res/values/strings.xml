@@ -1816,7 +1816,7 @@
     <string name="event_sync_section_explainer">Re-publish your events across all known relays to keep your outbox, inbox, and DM relays up to date. Requires Wi-Fi — this may use a lot of data.</string>
     <string name="event_sync_open_button">Open Relay Sync…</string>
     <string name="event_sync_what_happens_title">What this does</string>
-    <string name="event_sync_what_happens_body">This tool scans every relay your app has seen and redistributes your events to the correct destinations. It may transfer a large amount of data, so it is best run on Wi-Fi.</string>
+    <string name="event_sync_what_happens_body">This tool scans every relay your app has seen and redistributes your events to the correct destinations: </string>
     <string name="event_sync_step1">Download all events you authored and send them to your outbox relays.</string>
     <string name="event_sync_step2">Download all events that mention you and send them to your inbox relays.</string>
     <string name="event_sync_step3">Download all direct messages addressed to you and send them to your DM relays.</string>
@@ -1841,7 +1841,9 @@
     <string name="event_sync_outbox_relays">Outbox</string>
     <string name="event_sync_inbox_relays">Inbox</string>
     <string name="event_sync_dm_relays">DMs</string>
-    <string name="event_sync_activity_log">Activity (%1$d relays)</string>
+    <string name="event_sync_activity_log">Currently Checking (%1$d relays)</string>
+    <string name="event_sync_activity_log_finished">Finished (%1$d relays)</string>
+    <string name="event_sync_log_sent">sent %1$s</string>
     <string name="event_sync_log_recv">recv %1$s</string>
     <string name="event_sync_log_new">new %1$s</string>
     <string name="event_sync_no_events">no events</string>
@@ -1851,4 +1853,9 @@
     <string name="profiles">profiles</string>
     <string name="relay_settings_lower">relay settings</string>
     <string name="last_seen">Last seen %1$s ago</string>
+
+    <string name="event_sync_status_connecting">Connecting</string>
+    <string name="event_sync_status_downloading">Downloading</string>
+    <string name="event_sync_status_error">Error</string>
+    <string name="event_sync_status_completed">Completed</string>
 </resources>

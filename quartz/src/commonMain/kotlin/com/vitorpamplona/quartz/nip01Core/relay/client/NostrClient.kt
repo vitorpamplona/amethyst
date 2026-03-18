@@ -79,7 +79,8 @@ class NostrClient(
     private val websocketBuilder: WebsocketBuilder,
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
 ) : INostrClient,
-    IRelayClientListener {
+    IRelayClientListener,
+    AutoCloseable {
     private val relayPool: RelayPool = RelayPool(websocketBuilder, this)
 
     private val activeRequests: PoolRequests = PoolRequests()
@@ -326,4 +327,8 @@ class NostrClient(
     override fun connectedRelaysFlow() = relayPool.connectedRelays
 
     override fun availableRelaysFlow() = relayPool.availableRelays
+
+    override fun close() {
+        disconnect()
+    }
 }

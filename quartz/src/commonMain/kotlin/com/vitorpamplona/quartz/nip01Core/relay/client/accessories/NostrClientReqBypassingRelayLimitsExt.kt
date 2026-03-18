@@ -28,7 +28,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.coroutineContext
@@ -63,6 +62,8 @@ suspend fun INostrClient.reqBypassingRelayLimits(
     // Track how many matching events each filter has received so far.
     val matchCountPerFilter = IntArray(filters.size)
 
+    val subId = newSubId()
+
     while (true) {
         coroutineContext.ensureActive()
 
@@ -75,9 +76,7 @@ suspend fun INostrClient.reqBypassingRelayLimits(
 
         if (remainingFilters.isEmpty()) break
 
-        val eventChannel = Channel<Event>(UNLIMITED)
         val doneChannel = Channel<Unit>(Channel.CONFLATED)
-        val subId = newSubId()
 
         val activeFilters =
             if (until == null) {
@@ -86,19 +85,37 @@ suspend fun INostrClient.reqBypassingRelayLimits(
                 remainingFilters.map { it.copy(until = until) }
             }
 
+        var pageCount = 0
+        var pageMinTs = Long.MAX_VALUE
+
         val listener =
             object : IRequestListener {
                 override fun onEvent(
                     event: Event,
                     isLive: Boolean,
-                    relay: NormalizedRelayUrl,
+                    relayInner: NormalizedRelayUrl,
                     forFilters: List<Filter>?,
                 ) {
-                    eventChannel.trySend(event)
+                    onEvent(event)
+                    pageCount++
+                    if (event.createdAt < pageMinTs) pageMinTs = event.createdAt
+
+                    // Count this event against every base filter it matches.
+                    if (matchCountPerFilter.size == 1) {
+                        // no need to run the match.
+                        matchCountPerFilter[0]++
+                    } else {
+                        for (i in filters.indices) {
+                            val limit = filters[i].limit
+                            if ((limit == null || matchCountPerFilter[i] < limit) && filters[i].match(event)) {
+                                matchCountPerFilter[i]++
+                            }
+                        }
+                    }
                 }
 
                 override fun onEose(
-                    relay: NormalizedRelayUrl,
+                    relayInner: NormalizedRelayUrl,
                     forFilters: List<Filter>?,
                 ) {
                     doneChannel.trySend(Unit)
@@ -106,48 +123,29 @@ suspend fun INostrClient.reqBypassingRelayLimits(
 
                 override fun onClosed(
                     message: String,
-                    relay: NormalizedRelayUrl,
+                    relayInner: NormalizedRelayUrl,
                     forFilters: List<Filter>?,
                 ) {
                     doneChannel.trySend(Unit)
                 }
 
                 override fun onCannotConnect(
-                    relay: NormalizedRelayUrl,
+                    relayInner: NormalizedRelayUrl,
                     message: String,
                     forFilters: List<Filter>?,
                 ) {
-                    println("AABBCC $message")
                     doneChannel.trySend(Unit)
                 }
             }
 
         openReqSubscription(subId, mapOf(relay to activeFilters), listener)
-        withTimeoutOrNull(timeoutMs) { doneChannel.receive() }
-        close(subId)
-        eventChannel.close()
-        doneChannel.close()
 
-        var pageCount = 0
-        var pageMinTs = Long.MAX_VALUE
-        for (event in eventChannel) {
-            onEvent(event)
-            pageCount++
-            if (event.createdAt < pageMinTs) pageMinTs = event.createdAt
-
-            // Count this event against every base filter it matches.
-            if (matchCountPerFilter.size == 1) {
-                // no need to run the match.
-                matchCountPerFilter[0]++
-            } else {
-                for (i in filters.indices) {
-                    val limit = filters[i].limit
-                    if ((limit == null || matchCountPerFilter[i] < limit) && filters[i].match(event)) {
-                        matchCountPerFilter[i]++
-                    }
-                }
-            }
+        withTimeoutOrNull(timeoutMs) {
+            doneChannel.receive()
         }
+
+        close(subId)
+        doneChannel.close()
 
         if (pageCount == 0) break
 
