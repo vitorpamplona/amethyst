@@ -1237,6 +1237,7 @@
     <string name="metadata_strip_failed_title">Metadata could not be removed</string>
     <string name="metadata_strip_failed_body">This file format does not support metadata stripping. Private information such as location and device info may be included. Upload anyway?</string>
     <string name="metadata_strip_failed_upload">Upload anyway</string>
+    <string name="metadata_strip_failed_upload_cancelled">Failed to strip private metadata from media. Upload cancelled.</string>
     <string name="upload_cancelled">Upload cancelled</string>
 
     <string name="edit_draft">Edit draft</string>

@@ -211,13 +211,28 @@ class NewUserMetadataViewModel : ViewModel() {
     ): String? {
         isUploadingImageForPicture = true
 
-        val strippedUri =
+        val strippingResult =
             if (account.settings.stripLocationOnUpload) {
-                MetadataStripper().strip(galleryUri.uri, galleryUri.mimeType, context.applicationContext).uri
+                MetadataStripper().strip(galleryUri.uri, galleryUri.mimeType, context.applicationContext)
             } else {
-                galleryUri.uri
+                null
             }
-        val compResult = MediaCompressor().compress(strippedUri, galleryUri.mimeType, CompressorQuality.MEDIUM, context.applicationContext)
+
+        val sourceUri =
+            if (account.settings.stripLocationOnUpload &&
+                strippingResult != null &&
+                !strippingResult.stripped
+            ) {
+                onError(
+                    stringRes(context, R.string.metadata_strip_failed_title),
+                    stringRes(context, R.string.metadata_strip_failed_upload_cancelled),
+                )
+                return null
+            } else {
+                strippingResult?.uri ?: galleryUri.uri
+            }
+
+        val compResult = MediaCompressor().compress(sourceUri, galleryUri.mimeType, CompressorQuality.MEDIUM, context.applicationContext)
 
         return try {
             val result =
