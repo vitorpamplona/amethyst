@@ -96,6 +96,21 @@ open class EditPostViewModel : ViewModel() {
     var strippingFailureDialog by mutableStateOf<StrippingFailureState?>(null)
         private set
 
+    private suspend fun showStrippingFailureDialog(): Boolean =
+        suspendCancellableCoroutine { continuation ->
+            strippingFailureDialog =
+                StrippingFailureState(
+                    onConfirm = {
+                        strippingFailureDialog = null
+                        continuation.resume(true) {}
+                    },
+                    onCancel = {
+                        strippingFailureDialog = null
+                        continuation.resume(false) {}
+                    },
+                )
+        }
+
     // Codec selection: false = H264, true = H265
     var useH265Codec by mutableStateOf(false)
 
@@ -203,21 +218,7 @@ open class EditPostViewModel : ViewModel() {
                     context,
                     useH265Codec,
                     stripMetadata,
-                    onStrippingFailed = {
-                        suspendCancellableCoroutine { continuation ->
-                            strippingFailureDialog =
-                                StrippingFailureState(
-                                    onConfirm = {
-                                        strippingFailureDialog = null
-                                        continuation.resume(true) {}
-                                    },
-                                    onCancel = {
-                                        strippingFailureDialog = null
-                                        continuation.resume(false) {}
-                                    },
-                                )
-                        }
-                    },
+                    onStrippingFailed = ::showStrippingFailureDialog,
                 )
 
             if (results.allGood) {

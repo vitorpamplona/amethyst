@@ -33,13 +33,10 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment.Companion.CenterVertically
@@ -50,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromFiles
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
@@ -140,23 +138,7 @@ fun NewProductScreen(
 ) {
     WatchAndLoadMyEmojiList(accountViewModel)
 
-    postViewModel.strippingFailureDialog?.let { dialogState ->
-        AlertDialog(
-            onDismissRequest = { dialogState.onCancel() },
-            title = { Text(stringRes(R.string.metadata_strip_failed_title)) },
-            text = { Text(stringRes(R.string.metadata_strip_failed_body)) },
-            confirmButton = {
-                Button(onClick = { dialogState.onConfirm() }) {
-                    Text(stringRes(R.string.metadata_strip_failed_upload))
-                }
-            },
-            dismissButton = {
-                Button(onClick = { dialogState.onCancel() }) {
-                    Text(stringRes(R.string.cancel))
-                }
-            },
-        )
-    }
+    StrippingFailureDialog(postViewModel.strippingFailureDialog)
 
     BackHandler {
         accountViewModel.launchSigner {

@@ -26,8 +26,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -39,6 +37,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
@@ -72,23 +71,7 @@ fun EditFieldRow(
         nav.popBack()
     }
 
-    channelScreenModel.strippingFailureDialog?.let { dialogState ->
-        AlertDialog(
-            onDismissRequest = { dialogState.onCancel() },
-            title = { Text(stringRes(R.string.metadata_strip_failed_title)) },
-            text = { Text(stringRes(R.string.metadata_strip_failed_body)) },
-            confirmButton = {
-                Button(onClick = { dialogState.onConfirm() }) {
-                    Text(stringRes(R.string.metadata_strip_failed_upload))
-                }
-            },
-            dismissButton = {
-                Button(onClick = { dialogState.onCancel() }) {
-                    Text(stringRes(R.string.cancel))
-                }
-            },
-        )
-    }
+    StrippingFailureDialog(channelScreenModel.strippingFailureDialog)
 
     channelScreenModel.replyTo.value?.let {
         DisplayReplyingToNote(it, accountViewModel, nav) {

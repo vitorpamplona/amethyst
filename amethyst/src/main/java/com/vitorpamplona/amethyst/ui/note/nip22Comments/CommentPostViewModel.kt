@@ -168,6 +168,21 @@ open class CommentPostViewModel :
     var strippingFailureDialog by mutableStateOf<StrippingFailureState?>(null)
         private set
 
+    private suspend fun showStrippingFailureDialog(): Boolean =
+        suspendCancellableCoroutine { continuation ->
+            strippingFailureDialog =
+                StrippingFailureState(
+                    onConfirm = {
+                        strippingFailureDialog = null
+                        continuation.resume(true) {}
+                    },
+                    onCancel = {
+                        strippingFailureDialog = null
+                        continuation.resume(false) {}
+                    },
+                )
+        }
+
     // Invoices
     var canAddInvoice by mutableStateOf(false)
     var wantsInvoice by mutableStateOf(false)
@@ -509,21 +524,7 @@ open class CommentPostViewModel :
                     account,
                     context,
                     stripMetadata = stripMetadata,
-                    onStrippingFailed = {
-                        suspendCancellableCoroutine { continuation ->
-                            strippingFailureDialog =
-                                StrippingFailureState(
-                                    onConfirm = {
-                                        strippingFailureDialog = null
-                                        continuation.resume(true) {}
-                                    },
-                                    onCancel = {
-                                        strippingFailureDialog = null
-                                        continuation.resume(false) {}
-                                    },
-                                )
-                        }
-                    },
+                    onStrippingFailed = ::showStrippingFailureDialog,
                 )
 
             if (results.allGood) {

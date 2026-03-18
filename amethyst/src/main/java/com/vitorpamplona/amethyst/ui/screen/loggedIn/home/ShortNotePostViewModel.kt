@@ -197,6 +197,21 @@ open class ShortNotePostViewModel :
     var strippingFailureDialog by mutableStateOf<StrippingFailureState?>(null)
         private set
 
+    private suspend fun showStrippingFailureDialog(): Boolean =
+        suspendCancellableCoroutine { continuation ->
+            strippingFailureDialog =
+                StrippingFailureState(
+                    onConfirm = {
+                        strippingFailureDialog = null
+                        continuation.resume(true) {}
+                    },
+                    onCancel = {
+                        strippingFailureDialog = null
+                        continuation.resume(false) {}
+                    },
+                )
+        }
+
     // Voice Messages
     var voiceRecording by mutableStateOf<RecordingResult?>(null)
     var voiceLocalFile by mutableStateOf<java.io.File?>(null)
@@ -852,21 +867,7 @@ open class ShortNotePostViewModel :
                     context,
                     useH265,
                     stripMetadata,
-                    onStrippingFailed = {
-                        suspendCancellableCoroutine { continuation ->
-                            strippingFailureDialog =
-                                StrippingFailureState(
-                                    onConfirm = {
-                                        strippingFailureDialog = null
-                                        continuation.resume(true) {}
-                                    },
-                                    onCancel = {
-                                        strippingFailureDialog = null
-                                        continuation.resume(false) {}
-                                    },
-                                )
-                        }
-                    },
+                    onStrippingFailed = ::showStrippingFailureDialog,
                 )
 
             if (results.allGood) {

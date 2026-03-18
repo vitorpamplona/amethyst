@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send
 
-import android.R.attr.maxLines
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -42,6 +41,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
@@ -118,23 +118,7 @@ fun PrivateMessageEditFieldRow(
         }
     }
 
-    channelScreenModel.strippingFailureDialog?.let { dialogState ->
-        AlertDialog(
-            onDismissRequest = { dialogState.onCancel() },
-            title = { Text(stringRes(R.string.metadata_strip_failed_title)) },
-            text = { Text(stringRes(R.string.metadata_strip_failed_body)) },
-            confirmButton = {
-                TextButton(onClick = { dialogState.onConfirm() }) {
-                    Text(stringRes(R.string.metadata_strip_failed_upload))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { dialogState.onCancel() }) {
-                    Text(stringRes(R.string.cancel))
-                }
-            },
-        )
-    }
+    StrippingFailureDialog(channelScreenModel.strippingFailureDialog)
 
     channelScreenModel.encryptedUploadErrorTitle?.let { title ->
         EncryptedUploadErrorDialog(

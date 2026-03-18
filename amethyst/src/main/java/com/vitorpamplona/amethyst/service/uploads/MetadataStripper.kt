@@ -252,11 +252,7 @@ class MetadataStripper {
                     return StrippingResult(uri, false)
                 }
 
-                val extension =
-                    when {
-                        primaryMime.contains("mp4a") || primaryMime.contains("aac") -> ".m4a"
-                        else -> ".mp4"
-                    }
+                val extension = ".m4a"
 
                 tempOutputFile = File.createTempFile("stripped_audio_", extension, context.cacheDir)
                 muxer = MediaMuxer(tempOutputFile.absolutePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
@@ -321,41 +317,61 @@ class MetadataStripper {
                 }
             } ?: return StrippingResult(uri, false)
 
-            val bytes = tempInputFile.readBytes()
+            val fileSize = tempInputFile.length().toInt()
             var startOffset = 0
-            var endOffset = bytes.size
+            var endOffset = fileSize
 
-            // Strip ID3v2 header (at beginning of file)
-            if (bytes.size >= 10 &&
-                bytes[0] == 'I'.code.toByte() &&
-                bytes[1] == 'D'.code.toByte() &&
-                bytes[2] == '3'.code.toByte()
+            // Read first 10 bytes to check for ID3v2 header
+            val header = ByteArray(10)
+            tempInputFile.inputStream().use { it.read(header) }
+
+            if (fileSize >= 10 &&
+                header[0] == 'I'.code.toByte() &&
+                header[1] == 'D'.code.toByte() &&
+                header[2] == '3'.code.toByte()
             ) {
                 val size =
-                    (bytes[6].toInt() and 0x7F shl 21) or
-                        (bytes[7].toInt() and 0x7F shl 14) or
-                        (bytes[8].toInt() and 0x7F shl 7) or
-                        (bytes[9].toInt() and 0x7F)
+                    (header[6].toInt() and 0x7F shl 21) or
+                        (header[7].toInt() and 0x7F shl 14) or
+                        (header[8].toInt() and 0x7F shl 7) or
+                        (header[9].toInt() and 0x7F)
                 startOffset = 10 + size
             }
 
-            // Strip ID3v1 tag (last 128 bytes)
-            if (endOffset - startOffset >= 128 &&
-                bytes[endOffset - 128] == 'T'.code.toByte() &&
-                bytes[endOffset - 127] == 'A'.code.toByte() &&
-                bytes[endOffset - 126] == 'G'.code.toByte()
-            ) {
-                endOffset -= 128
+            // Read last 128 bytes to check for ID3v1 tag
+            if (endOffset - startOffset >= 128) {
+                val tail = ByteArray(128)
+                java.io.RandomAccessFile(tempInputFile, "r").use { raf ->
+                    raf.seek((endOffset - 128).toLong())
+                    raf.readFully(tail)
+                }
+                if (tail[0] == 'T'.code.toByte() &&
+                    tail[1] == 'A'.code.toByte() &&
+                    tail[2] == 'G'.code.toByte()
+                ) {
+                    endOffset -= 128
+                }
             }
 
-            if (startOffset == 0 && endOffset == bytes.size) {
+            if (startOffset == 0 && endOffset == fileSize) {
                 tempInputFile.delete()
                 return StrippingResult(uri, true) // no tags found, already clean
             }
 
             val tempOutputFile = File.createTempFile("stripped_mp3_", ".mp3", context.cacheDir)
-            tempOutputFile.outputStream().use { output ->
-                output.write(bytes, startOffset, endOffset - startOffset)
+            java.io.RandomAccessFile(tempInputFile, "r").use { raf ->
+                raf.seek(startOffset.toLong())
+                tempOutputFile.outputStream().use { output ->
+                    val buffer = ByteArray(8192)
+                    var remaining = endOffset - startOffset
+                    while (remaining > 0) {
+                        val toRead = minOf(buffer.size, remaining)
+                        val read = raf.read(buffer, 0, toRead)
+                        if (read <= 0) break
+                        output.write(buffer, 0, read)
+                        remaining -= read
+                    }
+                }
             }
             tempInputFile.delete()
 

@@ -65,6 +65,21 @@ open class NewMediaModel : ViewModel() {
     var strippingFailureDialog by mutableStateOf<StrippingFailureState?>(null)
         private set
 
+    private suspend fun showStrippingFailureDialog(): Boolean =
+        suspendCancellableCoroutine { continuation ->
+            strippingFailureDialog =
+                StrippingFailureState(
+                    onConfirm = {
+                        strippingFailureDialog = null
+                        continuation.resume(true) {}
+                    },
+                    onCancel = {
+                        strippingFailureDialog = null
+                        continuation.resume(false) {}
+                    },
+                )
+        }
+
     // 0 = Low, 1 = Medium, 2 = High, 3=UNCOMPRESSED
     var mediaQualitySlider by mutableIntStateOf(1)
 
@@ -126,21 +141,7 @@ open class NewMediaModel : ViewModel() {
                     context,
                     useH265Codec,
                     stripMetadata,
-                    onStrippingFailed = {
-                        suspendCancellableCoroutine { continuation ->
-                            strippingFailureDialog =
-                                StrippingFailureState(
-                                    onConfirm = {
-                                        strippingFailureDialog = null
-                                        continuation.resume(true) {}
-                                    },
-                                    onCancel = {
-                                        strippingFailureDialog = null
-                                        continuation.resume(false) {}
-                                    },
-                                )
-                        }
-                    },
+                    onStrippingFailed = ::showStrippingFailureDialog,
                 )
 
             if (results.allGood) {

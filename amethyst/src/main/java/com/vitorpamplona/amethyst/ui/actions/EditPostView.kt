@@ -39,8 +39,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CurrencyBitcoin
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -127,23 +125,7 @@ fun EditPostView(
         postViewModel.load(edit, versionLookingAt)
     }
 
-    postViewModel.strippingFailureDialog?.let { dialogState ->
-        AlertDialog(
-            onDismissRequest = { dialogState.onCancel() },
-            title = { Text(stringRes(R.string.metadata_strip_failed_title)) },
-            text = { Text(stringRes(R.string.metadata_strip_failed_body)) },
-            confirmButton = {
-                Button(onClick = { dialogState.onConfirm() }) {
-                    Text(stringRes(R.string.metadata_strip_failed_upload))
-                }
-            },
-            dismissButton = {
-                Button(onClick = { dialogState.onCancel() }) {
-                    Text(stringRes(R.string.cancel))
-                }
-            },
-        )
-    }
+    StrippingFailureDialog(postViewModel.strippingFailureDialog)
 
     Dialog(
         onDismissRequest = { onClose() },

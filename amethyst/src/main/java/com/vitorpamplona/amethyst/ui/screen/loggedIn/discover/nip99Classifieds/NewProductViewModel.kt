@@ -152,6 +152,21 @@ open class NewProductViewModel :
     var strippingFailureDialog by mutableStateOf<StrippingFailureState?>(null)
         private set
 
+    private suspend fun showStrippingFailureDialog(): Boolean =
+        suspendCancellableCoroutine { continuation ->
+            strippingFailureDialog =
+                StrippingFailureState(
+                    onConfirm = {
+                        strippingFailureDialog = null
+                        continuation.resume(true) {}
+                    },
+                    onCancel = {
+                        strippingFailureDialog = null
+                        continuation.resume(false) {}
+                    },
+                )
+        }
+
     // Classifieds
     var title by mutableStateOf(TextFieldValue(""))
     var price by mutableStateOf(TextFieldValue(""))
@@ -417,21 +432,7 @@ open class NewProductViewModel :
                     myAccount,
                     context,
                     stripMetadata = stripMetadata,
-                    onStrippingFailed = {
-                        suspendCancellableCoroutine { continuation ->
-                            strippingFailureDialog =
-                                StrippingFailureState(
-                                    onConfirm = {
-                                        strippingFailureDialog = null
-                                        continuation.resume(true) {}
-                                    },
-                                    onCancel = {
-                                        strippingFailureDialog = null
-                                        continuation.resume(false) {}
-                                    },
-                                )
-                        }
-                    },
+                    onStrippingFailed = ::showStrippingFailureDialog,
                 )
 
             if (results.allGood) {
