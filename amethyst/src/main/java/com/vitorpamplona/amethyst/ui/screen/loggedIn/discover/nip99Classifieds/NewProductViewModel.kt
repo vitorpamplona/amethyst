@@ -394,6 +394,7 @@ open class NewProductViewModel :
         server: ServerName,
         onError: (title: String, message: String) -> Unit,
         context: Context,
+        stripMetadata: Boolean = true,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             val myAccount = account
@@ -409,6 +410,7 @@ open class NewProductViewModel :
                     server,
                     myAccount,
                     context,
+                    stripMetadata = stripMetadata,
                 )
 
             if (results.allGood) {

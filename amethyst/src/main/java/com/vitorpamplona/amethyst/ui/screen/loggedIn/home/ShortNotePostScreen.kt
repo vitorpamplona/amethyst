@@ -358,7 +358,7 @@ private fun NewPostScreenBody(
                             accountViewModel.account.settings.defaultFileServer,
                             isUploading = postViewModel.mediaUploadTracker.isUploading,
                             onAdd = { alt, server, sensitiveContent, mediaQuality, useH265, stripMetadata ->
-                                postViewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, server, accountViewModel.toastManager::toast, context, useH265)
+                                postViewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, server, accountViewModel.toastManager::toast, context, useH265, stripMetadata)
                                 accountViewModel.account.settings.changeDefaultFileServer(server)
                             },
                             onDelete = postViewModel::deleteMediaToUpload,

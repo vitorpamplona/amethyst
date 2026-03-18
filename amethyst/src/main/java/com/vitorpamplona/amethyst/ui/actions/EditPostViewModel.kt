@@ -161,8 +161,9 @@ open class EditPostViewModel : ViewModel() {
         server: ServerName,
         onError: (String, String) -> Unit,
         context: Context,
+        stripMetadata: Boolean = true,
     ) = try {
-        uploadUnsafe(alt, sensitiveContent, mediaQuality, isPrivate, server, onError, context)
+        uploadUnsafe(alt, sensitiveContent, mediaQuality, isPrivate, server, onError, context, stripMetadata)
     } catch (e: SignerExceptions.ReadOnlyException) {
         onError(
             stringRes(context, R.string.read_only_user),
@@ -178,6 +179,7 @@ open class EditPostViewModel : ViewModel() {
         server: ServerName,
         onError: (String, String) -> Unit,
         context: Context,
+        stripMetadata: Boolean = true,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             val myAccount = account
@@ -194,6 +196,7 @@ open class EditPostViewModel : ViewModel() {
                     myAccount,
                     context,
                     useH265Codec,
+                    stripMetadata,
                 )
 
             if (results.allGood) {

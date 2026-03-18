@@ -58,6 +58,7 @@ class ChatFileUploader(
                     viewState.selectedServer,
                     account,
                     context,
+                    stripMetadata = viewState.stripMetadata,
                 )
 
             if (results.allGood) {

@@ -422,8 +422,9 @@ class NewPublicMessageViewModel :
         server: ServerName,
         onError: (title: String, message: String) -> Unit,
         context: Context,
+        stripMetadata: Boolean = true,
     ) = try {
-        uploadUnsafe(alt, contentWarningReason, mediaQuality, server, onError, context)
+        uploadUnsafe(alt, contentWarningReason, mediaQuality, server, onError, context, stripMetadata)
     } catch (e: SignerExceptions.ReadOnlyException) {
         onError(
             stringRes(context, R.string.read_only_user),
@@ -438,6 +439,7 @@ class NewPublicMessageViewModel :
         server: ServerName,
         onError: (title: String, message: String) -> Unit,
         context: Context,
+        stripMetadata: Boolean = true,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             val myMultiOrchestrator = multiOrchestrator ?: return@launch
@@ -452,6 +454,7 @@ class NewPublicMessageViewModel :
                     server,
                     account,
                     context,
+                    stripMetadata = stripMetadata,
                 )
 
             if (results.allGood) {
