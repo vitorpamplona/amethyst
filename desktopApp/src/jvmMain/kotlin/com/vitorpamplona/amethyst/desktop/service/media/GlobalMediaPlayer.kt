@@ -154,6 +154,8 @@ object GlobalMediaPlayer {
             }
 
             player.media().play(url)
+            // Set volume after play — VLC resets volume on new media
+            player.audio().setVolume(_videoState.value.volume)
             startVideoPolling()
         }
     }
@@ -191,6 +193,8 @@ object GlobalMediaPlayer {
             }
 
             player.media().play(url)
+            // Set volume after play — VLC resets volume on new media
+            player.audio().setVolume(_audioState.value.volume)
             startAudioPolling()
         }
     }
@@ -353,12 +357,16 @@ object GlobalMediaPlayer {
         player.events().addMediaPlayerEventListener(
             object : MediaPlayerEventAdapter() {
                 override fun playing(mediaPlayer: MediaPlayer) {
+                    val state = _videoState.value
                     _videoState.value =
-                        _videoState.value.copy(
+                        state.copy(
                             isPlaying = true,
                             isBuffering = false,
                             duration = mediaPlayer.status().length(),
                         )
+                    // Enforce volume — VLC can reset it on new media
+                    mediaPlayer.audio().setVolume(state.volume)
+                    mediaPlayer.audio().isMute = state.isMuted
                 }
 
                 override fun paused(mediaPlayer: MediaPlayer) {
@@ -409,12 +417,16 @@ object GlobalMediaPlayer {
         player.events().addMediaPlayerEventListener(
             object : MediaPlayerEventAdapter() {
                 override fun playing(mediaPlayer: MediaPlayer) {
+                    val state = _audioState.value
                     _audioState.value =
-                        _audioState.value.copy(
+                        state.copy(
                             isPlaying = true,
                             isBuffering = false,
                             duration = mediaPlayer.status().length(),
                         )
+                    // Enforce volume — VLC can reset it on new media
+                    mediaPlayer.audio().setVolume(state.volume)
+                    mediaPlayer.audio().isMute = state.isMuted
                 }
 
                 override fun paused(mediaPlayer: MediaPlayer) {
