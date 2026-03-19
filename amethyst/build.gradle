@@ -361,6 +361,9 @@ dependencies {
     // Image compression lib
     implementation libs.zelory.image.compressor
 
+    // EXIF metadata stripping
+    implementation libs.androidx.exifinterface
+
     // Voice anonymization DSP
     implementation libs.tarsosdsp
 

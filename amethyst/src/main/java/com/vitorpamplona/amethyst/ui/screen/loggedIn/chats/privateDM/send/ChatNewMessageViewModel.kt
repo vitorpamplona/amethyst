@@ -39,6 +39,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.location.LocationState
+import com.vitorpamplona.amethyst.service.uploads.SuspendableConfirmation
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.note.creators.draftTags.DraftTagState
@@ -195,6 +196,10 @@ class ChatNewMessageViewModel :
     val replyTo = mutableStateOf<Note?>(null)
 
     var uploadState by mutableStateOf<ChatFileUploadState?>(null)
+
+    // Stripping failure dialog
+    val strippingFailureConfirmation = SuspendableConfirmation()
+
     val iMetaAttachments = IMetaAttachments()
 
     var uploadsWaitingToBeSent by mutableStateOf<List<SuccessfulUploads>>(emptyList())
@@ -263,6 +268,7 @@ class ChatNewMessageViewModel :
         this.uploadState =
             ChatFileUploadState(
                 account.settings.defaultFileServer,
+                account.settings.stripLocationOnUpload,
             )
     }
 
@@ -452,6 +458,7 @@ class ChatNewMessageViewModel :
                     pendingRetryMode = RetryMode.HOLD
                 },
                 context,
+                onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
             ) {
                 uploadsWaitingToBeSent += it
                 draftTag.newVersion()
@@ -481,6 +488,7 @@ class ChatNewMessageViewModel :
                     pendingRetryOnceUploaded = onceUploaded
                 },
                 context,
+                onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
             ) {
                 ChatFileSender(room, account).sendNIP17(it)
                 draftTag.newVersion()
@@ -529,6 +537,7 @@ class ChatNewMessageViewModel :
                         uploadState,
                         onError ?: accountViewModel.toastManager::toast,
                         context,
+                        onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
                     ) {
                         uploadsWaitingToBeSent += it
                         draftTag.newVersion()
@@ -541,6 +550,7 @@ class ChatNewMessageViewModel :
                         uploadState,
                         onError ?: accountViewModel.toastManager::toast,
                         context,
+                        onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
                     ) {
                         ChatFileSender(room, account).sendNIP17(it)
                         draftTag.newVersion()

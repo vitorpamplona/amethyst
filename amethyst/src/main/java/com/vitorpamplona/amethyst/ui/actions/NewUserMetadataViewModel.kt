@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
+import com.vitorpamplona.amethyst.service.uploads.MetadataStripper
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
 import com.vitorpamplona.amethyst.service.uploads.nip96.Nip96Uploader
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
@@ -210,7 +211,28 @@ class NewUserMetadataViewModel : ViewModel() {
     ): String? {
         isUploadingImageForPicture = true
 
-        val compResult = MediaCompressor().compress(galleryUri.uri, galleryUri.mimeType, CompressorQuality.MEDIUM, context.applicationContext)
+        val strippingResult =
+            if (account.settings.stripLocationOnUpload) {
+                MetadataStripper.strip(galleryUri.uri, galleryUri.mimeType, context.applicationContext)
+            } else {
+                null
+            }
+
+        val sourceUri =
+            if (account.settings.stripLocationOnUpload &&
+                strippingResult != null &&
+                !strippingResult.stripped
+            ) {
+                onError(
+                    stringRes(context, R.string.metadata_strip_failed_title),
+                    stringRes(context, R.string.metadata_strip_failed_upload_cancelled),
+                )
+                return null
+            } else {
+                strippingResult?.uri ?: galleryUri.uri
+            }
+
+        val compResult = MediaCompressor().compress(sourceUri, galleryUri.mimeType, CompressorQuality.MEDIUM, context.applicationContext)
 
         return try {
             val result =

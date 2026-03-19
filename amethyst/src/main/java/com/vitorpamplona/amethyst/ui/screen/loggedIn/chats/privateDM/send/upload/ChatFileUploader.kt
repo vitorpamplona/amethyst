@@ -41,6 +41,7 @@ class ChatFileUploader(
         onError: (title: String, message: String) -> Unit,
         onEncryptedUploadError: (title: String, message: String) -> Unit,
         context: Context,
+        onStrippingFailed: suspend () -> Boolean = { true },
         onceUploaded: suspend (List<SuccessfulUploads>) -> Unit,
     ) {
         val orchestrator = viewState.multiOrchestrator ?: return
@@ -58,6 +59,8 @@ class ChatFileUploader(
                     viewState.selectedServer,
                     account,
                     context,
+                    stripMetadata = viewState.stripMetadata,
+                    onStrippingFailed = onStrippingFailed,
                 )
 
             if (results.allGood) {
@@ -81,7 +84,7 @@ class ChatFileUploader(
                 )
             }
         } else {
-            justUploadNIP17Unencrypted(viewState, onError, context, onceUploaded)
+            justUploadNIP17Unencrypted(viewState, onError, context, onStrippingFailed, onceUploaded)
         }
 
         viewState.mediaUploadTracker.finishUpload()
@@ -91,6 +94,7 @@ class ChatFileUploader(
         viewState: ChatFileUploadState,
         onError: (title: String, message: String) -> Unit,
         context: Context,
+        onStrippingFailed: suspend () -> Boolean = { true },
         onceUploaded: suspend (List<SuccessfulUploads>) -> Unit,
     ) {
         val orchestrator = viewState.multiOrchestrator ?: return
@@ -104,6 +108,8 @@ class ChatFileUploader(
                 viewState.selectedServer,
                 account,
                 context,
+                stripMetadata = viewState.stripMetadata,
+                onStrippingFailed = onStrippingFailed,
             )
 
         if (results.allGood) {
@@ -135,6 +141,7 @@ class ChatFileUploader(
         viewState: ChatFileUploadState,
         onError: (title: String, message: String) -> Unit,
         context: Context,
+        onStrippingFailed: suspend () -> Boolean = { true },
         onceUploaded: suspend (List<SuccessfulUploads>) -> Unit,
     ) {
         val orchestrator = viewState.multiOrchestrator ?: return
@@ -148,6 +155,8 @@ class ChatFileUploader(
                 viewState.selectedServer,
                 account,
                 context,
+                stripMetadata = viewState.stripMetadata,
+                onStrippingFailed = onStrippingFailed,
             )
 
         if (results.allGood) {

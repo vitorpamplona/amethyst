@@ -234,28 +234,40 @@ private fun ImageVideoPostChat(
         )
     }
 
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(modifier = Modifier.fillMaxWidth()) {
-            Text(
-                text =
-                    when (fileUploadState.mediaQualitySlider) {
-                        0 -> stringRes(R.string.media_compression_quality_low)
-                        1 -> stringRes(R.string.media_compression_quality_medium)
-                        2 -> stringRes(R.string.media_compression_quality_high)
-                        3 -> stringRes(R.string.media_compression_quality_uncompressed)
-                        else -> stringRes(R.string.media_compression_quality_medium)
-                    },
-                modifier = Modifier.align(Alignment.Center),
+    val firstMedia = fileUploadState.multiOrchestrator?.first()?.media
+
+    if (firstMedia?.isVideo() == true || firstMedia?.isImage() == true) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text =
+                        when (fileUploadState.mediaQualitySlider) {
+                            0 -> stringRes(R.string.media_compression_quality_low)
+                            1 -> stringRes(R.string.media_compression_quality_medium)
+                            2 -> stringRes(R.string.media_compression_quality_high)
+                            3 -> stringRes(R.string.media_compression_quality_uncompressed)
+                            else -> stringRes(R.string.media_compression_quality_medium)
+                        },
+                    modifier = Modifier.align(Alignment.Center),
+                )
+            }
+
+            Slider(
+                value = fileUploadState.mediaQualitySlider.toFloat(),
+                onValueChange = { fileUploadState.mediaQualitySlider = it.toInt() },
+                valueRange = 0f..3f,
+                steps = 2,
             )
         }
-
-        Slider(
-            value = fileUploadState.mediaQualitySlider.toFloat(),
-            onValueChange = { fileUploadState.mediaQualitySlider = it.toInt() },
-            valueRange = 0f..3f,
-            steps = 2,
-        )
     }
+
+    SettingSwitchItem(
+        title = R.string.strip_metadata_label,
+        description = R.string.strip_metadata_description,
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+        checked = fileUploadState.stripMetadata,
+        onCheckedChange = { fileUploadState.stripMetadata = it },
+    )
 }
 
 @Composable

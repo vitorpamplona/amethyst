@@ -67,6 +67,7 @@ zxingAndroidEmbedded = "4.3.0"
 windowCoreAndroid = "1.5.1"
 androidxCamera = "1.5.3"
 androidxCollection = "1.6.0"
+androidxExifinterface = "1.4.1"
 kotlinTest = "2.3.0"
 core = "1.7.0"
 mavenPublish = "0.36.0"
@@ -90,6 +91,7 @@ androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", versi
 androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation" }
 androidx-compose-runtime-annotation = { group = "androidx.compose.runtime", name = "runtime-annotation", version.ref = "composeRuntimeAnnotation" }
 androidx-collection = { group = "androidx.collection", name = "collection", version.ref = "androidxCollection" }
+androidx-exifinterface = { group = "androidx.exifinterface", name = "exifinterface", version.ref = "androidxExifinterface" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }

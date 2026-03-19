@@ -89,6 +89,8 @@ fun NewMediaView(
         postViewModel.load(account, uris)
     }
 
+    StrippingFailureDialog(postViewModel.strippingFailureConfirmation)
+
     Dialog(
         onDismissRequest = { onClose() },
         properties =
@@ -112,6 +114,7 @@ fun NewMediaView(
                         postViewModel.selectedServer?.let {
                             account.settings.changeDefaultFileServer(it)
                         }
+                        account.settings.changeStripLocationOnUpload(postViewModel.stripMetadata)
                     },
                 )
             },
@@ -269,4 +272,15 @@ fun ImageVideoPost(
             onCheckedChange = { postViewModel.useH265Codec = it },
         )
     }
+
+    SettingSwitchItem(
+        title = R.string.strip_metadata_label,
+        description = R.string.strip_metadata_description,
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp),
+        checked = postViewModel.stripMetadata,
+        onCheckedChange = { postViewModel.stripMetadata = it },
+    )
 }

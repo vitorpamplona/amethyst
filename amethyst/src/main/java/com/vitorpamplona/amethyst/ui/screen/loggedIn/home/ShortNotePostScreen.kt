@@ -60,6 +60,7 @@ import androidx.core.util.Consumer
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.FileServerSelectionRow
 import com.vitorpamplona.amethyst.ui.actions.uploads.MAX_VOICE_RECORD_SECONDS
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordVoiceButton
@@ -181,6 +182,8 @@ private fun NewPostScreenInner(
     nav: Nav,
 ) {
     WatchAndLoadMyEmojiList(accountViewModel)
+
+    StrippingFailureDialog(postViewModel.strippingFailureConfirmation)
 
     BackHandler {
         accountViewModel.launchSigner {
@@ -369,8 +372,8 @@ private fun NewPostScreenBody(
                             it,
                             accountViewModel.account.settings.defaultFileServer,
                             isUploading = postViewModel.mediaUploadTracker.isUploading,
-                            onAdd = { alt, server, sensitiveContent, mediaQuality, useH265 ->
-                                postViewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, server, accountViewModel.toastManager::toast, context, useH265)
+                            onAdd = { alt, server, sensitiveContent, mediaQuality, useH265, stripMetadata ->
+                                postViewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, server, accountViewModel.toastManager::toast, context, useH265, stripMetadata)
                                 accountViewModel.account.settings.changeDefaultFileServer(server)
                             },
                             onDelete = postViewModel::deleteMediaToUpload,

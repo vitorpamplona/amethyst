@@ -42,6 +42,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
+import com.vitorpamplona.amethyst.service.uploads.SuspendableConfirmation
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
@@ -161,6 +162,9 @@ open class CommentPostViewModel :
 
     // Images and Videos
     var multiOrchestrator by mutableStateOf<MultiOrchestrator?>(null)
+
+    // Stripping failure dialog
+    val strippingFailureConfirmation = SuspendableConfirmation()
 
     // Invoices
     var canAddInvoice by mutableStateOf(false)
@@ -470,8 +474,9 @@ open class CommentPostViewModel :
         server: ServerName,
         onError: (title: String, message: String) -> Unit,
         context: Context,
+        stripMetadata: Boolean = true,
     ) = try {
-        uploadUnsafe(alt, contentWarningReason, mediaQuality, server, onError, context)
+        uploadUnsafe(alt, contentWarningReason, mediaQuality, server, onError, context, stripMetadata)
     } catch (_: SignerExceptions.ReadOnlyException) {
         onError(
             stringRes(context, R.string.read_only_user),
@@ -486,6 +491,7 @@ open class CommentPostViewModel :
         server: ServerName,
         onError: (title: String, message: String) -> Unit,
         context: Context,
+        stripMetadata: Boolean = true,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             val myMultiOrchestrator = multiOrchestrator ?: return@launch
@@ -500,6 +506,8 @@ open class CommentPostViewModel :
                     server,
                     account,
                     context,
+                    stripMetadata = stripMetadata,
+                    onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
                 )
 
             if (results.allGood) {

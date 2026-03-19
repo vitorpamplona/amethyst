@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
+import com.vitorpamplona.amethyst.service.uploads.SuspendableConfirmation
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
@@ -196,6 +197,9 @@ open class ShortNotePostViewModel :
 
     // Images and Videos
     var multiOrchestrator by mutableStateOf<MultiOrchestrator?>(null)
+
+    // Stripping failure dialog
+    val strippingFailureConfirmation = SuspendableConfirmation()
 
     // Voice Messages
     var voiceRecording by mutableStateOf<RecordingResult?>(null)
@@ -944,8 +948,9 @@ open class ShortNotePostViewModel :
         onError: (title: String, message: String) -> Unit,
         context: Context,
         useH265: Boolean,
+        stripMetadata: Boolean = true,
     ) = try {
-        uploadUnsafe(alt, contentWarningReason, mediaQuality, server, onError, context, useH265)
+        uploadUnsafe(alt, contentWarningReason, mediaQuality, server, onError, context, useH265, stripMetadata)
     } catch (_: SignerExceptions.ReadOnlyException) {
         onError(
             stringRes(context, R.string.read_only_user),
@@ -961,6 +966,7 @@ open class ShortNotePostViewModel :
         onError: (title: String, message: String) -> Unit,
         context: Context,
         useH265: Boolean,
+        stripMetadata: Boolean = true,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             val myMultiOrchestrator = multiOrchestrator ?: return@launch
@@ -976,6 +982,8 @@ open class ShortNotePostViewModel :
                     account,
                     context,
                     useH265,
+                    stripMetadata,
+                    onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
                 )
 
             if (results.allGood) {

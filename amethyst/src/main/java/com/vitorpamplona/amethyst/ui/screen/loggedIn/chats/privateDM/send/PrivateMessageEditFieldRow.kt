@@ -54,6 +54,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
@@ -136,6 +137,8 @@ fun PrivateMessageEditFieldRow(
             )
         }
     }
+
+    StrippingFailureDialog(channelScreenModel.strippingFailureConfirmation)
 
     channelScreenModel.encryptedUploadErrorTitle?.let { title ->
         EncryptedUploadErrorDialog(

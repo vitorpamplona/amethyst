@@ -42,6 +42,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
+import com.vitorpamplona.amethyst.service.uploads.SuspendableConfirmation
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
@@ -145,6 +146,9 @@ open class NewProductViewModel :
 
     // Images and Videos
     var multiOrchestrator by mutableStateOf<MultiOrchestrator?>(null)
+
+    // Stripping failure dialog
+    val strippingFailureConfirmation = SuspendableConfirmation()
 
     // Classifieds
     var title by mutableStateOf(TextFieldValue(""))
@@ -394,6 +398,7 @@ open class NewProductViewModel :
         server: ServerName,
         onError: (title: String, message: String) -> Unit,
         context: Context,
+        stripMetadata: Boolean = true,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             val myAccount = account
@@ -409,6 +414,8 @@ open class NewProductViewModel :
                     server,
                     myAccount,
                     context,
+                    stripMetadata = stripMetadata,
+                    onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
                 )
 
             if (results.allGood) {
