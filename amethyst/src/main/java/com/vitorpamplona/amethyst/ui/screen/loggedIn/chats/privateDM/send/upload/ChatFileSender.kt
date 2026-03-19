@@ -135,12 +135,6 @@ class ChatFileSender(
     }
 
     suspend fun sendAll(uploads: List<SuccessfulUploads>) {
-        uploads.forEach {
-            if (it.cipher != null) {
-                sendNIP17(it.result, it.caption, it.contentWarningReason, it.cipher)
-            } else {
-                sendNIP04(it.result, it.caption, it.contentWarningReason)
-            }
-        }
+        sendNIP17(uploads)
     }
 }

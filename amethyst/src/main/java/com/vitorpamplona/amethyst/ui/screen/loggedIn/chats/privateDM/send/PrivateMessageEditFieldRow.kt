@@ -174,39 +174,63 @@ fun EditField(
     onSendNewMessage: () -> Unit,
     accountViewModel: AccountViewModel,
 ) {
-    ThinPaddingTextField(
-        value = channelScreenModel.message,
-        onValueChange = { channelScreenModel.updateMessage(it) },
-        keyboardOptions = PostKeyboard,
-        shape = EditFieldBorder,
-        modifier = Modifier.fillMaxWidth(),
-        placeholder = {
-            Text(
-                text = stringRes(R.string.reply_here),
-                color = MaterialTheme.colorScheme.placeholderText,
-            )
-        },
-        trailingIcon = {
-            ThinSendButton(
-                isActive = channelScreenModel.canPost(),
-                modifier = EditFieldTrailingIconModifier,
-            ) {
-                accountViewModel.launchSigner {
-                    channelScreenModel.sendPostSync()
-                    onSendNewMessage()
+    if (channelScreenModel.recipientsMissingDmRelays) {
+        RecipientMissingRelaysWarning()
+    } else {
+        ThinPaddingTextField(
+            value = channelScreenModel.message,
+            onValueChange = { channelScreenModel.updateMessage(it) },
+            keyboardOptions = PostKeyboard,
+            shape = EditFieldBorder,
+            modifier = Modifier.fillMaxWidth(),
+            placeholder = {
+                Text(
+                    text = stringRes(R.string.reply_here),
+                    color = MaterialTheme.colorScheme.placeholderText,
+                )
+            },
+            trailingIcon = {
+                ThinSendButton(
+                    isActive = channelScreenModel.canPost(),
+                    modifier = EditFieldTrailingIconModifier,
+                ) {
+                    accountViewModel.launchSigner {
+                        channelScreenModel.sendPostSync()
+                        onSendNewMessage()
+                    }
                 }
-            }
-        },
-        leadingIcon = {
-            KeyboardLeadingIcon(channelScreenModel, accountViewModel)
-        },
-        colors =
-            TextFieldDefaults.colors(
-                focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent,
-            ),
-        visualTransformation = UrlUserTagTransformation(MaterialTheme.colorScheme.primary),
-    )
+            },
+            leadingIcon = {
+                KeyboardLeadingIcon(channelScreenModel, accountViewModel)
+            },
+            colors =
+                TextFieldDefaults.colors(
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
+                ),
+            visualTransformation = UrlUserTagTransformation(MaterialTheme.colorScheme.primary),
+        )
+    }
+}
+
+@Composable
+fun RecipientMissingRelaysWarning() {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        Text(
+            text = stringRes(R.string.recipient_missing_dm_relays),
+            color = MaterialTheme.colorScheme.error,
+            fontSize = Font12SP,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
 }
 
 @Composable
@@ -225,7 +249,7 @@ fun KeyboardLeadingIcon(
             onImageChosen = channelScreenModel::pickedMedia,
         )
 
-        ToggleNip17Button(channelScreenModel, accountViewModel)
+        Nip17Indicator(channelScreenModel)
     }
 }
 

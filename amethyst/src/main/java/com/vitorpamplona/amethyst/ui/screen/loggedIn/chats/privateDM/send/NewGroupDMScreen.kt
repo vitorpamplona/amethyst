@@ -332,6 +332,10 @@ fun GroupDMScreenContent(
             )
         }
 
+        if (postViewModel.recipientsMissingDmRelays) {
+            RecipientMissingRelaysWarning()
+        }
+
         BottomRowActions(postViewModel, accountViewModel)
     }
 }
@@ -551,7 +555,7 @@ fun SendDirectMessageTo(
                     ),
             )
 
-            ToggleNip17Button(postViewModel, accountViewModel)
+            Nip17Indicator(postViewModel)
         }
 
         HorizontalDivider(thickness = DividerThickness)
