@@ -1535,7 +1535,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="import_follow_list">Folgeliste importieren</string>
     <string name="select_users_to_follow">Benutzer zum Folgen auswählen</string>
     <string name="profile_to_import_from">Profil, aus dem importiert werden soll</string>
-    <string name="name_search_npub1_alice_example_com">Namenssuche, npub1…, alice@example.com</string>
+    <string name="name_search_npub1_alice_example_com" tools:ignore="Typos">Namenssuche, npub1…, alice@example.com</string>
     <string name="supports_npub_nip_05_hex_and_namecoin_bit_d_id">Unterstützt npub, NIP-05, Hex und Namecoin (.bit / d/ / id/)</string>
     <string name="look_up_follow_list">Folgeliste nachschlagen</string>
     <string name="tip">Tipp</string>
@@ -1563,4 +1563,65 @@ anz der Bedingungen ist erforderlich</string>
     <string name="dms">DMs</string>
     <string name="profiles">profile</string>
     <string name="relay_settings_lower">relaiseinstellungen</string>
+    <!-- Relay Sync -->
+    <string name="event_sync_title">Relay-Synchronisierung</string>
+    <string name="event_sync_section">Relay-Synchronisierung</string>
+    <string name="event_sync_section_explainer">Veröffentliche deine Ereignisse erneut auf allen bekannten Relays, um deine Outbox-, Inbox- und DM-Relays aktuell zu halten. Erfordert WLAN — dies kann viele Daten verbrauchen.</string>
+    <string name="event_sync_open_button">Relay-Synchronisierung öffnen…</string>
+    <string name="event_sync_what_happens_title">Was passiert</string>
+    <string name="event_sync_what_happens_body">Dieses Tool durchsucht alle Relays, die deine App gesehen hat, und verteilt deine Ereignisse an die richtigen Ziele: </string>
+    <string name="event_sync_step1">Lade alle Ereignisse herunter, die du erstellt hast, und sende sie an deine Outbox-Relays.</string>
+    <string name="event_sync_step2">Lade alle Ereignisse herunter, die dich erwähnen, und sende sie an deine Inbox-Relays.</string>
+    <string name="event_sync_step3">Lade alle Direktnachrichten herunter, die an dich gerichtet sind, und sende sie an deine DM-Relays.</string>
+    <string name="event_sync_wifi_warning">⚠ Du scheinst eine getaktete oder mobile Verbindung zu nutzen. Dieser Vorgang kann sehr viele Daten übertragen. Verbinde dich vor dem Start mit einem WLAN.</string>
+    <string name="event_sync_mobile_data_dialog_title">Mobile Daten verwenden?</string>
+    <string name="event_sync_start">Synchronisierung starten</string>
+    <string name="event_sync_start_anyway">Trotzdem starten (mobile Daten)</string>
+    <string name="event_sync_pause">Pause</string>
+    <string name="event_sync_resume">Fortsetzen</string>
+    <string name="event_sync_start_over">Neu starten</string>
+    <string name="event_sync_cancel">Abbrechen</string>
+    <string name="event_sync_relays_progress">Relays: %1$d / %2$d</string>
+    <string name="event_sync_paused_title">Synchronisierung pausiert</string>
+    <string name="event_sync_paused_body">%1$d von %2$d Relays abgeschlossen — bisher %3$d Ereignisse verteilt. Tippe auf Fortsetzen.</string>
+    <string name="event_sync_done_title">Synchronisierung abgeschlossen</string>
+    <string name="event_sync_done_accepted">%1$d Ereignisse von Ziel-Relays als neu akzeptiert.</string>
+    <string name="event_sync_done_duration">Abgeschlossen in %1$d Sekunden.</string>
+    <string name="event_sync_done_sent">%1$d Ereignisse an Ziel-Relays weitergeleitet von %2$d empfangenen.</string>
+    <string name="event_sync_error_title">Synchronisierungsfehler</string>
+    <string name="event_sync_events_sent">Ereignisse verteilt: %1$d neue von %2$d gesendeten und %3$d empfangenen</string>
+    <string name="event_sync_sending_to">Senden an</string>
+    <string name="event_sync_outbox_relays">Outbox</string>
+    <string name="event_sync_inbox_relays">Inbox</string>
+    <string name="event_sync_dm_relays">DMs</string>
+    <string name="event_sync_log_recv">empf. %1$s</string>
+    <string name="event_sync_log_new">neu %1$s</string>
+    <string name="event_sync_log_sent">ges. %1$s</string>
+    <string name="event_sync_no_events">keine Ereignisse</string>
+    <string name="event_sync_less_than_until">&lt;%1$s</string>
+    <string name="event_sync_activity_log">Wird geprüft (%1$d Relays)</string>
+    <string name="event_sync_activity_log_finished">Abgeschlossen (%1$d Relays)</string>
+    <string name="event_sync_status_connecting">Verbinden</string>
+    <string name="event_sync_status_downloading">Herunterladen</string>
+    <string name="event_sync_status_error">Fehler</string>
+    <string name="event_sync_status_completed">Abgeschlossen</string>
+
+    <!-- Misc -->
+    <string name="last_seen">Zuletzt gesehen vor %1$s</string>
+
+    <!-- Encryption -->
+    <string name="encrypt_files_label">Dateien verschlüsseln</string>
+    <string name="encrypt_files_description">Dateien vor dem Hochladen verschlüsseln, um die Privatsphäre zu schützen. Einige Server akzeptieren möglicherweise keine verschlüsselten Dateien bei kostenlosen Konten.</string>
+    <string name="failed_to_upload_encrypted_media_title">Verschlüsselter Upload fehlgeschlagen</string>
+    <string name="failed_to_upload_encrypted_media_message">Viele Server akzeptieren keine verschlüsselten Dateien bei kostenlosen Konten. Du kannst es ohne Verschlüsselung erneut versuchen.</string>
+    <string name="retry_without_encryption">Ohne Verschlüsselung wiederholen</string>
+    <string name="upload_without_encryption_warning">Warnung: Ohne Verschlüsselung kann jeder mit dem Dateilink den Inhalt sehen.</string>
+
+    <!-- Wallet filter -->
+    <string name="wallet_filter_all">Alle</string>
+    <string name="wallet_filter_zaps">Zaps</string>
+    <string name="wallet_filter_non_zaps">Keine Zaps</string>
+
+    <!-- DM relays -->
+    <string name="recipient_missing_dm_relays">DM-Inbox-Relays nicht gefunden. Nachrichten können nicht zugestellt werden, bis die Relay-Liste konfiguriert wurde.</string>
 </resources>

@@ -1558,4 +1558,68 @@
     <string name="dms">DMs</string>
     <string name="profiles">profily</string>
     <string name="relay_settings_lower">nastavení relé</string>
+
+    <!-- Relay Sync -->
+    <string name="event_sync_title">Synchronizace relé</string>
+    <string name="event_sync_section">Synchronizace relé</string>
+    <string name="event_sync_section_explainer">Znovu publikujte své události na všech známých relé, aby byly vaše relé pro odchozí, příchozí a DM zprávy aktuální. Vyžaduje Wi-Fi — může spotřebovat velké množství dat.</string>
+    <string name="event_sync_open_button">Otevřít synchronizaci relé…</string>
+    <string name="event_sync_what_happens_title">Co toto provede</string>
+    <string name="event_sync_what_happens_body">Tento nástroj prohledá všechna relé, která vaše aplikace viděla, a přerozdělí vaše události na správná místa určení: </string>
+    <string name="event_sync_step1">Stáhne všechny události, které jste vytvořili, a odešle je na vaše odchozí relé.</string>
+    <string name="event_sync_step2">Stáhne všechny události, které vás zmiňují, a odešle je na vaše příchozí relé.</string>
+    <string name="event_sync_step3">Stáhne všechny přímé zprávy adresované vám a odešle je na vaše DM relé.</string>
+    <string name="event_sync_wifi_warning">⚠ Zdá se, že jste na měřeném nebo mobilním připojení. Tato operace může přenést velmi velké množství dat. Před spuštěním se připojte k Wi-Fi.</string>
+    <string name="event_sync_mobile_data_dialog_title">Použít mobilní data?</string>
+    <string name="event_sync_start">Spustit synchronizaci</string>
+    <string name="event_sync_start_anyway">Spustit přesto (mobilní data)</string>
+    <string name="event_sync_pause">Pozastavit</string>
+    <string name="event_sync_resume">Pokračovat</string>
+    <string name="event_sync_start_over">Začít znovu</string>
+    <string name="event_sync_cancel">Zrušit</string>
+    <string name="event_sync_relays_progress">Relé: %1$d / %2$d</string>
+    <string name="event_sync_paused_title">Synchronizace pozastavena</string>
+    <string name="event_sync_paused_body">Dokončeno %1$d z %2$d relé — dosud přerozděleno %3$d událostí. Klepněte na Pokračovat.</string>
+    <string name="event_sync_done_title">Synchronizace dokončena</string>
+    <string name="event_sync_done_accepted">%1$d událostí přijato jako nové cílovými relé.</string>
+    <string name="event_sync_done_duration">Dokončeno za %1$d sekund.</string>
+    <string name="event_sync_done_sent">Předáno %1$d událostí na cílová relé z %2$d přijatých.</string>
+    <string name="event_sync_error_title">Chyba synchronizace</string>
+    <string name="event_sync_events_sent">Přerozděleno událostí: %1$d nových z %2$d odeslaných a %3$d přijatých</string>
+    <string name="event_sync_sending_to">Odesílání na</string>
+    <string name="event_sync_outbox_relays">Odchozí</string>
+    <string name="event_sync_inbox_relays">Příchozí</string>
+    <string name="event_sync_dm_relays">DM</string>
+    <string name="event_sync_log_recv">přijato %1$s</string>
+    <string name="event_sync_log_new">nových %1$s</string>
+    <string name="event_sync_log_sent">odesláno %1$s</string>
+    <string name="event_sync_no_events">žádné události</string>
+    <string name="event_sync_less_than_until">&lt;%1$s</string>
+    <string name="event_sync_activity_log">Právě se kontroluje (%1$d relé)</string>
+    <string name="event_sync_activity_log_finished">Dokončeno (%1$d relé)</string>
+    <string name="event_sync_status_connecting">Připojování</string>
+    <string name="event_sync_status_downloading">Stahování</string>
+    <string name="event_sync_status_error">Chyba</string>
+    <string name="event_sync_status_completed">Dokončeno</string>
+
+    <!-- Misc -->
+    <string name="last_seen">Naposledy viděn před %1$s</string>
+
+    <!-- Encryption -->
+    <string name="encrypt_files_label">Šifrovat soubory</string>
+    <string name="encrypt_files_description">Šifrovat soubory před nahráním pro ochranu soukromí. Některé servery nemusí přijímat šifrované soubory na bezplatných účtech.</string>
+    <string name="failed_to_upload_encrypted_media_title">Šifrované nahrávání selhalo</string>
+    <string name="failed_to_upload_encrypted_media_message">Mnoho serverů nepřijímá šifrované soubory na bezplatných účtech. Můžete to zkusit znovu bez šifrování.</string>
+    <string name="retry_without_encryption">Zkusit znovu bez šifrování</string>
+    <string name="upload_without_encryption_warning">Upozornění: Bez šifrování může kdokoli s odkazem na soubor vidět jeho obsah.</string>
+
+    <!-- Wallet filter -->
+    <string name="wallet_filter_all">Vše</string>
+    <string name="wallet_filter_zaps">Zapy</string>
+    <string name="wallet_filter_non_zaps">Ostatní</string>
+
+    <!-- DM relays -->
+    <string name="recipient_missing_dm_relays">Příchozí DM relé příjemce nenalezena. Zprávy nelze doručit, dokud si nenastaví svůj seznam relé.</string>
+
+
 </resources>
