@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentRequestEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentResponseEvent
@@ -107,6 +108,9 @@ interface IAccount {
 
     /** Send a NIP-17 gift-wrapped direct message */
     suspend fun sendNip17PrivateMessage(template: EventTemplate<ChatMessageEvent>)
+
+    /** Send a NIP-17 gift-wrapped encrypted file header */
+    suspend fun sendNip17EncryptedFile(template: EventTemplate<ChatMessageEncryptedFileHeaderEvent>)
 
     /** Broadcast pre-created gift wraps (e.g. reactions within group DMs) */
     suspend fun sendGiftWraps(wraps: List<GiftWrapEvent>)

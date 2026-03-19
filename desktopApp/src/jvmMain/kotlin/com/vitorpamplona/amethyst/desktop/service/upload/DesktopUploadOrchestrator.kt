@@ -20,13 +20,23 @@
  */
 package com.vitorpamplona.amethyst.desktop.service.upload
 
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomUploadResult
+import com.vitorpamplona.quartz.utils.ciphers.AESGCM
+import com.vitorpamplona.quartz.utils.sha256.sha256
 import java.io.File
 
 data class UploadResult(
     val blossom: BlossomUploadResult,
     val metadata: MediaMetadata,
+)
+
+data class EncryptedUploadResult(
+    val blossom: BlossomUploadResult,
+    val metadata: MediaMetadata,
+    val encryptedHash: String,
+    val encryptedSize: Int,
 )
 
 class DesktopUploadOrchestrator(
@@ -74,5 +84,53 @@ class DesktopUploadOrchestrator(
         }
 
         return UploadResult(blossom = result, metadata = metadata)
+    }
+
+    /**
+     * Upload a file encrypted with AES-GCM for NIP-17 DM file sharing.
+     * Computes pre-encryption metadata (dimensions, blurhash), encrypts bytes,
+     * then uploads the encrypted blob to Blossom.
+     */
+    suspend fun uploadEncrypted(
+        file: File,
+        cipher: AESGCM,
+        serverBaseUrl: String,
+        signer: NostrSigner,
+    ): EncryptedUploadResult {
+        // 1. Compute pre-encryption metadata (dimensions, blurhash, mime, originalHash)
+        val metadata = DesktopMediaMetadata.compute(file)
+
+        // 2. Read file bytes and encrypt
+        val plaintext = file.readBytes()
+        val encrypted = cipher.encrypt(plaintext)
+
+        // 3. Compute SHA256 of ENCRYPTED blob (not plaintext)
+        val encryptedHash = sha256(encrypted).toHexKey()
+        val encryptedSize = encrypted.size
+
+        // 4. Create Blossom auth with encrypted hash and size
+        val authHeader =
+            DesktopBlossomAuth.createUploadAuth(
+                hash = encryptedHash,
+                size = encryptedSize.toLong(),
+                alt = "Encrypted upload",
+                signer = signer,
+            )
+
+        // 5. Upload encrypted blob as opaque binary
+        val result =
+            client.upload(
+                bytes = encrypted,
+                contentType = "application/octet-stream",
+                serverBaseUrl = serverBaseUrl,
+                authHeader = authHeader,
+            )
+
+        return EncryptedUploadResult(
+            blossom = result,
+            metadata = metadata,
+            encryptedHash = encryptedHash,
+            encryptedSize = encryptedSize,
+        )
     }
 }

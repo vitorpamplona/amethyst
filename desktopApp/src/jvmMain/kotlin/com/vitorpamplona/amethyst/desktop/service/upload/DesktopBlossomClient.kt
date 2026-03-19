@@ -28,6 +28,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import okio.BufferedSink
 import okio.source
 import java.io.File
@@ -53,6 +54,37 @@ class DesktopBlossomClient(
                         file.inputStream().source().use(sink::writeAll)
                     }
                 }
+
+            val requestBuilder =
+                Request
+                    .Builder()
+                    .url(apiUrl)
+                    .put(requestBody)
+
+            authHeader?.let { requestBuilder.addHeader("Authorization", it) }
+
+            val response = okHttpClient.newCall(requestBuilder.build()).execute()
+            response.use {
+                if (!it.isSuccessful) {
+                    val reason = it.headers["X-Reason"] ?: it.code.toString()
+                    throw RuntimeException("Upload failed ($serverBaseUrl): $reason")
+                }
+                JsonMapper.fromJson<BlossomUploadResult>(it.body.string())
+            }
+        }
+
+    /**
+     * Upload raw bytes (e.g. encrypted blobs) to a Blossom server.
+     */
+    suspend fun upload(
+        bytes: ByteArray,
+        contentType: String,
+        serverBaseUrl: String,
+        authHeader: String?,
+    ): BlossomUploadResult =
+        withContext(Dispatchers.IO) {
+            val apiUrl = serverBaseUrl.removeSuffix("/") + "/upload"
+            val requestBody = bytes.toRequestBody(contentType.toMediaType())
 
             val requestBuilder =
                 Request

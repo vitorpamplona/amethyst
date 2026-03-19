@@ -1,7 +1,7 @@
 ---
 title: "feat: Desktop DM Encrypted Media (NIP-17)"
 type: feat
-status: active
+status: completed
 date: 2026-03-18
 deepened: 2026-03-18
 origin: docs/brainstorms/2026-03-18-desktop-dm-encrypted-media-brainstorm.md
@@ -728,20 +728,20 @@ object EncryptedMediaService {
 
 ## Acceptance Criteria
 
-- [ ] Paperclip attach button visible in DM chat input (NIP-17 mode only)
-- [ ] File picker opens, supports image/video/audio selection
-- [ ] Selected files show as thumbnails above input with X to remove
-- [ ] Drag-and-drop files onto chat area adds to attachments (visual drop indicator)
-- [ ] Send encrypts files with AES-GCM before upload to Blossom
-- [ ] Kind 15 `ChatMessageEncryptedFileHeaderEvent` sent wrapped in GiftWrap
-- [ ] Lock icon overlay visible on attachment thumbnails before send
-- [ ] Received encrypted media downloads, decrypts, displays inline
-- [ ] Lock icon overlay on received encrypted media in chat bubbles
-- [ ] Wrong key / failed decryption shows error state, no crash
-- [ ] Upload progress indicator during encrypt + upload
-- [ ] No attach button when in NIP-04 mode
-- [ ] `canSend` true when files attached (even without text)
-- [ ] Send button disabled during active upload
+- [x] Paperclip attach button visible in DM chat input (NIP-17 mode only)
+- [x] File picker opens, supports image/video/audio selection
+- [x] Selected files show as thumbnails above input with X to remove
+- [x] Drag-and-drop files onto chat area adds to attachments (visual drop indicator)
+- [x] Send encrypts files with AES-GCM before upload to Blossom
+- [x] Kind 15 `ChatMessageEncryptedFileHeaderEvent` sent wrapped in GiftWrap
+- [x] Lock icon overlay visible on attachment thumbnails before send
+- [x] Received encrypted media downloads, decrypts, displays inline
+- [x] Lock icon overlay on received encrypted media in chat bubbles
+- [x] Wrong key / failed decryption shows error state, no crash
+- [x] Upload progress indicator during encrypt + upload
+- [x] No attach button when in NIP-04 mode
+- [x] `canSend` true when files attached (even without text)
+- [x] Send button disabled during active upload
 
 ## Test Plan (from Phase 6 testing plan)
 

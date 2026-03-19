@@ -97,9 +97,9 @@ Branch has 13 commits implementing Phases 0-9 of desktop media: image display, u
 
 | # | Test | Steps | Expected | Status |
 |---|------|-------|----------|--------|
-| 6.1 | DM file attach | Open DM → attach file | Encryption indicator visible | ⬜ BLOCKED — no attach button in DM input (send not implemented) |
-| 6.2 | Send encrypted | Attach file in DM → send | File uploads encrypted to Blossom | ⬜ BLOCKED — send not implemented |
-| 6.3 | Receive encrypted | Receive DM with encrypted file from another client | File downloads and decrypts; displays correctly | ⬜ TODO |
+| 6.1 | DM file attach | Open DM → click paperclip → select file | File thumbnail with lock icon visible above input | ⬜ TODO — implemented, needs manual test |
+| 6.2 | Send encrypted | Attach file in DM → send | File uploads encrypted to Blossom, kind 15 in GiftWrap | ⬜ TODO — implemented, needs manual test |
+| 6.3 | Receive encrypted | Receive DM with encrypted file from another client | File downloads and decrypts; displays correctly | ⬜ TODO — ChatFileAttachment implemented |
 | 6.4 | Wrong key | (If testable) Attempt to view another user's encrypted media | Decryption fails gracefully | ⬜ TODO |
 
 ---

@@ -25,24 +25,31 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Handles decryption of media files for NIP-17 DMs.
  * Uses AESGCM cipher from quartz (commonMain).
+ * Caches decrypted bytes in memory to avoid re-downloading on recomposition.
  */
 object EncryptedMediaService {
     private val httpClient = OkHttpClient()
+    private val cache = ConcurrentHashMap<String, ByteArray>()
+    private const val MAX_CACHE_ENTRIES = 20
 
     /**
      * Download and decrypt an encrypted file from a URL.
+     * Results are cached by URL to avoid re-downloading on scroll/recomposition.
      * Returns the decrypted bytes.
      */
     suspend fun downloadAndDecrypt(
         url: String,
         keyBytes: ByteArray,
         nonce: ByteArray,
-    ): ByteArray =
-        withContext(Dispatchers.IO) {
+    ): ByteArray {
+        cache[url]?.let { return it }
+
+        return withContext(Dispatchers.IO) {
             val request = Request.Builder().url(url).build()
             val response = httpClient.newCall(request).execute()
             val encryptedBytes =
@@ -52,6 +59,15 @@ object EncryptedMediaService {
                 }
 
             val cipher = AESGCM(keyBytes, nonce)
-            cipher.decrypt(encryptedBytes)
+            val decrypted = cipher.decrypt(encryptedBytes)
+
+            // Evict oldest entries if cache is full
+            if (cache.size >= MAX_CACHE_ENTRIES) {
+                cache.keys.firstOrNull()?.let { cache.remove(it) }
+            }
+            cache[url] = decrypted
+
+            decrypted
         }
+    }
 }
