@@ -203,7 +203,8 @@ fun ThreadScreen(
             createNoteSubscription(
                 relays = connectedRelays,
                 noteId = noteId,
-                onEvent = { event, _, _, _ ->
+                onEvent = { event, _, relay, _ ->
+                    subscriptionsCoordinator?.consumeEvent(event, relay)
                     if (event.id == noteId) {
                         rootNote = event
                         levelCache[event.id] = 0
@@ -224,7 +225,8 @@ fun ThreadScreen(
             createThreadRepliesSubscription(
                 relays = connectedRelays,
                 noteId = noteId,
-                onEvent = { event, _, _, _ ->
+                onEvent = { event, _, relay, _ ->
+                    subscriptionsCoordinator?.consumeEvent(event, relay)
                     replyEventState.addItem(event)
                 },
                 onEose = { _, _ ->

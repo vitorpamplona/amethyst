@@ -143,7 +143,8 @@ fun NotificationsScreen(
             createNotificationsSubscription(
                 relays = connectedRelays,
                 pubKeyHex = account.pubKeyHex,
-                onEvent = { event, _, _, _ ->
+                onEvent = { event, _, relay, _ ->
+                    subscriptionsCoordinator?.consumeEvent(event, relay)
                     // Skip events from the user themselves (except zaps)
                     if (event.pubKey == account.pubKeyHex && event !is LnZapEvent) {
                         return@createNotificationsSubscription
