@@ -84,7 +84,7 @@ class EventSync(
 ) {
     companion object {
         /** Maximum number of relays queried at the same time. */
-        const val MAX_CONCURRENT_RELAYS = 10
+        const val MAX_CONCURRENT_RELAYS = 50
 
         /** How long (ms) to wait for a single relay to reply per page before giving up. */
         const val RELAY_TIMEOUT_MS = 30_000L
