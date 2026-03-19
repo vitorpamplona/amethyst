@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip47WalletConnect
+package com.vitorpamplona.quartz.nip47WalletConnect.events
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -27,10 +27,11 @@ import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip31Alts.AltTag
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
-class NwcNotificationEvent(
+class LnZapPaymentResponseEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
@@ -40,47 +41,58 @@ class NwcNotificationEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
     override fun isContentEncoded() = true
 
-    fun clientPubKey() = tags.firstOrNull { it.size > 1 && it[0] == "p" }?.get(1)
+    fun requestAuthor() = tags.firstOrNull { it.size > 1 && it[0] == "p" }?.get(1)
 
-    fun talkingWith(oneSideHex: String): HexKey = if (pubKey == oneSideHex) clientPubKey() ?: pubKey else pubKey
+    fun requestId() = tags.firstOrNull { it.size > 1 && it[0] == "e" }?.get(1)
 
-    fun canDecrypt(signer: NostrSigner) = pubKey == signer.pubKey || clientPubKey() == signer.pubKey
+    fun talkingWith(oneSideHex: String): HexKey = if (pubKey == oneSideHex) requestAuthor() ?: pubKey else pubKey
 
-    suspend fun decryptNotification(signer: NostrSigner): Notification {
+    fun canDecrypt(signer: NostrSigner) = pubKey == signer.pubKey || requestAuthor() == signer.pubKey
+
+    suspend fun decrypt(signer: NostrSigner): Response {
         if (!canDecrypt(signer)) throw SignerExceptions.UnauthorizedDecryptionException()
-        val jsonText = signer.decrypt(content, talkingWith(signer.pubKey))
-        return OptimizedJsonMapper.fromJsonTo<Notification>(jsonText)
+
+        val json = signer.decrypt(content, talkingWith(signer.pubKey))
+        return OptimizedJsonMapper.fromJsonTo<Response>(json)
     }
 
     companion object {
-        const val KIND = 23197
-        const val LEGACY_KIND = 23196
-        const val ALT = "Wallet notification"
+        const val KIND = 23195
+        const val ALT = "NWC response"
 
         /**
-         * Creates an NWC notification event (server-side).
-         * Uses NIP-44 encryption (kind 23197).
+         * Creates an NWC response event (server-side).
          *
-         * @param notification the notification to send
-         * @param clientPubkey the client's public key to encrypt to
+         * @param response the NWC response object to send
+         * @param requestEvent the original request event being responded to
          * @param signer the wallet service signer
+         * @param useNip44 whether to use NIP-44 encryption (default: false for NIP-04)
          * @param createdAt event timestamp
          */
-        suspend fun createNotification(
-            notification: Notification,
-            clientPubkey: HexKey,
+        suspend fun createResponse(
+            response: Response,
+            requestEvent: LnZapPaymentRequestEvent,
             signer: NostrSigner,
+            useNip44: Boolean = false,
             createdAt: Long = TimeUtils.now(),
-        ): NwcNotificationEvent {
-            val serialized = OptimizedJsonMapper.toJson(notification)
+        ): LnZapPaymentResponseEvent {
+            val serializedResponse = OptimizedJsonMapper.toJson(response)
+
+            val clientPubkey = requestEvent.pubKey
 
             val tags =
                 arrayOf(
                     arrayOf("p", clientPubkey),
+                    arrayOf("e", requestEvent.id),
                     AltTag.assemble(ALT),
                 )
 
-            val encrypted = signer.nip44Encrypt(serialized, clientPubkey)
+            val encrypted =
+                if (useNip44) {
+                    signer.nip44Encrypt(serializedResponse, clientPubkey)
+                } else {
+                    signer.nip04Encrypt(serializedResponse, clientPubkey)
+                }
 
             return signer.sign(createdAt, KIND, tags, encrypted)
         }

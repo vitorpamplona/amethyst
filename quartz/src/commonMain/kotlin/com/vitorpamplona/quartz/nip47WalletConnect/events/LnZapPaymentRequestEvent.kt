@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip47WalletConnect
+package com.vitorpamplona.quartz.nip47WalletConnect.events
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -27,10 +27,12 @@ import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip31Alts.AltTag
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
-class LnZapPaymentResponseEvent(
+class LnZapPaymentRequestEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
@@ -40,57 +42,58 @@ class LnZapPaymentResponseEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
     override fun isContentEncoded() = true
 
-    fun requestAuthor() = tags.firstOrNull { it.size > 1 && it[0] == "p" }?.get(1)
+    fun walletServicePubKey() = tags.firstOrNull { it.size > 1 && it[0] == "p" }?.get(1)
 
-    fun requestId() = tags.firstOrNull { it.size > 1 && it[0] == "e" }?.get(1)
+    fun talkingWith(oneSideHex: String): HexKey = if (pubKey == oneSideHex) walletServicePubKey() ?: pubKey else pubKey
 
-    fun talkingWith(oneSideHex: String): HexKey = if (pubKey == oneSideHex) requestAuthor() ?: pubKey else pubKey
+    fun canDecrypt(signer: NostrSigner) = pubKey == signer.pubKey || walletServicePubKey() == signer.pubKey
 
-    fun canDecrypt(signer: NostrSigner) = pubKey == signer.pubKey || requestAuthor() == signer.pubKey
-
-    suspend fun decrypt(signer: NostrSigner): Response {
+    suspend fun decryptRequest(signer: NostrSigner): Request {
         if (!canDecrypt(signer)) throw SignerExceptions.UnauthorizedDecryptionException()
-
-        val json = signer.decrypt(content, talkingWith(signer.pubKey))
-        return OptimizedJsonMapper.fromJsonTo<Response>(json)
+        val jsonText = signer.decrypt(content, talkingWith(signer.pubKey))
+        return OptimizedJsonMapper.fromJsonTo<Request>(jsonText)
     }
 
+    fun encryptionScheme() = tags.firstOrNull { it.size > 1 && it[0] == "encryption" }?.get(1)
+
     companion object {
-        const val KIND = 23195
-        const val ALT = "NWC response"
+        const val KIND = 23194
+        const val ALT = "NWC request"
 
-        /**
-         * Creates an NWC response event (server-side).
-         *
-         * @param response the NWC response object to send
-         * @param requestEvent the original request event being responded to
-         * @param signer the wallet service signer
-         * @param useNip44 whether to use NIP-44 encryption (default: false for NIP-04)
-         * @param createdAt event timestamp
-         */
-        suspend fun createResponse(
-            response: Response,
-            requestEvent: LnZapPaymentRequestEvent,
+        suspend fun create(
+            lnInvoice: String,
+            walletServicePubkey: String,
             signer: NostrSigner,
-            useNip44: Boolean = false,
             createdAt: Long = TimeUtils.now(),
-        ): LnZapPaymentResponseEvent {
-            val serializedResponse = OptimizedJsonMapper.toJson(response)
+        ): LnZapPaymentRequestEvent =
+            createRequest(
+                PayInvoiceMethod.create(lnInvoice),
+                walletServicePubkey,
+                signer,
+                createdAt,
+            )
 
-            val clientPubkey = requestEvent.pubKey
+        suspend fun createRequest(
+            request: Request,
+            walletServicePubkey: String,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            useNip44: Boolean = false,
+        ): LnZapPaymentRequestEvent {
+            val serializedRequest = OptimizedJsonMapper.toJson(request)
 
             val tags =
-                arrayOf(
-                    arrayOf("p", clientPubkey),
-                    arrayOf("e", requestEvent.id),
-                    AltTag.assemble(ALT),
-                )
+                if (useNip44) {
+                    arrayOf(arrayOf("p", walletServicePubkey), AltTag.assemble(ALT), arrayOf("encryption", "nip44_v2"))
+                } else {
+                    arrayOf(arrayOf("p", walletServicePubkey), AltTag.assemble(ALT))
+                }
 
             val encrypted =
                 if (useNip44) {
-                    signer.nip44Encrypt(serializedResponse, clientPubkey)
+                    signer.nip44Encrypt(serializedRequest, walletServicePubkey)
                 } else {
-                    signer.nip04Encrypt(serializedResponse, clientPubkey)
+                    signer.nip04Encrypt(serializedRequest, walletServicePubkey)
                 }
 
             return signer.sign(createdAt, KIND, tags, encrypted)

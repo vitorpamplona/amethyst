@@ -171,8 +171,8 @@ import com.vitorpamplona.quartz.nip37Drafts.DraftEventCache
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
-import com.vitorpamplona.quartz.nip47WalletConnect.Request
-import com.vitorpamplona.quartz.nip47WalletConnect.Response
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent

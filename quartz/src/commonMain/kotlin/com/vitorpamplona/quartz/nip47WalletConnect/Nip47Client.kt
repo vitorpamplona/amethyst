@@ -27,6 +27,26 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentRequestEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcInfoEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcNotificationEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.CancelHoldInvoiceMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetBalanceMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetBudgetMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetInfoMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.ListTransactionsMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.LookupInvoiceMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.MakeHoldInvoiceMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.MakeInvoiceMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Notification
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayKeysendMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.SettleHoldInvoiceMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.SignMessageMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.TlvRecord
 
 /**
  * High-level NIP-47 Wallet Connect client.

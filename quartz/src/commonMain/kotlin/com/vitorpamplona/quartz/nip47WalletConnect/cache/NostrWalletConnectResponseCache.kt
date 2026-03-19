@@ -18,11 +18,13 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip47WalletConnect
+package com.vitorpamplona.quartz.nip47WalletConnect.cache
 
 import androidx.collection.LruCache
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.caches.DecryptCache
+import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 
 class NostrWalletConnectResponseCache(
     signer: NostrSigner,

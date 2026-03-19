@@ -35,10 +35,10 @@ import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip17Dm.NIP17Factory
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
-import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentRequestEvent
-import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentResponseEvent
-import com.vitorpamplona.quartz.nip47WalletConnect.Request
-import com.vitorpamplona.quartz.nip47WalletConnect.Response
+import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentRequestEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.nip57Zaps.IPrivateZapsDecryptionCache
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent

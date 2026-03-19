@@ -23,10 +23,10 @@ package com.vitorpamplona.quartz.nip47WalletConnect.jackson
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
-import com.vitorpamplona.quartz.nip47WalletConnect.HoldInvoiceAcceptedNotification
-import com.vitorpamplona.quartz.nip47WalletConnect.Notification
-import com.vitorpamplona.quartz.nip47WalletConnect.PaymentReceivedNotification
-import com.vitorpamplona.quartz.nip47WalletConnect.PaymentSentNotification
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.HoldInvoiceAcceptedNotification
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Notification
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PaymentReceivedNotification
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PaymentSentNotification
 
 class NotificationSerializer : StdSerializer<Notification>(Notification::class.java) {
     override fun serialize(

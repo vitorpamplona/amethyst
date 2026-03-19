@@ -18,30 +18,28 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip01Core.relay
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync
 
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.vitorpamplona.amethyst.model.Constants
+import com.vitorpamplona.amethyst.service.okhttp.DefaultContentTypeInterceptor
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
-import okhttp3.Interceptor
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.Response
+import org.junit.Test
+import org.junit.runner.RunWith
 
-class DefaultContentTypeInterceptor(
-    private val userAgentHeader: String,
-) : Interceptor {
-    override fun intercept(chain: Interceptor.Chain): Response {
-        val originalRequest: Request = chain.request()
-        val requestWithUserAgent: Request =
-            originalRequest
-                .newBuilder()
-                .header("User-Agent", userAgentHeader)
-                .build()
-        return chain.proceed(requestWithUserAgent)
-    }
-}
-
-open class BaseNostrClientTest {
+@RunWith(AndroidJUnit4::class)
+class EventSyncTest {
     companion object {
+        val vitor = "wss://vitor.nostr1.com".normalizeRelayUrl()
+        val appScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+
         val rootClient =
             OkHttpClient
                 .Builder()
@@ -51,4 +49,25 @@ open class BaseNostrClientTest {
                 .build()
         val socketBuilder = BasicOkHttpWebSocket.Builder { url -> rootClient }
     }
+
+    @Test
+    fun testSync() =
+        runBlocking {
+            val sync =
+                EventSync(
+                    accountPubKey = "460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c",
+                    relayDb = {
+                        listOf(Constants.mom, Constants.nos)
+                    },
+                    outboxTargets = { setOf(vitor) },
+                    inboxTargets = { setOf(vitor) },
+                    dmTargets = { setOf(vitor) },
+                    clientBuilder = {
+                        NostrClient(socketBuilder, appScope)
+                    },
+                    scope = appScope,
+                )
+
+            sync.runSync()
+        }
 }
