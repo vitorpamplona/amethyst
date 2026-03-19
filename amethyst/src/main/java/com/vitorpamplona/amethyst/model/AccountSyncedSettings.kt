@@ -27,7 +27,6 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
-import java.util.Locale
 
 @Stable
 class AccountSyncedSettings(
@@ -165,11 +164,11 @@ class AccountLanguagePreferences(
         dontTranslateFrom.update { it - languageCode }
     }
 
-    fun translateToContains(languageCode: Locale) = translateTo.value.contains(languageCode.language)
+    fun translateToContains(languageCode: String) = translateTo.value.contains(languageCode)
 
-    fun updateTranslateTo(languageCode: Locale): Boolean {
-        if (translateTo.value != languageCode.language) {
-            translateTo.tryEmit(languageCode.language)
+    fun updateTranslateTo(languageCode: String): Boolean {
+        if (translateTo.value != languageCode) {
+            translateTo.tryEmit(languageCode)
             return true
         }
         return false

@@ -289,7 +289,9 @@ fun BookmarksScreen(
                         ) {
                             NoteCard(
                                 note = event.toNoteDisplayData(localCache),
+                                localCache = localCache,
                                 onAuthorClick = onNavigateToProfile,
+                                onMentionClick = onNavigateToProfile,
                             )
                             NoteActionsRow(
                                 event = event,

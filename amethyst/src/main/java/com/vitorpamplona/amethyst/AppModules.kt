@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.model.nip03Timestamp.IncomingOtsEventVerifier
 import com.vitorpamplona.amethyst.model.nip03Timestamp.TorAwareOkHttpOtsResolverBuilder
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.model.preferences.NamecoinSharedPreferences
+import com.vitorpamplona.amethyst.model.preferences.OtsSharedPreferences
 import com.vitorpamplona.amethyst.model.preferences.TorSharedPreferences
 import com.vitorpamplona.amethyst.model.preferences.UiSharedPreferences
 import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilder
@@ -123,6 +124,11 @@ class AppModules(
         NamecoinSharedPreferences(appContext, applicationIOScope)
     }
 
+    // OTS blockchain explorer preferences (global, like Tor settings)
+    val otsPrefs by lazy {
+        OtsSharedPreferences(appContext, applicationIOScope)
+    }
+
     // App services that should be run as soon as there are subscribers to their flows
     val locationManager = LocationState(appContext, applicationIOScope)
     val connManager = ConnectivityManager(appContext, applicationIOScope)
@@ -181,6 +187,7 @@ class AppModules(
             roleBasedHttpClientBuilder::okHttpClientForMoney,
             roleBasedHttpClientBuilder::shouldUseTorForMoneyOperations,
             otsBlockHeightCache,
+            customExplorerUrl = { otsPrefs.current.normalizedUrl() },
         )
 
     // Application-wide ots verification cache
@@ -391,6 +398,11 @@ class AppModules(
             // Sets Coil - Tor - OkHttp link
             delay(3000)
             videoCache
+        }
+
+        applicationIOScope.launch {
+            // Eagerly initialize OtsSharedPreferences off the main thread
+            otsPrefs
         }
     }
 

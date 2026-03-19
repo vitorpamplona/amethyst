@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.UserDependencies
 import com.vitorpamplona.quartz.nip40Expiration.expiration
+import com.vitorpamplona.quartz.nip40Expiration.isExpired
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -43,6 +44,9 @@ class UserStatusCache : UserDependencies {
         // if it's already there, quick exit
         if (statuses.value.contains(note) || note.event?.content.isNullOrBlank()) return
 
+        // don't add expired statuses
+        if (note.event?.isExpired() == true) return
+
         statuses.update {
             (it + note).sortedWith(sortModel).toImmutableList()
         }
@@ -54,6 +58,20 @@ class UserStatusCache : UserDependencies {
 
         statuses.update {
             (it - deleteNote).toImmutableList()
+        }
+    }
+
+    fun removeExpired() {
+        val hasExpired = statuses.value.any { it.event?.isExpired() == true }
+        if (hasExpired) {
+            statuses.update { list ->
+                val filtered = list.filter { it.event?.isExpired() != true }
+                if (filtered.size != list.size) {
+                    filtered.toImmutableList()
+                } else {
+                    list
+                }
+            }
         }
     }
 }

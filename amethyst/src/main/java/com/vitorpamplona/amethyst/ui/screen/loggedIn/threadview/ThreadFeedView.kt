@@ -91,6 +91,7 @@ import com.vitorpamplona.amethyst.ui.note.CheckAndDisplayEditStatus
 import com.vitorpamplona.amethyst.ui.note.CheckHiddenFeedWatchBlockAndReport
 import com.vitorpamplona.amethyst.ui.note.DisplayDraft
 import com.vitorpamplona.amethyst.ui.note.DisplayOtsIfInOriginal
+import com.vitorpamplona.amethyst.ui.note.Expiration
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.LongPressToQuickAction
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
@@ -482,6 +483,8 @@ private fun FullBleedNoteCompose(
                     }
 
                     CheckAndDisplayEditStatus(editState)
+
+                    Expiration(baseNote)
 
                     TimeAgo(note = baseNote)
 

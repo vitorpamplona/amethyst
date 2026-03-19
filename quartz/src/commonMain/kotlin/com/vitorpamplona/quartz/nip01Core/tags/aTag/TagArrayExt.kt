@@ -39,7 +39,7 @@ fun TagArray.isTaggedAddressableKind(kindStr: String) = this.any(ATag::isTaggedW
 
 fun TagArray.getTagOfAddressableKind(kind: Int) = this.fastFirstNotNullOfOrNull(ATag::parseIfOfKind, kind.toString())
 
-fun TagArray.getTagOfAddressableKind(kindStr: String) = this.fastFirstNotNullOfOrNull(ATag::parseIfOfKind, kindStr.toString())
+fun TagArray.getTagOfAddressableKind(kindStr: String) = this.fastFirstNotNullOfOrNull(ATag::parseIfOfKind, kindStr)
 
 fun TagArray.taggedATags() = this.mapNotNull(ATag::parse)
 

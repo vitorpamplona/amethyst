@@ -97,6 +97,8 @@ import com.vitorpamplona.amethyst.ui.note.creators.contentWarning.ContentSensiti
 import com.vitorpamplona.amethyst.ui.note.creators.contentWarning.MarkAsSensitiveButton
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.WatchAndLoadMyEmojiList
+import com.vitorpamplona.amethyst.ui.note.creators.expiration.ExpirationDateButton
+import com.vitorpamplona.amethyst.ui.note.creators.expiration.ExpirationDatePicker
 import com.vitorpamplona.amethyst.ui.note.creators.invoice.AddLnInvoiceButton
 import com.vitorpamplona.amethyst.ui.note.creators.invoice.NewPostInvoiceRequest
 import com.vitorpamplona.amethyst.ui.note.creators.location.AddGeoHashButton
@@ -244,6 +246,10 @@ fun GroupDMScreenContent(
                     )
                 }
 
+                if (postViewModel.wantsExpirationDate) {
+                    ExpirationDatePicker(postViewModel)
+                }
+
                 if (postViewModel.wantsToAddGeoHash) {
                     LocationAsHash(postViewModel)
                 }
@@ -281,6 +287,7 @@ fun GroupDMScreenContent(
                         ImageVideoDescription(
                             selectedFiles,
                             accountViewModel.account.settings.defaultFileServer,
+                            isUploading = uploading.mediaUploadTracker.isUploading,
                             onAdd = { alt, server, sensitiveContent, mediaQuality, _ ->
                                 postViewModel.uploadAndHold(
                                     accountViewModel.toastManager::toast,
@@ -294,6 +301,15 @@ fun GroupDMScreenContent(
                             accountViewModel = accountViewModel,
                         )
                     }
+                }
+
+                postViewModel.encryptedUploadErrorTitle?.let { title ->
+                    EncryptedUploadErrorDialog(
+                        title = title,
+                        message = postViewModel.encryptedUploadErrorMessage ?: "",
+                        onDismiss = postViewModel::dismissEncryptedUploadError,
+                        onRetryWithoutEncryption = postViewModel::retryWithoutEncryption,
+                    )
                 }
             }
         }
@@ -380,6 +396,7 @@ private fun BottomRowActions(
         if (postViewModel.room != null) {
             SelectFromGallery(
                 isUploading = postViewModel.isUploadingImage,
+                enabled = !postViewModel.isUploadingFile,
                 tint = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier,
             ) {
@@ -387,7 +404,8 @@ private fun BottomRowActions(
             }
 
             SelectFromFiles(
-                isUploading = postViewModel.isUploadingImage,
+                isUploading = postViewModel.isUploadingFile,
+                enabled = !postViewModel.isUploadingImage,
                 tint = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier,
             ) {
@@ -456,6 +474,10 @@ private fun BottomRowActions(
 
         MarkAsSensitiveButton(postViewModel.wantsToMarkAsSensitive) {
             postViewModel.toggleMarkAsSensitive()
+        }
+
+        ExpirationDateButton(postViewModel.wantsExpirationDate) {
+            postViewModel.toggleExpirationDate()
         }
 
         AddGeoHashButton(postViewModel.wantsToAddGeoHash) {

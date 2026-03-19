@@ -135,8 +135,8 @@ import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
 import com.vitorpamplona.quartz.nip39ExtIdentities.ExternalIdentitiesEvent
 import com.vitorpamplona.quartz.nip40Expiration.isExpirationBefore
 import com.vitorpamplona.quartz.nip40Expiration.isExpired
-import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentRequestEvent
-import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentResponseEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentRequestEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
@@ -325,7 +325,7 @@ object LocalCache : ILocalCache, ICacheProvider {
 
             newFilter.init()
 
-            observables.put(newFilter, newFilter)
+            observables[newFilter] = newFilter
 
             awaitClose {
                 observables.remove(newFilter)
@@ -358,19 +358,19 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     fun load(keys: Set<String>): Set<User> = keys.mapNotNullTo(mutableSetOf(), ::checkGetOrCreateUser)
 
-    override fun getOrCreateUser(key: HexKey): User {
-        require(isValidHex(key = key)) { "$key is not a valid hex" }
+    override fun getOrCreateUser(pubkey: HexKey): User {
+        require(isValidHex(key = pubkey)) { "$pubkey is not a valid hex" }
 
-        return users.getOrCreate(key) {
-            val nip65RelayListNote = getOrCreateAddressableNoteInternal(AdvertisedRelayListEvent.createAddress(key))
-            val dmRelayListNote = getOrCreateAddressableNoteInternal(ChatMessageRelayListEvent.createAddress(key))
+        return users.getOrCreate(pubkey) {
+            val nip65RelayListNote = getOrCreateAddressableNoteInternal(AdvertisedRelayListEvent.createAddress(pubkey))
+            val dmRelayListNote = getOrCreateAddressableNoteInternal(ChatMessageRelayListEvent.createAddress(pubkey))
             User(it, nip65RelayListNote, dmRelayListNote)
         }
     }
 
-    override fun getUserIfExists(key: String): User? {
-        if (key.isEmpty()) return null
-        return users.get(key)
+    override fun getUserIfExists(pubkey: String): User? {
+        if (pubkey.isEmpty()) return null
+        return users.get(pubkey)
     }
 
     override fun countUsers(predicate: (String, User) -> Boolean): Int {
@@ -394,7 +394,7 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     fun getAddressableNoteIfExists(address: Address): AddressableNote? = addressables.get(address)
 
-    override fun getNoteIfExists(key: String): Note? = if (key.length == 64) notes.get(key) else Address.parse(key)?.let { addressables.get(it) }
+    override fun getNoteIfExists(hexKey: String): Note? = if (hexKey.length == 64) notes.get(hexKey) else Address.parse(hexKey)?.let { addressables.get(it) }
 
     fun getNoteIfExists(key: ETag): Note? = notes.get(key.eventId)
 
@@ -2250,6 +2250,7 @@ object LocalCache : ILocalCache, ICacheProvider {
 
             requestNote?.let { request -> zappedNote?.addZapPayment(request, note) }
 
+            @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
             GlobalScope.launch(Dispatchers.IO) {
                 responseCallback(event)
             }

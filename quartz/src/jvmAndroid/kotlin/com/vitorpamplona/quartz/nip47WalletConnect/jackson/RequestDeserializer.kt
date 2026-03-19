@@ -24,8 +24,21 @@ import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
-import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceMethod
-import com.vitorpamplona.quartz.nip47WalletConnect.Request
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.CancelHoldInvoiceMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.CreateConnectionMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetBalanceMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetBudgetMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetInfoMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.ListTransactionsMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.LookupInvoiceMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.MakeHoldInvoiceMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.MakeInvoiceMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayKeysendMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.SettleHoldInvoiceMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.SignMessageMethod
 import com.vitorpamplona.quartz.utils.asTextOrNull
 
 class RequestDeserializer : StdDeserializer<Request>(Request::class.java) {
@@ -36,9 +49,21 @@ class RequestDeserializer : StdDeserializer<Request>(Request::class.java) {
         val jsonObject: JsonNode = jp.codec.readTree(jp)
         val method = jsonObject.get("method")?.asTextOrNull()
 
-        if (method == "pay_invoice") {
-            return jp.codec.treeToValue(jsonObject, PayInvoiceMethod::class.java)
+        return when (method) {
+            NwcMethod.PAY_INVOICE -> jp.codec.treeToValue(jsonObject, PayInvoiceMethod::class.java)
+            NwcMethod.PAY_KEYSEND -> jp.codec.treeToValue(jsonObject, PayKeysendMethod::class.java)
+            NwcMethod.MAKE_INVOICE -> jp.codec.treeToValue(jsonObject, MakeInvoiceMethod::class.java)
+            NwcMethod.LOOKUP_INVOICE -> jp.codec.treeToValue(jsonObject, LookupInvoiceMethod::class.java)
+            NwcMethod.LIST_TRANSACTIONS -> jp.codec.treeToValue(jsonObject, ListTransactionsMethod::class.java)
+            NwcMethod.GET_BALANCE -> jp.codec.treeToValue(jsonObject, GetBalanceMethod::class.java)
+            NwcMethod.GET_INFO -> jp.codec.treeToValue(jsonObject, GetInfoMethod::class.java)
+            NwcMethod.GET_BUDGET -> jp.codec.treeToValue(jsonObject, GetBudgetMethod::class.java)
+            NwcMethod.SIGN_MESSAGE -> jp.codec.treeToValue(jsonObject, SignMessageMethod::class.java)
+            NwcMethod.CREATE_CONNECTION -> jp.codec.treeToValue(jsonObject, CreateConnectionMethod::class.java)
+            NwcMethod.MAKE_HOLD_INVOICE -> jp.codec.treeToValue(jsonObject, MakeHoldInvoiceMethod::class.java)
+            NwcMethod.CANCEL_HOLD_INVOICE -> jp.codec.treeToValue(jsonObject, CancelHoldInvoiceMethod::class.java)
+            NwcMethod.SETTLE_HOLD_INVOICE -> jp.codec.treeToValue(jsonObject, SettleHoldInvoiceMethod::class.java)
+            else -> null
         }
-        return null
     }
 }

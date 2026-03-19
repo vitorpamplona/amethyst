@@ -39,10 +39,6 @@ import com.linc.audiowaveform.infiniteLinearGradient
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
 import com.vitorpamplona.amethyst.service.playback.composable.WaveformData
 import com.vitorpamplona.amethyst.ui.components.AudioWaveformReadOnly
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.conflate
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.onStart
 
 @Composable
 fun Waveform(
@@ -74,19 +70,9 @@ fun Waveform(
     }
 
     LaunchedEffect(key1 = restartFlow.intValue) {
-        pollCurrentRelativePosition(mediaControllerState.controller).collect { value -> waveformProgress.floatValue = value }
+        mediaControllerState.controller.pollCurrentRelativePositionFlow().collect { value -> waveformProgress.floatValue = value }
     }
 }
-
-fun pollCurrentRelativePosition(controller: Player) =
-    flow {
-        while (controller.currentPosition <= controller.duration) {
-            emit(controller.currentPosition / controller.duration.toFloat())
-            delay(100)
-        }
-    }.onStart {
-        emit(controller.currentPosition / controller.duration.toFloat())
-    }.conflate()
 
 @Composable
 fun DrawWaveform(

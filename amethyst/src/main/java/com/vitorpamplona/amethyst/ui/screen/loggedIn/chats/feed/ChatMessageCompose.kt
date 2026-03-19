@@ -233,6 +233,7 @@ fun NormalChatNote(
                     modifier = ReactionRowHeightChat,
                 ) {
                     IncognitoBadge(note)
+                    ChatExpiration(note)
                     RelayBadgesHorizontal(note, accountViewModel, nav = nav)
 
                     Spacer(modifier = DoubleHorzSpacer)
@@ -286,7 +287,8 @@ fun NormalChatNote(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
-                        ChatTimeAgo(note)
+                        
+                      (note)
 
                         if (accountViewModel.settings.isCompleteUIMode() && !note.isDraft()) {
                             ReplyReaction(

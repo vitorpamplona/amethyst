@@ -44,9 +44,11 @@ import androidx.compose.ui.unit.dp
 import androidx.media3.common.Player
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.onStart
 import kotlin.math.sin
 
@@ -79,7 +81,7 @@ fun FakeWaveformAnimation(
     }
 
     LaunchedEffect(key1 = restartFlow.intValue) {
-        pollCurrentPosition(mediaControllerState.controller).collect { value ->
+        mediaControllerState.controller.pollCurrentPositionFlow().collect { value ->
             waveformProgress.floatValue = (value % 5000.0f) / 5000.0f
         }
     }
@@ -93,7 +95,8 @@ fun pollCurrentPosition(controller: Player) =
         }
     }.onStart {
         emit(controller.currentPosition)
-    }.conflate()
+    }.flowOn(Dispatchers.IO)
+        .conflate()
 
 @Preview
 @Composable

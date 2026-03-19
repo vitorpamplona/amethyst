@@ -48,7 +48,7 @@ class NostrClientSubscriptionTest : BaseNostrClientTest() {
 
             val sub =
                 client.req(
-                    relay = "wss://relay.damus.io",
+                    relay = "wss://nos.lol",
                     filter =
                         Filter(
                             kinds = listOf(MetadataEvent.KIND),

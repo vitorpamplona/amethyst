@@ -24,11 +24,14 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.IMetaAttachments
+import com.vitorpamplona.quartz.nip01Core.tags.references.references
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
+import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
+import com.vitorpamplona.quartz.nip92IMeta.imetas
 import com.vitorpamplona.quartz.utils.ciphers.AESGCM
 
 class ChatFileSender(
@@ -39,6 +42,8 @@ class ChatFileSender(
         uploads.forEach {
             if (it.cipher != null) {
                 sendNIP17(it.result, it.caption, it.contentWarningReason, it.cipher)
+            } else {
+                sendNIP17AsHiddenLink(it.result, it.caption, it.contentWarningReason)
             }
         }
     }
@@ -68,6 +73,31 @@ class ChatFileSender(
                 contentWarningReason?.let { contentWarning(it) }
             },
         )
+    }
+
+    suspend fun sendNIP17AsHiddenLink(
+        result: UploadOrchestrator.OrchestratorResult.ServerResult,
+        caption: String?,
+        contentWarningReason: String?,
+    ) {
+        val iMetaAttachments = IMetaAttachments()
+        iMetaAttachments.add(result, caption, contentWarningReason)
+
+        val toUsers = chatroom.users.map { LocalCache.getOrCreateUser(it).toPTag() }
+
+        val template =
+            ChatMessageEvent.build(result.url, toUsers) {
+                references(listOf(result.url))
+
+                if (!caption.isNullOrEmpty()) {
+                    alt(caption)
+                }
+                contentWarningReason?.let { contentWarning(it) }
+
+                imetas(iMetaAttachments.filterIsIn(setOf(result.url)))
+            }
+
+        account.sendNip17PrivateMessage(template)
     }
 
     // ------

@@ -31,6 +31,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
@@ -48,6 +50,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -74,6 +77,8 @@ import com.vitorpamplona.amethyst.desktop.model.DesktopDmRelayState
 import com.vitorpamplona.amethyst.desktop.model.DesktopIAccount
 import com.vitorpamplona.amethyst.desktop.network.DefaultRelays
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
+import com.vitorpamplona.amethyst.desktop.service.images.DesktopImageLoaderSetup
+import com.vitorpamplona.amethyst.desktop.service.media.VlcjPlayerPool
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.desktop.ui.ComposeNoteDialog
 import com.vitorpamplona.amethyst.desktop.ui.ConnectingRelaysScreen
@@ -87,8 +92,12 @@ import com.vitorpamplona.amethyst.desktop.ui.deck.DeckLayout
 import com.vitorpamplona.amethyst.desktop.ui.deck.DeckSidebar
 import com.vitorpamplona.amethyst.desktop.ui.deck.DeckState
 import com.vitorpamplona.amethyst.desktop.ui.deck.SinglePaneLayout
+import com.vitorpamplona.amethyst.desktop.ui.media.LocalAwtWindow
+import com.vitorpamplona.amethyst.desktop.ui.media.LocalIsImmersiveFullscreen
+import com.vitorpamplona.amethyst.desktop.ui.media.LocalWindowState
 import com.vitorpamplona.amethyst.desktop.ui.profile.ProfileInfoCard
 import com.vitorpamplona.amethyst.desktop.ui.relay.RelayStatusCard
+import com.vitorpamplona.amethyst.desktop.ui.settings.MediaServerSettings
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import kotlinx.coroutines.CoroutineScope
@@ -137,7 +146,17 @@ sealed class DesktopScreen {
     data object Settings : DesktopScreen()
 }
 
-fun main() =
+fun main() {
+    DesktopImageLoaderSetup.setup()
+    Runtime.getRuntime().addShutdownHook(
+        Thread {
+            com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
+                .shutdown()
+            VlcjPlayerPool.shutdown()
+        },
+    )
+    // Pre-init VLC on background thread so first play is fast
+    Thread { VlcjPlayerPool.init() }.start()
     application {
         val windowState =
             rememberWindowState(
@@ -363,27 +382,35 @@ fun main() =
                 }
             }
 
-            App(
-                layoutMode = layoutMode,
-                deckState = deckState,
-                accountManager = accountManager,
-                showComposeDialog = showComposeDialog,
-                showAddColumnDialog = showAddColumnDialog,
-                onShowComposeDialog = { showComposeDialog = true },
-                onShowReplyDialog = { event ->
-                    replyToNote = event
-                    showComposeDialog = true
-                },
-                onDismissComposeDialog = {
-                    showComposeDialog = false
-                    replyToNote = null
-                },
-                onDismissAddColumnDialog = { showAddColumnDialog = false },
-                onShowAddColumnDialog = { showAddColumnDialog = true },
-                replyToNote = replyToNote,
-            )
+            val immersiveFullscreenState = remember { mutableStateOf(false) }
+            CompositionLocalProvider(
+                LocalWindowState provides windowState,
+                LocalAwtWindow provides window,
+                LocalIsImmersiveFullscreen provides immersiveFullscreenState,
+            ) {
+                App(
+                    layoutMode = layoutMode,
+                    deckState = deckState,
+                    accountManager = accountManager,
+                    showComposeDialog = showComposeDialog,
+                    showAddColumnDialog = showAddColumnDialog,
+                    onShowComposeDialog = { showComposeDialog = true },
+                    onShowReplyDialog = { event ->
+                        replyToNote = event
+                        showComposeDialog = true
+                    },
+                    onDismissComposeDialog = {
+                        showComposeDialog = false
+                        replyToNote = null
+                    },
+                    onDismissAddColumnDialog = { showAddColumnDialog = false },
+                    onShowAddColumnDialog = { showAddColumnDialog = true },
+                    replyToNote = replyToNote,
+                )
+            }
         }
     }
+}
 
 @Composable
 fun App(
@@ -622,22 +649,31 @@ fun MainContent(
                                     )
                                 }
 
+                                is com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent -> {
+                                    val innerNote = localCache.getOrCreateNote(innerEvent.id)
+                                    val innerAuthor = localCache.getOrCreateUser(innerEvent.pubKey)
+                                    if (innerNote.event == null) {
+                                        innerNote.loadEvent(innerEvent, innerAuthor, emptyList())
+                                    }
+                                    iAccount.chatroomList.addMessage(
+                                        innerEvent.chatroomKey(iAccount.pubKey),
+                                        innerNote,
+                                    )
+                                }
+
                                 is com.vitorpamplona.quartz.nip25Reactions.ReactionEvent -> {
                                     val reactionNote = localCache.getOrCreateNote(innerEvent.id)
                                     val reactionAuthor = localCache.getOrCreateUser(innerEvent.pubKey)
                                     if (reactionNote.event == null) {
                                         reactionNote.loadEvent(innerEvent, reactionAuthor, emptyList())
                                     }
-                                    // Attach reaction to the target message note
                                     innerEvent.originalPost().forEach { targetId ->
                                         val targetNote = localCache.getNoteIfExists(targetId)
                                         targetNote?.addReaction(reactionNote)
                                     }
                                 }
 
-                                else -> {
-                                    println("Unhandled NIP-17 inner event: ${innerEvent.kind}")
-                                }
+                                else -> {}
                             }
                         }
                     }
@@ -665,60 +701,76 @@ fun MainContent(
         }
     }
 
+    val isImmersive by com.vitorpamplona.amethyst.desktop.ui.media.LocalIsImmersiveFullscreen.current
+
     Box(Modifier.fillMaxSize()) {
-        Row(Modifier.fillMaxSize()) {
-            when (layoutMode) {
-                LayoutMode.SINGLE_PANE -> {
-                    SinglePaneLayout(
-                        relayManager = relayManager,
-                        localCache = localCache,
-                        accountManager = accountManager,
-                        account = account,
-                        nwcConnection = nwcConnection,
-                        subscriptionsCoordinator = subscriptionsCoordinator,
-                        appScope = appScope,
-                        onShowComposeDialog = onShowComposeDialog,
-                        onShowReplyDialog = onShowReplyDialog,
-                        onZapFeedback = onZapFeedback,
-                        signerConnectionState = signerConnectionState,
-                        lastPingTimeSec = lastPingTimeSec,
-                        modifier = Modifier.weight(1f),
-                    )
+        Column(Modifier.fillMaxSize()) {
+            Row(Modifier.fillMaxSize().weight(1f)) {
+                when (layoutMode) {
+                    LayoutMode.SINGLE_PANE -> {
+                        SinglePaneLayout(
+                            relayManager = relayManager,
+                            localCache = localCache,
+                            accountManager = accountManager,
+                            account = account,
+                            iAccount = iAccount,
+                            nwcConnection = nwcConnection,
+                            subscriptionsCoordinator = subscriptionsCoordinator,
+                            appScope = appScope,
+                            onShowComposeDialog = onShowComposeDialog,
+                            onShowReplyDialog = onShowReplyDialog,
+                            onZapFeedback = onZapFeedback,
+                            signerConnectionState = signerConnectionState,
+                            lastPingTimeSec = lastPingTimeSec,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+
+                    LayoutMode.DECK -> {
+                        if (!isImmersive) {
+                            DeckSidebar(
+                                onAddColumn = onShowAddColumnDialog,
+                                onOpenSettings = {
+                                    if (deckState.hasColumnOfType(DeckColumnType.Settings)) {
+                                        deckState.focusExistingColumn(DeckColumnType.Settings)
+                                    } else {
+                                        deckState.addColumn(DeckColumnType.Settings)
+                                    }
+                                },
+                                signerConnectionState = signerConnectionState,
+                                lastPingTimeSec = lastPingTimeSec,
+                            )
+
+                            VerticalDivider()
+                        }
+
+                        DeckLayout(
+                            deckState = deckState,
+                            relayManager = relayManager,
+                            localCache = localCache,
+                            accountManager = accountManager,
+                            account = account,
+                            iAccount = iAccount,
+                            nwcConnection = nwcConnection,
+                            subscriptionsCoordinator = subscriptionsCoordinator,
+                            appScope = appScope,
+                            onShowComposeDialog = onShowComposeDialog,
+                            onShowReplyDialog = onShowReplyDialog,
+                            onZapFeedback = onZapFeedback,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
                 }
+            } // end Row
 
-                LayoutMode.DECK -> {
-                    DeckSidebar(
-                        onAddColumn = onShowAddColumnDialog,
-                        onOpenSettings = {
-                            if (deckState.hasColumnOfType(DeckColumnType.Settings)) {
-                                deckState.focusExistingColumn(DeckColumnType.Settings)
-                            } else {
-                                deckState.addColumn(DeckColumnType.Settings)
-                            }
-                        },
-                        signerConnectionState = signerConnectionState,
-                        lastPingTimeSec = lastPingTimeSec,
-                    )
+            // Persistent media control bar
+            com.vitorpamplona.amethyst.desktop.ui.media
+                .NowPlayingBar()
+        } // end Column
 
-                    VerticalDivider()
-
-                    DeckLayout(
-                        deckState = deckState,
-                        relayManager = relayManager,
-                        localCache = localCache,
-                        accountManager = accountManager,
-                        account = account,
-                        nwcConnection = nwcConnection,
-                        subscriptionsCoordinator = subscriptionsCoordinator,
-                        appScope = appScope,
-                        onShowComposeDialog = onShowComposeDialog,
-                        onShowReplyDialog = onShowReplyDialog,
-                        onZapFeedback = onZapFeedback,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-            }
-        }
+        // Global fullscreen video overlay
+        com.vitorpamplona.amethyst.desktop.ui.media
+            .GlobalFullscreenOverlay()
 
         // Snackbar for zap feedback
         SnackbarHost(
@@ -781,7 +833,9 @@ fun RelaySettingsScreen(
         accountManager.loadNwcConnection()
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+    ) {
         Text(
             "Settings",
             style = MaterialTheme.typography.headlineMedium,
@@ -868,6 +922,15 @@ fun RelaySettingsScreen(
             }
         }
 
+        Spacer(Modifier.height(24.dp))
+        HorizontalDivider()
+        Spacer(Modifier.height(24.dp))
+
+        // Media Server Settings
+        MediaServerSettings(
+            initialServers = DesktopPreferences.blossomServers,
+            onServersChanged = { DesktopPreferences.blossomServers = it },
+        )
         Spacer(Modifier.height(24.dp))
         HorizontalDivider()
         Spacer(Modifier.height(24.dp))

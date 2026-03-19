@@ -21,8 +21,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.drafts
 
 import androidx.compose.animation.animateContentSize
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -31,9 +29,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ElevatedButton
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -48,14 +50,15 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
-import com.vitorpamplona.amethyst.ui.components.SwipeToDeleteContainer
+import com.vitorpamplona.amethyst.ui.components.SwipeToDeleteWithConfirmation
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.RenderFeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys.DRAFTS
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.ui.navigation.topbars.ShorterTopAppBar
+import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.SaveableFeedState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -72,6 +75,7 @@ fun DraftListScreen(
     RenderDraftListScreen(accountViewModel.feedStates.drafts, accountViewModel, nav)
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun RenderDraftListScreen(
     feedState: FeedContentState,
@@ -80,10 +84,67 @@ private fun RenderDraftListScreen(
 ) {
     WatchLifecycleAndUpdateModel(feedState)
 
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showDeleteDialog = false
+            },
+            title = {
+                Text(text = stringResource(R.string.drafts))
+            },
+            text = {
+                Text(text = stringResource(R.string.delete_all_drafts_confirmation))
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val currentState = feedState.feedContent.value
+                        if (currentState is FeedState.Loaded) {
+                            accountViewModel.delete(currentState.feed.value.list)
+                        }
+                        showDeleteDialog = false
+                    },
+                ) {
+                    Text(text = stringResource(R.string.yes))
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteDialog = false
+                    },
+                ) {
+                    Text(text = stringResource(R.string.no))
+                }
+            },
+        )
+    }
+
     DisappearingScaffold(
         isInvertedLayout = false,
         topBar = {
-            TopBarWithBackButton(stringRes(id = R.string.drafts), nav::popBack)
+            ShorterTopAppBar(
+                title = {
+                    Text(
+                        text = stringRes(id = R.string.drafts),
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = nav::popBack) {
+                        ArrowBackIcon()
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { showDeleteDialog = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = stringResource(R.string.delete_all),
+                        )
+                    }
+                },
+            )
         },
         accountViewModel = accountViewModel,
     ) {
@@ -104,7 +165,6 @@ private fun RenderDraftListScreen(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun DraftFeedLoaded(
     loaded: FeedState.Loaded,
@@ -114,63 +174,15 @@ private fun DraftFeedLoaded(
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
 
-    var showDeleteDialog by remember { mutableStateOf(false) }
-
-    if (showDeleteDialog) {
-        AlertDialog(
-            onDismissRequest = {
-                showDeleteDialog = false
-            },
-            title = {
-                Text(text = stringResource(R.string.drafts))
-            },
-            text = {
-                Text(text = stringResource(R.string.delete_all_drafts_confirmation))
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        accountViewModel.delete(items.list)
-                        showDeleteDialog = false
-                    },
-                ) {
-                    Text(text = stringResource(R.string.yes))
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = {
-                        showDeleteDialog = false
-                    },
-                ) {
-                    Text(text = stringResource(R.string.no))
-                }
-            },
-        )
-    }
-
     LazyColumn(
         contentPadding = FeedPadding,
         state = listState,
     ) {
-        stickyHeader {
-            Row(
-                Modifier
-                    .fillMaxWidth(),
-                Arrangement.Center,
-            ) {
-                ElevatedButton(
-                    onClick = { showDeleteDialog = true },
-                ) {
-                    Text(stringResource(R.string.delete_all))
-                }
-            }
-        }
         itemsIndexed(items.list, key = { _, item -> item.idHex }) { _, item ->
-            Row(Modifier.fillMaxWidth().animateItem()) {
-                SwipeToDeleteContainer(
+            Row(Modifier.fillMaxWidth()) {
+                SwipeToDeleteWithConfirmation(
                     modifier = Modifier.fillMaxWidth().animateContentSize(),
-                    onStartToEnd = { accountViewModel.delete(item) },
+                    onDelete = { accountViewModel.delete(item) },
                 ) {
                     NoteCompose(
                         item,

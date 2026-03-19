@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send
 import android.content.Context
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.input.TextFieldValue
@@ -42,6 +43,7 @@ import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.note.creators.draftTags.DraftTagState
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.EmojiSuggestionState
+import com.vitorpamplona.amethyst.ui.note.creators.expiration.IExpiration
 import com.vitorpamplona.amethyst.ui.note.creators.location.ILocationGrabber
 import com.vitorpamplona.amethyst.ui.note.creators.messagefield.IMessageField
 import com.vitorpamplona.amethyst.ui.note.creators.previews.PreviewState
@@ -104,7 +106,8 @@ class ChatNewMessageViewModel :
     ILocationGrabber,
     IMessageField,
     IZapField,
-    IZapRaiser {
+    IZapRaiser,
+    IExpiration {
     val draftTag = DraftTagState()
 
     lateinit var accountViewModel: AccountViewModel
@@ -138,7 +141,8 @@ class ChatNewMessageViewModel :
 
     val urlPreviews = PreviewState()
 
-    var isUploadingImage by mutableStateOf(false)
+    val isUploadingImage: Boolean get() = uploadState?.isUploadingImage ?: false
+    val isUploadingFile: Boolean get() = uploadState?.isUploadingFile ?: false
 
     var userSuggestions: UserSuggestionState? = null
     var userSuggestionsMainMessage: UserSuggestionAnchor? = null
@@ -163,6 +167,10 @@ class ChatNewMessageViewModel :
     var wantsToMarkAsSensitive by mutableStateOf(false)
     var contentWarningDescription by mutableStateOf("")
 
+    // Expiration Date (NIP-40)
+    var wantsExpirationDate by mutableStateOf(false)
+    override var expirationDate by mutableLongStateOf(TimeUtils.oneDayAhead())
+
     // GeoHash
     var wantsToAddGeoHash by mutableStateOf(false)
     var location: StateFlow<LocationState.LocationResult>? = null
@@ -171,8 +179,6 @@ class ChatNewMessageViewModel :
     var canAddZapRaiser by mutableStateOf(false)
     var wantsZapraiser by mutableStateOf(false)
     override var zapRaiserAmount = mutableStateOf<Long?>(null)
-
-    var expirationDays by mutableStateOf<Int?>(null)
 
     // NIP17 Wrapped DMs / Group messages
     var nip17 by mutableStateOf(false)
@@ -274,7 +280,8 @@ class ChatNewMessageViewModel :
     }
 
     fun loadExpiration(expirationDays: Int) {
-        this.expirationDays = expirationDays
+        this.wantsExpirationDate = true
+        this.expirationDate = TimeUtils.now() + expirationDays * 86400L
     }
 
     private fun loadFromDraft(draft: Note) {
@@ -295,6 +302,10 @@ class ChatNewMessageViewModel :
 
         wantsToMarkAsSensitive = draftEvent.isSensitive()
         contentWarningDescription = draftEvent.contentWarningReason() ?: ""
+
+        val draftExpiration = draftEvent.expiration()
+        wantsExpirationDate = draftExpiration != null
+        expirationDate = draftExpiration ?: TimeUtils.oneDayAhead()
 
         val geohash = draftEvent.getGeoHash()
         wantsToAddGeoHash = geohash != null
@@ -348,8 +359,6 @@ class ChatNewMessageViewModel :
             }
         urlPreviews.update(message)
 
-        expirationDays = draftEvent.expiration()?.let { (it / 86_400).toInt() }
-
         iMetaAttachments.addAll(draftEvent.imetas())
 
         requiresNIP17 = draftEvent is NIP17Group
@@ -394,7 +403,16 @@ class ChatNewMessageViewModel :
 
         accountViewModel.launchSigner {
             if (nip17) {
-                ChatFileUploader(account).justUploadNIP17(uploadState, onError, context) {
+                ChatFileUploader(account).justUploadNIP17(
+                    uploadState,
+                    onError,
+                    onEncryptedUploadError = { title, message ->
+                        encryptedUploadErrorTitle = title
+                        encryptedUploadErrorMessage = message
+                        pendingRetryMode = RetryMode.HOLD
+                    },
+                    context,
+                ) {
                     uploadsWaitingToBeSent += it
                     draftTag.newVersion()
                     onceUploaded()
@@ -419,7 +437,19 @@ class ChatNewMessageViewModel :
 
         accountViewModel.launchSigner {
             if (nip17) {
-                ChatFileUploader(account).justUploadNIP17(uploadState, onError, context) {
+                ChatFileUploader(account).justUploadNIP17(
+                    uploadState,
+                    onError,
+                    onEncryptedUploadError = { title, message ->
+                        encryptedUploadErrorTitle = title
+                        encryptedUploadErrorMessage = message
+                        pendingRetryMode = RetryMode.SEND
+                        pendingRetryOnError = onError
+                        pendingRetryContext = context
+                        pendingRetryOnceUploaded = onceUploaded
+                    },
+                    context,
+                ) {
                     ChatFileSender(room, account).sendNIP17(it)
                     draftTag.newVersion()
                     onceUploaded()
@@ -429,6 +459,69 @@ class ChatNewMessageViewModel :
                     ChatFileSender(room, account).sendNIP04(it)
                     draftTag.newVersion()
                     onceUploaded()
+                }
+            }
+        }
+    }
+
+    // Encrypted upload error state for retry dialog
+    var encryptedUploadErrorTitle by mutableStateOf<String?>(null)
+    var encryptedUploadErrorMessage by mutableStateOf<String?>(null)
+    var pendingRetryMode by mutableStateOf<RetryMode?>(null)
+    var pendingRetryOnError by mutableStateOf<((String, String) -> Unit)?>(null)
+    var pendingRetryContext by mutableStateOf<Context?>(null)
+    var pendingRetryOnceUploaded by mutableStateOf<(() -> Unit)?>(null)
+
+    enum class RetryMode { HOLD, SEND }
+
+    fun dismissEncryptedUploadError() {
+        encryptedUploadErrorTitle = null
+        encryptedUploadErrorMessage = null
+        pendingRetryMode = null
+        pendingRetryOnError = null
+        pendingRetryContext = null
+        pendingRetryOnceUploaded = null
+    }
+
+    fun retryWithoutEncryption() {
+        val mode = pendingRetryMode ?: return
+        val onError = pendingRetryOnError
+        val context = pendingRetryContext
+        val onceUploaded = pendingRetryOnceUploaded
+        val room = room
+        val uploadState = uploadState
+
+        dismissEncryptedUploadError()
+
+        if (uploadState == null || context == null) return
+
+        uploadState.encryptFiles = false
+
+        accountViewModel.launchSigner {
+            when (mode) {
+                RetryMode.HOLD -> {
+                    ChatFileUploader(account).justUploadNIP17Unencrypted(
+                        uploadState,
+                        onError ?: accountViewModel.toastManager::toast,
+                        context,
+                    ) {
+                        uploadsWaitingToBeSent += it
+                        draftTag.newVersion()
+                        onceUploaded?.invoke()
+                    }
+                }
+
+                RetryMode.SEND -> {
+                    if (room == null) return@launchSigner
+                    ChatFileUploader(account).justUploadNIP17Unencrypted(
+                        uploadState,
+                        onError ?: accountViewModel.toastManager::toast,
+                        context,
+                    ) {
+                        ChatFileSender(room, account).sendNIP17(it)
+                        draftTag.newVersion()
+                        onceUploaded?.invoke()
+                    }
                 }
             }
         }
@@ -444,10 +537,9 @@ class ChatNewMessageViewModel :
         val message = message.text
 
         val contentWarningReason = if (wantsToMarkAsSensitive) contentWarningDescription else null
+        val localExpirationDate = if (wantsExpirationDate) expirationDate else null
         val localZapRaiserAmount = if (wantsZapraiser) zapRaiserAmount.value else null
         val zapReceiver = if (wantsForwardZapTo) forwardZapTo.value.toZapSplitSetup() else null
-
-        val expiration = expirationDays?.let { TimeUtils.now() + it.toLong() * 86_400 }
 
         if (nip17 || room.users.size > 1 || replyTo.value?.event is NIP17Group) {
             val replyHint = replyTo.value?.toEventHint<BaseDMGroupEvent>()
@@ -463,7 +555,7 @@ class ChatNewMessageViewModel :
                         localZapRaiserAmount?.let { zapraiser(it) }
                         zapReceiver?.let { zapSplits(it) }
                         contentWarningReason?.let { contentWarning(it) }
-                        expiration?.let { expiration(it) }
+                        localExpirationDate?.let { expiration(it) }
 
                         emojis(emojis)
                         imetas(usedAttachments)
@@ -478,7 +570,7 @@ class ChatNewMessageViewModel :
                         localZapRaiserAmount?.let { zapraiser(it) }
                         zapReceiver?.let { zapSplits(it) }
                         contentWarningReason?.let { contentWarning(it) }
-                        expiration?.let { expiration(it) }
+                        localExpirationDate?.let { expiration(it) }
 
                         emojis(emojis)
                         imetas(usedAttachments)
@@ -501,7 +593,7 @@ class ChatNewMessageViewModel :
                     replyingTo = replyTo.value?.toEventHint<PrivateDmEvent>(),
                     signer = accountViewModel.account.signer,
                 ) {
-                    expiration?.let { expiration(it) }
+                    localExpirationDate?.let { expiration(it) }
                 }
 
             if (draftTag != null) {
@@ -533,7 +625,6 @@ class ChatNewMessageViewModel :
         subject = TextFieldValue("")
 
         replyTo.value = null
-        expirationDays = null
 
         wantsInvoice = false
         wantsZapraiser = false
@@ -554,6 +645,9 @@ class ChatNewMessageViewModel :
         userSuggestionsMainMessage = null
 
         uploadsWaitingToBeSent = emptyList()
+        uploadState?.reset()
+
+        dismissEncryptedUploadError()
 
         iMetaAttachments.reset()
 
@@ -685,7 +779,7 @@ class ChatNewMessageViewModel :
 
     fun canPost(): Boolean =
         message.text.isNotBlank() &&
-            uploadState?.isUploadingImage != true &&
+            uploadState?.mediaUploadTracker?.isUploading != true &&
             !wantsInvoice &&
             (!wantsZapraiser || zapRaiserAmount.value != null) &&
             (toUsers.text.isNotBlank()) &&
@@ -739,6 +833,14 @@ class ChatNewMessageViewModel :
 
     fun toggleMarkAsSensitive() {
         wantsToMarkAsSensitive = !wantsToMarkAsSensitive
+        draftTag.newVersion()
+    }
+
+    fun toggleExpirationDate() {
+        wantsExpirationDate = !wantsExpirationDate
+        if (wantsExpirationDate) {
+            expirationDate = TimeUtils.oneDayAhead()
+        }
         draftTag.newVersion()
     }
 

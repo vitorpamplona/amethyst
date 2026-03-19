@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui.chats
 
+import androidx.compose.foundation.border
+import androidx.compose.foundation.draganddrop.dragAndDropTarget
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -37,7 +39,9 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.outlined.AddReaction
@@ -46,6 +50,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -53,6 +59,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -60,6 +67,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draganddrop.DragAndDropEvent
+import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.isCtrlPressed
@@ -88,13 +97,27 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.util.toTimeAgo
 import com.vitorpamplona.amethyst.commons.viewmodels.ChatNewMessageState
 import com.vitorpamplona.amethyst.commons.viewmodels.ChatroomFeedViewModel
+import com.vitorpamplona.amethyst.desktop.DesktopPreferences
+import com.vitorpamplona.amethyst.desktop.service.upload.DesktopUploadOrchestrator
+import com.vitorpamplona.amethyst.desktop.ui.media.DesktopFilePicker
+import com.vitorpamplona.amethyst.desktop.ui.media.MediaAttachmentRow
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip17Dm.NIP17Factory
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
+import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
+import com.vitorpamplona.quartz.utils.ciphers.AESGCM
 import kotlinx.coroutines.launch
+import java.awt.datatransfer.DataFlavor
+import java.awt.dnd.DnDConstants
+import java.awt.dnd.DropTargetDropEvent
+import java.io.File
 
 private val isMacOS = System.getProperty("os.name").lowercase().contains("mac")
+
+private val MEDIA_EXTENSIONS =
+    setOf("jpg", "jpeg", "png", "gif", "webp", "svg", "avif", "mp4", "webm", "mov", "mp3", "ogg", "wav", "flac")
 
 /**
  * Right panel of the DM split-pane layout (flexible width).
@@ -111,6 +134,7 @@ private val isMacOS = System.getProperty("os.name").lowercase().contains("mac")
  * @param messageState ChatNewMessageState for composition
  * @param onNavigateToProfile Called when user clicks on a profile
  */
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun ChatPane(
     roomKey: ChatroomKey,
@@ -120,6 +144,7 @@ fun ChatPane(
     messageState: ChatNewMessageState,
     dmBroadcastStatus: DmBroadcastStatus = DmBroadcastStatus.Idle,
     onNavigateToProfile: (String) -> Unit = {},
+    onBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val scope = rememberCoroutineScope()
@@ -127,6 +152,55 @@ fun ChatPane(
     val messageText by messageState.message.collectAsState()
     val isNip17 by messageState.nip17.collectAsState()
     val requiresNip17 by messageState.requiresNip17.collectAsState()
+
+    // File attachment state
+    val attachedFiles = remember { mutableStateListOf<File>() }
+    var isUploading by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Helper: attach files and auto-force NIP-17 if needed
+    fun attachFiles(files: List<File>) {
+        val mediaFiles = files.filter { it.extension.lowercase() in MEDIA_EXTENSIONS }
+        if (mediaFiles.isEmpty()) return
+        attachedFiles.addAll(mediaFiles)
+        if (!isNip17) {
+            messageState.toggleNip17()
+            scope.launch {
+                snackbarHostState.showSnackbar("Switched to NIP-17 — file attachments require encrypted messaging")
+            }
+        }
+    }
+
+    // Drag-and-drop target for file attachments (NIP-17 only)
+    var isDragOver by remember { mutableStateOf(false) }
+    val dropTarget =
+        remember {
+            object : DragAndDropTarget {
+                override fun onDrop(event: DragAndDropEvent): Boolean {
+                    isDragOver = false
+                    val dropEvent = event.nativeEvent as? DropTargetDropEvent ?: return false
+                    dropEvent.acceptDrop(DnDConstants.ACTION_COPY)
+                    val transferable = dropEvent.transferable
+                    if (transferable.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) {
+                        @Suppress("UNCHECKED_CAST")
+                        val files = transferable.getTransferData(DataFlavor.javaFileListFlavor) as List<File>
+                        attachFiles(files)
+                        dropEvent.dropComplete(true)
+                        return true
+                    }
+                    dropEvent.dropComplete(false)
+                    return false
+                }
+
+                override fun onStarted(event: DragAndDropEvent) {
+                    isDragOver = true
+                }
+
+                override fun onEnded(event: DragAndDropEvent) {
+                    isDragOver = false
+                }
+            }
+        }
 
     // Resolve users for the header
     val users = roomKey.users.mapNotNull { cacheProvider.getUserIfExists(it) as? User }
@@ -137,110 +211,186 @@ fun ChatPane(
         messageState.load(roomKey)
     }
 
-    Column(modifier = modifier.fillMaxSize()) {
-        // Header
-        if (isGroup) {
-            GroupChatroomHeader(
-                users = users,
-                onClick = { users.firstOrNull()?.let { onNavigateToProfile(it.pubkeyHex) } },
-            )
-        } else {
-            users.firstOrNull()?.let { user ->
-                ChatroomHeader(
-                    user = user,
-                    onClick = { onNavigateToProfile(user.pubkeyHex) },
-                )
-            } ?: run {
-                // Fallback header with raw pubkey
-                Text(
-                    text = roomKey.users.firstOrNull()?.take(20) ?: "Unknown",
-                    style = MaterialTheme.typography.titleSmall,
-                    modifier = Modifier.padding(10.dp),
-                )
-            }
-        }
-
-        HorizontalDivider()
-
-        // Broadcast status banner
-        DmBroadcastBanner(status = dmBroadcastStatus)
-
-        // Message list
-        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-            when (feedState) {
-                is FeedState.Loading -> {
-                    LoadingState("Loading messages...")
-                }
-
-                is FeedState.Empty -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            "No messages yet. Send the first one!",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-
-                is FeedState.Loaded -> {
-                    val loaded = feedState as FeedState.Loaded
-                    val loadedState by loaded.feed.collectAsState()
-                    val messages = loadedState.list
-
-                    MessageList(
-                        messages = messages,
-                        account = account,
-                        cacheProvider = cacheProvider,
-                        onAuthorClick = onNavigateToProfile,
-                        onReaction = { note, emoji ->
-                            scope.launch {
-                                try {
-                                    sendWrappedReaction(note, emoji, roomKey, account)
-                                } catch (e: Exception) {
-                                    println("Failed to send reaction: ${e.message}")
-                                }
-                            }
+    Box(modifier = modifier.fillMaxSize()) {
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .dragAndDropTarget(
+                        shouldStartDragAndDrop = { true },
+                        target = dropTarget,
+                    ).then(
+                        if (isDragOver) {
+                            Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp))
+                        } else {
+                            Modifier
                         },
-                    )
-                }
-
-                is FeedState.FeedError -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
+                    ),
+        ) {
+            // Header
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                if (onBack != null) {
+                    IconButton(
+                        onClick = onBack,
+                        modifier = Modifier.size(40.dp),
                     ) {
-                        Text(
-                            "Error loading messages",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.error,
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back to conversations",
                         )
                     }
                 }
-            }
-        }
 
-        HorizontalDivider()
-
-        // Message input
-        MessageInput(
-            messageText = messageText.text,
-            isNip17 = isNip17,
-            requiresNip17 = requiresNip17,
-            canSend = messageState.canSend,
-            onMessageChange = { messageState.updateMessage(messageText.copy(text = it)) },
-            onToggleNip17 = { messageState.toggleNip17() },
-            onSend = {
-                scope.launch {
-                    if (messageState.send()) {
-                        messageState.clear()
+                Box(modifier = Modifier.weight(1f)) {
+                    if (isGroup) {
+                        GroupChatroomHeader(
+                            users = users,
+                            onClick = { users.firstOrNull()?.let { onNavigateToProfile(it.pubkeyHex) } },
+                        )
+                    } else {
+                        users.firstOrNull()?.let { user ->
+                            ChatroomHeader(
+                                user = user,
+                                onClick = { onNavigateToProfile(user.pubkeyHex) },
+                            )
+                        } ?: run {
+                            // Fallback header with raw pubkey
+                            Text(
+                                text = roomKey.users.firstOrNull()?.take(20) ?: "Unknown",
+                                style = MaterialTheme.typography.titleSmall,
+                                modifier = Modifier.padding(10.dp),
+                            )
+                        }
                     }
                 }
-            },
+            }
+
+            HorizontalDivider()
+
+            // Broadcast status banner
+            DmBroadcastBanner(status = dmBroadcastStatus)
+
+            // Message list
+            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                when (feedState) {
+                    is FeedState.Loading -> {
+                        LoadingState("Loading messages...")
+                    }
+
+                    is FeedState.Empty -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                "No messages yet. Send the first one!",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+
+                    is FeedState.Loaded -> {
+                        val loaded = feedState as FeedState.Loaded
+                        val loadedState by loaded.feed.collectAsState()
+                        val messages = loadedState.list
+
+                        MessageList(
+                            messages = messages,
+                            account = account,
+                            cacheProvider = cacheProvider,
+                            onAuthorClick = onNavigateToProfile,
+                            onReaction = { note, emoji ->
+                                scope.launch {
+                                    try {
+                                        sendWrappedReaction(note, emoji, roomKey, account)
+                                    } catch (e: Exception) {
+                                        println("Failed to send reaction: ${e.message}")
+                                    }
+                                }
+                            },
+                        )
+                    }
+
+                    is FeedState.FeedError -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                "Error loading messages",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        }
+                    }
+                }
+            }
+
+            HorizontalDivider()
+
+            // File attachment row (only when NIP-17 and files attached)
+            if (attachedFiles.isNotEmpty()) {
+                MediaAttachmentRow(
+                    attachedFiles = attachedFiles,
+                    isUploading = isUploading,
+                    onAttach = { attachFiles(DesktopFilePicker.pickMediaFiles()) },
+                    onPaste = {},
+                    onRemove = { attachedFiles.remove(it) },
+                )
+            }
+
+            // Message input
+            MessageInput(
+                messageText = messageText.text,
+                isNip17 = isNip17,
+                requiresNip17 = requiresNip17,
+                canSend = messageState.canSend || attachedFiles.isNotEmpty(),
+                isUploading = isUploading,
+                hasAttachments = attachedFiles.isNotEmpty(),
+                onMessageChange = { messageState.updateMessage(messageText.copy(text = it)) },
+                onToggleNip17 = { messageState.toggleNip17() },
+                onAttach = { attachFiles(DesktopFilePicker.pickMediaFiles()) },
+                onSend = {
+                    scope.launch {
+                        if (attachedFiles.isNotEmpty()) {
+                            isUploading = true
+                            try {
+                                sendEncryptedFiles(
+                                    files = attachedFiles.toList(),
+                                    roomKey = roomKey,
+                                    account = account,
+                                    cacheProvider = cacheProvider,
+                                )
+                                attachedFiles.clear()
+                            } catch (e: Exception) {
+                                // Keep files in attachment row for retry
+                                println("Encrypted file send failed: ${e.message}")
+                            } finally {
+                                isUploading = false
+                            }
+                        }
+                        // Also send text message if present
+                        if (messageState.canSend) {
+                            if (messageState.send()) {
+                                messageState.clear()
+                            }
+                        } else if (attachedFiles.isEmpty()) {
+                            messageState.clear()
+                        }
+                    }
+                },
+            )
+        } // end Column
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 80.dp),
         )
-    }
+    } // end Box
 }
 
 /**
@@ -373,6 +523,29 @@ private fun MessageWithReactions(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
+                        // Encryption badge
+                        when (event) {
+                            is PrivateDmEvent -> {
+                                Icon(
+                                    Icons.Default.LockOpen,
+                                    contentDescription = "NIP-04 (legacy)",
+                                    modifier = Modifier.size(12.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                )
+                            }
+
+                            is com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent,
+                            is ChatMessageEncryptedFileHeaderEvent,
+                            -> {
+                                Icon(
+                                    Icons.Default.Lock,
+                                    contentDescription = "NIP-17 (encrypted)",
+                                    modifier = Modifier.size(12.dp),
+                                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                                )
+                            }
+                        }
+
                         // Timestamp
                         note.createdAt()?.let { timestamp ->
                             Text(
@@ -436,12 +609,20 @@ private fun MessageWithReactions(
                     }
                 },
             ) { _ ->
-                SelectionContainer {
-                    Text(
-                        text = decryptedContent ?: "",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
+                when (note.event) {
+                    is ChatMessageEncryptedFileHeaderEvent -> {
+                        ChatFileAttachment(event = note.event as ChatMessageEncryptedFileHeaderEvent)
+                    }
+
+                    else -> {
+                        SelectionContainer {
+                            Text(
+                                text = decryptedContent ?: "",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -520,8 +701,11 @@ private fun MessageInput(
     isNip17: Boolean,
     requiresNip17: Boolean,
     canSend: Boolean,
+    isUploading: Boolean = false,
+    hasAttachments: Boolean = false,
     onMessageChange: (String) -> Unit,
     onToggleNip17: () -> Unit,
+    onAttach: () -> Unit = {},
     onSend: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth().padding(8.dp)) {
@@ -530,6 +714,24 @@ private fun MessageInput(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            // Paperclip attach button — always visible, auto-switches to NIP-17 on send
+            IconButton(
+                onClick = onAttach,
+                enabled = !isUploading,
+                modifier = Modifier.size(40.dp),
+            ) {
+                Icon(
+                    Icons.Default.AttachFile,
+                    contentDescription = "Attach file",
+                    tint =
+                        if (isUploading) {
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                        } else {
+                            MaterialTheme.colorScheme.primary
+                        },
+                )
+            }
+
             OutlinedTextField(
                 value = messageText,
                 onValueChange = onMessageChange,
@@ -555,14 +757,14 @@ private fun MessageInput(
 
             IconButton(
                 onClick = onSend,
-                enabled = canSend,
+                enabled = canSend && !isUploading,
                 modifier = Modifier.size(40.dp),
             ) {
                 Icon(
                     Icons.AutoMirrored.Filled.Send,
                     contentDescription = "Send",
                     tint =
-                        if (canSend) {
+                        if (canSend && !isUploading) {
                             MaterialTheme.colorScheme.primary
                         } else {
                             MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
@@ -614,5 +816,45 @@ private fun MessageInput(
                 )
             }
         }
+    }
+}
+
+/**
+ * Encrypts and uploads files, then sends each as a ChatMessageEncryptedFileHeaderEvent (kind 15)
+ * wrapped in GiftWrap for each recipient.
+ */
+private suspend fun sendEncryptedFiles(
+    files: List<File>,
+    roomKey: ChatroomKey,
+    account: IAccount,
+    cacheProvider: ICacheProvider,
+) {
+    val orchestrator = DesktopUploadOrchestrator()
+    val server = DesktopPreferences.preferredBlossomServer
+    val recipients = roomKey.users.mapNotNull { cacheProvider.getUserIfExists(it) as? User }.map { it.toPTag() }
+
+    for (file in files) {
+        val cipher = AESGCM()
+        val result = orchestrator.uploadEncrypted(file, cipher, server, account.signer)
+        val url = result.blossom.url ?: continue
+
+        val template =
+            ChatMessageEncryptedFileHeaderEvent.build(
+                to = recipients,
+                url = url,
+                cipher = cipher,
+                mimeType = result.metadata.mimeType,
+                hash = result.encryptedHash,
+                size = result.encryptedSize,
+                dimension =
+                    if (result.metadata.width != null && result.metadata.height != null) {
+                        DimensionTag(result.metadata.width, result.metadata.height)
+                    } else {
+                        null
+                    },
+                blurhash = result.metadata.blurhash,
+                originalHash = result.metadata.sha256,
+            )
+        account.sendNip17EncryptedFile(template)
     }
 }

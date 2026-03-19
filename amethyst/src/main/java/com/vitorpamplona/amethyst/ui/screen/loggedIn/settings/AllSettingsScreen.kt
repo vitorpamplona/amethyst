@@ -31,6 +31,7 @@ import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.CloudUpload
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Key
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.ThumbUp
@@ -144,6 +145,13 @@ fun AllSettingsScreen(
                 iconPainterRef = 1,
                 tint = tint,
                 onClick = { nav.nav(Route.PrivacyOptions) },
+            )
+            HorizontalDivider()
+            SettingsNavigationRow(
+                title = R.string.ots_explorer_settings,
+                icon = Icons.Outlined.Search,
+                tint = tint,
+                onClick = { nav.nav(Route.OtsSettings) },
             )
             HorizontalDivider()
             SettingsNavigationRow(

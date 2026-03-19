@@ -32,9 +32,15 @@ import kotlin.math.round
 private const val YEAR_DATE_FORMAT = "MMM dd, yyyy"
 private const val MONTH_DATE_FORMAT = "MMM dd"
 
+private const val YEAR_NO_DAY_DATE_FORMAT = "MMM yyyy"
+private const val MONTH_NO_DAY_DATE_FORMAT = "MMM dd"
+
 var locale: Locale = Locale.getDefault()
 var yearFormatter = SimpleDateFormat(YEAR_DATE_FORMAT, locale)
 var monthFormatter = SimpleDateFormat(MONTH_DATE_FORMAT, locale)
+
+var yearNoDayFormatter = SimpleDateFormat(YEAR_NO_DAY_DATE_FORMAT, locale)
+var monthNoDayFormatter = SimpleDateFormat(MONTH_NO_DAY_DATE_FORMAT, locale)
 
 fun timeAgo(
     time: Long?,
@@ -104,6 +110,46 @@ fun timeAgoNoDot(
         }
 
         monthFormatter.format(time * 1000)
+    } else if (timeDifference > TimeUtils.ONE_DAY) {
+        // 2 days
+        (timeDifference / TimeUtils.ONE_DAY).toString() + stringRes(context, R.string.d)
+    } else if (timeDifference > TimeUtils.ONE_HOUR) {
+        (timeDifference / TimeUtils.ONE_HOUR).toString() + stringRes(context, R.string.h)
+    } else if (timeDifference > TimeUtils.ONE_MINUTE) {
+        (timeDifference / TimeUtils.ONE_MINUTE).toString() + stringRes(context, R.string.m)
+    } else {
+        stringRes(context, R.string.now)
+    }
+}
+
+fun timeAgoNoDotNoDay(
+    time: Long?,
+    context: Context,
+): String {
+    if (time == null) return " "
+    if (time == 0L) return " ${stringRes(context, R.string.never)}"
+
+    val timeDifference = TimeUtils.now() - time
+
+    return if (timeDifference > TimeUtils.ONE_YEAR) {
+        // Dec 12, 2022
+
+        if (locale != Locale.getDefault()) {
+            locale = Locale.getDefault()
+            yearNoDayFormatter = SimpleDateFormat(YEAR_NO_DAY_DATE_FORMAT, locale)
+            monthNoDayFormatter = SimpleDateFormat(MONTH_NO_DAY_DATE_FORMAT, locale)
+        }
+
+        yearNoDayFormatter.format(time * 1000)
+    } else if (timeDifference > TimeUtils.ONE_MONTH) {
+        // Dec 12
+        if (locale != Locale.getDefault()) {
+            locale = Locale.getDefault()
+            yearNoDayFormatter = SimpleDateFormat(YEAR_NO_DAY_DATE_FORMAT, locale)
+            monthNoDayFormatter = SimpleDateFormat(MONTH_NO_DAY_DATE_FORMAT, locale)
+        }
+
+        monthNoDayFormatter.format(time * 1000)
     } else if (timeDifference > TimeUtils.ONE_DAY) {
         // 2 days
         (timeDifference / TimeUtils.ONE_DAY).toString() + stringRes(context, R.string.d)

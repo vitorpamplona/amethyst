@@ -55,6 +55,7 @@ class UserProfileFollowsUserFeedViewModel(
         return LocalCache.load(nonHiddenFollows).sortedWith(sortingModel)
     }
 
+    @OptIn(kotlinx.coroutines.FlowPreview::class)
     val followsFlow: StateFlow<List<User>> =
         contactList
             .flow()

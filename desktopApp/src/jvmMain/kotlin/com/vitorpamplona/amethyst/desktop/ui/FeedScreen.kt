@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -55,6 +55,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.richtext.UrlParser
 import com.vitorpamplona.amethyst.commons.state.EventCollectionState
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
@@ -75,7 +76,9 @@ import com.vitorpamplona.amethyst.desktop.subscriptions.createRepliesSubscriptio
 import com.vitorpamplona.amethyst.desktop.subscriptions.createRepostsSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.createZapsSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
+import com.vitorpamplona.amethyst.desktop.ui.media.LightboxOverlay
 import com.vitorpamplona.amethyst.desktop.ui.note.NoteCard
+import com.vitorpamplona.amethyst.desktop.ui.note.extractMentionedPubkeys
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
@@ -85,6 +88,13 @@ import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+
+data class LightboxState(
+    val urls: List<String>,
+    val index: Int,
+    val seekPosition: Float = 0f,
+    val fullscreen: Boolean = false,
+)
 
 /**
  * Note card with action buttons.
@@ -100,6 +110,8 @@ fun FeedNoteCard(
     onZapFeedback: (ZapFeedback) -> Unit,
     onNavigateToProfile: (String) -> Unit = {},
     onNavigateToThread: (String) -> Unit = {},
+    onImageClick: ((List<String>, Int) -> Unit)? = null,
+    onMediaClick: ((List<String>, Int, Float) -> Unit)? = null,
     zapReceipts: List<ZapReceipt> = emptyList(),
     reactionCount: Int = 0,
     replyCount: Int = 0,
@@ -110,15 +122,15 @@ fun FeedNoteCard(
 ) {
     val zapAmountSats = zapReceipts.sumOf { it.amountSats }
 
-    Column(
-        modifier =
-            Modifier.clickable {
-                onNavigateToThread(event.id)
-            },
-    ) {
+    Column {
         NoteCard(
             note = event.toNoteDisplayData(localCache),
+            localCache = localCache,
+            onClick = { onNavigateToThread(event.id) },
             onAuthorClick = onNavigateToProfile,
+            onMentionClick = onNavigateToProfile,
+            onImageClick = onImageClick,
+            onMediaClick = onMediaClick,
         )
 
         // Action buttons (only if logged in)
@@ -180,6 +192,7 @@ fun FeedScreen(
         }
     val events by eventState.items.collectAsState()
     var replyToEvent by remember { mutableStateOf<Event?>(null) }
+    var lightboxState by remember { mutableStateOf<LightboxState?>(null) }
     var feedMode by remember { mutableStateOf(initialFeedMode ?: DesktopPreferences.feedMode) }
     var followedUsers by remember { mutableStateOf<Set<String>>(emptySet()) }
     var zapsByEvent by remember { mutableStateOf<Map<String, List<ZapReceipt>>>(emptyMap()) }
@@ -434,30 +447,40 @@ fun FeedScreen(
         )
     }
 
-    // Subscribe to metadata for note authors (to enable zaps and populate search cache)
+    // Subscribe to metadata for note authors + mentioned users
     val authorPubkeys = events.map { it.pubKey }.distinct()
+    val mentionedPubkeys =
+        remember(events) {
+            val parser = UrlParser()
+            events
+                .flatMap { event ->
+                    val urls = parser.parseValidUrls(event.content)
+                    extractMentionedPubkeys(urls.bech32s)
+                }.distinct()
+        }
+    val allPubkeys = remember(authorPubkeys, mentionedPubkeys) { (authorPubkeys + mentionedPubkeys).distinct() }
 
     // Use coordinator for rate-limited metadata loading (preferred)
-    LaunchedEffect(authorPubkeys, subscriptionsCoordinator) {
-        if (subscriptionsCoordinator != null && authorPubkeys.isNotEmpty()) {
-            subscriptionsCoordinator.loadMetadataForPubkeys(authorPubkeys)
+    LaunchedEffect(allPubkeys, subscriptionsCoordinator) {
+        if (subscriptionsCoordinator != null && allPubkeys.isNotEmpty()) {
+            subscriptionsCoordinator.loadMetadataForPubkeys(allPubkeys)
         }
     }
 
     // Fallback subscription if coordinator not available
-    rememberSubscription(configuredRelays, authorPubkeys, subscriptionsCoordinator, relayManager = relayManager) {
+    rememberSubscription(configuredRelays, allPubkeys, subscriptionsCoordinator, relayManager = relayManager) {
         // Skip if using coordinator
         if (subscriptionsCoordinator != null) {
             return@rememberSubscription null
         }
 
-        if (configuredRelays.isEmpty() || authorPubkeys.isEmpty()) {
+        if (configuredRelays.isEmpty() || allPubkeys.isEmpty()) {
             return@rememberSubscription null
         }
 
         // Only fetch metadata for users we don't have yet
         val missingPubkeys =
-            authorPubkeys.filter { pubkey ->
+            allPubkeys.filter { pubkey ->
                 localCache
                     .getUserIfExists(pubkey)
                     ?.metadataOrNull()
@@ -480,147 +503,156 @@ fun FeedScreen(
     }
 
     @OptIn(ExperimentalLayoutApi::class)
-    Column(modifier = Modifier.fillMaxSize()) {
-        // Header with compose button — wraps on narrow columns
-        FlowRow(
-            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Column {
-                FlowRow(
-                    verticalArrangement = Arrangement.Center,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Text(
-                        if (feedMode == FeedMode.GLOBAL) "Global Feed" else "Following Feed",
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = MaterialTheme.colorScheme.onBackground,
-                    )
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Header with compose button — wraps on narrow columns
+            FlowRow(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Column {
+                    FlowRow(
+                        verticalArrangement = Arrangement.Center,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Text(
+                            if (feedMode == FeedMode.GLOBAL) "Global Feed" else "Following Feed",
+                            style = MaterialTheme.typography.headlineMedium,
+                            color = MaterialTheme.colorScheme.onBackground,
+                        )
 
-                    // Feed mode selector
-                    if (account != null) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            FilterChip(
-                                selected = feedMode == FeedMode.GLOBAL,
-                                onClick = {
-                                    feedMode = FeedMode.GLOBAL
-                                    DesktopPreferences.feedMode = FeedMode.GLOBAL
-                                },
-                                label = { Text("Global") },
+                        // Feed mode selector
+                        if (account != null) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                FilterChip(
+                                    selected = feedMode == FeedMode.GLOBAL,
+                                    onClick = {
+                                        feedMode = FeedMode.GLOBAL
+                                        DesktopPreferences.feedMode = FeedMode.GLOBAL
+                                    },
+                                    label = { Text("Global") },
+                                )
+                                FilterChip(
+                                    selected = feedMode == FeedMode.FOLLOWING,
+                                    onClick = {
+                                        feedMode = FeedMode.FOLLOWING
+                                        DesktopPreferences.feedMode = FeedMode.FOLLOWING
+                                    },
+                                    label = { Text("Following") },
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(Modifier.height(4.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            "${connectedRelays.size} relays connected",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        if (feedMode == FeedMode.FOLLOWING) {
+                            Text(
+                                " • ${followedUsers.size} followed",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
-                            FilterChip(
-                                selected = feedMode == FeedMode.FOLLOWING,
-                                onClick = {
-                                    feedMode = FeedMode.FOLLOWING
-                                    DesktopPreferences.feedMode = FeedMode.FOLLOWING
-                                },
-                                label = { Text("Following") },
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        IconButton(
+                            onClick = { relayManager.connect() },
+                            modifier = Modifier.size(24.dp),
+                        ) {
+                            Icon(
+                                Icons.Default.Refresh,
+                                contentDescription = "Refresh",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp),
                             )
                         }
                     }
                 }
 
-                Spacer(Modifier.height(4.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        "${connectedRelays.size} relays connected",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    if (feedMode == FeedMode.FOLLOWING) {
-                        Text(
-                            " • ${followedUsers.size} followed",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
+                // New Post button (primary action)
+                Button(
+                    onClick = onCompose,
+                    enabled = account != null && !account.isReadOnly,
+                ) {
+                    Icon(Icons.Default.Add, "New Post", Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    IconButton(
-                        onClick = { relayManager.connect() },
-                        modifier = Modifier.size(24.dp),
-                    ) {
-                        Icon(
-                            Icons.Default.Refresh,
-                            contentDescription = "Refresh",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(18.dp),
+                    Text("New Post")
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            if (connectedRelays.isEmpty()) {
+                LoadingState("Connecting to relays...")
+            } else if (feedMode == FeedMode.FOLLOWING && followedUsers.isEmpty()) {
+                LoadingState("Loading followed users...")
+            } else if (events.isEmpty() && !initialLoadComplete) {
+                LoadingState("Loading notes...")
+            } else if (events.isEmpty() && initialLoadComplete) {
+                EmptyState(
+                    title =
+                        if (feedMode == FeedMode.FOLLOWING) {
+                            "No notes from followed users"
+                        } else {
+                            "No notes found"
+                        },
+                    description =
+                        if (feedMode == FeedMode.FOLLOWING) {
+                            "Notes from people you follow will appear here"
+                        } else {
+                            "Notes from the network will appear here"
+                        },
+                    onRefresh = { relayManager.connect() },
+                )
+            } else {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    // Use distinctBy to prevent duplicate key crashes from events with same ID
+                    items(events.distinctBy { it.id }, key = { it.id }) { event ->
+                        FeedNoteCard(
+                            event = event,
+                            relayManager = relayManager,
+                            localCache = localCache,
+                            account = account,
+                            nwcConnection = nwcConnection,
+                            onReply = { replyToEvent = event },
+                            onZapFeedback = onZapFeedback,
+                            onNavigateToProfile = onNavigateToProfile,
+                            onNavigateToThread = onNavigateToThread,
+                            onImageClick = { urls, index -> lightboxState = LightboxState(urls, index) },
+                            onMediaClick = { urls, index, seekPos ->
+                                com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
+                                    .playVideo(urls[index], seekPos)
+                                com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
+                                    .toggleFullscreen()
+                            },
+                            zapReceipts = zapsByEvent[event.id] ?: emptyList(),
+                            reactionCount = reactionsByEvent[event.id] ?: 0,
+                            replyCount = repliesByEvent[event.id] ?: 0,
+                            repostCount = repostsByEvent[event.id] ?: 0,
+                            bookmarkList = bookmarkList,
+                            isBookmarked = bookmarkedEventIds.contains(event.id),
+                            onBookmarkChanged = { newList ->
+                                bookmarkList = newList
+                                val pubIds =
+                                    newList
+                                        .publicBookmarks()
+                                        .filterIsInstance<com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark>()
+                                        .map { it.eventId }
+                                        .toSet()
+                                bookmarkedEventIds = pubIds
+                            },
                         )
                     }
                 }
             }
-
-            // New Post button (primary action)
-            Button(
-                onClick = onCompose,
-                enabled = account != null && !account.isReadOnly,
-            ) {
-                Icon(Icons.Default.Add, "New Post", Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-                Text("New Post")
-            }
-        }
-
-        Spacer(Modifier.height(8.dp))
-
-        if (connectedRelays.isEmpty()) {
-            LoadingState("Connecting to relays...")
-        } else if (feedMode == FeedMode.FOLLOWING && followedUsers.isEmpty()) {
-            LoadingState("Loading followed users...")
-        } else if (events.isEmpty() && !initialLoadComplete) {
-            LoadingState("Loading notes...")
-        } else if (events.isEmpty() && initialLoadComplete) {
-            EmptyState(
-                title =
-                    if (feedMode == FeedMode.FOLLOWING) {
-                        "No notes from followed users"
-                    } else {
-                        "No notes found"
-                    },
-                description =
-                    if (feedMode == FeedMode.FOLLOWING) {
-                        "Notes from people you follow will appear here"
-                    } else {
-                        "Notes from the network will appear here"
-                    },
-                onRefresh = { relayManager.connect() },
-            )
-        } else {
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                // Use distinctBy to prevent duplicate key crashes from events with same ID
-                items(events.distinctBy { it.id }, key = { it.id }) { event ->
-                    FeedNoteCard(
-                        event = event,
-                        relayManager = relayManager,
-                        localCache = localCache,
-                        account = account,
-                        nwcConnection = nwcConnection,
-                        onReply = { replyToEvent = event },
-                        onZapFeedback = onZapFeedback,
-                        onNavigateToProfile = onNavigateToProfile,
-                        onNavigateToThread = onNavigateToThread,
-                        zapReceipts = zapsByEvent[event.id] ?: emptyList(),
-                        reactionCount = reactionsByEvent[event.id] ?: 0,
-                        replyCount = repliesByEvent[event.id] ?: 0,
-                        repostCount = repostsByEvent[event.id] ?: 0,
-                        bookmarkList = bookmarkList,
-                        isBookmarked = bookmarkedEventIds.contains(event.id),
-                        onBookmarkChanged = { newList ->
-                            bookmarkList = newList
-                            val pubIds =
-                                newList
-                                    .publicBookmarks()
-                                    .filterIsInstance<com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark>()
-                                    .map { it.eventId }
-                                    .toSet()
-                            bookmarkedEventIds = pubIds
-                        },
-                    )
-                }
-            }
-        }
+        } // end Column
 
         // Reply dialog
         if (replyToEvent != null && account != null) {
@@ -631,5 +663,16 @@ fun FeedScreen(
                 replyTo = replyToEvent,
             )
         }
-    }
+
+        // Lightbox overlay
+        lightboxState?.let { state ->
+            LightboxOverlay(
+                urls = state.urls,
+                initialIndex = state.index,
+                initialSeekPosition = state.seekPosition,
+                initialFullscreen = state.fullscreen,
+                onDismiss = { lightboxState = null },
+            )
+        }
+    } // end Box
 }

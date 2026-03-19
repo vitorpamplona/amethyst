@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.send
 import android.content.Context
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.input.TextFieldValue
@@ -50,6 +51,7 @@ import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.note.creators.draftTags.DraftTagState
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.EmojiSuggestionState
+import com.vitorpamplona.amethyst.ui.note.creators.expiration.IExpiration
 import com.vitorpamplona.amethyst.ui.note.creators.location.ILocationGrabber
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.SplitBuilder
@@ -85,6 +87,7 @@ import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarningReason
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitive
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
+import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.notify
 import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
@@ -92,6 +95,7 @@ import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitSetup
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
 import com.vitorpamplona.quartz.nip92IMeta.imetas
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
@@ -101,7 +105,8 @@ import kotlinx.coroutines.launch
 @Stable
 open class ChannelNewMessageViewModel :
     ViewModel(),
-    ILocationGrabber {
+    ILocationGrabber,
+    IExpiration {
     val draftTag = DraftTagState()
 
     init {
@@ -129,7 +134,8 @@ open class ChannelNewMessageViewModel :
 
     var message by mutableStateOf(TextFieldValue(""))
     var urlPreview by mutableStateOf<String?>(null)
-    var isUploadingImage by mutableStateOf(false)
+    val isUploadingImage: Boolean get() = uploadState?.isUploadingImage ?: false
+    val isUploadingFile: Boolean get() = uploadState?.isUploadingFile ?: false
 
     var userSuggestions: UserSuggestionState? = null
     var userSuggestionsMainMessage: UserSuggestionAnchor? = null
@@ -148,6 +154,10 @@ open class ChannelNewMessageViewModel :
     // NSFW, Sensitive
     var wantsToMarkAsSensitive by mutableStateOf(false)
     var contentWarningDescription by mutableStateOf("")
+
+    // Expiration Date (NIP-40)
+    var wantsExpirationDate by mutableStateOf(false)
+    override var expirationDate by mutableLongStateOf(TimeUtils.oneDayAhead())
 
     // GeoHash
     var wantsToAddGeoHash by mutableStateOf(false)
@@ -228,6 +238,10 @@ open class ChannelNewMessageViewModel :
 
         wantsToMarkAsSensitive = draftEvent.isSensitive()
         contentWarningDescription = draftEvent.contentWarningReason() ?: ""
+
+        val draftExpiration = draftEvent.expiration()
+        wantsExpirationDate = draftExpiration != null
+        expirationDate = draftExpiration ?: TimeUtils.oneDayAhead()
 
         val geohash = draftEvent.getGeoHash()
         wantsToAddGeoHash = geohash != null
@@ -324,7 +338,7 @@ open class ChannelNewMessageViewModel :
 
             val myMultiOrchestrator = uploadState.multiOrchestrator ?: return@launch
 
-            isUploadingImage = true
+            uploadState.mediaUploadTracker.startUpload(myMultiOrchestrator.hasNonMedia())
 
             val results =
                 myMultiOrchestrator.upload(
@@ -365,7 +379,7 @@ open class ChannelNewMessageViewModel :
                 onError(stringRes(context, R.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
             }
 
-            isUploadingImage = false
+            uploadState.mediaUploadTracker.finishUpload()
         }
     }
 
@@ -388,6 +402,7 @@ open class ChannelNewMessageViewModel :
         val geoHash = if (wantsToAddGeoHash) (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString() else null
 
         val contentWarningReason = if (wantsToMarkAsSensitive) contentWarningDescription else null
+        val localExpirationDate = if (wantsExpirationDate) expirationDate else null
 
         return if (channel is PublicChatChannel) {
             val replyingToEvent = replyTo.value?.toEventHint<ChannelMessageEvent>()
@@ -401,6 +416,7 @@ open class ChannelNewMessageViewModel :
                     references(findURLs(tagger.message))
                     quotes(findNostrUris(tagger.message))
                     contentWarningReason?.let { contentWarning(it) }
+                    localExpirationDate?.let { expiration(it) }
 
                     geoHash?.let { geohash(it) }
 
@@ -414,6 +430,7 @@ open class ChannelNewMessageViewModel :
                     references(findURLs(tagger.message))
                     quotes(findNostrUris(tagger.message))
                     contentWarningReason?.let { contentWarning(it) }
+                    localExpirationDate?.let { expiration(it) }
 
                     geoHash?.let { geohash(it) }
 
@@ -426,6 +443,7 @@ open class ChannelNewMessageViewModel :
                     references(findURLs(tagger.message))
                     quotes(findNostrUris(tagger.message))
                     contentWarningReason?.let { contentWarning(it) }
+                    localExpirationDate?.let { expiration(it) }
 
                     geoHash?.let { geohash(it) }
 
@@ -445,6 +463,7 @@ open class ChannelNewMessageViewModel :
                     references(findURLs(tagger.message))
                     quotes(findNostrUris(tagger.message))
                     contentWarningReason?.let { contentWarning(it) }
+                    localExpirationDate?.let { expiration(it) }
 
                     emojis(emojis)
                     imetas(usedAttachments)
@@ -457,6 +476,7 @@ open class ChannelNewMessageViewModel :
                     references(findURLs(tagger.message))
                     quotes(findNostrUris(tagger.message))
                     contentWarningReason?.let { contentWarning(it) }
+                    localExpirationDate?.let { expiration(it) }
 
                     emojis(emojis)
                     imetas(usedAttachments)
@@ -467,6 +487,7 @@ open class ChannelNewMessageViewModel :
                     references(findURLs(tagger.message))
                     quotes(findNostrUris(tagger.message))
                     contentWarningReason?.let { contentWarning(it) }
+                    localExpirationDate?.let { expiration(it) }
 
                     emojis(emojis)
                     imetas(usedAttachments)
@@ -482,6 +503,7 @@ open class ChannelNewMessageViewModel :
                 references(findURLs(tagger.message))
                 quotes(findNostrUris(tagger.message))
                 contentWarningReason?.let { contentWarning(it) }
+                localExpirationDate?.let { expiration(it) }
 
                 emojis(emojis)
                 imetas(usedAttachments)
@@ -524,6 +546,8 @@ open class ChannelNewMessageViewModel :
 
         userSuggestions?.reset()
         userSuggestionsMainMessage = null
+
+        uploadState?.reset()
 
         iMetaAttachments.reset()
 
@@ -611,7 +635,7 @@ open class ChannelNewMessageViewModel :
 
     fun canPost(): Boolean =
         message.text.isNotBlank() &&
-            uploadState?.isUploadingImage != true &&
+            uploadState?.mediaUploadTracker?.isUploading != true &&
             !wantsInvoice &&
             (!wantsZapraiser || zapRaiserAmount != null) &&
             uploadState?.multiOrchestrator == null
@@ -661,6 +685,14 @@ open class ChannelNewMessageViewModel :
 
     fun toggleMarkAsSensitive() {
         wantsToMarkAsSensitive = !wantsToMarkAsSensitive
+        draftTag.newVersion()
+    }
+
+    fun toggleExpirationDate() {
+        wantsExpirationDate = !wantsExpirationDate
+        if (wantsExpirationDate) {
+            expirationDate = TimeUtils.oneDayAhead()
+        }
         draftTag.newVersion()
     }
 }

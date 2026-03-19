@@ -163,7 +163,7 @@ fun RenderTextModificationEvent(
                             }
 
                         LaunchedEffect(key1 = noteState) {
-                            val newAuthor = accountViewModel.isLoggedUser(noteState?.note?.author)
+                            val newAuthor = accountViewModel.isLoggedUser(noteState.note.author)
 
                             if (isAuthorTheLoggedUser.value != newAuthor) {
                                 isAuthorTheLoggedUser.value = newAuthor

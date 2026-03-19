@@ -27,6 +27,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -53,7 +55,6 @@ import com.vitorpamplona.amethyst.desktop.ui.ThreadScreen
 import com.vitorpamplona.amethyst.desktop.ui.UserProfileScreen
 import com.vitorpamplona.amethyst.desktop.ui.ZapFeedback
 import com.vitorpamplona.amethyst.desktop.ui.chats.DesktopMessagesScreen
-import com.vitorpamplona.amethyst.desktop.ui.chats.DmSendTracker
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect.Nip47URINorm
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -88,6 +89,7 @@ fun DeckColumnContainer(
     localCache: DesktopLocalCache,
     accountManager: AccountManager,
     account: AccountState.LoggedIn,
+    iAccount: DesktopIAccount,
     nwcConnection: Nip47URINorm?,
     subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator,
     appScope: CoroutineScope,
@@ -120,37 +122,44 @@ fun DeckColumnContainer(
         Box(
             modifier = Modifier.fillMaxSize().padding(12.dp),
         ) {
+            // Always keep RootContent composed so state (e.g. search results) survives navigation
+            RootContent(
+                columnType = column.type,
+                relayManager = relayManager,
+                localCache = localCache,
+                accountManager = accountManager,
+                account = account,
+                iAccount = iAccount,
+                nwcConnection = nwcConnection,
+                subscriptionsCoordinator = subscriptionsCoordinator,
+                appScope = appScope,
+                compactMode = true,
+                onShowComposeDialog = onShowComposeDialog,
+                onShowReplyDialog = onShowReplyDialog,
+                onZapFeedback = onZapFeedback,
+                onNavigateToProfile = { navState.push(DesktopScreen.UserProfile(it)) },
+                onNavigateToThread = { navState.push(DesktopScreen.Thread(it)) },
+            )
             if (currentOverlay != null) {
-                OverlayContent(
-                    screen = currentOverlay,
-                    relayManager = relayManager,
-                    localCache = localCache,
-                    account = account,
-                    nwcConnection = nwcConnection,
-                    subscriptionsCoordinator = subscriptionsCoordinator,
-                    onShowComposeDialog = onShowComposeDialog,
-                    onShowReplyDialog = onShowReplyDialog,
-                    onZapFeedback = onZapFeedback,
-                    onNavigateToProfile = { navState.push(DesktopScreen.UserProfile(it)) },
-                    onNavigateToThread = { navState.push(DesktopScreen.Thread(it)) },
-                    onBack = { navState.pop() },
-                )
-            } else {
-                RootContent(
-                    columnType = column.type,
-                    relayManager = relayManager,
-                    localCache = localCache,
-                    accountManager = accountManager,
-                    account = account,
-                    nwcConnection = nwcConnection,
-                    subscriptionsCoordinator = subscriptionsCoordinator,
-                    appScope = appScope,
-                    onShowComposeDialog = onShowComposeDialog,
-                    onShowReplyDialog = onShowReplyDialog,
-                    onZapFeedback = onZapFeedback,
-                    onNavigateToProfile = { navState.push(DesktopScreen.UserProfile(it)) },
-                    onNavigateToThread = { navState.push(DesktopScreen.Thread(it)) },
-                )
+                Surface(
+                    color = MaterialTheme.colorScheme.background,
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    OverlayContent(
+                        screen = currentOverlay,
+                        relayManager = relayManager,
+                        localCache = localCache,
+                        account = account,
+                        nwcConnection = nwcConnection,
+                        subscriptionsCoordinator = subscriptionsCoordinator,
+                        onShowComposeDialog = onShowComposeDialog,
+                        onShowReplyDialog = onShowReplyDialog,
+                        onZapFeedback = onZapFeedback,
+                        onNavigateToProfile = { navState.push(DesktopScreen.UserProfile(it)) },
+                        onNavigateToThread = { navState.push(DesktopScreen.Thread(it)) },
+                        onBack = { navState.pop() },
+                    )
+                }
             }
         }
     }
@@ -163,9 +172,11 @@ internal fun RootContent(
     localCache: DesktopLocalCache,
     accountManager: AccountManager,
     account: AccountState.LoggedIn,
+    iAccount: DesktopIAccount,
     nwcConnection: Nip47URINorm?,
     subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator,
     appScope: CoroutineScope,
+    compactMode: Boolean = false,
     onShowComposeDialog: () -> Unit,
     onShowReplyDialog: (com.vitorpamplona.quartz.nip01Core.core.Event) -> Unit,
     onZapFeedback: (ZapFeedback) -> Unit,
@@ -195,19 +206,12 @@ internal fun RootContent(
         }
 
         DeckColumnType.Messages -> {
-            val dmSendTracker =
-                remember(relayManager) {
-                    DmSendTracker(relayManager.client)
-                }
-            val iAccount =
-                remember(account, localCache, relayManager, dmSendTracker) {
-                    DesktopIAccount(account, localCache, relayManager, dmSendTracker, appScope)
-                }
             DesktopMessagesScreen(
                 account = iAccount,
                 cacheProvider = localCache,
                 relayManager = relayManager,
                 localCache = localCache,
+                compactMode = compactMode,
                 onNavigateToProfile = onNavigateToProfile,
             )
         }

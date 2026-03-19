@@ -33,7 +33,6 @@ import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flowOn
@@ -144,7 +143,7 @@ class MuteListState(
         settings.backupMuteList?.let { event ->
             Log.d("AccountRegisterObservers", "Loading saved mute list ${event.toJson()}")
             @OptIn(DelicateCoroutinesApi::class)
-            GlobalScope.launch(Dispatchers.IO) {
+            scope.launch(Dispatchers.IO) {
                 LocalCache.justConsumeMyOwnEvent(event)
             }
         }

@@ -301,7 +301,8 @@ class NamecoinNameResolver(
                     pubkey = rootMatch.content
                 }
 
-                firstEntry != null && firstEntry.value is JsonPrimitive &&
+                firstEntry != null &&
+                    firstEntry.value is JsonPrimitive &&
                     isValidPubkey((firstEntry.value as JsonPrimitive).content) -> {
                     resolvedLocalPart = firstEntry.key
                     pubkey = (firstEntry.value as JsonPrimitive).content

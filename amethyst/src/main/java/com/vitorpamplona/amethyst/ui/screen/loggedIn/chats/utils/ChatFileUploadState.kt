@@ -28,6 +28,7 @@ import androidx.compose.runtime.setValue
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
+import com.vitorpamplona.amethyst.ui.actions.uploads.MediaUploadTracker
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
 import kotlinx.collections.immutable.ImmutableList
@@ -36,7 +37,9 @@ import kotlinx.collections.immutable.ImmutableList
 class ChatFileUploadState(
     val defaultServer: ServerName,
 ) {
-    var isUploadingImage by mutableStateOf(false)
+    val mediaUploadTracker = MediaUploadTracker()
+    val isUploadingImage: Boolean get() = mediaUploadTracker.isUploadingImage
+    val isUploadingFile: Boolean get() = mediaUploadTracker.isUploadingFile
 
     var selectedServer by mutableStateOf(defaultServer)
     var caption by mutableStateOf("")
@@ -52,6 +55,8 @@ class ChatFileUploadState(
     // 0 = Low, 1 = Medium, 2 = High, 3=UNCOMPRESSED
     var mediaQualitySlider by mutableIntStateOf(1)
 
+    var encryptFiles by mutableStateOf(true)
+
     fun load(uris: ImmutableList<SelectedMedia>) {
         reset()
         this.multiOrchestrator = MultiOrchestrator(uris)
@@ -64,16 +69,17 @@ class ChatFileUploadState(
 
     fun reset() {
         multiOrchestrator = null
-        isUploadingImage = false
+        mediaUploadTracker.finishUpload()
         caption = ""
         selectedServer = defaultServer
+        encryptFiles = true
     }
 
     fun deleteMediaToUpload(selected: SelectedMediaProcessing) {
         multiOrchestrator?.remove(selected)
     }
 
-    fun canPost(): Boolean = !isUploadingImage && multiOrchestrator != null
+    fun canPost(): Boolean = !mediaUploadTracker.isUploading && multiOrchestrator != null
 
     fun hasPickedMedia() = multiOrchestrator != null
 

@@ -54,7 +54,7 @@ class NostrClientSubscriptionUntilEoseAsFlowTest : BaseNostrClientTest() {
 
             val flow =
                 client.reqUntilEoseAsFlow(
-                    relay = "wss://relay.damus.io",
+                    relay = "wss://nos.lol",
                     filter =
                         Filter(
                             kinds = listOf(MetadataEvent.KIND),
@@ -93,7 +93,7 @@ class NostrClientSubscriptionUntilEoseAsFlowTest : BaseNostrClientTest() {
 
             val flow =
                 client.reqUntilEoseAsFlow(
-                    relay = "wss://relay.damus.io",
+                    relay = "wss://nos.lol",
                     filter =
                         Filter(
                             kinds = listOf(MetadataEvent.KIND),
