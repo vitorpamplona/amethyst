@@ -649,6 +649,18 @@ fun MainContent(
                                     )
                                 }
 
+                                is com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent -> {
+                                    val innerNote = localCache.getOrCreateNote(innerEvent.id)
+                                    val innerAuthor = localCache.getOrCreateUser(innerEvent.pubKey)
+                                    if (innerNote.event == null) {
+                                        innerNote.loadEvent(innerEvent, innerAuthor, emptyList())
+                                    }
+                                    iAccount.chatroomList.addMessage(
+                                        innerEvent.chatroomKey(iAccount.pubKey),
+                                        innerNote,
+                                    )
+                                }
+
                                 is com.vitorpamplona.quartz.nip25Reactions.ReactionEvent -> {
                                     val reactionNote = localCache.getOrCreateNote(innerEvent.id)
                                     val reactionAuthor = localCache.getOrCreateUser(innerEvent.pubKey)
