@@ -32,7 +32,7 @@ import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.publicMessages.PublicMessageEvent
-import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
+import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
@@ -78,7 +78,7 @@ class UserProfileMutualFeedFilter(
                     it.event is LongTextNoteEvent ||
                     it.event is WikiNoteEvent ||
                     it.event is NipTextEvent ||
-                    it.event is PollNoteEvent ||
+                    it.event is ZapPollEvent ||
                     it.event is HighlightEvent ||
                     it.event is InteractiveStoryPrologueEvent ||
                     it.event is AudioTrackEvent ||

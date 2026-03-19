@@ -27,7 +27,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.quartz.experimental.publicMessages.PublicMessageEvent
-import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
+import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
@@ -64,7 +64,7 @@ class UserProfileConversationsFeedFilter(
         it.author == user &&
             (
                 it.event is TextNoteEvent ||
-                    it.event is PollNoteEvent ||
+                    it.event is ZapPollEvent ||
                     it.event is PollResponseEvent ||
                     it.event is ChannelMessageEvent ||
                     it.event is LiveActivitiesChatMessageEvent ||

@@ -26,7 +26,7 @@ import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
-import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
+import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -60,7 +60,7 @@ val HomePostsNewThreadKinds =
         HighlightEvent.KIND,
         WikiNoteEvent.KIND,
         NipTextEvent.KIND,
-        PollNoteEvent.KIND,
+        ZapPollEvent.KIND,
         PollEvent.KIND,
         InteractiveStoryPrologueEvent.KIND,
         ChessGameEvent.KIND,

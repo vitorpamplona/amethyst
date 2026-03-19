@@ -24,7 +24,7 @@ import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStorySceneEvent
 import com.vitorpamplona.quartz.experimental.publicMessages.PublicMessageEvent
-import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
+import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -65,7 +65,7 @@ val NotificationsPerKeyKinds =
         ChannelMessageEvent.KIND,
         EphemeralChatEvent.KIND,
         BadgeAwardEvent.KIND,
-        PollNoteEvent.KIND,
+        ZapPollEvent.KIND,
         PollEvent.KIND,
         PollResponseEvent.KIND,
         PublicMessageEvent.KIND,

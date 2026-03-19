@@ -146,7 +146,7 @@ import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryE
 import com.vitorpamplona.quartz.experimental.publicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.experimental.relationshipStatus.ContactCardEvent
 import com.vitorpamplona.quartz.experimental.trustedAssertions.list.TrustProviderListEvent
-import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
+import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.ErrorDebugMessage
@@ -619,7 +619,7 @@ private fun kindDisplayName(kind: Int): Int =
         PeopleListEvent.KIND -> R.string.kind_people_lists
         PictureEvent.KIND -> R.string.kind_pictures
         PinListEvent.KIND -> R.string.kind_pins
-        PollNoteEvent.KIND -> R.string.kind_zap_poll
+        ZapPollEvent.KIND -> R.string.kind_zap_poll
         PollEvent.KIND -> R.string.kind_poll
         PollResponseEvent.KIND -> R.string.kind_poll_response
         PrivateDmEvent.KIND -> R.string.kind_nip04_dms

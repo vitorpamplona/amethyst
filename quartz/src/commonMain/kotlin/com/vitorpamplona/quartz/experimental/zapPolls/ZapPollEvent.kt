@@ -51,7 +51,7 @@ import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
-class PollNoteEvent(
+class ZapPollEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
@@ -131,9 +131,9 @@ class PollNoteEvent(
             post: String,
             options: List<PollOptionTag>,
             createdAt: Long = TimeUtils.now(),
-            initializer: TagArrayBuilder<PollNoteEvent>.() -> Unit = {},
-        ): EventTemplate<PollNoteEvent> {
-            val tags = TagArrayBuilder<PollNoteEvent>()
+            initializer: TagArrayBuilder<ZapPollEvent>.() -> Unit = {},
+        ): EventTemplate<ZapPollEvent> {
+            val tags = TagArrayBuilder<ZapPollEvent>()
             tags.pollOptions(options)
             tags.alt(ALT_DESCRIPTION)
             tags.apply(initializer)

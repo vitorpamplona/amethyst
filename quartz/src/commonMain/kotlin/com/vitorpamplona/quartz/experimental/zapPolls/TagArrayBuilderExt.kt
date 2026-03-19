@@ -27,19 +27,19 @@ import com.vitorpamplona.quartz.experimental.zapPolls.tags.MinimumTag
 import com.vitorpamplona.quartz.experimental.zapPolls.tags.PollOptionTag
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 
-fun TagArrayBuilder<PollNoteEvent>.consensusThreshold(percentage: Double) = addUnique(ConsensusThresholdTag.assemble(percentage))
+fun TagArrayBuilder<ZapPollEvent>.consensusThreshold(percentage: Double) = addUnique(ConsensusThresholdTag.assemble(percentage))
 
-fun TagArrayBuilder<PollNoteEvent>.minAmount(value: Long) = addUnique(MinimumTag.assemble(value))
+fun TagArrayBuilder<ZapPollEvent>.minAmount(value: Long) = addUnique(MinimumTag.assemble(value))
 
-fun TagArrayBuilder<PollNoteEvent>.maxAmount(value: Long) = addUnique(MaximumTag.assemble(value))
+fun TagArrayBuilder<ZapPollEvent>.maxAmount(value: Long) = addUnique(MaximumTag.assemble(value))
 
-fun TagArrayBuilder<PollNoteEvent>.closedAt(timestamp: Long) = addUnique(ClosedAtTag.assemble(timestamp))
+fun TagArrayBuilder<ZapPollEvent>.closedAt(timestamp: Long) = addUnique(ClosedAtTag.assemble(timestamp))
 
-fun TagArrayBuilder<PollNoteEvent>.pollOption(
+fun TagArrayBuilder<ZapPollEvent>.pollOption(
     index: Int,
     description: String,
 ) = add(PollOptionTag.assemble(index, description))
 
-fun TagArrayBuilder<PollNoteEvent>.pollOptions(options: Map<Int, String>) = addAll(options.map { PollOptionTag.assemble(it.key, it.value) })
+fun TagArrayBuilder<ZapPollEvent>.pollOptions(options: Map<Int, String>) = addAll(options.map { PollOptionTag.assemble(it.key, it.value) })
 
-fun TagArrayBuilder<PollNoteEvent>.pollOptions(options: List<PollOptionTag>) = addAll(options.map { it.toTagArray() })
+fun TagArrayBuilder<ZapPollEvent>.pollOptions(options: List<PollOptionTag>) = addAll(options.map { it.toTagArray() })
