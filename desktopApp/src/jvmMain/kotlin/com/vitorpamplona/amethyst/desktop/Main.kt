@@ -655,16 +655,13 @@ fun MainContent(
                                     if (reactionNote.event == null) {
                                         reactionNote.loadEvent(innerEvent, reactionAuthor, emptyList())
                                     }
-                                    // Attach reaction to the target message note
                                     innerEvent.originalPost().forEach { targetId ->
                                         val targetNote = localCache.getNoteIfExists(targetId)
                                         targetNote?.addReaction(reactionNote)
                                     }
                                 }
 
-                                else -> {
-                                    println("Unhandled NIP-17 inner event: ${innerEvent.kind}")
-                                }
+                                else -> {}
                             }
                         }
                     }
@@ -704,6 +701,7 @@ fun MainContent(
                             localCache = localCache,
                             accountManager = accountManager,
                             account = account,
+                            iAccount = iAccount,
                             nwcConnection = nwcConnection,
                             subscriptionsCoordinator = subscriptionsCoordinator,
                             appScope = appScope,
@@ -740,6 +738,7 @@ fun MainContent(
                             localCache = localCache,
                             accountManager = accountManager,
                             account = account,
+                            iAccount = iAccount,
                             nwcConnection = nwcConnection,
                             subscriptionsCoordinator = subscriptionsCoordinator,
                             appScope = appScope,

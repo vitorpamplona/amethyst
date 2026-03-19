@@ -55,7 +55,6 @@ import com.vitorpamplona.amethyst.desktop.ui.ThreadScreen
 import com.vitorpamplona.amethyst.desktop.ui.UserProfileScreen
 import com.vitorpamplona.amethyst.desktop.ui.ZapFeedback
 import com.vitorpamplona.amethyst.desktop.ui.chats.DesktopMessagesScreen
-import com.vitorpamplona.amethyst.desktop.ui.chats.DmSendTracker
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect.Nip47URINorm
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -90,6 +89,7 @@ fun DeckColumnContainer(
     localCache: DesktopLocalCache,
     accountManager: AccountManager,
     account: AccountState.LoggedIn,
+    iAccount: DesktopIAccount,
     nwcConnection: Nip47URINorm?,
     subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator,
     appScope: CoroutineScope,
@@ -129,6 +129,7 @@ fun DeckColumnContainer(
                 localCache = localCache,
                 accountManager = accountManager,
                 account = account,
+                iAccount = iAccount,
                 nwcConnection = nwcConnection,
                 subscriptionsCoordinator = subscriptionsCoordinator,
                 appScope = appScope,
@@ -170,6 +171,7 @@ internal fun RootContent(
     localCache: DesktopLocalCache,
     accountManager: AccountManager,
     account: AccountState.LoggedIn,
+    iAccount: DesktopIAccount,
     nwcConnection: Nip47URINorm?,
     subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator,
     appScope: CoroutineScope,
@@ -202,14 +204,6 @@ internal fun RootContent(
         }
 
         DeckColumnType.Messages -> {
-            val dmSendTracker =
-                remember(relayManager) {
-                    DmSendTracker(relayManager.client)
-                }
-            val iAccount =
-                remember(account, localCache, relayManager, dmSendTracker) {
-                    DesktopIAccount(account, localCache, relayManager, dmSendTracker, appScope)
-                }
             DesktopMessagesScreen(
                 account = iAccount,
                 cacheProvider = localCache,
