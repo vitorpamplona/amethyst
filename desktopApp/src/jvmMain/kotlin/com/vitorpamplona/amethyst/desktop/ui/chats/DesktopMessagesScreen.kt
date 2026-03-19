@@ -24,8 +24,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material3.Icon
@@ -59,18 +61,19 @@ import com.vitorpamplona.amethyst.commons.viewmodels.ChatroomFeedViewModel
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.model.DesktopIAccount
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
+import kotlinx.coroutines.CoroutineScope
 
 private val isMacOS = System.getProperty("os.name").lowercase().contains("mac")
 
 /**
- * Desktop DM screen with split-pane layout.
+ * Desktop DM screen with two layout modes:
  *
- * Left pane (280dp): ConversationListPane with Known/New tabs
- * Right pane (flex): ChatPane with messages + input, or empty state
+ * - **Split mode** (compactMode = false): Side-by-side with conversation list (280dp) + chat pane.
+ *   Used in single-pane layout where there's plenty of horizontal space.
  *
- * @param account The user's IAccount for DM operations
- * @param cacheProvider ICacheProvider for user/note lookups
- * @param onNavigateToProfile Called when navigating to a user profile
+ * - **Compact mode** (compactMode = true): Stacked navigation — full-width contact list OR
+ *   full-width chat. Used in multi-deck columns where width is limited.
  */
 @Composable
 fun DesktopMessagesScreen(
@@ -78,6 +81,7 @@ fun DesktopMessagesScreen(
     cacheProvider: ICacheProvider,
     relayManager: DesktopRelayConnectionManager,
     localCache: DesktopLocalCache,
+    compactMode: Boolean = false,
     onNavigateToProfile: (String) -> Unit = {},
 ) {
     val scope = rememberCoroutineScope()
@@ -89,51 +93,159 @@ fun DesktopMessagesScreen(
     val listFocusRequester = remember { FocusRequester() }
     var showNewDmDialog by remember { mutableStateOf(false) }
 
-    Row(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .onPreviewKeyEvent { event ->
-                    if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
-                    val isModifier = if (isMacOS) event.isMetaPressed else event.isCtrlPressed
+    // Shared keyboard shortcuts
+    val keyHandler =
+        Modifier.onPreviewKeyEvent { event ->
+            if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+            val isModifier = if (isMacOS) event.isMetaPressed else event.isCtrlPressed
 
-                    when {
-                        // Escape -> deselect conversation
-                        event.key == Key.Escape -> {
-                            listState.clearSelection()
-                            true
-                        }
+            when {
+                event.key == Key.Escape -> {
+                    listState.clearSelection()
+                    true
+                }
 
-                        // Cmd+Shift+N / Ctrl+Shift+N -> new DM
-                        event.key == Key.N && isModifier && event.isShiftPressed -> {
-                            showNewDmDialog = true
-                            true
-                        }
+                event.key == Key.N && isModifier && event.isShiftPressed -> {
+                    showNewDmDialog = true
+                    true
+                }
 
-                        else -> {
-                            false
-                        }
-                    }
-                },
-    ) {
-        // Left pane: conversation list (280dp fixed)
+                else -> {
+                    false
+                }
+            }
+        }
+
+    if (compactMode) {
+        CompactMessagesContent(
+            selectedRoom = selectedRoom,
+            listState = listState,
+            account = account,
+            cacheProvider = cacheProvider,
+            scope = scope,
+            onNavigateToProfile = onNavigateToProfile,
+            listFocusRequester = listFocusRequester,
+            onShowNewDm = { showNewDmDialog = true },
+            keyHandler = keyHandler,
+        )
+    } else {
+        SplitMessagesContent(
+            selectedRoom = selectedRoom,
+            listState = listState,
+            account = account,
+            cacheProvider = cacheProvider,
+            scope = scope,
+            onNavigateToProfile = onNavigateToProfile,
+            listFocusRequester = listFocusRequester,
+            onShowNewDm = { showNewDmDialog = true },
+            keyHandler = keyHandler,
+        )
+    }
+
+    if (showNewDmDialog) {
+        NewDmDialog(
+            cacheProvider = cacheProvider,
+            relayManager = relayManager,
+            localCache = localCache,
+            onUserSelected = { roomKey ->
+                listState.selectRoom(roomKey)
+                showNewDmDialog = false
+            },
+            onDismiss = { showNewDmDialog = false },
+        )
+    }
+}
+
+/**
+ * Compact (stacked) layout for deck columns.
+ * Shows either the contact list OR the chat, never both.
+ */
+@Composable
+private fun CompactMessagesContent(
+    selectedRoom: ChatroomKey?,
+    listState: ChatroomListState,
+    account: IAccount,
+    cacheProvider: ICacheProvider,
+    scope: CoroutineScope,
+    onNavigateToProfile: (String) -> Unit,
+    listFocusRequester: FocusRequester,
+    onShowNewDm: () -> Unit,
+    keyHandler: Modifier,
+) {
+    Box(modifier = Modifier.fillMaxSize().then(keyHandler)) {
+        val currentRoom = selectedRoom
+        if (currentRoom != null) {
+            val feedViewModel =
+                remember(currentRoom) {
+                    ChatroomFeedViewModel(currentRoom, account, cacheProvider)
+                }
+            val messageState =
+                remember(currentRoom) {
+                    ChatNewMessageState(account, cacheProvider, scope)
+                }
+            val broadcastStatus =
+                if (account is DesktopIAccount) {
+                    account.dmSendTracker.status
+                        .collectAsState()
+                        .value
+                } else {
+                    DmBroadcastStatus.Idle
+                }
+
+            ChatPane(
+                roomKey = currentRoom,
+                account = account,
+                cacheProvider = cacheProvider,
+                feedViewModel = feedViewModel,
+                messageState = messageState,
+                dmBroadcastStatus = broadcastStatus,
+                onNavigateToProfile = onNavigateToProfile,
+                onBack = { listState.clearSelection() },
+            )
+        } else {
+            ConversationListPane(
+                state = listState,
+                selectedRoom = selectedRoom,
+                onConversationSelected = { listState.selectRoom(it) },
+                onNewConversation = onShowNewDm,
+                focusRequester = listFocusRequester,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
+}
+
+/**
+ * Split (side-by-side) layout for single-pane mode.
+ * Contact list (280dp) + divider + chat pane (flex).
+ */
+@Composable
+private fun SplitMessagesContent(
+    selectedRoom: ChatroomKey?,
+    listState: ChatroomListState,
+    account: IAccount,
+    cacheProvider: ICacheProvider,
+    scope: CoroutineScope,
+    onNavigateToProfile: (String) -> Unit,
+    listFocusRequester: FocusRequester,
+    onShowNewDm: () -> Unit,
+    keyHandler: Modifier,
+) {
+    Row(modifier = Modifier.fillMaxSize().then(keyHandler)) {
         ConversationListPane(
             state = listState,
             selectedRoom = selectedRoom,
-            onConversationSelected = { roomKey ->
-                listState.selectRoom(roomKey)
-            },
-            onNewConversation = { showNewDmDialog = true },
+            onConversationSelected = { listState.selectRoom(it) },
+            onNewConversation = onShowNewDm,
             focusRequester = listFocusRequester,
+            modifier = Modifier.width(280.dp),
         )
 
         VerticalDivider(modifier = Modifier.fillMaxHeight())
 
-        // Right pane: chat or empty state (flex)
         Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
             val currentRoom = selectedRoom
             if (currentRoom != null) {
-                // Create feed VM and message state scoped to the selected room
                 val feedViewModel =
                     remember(currentRoom) {
                         ChatroomFeedViewModel(currentRoom, account, cacheProvider)
@@ -142,7 +254,6 @@ fun DesktopMessagesScreen(
                     remember(currentRoom) {
                         ChatNewMessageState(account, cacheProvider, scope)
                     }
-
                 val broadcastStatus =
                     if (account is DesktopIAccount) {
                         account.dmSendTracker.status
@@ -162,28 +273,14 @@ fun DesktopMessagesScreen(
                     onNavigateToProfile = onNavigateToProfile,
                 )
             } else {
-                // Empty state
                 EmptyConversationState()
             }
         }
     }
-
-    if (showNewDmDialog) {
-        NewDmDialog(
-            cacheProvider = cacheProvider,
-            relayManager = relayManager,
-            localCache = localCache,
-            onUserSelected = { roomKey ->
-                listState.selectRoom(roomKey)
-                showNewDmDialog = false
-            },
-            onDismiss = { showNewDmDialog = false },
-        )
-    }
 }
 
 /**
- * Shown when no conversation is selected in the right pane.
+ * Shown when no conversation is selected in the split layout right pane.
  */
 @Composable
 private fun EmptyConversationState() {

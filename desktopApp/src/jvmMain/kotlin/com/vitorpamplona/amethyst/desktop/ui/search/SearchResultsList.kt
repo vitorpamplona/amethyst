@@ -40,8 +40,6 @@ import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Forum
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -61,15 +59,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.search.AdvancedSearchBarState
-import com.vitorpamplona.amethyst.commons.search.KindRegistry
 import com.vitorpamplona.amethyst.commons.search.SearchSortOrder
 import com.vitorpamplona.amethyst.commons.ui.components.UserSearchCard
-import com.vitorpamplona.amethyst.commons.util.toTimeAgo
-import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
+import com.vitorpamplona.amethyst.desktop.ui.note.NoteCard
+import com.vitorpamplona.amethyst.desktop.ui.toNoteDisplayData
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 
 @Composable
@@ -77,6 +73,7 @@ fun SearchResultsList(
     state: AdvancedSearchBarState,
     onNavigateToProfile: (String) -> Unit,
     onNavigateToThread: (String) -> Unit,
+    localCache: DesktopLocalCache? = null,
     modifier: Modifier = Modifier,
     listState: LazyListState = rememberLazyListState(),
 ) {
@@ -161,14 +158,24 @@ fun SearchResultsList(
             if (!collapsed) {
                 val displayNotes = textNotes.take(5)
                 items(displayNotes, key = { "note-${it.id}" }) { event ->
-                    NotePreviewCard(event = event, onClick = { onNavigateToThread(event.id) })
+                    NoteCard(
+                        note = event.toNoteDisplayData(localCache),
+                        localCache = localCache,
+                        onClick = { onNavigateToThread(event.id) },
+                        onAuthorClick = onNavigateToProfile,
+                        onMentionClick = onNavigateToProfile,
+                    )
                 }
                 if (textNotes.size > 5) {
                     item(key = "notes-expand") {
                         ExpandableSection(
                             remaining = textNotes.drop(5),
                         ) { event ->
-                            NotePreviewCard(event = event, onClick = { onNavigateToThread(event.id) })
+                            NoteCard(
+                                note = event.toNoteDisplayData(localCache),
+                                onClick = { onNavigateToThread(event.id) },
+                                onAuthorClick = onNavigateToProfile,
+                            )
                         }
                     }
                 }
@@ -195,14 +202,24 @@ fun SearchResultsList(
             }
             if (!collapsed) {
                 items(articles.take(5), key = { "article-${it.id}" }) { event ->
-                    NotePreviewCard(event = event, onClick = { onNavigateToThread(event.id) })
+                    NoteCard(
+                        note = event.toNoteDisplayData(localCache),
+                        localCache = localCache,
+                        onClick = { onNavigateToThread(event.id) },
+                        onAuthorClick = onNavigateToProfile,
+                        onMentionClick = onNavigateToProfile,
+                    )
                 }
                 if (articles.size > 5) {
                     item(key = "articles-expand") {
                         ExpandableSection(
                             remaining = articles.drop(5),
                         ) { event ->
-                            NotePreviewCard(event = event, onClick = { onNavigateToThread(event.id) })
+                            NoteCard(
+                                note = event.toNoteDisplayData(localCache),
+                                onClick = { onNavigateToThread(event.id) },
+                                onAuthorClick = onNavigateToProfile,
+                            )
                         }
                     }
                 }
@@ -227,7 +244,13 @@ fun SearchResultsList(
             }
             if (!collapsed) {
                 items(otherNotes.take(5), key = { "other-${it.id}" }) { event ->
-                    NotePreviewCard(event = event, onClick = { onNavigateToThread(event.id) })
+                    NoteCard(
+                        note = event.toNoteDisplayData(localCache),
+                        localCache = localCache,
+                        onClick = { onNavigateToThread(event.id) },
+                        onAuthorClick = onNavigateToProfile,
+                        onMentionClick = onNavigateToProfile,
+                    )
                 }
             }
         }
@@ -299,58 +322,6 @@ private fun SortableHeader(
                     }
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun NotePreviewCard(
-    event: Event,
-    onClick: () -> Unit,
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-        colors =
-            CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant,
-            ),
-    ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                // Kind badge
-                val kindName = KindRegistry.nameFor(event.kind) ?: "kind ${event.kind}"
-                Text(
-                    kindName,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                // Author (hex truncated)
-                Text(
-                    event.pubKey.take(8) + "..." + event.pubKey.takeLast(4),
-                    style = MaterialTheme.typography.bodySmall,
-                    fontFamily = FontFamily.Monospace,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(Modifier.weight(1f))
-                // Timestamp
-                Text(
-                    event.createdAt.toTimeAgo(withDot = false),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Spacer(Modifier.height(4.dp))
-            // Content preview
-            Text(
-                event.content.take(200),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis,
-            )
         }
     }
 }

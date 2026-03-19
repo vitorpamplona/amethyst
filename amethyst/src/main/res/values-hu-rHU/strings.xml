@@ -61,7 +61,7 @@
     <string name="unauthorized_exception_description">Az aláíró nem engedélyezte a művelet végrehajtásához szükséges visszafejtést. Aktiválja az NIP-44 visszafejtést az aláíró alkalmazásban, és próbálja meg újra</string>
     <string name="signer_not_found_exception">Nem található az aláíró</string>
     <string name="signer_not_found_exception_description">Az aláíró alkalmazás el lett távolítva? Ellenőrizze, hogy az aláíró telepítve van-e és rendelkezik-e ezzel a fiókkal. Jelentkezzen ki és jelentkezzen be újra, ha az aláíró alkalmazás megváltozott.</string>
-    <string name="zaps">Zap</string>
+    <string name="zaps">Zap-ek</string>
     <string name="view_count">Megtekintések száma</string>
     <string name="boost">Megtolás</string>
     <string name="boosted">megtolta</string>
@@ -1034,6 +1034,12 @@
     <string name="could_not_prepare_header">Nem sikerült előkészíteni a fejlécadatokat: %1$s</string>
     <string name="compression_cancelled">Tömörítés visszavonva</string>
     <string name="compression_returned_null">A tömörítés nem tudott visszaadni egy fájlt</string>
+    <string name="encrypt_files_label">Fájlok titkosítása</string>
+    <string name="encrypt_files_description">Az adatok védelme érdekében titkosítsa a fájlokat a feltöltés előtt. Egyes kiszolgálók az ingyenes fiókok esetében nem biztos, hogy elfogadják a titkosított fájlokat.</string>
+    <string name="failed_to_upload_encrypted_media_title">Titkosított feltöltés sikertelen</string>
+    <string name="failed_to_upload_encrypted_media_message">Sok kiszolgáló nem fogad el titkosított fájlokat ingyenes fiókok esetén. Próbálja újra titkosítás nélkül.</string>
+    <string name="retry_without_encryption">Újrapróbálás titkosítás nélkül</string>
+    <string name="upload_without_encryption_warning">Figyelem: Titkosítás nélkül bárki láthatja a tartalmat, akinek megvan a fájlhoz tartozó hivatkozás.</string>
     <string name="media_compression_quality_label">Média minősége</string>
     <string name="media_compression_quality_explainer">Válassza az alacsony minőséget a média kisebb, de kevésbé jó minőségű fájlba tömörítéséhez, a magas minőséget a nagyobb, de jobb minőségű fájlba tömörítéshez, vagy a tömörítetlen fájlt a tömörítés nélküli feltöltéshez.</string>
     <string name="media_compression_quality_low">Alacsony</string>
@@ -1076,6 +1082,9 @@
     <string name="wallet_incoming">Fogadott</string>
     <string name="wallet_outgoing">Elküldött</string>
     <string name="wallet_refresh">Frissítés</string>
+    <string name="wallet_filter_all">Összes</string>
+    <string name="wallet_filter_zaps">Zap-ek</string>
+    <string name="wallet_filter_non_zaps">Nem-zap-ek</string>
     <string name="route_security_filters">Biztonsági szűrők</string>
     <string name="route_import_follows">Követettek importálása</string>
     <string name="new_post">Új bejegyzés</string>
@@ -1563,4 +1572,5 @@
     <string name="dms">Közvetlen üzenetek</string>
     <string name="profiles">profilok</string>
     <string name="relay_settings_lower">átjátszóbeállítások</string>
+    <string name="last_seen">Utoljára %1$s ezelőtt látták</string>
 </resources>

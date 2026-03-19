@@ -265,11 +265,15 @@ class PoolRequests {
         errorMessage: String,
     ) {
         relayState.forEach { subId, state ->
-            desiredSubListeners.get(subId)?.onCannotConnect(
-                message = errorMessage,
-                relay = url,
-                forFilters = state.lastKnownFilterStates(url),
-            )
+            // These are all my subs.. need to figure out which relays have them
+            val subs = desiredSubs.get(subId)
+            if (subs != null && url in subs.keys) {
+                desiredSubListeners.get(subId)?.onCannotConnect(
+                    relay = url,
+                    message = errorMessage,
+                    forFilters = state.lastKnownFilterStates(url),
+                )
+            }
         }
     }
 

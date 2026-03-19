@@ -60,6 +60,8 @@ unifiedpush = "3.0.10"
 vico-charts-compose = "3.0.3"
 zelory = "3.0.1"
 zoomable = "2.11.1"
+vlcj = "4.8.3"
+commonsImaging = "1.0.0-alpha5"
 zxing = "3.5.4"
 zxingAndroidEmbedded = "4.3.0"
 windowCoreAndroid = "1.5.1"
@@ -123,6 +125,8 @@ coil-gif = { group = "io.coil-kt.coil3", name = "coil-gif", version.ref = "coil"
 coil-svg = { group = "io.coil-kt.coil3", name = "coil-svg", version.ref = "coil" }
 coil-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
 coil-video = { group = "io.coil-kt.coil3", name = "coil-video", version.ref = "coil" }
+commons-imaging = { group = "org.apache.commons", name = "commons-imaging", version.ref = "commonsImaging" }
+vlcj = { group = "uk.co.caprica", name = "vlcj", version.ref = "vlcj" }
 dev-whyoleg-cryptography-provider-apple-optimal = { module = "dev.whyoleg.cryptography:cryptography-provider-optimal", version.ref = "devWhyolegCryptography" }
 drfonfon-geohash = { group = "com.github.drfonfon", name = "android-kotlin-geohash", version.ref = "androidKotlinGeohash" }
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }

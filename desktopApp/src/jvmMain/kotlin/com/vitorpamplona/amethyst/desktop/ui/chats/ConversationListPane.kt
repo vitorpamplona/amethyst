@@ -119,7 +119,6 @@ fun ConversationListPane(
     Column(
         modifier =
             modifier
-                .width(280.dp)
                 .fillMaxHeight()
                 .focusRequester(focusRequester)
                 .focusable()

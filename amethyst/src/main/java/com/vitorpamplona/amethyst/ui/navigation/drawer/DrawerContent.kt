@@ -51,6 +51,7 @@ import androidx.compose.material.icons.outlined.CollectionsBookmark
 import androidx.compose.material.icons.outlined.Drafts
 import androidx.compose.material.icons.outlined.GroupAdd
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.Sync
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -479,6 +480,14 @@ fun ListContent(
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
             route = Route.Chess,
+        )
+
+        NavigationRow(
+            title = R.string.event_sync_title,
+            icon = Icons.Outlined.Sync,
+            tint = MaterialTheme.colorScheme.onBackground,
+            nav = nav,
+            route = Route.EventSync,
         )
 
         NavigationRow(

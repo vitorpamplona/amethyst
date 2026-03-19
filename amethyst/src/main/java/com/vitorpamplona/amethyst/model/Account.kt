@@ -171,8 +171,8 @@ import com.vitorpamplona.quartz.nip37Drafts.DraftEventCache
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
-import com.vitorpamplona.quartz.nip47WalletConnect.Request
-import com.vitorpamplona.quartz.nip47WalletConnect.Response
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
@@ -1609,7 +1609,7 @@ class Account(
         client.send(newEvent, outboxRelays.flow.value + destinationRelays)
     }
 
-    suspend fun sendNip17EncryptedFile(template: EventTemplate<ChatMessageEncryptedFileHeaderEvent>) {
+    override suspend fun sendNip17EncryptedFile(template: EventTemplate<ChatMessageEncryptedFileHeaderEvent>) {
         if (!isWriteable()) return
 
         val wraps = NIP17Factory().createEncryptedFileNIP17(template, signer)

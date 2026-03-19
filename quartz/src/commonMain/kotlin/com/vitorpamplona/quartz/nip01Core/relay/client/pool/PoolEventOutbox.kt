@@ -28,26 +28,63 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.update
+import kotlin.compareTo
 
 class PoolEventOutbox {
     private var eventOutbox = mapOf<HexKey, PoolEventOutboxState>()
     val relays = MutableStateFlow(setOf<NormalizedRelayUrl>())
 
-    fun updateRelays() {
-        val myRelays = mutableSetOf<NormalizedRelayUrl>()
-        eventOutbox.values.forEach {
-            myRelays.addAll(it.relaysLeft())
+    fun needsToUpdateRelays(): Boolean {
+        val currentRelays = relays.value
+
+        var relaysToRemoveCounter = 0
+
+        currentRelays.forEach { currentRelay ->
+            if (eventOutbox.values.none { currentRelay in it.relaysRemaining }) {
+                relaysToRemoveCounter++
+            }
         }
 
-        if (relays.value != myRelays) {
-            relays.tryEmit(myRelays)
+        var relaysToAddCounter = 0
+        eventOutbox.values.forEach { outboxState ->
+            if (outboxState.relaysRemaining.any { it !in currentRelays }) {
+                relaysToAddCounter++
+            }
+        }
+
+        return relaysToRemoveCounter > 0 || relaysToAddCounter > 0
+    }
+
+    fun updateRelays() {
+        if (needsToUpdateRelays()) {
+            relays.update { currentRelays ->
+                val relaysToRemove = mutableSetOf<NormalizedRelayUrl>()
+
+                currentRelays.forEach { currentRelay ->
+                    if (eventOutbox.values.none { currentRelay in it.relaysRemaining }) {
+                        relaysToRemove.add(currentRelay)
+                    }
+                }
+
+                val relaysToAdd = mutableSetOf<NormalizedRelayUrl>()
+                eventOutbox.values.forEach { outboxState ->
+                    outboxState.relaysRemaining.forEach { relay ->
+                        if (relay !in relaysToAdd && relay !in currentRelays) {
+                            relaysToAdd.add(relay)
+                        }
+                    }
+                }
+
+                (currentRelays - relaysToRemove) + relaysToAdd
+            }
         }
     }
 
     fun activeOutboxCacheFor(url: NormalizedRelayUrl): Set<HexKey> {
         val myEvents = mutableSetOf<HexKey>()
         eventOutbox.forEach { (eventId, outboxCache) ->
-            if (url in outboxCache.relays) {
+            if (url in outboxCache.relaysRemaining) {
                 myEvents.add(eventId)
             }
         }
@@ -72,7 +109,12 @@ class PoolEventOutbox {
         id: HexKey,
         url: NormalizedRelayUrl,
     ) {
-        eventOutbox[id]?.newTry(url)
+        val waiting = eventOutbox[id]
+        waiting?.newTry(url)
+        if (waiting?.isDone() == true) {
+            eventOutbox = eventOutbox - waiting.event.id
+            updateRelays()
+        }
     }
 
     fun newResponse(
@@ -84,13 +126,11 @@ class PoolEventOutbox {
         val waiting = eventOutbox[id]
         if (waiting != null) {
             waiting.newResponse(url, success, message)
-            clear()
+            if (waiting.isDone()) {
+                eventOutbox = eventOutbox - waiting.event.id
+                updateRelays()
+            }
         }
-    }
-
-    fun clear() {
-        eventOutbox = eventOutbox.filter { !it.value.isDone() }
-        updateRelays()
     }
 
     // --------------------------
@@ -143,7 +183,7 @@ class PoolEventOutbox {
         errorMessage: String,
     ) {
         eventOutbox.forEach {
-            if (relay in it.value.relays) {
+            if (relay in it.value.relaysRemaining) {
                 newResponse(it.key, relay, false, errorMessage)
             }
         }
