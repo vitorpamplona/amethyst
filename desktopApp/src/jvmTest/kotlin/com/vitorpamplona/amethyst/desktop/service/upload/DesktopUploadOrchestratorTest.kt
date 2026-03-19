@@ -153,7 +153,7 @@ class DesktopUploadOrchestratorTest {
             val mockClient = mockk<DesktopBlossomClient>()
 
             coEvery {
-                mockClient.upload(any(), any(), any(), any())
+                mockClient.upload(any<java.io.File>(), any<String>(), any<String>(), any())
             } returns BlossomUploadResult(url = "https://example.com/hash")
 
             val orchestrator = DesktopUploadOrchestrator(mockClient)
