@@ -523,6 +523,29 @@ private fun MessageWithReactions(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
+                        // Encryption badge
+                        when (event) {
+                            is PrivateDmEvent -> {
+                                Icon(
+                                    Icons.Default.LockOpen,
+                                    contentDescription = "NIP-04 (legacy)",
+                                    modifier = Modifier.size(12.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                )
+                            }
+
+                            is com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent,
+                            is ChatMessageEncryptedFileHeaderEvent,
+                            -> {
+                                Icon(
+                                    Icons.Default.Lock,
+                                    contentDescription = "NIP-17 (encrypted)",
+                                    modifier = Modifier.size(12.dp),
+                                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                                )
+                            }
+                        }
+
                         // Timestamp
                         note.createdAt()?.let { timestamp ->
                             Text(
