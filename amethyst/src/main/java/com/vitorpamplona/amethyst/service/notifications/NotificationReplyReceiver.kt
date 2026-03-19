@@ -34,6 +34,7 @@ import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -53,10 +54,13 @@ class NotificationReplyReceiver : BroadcastReceiver() {
             NotificationUtils.MARK_READ_ACTION -> {
                 notificationManager.cancel(notificationId)
             }
+
             NotificationUtils.REPLY_ACTION -> {
-                val replyText = RemoteInput.getResultsFromIntent(intent)
-                    ?.getCharSequence(NotificationUtils.KEY_REPLY_TEXT)
-                    ?.toString()
+                val replyText =
+                    RemoteInput
+                        .getResultsFromIntent(intent)
+                        ?.getCharSequence(NotificationUtils.KEY_REPLY_TEXT)
+                        ?.toString()
 
                 if (replyText.isNullOrBlank()) return
 
@@ -69,6 +73,13 @@ class NotificationReplyReceiver : BroadcastReceiver() {
                 val pendingResult = goAsync()
 
                 scope.launch {
+                    // activates the relay to send the message.
+                    val collectionJob =
+                        scope.launch {
+                            Amethyst.instance.relayProxyClientConnector.relayServices
+                                .collect()
+                        }
+
                     try {
                         sendReply(accountNpub, members, replyText)
                         notificationManager.cancel(notificationId)
@@ -77,6 +88,9 @@ class NotificationReplyReceiver : BroadcastReceiver() {
                         Log.e("NotificationReply", "Failed to send reply: ${e.message}")
                     } finally {
                         pendingResult.finish()
+
+                        // closes the relay connection.
+                        collectionJob.cancel()
                     }
                 }
             }

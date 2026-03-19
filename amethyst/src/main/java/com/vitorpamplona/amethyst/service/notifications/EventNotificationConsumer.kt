@@ -210,7 +210,10 @@ class EventNotificationConsumer(
                 val content = chatNote.event?.content ?: ""
                 val user = chatNote.author?.toBestDisplayName() ?: ""
                 val userPicture = chatNote.author?.profilePicture()
-                val accountNpub = account.signer.pubKey.hexToByteArray().toNpub()
+                val accountNpub =
+                    account.signer.pubKey
+                        .hexToByteArray()
+                        .toNpub()
                 val chatroomMembers = chatRoom.users.joinToString(",")
                 val noteUri = chatNote.toNEvent() + ACCOUNT_QUERY_PARAM + accountNpub
 
@@ -224,6 +227,7 @@ class EventNotificationConsumer(
                         noteUri,
                         applicationContext,
                         accountNpub = accountNpub,
+                        accountPictureUrl = account.userProfile().profilePicture(),
                         chatroomMembers = chatroomMembers,
                     )
             }
@@ -254,20 +258,24 @@ class EventNotificationConsumer(
                 val content = chatNote.event?.content ?: ""
                 val user = chatNote.author?.toBestDisplayName() ?: ""
                 val userPicture = chatNote.author?.profilePicture()
-                val accountNpub = account.signer.pubKey.hexToByteArray().toNpub()
+                val accountNpub =
+                    account.signer.pubKey
+                        .hexToByteArray()
+                        .toNpub()
                 val chatroomMembers = chatRoom.users.joinToString(",")
                 val noteUri = chatNote.toNEvent() + ACCOUNT_QUERY_PARAM + accountNpub
 
                 notificationManager()
                     .sendDMNotification(
-                        event.id,
-                        content,
-                        user,
-                        event.createdAt,
-                        userPicture,
-                        noteUri,
-                        applicationContext,
+                        id = event.id,
+                        messageBody = content,
+                        senderName = user,
+                        time = event.createdAt,
+                        pictureUrl = userPicture,
+                        uri = noteUri,
+                        applicationContext = applicationContext,
                         accountNpub = accountNpub,
+                        accountPictureUrl = account.userProfile().profilePicture(),
                         chatroomMembers = chatroomMembers,
                     )
             }
@@ -297,19 +305,23 @@ class EventNotificationConsumer(
                     decryptContent(note, account.signer)?.let { content ->
                         val user = note.author?.toBestDisplayName() ?: ""
                         val userPicture = note.author?.profilePicture()
-                        val accountNpub = account.signer.pubKey.hexToByteArray().toNpub()
+                        val accountNpub =
+                            account.signer.pubKey
+                                .hexToByteArray()
+                                .toNpub()
                         val noteUri = note.toNEvent() + ACCOUNT_QUERY_PARAM + accountNpub
 
                         notificationManager()
                             .sendDMNotification(
-                                event.id,
-                                content,
-                                user,
-                                event.createdAt,
-                                userPicture,
-                                noteUri,
-                                applicationContext,
+                                id = event.id,
+                                messageBody = content,
+                                senderName = user,
+                                time = event.createdAt,
+                                pictureUrl = userPicture,
+                                uri = noteUri,
+                                applicationContext = applicationContext,
                                 accountNpub = accountNpub,
+                                accountPictureUrl = account.userProfile().profilePicture(),
                                 chatroomMembers = null,
                             )
                     }

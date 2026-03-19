@@ -136,6 +136,7 @@ object NotificationUtils {
         uri: String,
         applicationContext: Context,
         accountNpub: String? = null,
+        accountPictureUrl: String? = null,
         chatroomMembers: String? = null,
     ) {
         getOrCreateDMChannel(applicationContext)
@@ -151,6 +152,7 @@ object NotificationUtils {
             channelId = channelId,
             applicationContext = applicationContext,
             accountNpub = accountNpub,
+            accountPictureUrl = accountPictureUrl,
             chatroomMembers = chatroomMembers,
         )
     }
@@ -180,6 +182,7 @@ object NotificationUtils {
         channelId: String,
         applicationContext: Context,
         accountNpub: String?,
+        accountPictureUrl: String?,
         chatroomMembers: String?,
     ) {
         val notId = id.hashCode()
@@ -187,8 +190,11 @@ object NotificationUtils {
         if (isDuplicate(notId)) return
 
         val bitmap = pictureUrl?.let { loadBitmap(it, applicationContext) }
+        val accountBitmap = accountPictureUrl?.let { loadBitmap(it, applicationContext) }
 
         val senderIcon = bitmap?.let { IconCompat.createWithBitmap(it) }
+        val accountIcon = accountBitmap?.let { IconCompat.createWithBitmap(it) }
+
         val sender =
             Person
                 .Builder()
@@ -198,8 +204,13 @@ object NotificationUtils {
 
         val messagingStyle =
             NotificationCompat
-                .MessagingStyle(Person.Builder().setName("Me").build())
-                .addMessage(messageBody, time * 1000, sender)
+                .MessagingStyle(
+                    Person
+                        .Builder()
+                        .setName("Me")
+                        .setIcon(accountIcon)
+                        .build(),
+                ).addMessage(messageBody, time * 1000, sender)
 
         val contentIntent =
             Intent(applicationContext, MainActivity::class.java).apply { data = uri.toUri() }
