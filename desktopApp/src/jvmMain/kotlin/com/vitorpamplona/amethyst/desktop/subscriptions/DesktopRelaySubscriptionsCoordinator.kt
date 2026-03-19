@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.relayClient.assemblers.FeedMetadataCoordinator
 import com.vitorpamplona.amethyst.commons.relayClient.preload.MetadataPreloader
 import com.vitorpamplona.amethyst.commons.relayClient.preload.MetadataRateLimiter
+import com.vitorpamplona.amethyst.commons.service.BasicBundledInsert
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.model.DesktopDmRelayState
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -34,6 +35,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 /**
  * Desktop-specific relay subscriptions coordinator.
@@ -85,6 +88,34 @@ class DesktopRelaySubscriptionsCoordinator(
                 }
             },
         )
+
+    // Event bundler: batches consumed notes before emitting to SharedFlow
+    // 250ms for desktop (Android uses 1000ms to save battery)
+    private val eventBundler =
+        BasicBundledInsert<Note>(
+            delay = 250,
+            dispatcher = Dispatchers.IO,
+            scope = scope,
+        )
+
+    /**
+     * Central event router — consumes an event into the cache and emits to event stream.
+     * Called from relay onEvent callbacks. Non-blocking (launches on IO dispatcher).
+     */
+    fun consumeEvent(
+        event: Event,
+        relay: NormalizedRelayUrl?,
+    ) {
+        scope.launch(Dispatchers.IO) {
+            val consumed = localCache.consume(event, relay)
+            if (consumed) {
+                val note = localCache.getNoteIfExists(event.id) as? Note ?: return@launch
+                eventBundler.invalidateList(note) { batch ->
+                    localCache.eventStream.emitNewNotes(batch)
+                }
+            }
+        }
+    }
 
     /**
      * Start the coordinator.
