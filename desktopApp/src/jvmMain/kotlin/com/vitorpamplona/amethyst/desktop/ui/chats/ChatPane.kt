@@ -150,25 +150,18 @@ fun ChatPane(
     val scope = rememberCoroutineScope()
     val feedState by feedViewModel.feedState.feedContent.collectAsState()
     val messageText by messageState.message.collectAsState()
-    val isNip17 by messageState.nip17.collectAsState()
-    val requiresNip17 by messageState.requiresNip17.collectAsState()
+    val recipientsMissingRelays by messageState.recipientsMissingDmRelays.collectAsState()
 
     // File attachment state
     val attachedFiles = remember { mutableStateListOf<File>() }
     var isUploading by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Helper: attach files and auto-force NIP-17 if needed
+    // Helper: attach files
     fun attachFiles(files: List<File>) {
         val mediaFiles = files.filter { it.extension.lowercase() in MEDIA_EXTENSIONS }
         if (mediaFiles.isEmpty()) return
         attachedFiles.addAll(mediaFiles)
-        if (!isNip17) {
-            messageState.toggleNip17()
-            scope.launch {
-                snackbarHostState.showSnackbar("Switched to NIP-17 — file attachments require encrypted messaging")
-            }
-        }
     }
 
     // Drag-and-drop target for file attachments (NIP-17 only)
@@ -346,13 +339,11 @@ fun ChatPane(
             // Message input
             MessageInput(
                 messageText = messageText.text,
-                isNip17 = isNip17,
-                requiresNip17 = requiresNip17,
+                recipientsMissingRelays = recipientsMissingRelays,
                 canSend = messageState.canSend || attachedFiles.isNotEmpty(),
                 isUploading = isUploading,
                 hasAttachments = attachedFiles.isNotEmpty(),
                 onMessageChange = { messageState.updateMessage(messageText.copy(text = it)) },
-                onToggleNip17 = { messageState.toggleNip17() },
                 onAttach = { attachFiles(DesktopFilePicker.pickMediaFiles()) },
                 onSend = {
                     scope.launch {
@@ -698,13 +689,11 @@ private fun ReactionBar(onReaction: (String) -> Unit) {
 @Composable
 private fun MessageInput(
     messageText: String,
-    isNip17: Boolean,
-    requiresNip17: Boolean,
+    recipientsMissingRelays: Boolean,
     canSend: Boolean,
     isUploading: Boolean = false,
     hasAttachments: Boolean = false,
     onMessageChange: (String) -> Unit,
-    onToggleNip17: () -> Unit,
     onAttach: () -> Unit = {},
     onSend: () -> Unit,
 ) {
@@ -773,46 +762,30 @@ private fun MessageInput(
             }
         }
 
-        // NIP-17 indicator
+        // NIP-17 indicator / recipient warning
         Spacer(Modifier.height(4.dp))
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(start = 4.dp),
         ) {
-            IconButton(
-                onClick = onToggleNip17,
-                enabled = !requiresNip17,
-                modifier = Modifier.size(20.dp),
-            ) {
-                Icon(
-                    imageVector = if (isNip17) Icons.Default.Lock else Icons.Default.LockOpen,
-                    contentDescription = if (isNip17) "NIP-17 (encrypted)" else "NIP-04 (legacy)",
-                    modifier = Modifier.size(16.dp),
-                    tint =
-                        if (isNip17) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                        },
-                )
-            }
+            Icon(
+                imageVector = Icons.Default.Lock,
+                contentDescription = "NIP-17 (encrypted)",
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.primary,
+            )
             Spacer(Modifier.width(4.dp))
             Text(
-                text = if (isNip17) "NIP-17" else "NIP-04",
+                text = "NIP-17",
                 style = MaterialTheme.typography.labelSmall,
-                color =
-                    if (isNip17) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                    },
+                color = MaterialTheme.colorScheme.primary,
             )
-            if (requiresNip17) {
-                Spacer(Modifier.width(4.dp))
+            if (recipientsMissingRelays) {
+                Spacer(Modifier.width(8.dp))
                 Text(
-                    text = "(required for groups)",
+                    text = "Recipient has no DM relay list — messages cannot be delivered",
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                    color = MaterialTheme.colorScheme.error,
                 )
             }
         }

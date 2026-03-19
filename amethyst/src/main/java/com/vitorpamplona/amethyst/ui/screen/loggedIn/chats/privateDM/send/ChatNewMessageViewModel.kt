@@ -73,6 +73,7 @@ import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.base.NIP17Group
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
+import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
@@ -88,16 +89,29 @@ import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitSetup
 import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplits
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiser
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
-import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip92IMeta.imetas
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapNotNull
+import kotlinx.coroutines.flow.onCompletion
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.launch
 
 @Stable
@@ -126,9 +140,57 @@ class ChatNewMessageViewModel :
         }
     }
 
-    var room: ChatroomKey? by mutableStateOf(null)
+    val room = MutableStateFlow<ChatroomKey?>(null)
 
-    var requiresNIP17: Boolean = false
+    val roomUsers: StateFlow<List<User>> =
+        room
+            .mapNotNull {
+                it?.users?.mapNotNull { userHex -> LocalCache.checkGetOrCreateUser(userHex) } ?: emptyList()
+            }.flowOn(Dispatchers.IO)
+            .stateIn(
+                viewModelScope,
+                SharingStarted.Eagerly,
+                room.value?.users?.mapNotNull { userHex -> LocalCache.checkGetOrCreateUser(userHex) } ?: emptyList(),
+            )
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val recipientsMissingDmRelays: StateFlow<ImmutableList<User>> =
+        roomUsers
+            .transformLatest {
+                val dmRelayListNoteFlows =
+                    it.map { user ->
+                        user.dmRelayListNote
+                            .flow()
+                            .metadata.stateFlow
+                    }
+
+                if (dmRelayListNoteFlows.isEmpty()) {
+                    emitAll(MutableStateFlow(persistentListOf()))
+                } else {
+                    val flow =
+                        combine(dmRelayListNoteFlows) { dmRelayListNotes ->
+                            dmRelayListNotes
+                                .mapNotNull { noteState ->
+                                    val noteEvent = noteState.note.event as? ChatMessageRelayListEvent
+                                    if (noteEvent == null || noteEvent.relays().isEmpty()) {
+                                        noteState.note.author
+                                    } else {
+                                        null
+                                    }
+                                }.toImmutableList()
+                        }
+                    emitAll(flow)
+                }
+            }.onStart {
+            }.onCompletion {
+            }.stateIn(
+                viewModelScope,
+                SharingStarted.Eagerly,
+                roomUsers.value
+                    .filter { user ->
+                        user.dmInboxRelays().isNullOrEmpty()
+                    }.toImmutableList(),
+            )
 
     val replyTo = mutableStateOf<Note?>(null)
 
@@ -180,9 +242,6 @@ class ChatNewMessageViewModel :
     var wantsZapraiser by mutableStateOf(false)
     override var zapRaiserAmount = mutableStateOf<Long?>(null)
 
-    // NIP17 Wrapped DMs / Group messages
-    var nip17 by mutableStateOf(false)
-
     fun lnAddress(): String? = account.userProfile().lnAddress()
 
     fun hasLnAddress(): Boolean = account.userProfile().lnAddress() != null
@@ -208,26 +267,11 @@ class ChatNewMessageViewModel :
     }
 
     fun load(room: ChatroomKey) {
-        this.room = room
+        this.room.tryEmit(room)
         this.toUsers =
             TextFieldValue(
                 room.users.mapNotNull { runCatching { Hex.decode(it).toNpub() }.getOrNull() }.joinToString(", ") { "@$it" },
             )
-
-        updateNIP17StatusFromRoom()
-    }
-
-    fun updateNIP17StatusFromRoom() {
-        val room = this.room
-        if (room != null) {
-            this.requiresNIP17 = room.users.size > 1
-            if (this.requiresNIP17) {
-                this.nip17 = true
-            }
-        } else {
-            this.requiresNIP17 = false
-            this.nip17 = false
-        }
     }
 
     fun reply(replyNote: Note) {
@@ -360,9 +404,6 @@ class ChatNewMessageViewModel :
         urlPreviews.update(message)
 
         iMetaAttachments.addAll(draftEvent.imetas())
-
-        requiresNIP17 = draftEvent is NIP17Group
-        nip17 = draftEvent is NIP17Group
     }
 
     suspend fun sendPostSync() {
@@ -402,27 +443,19 @@ class ChatNewMessageViewModel :
         val uploadState = uploadState ?: return
 
         accountViewModel.launchSigner {
-            if (nip17) {
-                ChatFileUploader(account).justUploadNIP17(
-                    uploadState,
-                    onError,
-                    onEncryptedUploadError = { title, message ->
-                        encryptedUploadErrorTitle = title
-                        encryptedUploadErrorMessage = message
-                        pendingRetryMode = RetryMode.HOLD
-                    },
-                    context,
-                ) {
-                    uploadsWaitingToBeSent += it
-                    draftTag.newVersion()
-                    onceUploaded()
-                }
-            } else {
-                ChatFileUploader(account).justUploadNIP04(uploadState, onError, context) {
-                    uploadsWaitingToBeSent += it
-                    draftTag.newVersion()
-                    onceUploaded()
-                }
+            ChatFileUploader(account).justUploadNIP17(
+                uploadState,
+                onError,
+                onEncryptedUploadError = { title, message ->
+                    encryptedUploadErrorTitle = title
+                    encryptedUploadErrorMessage = message
+                    pendingRetryMode = RetryMode.HOLD
+                },
+                context,
+            ) {
+                uploadsWaitingToBeSent += it
+                draftTag.newVersion()
+                onceUploaded()
             }
         }
     }
@@ -432,34 +465,26 @@ class ChatNewMessageViewModel :
         context: Context,
         onceUploaded: () -> Unit,
     ) {
-        val room = room ?: return
+        val room = room.value ?: return
         val uploadState = uploadState ?: return
 
         accountViewModel.launchSigner {
-            if (nip17) {
-                ChatFileUploader(account).justUploadNIP17(
-                    uploadState,
-                    onError,
-                    onEncryptedUploadError = { title, message ->
-                        encryptedUploadErrorTitle = title
-                        encryptedUploadErrorMessage = message
-                        pendingRetryMode = RetryMode.SEND
-                        pendingRetryOnError = onError
-                        pendingRetryContext = context
-                        pendingRetryOnceUploaded = onceUploaded
-                    },
-                    context,
-                ) {
-                    ChatFileSender(room, account).sendNIP17(it)
-                    draftTag.newVersion()
-                    onceUploaded()
-                }
-            } else {
-                ChatFileUploader(account).justUploadNIP04(uploadState, onError, context) {
-                    ChatFileSender(room, account).sendNIP04(it)
-                    draftTag.newVersion()
-                    onceUploaded()
-                }
+            ChatFileUploader(account).justUploadNIP17(
+                uploadState,
+                onError,
+                onEncryptedUploadError = { title, message ->
+                    encryptedUploadErrorTitle = title
+                    encryptedUploadErrorMessage = message
+                    pendingRetryMode = RetryMode.SEND
+                    pendingRetryOnError = onError
+                    pendingRetryContext = context
+                    pendingRetryOnceUploaded = onceUploaded
+                },
+                context,
+            ) {
+                ChatFileSender(room, account).sendNIP17(it)
+                draftTag.newVersion()
+                onceUploaded()
             }
         }
     }
@@ -488,12 +513,12 @@ class ChatNewMessageViewModel :
         val onError = pendingRetryOnError
         val context = pendingRetryContext
         val onceUploaded = pendingRetryOnceUploaded
-        val room = room
+        val room = room.value
         val uploadState = uploadState
 
         dismissEncryptedUploadError()
 
-        if (uploadState == null || context == null) return
+        if (room == null || uploadState == null || context == null) return
 
         uploadState.encryptFiles = false
 
@@ -512,7 +537,6 @@ class ChatNewMessageViewModel :
                 }
 
                 RetryMode.SEND -> {
-                    if (room == null) return@launchSigner
                     ChatFileUploader(account).justUploadNIP17Unencrypted(
                         uploadState,
                         onError ?: accountViewModel.toastManager::toast,
@@ -528,7 +552,7 @@ class ChatNewMessageViewModel :
     }
 
     private suspend fun innerSendPost(draftTag: String?) {
-        val room = room ?: return
+        val room = room.value ?: return
 
         val urls = findURLs(message.text)
         val usedAttachments = iMetaAttachments.filterIsIn(urls.toSet())
@@ -541,70 +565,49 @@ class ChatNewMessageViewModel :
         val localZapRaiserAmount = if (wantsZapraiser) zapRaiserAmount.value else null
         val zapReceiver = if (wantsForwardZapTo) forwardZapTo.value.toZapSplitSetup() else null
 
-        if (nip17 || room.users.size > 1 || replyTo.value?.event is NIP17Group) {
-            val replyHint = replyTo.value?.toEventHint<BaseDMGroupEvent>()
+        val replyHint = replyTo.value?.toEventHint<BaseDMGroupEvent>()
 
-            val template =
-                if (replyHint == null) {
-                    ChatMessageEvent.build(message, room.users.map { LocalCache.getOrCreateUser(it).toPTag() }) {
-                        hashtags(findHashtags(message))
-                        references(findURLs(message))
-                        quotes(findNostrEventUris(message))
+        val template =
+            if (replyHint == null) {
+                ChatMessageEvent.build(message, room.users.map { LocalCache.getOrCreateUser(it).toPTag() }) {
+                    hashtags(findHashtags(message))
+                    references(findURLs(message))
+                    quotes(findNostrEventUris(message))
 
-                        geoHash?.let { geohash(it) }
-                        localZapRaiserAmount?.let { zapraiser(it) }
-                        zapReceiver?.let { zapSplits(it) }
-                        contentWarningReason?.let { contentWarning(it) }
-                        localExpirationDate?.let { expiration(it) }
-
-                        emojis(emojis)
-                        imetas(usedAttachments)
-                    }
-                } else {
-                    ChatMessageEvent.reply(message, replyHint) {
-                        hashtags(findHashtags(message))
-                        references(findURLs(message))
-                        quotes(findNostrEventUris(message))
-
-                        geoHash?.let { geohash(it) }
-                        localZapRaiserAmount?.let { zapraiser(it) }
-                        zapReceiver?.let { zapSplits(it) }
-                        contentWarningReason?.let { contentWarning(it) }
-                        localExpirationDate?.let { expiration(it) }
-
-                        emojis(emojis)
-                        imetas(usedAttachments)
-                    }
-                }
-
-            if (draftTag != null) {
-                accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag, template)
-            } else {
-                accountViewModel.account.sendNip17PrivateMessage(template)
-            }
-        } else {
-            val toUser = room.users.first().let { LocalCache.getOrCreateUser(it).toPTag() }
-
-            val template =
-                PrivateDmEvent.build(
-                    toUser = toUser,
-                    message = message,
-                    imetas = usedAttachments,
-                    replyingTo = replyTo.value?.toEventHint<PrivateDmEvent>(),
-                    signer = accountViewModel.account.signer,
-                ) {
+                    geoHash?.let { geohash(it) }
+                    localZapRaiserAmount?.let { zapraiser(it) }
+                    zapReceiver?.let { zapSplits(it) }
+                    contentWarningReason?.let { contentWarning(it) }
                     localExpirationDate?.let { expiration(it) }
-                }
 
-            if (draftTag != null) {
-                accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag, template)
+                    emojis(emojis)
+                    imetas(usedAttachments)
+                }
             } else {
-                accountViewModel.account.sendNip04PrivateMessage(template)
+                ChatMessageEvent.reply(message, replyHint) {
+                    hashtags(findHashtags(message))
+                    references(findURLs(message))
+                    quotes(findNostrEventUris(message))
+
+                    geoHash?.let { geohash(it) }
+                    localZapRaiserAmount?.let { zapraiser(it) }
+                    zapReceiver?.let { zapSplits(it) }
+                    contentWarningReason?.let { contentWarning(it) }
+                    localExpirationDate?.let { expiration(it) }
+
+                    emojis(emojis)
+                    imetas(usedAttachments)
+                }
             }
+
+        if (draftTag != null) {
+            accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag, template)
+        } else {
+            accountViewModel.account.sendNip17PrivateMessage(template)
         }
 
         if (draftTag == null) {
-            ChatFileSender(room, accountViewModel.account).sendAll(uploadsWaitingToBeSent)
+            ChatFileSender(room, accountViewModel.account).sendNIP17(uploadsWaitingToBeSent)
         }
     }
 
@@ -699,12 +702,10 @@ class ChatNewMessageViewModel :
 
             val users = toUsersTagger.pTags?.mapTo(mutableSetOf()) { it.pubkeyHex }
             if (users.isNullOrEmpty()) {
-                room = null
-                updateNIP17StatusFromRoom()
+                room.emit(null)
             } else {
-                if (users != room?.users) {
-                    room = ChatroomKey(users)
-                    updateNIP17StatusFromRoom()
+                if (users != room.value?.users) {
+                    room.emit(ChatroomKey(users))
                 }
             }
         }
@@ -737,9 +738,6 @@ class ChatNewMessageViewModel :
                 val lastWord = toUsers.currentWord()
                 toUsers = userSuggestions.replaceCurrentWord(toUsers, lastWord, item)
                 updateRoomFromUsersInput()
-
-                val relayList = (LocalCache.getAddressableNoteIfExists(AdvertisedRelayListEvent.createAddressTag(item.pubkeyHex))?.event as? AdvertisedRelayListEvent)?.readRelaysNorm()
-                nip17 = relayList != null
             }
 
             userSuggestionsMainMessage = null
@@ -783,7 +781,8 @@ class ChatNewMessageViewModel :
             !wantsInvoice &&
             (!wantsZapraiser || zapRaiserAmount.value != null) &&
             (toUsers.text.isNotBlank()) &&
-            uploadState?.multiOrchestrator == null
+            uploadState?.multiOrchestrator == null &&
+            recipientsMissingDmRelays.value.isEmpty()
 
     fun insertAtCursor(newElement: String) {
         message = message.insertUrlAtCursor(newElement)
@@ -795,15 +794,7 @@ class ChatNewMessageViewModel :
         Log.d("Init", "OnCleared: ${this.javaClass.simpleName}")
     }
 
-    fun toggleNIP04And24() {
-        if (requiresNIP17) {
-            nip17 = true
-        } else {
-            nip17 = !nip17
-        }
-
-        draftTag.newVersion()
-    }
+    // NIP-04 sending is deprecated. NIP-17 is always used.
 
     override fun updateZapPercentage(
         index: Int,
