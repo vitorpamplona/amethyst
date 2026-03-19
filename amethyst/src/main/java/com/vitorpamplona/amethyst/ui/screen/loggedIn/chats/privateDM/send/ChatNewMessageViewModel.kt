@@ -73,6 +73,7 @@ import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.base.NIP17Group
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
+import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
@@ -93,10 +94,24 @@ import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapNotNull
+import kotlinx.coroutines.flow.onCompletion
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.launch
 
 @Stable
@@ -125,10 +140,57 @@ class ChatNewMessageViewModel :
         }
     }
 
-    var room: ChatroomKey? by mutableStateOf(null)
+    val room = MutableStateFlow<ChatroomKey?>(null)
 
-    /** Whether any recipients are missing DM relay lists */
-    var recipientsMissingDmRelays by mutableStateOf(false)
+    val roomUsers: StateFlow<List<User>> =
+        room
+            .mapNotNull {
+                it?.users?.mapNotNull { userHex -> LocalCache.checkGetOrCreateUser(userHex) } ?: emptyList()
+            }.flowOn(Dispatchers.IO)
+            .stateIn(
+                viewModelScope,
+                SharingStarted.Eagerly,
+                room.value?.users?.mapNotNull { userHex -> LocalCache.checkGetOrCreateUser(userHex) } ?: emptyList(),
+            )
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val recipientsMissingDmRelays: StateFlow<ImmutableList<User>> =
+        roomUsers
+            .transformLatest {
+                val dmRelayListNoteFlows =
+                    it.map { user ->
+                        user.dmRelayListNote
+                            .flow()
+                            .metadata.stateFlow
+                    }
+
+                if (dmRelayListNoteFlows.isEmpty()) {
+                    emitAll(MutableStateFlow(persistentListOf()))
+                } else {
+                    val flow =
+                        combine(dmRelayListNoteFlows) { dmRelayListNotes ->
+                            dmRelayListNotes
+                                .mapNotNull { noteState ->
+                                    val noteEvent = noteState.note.event as? ChatMessageRelayListEvent
+                                    if (noteEvent == null || noteEvent.relays().isEmpty()) {
+                                        noteState.note.author
+                                    } else {
+                                        null
+                                    }
+                                }.toImmutableList()
+                        }
+                    emitAll(flow)
+                }
+            }.onStart {
+            }.onCompletion {
+            }.stateIn(
+                viewModelScope,
+                SharingStarted.Eagerly,
+                roomUsers.value
+                    .filter { user ->
+                        user.dmInboxRelays().isNullOrEmpty()
+                    }.toImmutableList(),
+            )
 
     val replyTo = mutableStateOf<Note?>(null)
 
@@ -180,9 +242,6 @@ class ChatNewMessageViewModel :
     var wantsZapraiser by mutableStateOf(false)
     override var zapRaiserAmount = mutableStateOf<Long?>(null)
 
-    // NIP17 is always enabled - NIP-04 is deprecated for sending
-    val nip17: Boolean get() = true
-
     fun lnAddress(): String? = account.userProfile().lnAddress()
 
     fun hasLnAddress(): Boolean = account.userProfile().lnAddress() != null
@@ -208,26 +267,11 @@ class ChatNewMessageViewModel :
     }
 
     fun load(room: ChatroomKey) {
-        this.room = room
+        this.room.tryEmit(room)
         this.toUsers =
             TextFieldValue(
                 room.users.mapNotNull { runCatching { Hex.decode(it).toNpub() }.getOrNull() }.joinToString(", ") { "@$it" },
             )
-
-        updateRecipientRelayStatus()
-    }
-
-    fun updateRecipientRelayStatus() {
-        val room = this.room
-        if (room != null) {
-            this.recipientsMissingDmRelays =
-                room.users.any { hexKey ->
-                    val user = LocalCache.getOrCreateUser(hexKey)
-                    user.dmInboxRelays().isNullOrEmpty()
-                }
-        } else {
-            this.recipientsMissingDmRelays = false
-        }
     }
 
     fun reply(replyNote: Note) {
@@ -360,8 +404,6 @@ class ChatNewMessageViewModel :
         urlPreviews.update(message)
 
         iMetaAttachments.addAll(draftEvent.imetas())
-
-        updateRecipientRelayStatus()
     }
 
     suspend fun sendPostSync() {
@@ -423,7 +465,7 @@ class ChatNewMessageViewModel :
         context: Context,
         onceUploaded: () -> Unit,
     ) {
-        val room = room ?: return
+        val room = room.value ?: return
         val uploadState = uploadState ?: return
 
         accountViewModel.launchSigner {
@@ -471,12 +513,12 @@ class ChatNewMessageViewModel :
         val onError = pendingRetryOnError
         val context = pendingRetryContext
         val onceUploaded = pendingRetryOnceUploaded
-        val room = room
+        val room = room.value
         val uploadState = uploadState
 
         dismissEncryptedUploadError()
 
-        if (uploadState == null || context == null) return
+        if (room == null || uploadState == null || context == null) return
 
         uploadState.encryptFiles = false
 
@@ -495,7 +537,6 @@ class ChatNewMessageViewModel :
                 }
 
                 RetryMode.SEND -> {
-                    if (room == null) return@launchSigner
                     ChatFileUploader(account).justUploadNIP17Unencrypted(
                         uploadState,
                         onError ?: accountViewModel.toastManager::toast,
@@ -511,7 +552,7 @@ class ChatNewMessageViewModel :
     }
 
     private suspend fun innerSendPost(draftTag: String?) {
-        val room = room ?: return
+        val room = room.value ?: return
 
         val urls = findURLs(message.text)
         val usedAttachments = iMetaAttachments.filterIsIn(urls.toSet())
@@ -661,12 +702,10 @@ class ChatNewMessageViewModel :
 
             val users = toUsersTagger.pTags?.mapTo(mutableSetOf()) { it.pubkeyHex }
             if (users.isNullOrEmpty()) {
-                room = null
-                updateRecipientRelayStatus()
+                room.emit(null)
             } else {
-                if (users != room?.users) {
-                    room = ChatroomKey(users)
-                    updateRecipientRelayStatus()
+                if (users != room.value?.users) {
+                    room.emit(ChatroomKey(users))
                 }
             }
         }
@@ -743,7 +782,7 @@ class ChatNewMessageViewModel :
             (!wantsZapraiser || zapRaiserAmount.value != null) &&
             (toUsers.text.isNotBlank()) &&
             uploadState?.multiOrchestrator == null &&
-            !recipientsMissingDmRelays
+            recipientsMissingDmRelays.value.isEmpty()
 
     fun insertAtCursor(newElement: String) {
         message = message.insertUrlAtCursor(newElement)

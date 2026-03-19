@@ -25,7 +25,6 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.IMetaAttachments
 import com.vitorpamplona.quartz.nip01Core.tags.references.references
-import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
@@ -98,40 +97,6 @@ class ChatFileSender(
             }
 
         account.sendNip17PrivateMessage(template)
-    }
-
-    // ------
-    // NIP 04
-    // ------
-
-    suspend fun sendNIP04(uploads: List<SuccessfulUploads>) {
-        uploads.forEach {
-            if (it.cipher == null) {
-                sendNIP04(it.result, it.caption, it.contentWarningReason)
-            }
-        }
-    }
-
-    suspend fun sendNIP04(
-        result: UploadOrchestrator.OrchestratorResult.ServerResult,
-        caption: String?,
-        contentWarningReason: String?,
-    ) {
-        val iMetaAttachments = IMetaAttachments()
-        iMetaAttachments.add(result, caption, contentWarningReason)
-
-        val toUser = chatroom.users.first().let { LocalCache.getOrCreateUser(it).toPTag() }
-
-        val template =
-            PrivateDmEvent.build(
-                toUser = toUser,
-                message = result.url,
-                imetas = iMetaAttachments.iMetaAttachments,
-                replyingTo = null,
-                signer = account.signer,
-            )
-
-        account.sendNip04PrivateMessage(template)
     }
 
     suspend fun sendAll(uploads: List<SuccessfulUploads>) {
