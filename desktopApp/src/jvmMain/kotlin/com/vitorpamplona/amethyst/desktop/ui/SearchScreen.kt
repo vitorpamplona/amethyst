@@ -449,6 +449,7 @@ fun SearchScreen(
                 state = state,
                 onNavigateToProfile = onNavigateToProfile,
                 onNavigateToThread = onNavigateToThread,
+                localCache = localCache,
             )
         } else if (!debouncedQuery.isEmpty && !isSearching) {
             Text(

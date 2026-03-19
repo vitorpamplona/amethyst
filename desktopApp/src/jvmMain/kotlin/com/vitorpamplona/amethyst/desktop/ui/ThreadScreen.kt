@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.desktop.ui
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -51,6 +52,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.richtext.UrlParser
 import com.vitorpamplona.amethyst.commons.state.EventCollectionState
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
@@ -68,7 +70,9 @@ import com.vitorpamplona.amethyst.desktop.subscriptions.createRepostsSubscriptio
 import com.vitorpamplona.amethyst.desktop.subscriptions.createThreadRepliesSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.createZapsSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
+import com.vitorpamplona.amethyst.desktop.ui.media.LightboxOverlay
 import com.vitorpamplona.amethyst.desktop.ui.note.NoteCard
+import com.vitorpamplona.amethyst.desktop.ui.note.extractMentionedPubkeys
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
@@ -135,12 +139,25 @@ fun ThreadScreen(
     var bookmarkList by remember { mutableStateOf<BookmarkListEvent?>(null) }
     var bookmarkedEventIds by remember { mutableStateOf<Set<String>>(emptySet()) }
 
-    // Load metadata for thread authors via coordinator
+    // Lightbox state
+    var lightboxState by remember { mutableStateOf<LightboxState?>(null) }
+
+    // Load metadata for thread authors + mentioned users via coordinator
     LaunchedEffect(rootNote, replyEvents, subscriptionsCoordinator) {
         if (subscriptionsCoordinator != null) {
             val pubkeys = mutableListOf<String>()
             rootNote?.let { pubkeys.add(it.pubKey) }
             pubkeys.addAll(replyEvents.map { it.pubKey })
+
+            // Also load metadata for users mentioned in note content
+            val parser = UrlParser()
+            val allEvents = listOfNotNull(rootNote) + replyEvents
+            val mentionedPubkeys =
+                allEvents.flatMap { event ->
+                    extractMentionedPubkeys(parser.parseValidUrls(event.content).bech32s)
+                }
+            pubkeys.addAll(mentionedPubkeys)
+
             if (pubkeys.isNotEmpty()) {
                 subscriptionsCoordinator.loadMetadataForPubkeys(pubkeys.distinct())
             }
@@ -331,173 +348,200 @@ fun ThreadScreen(
         return level
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        // Header with back button
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            IconButton(onClick = onBack) {
-                Icon(
-                    Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
-                    modifier = Modifier.size(24.dp),
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Header with back button
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                IconButton(onClick = onBack) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        modifier = Modifier.size(24.dp),
+                    )
+                }
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    "Thread",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.onBackground,
                 )
             }
-            Spacer(Modifier.width(8.dp))
-            Text(
-                "Thread",
-                style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.onBackground,
-            )
-        }
 
-        if (connectedRelays.isEmpty()) {
-            LoadingState("Connecting to relays...")
-        } else if (rootNote == null && !rootNoteEoseReceived) {
-            LoadingState("Loading thread...")
-        } else if (rootNote == null && rootNoteEoseReceived) {
-            EmptyState(
-                title = "Note not found",
-                description = "This note may have been deleted or is not available from connected relays",
-                onRefresh = onBack,
-                refreshLabel = "Go back",
-            )
-        } else {
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(0.dp),
-            ) {
-                // Root note (no reply level indicator)
-                item(key = noteId) {
-                    Column(
-                        modifier =
-                            Modifier.clickable {
-                                // Already viewing this thread, no-op
-                            },
-                    ) {
-                        NoteCard(
-                            note = rootNote!!.toNoteDisplayData(localCache),
-                            onAuthorClick = onNavigateToProfile,
-                        )
-                        if (account != null) {
-                            val rootZaps = zapsByEvent[noteId] ?: emptyList()
-                            NoteActionsRow(
-                                event = rootNote!!,
-                                relayManager = relayManager,
+            if (connectedRelays.isEmpty()) {
+                LoadingState("Connecting to relays...")
+            } else if (rootNote == null && !rootNoteEoseReceived) {
+                LoadingState("Loading thread...")
+            } else if (rootNote == null && rootNoteEoseReceived) {
+                EmptyState(
+                    title = "Note not found",
+                    description = "This note may have been deleted or is not available from connected relays",
+                    onRefresh = onBack,
+                    refreshLabel = "Go back",
+                )
+            } else {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(0.dp),
+                ) {
+                    // Root note (no reply level indicator)
+                    item(key = noteId) {
+                        Column {
+                            NoteCard(
+                                note = rootNote!!.toNoteDisplayData(localCache),
                                 localCache = localCache,
-                                account = account,
-                                nwcConnection = nwcConnection,
-                                onReplyClick = { onReply(rootNote!!) },
-                                onZapFeedback = onZapFeedback,
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                                zapCount = rootZaps.size,
-                                zapAmountSats = rootZaps.sumOf { it.amountSats },
-                                zapReceipts = rootZaps,
-                                reactionCount = reactionsByEvent[noteId] ?: 0,
-                                replyCount = repliesByEvent[noteId] ?: 0,
-                                repostCount = repostsByEvent[noteId] ?: 0,
-                                bookmarkList = bookmarkList,
-                                isBookmarked = bookmarkedEventIds.contains(noteId),
-                                onBookmarkChanged = { newList ->
-                                    bookmarkList = newList
-                                    val pubIds =
-                                        newList
-                                            .publicBookmarks()
-                                            .filterIsInstance<EventBookmark>()
-                                            .map { it.eventId }
-                                            .toSet()
-                                    bookmarkedEventIds = pubIds
+                                onAuthorClick = onNavigateToProfile,
+                                onMentionClick = onNavigateToProfile,
+                                onImageClick = { urls, index -> lightboxState = LightboxState(urls, index) },
+                                onMediaClick = { urls, index, seekPos ->
+                                    com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
+                                        .playVideo(urls[index], seekPos)
+                                    com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
+                                        .toggleFullscreen()
                                 },
                             )
+                            if (account != null) {
+                                val rootZaps = zapsByEvent[noteId] ?: emptyList()
+                                NoteActionsRow(
+                                    event = rootNote!!,
+                                    relayManager = relayManager,
+                                    localCache = localCache,
+                                    account = account,
+                                    nwcConnection = nwcConnection,
+                                    onReplyClick = { onReply(rootNote!!) },
+                                    onZapFeedback = onZapFeedback,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                                    zapCount = rootZaps.size,
+                                    zapAmountSats = rootZaps.sumOf { it.amountSats },
+                                    zapReceipts = rootZaps,
+                                    reactionCount = reactionsByEvent[noteId] ?: 0,
+                                    replyCount = repliesByEvent[noteId] ?: 0,
+                                    repostCount = repostsByEvent[noteId] ?: 0,
+                                    bookmarkList = bookmarkList,
+                                    isBookmarked = bookmarkedEventIds.contains(noteId),
+                                    onBookmarkChanged = { newList ->
+                                        bookmarkList = newList
+                                        val pubIds =
+                                            newList
+                                                .publicBookmarks()
+                                                .filterIsInstance<EventBookmark>()
+                                                .map { it.eventId }
+                                                .toSet()
+                                        bookmarkedEventIds = pubIds
+                                    },
+                                )
+                            }
                         }
+                        HorizontalDivider(thickness = 1.dp)
                     }
-                    HorizontalDivider(thickness = 1.dp)
-                }
 
-                // Reply notes with level indicators
-                items(replyEvents.distinctBy { it.id }, key = { it.id }) { event ->
-                    val level = calculateLevel(event)
+                    // Reply notes with level indicators
+                    items(replyEvents.distinctBy { it.id }, key = { it.id }) { event ->
+                        val level = calculateLevel(event)
 
-                    Column(
-                        modifier =
-                            Modifier
-                                .drawReplyLevel(
-                                    level = level,
-                                    color = MaterialTheme.colorScheme.outlineVariant,
-                                    selected =
-                                        if (event.id == noteId) {
-                                            MaterialTheme.colorScheme.primary
-                                        } else {
-                                            MaterialTheme.colorScheme.outlineVariant
-                                        },
-                                ).clickable {
-                                    onNavigateToThread(event.id)
-                                },
-                    ) {
-                        NoteCard(
-                            note = event.toNoteDisplayData(localCache),
-                            onAuthorClick = onNavigateToProfile,
-                        )
-                        if (account != null) {
-                            val eventZaps = zapsByEvent[event.id] ?: emptyList()
-                            NoteActionsRow(
-                                event = event,
-                                relayManager = relayManager,
+                        Column(
+                            modifier =
+                                Modifier
+                                    .drawReplyLevel(
+                                        level = level,
+                                        color = MaterialTheme.colorScheme.outlineVariant,
+                                        selected =
+                                            if (event.id == noteId) {
+                                                MaterialTheme.colorScheme.primary
+                                            } else {
+                                                MaterialTheme.colorScheme.outlineVariant
+                                            },
+                                    ).clickable {
+                                        onNavigateToThread(event.id)
+                                    },
+                        ) {
+                            NoteCard(
+                                note = event.toNoteDisplayData(localCache),
                                 localCache = localCache,
-                                account = account,
-                                nwcConnection = nwcConnection,
-                                onReplyClick = { onReply(event) },
-                                onZapFeedback = onZapFeedback,
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                                zapCount = eventZaps.size,
-                                zapAmountSats = eventZaps.sumOf { it.amountSats },
-                                zapReceipts = eventZaps,
-                                reactionCount = reactionsByEvent[event.id] ?: 0,
-                                replyCount = repliesByEvent[event.id] ?: 0,
-                                repostCount = repostsByEvent[event.id] ?: 0,
-                                bookmarkList = bookmarkList,
-                                isBookmarked = bookmarkedEventIds.contains(event.id),
-                                onBookmarkChanged = { newList ->
-                                    bookmarkList = newList
-                                    val pubIds =
-                                        newList
-                                            .publicBookmarks()
-                                            .filterIsInstance<EventBookmark>()
-                                            .map { it.eventId }
-                                            .toSet()
-                                    bookmarkedEventIds = pubIds
+                                onAuthorClick = onNavigateToProfile,
+                                onMentionClick = onNavigateToProfile,
+                                onImageClick = { urls, index -> lightboxState = LightboxState(urls, index) },
+                                onMediaClick = { urls, index, seekPos ->
+                                    com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
+                                        .playVideo(urls[index], seekPos)
+                                    com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
+                                        .toggleFullscreen()
                                 },
                             )
+                            if (account != null) {
+                                val eventZaps = zapsByEvent[event.id] ?: emptyList()
+                                NoteActionsRow(
+                                    event = event,
+                                    relayManager = relayManager,
+                                    localCache = localCache,
+                                    account = account,
+                                    nwcConnection = nwcConnection,
+                                    onReplyClick = { onReply(event) },
+                                    onZapFeedback = onZapFeedback,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                                    zapCount = eventZaps.size,
+                                    zapAmountSats = eventZaps.sumOf { it.amountSats },
+                                    zapReceipts = eventZaps,
+                                    reactionCount = reactionsByEvent[event.id] ?: 0,
+                                    replyCount = repliesByEvent[event.id] ?: 0,
+                                    repostCount = repostsByEvent[event.id] ?: 0,
+                                    bookmarkList = bookmarkList,
+                                    isBookmarked = bookmarkedEventIds.contains(event.id),
+                                    onBookmarkChanged = { newList ->
+                                        bookmarkList = newList
+                                        val pubIds =
+                                            newList
+                                                .publicBookmarks()
+                                                .filterIsInstance<EventBookmark>()
+                                                .map { it.eventId }
+                                                .toSet()
+                                        bookmarkedEventIds = pubIds
+                                    },
+                                )
+                            }
                         }
+                        HorizontalDivider(thickness = 1.dp)
                     }
-                    HorizontalDivider(thickness = 1.dp)
-                }
 
-                // Empty state for no replies
-                if (replyEvents.isEmpty() && repliesEoseReceived) {
-                    item {
-                        Spacer(Modifier.height(32.dp))
-                        Text(
-                            "No replies yet",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(16.dp),
-                        )
-                    }
-                } else if (replyEvents.isEmpty() && !repliesEoseReceived) {
-                    item {
-                        Spacer(Modifier.height(32.dp))
-                        Text(
-                            "Loading replies...",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(16.dp),
-                        )
+                    // Empty state for no replies
+                    if (replyEvents.isEmpty() && repliesEoseReceived) {
+                        item {
+                            Spacer(Modifier.height(32.dp))
+                            Text(
+                                "No replies yet",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(16.dp),
+                            )
+                        }
+                    } else if (replyEvents.isEmpty() && !repliesEoseReceived) {
+                        item {
+                            Spacer(Modifier.height(32.dp))
+                            Text(
+                                "Loading replies...",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(16.dp),
+                            )
+                        }
                     }
                 }
             }
+        } // end Column
+
+        // Lightbox overlay
+        val lb = lightboxState
+        if (lb != null) {
+            LightboxOverlay(
+                urls = lb.urls,
+                initialIndex = lb.index,
+                initialSeekPosition = lb.seekPosition,
+                initialFullscreen = lb.fullscreen,
+                onDismiss = { lightboxState = null },
+            )
         }
-    }
+    } // end Box
 }
 
 /**
