@@ -1532,8 +1532,20 @@
     <string name="following_accounts">Obserwujesz %1$d kont(a)…</string>
     <string name="import_follows_tips">"Wprowadź profil znajomego lub lidera społeczności. Możesz użyć ich npub-u, adresu NIP-05 lub nazwy jak alicja@domena.pl lub id/alicja dla zweryfikowanych przez blockchain tożsamości."</string>
     <string name="select_all">Wybierz Wszystkie</string>
+    <string name="event_sync_what_happens_body">To narzędzie skanuje wszystkie transmitery, z którymi zetknęła się Twoja aplikacja, i przekierowuje zdarzenia do właściwych miejsc docelowych: </string>
+    <string name="event_sync_step1">Pobierz wszystkie wydarzenia, których jesteś autorem, i wyślij je do transmiterów nadawczych.</string>
+    <string name="event_sync_step2">Pobierz wszystkie wydarzenia, w których jesteś wymieniony, i prześlij je do swoich transmiterów odbiorczych.</string>
+    <string name="event_sync_step3">Pobierz wszystkie bezpośrednie wiadomości adresowane do Ciebie i wyślij je do swoich transmiterów DM.</string>
+    <string name="event_sync_wifi_warning">⚠️ Wygląda na to, że korzystasz z połączenia komórkowego lub z limitem transferu danych. Ta operacja może wymagać przesłania bardzo dużej ilości danych. Przed rozpoczęciem podłącz się do sieci Wi-Fi.</string>
+    <string name="event_sync_mobile_data_dialog_title">Włączyć transmisje danych?</string>
+    <string name="event_sync_pause">Pauza</string>
+    <string name="event_sync_resume">Wznów</string>
+    <string name="event_sync_start_over">Zacznij od początku</string>
+    <string name="event_sync_cancel">Anuluj</string>
+    <string name="event_sync_relays_progress">Transmitery: %1$d / %2$d</string>
     <string name="events">wydarzenia</string>
     <string name="profiles">profile</string>
     <string name="relay_settings_lower">ustawienia transmiterów</string>
     <string name="last_seen">Ostatnio widziano %1$s temu</string>
+    <string name="event_sync_status_error">Błąd</string>
 </resources>
