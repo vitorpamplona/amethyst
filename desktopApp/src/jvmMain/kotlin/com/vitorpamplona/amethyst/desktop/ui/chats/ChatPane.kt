@@ -50,6 +50,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -154,6 +156,20 @@ fun ChatPane(
     // File attachment state
     val attachedFiles = remember { mutableStateListOf<File>() }
     var isUploading by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Helper: attach files and auto-force NIP-17 if needed
+    fun attachFiles(files: List<File>) {
+        val mediaFiles = files.filter { it.extension.lowercase() in MEDIA_EXTENSIONS }
+        if (mediaFiles.isEmpty()) return
+        attachedFiles.addAll(mediaFiles)
+        if (!isNip17) {
+            messageState.toggleNip17()
+            scope.launch {
+                snackbarHostState.showSnackbar("Switched to NIP-17 — file attachments require encrypted messaging")
+            }
+        }
+    }
 
     // Drag-and-drop target for file attachments (NIP-17 only)
     var isDragOver by remember { mutableStateOf(false) }
@@ -168,7 +184,7 @@ fun ChatPane(
                     if (transferable.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) {
                         @Suppress("UNCHECKED_CAST")
                         val files = transferable.getTransferData(DataFlavor.javaFileListFlavor) as List<File>
-                        attachedFiles.addAll(files.filter { it.extension.lowercase() in MEDIA_EXTENSIONS })
+                        attachFiles(files)
                         dropEvent.dropComplete(true)
                         return true
                     }
@@ -195,185 +211,186 @@ fun ChatPane(
         messageState.load(roomKey)
     }
 
-    Column(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .dragAndDropTarget(
-                    shouldStartDragAndDrop = { isNip17 },
-                    target = dropTarget,
-                ).then(
-                    if (isDragOver) {
-                        Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp))
-                    } else {
-                        Modifier
-                    },
-                ),
-    ) {
-        // Header
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            if (onBack != null) {
-                IconButton(
-                    onClick = onBack,
-                    modifier = Modifier.size(40.dp),
-                ) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back to conversations",
-                    )
-                }
-            }
-
-            Box(modifier = Modifier.weight(1f)) {
-                if (isGroup) {
-                    GroupChatroomHeader(
-                        users = users,
-                        onClick = { users.firstOrNull()?.let { onNavigateToProfile(it.pubkeyHex) } },
-                    )
-                } else {
-                    users.firstOrNull()?.let { user ->
-                        ChatroomHeader(
-                            user = user,
-                            onClick = { onNavigateToProfile(user.pubkeyHex) },
-                        )
-                    } ?: run {
-                        // Fallback header with raw pubkey
-                        Text(
-                            text = roomKey.users.firstOrNull()?.take(20) ?: "Unknown",
-                            style = MaterialTheme.typography.titleSmall,
-                            modifier = Modifier.padding(10.dp),
-                        )
-                    }
-                }
-            }
-        }
-
-        HorizontalDivider()
-
-        // Broadcast status banner
-        DmBroadcastBanner(status = dmBroadcastStatus)
-
-        // Message list
-        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-            when (feedState) {
-                is FeedState.Loading -> {
-                    LoadingState("Loading messages...")
-                }
-
-                is FeedState.Empty -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            "No messages yet. Send the first one!",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-
-                is FeedState.Loaded -> {
-                    val loaded = feedState as FeedState.Loaded
-                    val loadedState by loaded.feed.collectAsState()
-                    val messages = loadedState.list
-
-                    MessageList(
-                        messages = messages,
-                        account = account,
-                        cacheProvider = cacheProvider,
-                        onAuthorClick = onNavigateToProfile,
-                        onReaction = { note, emoji ->
-                            scope.launch {
-                                try {
-                                    sendWrappedReaction(note, emoji, roomKey, account)
-                                } catch (e: Exception) {
-                                    println("Failed to send reaction: ${e.message}")
-                                }
-                            }
+    Box(modifier = modifier.fillMaxSize()) {
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .dragAndDropTarget(
+                        shouldStartDragAndDrop = { true },
+                        target = dropTarget,
+                    ).then(
+                        if (isDragOver) {
+                            Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp))
+                        } else {
+                            Modifier
                         },
-                    )
-                }
-
-                is FeedState.FeedError -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
+                    ),
+        ) {
+            // Header
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                if (onBack != null) {
+                    IconButton(
+                        onClick = onBack,
+                        modifier = Modifier.size(40.dp),
                     ) {
-                        Text(
-                            "Error loading messages",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.error,
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back to conversations",
                         )
                     }
                 }
-            }
-        }
 
-        HorizontalDivider()
-
-        // File attachment row (only when NIP-17 and files attached)
-        if (isNip17 && attachedFiles.isNotEmpty()) {
-            MediaAttachmentRow(
-                attachedFiles = attachedFiles,
-                isUploading = isUploading,
-                onAttach = {
-                    val files = DesktopFilePicker.pickMediaFiles()
-                    attachedFiles.addAll(files)
-                },
-                onPaste = {},
-                onRemove = { attachedFiles.remove(it) },
-            )
-        }
-
-        // Message input
-        MessageInput(
-            messageText = messageText.text,
-            isNip17 = isNip17,
-            requiresNip17 = requiresNip17,
-            canSend = messageState.canSend || attachedFiles.isNotEmpty(),
-            isUploading = isUploading,
-            hasAttachments = attachedFiles.isNotEmpty(),
-            onMessageChange = { messageState.updateMessage(messageText.copy(text = it)) },
-            onToggleNip17 = { messageState.toggleNip17() },
-            onAttach = {
-                val files = DesktopFilePicker.pickMediaFiles()
-                attachedFiles.addAll(files)
-            },
-            onSend = {
-                scope.launch {
-                    if (attachedFiles.isNotEmpty()) {
-                        isUploading = true
-                        try {
-                            sendEncryptedFiles(
-                                files = attachedFiles.toList(),
-                                roomKey = roomKey,
-                                account = account,
-                                cacheProvider = cacheProvider,
+                Box(modifier = Modifier.weight(1f)) {
+                    if (isGroup) {
+                        GroupChatroomHeader(
+                            users = users,
+                            onClick = { users.firstOrNull()?.let { onNavigateToProfile(it.pubkeyHex) } },
+                        )
+                    } else {
+                        users.firstOrNull()?.let { user ->
+                            ChatroomHeader(
+                                user = user,
+                                onClick = { onNavigateToProfile(user.pubkeyHex) },
                             )
-                            attachedFiles.clear()
-                        } catch (e: Exception) {
-                            // Keep files in attachment row for retry
-                            println("Encrypted file send failed: ${e.message}")
-                        } finally {
-                            isUploading = false
+                        } ?: run {
+                            // Fallback header with raw pubkey
+                            Text(
+                                text = roomKey.users.firstOrNull()?.take(20) ?: "Unknown",
+                                style = MaterialTheme.typography.titleSmall,
+                                modifier = Modifier.padding(10.dp),
+                            )
                         }
                     }
-                    // Also send text message if present
-                    if (messageState.canSend) {
-                        if (messageState.send()) {
+                }
+            }
+
+            HorizontalDivider()
+
+            // Broadcast status banner
+            DmBroadcastBanner(status = dmBroadcastStatus)
+
+            // Message list
+            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                when (feedState) {
+                    is FeedState.Loading -> {
+                        LoadingState("Loading messages...")
+                    }
+
+                    is FeedState.Empty -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                "No messages yet. Send the first one!",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+
+                    is FeedState.Loaded -> {
+                        val loaded = feedState as FeedState.Loaded
+                        val loadedState by loaded.feed.collectAsState()
+                        val messages = loadedState.list
+
+                        MessageList(
+                            messages = messages,
+                            account = account,
+                            cacheProvider = cacheProvider,
+                            onAuthorClick = onNavigateToProfile,
+                            onReaction = { note, emoji ->
+                                scope.launch {
+                                    try {
+                                        sendWrappedReaction(note, emoji, roomKey, account)
+                                    } catch (e: Exception) {
+                                        println("Failed to send reaction: ${e.message}")
+                                    }
+                                }
+                            },
+                        )
+                    }
+
+                    is FeedState.FeedError -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                "Error loading messages",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        }
+                    }
+                }
+            }
+
+            HorizontalDivider()
+
+            // File attachment row (only when NIP-17 and files attached)
+            if (attachedFiles.isNotEmpty()) {
+                MediaAttachmentRow(
+                    attachedFiles = attachedFiles,
+                    isUploading = isUploading,
+                    onAttach = { attachFiles(DesktopFilePicker.pickMediaFiles()) },
+                    onPaste = {},
+                    onRemove = { attachedFiles.remove(it) },
+                )
+            }
+
+            // Message input
+            MessageInput(
+                messageText = messageText.text,
+                isNip17 = isNip17,
+                requiresNip17 = requiresNip17,
+                canSend = messageState.canSend || attachedFiles.isNotEmpty(),
+                isUploading = isUploading,
+                hasAttachments = attachedFiles.isNotEmpty(),
+                onMessageChange = { messageState.updateMessage(messageText.copy(text = it)) },
+                onToggleNip17 = { messageState.toggleNip17() },
+                onAttach = { attachFiles(DesktopFilePicker.pickMediaFiles()) },
+                onSend = {
+                    scope.launch {
+                        if (attachedFiles.isNotEmpty()) {
+                            isUploading = true
+                            try {
+                                sendEncryptedFiles(
+                                    files = attachedFiles.toList(),
+                                    roomKey = roomKey,
+                                    account = account,
+                                    cacheProvider = cacheProvider,
+                                )
+                                attachedFiles.clear()
+                            } catch (e: Exception) {
+                                // Keep files in attachment row for retry
+                                println("Encrypted file send failed: ${e.message}")
+                            } finally {
+                                isUploading = false
+                            }
+                        }
+                        // Also send text message if present
+                        if (messageState.canSend) {
+                            if (messageState.send()) {
+                                messageState.clear()
+                            }
+                        } else if (attachedFiles.isEmpty()) {
                             messageState.clear()
                         }
-                    } else if (attachedFiles.isEmpty()) {
-                        messageState.clear()
                     }
-                }
-            },
+                },
+            )
+        } // end Column
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 80.dp),
         )
-    }
+    } // end Box
 }
 
 /**
@@ -674,24 +691,22 @@ private fun MessageInput(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            // Paperclip attach button (NIP-17 only)
-            if (isNip17) {
-                IconButton(
-                    onClick = onAttach,
-                    enabled = !isUploading,
-                    modifier = Modifier.size(40.dp),
-                ) {
-                    Icon(
-                        Icons.Default.AttachFile,
-                        contentDescription = "Attach file",
-                        tint =
-                            if (isUploading) {
-                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
-                            } else {
-                                MaterialTheme.colorScheme.primary
-                            },
-                    )
-                }
+            // Paperclip attach button — always visible, auto-switches to NIP-17 on send
+            IconButton(
+                onClick = onAttach,
+                enabled = !isUploading,
+                modifier = Modifier.size(40.dp),
+            ) {
+                Icon(
+                    Icons.Default.AttachFile,
+                    contentDescription = "Attach file",
+                    tint =
+                        if (isUploading) {
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                        } else {
+                            MaterialTheme.colorScheme.primary
+                        },
+                )
             }
 
             OutlinedTextField(
