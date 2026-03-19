@@ -32,12 +32,18 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.taggedAddresses
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
+import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentRequestEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
+import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.utils.DualCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
@@ -50,28 +56,33 @@ import java.util.concurrent.ConcurrentHashMap
  * Supports searching users by name prefix for the search functionality.
  */
 class DesktopLocalCache : ICacheProvider {
-    private val users = ConcurrentHashMap<HexKey, User>()
-    private val notes = ConcurrentHashMap<HexKey, Note>()
-    private val addressableNotes = ConcurrentHashMap<String, AddressableNote>()
+    val users = BoundedLargeCache<HexKey, User>(MAX_USERS)
+    val notes = BoundedLargeCache<HexKey, Note>(MAX_NOTES)
+    val addressableNotes = BoundedLargeCache<String, AddressableNote>(MAX_ADDRESSABLE)
     private val deletedEvents = ConcurrentHashMap.newKeySet<HexKey>()
 
-    private val eventStream = DesktopCacheEventStream()
+    val eventStream = DesktopCacheEventStream()
+
+    companion object {
+        const val MAX_NOTES = 50_000
+        const val MAX_USERS = 25_000
+        const val MAX_ADDRESSABLE = 10_000
+    }
 
     val paymentTracker = NwcPaymentTracker()
 
     // ----- User operations -----
 
-    override fun getUserIfExists(pubkey: HexKey): User? = users[pubkey]
+    override fun getUserIfExists(pubkey: HexKey): User? = users.get(pubkey)
 
     override fun getOrCreateUser(pubkey: HexKey): User =
-        users.getOrPut(pubkey) {
-            // Create placeholder notes for relay lists
+        users.getOrCreate(pubkey) {
             val nip65Note = getOrCreateNote("nip65:$pubkey")
             val dmNote = getOrCreateNote("dm:$pubkey")
             User(pubkey, nip65Note, dmNote)
         }
 
-    override fun countUsers(predicate: (String, User) -> Boolean): Int = users.count { (key, user) -> predicate(key, user) }
+    override fun countUsers(predicate: (String, User) -> Boolean): Int = users.count { key, user -> predicate(key, user) }
 
     override fun findUsersStartingWith(
         prefix: String,
@@ -92,7 +103,8 @@ class DesktopLocalCache : ICacheProvider {
             )
 
         // Search by name/displayName/nip05/lud16
-        return users.values
+        return users
+            .values()
             .filter { user ->
                 val metadata = user.metadataOrNull()
                 if (metadata == null) {
@@ -126,6 +138,134 @@ class DesktopLocalCache : ICacheProvider {
                 user.updateUserInfo(newUserMetadata, event)
             }
         }
+    }
+
+    // ----- Event consumption (mirrors Android LocalCache pattern) -----
+
+    /**
+     * Routes an event to the appropriate consume method.
+     * Returns true if the event was consumed (new), false if already seen.
+     */
+    fun consume(
+        event: Event,
+        relay: NormalizedRelayUrl?,
+    ): Boolean =
+        when (event) {
+            is MetadataEvent -> {
+                consumeMetadata(event)
+                true
+            }
+
+            is TextNoteEvent -> {
+                consumeTextNote(event, relay)
+            }
+
+            is ReactionEvent -> {
+                consumeReaction(event, relay)
+            }
+
+            is LnZapRequestEvent -> {
+                consumeZapRequest(event, relay)
+            }
+
+            is LnZapEvent -> {
+                consumeZap(event, relay)
+            }
+
+            else -> {
+                false
+            }
+        }
+
+    /**
+     * Consumes a kind 1 text note event.
+     * Creates/updates Note in cache and links reply relationships.
+     */
+    private fun consumeTextNote(
+        event: TextNoteEvent,
+        relay: NormalizedRelayUrl?,
+    ): Boolean {
+        val note = getOrCreateNote(event.id)
+        if (note.event != null) return false
+        val author = getOrCreateUser(event.pubKey)
+        val repliesTo = event.tagsWithoutCitations().mapNotNull { getNoteIfExists(it) }
+        note.loadEvent(event, author, repliesTo)
+        relay?.let { note.addRelay(it) }
+        repliesTo.forEach { it.addReply(note) }
+        return true
+    }
+
+    /**
+     * Consumes a kind 7 reaction event.
+     * Links reaction to target notes via e-tags and a-tags.
+     */
+    private fun consumeReaction(
+        event: ReactionEvent,
+        relay: NormalizedRelayUrl?,
+    ): Boolean {
+        val note = getOrCreateNote(event.id)
+        if (note.event != null) return false
+        val author = getOrCreateUser(event.pubKey)
+        val reactedTo =
+            event.originalPost().mapNotNull { getNoteIfExists(it) } +
+                event.taggedAddresses().mapNotNull { addressableNotes.get(it.toValue()) }
+        note.loadEvent(event, author, reactedTo)
+        relay?.let { note.addRelay(it) }
+        reactedTo.forEach { it.addReaction(note) }
+        return true
+    }
+
+    /**
+     * Consumes a kind 9734 zap request event.
+     * Must be consumed before the corresponding LnZapEvent (kind 9735).
+     */
+    private fun consumeZapRequest(
+        event: LnZapRequestEvent,
+        relay: NormalizedRelayUrl?,
+    ): Boolean {
+        val note = getOrCreateNote(event.id)
+        if (note.event != null) return false
+        val author = getOrCreateUser(event.pubKey)
+        note.loadEvent(event, author, emptyList())
+        relay?.let { note.addRelay(it) }
+        return true
+    }
+
+    /**
+     * Consumes a kind 9735 zap receipt event.
+     * Links zap to target notes via the embedded zap request.
+     */
+    private fun consumeZap(
+        event: LnZapEvent,
+        relay: NormalizedRelayUrl?,
+    ): Boolean {
+        val note = getOrCreateNote(event.id)
+        if (note.event != null) return false
+        val author = getOrCreateUser(event.pubKey)
+
+        // Get or consume the embedded zap request
+        val zapRequestEvent = event.zapRequest
+        val zapRequestNote =
+            if (zapRequestEvent != null) {
+                consumeZapRequest(zapRequestEvent, relay)
+                getOrCreateNote(zapRequestEvent.id)
+            } else {
+                null
+            }
+
+        val zappedNotes =
+            event.zappedPost().mapNotNull { getNoteIfExists(it) } +
+                event.taggedAddresses().mapNotNull { addressableNotes.get(it.toValue()) }
+
+        note.loadEvent(event, author, zappedNotes)
+        relay?.let { note.addRelay(it) }
+
+        // Link zap to target notes
+        if (zapRequestNote != null) {
+            zappedNotes.forEach { it.addZap(zapRequestNote, note) }
+        }
+
+        return true
     }
 
     // ----- NWC Payment operations -----
@@ -199,17 +339,17 @@ class DesktopLocalCache : ICacheProvider {
 
     // ----- Note operations -----
 
-    override fun getNoteIfExists(hexKey: HexKey): Note? = notes[hexKey]
+    override fun getNoteIfExists(hexKey: HexKey): Note? = notes.get(hexKey)
 
     override fun checkGetOrCreateNote(hexKey: HexKey): Note = getOrCreateNote(hexKey)
 
     fun getOrCreateNote(hexKey: HexKey): Note =
-        notes.getOrPut(hexKey) {
+        notes.getOrCreate(hexKey) {
             Note(hexKey)
         }
 
     override fun getOrCreateAddressableNote(key: Address): AddressableNote =
-        addressableNotes.getOrPut(key.toValue()) {
+        addressableNotes.getOrCreate(key.toValue()) {
             AddressableNote(key)
         }
 
@@ -260,9 +400,9 @@ class DesktopLocalCache : ICacheProvider {
 
     // ----- Stats -----
 
-    fun userCount(): Int = users.size
+    fun userCount(): Int = users.size()
 
-    fun noteCount(): Int = notes.size
+    fun noteCount(): Int = notes.size()
 
     fun clear() {
         users.clear()
@@ -276,8 +416,18 @@ class DesktopLocalCache : ICacheProvider {
  * Desktop implementation of ICacheEventStream.
  */
 class DesktopCacheEventStream : ICacheEventStream {
-    private val _newEventBundles = MutableSharedFlow<Set<Note>>(replay = 0)
-    private val _deletedEventBundles = MutableSharedFlow<Set<Note>>(replay = 0)
+    private val _newEventBundles =
+        MutableSharedFlow<Set<Note>>(
+            replay = 0,
+            extraBufferCapacity = 64,
+            onBufferOverflow = BufferOverflow.DROP_OLDEST,
+        )
+    private val _deletedEventBundles =
+        MutableSharedFlow<Set<Note>>(
+            replay = 0,
+            extraBufferCapacity = 64,
+            onBufferOverflow = BufferOverflow.DROP_OLDEST,
+        )
 
     override val newEventBundles: SharedFlow<Set<Note>> = _newEventBundles
     override val deletedEventBundles: SharedFlow<Set<Note>> = _deletedEventBundles

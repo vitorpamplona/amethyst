@@ -80,6 +80,8 @@ compose.desktop {
         mainClass = "com.vitorpamplona.amethyst.desktop.MainKt"
         jvmArgs += "--add-opens=java.base/java.nio=ALL-UNNAMED"
 
+        jvmArgs += "-Xmx2g"
+
         nativeDistributions {
             appResourcesRootDir.set(project.layout.projectDirectory.dir("src/jvmMain/appResources"))
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
