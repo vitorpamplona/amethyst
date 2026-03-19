@@ -1077,6 +1077,7 @@
     <string name="wallet_outgoing">Skickad</string>
     <string name="wallet_refresh">Uppdatera</string>
     <string name="wallet_filter_all">Alla</string>
+    <string name="wallet_filter_zaps">Zaps</string>
     <string name="wallet_filter_non_zaps">Övriga</string>
     <string name="route_security_filters">Säkerhetsfilter</string>
     <string name="route_import_follows">Importera följare</string>
@@ -1603,6 +1604,7 @@
     <string name="profiles">profiler</string>
     <string name="relay_settings_lower">relä inställningar</string>
     <string name="last_seen">Senast sedd för %1$s sedan</string>
+    <string name="event_sync_less_than_until">&lt;%1$s</string>
     <string name="event_sync_status_connecting">Ansluter</string>
     <string name="event_sync_status_downloading">Laddar ner</string>
     <string name="event_sync_status_error">Fel</string>

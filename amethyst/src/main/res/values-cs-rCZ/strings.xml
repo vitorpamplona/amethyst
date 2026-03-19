@@ -1605,6 +1605,7 @@
     <string name="profiles">profily</string>
     <string name="relay_settings_lower">nastavení relé</string>
     <string name="last_seen">Naposledy viděn před %1$s</string>
+    <string name="event_sync_less_than_until">&lt;%1$s</string>
     <string name="event_sync_status_connecting">Připojování</string>
     <string name="event_sync_status_downloading">Stahování</string>
     <string name="event_sync_status_error">Chyba</string>

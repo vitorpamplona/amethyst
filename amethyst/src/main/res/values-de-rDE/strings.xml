@@ -1083,6 +1083,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="wallet_outgoing">Gesendet</string>
     <string name="wallet_refresh">Aktualisieren</string>
     <string name="wallet_filter_all">Alle</string>
+    <string name="wallet_filter_zaps">Zaps</string>
     <string name="wallet_filter_non_zaps">Keine Zaps</string>
     <string name="route_security_filters">Sicherheitsfilter</string>
     <string name="route_import_follows">Folgeliste importieren</string>
@@ -1580,9 +1581,11 @@ anz der Bedingungen ist erforderlich</string>
     <string name="event_sync_mobile_data_dialog_title">Mobile Daten verwenden?</string>
     <string name="event_sync_start">Synchronisierung starten</string>
     <string name="event_sync_start_anyway">Trotzdem starten (mobile Daten)</string>
+    <string name="event_sync_pause">Pausen</string>
     <string name="event_sync_resume">Fortsetzen</string>
     <string name="event_sync_start_over">Neu starten</string>
     <string name="event_sync_cancel">Abbrechen</string>
+    <string name="event_sync_relays_progress">Relais: %1$d / %2$d</string>
     <string name="event_sync_events_sent">Ereignisse verteilt: %1$d neue von %2$d gesendeten und %3$d empfangenen</string>
     <string name="event_sync_paused_title">Synchronisierung pausiert</string>
     <string name="event_sync_paused_body">%1$d von %2$d Relays abgeschlossen — bisher %3$d Ereignisse verteilt. Tippe auf Fortsetzen.</string>
@@ -1592,6 +1595,9 @@ anz der Bedingungen ist erforderlich</string>
     <string name="event_sync_done_duration">Abgeschlossen in %1$d Sekunden.</string>
     <string name="event_sync_error_title">Synchronisierungsfehler</string>
     <string name="event_sync_sending_to">Senden an</string>
+    <string name="event_sync_outbox_relays">Outbox</string>
+    <string name="event_sync_inbox_relays">Inbox</string>
+    <string name="event_sync_dm_relays">DMs</string>
     <string name="event_sync_activity_log">Wird geprüft (%1$d Relays)</string>
     <string name="event_sync_activity_log_finished">Abgeschlossen (%1$d Relays)</string>
     <string name="event_sync_log_sent">ges. %1$s</string>
@@ -1604,6 +1610,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="profiles">profile</string>
     <string name="relay_settings_lower">relaiseinstellungen</string>
     <string name="last_seen">Zuletzt gesehen vor %1$s</string>
+    <string name="event_sync_less_than_until">&lt;%1$s</string>
     <string name="event_sync_status_connecting">Verbinden</string>
     <string name="event_sync_status_downloading">Herunterladen</string>
     <string name="event_sync_status_error">Fehler</string>
