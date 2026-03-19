@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySet
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoModel
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 
 @Stable
 class ConnectedRelayListViewModel : BasicRelaySetupInfoModel() {
@@ -41,11 +42,14 @@ class ConnectedRelayListViewModel : BasicRelaySetupInfoModel() {
                 val users = mutableSetOf<HexKey>()
                 reqs.forEach { id, filters ->
                     filters.forEach { filter ->
-                        filter.authors?.forEach { pubkey ->
-                            users.add(pubkey)
-                        }
-                        filter.tags?.get("p")?.forEach { pubkey ->
-                            users.add(pubkey)
+                        val isReportFilter = filter.kinds?.size == 1 && filter.kinds?.firstOrNull() == ReportEvent.KIND
+                        if (!isReportFilter) {
+                            filter.authors?.forEach { pubkey ->
+                                users.add(pubkey)
+                            }
+                            filter.tags?.get("p")?.forEach { pubkey ->
+                                users.add(pubkey)
+                            }
                         }
                     }
                 }
