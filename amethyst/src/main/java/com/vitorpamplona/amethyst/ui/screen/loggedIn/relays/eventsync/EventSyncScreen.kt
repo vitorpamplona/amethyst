@@ -64,7 +64,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
-import com.vitorpamplona.amethyst.ui.note.timeAgoNoDot
+import com.vitorpamplona.amethyst.ui.note.timeAgoNoDotNoDay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
@@ -606,7 +606,7 @@ private fun ActivityLogRow(info: EventSync.LiveSyncActivity.SourceRelayInfo) {
             val eventsAccepted by info.eventsAccepted.collectAsStateWithLifecycle()
             untilPage?.let {
                 Text(
-                    text = stringRes(R.string.event_sync_less_than_until, timeAgoNoDot(it, context)),
+                    text = stringRes(R.string.event_sync_less_than_until, timeAgoNoDotNoDay(it, context)),
                     style = MaterialTheme.typography.bodySmall,
                     color = textColor,
                     modifier = Modifier.weight(0.3f),
