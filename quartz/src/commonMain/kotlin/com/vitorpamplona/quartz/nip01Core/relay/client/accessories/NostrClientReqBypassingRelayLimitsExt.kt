@@ -21,6 +21,8 @@
 package com.vitorpamplona.quartz.nip01Core.relay.client.accessories
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.client.EmptyNostrClient.close
+import com.vitorpamplona.quartz.nip01Core.relay.client.EmptyNostrClient.openReqSubscription
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
@@ -54,6 +56,7 @@ suspend fun INostrClient.reqBypassingRelayLimits(
     relay: NormalizedRelayUrl,
     filters: List<Filter>,
     timeoutMs: Long = 30_000L,
+    onNewPage: ((Long) -> Unit)? = null,
     onEvent: (Event) -> Unit,
 ): Int {
     var until: Long? = null
@@ -82,6 +85,7 @@ suspend fun INostrClient.reqBypassingRelayLimits(
             if (until == null) {
                 remainingFilters
             } else {
+                onNewPage?.invoke(until)
                 remainingFilters.map { it.copy(until = until) }
             }
 
@@ -162,11 +166,13 @@ suspend fun INostrClient.reqBypassingRelayLimits(
     relay: String,
     filters: List<Filter>,
     timeoutMs: Long = 30_000L,
+    onNewPage: ((Long) -> Unit)? = null,
     onEvent: (Event) -> Unit,
 ): Int =
     reqBypassingRelayLimits(
         relay = RelayUrlNormalizer.normalize(relay),
         filters = filters,
         timeoutMs = timeoutMs,
+        onNewPage = onNewPage,
         onEvent = onEvent,
     )

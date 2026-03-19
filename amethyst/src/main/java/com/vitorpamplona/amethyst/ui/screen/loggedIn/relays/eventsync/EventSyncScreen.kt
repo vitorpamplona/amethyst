@@ -54,6 +54,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -63,6 +64,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.ui.note.timeAgoNoDot
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
@@ -292,28 +294,9 @@ private fun SyncProgressCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = stringRes(R.string.event_sync_relays_progress, state.relaysCompleted, state.totalRelays),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-            )
+            RelayStatement(state)
             Spacer(Modifier.height(8.dp))
-            LinearProgressIndicator(
-                progress = {
-                    if (state.totalRelays > 0) {
-                        state.relaysCompleted.toFloat() / state.totalRelays
-                    } else {
-                        0f
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = stringRes(R.string.event_sync_events_sent, state.eventsSent),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            EventsReceivedStatement(state)
             Spacer(Modifier.height(10.dp))
             OutlinedButton(
                 onClick = onCancel,
@@ -327,6 +310,42 @@ private fun SyncProgressCard(
             }
         }
     }
+}
+
+@Composable
+private fun EventsReceivedStatement(state: EventSync.SyncState.Running) {
+    val eventsReceived by state.eventsReceived.collectAsStateWithLifecycle()
+    val eventsSent by state.eventsSent.collectAsStateWithLifecycle()
+    val eventsAccepted by state.eventsAccepted.collectAsStateWithLifecycle()
+
+    Text(
+        text = stringRes(R.string.event_sync_events_sent, eventsAccepted, eventsSent, eventsReceived),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+}
+
+@Composable
+private fun RelayStatement(state: EventSync.SyncState.Running) {
+    val relaysCompleted by state.relaysCompleted.collectAsStateWithLifecycle()
+    val totalRelays by state.totalRelays.collectAsStateWithLifecycle()
+
+    Text(
+        text = stringRes(R.string.event_sync_relays_progress, relaysCompleted, totalRelays),
+        style = MaterialTheme.typography.titleSmall,
+        fontWeight = FontWeight.SemiBold,
+    )
+    Spacer(Modifier.height(8.dp))
+    LinearProgressIndicator(
+        progress = {
+            if (totalRelays > 0) {
+                relaysCompleted / totalRelays.toFloat()
+            } else {
+                0f
+            }
+        },
+        modifier = Modifier.fillMaxWidth(),
+    )
 }
 
 @Composable
@@ -351,7 +370,7 @@ private fun DoneCard(
             )
             Spacer(Modifier.height(6.dp))
             Text(
-                text = stringRes(R.string.event_sync_done_sent, state.totalEventsSent),
+                text = stringRes(R.string.event_sync_done_sent, state.totalEventsSent, state.totalEventsReceived),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
             )
@@ -544,7 +563,6 @@ private fun DestinationRelayRow(
 @Composable
 private fun ActivityLogRow(info: EventSync.LiveSyncActivity.SourceRelayInfo) {
     val eventsFound by info.eventsFound.collectAsStateWithLifecycle()
-    val status by info.status.collectAsStateWithLifecycle()
     val hasEvents = eventsFound > 0
     val dotColor =
         if (hasEvents) {
@@ -583,12 +601,25 @@ private fun ActivityLogRow(info: EventSync.LiveSyncActivity.SourceRelayInfo) {
             modifier = Modifier.weight(0.6f),
         )
         if (hasEvents) {
+            val context = LocalContext.current
+            val untilPage by info.pageUntil.collectAsStateWithLifecycle()
             val eventsAccepted by info.eventsAccepted.collectAsStateWithLifecycle()
+            untilPage?.let {
+                Text(
+                    text = stringRes(R.string.event_sync_less_than_until, timeAgoNoDot(it, context)),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = textColor,
+                    modifier = Modifier.weight(0.3f),
+                    maxLines = 1,
+                    textAlign = TextAlign.End,
+                    overflow = TextOverflow.StartEllipsis,
+                )
+            }
             Text(
                 text = stringRes(R.string.event_sync_log_recv, formatCount(eventsFound)),
                 style = MaterialTheme.typography.bodySmall,
                 color = textColor,
-                modifier = Modifier.weight(0.2f),
+                modifier = Modifier.weight(0.3f),
                 maxLines = 1,
                 textAlign = TextAlign.End,
                 overflow = TextOverflow.StartEllipsis,
@@ -606,7 +637,7 @@ private fun ActivityLogRow(info: EventSync.LiveSyncActivity.SourceRelayInfo) {
                 maxLines = 1,
                 textAlign = TextAlign.End,
                 overflow = TextOverflow.StartEllipsis,
-                modifier = Modifier.weight(0.2f),
+                modifier = Modifier.weight(0.3f),
             )
         } else {
             val status by info.status.collectAsStateWithLifecycle()
@@ -737,7 +768,9 @@ fun SyncProgressCardPreview() {
                 EventSync.SyncState.Running(
                     relaysCompleted = 312,
                     totalRelays = 1024,
+                    eventsAccepted = 12,
                     eventsSent = 4821,
+                    eventsReceived = 10000,
                 ),
             onCancel = {},
         )
@@ -751,6 +784,7 @@ fun DoneCardPreview() {
         DoneCard(
             state =
                 EventSync.SyncState.Done(
+                    totalEventsReceived = 20_000,
                     totalEventsSent = 18_432,
                     totalEventsAccepted = 14_891,
                     durationMs = 187_000,
@@ -791,7 +825,7 @@ fun EventScreenBodyPreview() {
 fun EventScreenBody2Preview() {
     ThemeComparisonRow {
         EventScreenBody(
-            EventSync.SyncState.Running(1247, 1024, 4821),
+            EventSync.SyncState.Running(1047, 1224, 100, 4821, 10000),
             previewActivity,
         )
     }

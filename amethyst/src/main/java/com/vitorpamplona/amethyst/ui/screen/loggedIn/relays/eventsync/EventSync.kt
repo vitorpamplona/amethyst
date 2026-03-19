@@ -38,7 +38,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -50,8 +49,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.sync.Semaphore
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.atomic.AtomicLong
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Syncs the user's events across all known relays:
@@ -103,12 +101,24 @@ class EventSync(
         object Idle : SyncState()
 
         data class Running(
-            val relaysCompleted: Int,
-            val totalRelays: Int,
-            val eventsSent: Int,
-        ) : SyncState()
+            val relaysCompleted: MutableStateFlow<Int>,
+            val totalRelays: MutableStateFlow<Int>,
+            val eventsSent: MutableStateFlow<Int>,
+            val eventsReceived: MutableStateFlow<Int>,
+            val eventsAccepted: MutableStateFlow<Int>,
+        ) : SyncState() {
+            constructor(relaysCompleted: Int, totalRelays: Int, eventsSent: Int, eventsReceived: Int, eventsAccepted: Int) :
+                this(
+                    relaysCompleted = MutableStateFlow(relaysCompleted),
+                    totalRelays = MutableStateFlow(totalRelays),
+                    eventsSent = MutableStateFlow(eventsSent),
+                    eventsReceived = MutableStateFlow(eventsReceived),
+                    eventsAccepted = MutableStateFlow(eventsAccepted),
+                )
+        }
 
         data class Done(
+            val totalEventsReceived: Int,
             val totalEventsSent: Int,
             val totalEventsAccepted: Int,
             val durationMs: Long,
@@ -180,9 +190,16 @@ class EventSync(
             val status: MutableStateFlow<ConnectionStatus>,
             val eventsFound: MutableStateFlow<Int>,
             val eventsAccepted: MutableStateFlow<Int>,
+            val pageUntil: MutableStateFlow<Long?> = MutableStateFlow(null),
         ) {
-            constructor(relay: NormalizedRelayUrl, status: ConnectionStatus, eventsFound: Int, eventsAccepted: Int) :
-                this(relay, MutableStateFlow(status), MutableStateFlow(eventsFound), MutableStateFlow(eventsAccepted))
+            constructor(relay: NormalizedRelayUrl, status: ConnectionStatus, eventsFound: Int, eventsAccepted: Int, untilPage: Long? = null) :
+                this(
+                    relay = relay,
+                    status = MutableStateFlow(status),
+                    eventsFound = MutableStateFlow(eventsFound),
+                    eventsAccepted = MutableStateFlow(eventsAccepted),
+                    pageUntil = MutableStateFlow(untilPage),
+                )
         }
 
         /**
@@ -346,14 +363,17 @@ class EventSync(
         val outboxDedup = ConcurrentHashMap.newKeySet<String>()
         val inboxDedup = ConcurrentHashMap.newKeySet<String>()
         val dmDedup = ConcurrentHashMap.newKeySet<String>()
-        val totalSent = AtomicLong(0)
 
-        // OK (true) tracking: maps each sent event ID to its source relay.
-        // The first OK true for an event atomically removes it from this map,
-        // crediting the acceptance to the source relay and preventing double-counting.
         val sourceRelayOfEvent = ConcurrentHashMap<HexKey, NormalizedRelayUrl>()
-        val acceptedCountPerSourceRelay = ConcurrentHashMap<NormalizedRelayUrl, AtomicInteger>()
-        val totalAccepted = AtomicLong(0)
+
+        val runningState =
+            SyncState.Running(
+                relaysCompleted = 0,
+                totalRelays = totalRelays,
+                eventsSent = 0,
+                eventsReceived = 0,
+                eventsAccepted = 0,
+            )
 
         val okListener =
             object : IRelayClientListener {
@@ -375,22 +395,30 @@ class EventSync(
                     success: Boolean,
                 ) {
                     super.onSent(relay, cmdStr, cmd, success)
-
                     if (cmd is EventCmd) {
+                        var hasSent = false
+
                         if (outboxDedup.contains(cmd.event.id)) {
                             liveActivity.value.outboxTargets[relay.url]
                                 ?.eventsSent
                                 ?.update { it + 1 }
+                            hasSent = true
                         }
                         if (inboxDedup.contains(cmd.event.id)) {
                             liveActivity.value.inboxTargets[relay.url]
                                 ?.eventsSent
                                 ?.update { it + 1 }
+                            hasSent = true
                         }
                         if (dmDedup.contains(cmd.event.id)) {
                             liveActivity.value.dmTargets[relay.url]
                                 ?.eventsSent
                                 ?.update { it + 1 }
+                            hasSent = true
+                        }
+
+                        if (hasSent) {
+                            runningState.eventsSent.update { it + 1 }
                         }
                     } else if (cmd is ReqCmd) {
                         val currentStatus = liveActivity.value.runningRelays[relay.url]?.status
@@ -407,37 +435,39 @@ class EventSync(
                 ) {
                     if (msg is OkMessage && msg.success && msg.message.isBlank()) {
                         // remove() is atomic: returns non-null only for the first OK per event.
-                        val sourceRelay = sourceRelayOfEvent.remove(msg.eventId) ?: return
-                        acceptedCountPerSourceRelay.getOrPut(sourceRelay) { AtomicInteger(0) }.incrementAndGet()
-                        totalAccepted.incrementAndGet()
+                        val sourceRelay = sourceRelayOfEvent.remove(msg.eventId)
+                        if (sourceRelay != null) {
+                            liveActivity.value.runningRelays[sourceRelay]
+                                ?.eventsAccepted
+                                ?.update { it + 1 }
+                        }
 
                         if (outboxDedup.contains(msg.eventId)) {
-                            liveActivity.value.outboxTargets[relay.url]
-                                ?.eventsAccepted
-                                ?.update { it + 1 }
+                            val relayTarget = liveActivity.value.outboxTargets[relay.url]
+                            if (relayTarget != null) {
+                                relayTarget.eventsAccepted.update { it + 1 }
+                                runningState.eventsAccepted.update { it + 1 }
+                            }
                         }
                         if (dmDedup.contains(msg.eventId)) {
-                            liveActivity.value.dmTargets[relay.url]
-                                ?.eventsAccepted
-                                ?.update { it + 1 }
+                            val relayTarget = liveActivity.value.dmTargets[relay.url]
+                            if (relayTarget != null) {
+                                relayTarget.eventsAccepted.update { it + 1 }
+                                runningState.eventsAccepted.update { it + 1 }
+                            }
                         }
                         if (inboxDedup.contains(msg.eventId)) {
-                            liveActivity.value.inboxTargets[relay.url]
-                                ?.eventsAccepted
-                                ?.update { it + 1 }
+                            val relayTarget = liveActivity.value.inboxTargets[relay.url]
+                            if (relayTarget != null) {
+                                relayTarget.eventsAccepted.update { it + 1 }
+                                runningState.eventsAccepted.update { it + 1 }
+                            }
                         }
                     }
                 }
             }
 
-        val relaysCompleted = AtomicInteger(0)
-
-        _syncState.value =
-            SyncState.Running(
-                relaysCompleted = relaysCompleted.get(),
-                totalRelays = totalRelays,
-                eventsSent = totalSent.get().toInt(),
-            )
+        _syncState.emit(runningState)
 
         clientBuilder().use { client ->
             client.subscribe(okListener)
@@ -445,6 +475,11 @@ class EventSync(
                 client.downloadFromPool(
                     relays = relaysToProcess,
                     filters = perRelayFilters,
+                    onNewPage = { until, sourceRelay ->
+                        _liveActivity.value.runningRelays[sourceRelay]
+                            ?.pageUntil
+                            ?.tryEmit(until)
+                    },
                     onEvent = { event, sourceRelay ->
                         val isMyEvent = event.pubKey == myPubKey
                         val mentionsMe = event.tags.isTaggedUser(myPubKey)
@@ -452,36 +487,41 @@ class EventSync(
 
                         val live = liveActivity.value
 
+                        var newEvent = false
+                        var matchesAtLeastOneFilter = false
+
                         // Each routing rule is independent: an event can match more than one.
                         if (isMyEvent && outboxTargets.isNotEmpty()) {
                             if (outboxDedup.add(event.id)) {
-                                sourceRelayOfEvent[event.id] = sourceRelay
                                 client.send(event, outboxTargets)
-                                totalSent.incrementAndGet()
-
-                                live.runningRelays[sourceRelay]?.eventsFound?.update { it + 1 }
-                                live.completedRelays[sourceRelay]?.eventsFound?.update { it + 1 }
+                                newEvent = true
                             }
+                            matchesAtLeastOneFilter = true
                         }
                         if (mentionsMe && isDmKind && dmTargets.isNotEmpty()) {
                             if (dmDedup.add(event.id)) {
-                                sourceRelayOfEvent[event.id] = sourceRelay
                                 client.send(event, dmTargets)
-                                totalSent.incrementAndGet()
-
-                                live.runningRelays[sourceRelay]?.eventsFound?.update { it + 1 }
-                                live.completedRelays[sourceRelay]?.eventsFound?.update { it + 1 }
+                                newEvent = true
                             }
+                            matchesAtLeastOneFilter = true
                         }
                         if (mentionsMe && !isDmKind && inboxTargets.isNotEmpty()) {
                             if (inboxDedup.add(event.id)) {
-                                sourceRelayOfEvent[event.id] = sourceRelay
                                 client.send(event, inboxTargets)
-                                totalSent.incrementAndGet()
-
-                                live.runningRelays[sourceRelay]?.eventsFound?.update { it + 1 }
-                                live.completedRelays[sourceRelay]?.eventsFound?.update { it + 1 }
+                                newEvent = true
                             }
+                            matchesAtLeastOneFilter = true
+                        }
+
+                        if (newEvent) {
+                            sourceRelayOfEvent[event.id] = sourceRelay
+                        }
+
+                        if (matchesAtLeastOneFilter) {
+                            runningState.eventsReceived.update { it + 1 }
+
+                            live.runningRelays[sourceRelay]?.eventsFound?.update { it + 1 }
+                            live.completedRelays[sourceRelay]?.eventsFound?.update { it + 1 }
                         }
                     },
                     onRelayStart = { relay ->
@@ -513,30 +553,27 @@ class EventSync(
                             status?.tryEmit(LiveSyncActivity.ConnectionStatus.Completed)
                         }
 
-                        _syncState.value =
-                            SyncState.Running(
-                                relaysCompleted = relaysCompleted.incrementAndGet(),
-                                totalRelays = totalRelays,
-                                eventsSent = totalSent.get().toInt(),
-                            )
+                        runningState.relaysCompleted.update { it + 1 }
                     },
                 )
 
                 _syncState.value =
                     SyncState.Done(
-                        totalEventsSent = totalSent.get().toInt(),
-                        totalEventsAccepted = totalAccepted.get().toInt(),
+                        totalEventsReceived = runningState.eventsReceived.value,
+                        totalEventsSent = runningState.eventsSent.value,
+                        totalEventsAccepted = runningState.eventsAccepted.value,
                         durationMs = System.currentTimeMillis() - startTime,
                     )
-            } catch (e: CancellationException) {
+            } catch (e: Exception) {
                 _syncState.value =
                     SyncState.Done(
-                        totalEventsSent = totalSent.get().toInt(),
-                        totalEventsAccepted = totalAccepted.get().toInt(),
+                        totalEventsReceived = runningState.eventsReceived.value,
+                        totalEventsSent = runningState.eventsSent.value,
+                        totalEventsAccepted = runningState.eventsAccepted.value,
                         durationMs = System.currentTimeMillis() - startTime,
                     )
-                throw e
-            } catch (e: Exception) {
+
+                if (e is CancellationException) throw e
                 _syncState.value = SyncState.Error(e.message ?: "Unknown error")
             } finally {
                 client.unsubscribe(okListener)
@@ -554,6 +591,7 @@ class EventSync(
     private suspend fun INostrClient.downloadFromPool(
         relays: List<NormalizedRelayUrl>,
         filters: Map<NormalizedRelayUrl, List<Filter>>,
+        onNewPage: (Long, NormalizedRelayUrl) -> Unit,
         onEvent: (Event, NormalizedRelayUrl) -> Unit,
         onRelayStart: (NormalizedRelayUrl) -> Unit,
         onRelayComplete: (NormalizedRelayUrl) -> Unit,
@@ -567,7 +605,12 @@ class EventSync(
                     try {
                         onRelayStart(relay)
                         filters[relay]?.let { filtersForRelay ->
-                            downloadFromRelay(relay, filtersForRelay) { event -> onEvent(event, relay) }
+                            downloadFromRelay(
+                                relay = relay,
+                                filters = filtersForRelay,
+                                onNewPage = { onNewPage(it, relay) },
+                                onEvent = { onEvent(it, relay) },
+                            )
                         } ?: 0
                         onRelayComplete(relay)
                     } finally {
@@ -587,6 +630,7 @@ class EventSync(
     private suspend fun INostrClient.downloadFromRelay(
         relay: NormalizedRelayUrl,
         filters: List<Filter>,
+        onNewPage: (Long) -> Unit,
         onEvent: (Event) -> Unit,
-    ): Int = reqBypassingRelayLimits(relay, filters, RELAY_TIMEOUT_MS, onEvent)
+    ): Int = reqBypassingRelayLimits(relay, filters, RELAY_TIMEOUT_MS, onNewPage, onEvent)
 }

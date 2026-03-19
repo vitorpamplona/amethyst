@@ -1829,11 +1829,11 @@
     <string name="event_sync_start_over">Start Over</string>
     <string name="event_sync_cancel">Cancel</string>
     <string name="event_sync_relays_progress">Relays: %1$d / %2$d</string>
-    <string name="event_sync_events_sent">Events redistributed: %1$d</string>
+    <string name="event_sync_events_sent">Events redistributed: %1$d new out of %2$d sent and %3$d received</string>
     <string name="event_sync_paused_title">Sync Paused</string>
     <string name="event_sync_paused_body">Completed %1$d of %2$d relays — %3$d events redistributed so far. Tap Resume to continue.</string>
     <string name="event_sync_done_title">Sync complete</string>
-    <string name="event_sync_done_sent">Forwarded %1$d events to destination relays.</string>
+    <string name="event_sync_done_sent">Forwarded %1$d events to destination relays out of %2$d received.</string>
     <string name="event_sync_done_accepted">%1$d events accepted as new by destination relays.</string>
     <string name="event_sync_done_duration">Completed in %1$d seconds.</string>
     <string name="event_sync_error_title">Sync error</string>
@@ -1854,6 +1854,7 @@
     <string name="relay_settings_lower">relay settings</string>
     <string name="last_seen">Last seen %1$s ago</string>
 
+    <string name="event_sync_less_than_until">&lt;%1$s</string>
     <string name="event_sync_status_connecting">Connecting</string>
     <string name="event_sync_status_downloading">Downloading</string>
     <string name="event_sync_status_error">Error</string>
