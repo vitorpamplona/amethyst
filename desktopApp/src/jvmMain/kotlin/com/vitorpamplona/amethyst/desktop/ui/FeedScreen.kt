@@ -279,7 +279,8 @@ fun FeedScreen(
             FeedMode.GLOBAL -> {
                 createGlobalFeedSubscription(
                     relays = configuredRelays,
-                    onEvent = { event, _, _, _ ->
+                    onEvent = { event, _, relay, _ ->
+                        subscriptionsCoordinator?.consumeEvent(event, relay)
                         // Store metadata events in cache
                         if (event is MetadataEvent) {
                             localCache.consumeMetadata(event)

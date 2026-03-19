@@ -62,6 +62,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
+import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.desktop.subscriptions.FeedMode
 import com.vitorpamplona.amethyst.desktop.subscriptions.createContactListSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.createFollowingLongFormFeedSubscription
@@ -180,6 +181,7 @@ fun ReadsScreen(
     localCache: DesktopLocalCache,
     account: AccountState.LoggedIn? = null,
     nwcConnection: Nip47WalletConnect.Nip47URINorm? = null,
+    subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator? = null,
     onNavigateToProfile: (String) -> Unit = {},
     onNavigateToArticle: (String) -> Unit = {},
     onNavigateToThread: (String) -> Unit = {},
@@ -239,7 +241,8 @@ fun ReadsScreen(
             FeedMode.GLOBAL -> {
                 createLongFormFeedSubscription(
                     relays = connectedRelays,
-                    onEvent = { event, _, _, _ ->
+                    onEvent = { event, _, relay, _ ->
+                        subscriptionsCoordinator?.consumeEvent(event, relay)
                         if (event is LongTextNoteEvent) {
                             eventState.addItem(event)
                         }

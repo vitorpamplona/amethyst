@@ -188,7 +188,8 @@ fun BookmarksScreen(
                         FilterBuilders.byIds(publicBookmarkIds),
                     ),
                 relays = connectedRelays,
-                onEvent = { event, _, _, _ ->
+                onEvent = { event, _, relay, _ ->
+                    subscriptionsCoordinator?.consumeEvent(event, relay)
                     publicEventState.addItem(event)
                 },
                 onEose = { _, _ -> },
@@ -209,7 +210,8 @@ fun BookmarksScreen(
                         FilterBuilders.byIds(privateBookmarkIds),
                     ),
                 relays = connectedRelays,
-                onEvent = { event, _, _, _ ->
+                onEvent = { event, _, relay, _ ->
+                    subscriptionsCoordinator?.consumeEvent(event, relay)
                     privateEventState.addItem(event)
                 },
                 onEose = { _, _ -> },

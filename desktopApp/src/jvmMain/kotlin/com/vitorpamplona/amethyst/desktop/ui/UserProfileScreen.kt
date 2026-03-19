@@ -206,11 +206,24 @@ fun UserProfileScreen(
         }
     }
 
-    // Clear posts when profile changes
+    // Clear posts when profile changes, then hydrate from cache
     remember(pubKeyHex, retryTrigger) {
         eventState.clear()
         postsLoading = true
         postsError = null
+    }
+
+    // Hydrate from cache — show previously loaded posts instantly
+    LaunchedEffect(pubKeyHex) {
+        val cachedNotes =
+            localCache.notes.filterIntoSet { _, note ->
+                note.event?.kind == 1 && note.author?.pubkeyHex == pubKeyHex
+            }
+        if (cachedNotes.isNotEmpty()) {
+            val events = cachedNotes.mapNotNull { it.event }
+            eventState.addItems(events)
+            postsLoading = false
+        }
     }
 
     // Subscribe to user metadata
@@ -308,7 +321,8 @@ fun UserProfileScreen(
             createUserPostsSubscription(
                 relays = connectedRelays,
                 pubKeyHex = pubKeyHex,
-                onEvent = { event, _, _, _ ->
+                onEvent = { event, _, relay, _ ->
+                    subscriptionsCoordinator?.consumeEvent(event, relay)
                     eventState.addItem(event)
                 },
                 onEose = { _, _ ->
