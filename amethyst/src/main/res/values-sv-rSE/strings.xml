@@ -1028,6 +1028,12 @@
     <string name="could_not_prepare_header">Kunde inte förbereda header information: %1$s</string>
     <string name="compression_cancelled">Komprimering avbruten</string>
     <string name="compression_returned_null">Komprimering misslyckades att returnera en fil</string>
+    <string name="encrypt_files_label">Kryptera filer</string>
+    <string name="encrypt_files_description">Kryptera filer innan uppladdning för integritet. Vissa servrar kanske inte accepterar krypterade filer på gratiskonton.</string>
+    <string name="failed_to_upload_encrypted_media_title">Krypterad uppladdning misslyckades</string>
+    <string name="failed_to_upload_encrypted_media_message">Många servrar accepterar inte krypterade filer på gratiskonton. Du kan försöka igen utan kryptering.</string>
+    <string name="retry_without_encryption">Försök igen utan kryptering</string>
+    <string name="upload_without_encryption_warning">Varning: Utan kryptering kan vem som helst med fillänken se innehållet.</string>
     <string name="media_compression_quality_label">Mediakvalitet</string>
     <string name="media_compression_quality_explainer">Välj Låg kvalitet för att komprimera ditt media till en mindre fil med lägre kvalitet, Hög kvalitet för att komprimera till en större fil med högre kvalitet eller Okomprimerad för att ladda upp media utan kompression.</string>
     <string name="media_compression_quality_low">Låg</string>
@@ -1070,6 +1076,8 @@
     <string name="wallet_incoming">Mottagen</string>
     <string name="wallet_outgoing">Skickad</string>
     <string name="wallet_refresh">Uppdatera</string>
+    <string name="wallet_filter_all">Alla</string>
+    <string name="wallet_filter_non_zaps">Övriga</string>
     <string name="route_security_filters">Säkerhetsfilter</string>
     <string name="route_import_follows">Importera följare</string>
     <string name="new_post">Nytt inlägg</string>
@@ -1137,6 +1145,7 @@
     <string name="dm_relays_not_found_examples2">Bra alternativ är:\n - auth.nostr1.com (gratis)\n - inbox.nostr.wine (betalad)\n - relay.0xchat.com (gratis)</string>
     <string name="dm_relays_not_found_editing">Sätt in mellan 1–3 reläer för att fungera som din privata inkorg. DM Inkorg reläer bör acceptera alla meddelanden från vem som helst, men endast tillåta dig att ladda ner dem.</string>
     <string name="dm_relays_not_found_create_now">Ställ in nu</string>
+    <string name="recipient_missing_dm_relays">DM-inkorgsreläer hittades inte. Meddelanden kan inte levereras förrän de konfigurerar sin relälista.</string>
     <string name="search_relays_title">Sökreläer</string>
     <string name="search_relays_not_found">Ställ in dina sökreläer</string>
     <string name="search_relays_not_found_description">Att skapa en relälista speciellt utformad för sökning och användartaggning kommer att förbättra dessa resultat.</string>
@@ -1552,12 +1561,6 @@
     <string name="select_all">Välj alla</string>
     <string name="uptime">%1$d%% drifttid</string>
     <string name="namecoin_settings">Namecoin-inställningar</string>
-    <string name="ots_explorer_settings">Bitcoin Explorer (OTS)</string>
-    <string name="events">händelser</string>
-    <string name="dms">DMs</string>
-    <string name="profiles">profiler</string>
-    <string name="relay_settings_lower">relä inställningar</string>
-    <!-- Relay Sync -->
     <string name="event_sync_title">Relä-synkronisering</string>
     <string name="event_sync_section">Relä-synkronisering</string>
     <string name="event_sync_section_explainer">Publicera om dina händelser på alla kända reläer för att hålla dina utkorgs-, inkorgs- och DM-reläer uppdaterade. Kräver Wi-Fi — detta kan använda mycket data.</string>
@@ -1576,46 +1579,32 @@
     <string name="event_sync_start_over">Börja om</string>
     <string name="event_sync_cancel">Avbryt</string>
     <string name="event_sync_relays_progress">Reläer: %1$d / %2$d</string>
+    <string name="event_sync_events_sent">Omfördelade händelser: %1$d nya av %2$d skickade och %3$d mottagna</string>
     <string name="event_sync_paused_title">Synkronisering pausad</string>
     <string name="event_sync_paused_body">%1$d av %2$d reläer klara — %3$d händelser omfördelade hittills. Tryck på Återuppta för att fortsätta.</string>
     <string name="event_sync_done_title">Synkronisering klar</string>
+    <string name="event_sync_done_sent">Vidarebefordrade %1$d händelser till destinationsreläer av %2$d mottagna.</string>
     <string name="event_sync_done_accepted">%1$d händelser accepterade som nya av destinationsreläer.</string>
     <string name="event_sync_done_duration">Slutfört på %1$d sekunder.</string>
-    <string name="event_sync_done_sent">Vidarebefordrade %1$d händelser till destinationsreläer av %2$d mottagna.</string>
     <string name="event_sync_error_title">Synkroniseringsfel</string>
-    <string name="event_sync_events_sent">Omfördelade händelser: %1$d nya av %2$d skickade och %3$d mottagna</string>
     <string name="event_sync_sending_to">Skickar till</string>
     <string name="event_sync_outbox_relays">Utkorg</string>
     <string name="event_sync_inbox_relays">Inkorg</string>
     <string name="event_sync_dm_relays">DM</string>
-    <string name="event_sync_log_recv">mott. %1$s</string>
-    <string name="event_sync_log_new">nya %1$s</string>
-    <string name="event_sync_log_sent">skick. %1$s</string>
-    <string name="event_sync_no_events">inga händelser</string>
-    <string name="event_sync_less_than_until">&lt;%1$s</string>
     <string name="event_sync_activity_log">Kontrollerar (%1$d reläer)</string>
     <string name="event_sync_activity_log_finished">Slutfört (%1$d reläer)</string>
+    <string name="event_sync_log_sent">skick. %1$s</string>
+    <string name="event_sync_log_recv">mott. %1$s</string>
+    <string name="event_sync_log_new">nya %1$s</string>
+    <string name="event_sync_no_events">inga händelser</string>
+    <string name="ots_explorer_settings">Bitcoin Explorer (OTS)</string>
+    <string name="events">händelser</string>
+    <string name="dms">DMs</string>
+    <string name="profiles">profiler</string>
+    <string name="relay_settings_lower">relä inställningar</string>
+    <string name="last_seen">Senast sedd för %1$s sedan</string>
     <string name="event_sync_status_connecting">Ansluter</string>
     <string name="event_sync_status_downloading">Laddar ner</string>
     <string name="event_sync_status_error">Fel</string>
     <string name="event_sync_status_completed">Slutfört</string>
-
-    <!-- Misc -->
-    <string name="last_seen">Senast sedd för %1$s sedan</string>
-
-    <!-- Encryption -->
-    <string name="encrypt_files_label">Kryptera filer</string>
-    <string name="encrypt_files_description">Kryptera filer innan uppladdning för integritet. Vissa servrar kanske inte accepterar krypterade filer på gratiskonton.</string>
-    <string name="failed_to_upload_encrypted_media_title">Krypterad uppladdning misslyckades</string>
-    <string name="failed_to_upload_encrypted_media_message">Många servrar accepterar inte krypterade filer på gratiskonton. Du kan försöka igen utan kryptering.</string>
-    <string name="retry_without_encryption">Försök igen utan kryptering</string>
-    <string name="upload_without_encryption_warning">Varning: Utan kryptering kan vem som helst med fillänken se innehållet.</string>
-
-    <!-- Wallet filter -->
-    <string name="wallet_filter_all">Alla</string>
-    <string name="wallet_filter_zaps">Zaps</string>
-    <string name="wallet_filter_non_zaps">Övriga</string>
-
-    <!-- DM relays -->
-    <string name="recipient_missing_dm_relays">DM-inkorgsreläer hittades inte. Meddelanden kan inte levereras förrän de konfigurerar sin relälista.</string>
 </resources>
