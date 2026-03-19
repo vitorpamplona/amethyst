@@ -811,6 +811,148 @@ fun DestinationRelaysCardPreview() {
 }
 
 @Composable
+@Preview
+fun StatusIndicatorPreview() {
+    ThemeComparisonColumn {
+        Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            StatusIndicator(EventSync.LiveSyncActivity.ConnectionStatus.Connecting)
+            StatusIndicator(EventSync.LiveSyncActivity.ConnectionStatus.Querying)
+            StatusIndicator(EventSync.LiveSyncActivity.ConnectionStatus.Completed)
+            StatusIndicator(EventSync.LiveSyncActivity.ConnectionStatus.Error("timeout"))
+        }
+    }
+}
+
+@Composable
+@Preview
+fun ActivityLogRowQueryingWithEventsPreview() {
+    ThemeComparisonColumn {
+        ActivityLogRow(
+            info =
+                EventSync.LiveSyncActivity.SourceRelayInfo(
+                    NormalizedRelayUrl("wss://relay.damus.io"),
+                    EventSync.LiveSyncActivity.ConnectionStatus.Querying,
+                    1247,
+                    891,
+                ),
+        )
+    }
+}
+
+@Composable
+@Preview
+fun ActivityLogRowConnectingPreview() {
+    ThemeComparisonColumn {
+        ActivityLogRow(
+            info =
+                EventSync.LiveSyncActivity.SourceRelayInfo(
+                    NormalizedRelayUrl("wss://nos2.lol"),
+                    EventSync.LiveSyncActivity.ConnectionStatus.Connecting,
+                    0,
+                    0,
+                ),
+        )
+    }
+}
+
+@Composable
+@Preview
+fun ActivityLogRowCompletedWithEventsPreview() {
+    ThemeComparisonColumn {
+        ActivityLogRow(
+            info =
+                EventSync.LiveSyncActivity.SourceRelayInfo(
+                    NormalizedRelayUrl("wss://relay.nostr.band"),
+                    EventSync.LiveSyncActivity.ConnectionStatus.Completed,
+                    3500,
+                    3498,
+                ),
+        )
+    }
+}
+
+@Composable
+@Preview
+fun ActivityLogRowCompletedNoEventsPreview() {
+    ThemeComparisonColumn {
+        ActivityLogRow(
+            info =
+                EventSync.LiveSyncActivity.SourceRelayInfo(
+                    NormalizedRelayUrl("wss://slow.relay.example.com"),
+                    EventSync.LiveSyncActivity.ConnectionStatus.Completed,
+                    0,
+                    0,
+                ),
+        )
+    }
+}
+
+@Composable
+@Preview
+fun ActivityLogRowErrorPreview() {
+    ThemeComparisonColumn {
+        ActivityLogRow(
+            info =
+                EventSync.LiveSyncActivity.SourceRelayInfo(
+                    NormalizedRelayUrl("wss://unreachable.relay.xyz"),
+                    EventSync.LiveSyncActivity.ConnectionStatus.Error("connection failed"),
+                    0,
+                    0,
+                ),
+        )
+    }
+}
+
+@Composable
+@Preview
+fun ActivityLogRowCompletedPartialAcceptPreview() {
+    ThemeComparisonColumn {
+        ActivityLogRow(
+            info =
+                EventSync.LiveSyncActivity.SourceRelayInfo(
+                    NormalizedRelayUrl("wss://nostr.bitcoiner.social"),
+                    EventSync.LiveSyncActivity.ConnectionStatus.Completed,
+                    15,
+                    0,
+                ),
+        )
+    }
+}
+
+@Composable
+@Preview
+fun DestinationRelayRowWithEventsPreview() {
+    ThemeComparisonColumn {
+        DestinationRelayRow(
+            info = EventSync.LiveSyncActivity.DestinationRelayInfo(NormalizedRelayUrl("wss://outbox.nostr.com"), 1247, 891),
+            color = MaterialTheme.colorScheme.primary,
+        )
+    }
+}
+
+@Composable
+@Preview
+fun DestinationRelayRowFullAcceptPreview() {
+    ThemeComparisonColumn {
+        DestinationRelayRow(
+            info = EventSync.LiveSyncActivity.DestinationRelayInfo(NormalizedRelayUrl("wss://inbox.nostr.com"), 500, 500),
+            color = MaterialTheme.colorScheme.secondary,
+        )
+    }
+}
+
+@Composable
+@Preview
+fun DestinationRelayRowNoEventsPreview() {
+    ThemeComparisonColumn {
+        DestinationRelayRow(
+            info = EventSync.LiveSyncActivity.DestinationRelayInfo(NormalizedRelayUrl("wss://nos.lol"), 0, 0),
+            color = MaterialTheme.colorScheme.secondary,
+        )
+    }
+}
+
+@Composable
 @Preview(device = "spec:width=1800px,height=2340px,dpi=440")
 fun EventScreenBodyPreview() {
     ThemeComparisonRow {
@@ -827,6 +969,33 @@ fun EventScreenBody2Preview() {
     ThemeComparisonRow {
         EventScreenBody(
             EventSync.SyncState.Running(1047, 1224, 100, 4821, 10000),
+            previewActivity,
+        )
+    }
+}
+
+@Composable
+@Preview(device = "spec:width=1800px,height=2340px,dpi=440")
+fun EventScreenBodyDonePreview() {
+    ThemeComparisonRow {
+        EventScreenBody(
+            EventSync.SyncState.Done(
+                totalEventsReceived = 20_000,
+                totalEventsSent = 18_432,
+                totalEventsAccepted = 14_891,
+                durationMs = 187_000,
+            ),
+            previewActivity,
+        )
+    }
+}
+
+@Composable
+@Preview(device = "spec:width=1800px,height=2340px,dpi=440")
+fun EventScreenBodyErrorPreview() {
+    ThemeComparisonRow {
+        EventScreenBody(
+            EventSync.SyncState.Error("No outbox, inbox, or DM relays configured."),
             previewActivity,
         )
     }
