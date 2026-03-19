@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.note
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -32,7 +34,6 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -58,8 +59,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -93,13 +97,15 @@ import com.vitorpamplona.amethyst.ui.theme.BigPadding
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
-import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size14Modifier
+import com.vitorpamplona.amethyst.ui.theme.SmallishBorder
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
-import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
+import com.vitorpamplona.amethyst.ui.theme.allGoodColor
+import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.ripple24dp
-import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
+import com.vitorpamplona.amethyst.ui.theme.subtleBorder
+import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import kotlinx.collections.immutable.ImmutableList
@@ -115,7 +121,7 @@ import kotlin.uuid.Uuid
 @Composable
 fun ZapZapPollNotePreview() {
     val event =
-        PollNoteEvent(
+        ZapPollEvent(
             id = "6ff9bc13d27490f6e3953325260bd996901a143de89886a0608c39e7d0160a72",
             pubKey = "f8ff11c7a7d3478355d3b4d174e5a473797a906ea4aa61aa9b6bc0652c1ea17a",
             createdAt = 1729186078,
@@ -188,7 +194,7 @@ fun ZapZapPollNotePreview() {
 @Composable
 fun ZapZapPollNotePreview2() {
     val event =
-        PollNoteEvent(
+        ZapPollEvent(
             id = "3064bf97800a4b04b612fc0fd498936eae75fffbdca5bbd09d19a6dc598530ab",
             pubKey = "f8ff11c7a7d3478355d3b4d174e5a473797a906ea4aa61aa9b6bc0652c1ea17a",
             createdAt = 1729191389,
@@ -311,13 +317,6 @@ private fun OptionNote(
         modifier = Modifier.padding(vertical = 3.dp),
     ) {
         if (!pollViewModel.canZap.value) {
-            val color =
-                if (poolOption.consensusThreadhold.value) {
-                    Color.Green.copy(alpha = 0.32f)
-                } else {
-                    MaterialTheme.colorScheme.mediumImportanceLink
-                }
-
             ZapVote(
                 baseNote,
                 poolOption,
@@ -326,7 +325,7 @@ private fun OptionNote(
                     RenderOptionAfterVote(
                         baseNote,
                         poolOption,
-                        color,
+                        poolOption.consensusThreadhold.value,
                         canPreview,
                         tags,
                         backgroundColor,
@@ -366,7 +365,7 @@ private fun OptionNote(
 private fun RenderOptionAfterVote(
     baseNote: Note,
     poolOption: PollOption,
-    color: Color,
+    isWinning: Boolean,
     canPreview: Boolean,
     tags: ImmutableListOfLists<String>,
     backgroundColor: MutableState<Color>,
@@ -376,14 +375,25 @@ private fun RenderOptionAfterVote(
     Box(
         Modifier
             .fillMaxWidth(0.75f)
-            .clip(shape = QuoteBorder)
+            .clip(SmallishBorder)
             .border(
-                2.dp,
-                color,
-                QuoteBorder,
+                width = 1.dp,
+                color =
+                    if (isWinning) {
+                        MaterialTheme.colorScheme.allGoodColor
+                    } else {
+                        MaterialTheme.colorScheme.grayText
+                    },
+                shape = SmallishBorder,
+            ).background(
+                if (isWinning) {
+                    MaterialTheme.colorScheme.allGoodColor.copy(0.2f)
+                } else {
+                    MaterialTheme.colorScheme.subtleBorder
+                },
             ),
     ) {
-        DisplayProgress(poolOption, color, modifier = Modifier.matchParentSize())
+        DisplayProgress(poolOption, isWinning, modifier = Modifier.matchParentSize())
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -428,22 +438,29 @@ private fun RenderOptionAfterVote(
 @Composable
 private fun DisplayProgress(
     poolOption: PollOption,
-    color: Color,
+    isWinning: Boolean,
     modifier: Modifier,
 ) {
-    val progress by poolOption.tally
+    // Animate the progress bar when a vote is cast
+    val animatedProgress by animateFloatAsState(
+        targetValue = poolOption.tally.value,
+        animationSpec = tween(durationMillis = 800),
+    )
 
-    // The LinearProgressIndicator has some weird update issues and renders inaccurate percentages.
-    Box(modifier = modifier) {
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxWidth(progress)
-                    .fillMaxHeight()
-                    .background(color = color),
-        ) {
-        }
-    }
+    val progressBarColor = if (isWinning) MaterialTheme.colorScheme.allGoodColor else MaterialTheme.colorScheme.primary
+
+    Box(
+        modifier =
+            modifier
+                .alpha(0.32f)
+                .drawWithContent {
+                    // Clip the drawing area to show only the progress amount
+                    clipRect(right = size.width * animatedProgress) {
+                        drawRect(progressBarColor)
+                    }
+                    drawContent()
+                },
+    )
 }
 
 @Composable
@@ -475,11 +492,11 @@ private fun RenderOptionBeforeVote(
     Box(
         Modifier
             .fillMaxWidth(0.75f)
-            .clip(shape = QuoteBorder)
+            .clip(SmallishBorder)
             .border(
-                2.dp,
-                MaterialTheme.colorScheme.primary,
-                QuoteBorder,
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.placeholderText,
+                shape = SmallishBorder,
             ),
     ) {
         Column(BigPadding) {
@@ -568,7 +585,19 @@ fun ZapVote(
                                 showErrorMessageDialog = StringToastMsg(title, message)
                             },
                             onProgress = { scope.launch(Dispatchers.Main) { zappingProgress = it } },
-                            onPayViaIntent = {},
+                            onPayViaIntent = {
+                                if (it.size == 1) {
+                                    val payable = it.first()
+                                    payViaIntent(payable.invoice, context, { }) { error ->
+                                        zappingProgress = 0f
+                                        showErrorMessageDialog = StringToastMsg(stringRes(context, R.string.error_dialog_zap_error), error)
+                                    }
+                                } else {
+                                    val uid = Uuid.random().toString()
+                                    accountViewModel.tempManualPaymentCache.put(uid, it)
+                                    nav.nav(Route.ManualZapSplitPayment(uid))
+                                }
+                            },
                         )
                     } else {
                         wantsToZap = true

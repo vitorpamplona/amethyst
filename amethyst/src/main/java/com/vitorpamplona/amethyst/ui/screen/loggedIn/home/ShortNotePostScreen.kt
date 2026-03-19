@@ -94,15 +94,18 @@ import com.vitorpamplona.amethyst.ui.note.creators.secretEmoji.AddSecretEmojiBut
 import com.vitorpamplona.amethyst.ui.note.creators.secretEmoji.SecretEmojiRequest
 import com.vitorpamplona.amethyst.ui.note.creators.uploads.ImageVideoDescription
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
+import com.vitorpamplona.amethyst.ui.note.creators.zappolls.ZapPollField
 import com.vitorpamplona.amethyst.ui.note.creators.zapraiser.AddZapraiserButton
 import com.vitorpamplona.amethyst.ui.note.creators.zapraiser.ZapRaiserRequest
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapTo
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapToButton
 import com.vitorpamplona.amethyst.ui.note.types.ReplyRenderType
+import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
+import com.vitorpamplona.amethyst.ui.theme.Size19Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
@@ -296,6 +299,15 @@ private fun NewPostScreenBody(
                         modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
                     ) {
                         PollOptionsField(postViewModel)
+                    }
+                }
+
+                if (postViewModel.wantsZapPoll) {
+                    Row(
+                        verticalAlignment = CenterVertically,
+                        modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
+                    ) {
+                        ZapPollField(postViewModel)
                     }
                 }
 
@@ -531,11 +543,24 @@ private fun BottomRowActions(postViewModel: ShortNotePostViewModel) {
         )
 
         if (postViewModel.canUsePoll) {
-            // These should be hashtag recommendations the user selects in the future.
-            // val hashtag = stringRes(R.string.poll_hashtag)
-            // postViewModel.includePollHashtagInMessage(postViewModel.wantsPoll, hashtag)
             AddPollButton(postViewModel.wantsPoll) {
                 postViewModel.wantsPoll = !postViewModel.wantsPoll
+                if (postViewModel.wantsPoll) {
+                    if (postViewModel.wantsZapPoll) {
+                        postViewModel.wantsZapPoll = false
+                    }
+                }
+            }
+        }
+
+        if (postViewModel.canUseZapPoll) {
+            AddZapPollButton(postViewModel.wantsZapPoll) {
+                postViewModel.wantsZapPoll = !postViewModel.wantsZapPoll
+                if (postViewModel.wantsZapPoll) {
+                    if (postViewModel.wantsPoll) {
+                        postViewModel.wantsPoll = false
+                    }
+                }
             }
         }
 
@@ -581,6 +606,32 @@ private fun BottomRowActionsPreview() {
     model.canUsePoll = true
     ThemeComparisonColumn {
         BottomRowActions(model)
+    }
+}
+
+@Composable
+private fun AddZapPollButton(
+    isPollActive: Boolean,
+    onClick: () -> Unit,
+) {
+    IconButton(
+        onClick = { onClick() },
+    ) {
+        if (!isPollActive) {
+            Icon(
+                painter = painterRes(R.drawable.ic_poll, 1),
+                contentDescription = stringRes(id = R.string.poll),
+                modifier = Size19Modifier,
+                tint = MaterialTheme.colorScheme.onBackground,
+            )
+        } else {
+            Icon(
+                painter = painterRes(R.drawable.ic_poll, 1),
+                contentDescription = stringRes(id = R.string.disable_poll),
+                modifier = Size19Modifier,
+                tint = MaterialTheme.colorScheme.primary,
+            )
+        }
     }
 }
 

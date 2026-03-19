@@ -29,7 +29,7 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
+import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -53,7 +53,7 @@ class PollNoteViewModel : ViewModel() {
     private lateinit var account: Account
     private var pollNote: Note? = null
 
-    private var pollEvent: PollNoteEvent? = null
+    private var pollEvent: ZapPollEvent? = null
     private var pollOptions: Map<Int, String>? = null
     private var valueMaximum: Long? = null
     private var valueMinimum: Long? = null
@@ -76,7 +76,7 @@ class PollNoteViewModel : ViewModel() {
     fun load(note: Note?) {
         if (pollNote != note) {
             pollNote = note
-            pollEvent = pollNote?.event as PollNoteEvent
+            pollEvent = pollNote?.event as ZapPollEvent
             pollOptions = pollEvent?.pollOptions()
             valueMaximum = pollEvent?.maxAmount()
             valueMinimum = pollEvent?.minAmount()
