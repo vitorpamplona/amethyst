@@ -133,6 +133,7 @@ fun DeckColumnContainer(
                 nwcConnection = nwcConnection,
                 subscriptionsCoordinator = subscriptionsCoordinator,
                 appScope = appScope,
+                compactMode = true,
                 onShowComposeDialog = onShowComposeDialog,
                 onShowReplyDialog = onShowReplyDialog,
                 onZapFeedback = onZapFeedback,
@@ -175,6 +176,7 @@ internal fun RootContent(
     nwcConnection: Nip47URINorm?,
     subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator,
     appScope: CoroutineScope,
+    compactMode: Boolean = false,
     onShowComposeDialog: () -> Unit,
     onShowReplyDialog: (com.vitorpamplona.quartz.nip01Core.core.Event) -> Unit,
     onZapFeedback: (ZapFeedback) -> Unit,
@@ -209,7 +211,7 @@ internal fun RootContent(
                 cacheProvider = localCache,
                 relayManager = relayManager,
                 localCache = localCache,
-                compactMode = true,
+                compactMode = compactMode,
                 onNavigateToProfile = onNavigateToProfile,
             )
         }
