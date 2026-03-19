@@ -1031,6 +1031,12 @@
     <string name="could_not_prepare_header">Nie można przygotować informacji nagłówkowych: %1$s</string>
     <string name="compression_cancelled">Kompresja anulowana</string>
     <string name="compression_returned_null">Kompresja nie powiodła się przy zwracaniu pliku</string>
+    <string name="encrypt_files_label">Szyfrowanie plików</string>
+    <string name="encrypt_files_description">W celu zapewnienia prywatności zaszyfruj pliki przed ich przesłaniem. Niektóre serwery mogą nie akceptować zaszyfrowanych plików na bezpłatnych kontach.</string>
+    <string name="failed_to_upload_encrypted_media_title">Nie udało się przesłać zaszyfrowanego pliku</string>
+    <string name="failed_to_upload_encrypted_media_message">Wiele serwerów nie akceptuje plików zaszyfrowanych na kontach bezpłatnych. Możesz spróbować ponownie bez szyfrowania.</string>
+    <string name="retry_without_encryption">Ponów bez szyfrowania</string>
+    <string name="upload_without_encryption_warning">Ostrzeżenie: Bez szyfrowania każdy, kto posiada link do pliku, może zobaczyć jego zawartość.</string>
     <string name="media_compression_quality_label">Jakość Załącznika</string>
     <string name="media_compression_quality_explainer">Wybierz Niską jakość, aby skompresować media do mniejszego pliku o mniejszej jakości lub wybierz Wysoką jakość, aby skompresować do większego pliku o wyższej jakości.</string>
     <string name="media_compression_quality_low">Niska</string>
@@ -1073,6 +1079,8 @@
     <string name="wallet_incoming">Otrzymano</string>
     <string name="wallet_outgoing">Wysłano</string>
     <string name="wallet_refresh">Odśwież</string>
+    <string name="wallet_filter_zaps">Zapy</string>
+    <string name="wallet_filter_non_zaps">Bez zapów</string>
     <string name="route_security_filters">Filtry bezpieczeństwa</string>
     <string name="route_import_follows">Importuj Obserwujących</string>
     <string name="new_post">Nowy post</string>
@@ -1455,6 +1463,7 @@
     <string name="kind_highlights">Najważniejsze informacje</string>
     <string name="kind_index_relay_list">Indeks listy transmiterów</string>
     <string name="kind_named_bookmarks">Opisane zakładki</string>
+    <string name="kind_live_streams">Na żywo</string>
     <string name="kind_zaps">Zapy</string>
     <string name="kind_nwc_request">Zapytanie NWC</string>
     <string name="kind_nwc_response">Odpowiedź NWC</string>
@@ -1523,4 +1532,8 @@
     <string name="following_accounts">Obserwujesz %1$d kont(a)…</string>
     <string name="import_follows_tips">"Wprowadź profil znajomego lub lidera społeczności. Możesz użyć ich npub-u, adresu NIP-05 lub nazwy jak alicja@domena.pl lub id/alicja dla zweryfikowanych przez blockchain tożsamości."</string>
     <string name="select_all">Wybierz Wszystkie</string>
+    <string name="events">wydarzenia</string>
+    <string name="profiles">profile</string>
+    <string name="relay_settings_lower">ustawienia transmiterów</string>
+    <string name="last_seen">Ostatnio widziano %1$s temu</string>
 </resources>

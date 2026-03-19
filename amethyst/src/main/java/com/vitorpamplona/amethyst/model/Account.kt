@@ -1609,7 +1609,7 @@ class Account(
         client.send(newEvent, outboxRelays.flow.value + destinationRelays)
     }
 
-    suspend fun sendNip17EncryptedFile(template: EventTemplate<ChatMessageEncryptedFileHeaderEvent>) {
+    override suspend fun sendNip17EncryptedFile(template: EventTemplate<ChatMessageEncryptedFileHeaderEvent>) {
         if (!isWriteable()) return
 
         val wraps = NIP17Factory().createEncryptedFileNIP17(template, signer)
