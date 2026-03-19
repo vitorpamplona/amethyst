@@ -1530,7 +1530,7 @@
     <string name="import_follow_list">Importar lista de seguidos</string>
     <string name="select_users_to_follow">Selecionar usuários para seguir</string>
     <string name="profile_to_import_from">Perfil para importar</string>
-    <string name="name_search_npub1_alice_example_com">busca por nome, npub1…, alice@example.com</string>
+    <string name="name_search_npub1_alice_example_com" tools:ignore="Typos">busca por nome, npub1…, alice@example.com</string>
     <string name="supports_npub_nip_05_hex_and_namecoin_bit_d_id">Suporta npub, NIP-05, hex e Namecoin (.bit / d/ / id/)</string>
     <string name="look_up_follow_list">Buscar lista de seguidos</string>
     <string name="tip">Dica</string>
@@ -1558,4 +1558,65 @@
     <string name="dms">DMs</string>
     <string name="profiles">perfils</string>
     <string name="relay_settings_lower">configurações de Relay</string>
+    <!-- Relay Sync -->
+    <string name="event_sync_title">Sincronização de Relays</string>
+    <string name="event_sync_section">Sincronização de Relays</string>
+    <string name="event_sync_section_explainer">Republique seus eventos em todos os relays conhecidos para manter seus relays de saída, entrada e DM atualizados. Requer Wi-Fi — pode consumir muitos dados.</string>
+    <string name="event_sync_open_button">Abrir sincronização de relays…</string>
+    <string name="event_sync_what_happens_title">O que isso faz</string>
+    <string name="event_sync_what_happens_body">Esta ferramenta verifica todos os relays que seu app conhece e redistribui seus eventos para os destinos corretos: </string>
+    <string name="event_sync_step1">Baixar todos os eventos que você criou e enviá-los para seus relays de saída.</string>
+    <string name="event_sync_step2">Baixar todos os eventos que mencionam você e enviá-los para seus relays de entrada.</string>
+    <string name="event_sync_step3">Baixar todas as mensagens diretas endereçadas a você e enviá-las para seus relays de DM.</string>
+    <string name="event_sync_wifi_warning">⚠ Você parece estar em uma conexão limitada ou móvel. Esta operação pode transferir uma quantidade muito grande de dados. Conecte-se ao Wi-Fi antes de iniciar.</string>
+    <string name="event_sync_mobile_data_dialog_title">Usar dados móveis?</string>
+    <string name="event_sync_start">Iniciar sincronização</string>
+    <string name="event_sync_start_anyway">Iniciar mesmo assim (dados móveis)</string>
+    <string name="event_sync_pause">Pausar</string>
+    <string name="event_sync_resume">Retomar</string>
+    <string name="event_sync_start_over">Recomeçar</string>
+    <string name="event_sync_cancel">Cancelar</string>
+    <string name="event_sync_relays_progress">Relays: %1$d / %2$d</string>
+    <string name="event_sync_paused_title">Sincronização pausada</string>
+    <string name="event_sync_paused_body">%1$d de %2$d relays concluídos — %3$d eventos redistribuídos até agora. Toque em Retomar para continuar.</string>
+    <string name="event_sync_done_title">Sincronização concluída</string>
+    <string name="event_sync_done_accepted">%1$d eventos aceitos como novos pelos relays de destino.</string>
+    <string name="event_sync_done_duration">Concluído em %1$d segundos.</string>
+    <string name="event_sync_done_sent">%1$d eventos encaminhados para relays de destino de %2$d recebidos.</string>
+    <string name="event_sync_error_title">Erro de sincronização</string>
+    <string name="event_sync_events_sent">Eventos redistribuídos: %1$d novos de %2$d enviados e %3$d recebidos</string>
+    <string name="event_sync_sending_to">Enviando para</string>
+    <string name="event_sync_outbox_relays">Saída</string>
+    <string name="event_sync_inbox_relays">Entrada</string>
+    <string name="event_sync_dm_relays">DMs</string>
+    <string name="event_sync_log_recv">receb. %1$s</string>
+    <string name="event_sync_log_new">novos %1$s</string>
+    <string name="event_sync_log_sent">env. %1$s</string>
+    <string name="event_sync_no_events">nenhum evento</string>
+    <string name="event_sync_less_than_until">&lt;%1$s</string>
+    <string name="event_sync_activity_log">Verificando (%1$d relays)</string>
+    <string name="event_sync_activity_log_finished">Concluído (%1$d relays)</string>
+    <string name="event_sync_status_connecting">Conectando</string>
+    <string name="event_sync_status_downloading">Baixando</string>
+    <string name="event_sync_status_error">Erro</string>
+    <string name="event_sync_status_completed">Concluído</string>
+
+    <!-- Misc -->
+    <string name="last_seen">Visto pela última vez há %1$s</string>
+
+    <!-- Encryption -->
+    <string name="encrypt_files_label">Criptografar arquivos</string>
+    <string name="encrypt_files_description">Criptografar arquivos antes do upload para privacidade. Alguns servidores podem não aceitar arquivos criptografados em contas gratuitas.</string>
+    <string name="failed_to_upload_encrypted_media_title">Falha no upload criptografado</string>
+    <string name="failed_to_upload_encrypted_media_message">Muitos servidores não aceitam arquivos criptografados em contas gratuitas. Você pode tentar novamente sem criptografia.</string>
+    <string name="retry_without_encryption">Tentar novamente sem criptografia</string>
+    <string name="upload_without_encryption_warning">Aviso: Sem criptografia, qualquer pessoa com o link do arquivo pode ver o conteúdo.</string>
+
+    <!-- Wallet filter -->
+    <string name="wallet_filter_all">Todos</string>
+    <string name="wallet_filter_zaps">Zaps</string>
+    <string name="wallet_filter_non_zaps">Outros</string>
+
+    <!-- DM relays -->
+    <string name="recipient_missing_dm_relays">Relays de entrada de DM não encontrados. As mensagens não podem ser entregues até que a lista de relays seja configurada.</string>
 </resources>
