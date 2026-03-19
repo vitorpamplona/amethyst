@@ -564,6 +564,7 @@ private fun DestinationRelayRow(
 private fun ActivityLogRow(info: EventSync.LiveSyncActivity.SourceRelayInfo) {
     val eventsFound by info.eventsFound.collectAsStateWithLifecycle()
     val hasEvents = eventsFound > 0
+    val status by info.status.collectAsStateWithLifecycle()
     val dotColor =
         if (hasEvents) {
             MaterialTheme.colorScheme.primary
@@ -577,70 +578,33 @@ private fun ActivityLogRow(info: EventSync.LiveSyncActivity.SourceRelayInfo) {
             MaterialTheme.colorScheme.onSurfaceVariant
         }
 
-    Row(
+    Column(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .padding(vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Box(
-            modifier =
-                Modifier
-                    .size(8.dp)
-                    .clip(CircleShape)
-                    .background(dotColor),
-        )
-        Text(
-            text = info.relay.displayHost(),
-            style = MaterialTheme.typography.bodySmall,
-            color = textColor,
-            maxLines = 1,
-            overflow = TextOverflow.StartEllipsis,
-            modifier = Modifier.weight(0.6f),
-        )
-        if (hasEvents) {
-            val context = LocalContext.current
-            val untilPage by info.pageUntil.collectAsStateWithLifecycle()
-            val eventsAccepted by info.eventsAccepted.collectAsStateWithLifecycle()
-            untilPage?.let {
-                Text(
-                    text = stringRes(R.string.event_sync_less_than_until, timeAgoNoDotNoDay(it, context)),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = textColor,
-                    modifier = Modifier.weight(0.3f),
-                    maxLines = 1,
-                    textAlign = TextAlign.End,
-                    overflow = TextOverflow.StartEllipsis,
-                )
-            }
+        // Line 1: dot + relay name + status
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Box(
+                modifier =
+                    Modifier
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(dotColor),
+            )
             Text(
-                text = stringRes(R.string.event_sync_log_recv, formatCount(eventsFound)),
+                text = info.relay.displayHost(),
                 style = MaterialTheme.typography.bodySmall,
                 color = textColor,
-                modifier = Modifier.weight(0.3f),
                 maxLines = 1,
-                textAlign = TextAlign.End,
                 overflow = TextOverflow.StartEllipsis,
+                modifier = Modifier.weight(1f),
             )
-            Text(
-                text = stringRes(R.string.event_sync_log_new, formatCount(eventsAccepted)),
-                style = MaterialTheme.typography.bodySmall,
-                fontWeight = if (eventsAccepted > 0) FontWeight.SemiBold else FontWeight.Normal,
-                color =
-                    if (eventsAccepted > 0) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    },
-                maxLines = 1,
-                textAlign = TextAlign.End,
-                overflow = TextOverflow.StartEllipsis,
-                modifier = Modifier.weight(0.3f),
-            )
-        } else {
-            val status by info.status.collectAsStateWithLifecycle()
             Text(
                 text =
                     when (status) {
@@ -650,12 +614,63 @@ private fun ActivityLogRow(info: EventSync.LiveSyncActivity.SourceRelayInfo) {
                         EventSync.LiveSyncActivity.ConnectionStatus.Completed -> stringRes(R.string.event_sync_status_completed)
                     },
                 style = MaterialTheme.typography.bodySmall,
-                color = textColor,
+                color =
+                    when (status) {
+                        is EventSync.LiveSyncActivity.ConnectionStatus.Error -> MaterialTheme.colorScheme.error
+                        EventSync.LiveSyncActivity.ConnectionStatus.Completed -> MaterialTheme.colorScheme.onSurfaceVariant
+                        else -> textColor
+                    },
                 textAlign = TextAlign.End,
                 maxLines = 1,
-                overflow = TextOverflow.StartEllipsis,
-                modifier = Modifier.weight(0.45f),
             )
+        }
+
+        // Line 2: until date + recv + new (only when events exist)
+        if (hasEvents) {
+            val context = LocalContext.current
+            val untilPage by info.pageUntil.collectAsStateWithLifecycle()
+            val eventsAccepted by info.eventsAccepted.collectAsStateWithLifecycle()
+
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(start = 18.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Text(
+                    text =
+                        untilPage?.let {
+                            stringRes(R.string.event_sync_less_than_until, timeAgoNoDotNoDay(it, context))
+                        } ?: "",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.StartEllipsis,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    text = stringRes(R.string.event_sync_log_recv, formatCount(eventsFound)),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    textAlign = TextAlign.End,
+                )
+                Text(
+                    text = stringRes(R.string.event_sync_log_new, formatCount(eventsAccepted)),
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = if (eventsAccepted > 0) FontWeight.SemiBold else FontWeight.Normal,
+                    color =
+                        if (eventsAccepted > 0) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                    maxLines = 1,
+                    textAlign = TextAlign.End,
+                )
+            }
         }
     }
 }
