@@ -209,6 +209,7 @@ internal fun RootContent(
                 cacheProvider = localCache,
                 relayManager = relayManager,
                 localCache = localCache,
+                compactMode = true,
                 onNavigateToProfile = onNavigateToProfile,
             )
         }

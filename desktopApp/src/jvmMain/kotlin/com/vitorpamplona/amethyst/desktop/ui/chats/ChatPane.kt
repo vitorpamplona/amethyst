@@ -39,6 +39,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Lock
@@ -141,6 +142,7 @@ fun ChatPane(
     messageState: ChatNewMessageState,
     dmBroadcastStatus: DmBroadcastStatus = DmBroadcastStatus.Idle,
     onNavigateToProfile: (String) -> Unit = {},
+    onBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val scope = rememberCoroutineScope()
@@ -209,24 +211,43 @@ fun ChatPane(
                 ),
     ) {
         // Header
-        if (isGroup) {
-            GroupChatroomHeader(
-                users = users,
-                onClick = { users.firstOrNull()?.let { onNavigateToProfile(it.pubkeyHex) } },
-            )
-        } else {
-            users.firstOrNull()?.let { user ->
-                ChatroomHeader(
-                    user = user,
-                    onClick = { onNavigateToProfile(user.pubkeyHex) },
-                )
-            } ?: run {
-                // Fallback header with raw pubkey
-                Text(
-                    text = roomKey.users.firstOrNull()?.take(20) ?: "Unknown",
-                    style = MaterialTheme.typography.titleSmall,
-                    modifier = Modifier.padding(10.dp),
-                )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            if (onBack != null) {
+                IconButton(
+                    onClick = onBack,
+                    modifier = Modifier.size(40.dp),
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back to conversations",
+                    )
+                }
+            }
+
+            Box(modifier = Modifier.weight(1f)) {
+                if (isGroup) {
+                    GroupChatroomHeader(
+                        users = users,
+                        onClick = { users.firstOrNull()?.let { onNavigateToProfile(it.pubkeyHex) } },
+                    )
+                } else {
+                    users.firstOrNull()?.let { user ->
+                        ChatroomHeader(
+                            user = user,
+                            onClick = { onNavigateToProfile(user.pubkeyHex) },
+                        )
+                    } ?: run {
+                        // Fallback header with raw pubkey
+                        Text(
+                            text = roomKey.users.firstOrNull()?.take(20) ?: "Unknown",
+                            style = MaterialTheme.typography.titleSmall,
+                            modifier = Modifier.padding(10.dp),
+                        )
+                    }
+                }
             }
         }
 
