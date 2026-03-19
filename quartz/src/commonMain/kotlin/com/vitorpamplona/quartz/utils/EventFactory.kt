@@ -20,6 +20,10 @@
  */
 package com.vitorpamplona.quartz.utils
 
+import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
+import com.vitorpamplona.quartz.experimental.attestations.proficiency.AttestorProficiencyEvent
+import com.vitorpamplona.quartz.experimental.attestations.recommendation.AttestorRecommendationEvent
+import com.vitorpamplona.quartz.experimental.attestations.request.AttestationRequestEvent
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
@@ -185,6 +189,10 @@ class EventFactory {
                 AppDefinitionEvent.KIND -> AppDefinitionEvent(id, pubKey, createdAt, tags, content, sig)
                 AppRecommendationEvent.KIND -> AppRecommendationEvent(id, pubKey, createdAt, tags, content, sig)
                 AppSpecificDataEvent.KIND -> AppSpecificDataEvent(id, pubKey, createdAt, tags, content, sig)
+                AttestationEvent.KIND -> AttestationEvent(id, pubKey, createdAt, tags, content, sig)
+                AttestationRequestEvent.KIND -> AttestationRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                AttestorRecommendationEvent.KIND -> AttestorRecommendationEvent(id, pubKey, createdAt, tags, content, sig)
+                AttestorProficiencyEvent.KIND -> AttestorProficiencyEvent(id, pubKey, createdAt, tags, content, sig)
                 AudioHeaderEvent.KIND -> AudioHeaderEvent(id, pubKey, createdAt, tags, content, sig)
                 AudioTrackEvent.KIND -> AudioTrackEvent(id, pubKey, createdAt, tags, content, sig)
                 BadgeAwardEvent.KIND -> BadgeAwardEvent(id, pubKey, createdAt, tags, content, sig)
