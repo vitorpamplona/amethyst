@@ -20,6 +20,12 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,12 +40,16 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -47,6 +57,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -54,9 +65,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -64,7 +74,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
-import com.vitorpamplona.amethyst.ui.note.timeAgoNoDotNoDay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
@@ -146,15 +155,10 @@ fun EventScreenBody(
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                 )
-                Spacer(Modifier.height(5.dp))
+                Spacer(Modifier.height(4.dp))
             }
 
-            itemsIndexed(liveActivity.runningRelays.values.toList(), key = { _, item -> item.relay.url }) { index, info ->
-                if (index > 0) {
-                    HorizontalDivider(
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                    )
-                }
+            itemsIndexed(liveActivity.runningRelays.values.toList(), key = { _, item -> item.relay.url }) { _, info ->
                 ActivityLogRow(info = info)
             }
         }
@@ -168,15 +172,10 @@ fun EventScreenBody(
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                 )
-                Spacer(Modifier.height(5.dp))
+                Spacer(Modifier.height(4.dp))
             }
 
-            itemsIndexed(liveActivity.sortedCompletedRelays, key = { _, item -> item.relay.url }) { index, info ->
-                if (index > 0) {
-                    HorizontalDivider(
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                    )
-                }
+            itemsIndexed(liveActivity.sortedCompletedRelays, key = { _, item -> item.relay.url }) { _, info ->
                 ActivityLogRow(info = info)
             }
         }
@@ -456,9 +455,7 @@ private fun DestinationRelaysCard(activity: EventSync.LiveSyncActivity) {
             }
 
             if (activity.inboxTargets.isNotEmpty()) {
-                Spacer(Modifier.height(10.dp))
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(12.dp))
                 DestinationSection(
                     label = stringRes(R.string.event_sync_inbox_relays),
                     relays = activity.inboxTargets.values,
@@ -467,9 +464,7 @@ private fun DestinationRelaysCard(activity: EventSync.LiveSyncActivity) {
             }
 
             if (activity.dmTargets.isNotEmpty()) {
-                Spacer(Modifier.height(10.dp))
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(12.dp))
                 DestinationSection(
                     label = stringRes(R.string.event_sync_dm_relays),
                     relays = activity.dmTargets.values,
@@ -493,13 +488,8 @@ private fun DestinationSection(
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
     Spacer(Modifier.height(6.dp))
-    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        relays.forEachIndexed { index, info ->
-            if (index > 0) {
-                HorizontalDivider(
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                )
-            }
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        relays.forEach { info ->
             DestinationRelayRow(info = info, color = color)
         }
     }
@@ -511,6 +501,53 @@ private fun DestinationRelayRow(
     color: androidx.compose.ui.graphics.Color,
 ) {
     val eventsSent by info.eventsSent.collectAsStateWithLifecycle()
+    val eventsAccepted by info.eventsAccepted.collectAsStateWithLifecycle()
+
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+        verticalArrangement = Arrangement.spacedBy(3.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = info.relay.displayHost(),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.StartEllipsis,
+                modifier = Modifier.weight(1f),
+            )
+            if (eventsSent > 0) {
+                Text(
+                    text = "${formatCount(eventsAccepted)} / ${formatCount(eventsSent)}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        // Visual bar showing sent (track) vs accepted (fill)
+        val progress = if (eventsSent > 0) eventsAccepted / eventsSent.toFloat() else 0f
+        LinearProgressIndicator(
+            progress = { progress },
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(2.dp)),
+            color = color,
+            trackColor = if (eventsSent > 0) color.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant,
+            strokeCap = StrokeCap.Round,
+        )
+    }
+}
+
+@Composable
+private fun ActivityLogRow(info: EventSync.LiveSyncActivity.SourceRelayInfo) {
+    val eventsFound by info.eventsFound.collectAsStateWithLifecycle()
+    val eventsAccepted by info.eventsAccepted.collectAsStateWithLifecycle()
+    val status by info.status.collectAsStateWithLifecycle()
 
     Row(
         modifier =
@@ -518,159 +555,108 @@ private fun DestinationRelayRow(
                 .fillMaxWidth()
                 .padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Box(
-            modifier =
-                Modifier
-                    .size(8.dp)
-                    .clip(CircleShape)
-                    .background(color),
-        )
-        Text(
-            text = info.relay.displayHost(),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurface,
-            maxLines = 1,
-            overflow = TextOverflow.StartEllipsis,
-            modifier = Modifier.weight(1f),
-        )
-        if (eventsSent > 0) {
-            val eventsAccepted by info.eventsAccepted.collectAsStateWithLifecycle()
+        // Status icon: spinner for active, check for done, warning for error
+        StatusIndicator(status)
+
+        // Relay name + visual bar
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(
-                text = stringRes(R.string.event_sync_log_sent, formatCount(eventsSent)),
+                text = info.relay.displayHost(),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.weight(0.3f),
-                textAlign = TextAlign.End,
+                color =
+                    if (eventsFound > 0) {
+                        MaterialTheme.colorScheme.onSurface
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
                 maxLines = 1,
                 overflow = TextOverflow.StartEllipsis,
             )
-            Text(
-                text = stringRes(R.string.event_sync_log_new, formatCount(eventsAccepted)),
-                style = MaterialTheme.typography.bodySmall,
-                fontWeight = if (eventsAccepted > 0) FontWeight.SemiBold else FontWeight.Normal,
-                color = if (eventsAccepted > 0) color else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.weight(0.3f),
-                textAlign = TextAlign.End,
-                maxLines = 1,
-                overflow = TextOverflow.StartEllipsis,
-            )
+            // Thin bar: track = events found, fill = events accepted (new)
+            if (eventsFound > 0) {
+                val acceptedRatio by remember { derivedStateOf { eventsAccepted / eventsFound.toFloat() } }
+                LinearProgressIndicator(
+                    progress = { acceptedRatio },
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(3.dp)
+                            .clip(RoundedCornerShape(1.5.dp)),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                    strokeCap = StrokeCap.Round,
+                )
+            }
+        }
+
+        // Compact count badge (only when events exist)
+        if (eventsFound > 0) {
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = formatCount(eventsFound),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (eventsAccepted > 0) {
+                    Text(
+                        text = "+${formatCount(eventsAccepted)}",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun ActivityLogRow(info: EventSync.LiveSyncActivity.SourceRelayInfo) {
-    val eventsFound by info.eventsFound.collectAsStateWithLifecycle()
-    val hasEvents = eventsFound > 0
-    val status by info.status.collectAsStateWithLifecycle()
-    val dotColor =
-        if (hasEvents) {
-            MaterialTheme.colorScheme.primary
-        } else {
-            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-        }
-    val textColor =
-        if (hasEvents) {
-            MaterialTheme.colorScheme.onSurface
-        } else {
-            MaterialTheme.colorScheme.onSurfaceVariant
-        }
-
-    Column(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(vertical = 6.dp),
-    ) {
-        // Line 1: dot + relay name + status
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
+private fun StatusIndicator(status: EventSync.LiveSyncActivity.ConnectionStatus) {
+    when (status) {
+        EventSync.LiveSyncActivity.ConnectionStatus.Connecting,
+        EventSync.LiveSyncActivity.ConnectionStatus.Querying,
+        -> {
+            // Pulsing dot for active connections
+            val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+            val alpha by
+                infiniteTransition.animateFloat(
+                    initialValue = 0.3f,
+                    targetValue = 1f,
+                    animationSpec =
+                        infiniteRepeatable(
+                            animation = tween(800, easing = LinearEasing),
+                            repeatMode = RepeatMode.Reverse,
+                        ),
+                    label = "pulseAlpha",
+                )
             Box(
                 modifier =
                     Modifier
-                        .size(8.dp)
+                        .size(16.dp)
+                        .padding(4.dp)
                         .clip(CircleShape)
-                        .background(dotColor),
-            )
-            Text(
-                text = info.relay.displayHost(),
-                style = MaterialTheme.typography.bodySmall,
-                color = textColor,
-                maxLines = 1,
-                overflow = TextOverflow.StartEllipsis,
-                modifier = Modifier.weight(1f),
-            )
-            Text(
-                text =
-                    when (status) {
-                        EventSync.LiveSyncActivity.ConnectionStatus.Connecting -> stringRes(R.string.event_sync_status_connecting)
-                        EventSync.LiveSyncActivity.ConnectionStatus.Querying -> stringRes(R.string.event_sync_status_downloading)
-                        is EventSync.LiveSyncActivity.ConnectionStatus.Error -> (status as EventSync.LiveSyncActivity.ConnectionStatus.Error).msg.ifBlank { stringRes(R.string.event_sync_status_error) }
-                        EventSync.LiveSyncActivity.ConnectionStatus.Completed -> stringRes(R.string.event_sync_status_completed)
-                    },
-                style = MaterialTheme.typography.bodySmall,
-                color =
-                    when (status) {
-                        is EventSync.LiveSyncActivity.ConnectionStatus.Error -> MaterialTheme.colorScheme.error
-                        EventSync.LiveSyncActivity.ConnectionStatus.Completed -> MaterialTheme.colorScheme.onSurfaceVariant
-                        else -> textColor
-                    },
-                textAlign = TextAlign.End,
-                maxLines = 1,
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = alpha)),
             )
         }
 
-        // Line 2: until date + recv + new (only when events exist)
-        if (hasEvents) {
-            val context = LocalContext.current
-            val untilPage by info.pageUntil.collectAsStateWithLifecycle()
-            val eventsAccepted by info.eventsAccepted.collectAsStateWithLifecycle()
+        EventSync.LiveSyncActivity.ConnectionStatus.Completed -> {
+            Icon(
+                imageVector = Icons.Filled.Check,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+        }
 
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(start = 18.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                Text(
-                    text =
-                        untilPage?.let {
-                            stringRes(R.string.event_sync_less_than_until, timeAgoNoDotNoDay(it, context))
-                        } ?: "",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.StartEllipsis,
-                    modifier = Modifier.weight(1f),
-                )
-                Text(
-                    text = stringRes(R.string.event_sync_log_recv, formatCount(eventsFound)),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    textAlign = TextAlign.End,
-                )
-                Text(
-                    text = stringRes(R.string.event_sync_log_new, formatCount(eventsAccepted)),
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = if (eventsAccepted > 0) FontWeight.SemiBold else FontWeight.Normal,
-                    color =
-                        if (eventsAccepted > 0) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                    maxLines = 1,
-                    textAlign = TextAlign.End,
-                )
-            }
+        is EventSync.LiveSyncActivity.ConnectionStatus.Error -> {
+            Icon(
+                imageVector = Icons.Filled.Warning,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.error,
+            )
         }
     }
 }
