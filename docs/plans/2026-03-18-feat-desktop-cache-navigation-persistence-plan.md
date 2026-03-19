@@ -52,24 +52,62 @@ Relays ──→ DesktopLocalCache.consume(event)
 
 **Branch:** `feat/desktop-cache-phase1`
 
-#### 1.1 Switch cache backing to `LargeCache`
+#### 1.1 Switch cache backing to `LargeCache` with size enforcement
 
 **File:** `desktopApp/.../cache/DesktopLocalCache.kt`
 
-Replace `ConcurrentHashMap` with `LargeCache` from quartz — same backing store Android uses (`ConcurrentSkipListMap` on JVM), with rich query APIs (`filterIntoSet`, `mapNotNull`, range queries). Desktop keeps strong references (no `WeakReference` wrapper — that's Android-only `LargeSoftCache` for mobile memory pressure). Desktop has 2GB+ heap; we want to keep everything.
+Replace `ConcurrentHashMap` with `LargeCache` from quartz — same backing store Android uses (`ConcurrentSkipListMap` on JVM), lock-free reads (CAS-based), rich query APIs (`filterIntoSet`, `mapNotNull`, range queries). Desktop keeps strong references (no `WeakReference` wrapper — that's Android-only `LargeSoftCache` for mobile memory pressure).
+
+`LargeCache` chosen over `LruCache` because:
+- **Lock-free reads** — `ConcurrentSkipListMap` vs `synchronized` on every `get()`. Critical at 1000 events/sec.
+- **Rich query API** — `filterIntoSet`, `mapNotNull` match Android's filter patterns exactly.
+- **No snapshot overhead** — `LruCache.snapshot()` copies the entire map; `LargeCache` iterates in-place.
+
+Add size enforcement via a `BoundedLargeCache` wrapper that checks size on `put()` and evicts oldest entries when cap is exceeded:
 
 ```kotlin
-// Before:
-private val notes = ConcurrentHashMap<HexKey, Note>()
-private val users = ConcurrentHashMap<HexKey, User>()
+class BoundedLargeCache<K : Comparable<K>, V>(
+    private val maxSize: Int,
+    private val evictPercent: Float = 0.1f, // Remove 10% when cap hit
+) {
+    private val inner = LargeCache<K, V>()
 
-// After:
-private val notes = LargeCache<HexKey, Note>()
-private val users = LargeCache<HexKey, User>()
-private val addressableNotes = LargeCache<String, AddressableNote>()
+    fun get(key: K): V? = inner.get(key)
+    fun put(key: K, value: V) {
+        inner.put(key, value)
+        enforceSize()
+    }
+    fun getOrCreate(key: K, builder: (K) -> V): V = inner.getOrCreate(key, builder).also { enforceSize() }
+    fun remove(key: K): V? = inner.remove(key)
+    fun clear() = inner.clear()
+    fun size(): Int = inner.size()
+    fun values(): Iterable<V> = inner.values()
+    fun filterIntoSet(consumer: CacheCollectors.BiFilter<K, V>): Set<V> = inner.filterIntoSet(consumer)
+    // ... delegate other LargeCache methods as needed
+
+    private fun enforceSize() {
+        if (inner.size() > maxSize) {
+            val toRemove = (maxSize * evictPercent).toInt().coerceAtLeast(1)
+            // ConcurrentSkipListMap keys are sorted — first N keys are "oldest" by insertion order
+            val keys = inner.keys().take(toRemove)
+            keys.forEach { inner.remove(it) }
+        }
+    }
+}
+
+// Usage:
+private val notes = BoundedLargeCache<HexKey, Note>(MAX_NOTES)
+private val users = BoundedLargeCache<HexKey, User>(MAX_USERS)
+private val addressableNotes = BoundedLargeCache<String, AddressableNote>(MAX_ADDRESSABLE)
+
+companion object {
+    const val MAX_NOTES = 50_000    // ~100-150MB at ~2-3KB/note
+    const val MAX_USERS = 25_000    // ~25-50MB at ~1-2KB/user
+    const val MAX_ADDRESSABLE = 10_000
+}
 ```
 
-This gives FeedFilters access to `filterIntoSet`, `mapNotNull`, etc. — matching Android's query patterns exactly.
+Note: `ConcurrentSkipListMap` keys are sorted, so `keys().take(N)` removes the lexicographically smallest hex keys — not strictly "oldest by time." For true time-based eviction, the `enforceSize()` could sort by `note.event?.createdAt` instead, but the simple key-based approach is cheaper and good enough (hex keys from Nostr events are effectively random, so eviction is approximately random).
 
 #### 1.2 Port consume methods from Android LocalCache
 
@@ -177,7 +215,7 @@ class DesktopCacheEventStream : ICacheEventStream {
 
 Dropped emissions are fine — events are already in the cache. The flow signals "something changed," not "here is the data."
 
-#### 1.5 Set JVM memory limit + LRU eviction
+#### 1.5 Set JVM memory limit
 
 **File:** `desktopApp/build.gradle.kts`
 
@@ -187,25 +225,9 @@ compose.desktop.application {
 }
 ```
 
-**LRU eviction** — wrap `LargeCache` with size caps. Desktop has more RAM than mobile but runs for hours without restart. Use `LruCache` from `androidx.collection` (confirmed available in desktopApp deps) as the backing store instead of raw `LargeCache`. 5x Android's effective limits.
+Size enforcement is handled by `BoundedLargeCache` (section 1.1). `-Xmx2g` is a safety net for the JVM heap overall.
 
-**File:** `desktopApp/.../cache/DesktopLocalCache.kt`
-
-```kotlin
-private val notes = LruCache<HexKey, Note>(MAX_NOTES)
-private val users = LruCache<HexKey, User>(MAX_USERS)
-private val addressableNotes = LruCache<String, AddressableNote>(MAX_ADDRESSABLE)
-
-companion object {
-    const val MAX_NOTES = 50_000    // ~100-150MB at ~2-3KB/note
-    const val MAX_USERS = 25_000    // ~25-50MB at ~1-2KB/user
-    const val MAX_ADDRESSABLE = 10_000
-}
-```
-
-**Eviction safety:** Feed lists hold strong references to `Note` objects. When LRU evicts a key, the `Note` object survives in the feed list (GC won't collect it). On next `FeedFilter.feed()` refresh, the evicted note won't appear — acceptable (feed shows most recent N items). If a user clicks an evicted note, `checkGetOrCreateNote(id)` creates a shell Note that triggers a relay re-fetch.
-
-Note: `LruCache` uses `synchronized` internally — fine for desktop concurrency levels. If contention becomes an issue, switch to `LargeCache` with a periodic size check.
+**Eviction safety:** Feed lists hold strong references to `Note` objects. When `BoundedLargeCache` evicts a key, the `Note` object survives in the feed list (GC won't collect it). On next `FeedFilter.feed()` refresh, the evicted note won't appear — acceptable (feed shows most recent N items). If a user clicks an evicted note, `checkGetOrCreateNote(id)` creates a shell Note that triggers a relay re-fetch.
 
 #### 1.6 Add cache clear on logout
 
@@ -222,7 +244,7 @@ fun logout() {
 
 #### Phase 1 Acceptance Criteria
 
-- [ ] `DesktopLocalCache` backed by `LruCache` with size caps (50k notes, 25k users, 10k addressable)
+- [ ] `DesktopLocalCache` backed by `BoundedLargeCache` with size caps (50k notes, 25k users, 10k addressable)
 - [ ] Consume methods for kinds 1, 7, 9734, 9735
 - [ ] Relay `onEvent` callbacks route through `coordinator.consumeEvent()`
 - [ ] `BasicBundledInsert(250ms)` batches events before `emitNewNotes()`
@@ -256,7 +278,7 @@ fun logout() {
 | `DesktopNotificationFeedFilter` | Events tagging logged-in user (reactions, zaps, replies, reposts) | `AdditiveFeedFilter<Note>` | 2500 |
 | `DesktopSearchFeedFilter(query)` | Cache search + relay search results stored in cache | `AdditiveFeedFilter<Note>` | 500 |
 
-Limits are ~5x Android's (desktop has more screen space and RAM). Filters iterate `LruCache` values. `LruCache` doesn't have `filterIntoSet` — use `snapshot()` or iterate via `forEach`.
+Limits are ~5x Android's (desktop has more screen space and RAM). Filters use `BoundedLargeCache.filterIntoSet` — same API as Android's `LocalCache`.
 
 The initial `feed()` scan runs only once on first load or `feedKey()` change. After that, `updateListWith()` uses `applyFilter()` + `sort()` incrementally — O(batch_size) not O(cache_size).
 
@@ -269,8 +291,7 @@ class DesktopGlobalFeedFilter(
     private val cache: DesktopLocalCache,
 ) : AdditiveFeedFilter<Note>() {
     override fun feed(): List<Note> =
-        cache.notes.snapshot().values
-            .filter { it.event?.kind == 1 }
+        cache.notes.filterIntoSet { _, note -> note.event?.kind == 1 }
             .sortedByDescending { it.event?.createdAt ?: 0 }
             .take(limit())
 
@@ -388,12 +409,43 @@ rememberSubscription(configuredRelays, feedMode, followedUsers, relayManager = r
 | ReadsScreen | Singleton | 30023 (LongTextNote) | Articles feed |
 | NotificationsScreen | Singleton | — | Uses DesktopNotificationFeedFilter |
 
-**FeedNoteCard rewrite** — done alongside FeedScreen migration (first screen). Currently takes raw `Event` + per-screen zap/reaction counts as parameters. Must rewrite to read from `Note` model directly (`note.reactions`, `note.zaps`, `note.replies`). All subsequent screen migrations benefit from this rewrite.
+**FeedNoteCard rewrite** — done alongside FeedScreen migration (first screen). All subsequent screen migrations benefit.
+
+Current `FeedNoteCard` takes raw `Event` + per-screen counts:
+```kotlin
+// CURRENT: 6 per-screen state params
+FeedNoteCard(event, ..., zapReceipts, reactionCount, replyCount, repostCount, ...)
+```
+
+New `FeedNoteCard` takes `Note` from cache — reads counts directly from model:
+```kotlin
+// NEW: Note replaces all per-screen count params
+FeedNoteCard(note, ...) // inside: note.zaps.size, note.countReactions(), note.replies.size, note.boosts.size
+```
+
+**Field mapping (per-screen state → Note model):**
+
+| Per-Screen State Map | Note Model Replacement |
+|---------------------|----------------------|
+| `zapsByEvent[id]` → `List<ZapReceipt>` | `note.zaps` → `Map<Note, Note?>` |
+| `zapReceipts.sumOf { it.amountSats }` | `note.zapsAmount` (BigDecimal) |
+| `reactionIdsByEvent[id]` → count | `note.countReactions()` |
+| `replyIdsByEvent[id]` → count | `note.replies.size` |
+| `repostIdsByEvent[id]` → count | `note.boosts.size` |
+
+**FeedScreen subscriptions removed** (5 subscriptions, ~130 lines):
+- `createZapsSubscription` + `zapsByEvent` state map
+- `createReactionsSubscription` + `reactionIdsByEvent` state map
+- `createRepliesSubscription` + `replyIdsByEvent` state map
+- `createRepostsSubscription` + `repostIdsByEvent` state map
+- `createBatchMetadataSubscription` for zap senders
+
+These are replaced by `cache.consume()` which populates Note model relationships automatically.
 
 **Per-screen migration removes:**
 - `val eventState = remember { EventCollectionState<Event>(...) }`
 - Per-screen `zapsByEvent`, `reactionIdsByEvent`, `replyIdsByEvent`, `repostIdsByEvent` mutable state maps
-- Per-screen metadata, zap, reaction, reply, repost subscription handlers
+- 5 per-screen subscription handlers (zaps, reactions, replies, reposts, metadata)
 
 **Per-screen migration adds:**
 - `val feedState by viewModel.feedState.feedContent.collectAsState()`
@@ -442,7 +494,7 @@ when (val state = feedState) {
 User navigates to Feed
   → FeedScreen reads globalFeedViewModel.feedState
     → FeedContentState queries DesktopGlobalFeedFilter.feed()
-      → Filter queries DesktopLocalCache.notes.snapshot().values, filters kind==1
+      → Filter calls cache.notes.filterIntoSet { kind==1 }
         → Returns cached Note objects
 
 Relay sends new event
@@ -475,13 +527,13 @@ User navigates away and back
 | Stale data after logout | `coordinator.clear()` then `localCache.clear()` |
 | Mixed-account data | ViewModels cleared + cache cleared on account switch |
 | Subscription leak on app exit | Coordinator.clear() in shutdown hook |
-| Cache memory pressure | `-Xmx2g` + LRU caps (50k notes, 25k users) |
+| Cache memory pressure | `-Xmx2g` + BoundedLargeCache caps (50k notes, 25k users) |
 
 ## Dependencies & Prerequisites
 
 | Dependency | Status | Needed For |
 |------------|--------|------------|
-| `LruCache` (androidx.collection) | ✅ In desktopApp deps — thread-safe, bounded | Phase 1 |
+| `LargeCache` (quartz) | ✅ In quartz jvmAndroid — `ConcurrentSkipListMap`, lock-free | Phase 1 |
 | `BasicBundledInsert` (commons) | ✅ In commons `BundledUpdate.kt` | Phase 1 |
 | `ICacheProvider` / `ICacheEventStream` | ✅ In commons | Phase 1 |
 | `Note.loadEvent()`, `addReply()`, `addReaction()`, `addZap()` | ✅ In commons | Phase 1 |
