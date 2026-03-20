@@ -23,6 +23,10 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip65Follo
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
+import com.vitorpamplona.quartz.experimental.attestations.proficiency.AttestorProficiencyEvent
+import com.vitorpamplona.quartz.experimental.attestations.recommendation.AttestorRecommendationEvent
+import com.vitorpamplona.quartz.experimental.attestations.request.AttestationRequestEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
@@ -66,6 +70,10 @@ val HomePostsNewThreadKinds =
         ChessGameEvent.KIND,
         LiveChessGameChallengeEvent.KIND,
         LiveChessGameEndEvent.KIND,
+        AttestationEvent.KIND,
+        AttestationRequestEvent.KIND,
+        AttestorRecommendationEvent.KIND,
+        AttestorProficiencyEvent.KIND,
     )
 
 val HomePostsConversationKinds =
