@@ -1,5 +1,5 @@
-/**
- * Copyright (c) 2024 Vitor Pamplona
+/*
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -24,17 +24,16 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.quartz.experimental.moneroTips.TipEvent
 
-class UserProfileTipsFeedFilter(val user: User) : FeedFilter<Note>() {
-    override fun feedKey(): String {
-        return user.pubkeyHex
-    }
+class UserProfileTipsFeedFilter(
+    val user: User,
+) : FeedFilter<Note>() {
+    override fun feedKey(): String = user.pubkeyHex
 
-    override fun feed(): List<Note> {
-        return user.tips
+    override fun feed(): List<Note> =
+        user.tips
             .sortedBy {
                 (it.event as? TipEvent)?.valueByUser?.get(user.info?.moneroAddress())
             }
-    }
 
     override fun limit() = 400
 }

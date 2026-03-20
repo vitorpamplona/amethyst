@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -30,7 +30,6 @@ import com.vitorpamplona.amethyst.service.MoneroDataSource
 import com.vitorpamplona.amethyst.service.WalletService
 import com.vitorpamplona.quartz.experimental.moneroTips.TipSplitSetup
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
@@ -112,15 +111,13 @@ object AccountMoneroManager {
         destination: String,
         amount: Long,
         priority: TransactionPriority,
-    ): PendingTransaction.Status? =
-        walletService?.sendTransaction(destination, amount, priority)
+    ): PendingTransaction.Status? = walletService?.sendTransaction(destination, amount, priority)
 
     fun sendTransactionMultDest(
         destinations: Array<String>,
         amounts: Array<Long>,
         priority: TransactionPriority,
-    ): PendingTransaction? =
-        walletService?.sendTransactionMultDest(destinations, amounts, priority)
+    ): PendingTransaction? = walletService?.sendTransactionMultDest(destinations, amounts, priority)
 
     fun tip(
         tips: List<TipSplitSetup>,
@@ -138,10 +135,11 @@ object AccountMoneroManager {
             }
 
         val amounts =
-            tips.map {
-                val weight = it.weight?.let { w -> w / totalWeight } ?: (totalWeight / tips.size)
-                (amount.toDouble() * weight).toLong()
-            }.toTypedArray()
+            tips
+                .map {
+                    val weight = it.weight?.let { w -> w / totalWeight } ?: (totalWeight / tips.size)
+                    (amount.toDouble() * weight).toLong()
+                }.toTypedArray()
 
         return walletService?.sendTransactionMultDest(destinations, amounts, priority)
     }
@@ -170,24 +168,22 @@ object AccountMoneroManager {
         priority: TransactionPriority,
     ): Long = walletService?.estimateTransactionFee(destinations, amounts, priority) ?: 0
 
-    fun newSubaddress(label: String = ""): Subaddress? =
-        walletService?.newSubaddress(0, label)
+    fun newSubaddress(label: String = ""): Subaddress? = walletService?.newSubaddress(0, label)
 
-    fun lastSubaddress(): Subaddress? =
-        walletService?.lastSubaddress(0)
+    fun lastSubaddress(): Subaddress? = walletService?.lastSubaddress(0)
 
-    fun listAddresses(): List<Subaddress>? =
-        walletService?.listAddresses()
+    fun listAddresses(): List<Subaddress>? = walletService?.listAddresses()
 
-    fun setSubaddressLabel(index: Int, label: String) {
+    fun setSubaddressLabel(
+        index: Int,
+        label: String,
+    ) {
         walletService?.setSubaddressLabel(index, label)
     }
 
-    fun seedWithPassphrase(passphrase: String): String? =
-        walletService?.seedWithPassphrase(passphrase)
+    fun seedWithPassphrase(passphrase: String): String? = walletService?.seedWithPassphrase(passphrase)
 
-    fun getTransactionHistory(): TransactionHistory? =
-        walletService?.getHistory()
+    fun getTransactionHistory(): TransactionHistory? = walletService?.getHistory()
 
     fun setRestoreHeight(
         height: Long,

@@ -1,5 +1,5 @@
-/**
- * Copyright (c) 2024 Vitor Pamplona
+/*
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -105,13 +105,12 @@ object WalletManager {
 
     private external fun closeJ(wallet: Wallet)
 
-    fun getNetworkType(): NetworkType {
-        return if (BuildConfig.FLAVOR_net == "mainnet") {
+    fun getNetworkType(): NetworkType =
+        if (BuildConfig.FLAVOR_net == "mainnet") {
             NetworkType.MAINNET
         } else {
             NetworkType.STAGENET
         }
-    }
 
     fun walletExists(name: String): Boolean {
         val path = Path(getWalletDir(), name).toString()
@@ -130,9 +129,7 @@ object WalletManager {
         return true
     }
 
-    fun deleteCache(name: String): Boolean {
-        return Path(getWalletDir(), name).deleteIfExists()
-    }
+    fun deleteCache(name: String): Boolean = Path(getWalletDir(), name).deleteIfExists()
 
     const val MONERO_DIR = "monero"
 
@@ -151,14 +148,13 @@ object WalletManager {
 
     external fun getBlockchainHeight(): Long
 
-    private fun localeToSupportedLanguage(locale: Locale): String {
-        return if (locale.language in arrayOf("de", "es", "fr", "it", "nl", "pt", "ru", "ja", "zh")) {
+    private fun localeToSupportedLanguage(locale: Locale): String =
+        if (locale.language in arrayOf("de", "es", "fr", "it", "nl", "pt", "ru", "ja", "zh")) {
             // always use the english name
             locale.getDisplayLanguage(Locale.ENGLISH)
         } else {
             "English"
         }
-    }
 
     external fun setProxy(proxy: String): Boolean
 }

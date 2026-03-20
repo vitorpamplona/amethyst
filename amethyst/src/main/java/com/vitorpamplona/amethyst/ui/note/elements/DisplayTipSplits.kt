@@ -1,5 +1,5 @@
-/**
- * Copyright (c) 2024 Vitor Pamplona
+/*
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -43,8 +43,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.MoneroOrange
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
-import com.vitorpamplona.quartz.nip01Core.core.EventInterface
 import com.vitorpamplona.quartz.experimental.moneroTips.TipSplitSetup
+import com.vitorpamplona.quartz.nip01Core.core.EventInterface
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable

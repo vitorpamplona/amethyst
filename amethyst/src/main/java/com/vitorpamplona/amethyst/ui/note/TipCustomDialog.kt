@@ -1,5 +1,5 @@
-/**
- * Copyright (c) 2024 Vitor Pamplona
+/*
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -55,11 +55,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.TransactionPriority
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TitleExplainer
-import com.vitorpamplona.amethyst.model.TransactionPriority
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.experimental.moneroTips.TipEvent
@@ -75,19 +75,16 @@ class TipOptionsViewModel : ViewModel() {
         this.account = account
     }
 
-    fun canSend(): Boolean {
-        return value() != null
-    }
+    fun canSend(): Boolean = value() != null
 
-    fun value(): ULong? {
-        return customAmount.text.trim().let { amount ->
+    fun value(): ULong? =
+        customAmount.text.trim().let { amount ->
             if (amount.toDoubleOrNull() != null) {
                 decToPiconero(amount)
             } else {
                 null
             }
         }
-    }
 
     fun cancel() {
         customAmount = TextFieldValue("0.01")
@@ -192,9 +189,10 @@ fun TipCustomDialog(
                         label = stringResource(R.string.transaction_priority),
                         placeholder = selectedTransactionPriority.toLocalizedString(context),
                         options =
-                            TransactionPriority.entries.map {
-                                TitleExplainer(it.toLocalizedString(context))
-                            }.toImmutableList(),
+                            TransactionPriority.entries
+                                .map {
+                                    TitleExplainer(it.toLocalizedString(context))
+                                }.toImmutableList(),
                         onSelect = { selectedTransactionPriority = TransactionPriority.entries[it] },
                         modifier =
                             Modifier

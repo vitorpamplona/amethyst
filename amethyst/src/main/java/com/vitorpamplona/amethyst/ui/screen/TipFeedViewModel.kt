@@ -1,5 +1,5 @@
-/**
- * Copyright (c) 2024 Vitor Pamplona
+/*
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -42,17 +42,20 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class NostrUserProfileTipsFeedViewModel(user: User) :
-    TipFeedViewModel(UserProfileTipsFeedFilter(user)) {
-    class Factory(val user: User) : ViewModelProvider.Factory {
-        override fun <NostrUserProfileTipsFeedViewModel : ViewModel> create(modelClass: Class<NostrUserProfileTipsFeedViewModel>): NostrUserProfileTipsFeedViewModel {
-            return NostrUserProfileTipsFeedViewModel(user) as NostrUserProfileTipsFeedViewModel
-        }
+class NostrUserProfileTipsFeedViewModel(
+    user: User,
+) : TipFeedViewModel(UserProfileTipsFeedFilter(user)) {
+    class Factory(
+        val user: User,
+    ) : ViewModelProvider.Factory {
+        override fun <NostrUserProfileTipsFeedViewModel : ViewModel> create(modelClass: Class<NostrUserProfileTipsFeedViewModel>): NostrUserProfileTipsFeedViewModel = NostrUserProfileTipsFeedViewModel(user) as NostrUserProfileTipsFeedViewModel
     }
 }
 
 @Stable
-open class TipFeedViewModel(val dataSource: FeedFilter<Note>) : ViewModel() {
+open class TipFeedViewModel(
+    val dataSource: FeedFilter<Note>,
+) : ViewModel() {
     private val _feedContent = MutableStateFlow<TipFeedState>(TipFeedState.Loading)
     val feedContent = _feedContent.asStateFlow()
 

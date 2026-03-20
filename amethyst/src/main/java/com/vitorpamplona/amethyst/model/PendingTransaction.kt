@@ -1,5 +1,5 @@
-/**
- * Copyright (c) 2024 Vitor Pamplona
+/*
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -22,14 +22,19 @@ package com.vitorpamplona.amethyst.model
 
 import kotlin.IllegalArgumentException
 
-class PendingTransaction(val handle: Long) {
+class PendingTransaction(
+    val handle: Long,
+) {
     enum class StatusType {
         OK,
         ERROR,
         CRITICAL,
     }
 
-    class Status(val type: StatusType, val error: String) {
+    class Status(
+        val type: StatusType,
+        val error: String,
+    ) {
         fun isOk(): Boolean = type == StatusType.OK
     }
 
@@ -59,9 +64,7 @@ class PendingTransaction(val handle: Long) {
     fun commit(
         filename: String = "",
         overwrite: Boolean = false,
-    ): Boolean {
-        return commitJ(filename, overwrite)
-    }
+    ): Boolean = commitJ(filename, overwrite)
 
     private external fun commitJ(
         filename: String,

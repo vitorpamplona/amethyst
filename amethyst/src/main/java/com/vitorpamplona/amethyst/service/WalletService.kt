@@ -1,5 +1,5 @@
-/**
- * Copyright (c) 2024 Vitor Pamplona
+/*
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -27,8 +27,8 @@ import android.os.Binder
 import android.os.IBinder
 import android.util.Log
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.commons.threading.checkNotInMainThread
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.threading.checkNotInMainThread
 import com.vitorpamplona.amethyst.model.MoneroWalletListener
 import com.vitorpamplona.amethyst.model.PendingTransaction
 import com.vitorpamplona.amethyst.model.Proof
@@ -36,9 +36,9 @@ import com.vitorpamplona.amethyst.model.ProofInfo
 import com.vitorpamplona.amethyst.model.Subaddress
 import com.vitorpamplona.amethyst.model.TransactionHistory
 import com.vitorpamplona.amethyst.model.TransactionInfo
+import com.vitorpamplona.amethyst.model.TransactionPriority
 import com.vitorpamplona.amethyst.model.Wallet
 import com.vitorpamplona.amethyst.model.WalletManager
-import com.vitorpamplona.amethyst.model.TransactionPriority
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -64,27 +64,42 @@ class WalletService : Service() {
         DISCONNECTED,
         ;
 
-        fun toLocalizedString(context: Context): String {
-            return when (this) {
-                OPENING ->
+        fun toLocalizedString(context: Context): String =
+            when (this) {
+                OPENING -> {
                     context.getString(R.string.wallet_status_opening)
-                CONNECTING ->
+                }
+
+                CONNECTING -> {
                     context.getString(R.string.wallet_status_connecting)
-                DISCONNECTING ->
+                }
+
+                DISCONNECTING -> {
                     context.getString(R.string.wallet_status_disconnecting)
-                SYNCING ->
+                }
+
+                SYNCING -> {
                     context.getString(R.string.wallet_status_syncing)
-                SYNCED ->
+                }
+
+                SYNCED -> {
                     context.getString(R.string.wallet_status_synced)
-                ERROR ->
+                }
+
+                ERROR -> {
                     context.getString(R.string.wallet_status_error)
-                DISCONNECTED ->
+                }
+
+                DISCONNECTED -> {
                     context.getString(R.string.wallet_status_disconnected)
+                }
             }
-        }
     }
 
-    class WalletStatus(val type: WalletStatusType, val description: String?) {
+    class WalletStatus(
+        val type: WalletStatusType,
+        val description: String?,
+    ) {
         fun toLocalizedString(context: Context): String {
             val description = description?.let { ": $it" } ?: ""
             return "${type.toLocalizedString(context)}$description"
@@ -684,17 +699,11 @@ class WalletService : Service() {
         intent: Intent?,
         flags: Int,
         startId: Int,
-    ): Int {
-        return super.onStartCommand(intent, flags, startId)
-    }
+    ): Int = super.onStartCommand(intent, flags, startId)
 
-    override fun onBind(intent: Intent): IBinder {
-        return binder
-    }
+    override fun onBind(intent: Intent): IBinder = binder
 
-    override fun onUnbind(intent: Intent?): Boolean {
-        return false
-    }
+    override fun onUnbind(intent: Intent?): Boolean = false
 
     override fun onDestroy() {
         synchronized(lock) {
@@ -703,4 +712,6 @@ class WalletService : Service() {
     }
 }
 
-data class ServiceState(val wallet: Wallet?)
+data class ServiceState(
+    val wallet: Wallet?,
+)

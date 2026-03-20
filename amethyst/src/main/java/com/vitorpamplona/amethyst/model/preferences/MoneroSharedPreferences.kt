@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -64,18 +64,21 @@ class MoneroSharedPreferences(
                 daemonUsername = preferences[MONERO_DAEMON_USERNAME_KEY] ?: "",
                 daemonPassword = preferences[MONERO_DAEMON_PASSWORD_KEY] ?: "",
                 isSeedBackedUp = preferences[MONERO_SEED_BACKED_UP_KEY] ?: false,
-                tipAmounts = preferences[MONERO_TIP_AMOUNTS_KEY]?.split(",")?.mapNotNull { it.toLongOrNull() }
-                    ?: listOf(10000000L, 50000000L, 100000000L),
-                defaultTipType = preferences[MONERO_DEFAULT_TIP_TYPE_KEY]?.let {
-                    try {
-                        TipEvent.TipType.valueOf(it)
-                    } catch (e: Exception) {
-                        TipEvent.TipType.PUBLIC
-                    }
-                } ?: TipEvent.TipType.PUBLIC,
-                defaultTransactionPriority = preferences[MONERO_DEFAULT_TX_PRIORITY_KEY]?.let {
-                    TransactionPriority.entries.getOrNull(it)
-                } ?: TransactionPriority.UNIMPORTANT,
+                tipAmounts =
+                    preferences[MONERO_TIP_AMOUNTS_KEY]?.split(",")?.mapNotNull { it.toLongOrNull() }
+                        ?: listOf(10000000L, 50000000L, 100000000L),
+                defaultTipType =
+                    preferences[MONERO_DEFAULT_TIP_TYPE_KEY]?.let {
+                        try {
+                            TipEvent.TipType.valueOf(it)
+                        } catch (e: Exception) {
+                            TipEvent.TipType.PUBLIC
+                        }
+                    } ?: TipEvent.TipType.PUBLIC,
+                defaultTransactionPriority =
+                    preferences[MONERO_DEFAULT_TX_PRIORITY_KEY]?.let {
+                        TransactionPriority.entries.getOrNull(it)
+                    } ?: TransactionPriority.UNIMPORTANT,
             )
         } catch (e: Exception) {
             if (e is CancellationException) throw e

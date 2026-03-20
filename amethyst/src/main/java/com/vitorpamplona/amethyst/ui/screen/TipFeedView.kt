@@ -1,5 +1,5 @@
-/**
- * Copyright (c) 2024 Vitor Pamplona
+/*
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -50,12 +50,15 @@ fun TipFeedView(
             is TipFeedState.Empty -> {
                 FeedEmpty { viewModel.invalidateData() }
             }
+
             is TipFeedState.FeedError -> {
                 FeedError(state.errorMessage) { viewModel.invalidateData() }
             }
+
             is TipFeedState.Loaded -> {
                 TipFeedLoaded(state, accountViewModel, nav)
             }
+
             is TipFeedState.Loading -> {
                 LoadingFeed()
             }

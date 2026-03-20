@@ -1,5 +1,5 @@
-/**
- * Copyright (c) 2024 Vitor Pamplona
+/*
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -27,18 +27,20 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.PendingTransaction
 import com.vitorpamplona.amethyst.model.TransactionPriority
+import com.vitorpamplona.quartz.experimental.moneroTips.TipEvent
+import com.vitorpamplona.quartz.experimental.moneroTips.TipSplitSetup
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
-import com.vitorpamplona.quartz.experimental.moneroTips.TipEvent
-import com.vitorpamplona.quartz.experimental.moneroTips.TipSplitSetup
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlin.time.Duration.Companion.milliseconds
 
-class TipHandler(val account: Account) {
+class TipHandler(
+    val account: Account,
+) {
     suspend fun tip(
         note: Note,
         amount: ULong,
@@ -75,10 +77,11 @@ class TipHandler(val account: Account) {
             }
 
         val amounts =
-            tipsToSend.map {
-                val weight = it.weight?.let { it / totalWeight } ?: (totalWeight / tipsToSend.size)
-                (amount.toDouble() * weight).toLong()
-            }.toTypedArray()
+            tipsToSend
+                .map {
+                    val weight = it.weight?.let { it / totalWeight } ?: (totalWeight / tipsToSend.size)
+                    (amount.toDouble() * weight).toLong()
+                }.toTypedArray()
 
         val fee =
             account.estimateMoneroTransactionFee(

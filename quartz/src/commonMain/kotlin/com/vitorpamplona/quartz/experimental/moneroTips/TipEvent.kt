@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -23,13 +23,14 @@ package com.vitorpamplona.quartz.experimental.moneroTips
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip01Core.tags.events.eTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -77,7 +78,7 @@ class TipEvent(
         fun build(
             users: Set<HexKey>,
             txId: String,
-            proofs: Map<String, Array<String>>,
+            proofs: Map<String, List<String>>,
             eventId: String? = null,
             message: String = "",
         ): EventTemplate<TipEvent> {
@@ -93,10 +94,10 @@ class TipEvent(
 
             return eventTemplate(KIND, content) {
                 users.forEach { user ->
-                    tag(PTag.assemble(user, null))
+                    pTag(user)
                 }
                 eventId?.let { id ->
-                    tag(ETag.assemble(id, null))
+                    eTag(ETag(id, null))
                 }
             }
         }

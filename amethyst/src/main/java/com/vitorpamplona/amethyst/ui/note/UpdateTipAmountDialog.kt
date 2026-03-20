@@ -1,5 +1,5 @@
-/**
- * Copyright (c) 2024 Vitor Pamplona
+/*
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -66,18 +66,20 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.TransactionPriority
 import com.vitorpamplona.amethyst.ui.actions.CloseButton
 import com.vitorpamplona.amethyst.ui.actions.SaveButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TitleExplainer
-import com.vitorpamplona.amethyst.model.TransactionPriority
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.experimental.moneroTips.TipEvent
 import kotlinx.collections.immutable.toImmutableList
 
-class UpdateTipAmountViewModel(val account: Account) : ViewModel() {
+class UpdateTipAmountViewModel(
+    val account: Account,
+) : ViewModel() {
     var nextAmount by mutableStateOf(TextFieldValue(""))
     var amountSet by mutableStateOf(listOf<String>())
     var selectedTipType by mutableStateOf(TipEvent.TipType.PRIVATE)
@@ -89,9 +91,7 @@ class UpdateTipAmountViewModel(val account: Account) : ViewModel() {
         this.selectedTransactionPriority = account.defaultMoneroTransactionPriority
     }
 
-    fun toListOfAmounts(commaSeparatedAmounts: String): List<Long> {
-        return commaSeparatedAmounts.split(",").map { it.trim().toLongOrNull() ?: 0 }
-    }
+    fun toListOfAmounts(commaSeparatedAmounts: String): List<Long> = commaSeparatedAmounts.split(",").map { it.trim().toLongOrNull() ?: 0 }
 
     fun addAmount() {
         val newValue = nextAmount.text.trim()
@@ -121,19 +121,18 @@ class UpdateTipAmountViewModel(val account: Account) : ViewModel() {
         selectedTransactionPriority = account.defaultMoneroTransactionPriority
     }
 
-    fun hasChanged(): Boolean {
-        return (
+    fun hasChanged(): Boolean =
+        (
             selectedTipType != account.defaultTipType ||
                 selectedTransactionPriority != account.defaultMoneroTransactionPriority ||
                 amountSet != account.tipAmountChoices
 
         )
-    }
 
-    class Factory(val account: Account) : ViewModelProvider.Factory {
-        override fun <UpdateTipAmountViewModel : ViewModel> create(modelClass: Class<UpdateTipAmountViewModel>): UpdateTipAmountViewModel {
-            return UpdateTipAmountViewModel(account) as UpdateTipAmountViewModel
-        }
+    class Factory(
+        val account: Account,
+    ) : ViewModelProvider.Factory {
+        override fun <UpdateTipAmountViewModel : ViewModel> create(modelClass: Class<UpdateTipAmountViewModel>): UpdateTipAmountViewModel = UpdateTipAmountViewModel(account) as UpdateTipAmountViewModel
     }
 }
 
@@ -302,9 +301,10 @@ fun UpdateTipAmountDialog(
                             label = stringResource(R.string.transaction_priority_explainer),
                             placeholder = accountViewModel.account.defaultMoneroTransactionPriority.toLocalizedString(context),
                             options =
-                                TransactionPriority.entries.map {
-                                    TitleExplainer(it.toLocalizedString(context))
-                                }.toImmutableList(),
+                                TransactionPriority.entries
+                                    .map {
+                                        TitleExplainer(it.toLocalizedString(context))
+                                    }.toImmutableList(),
                             onSelect = {
                                 postViewModel.selectedTransactionPriority = TransactionPriority.entries[it]
                             },

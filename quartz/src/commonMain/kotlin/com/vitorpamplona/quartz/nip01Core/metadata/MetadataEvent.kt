@@ -271,8 +271,9 @@ class MetadataEvent(
             moneroAddress: String?,
         ) {
             moneroAddress?.let { addr ->
-                val existingCryptos = (currentMetadata["cryptocurrency_addresses"] as? JsonObject)
-                    ?.toMutableMap() ?: mutableMapOf()
+                val existingCryptos =
+                    (currentMetadata["cryptocurrency_addresses"] as? JsonObject)
+                        ?.toMutableMap() ?: mutableMapOf()
 
                 if (addr.isBlank()) {
                     existingCryptos.remove("monero")

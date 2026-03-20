@@ -1,5 +1,5 @@
-/**
- * Copyright (c) 2024 Vitor Pamplona
+/*
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -22,7 +22,9 @@ package com.vitorpamplona.amethyst.model
 
 import com.vitorpamplona.amethyst.model.TransactionPriority
 
-class Wallet(val handle: Long) {
+class Wallet(
+    val handle: Long,
+) {
     companion object {
         init {
             System.loadLibrary("monerujo")
@@ -41,10 +43,11 @@ class Wallet(val handle: Long) {
         CRITICAL,
     }
 
-    class Status(val status: Int, val error: String) {
-        fun isOk(): Boolean {
-            return status == StatusType.OK.ordinal
-        }
+    class Status(
+        val status: Int,
+        val error: String,
+    ) {
+        fun isOk(): Boolean = status == StatusType.OK.ordinal
     }
 
     val status: Status
@@ -218,9 +221,7 @@ class Wallet(val handle: Long) {
 
     private external fun getSeedJ(seedOffset: String = ""): String
 
-    fun seedWithPassphrase(passphrase: String): String {
-        return getSeedJ(passphrase)
-    }
+    fun seedWithPassphrase(passphrase: String): String = getSeedJ(passphrase)
 
     external fun getSubaddressLabel(
         accountIndex: Int,
@@ -238,9 +239,7 @@ class Wallet(val handle: Long) {
         address: String,
         message: String = "",
         signature: String,
-    ): ProofInfo? {
-        return checkTxProofJ(txId, address, message, signature)
-    }
+    ): ProofInfo? = checkTxProofJ(txId, address, message, signature)
 
     private external fun checkTxProofJ(
         txId: String,
@@ -273,9 +272,7 @@ class Wallet(val handle: Long) {
         addresses: Array<String>,
         amounts: Array<Long>,
         priority: TransactionPriority,
-    ): Long {
-        return estimateTransactionFeeJ(addresses, amounts.toLongArray(), priority.ordinal)
-    }
+    ): Long = estimateTransactionFeeJ(addresses, amounts.toLongArray(), priority.ordinal)
 
     external fun estimateTransactionFeeJ(
         addresses: Array<String>,

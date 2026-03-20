@@ -1,5 +1,5 @@
-/**
- * Copyright (c) 2024 Vitor Pamplona
+/*
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -168,7 +168,9 @@ import java.time.format.FormatStyle
 import java.util.Locale
 import kotlin.time.Duration.Companion.seconds
 
-class MoneroViewModel(val account: Account) : ViewModel() {
+class MoneroViewModel(
+    val account: Account,
+) : ViewModel() {
     var daemonAddress: String by mutableStateOf(account.moneroDaemonAddress.host)
     var daemonPort by mutableStateOf(account.moneroDaemonAddress.port.toString())
 
@@ -181,28 +183,27 @@ class MoneroViewModel(val account: Account) : ViewModel() {
     val walletStatus = MoneroDataSource.status().asLiveData(Dispatchers.IO)
     val connectionStatus = MoneroDataSource.connectionStatus().asLiveData(Dispatchers.IO)
     val balance =
-        MoneroDataSource.balance()
+        MoneroDataSource
+            .balance()
             .map {
                 showMoneroAmount(it.toULong())
-            }
-            .asLiveData(Dispatchers.IO)
+            }.asLiveData(Dispatchers.IO)
     val lockedBalance =
-        MoneroDataSource.lockedBalance()
+        MoneroDataSource
+            .lockedBalance()
             .map {
                 showMoneroAmount(it.toULong())
-            }
-            .asLiveData(Dispatchers.IO)
+            }.asLiveData(Dispatchers.IO)
     val tips =
-        MoneroDataSource.transactions()
+        MoneroDataSource
+            .transactions()
             .map {
                 it
                     .filter {
                         (it.subaddressLabel.length == 64 && HexValidator.isHex(it.subaddressLabel)) ||
                             (it.description.length == 64 && HexValidator.isHex(it.description))
-                    }
-                    .sortedByDescending { it.timestamp }
-            }
-            .asLiveData(Dispatchers.IO)
+                    }.sortedByDescending { it.timestamp }
+            }.asLiveData(Dispatchers.IO)
 
     fun resetInput() {
         daemonAddress = account.moneroDaemonAddress.host
@@ -245,10 +246,10 @@ class MoneroViewModel(val account: Account) : ViewModel() {
         resetInput()
     }
 
-    class Factory(val account: Account) : ViewModelProvider.Factory {
-        override fun <MoneroViewModel : ViewModel> create(modelClass: Class<MoneroViewModel>): MoneroViewModel {
-            return MoneroViewModel(account) as MoneroViewModel
-        }
+    class Factory(
+        val account: Account,
+    ) : ViewModelProvider.Factory {
+        override fun <MoneroViewModel : ViewModel> create(modelClass: Class<MoneroViewModel>): MoneroViewModel = MoneroViewModel(account) as MoneroViewModel
     }
 }
 
@@ -432,8 +433,7 @@ fun DaemonInfo(
                                     with(LocalDensity.current) {
                                         fontSize.toDp()
                                     },
-                                )
-                                .clickable { onEdit() },
+                                ).clickable { onEdit() },
                     )
                 }
 
@@ -477,7 +477,8 @@ fun Balance(
             if (showEntireBalance) {
                 val yOffset =
                     with(LocalDensity.current) {
-                        MaterialTheme.typography.displayMedium.fontSize.toPx() + 5.dp.toPx()
+                        MaterialTheme.typography.displayMedium.fontSize
+                            .toPx() + 5.dp.toPx()
                     }
                 Popup(
                     alignment = Alignment.BottomCenter,
@@ -540,7 +541,8 @@ fun Balance(
                 if (showEntireLockedBalance) {
                     val yOffset =
                         with(LocalDensity.current) {
-                            MaterialTheme.typography.bodyMedium.fontSize.toPx() + 5.dp.toPx()
+                            MaterialTheme.typography.bodyMedium.fontSize
+                                .toPx() + 5.dp.toPx()
                         }
                     Popup(
                         alignment = Alignment.BottomCenter,
@@ -603,7 +605,8 @@ fun TipInfo(tip: TransactionInfo) {
                 modifier =
                     Modifier.size(
                         with(LocalDensity.current) {
-                            MaterialTheme.typography.bodySmall.fontSize.toDp()
+                            MaterialTheme.typography.bodySmall.fontSize
+                                .toDp()
                         },
                     ),
                 contentDescription =
@@ -981,14 +984,14 @@ fun ReceiveDialog(
                                                     clipboardManager.setText(AnnotatedString(selectedAddress.address))
 
                                                     if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2) {
-                                                        Toast.makeText(
-                                                            context,
-                                                            context.getString(R.string.monero_address_copied_to_clipboard),
-                                                            Toast.LENGTH_SHORT,
-                                                        ).show()
+                                                        Toast
+                                                            .makeText(
+                                                                context,
+                                                                context.getString(R.string.monero_address_copied_to_clipboard),
+                                                                Toast.LENGTH_SHORT,
+                                                            ).show()
                                                     }
-                                                }
-                                                .padding(horizontal = 5.dp, vertical = 10.dp),
+                                                }.padding(horizontal = 5.dp, vertical = 10.dp),
                                     )
 
                                     Spacer(Modifier.width(10.dp))
@@ -1152,8 +1155,8 @@ enum class TransactionPriority {
     PRIORITY,
     ;
 
-    fun toLocalizedString(context: Context): String {
-        return if (this == UNIMPORTANT) {
+    fun toLocalizedString(context: Context): String =
+        if (this == UNIMPORTANT) {
             context.getString(R.string.transaction_priority_unimportant)
         } else if (this == NORMAL) {
             context.getString(R.string.transaction_priority_normal)
@@ -1164,10 +1167,11 @@ enum class TransactionPriority {
         } else {
             name
         }
-    }
 }
 
-class MoneroSendViewModel(val account: Account) : ViewModel() {
+class MoneroSendViewModel(
+    val account: Account,
+) : ViewModel() {
     var address by mutableStateOf("")
     var addressInvalid by mutableStateOf(false)
 
@@ -1275,10 +1279,10 @@ class MoneroSendViewModel(val account: Account) : ViewModel() {
         }
     }
 
-    class Factory(val account: Account) : ViewModelProvider.Factory {
-        override fun <MoneroSendViewModel : ViewModel> create(modelClass: Class<MoneroSendViewModel>): MoneroSendViewModel {
-            return MoneroSendViewModel(account) as MoneroSendViewModel
-        }
+    class Factory(
+        val account: Account,
+    ) : ViewModelProvider.Factory {
+        override fun <MoneroSendViewModel : ViewModel> create(modelClass: Class<MoneroSendViewModel>): MoneroSendViewModel = MoneroSendViewModel(account) as MoneroSendViewModel
     }
 }
 
@@ -1419,9 +1423,10 @@ fun SendDialog(
                             label = stringResource(R.string.priority),
                             placeholder = moneroViewModel.priority.toLocalizedString(context),
                             options =
-                                TransactionPriority.entries.map {
-                                    TitleExplainer(it.toLocalizedString(context))
-                                }.toPersistentList(),
+                                TransactionPriority.entries
+                                    .map {
+                                        TitleExplainer(it.toLocalizedString(context))
+                                    }.toPersistentList(),
                             onSelect = {},
                             modifier = Modifier.weight(1f),
                         )
@@ -1466,8 +1471,7 @@ fun BackupSeedDialog(
     var loading by remember { mutableStateOf(false) }
 
     val keyguardLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-                result: ActivityResult ->
+        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
             if (result.resultCode == Activity.RESULT_OK) {
                 copySeed(context, scope, accountViewModel, clipboardManager, offsetPassphrase, onLoading = { loading = it })
                 accountViewModel.account.changeIsMoneroSeedBackedUp(true)
@@ -1570,17 +1574,19 @@ fun BackupSeedDialog(
                                     clipboardManager.setText(AnnotatedString("$restoreHeight"))
 
                                     if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2) {
-                                        Toast.makeText(
-                                            context,
-                                            context.getString(R.string.restore_height_copied_to_clipboard),
-                                            Toast.LENGTH_SHORT,
-                                        ).show()
+                                        Toast
+                                            .makeText(
+                                                context,
+                                                context.getString(R.string.restore_height_copied_to_clipboard),
+                                                Toast.LENGTH_SHORT,
+                                            ).show()
                                     }
                                 },
                                 modifier =
                                     Modifier.size(
                                         with(LocalDensity.current) {
-                                            MaterialTheme.typography.bodyLarge.fontSize.toDp() + 3.dp
+                                            MaterialTheme.typography.bodyLarge.fontSize
+                                                .toDp() + 3.dp
                                         },
                                     ),
                             ) {
@@ -1590,7 +1596,8 @@ fun BackupSeedDialog(
                                     modifier =
                                         Modifier.size(
                                             with(LocalDensity.current) {
-                                                MaterialTheme.typography.bodyLarge.fontSize.toDp()
+                                                MaterialTheme.typography.bodyLarge.fontSize
+                                                    .toDp()
                                             },
                                         ),
                                 )
@@ -1658,11 +1665,12 @@ fun copySeed(
         clipboardManager.setText(AnnotatedString(seed))
 
         if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2) {
-            Toast.makeText(
-                context,
-                context.getString(R.string.monero_seed_copied_to_clipboard),
-                Toast.LENGTH_SHORT,
-            ).show()
+            Toast
+                .makeText(
+                    context,
+                    context.getString(R.string.monero_seed_copied_to_clipboard),
+                    Toast.LENGTH_SHORT,
+                ).show()
         }
     } else {
         onLoading(true)
@@ -1673,11 +1681,12 @@ fun copySeed(
 
             withContext(Dispatchers.Main) {
                 if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2) {
-                    Toast.makeText(
-                        context,
-                        context.getString(R.string.monero_seed_copied_to_clipboard),
-                        Toast.LENGTH_SHORT,
-                    ).show()
+                    Toast
+                        .makeText(
+                            context,
+                            context.getString(R.string.monero_seed_copied_to_clipboard),
+                            Toast.LENGTH_SHORT,
+                        ).show()
                 }
 
                 onLoading(false)
@@ -1785,8 +1794,7 @@ fun EphemeralWalletWarning(
     var loading by remember { mutableStateOf(false) }
 
     val keyguardLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-                result: ActivityResult ->
+        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
             if (result.resultCode == Activity.RESULT_OK) {
                 copySeed(context, scope, accountViewModel, clipboardManager, offsetPassphrase, onLoading = { loading = it })
                 onBackedUp()
@@ -1883,17 +1891,19 @@ fun EphemeralWalletWarning(
                                 clipboardManager.setText(AnnotatedString("$restoreHeight"))
 
                                 if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2) {
-                                    Toast.makeText(
-                                        context,
-                                        context.getString(R.string.restore_height_copied_to_clipboard),
-                                        Toast.LENGTH_SHORT,
-                                    ).show()
+                                    Toast
+                                        .makeText(
+                                            context,
+                                            context.getString(R.string.restore_height_copied_to_clipboard),
+                                            Toast.LENGTH_SHORT,
+                                        ).show()
                                 }
                             },
                             modifier =
                                 Modifier.size(
                                     with(LocalDensity.current) {
-                                        MaterialTheme.typography.bodyLarge.fontSize.toDp() + 3.dp
+                                        MaterialTheme.typography.bodyLarge.fontSize
+                                            .toDp() + 3.dp
                                     },
                                 ),
                         ) {
@@ -1903,7 +1913,8 @@ fun EphemeralWalletWarning(
                                 modifier =
                                     Modifier.size(
                                         with(LocalDensity.current) {
-                                            MaterialTheme.typography.bodyLarge.fontSize.toDp()
+                                            MaterialTheme.typography.bodyLarge.fontSize
+                                                .toDp()
                                         },
                                     ),
                             )
