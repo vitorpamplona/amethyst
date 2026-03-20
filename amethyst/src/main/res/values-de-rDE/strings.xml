@@ -639,6 +639,10 @@ anz der Bedingungen ist erforderlich</string>
     <string name="app_notification_zaps_channel_message">%1$s Sats</string>
     <string name="app_notification_zaps_channel_message_from">Von %1$s</string>
     <string name="app_notification_zaps_channel_message_for">für %1$s</string>
+    <string name="app_notification_reply_label">Antworten</string>
+    <string name="app_notification_mark_read_label">Als gelesen markieren</string>
+    <string name="app_notification_dms_summary">Neue Nachrichten</string>
+    <string name="app_notification_zaps_summary">Neue Zaps</string>
     <string name="reply_notify">Benachrichtigen: </string>
     <string name="channel_list_join_conversation">Unterhaltung beitreten</string>
     <string name="channel_list_user_or_group_id">Benutzer- oder Gruppen-ID</string>
@@ -1048,6 +1052,13 @@ anz der Bedingungen ist erforderlich</string>
     <string name="media_compression_quality_uncompressed">Ohne Kompression</string>
     <string name="video_codec_h265_label">H.265/HEVC-Codec verwenden</string>
     <string name="video_codec_h265_description">Bessere Qualität bei kleinerer Dateigröße, aber nicht alle Geräte unterstützen die H.265-Wiedergabe.</string>
+    <string name="strip_metadata_label">Private Metadaten entfernen</string>
+    <string name="strip_metadata_description">Versucht, private Metadaten aus unterstützten Mediendateien vor dem Hochladen zu entfernen</string>
+    <string name="metadata_strip_failed_title">Metadaten konnten nicht entfernt werden</string>
+    <string name="metadata_strip_failed_body">Dieses Dateiformat unterstützt das Entfernen von Metadaten nicht. Private Informationen wie Standort und Geräteinformationen können enthalten sein. Trotzdem hochladen?</string>
+    <string name="metadata_strip_failed_upload">Trotzdem hochladen</string>
+    <string name="metadata_strip_failed_upload_cancelled">Private Metadaten konnten nicht aus der Mediendatei entfernt werden. Hochladen abgebrochen.</string>
+    <string name="upload_cancelled">Hochladen abgebrochen</string>
     <string name="edit_draft">Entwurf bearbeiten</string>
     <string name="login_with_qr_code">Einloggen mit QR-Code</string>
     <string name="route">Route</string>
@@ -1615,17 +1626,4 @@ anz der Bedingungen ist erforderlich</string>
     <string name="event_sync_status_downloading">Herunterladen</string>
     <string name="event_sync_status_error">Fehler</string>
     <string name="event_sync_status_completed">Abgeschlossen</string>
-    <string name="app_notification_reply_label">Antworten</string>
-    <string name="app_notification_mark_read_label">Als gelesen markieren</string>
-    <string name="app_notification_dms_summary">Neue Nachrichten</string>
-    <string name="app_notification_zaps_summary">Neue Zaps</string>
-
-    <string name="strip_metadata_label">Private Metadaten entfernen</string>
-    <string name="strip_metadata_description">Versucht, private Metadaten aus unterstützten Mediendateien vor dem Hochladen zu entfernen</string>
-
-    <string name="metadata_strip_failed_title">Metadaten konnten nicht entfernt werden</string>
-    <string name="metadata_strip_failed_body">Dieses Dateiformat unterstützt das Entfernen von Metadaten nicht. Private Informationen wie Standort und Geräteinformationen können enthalten sein. Trotzdem hochladen?</string>
-    <string name="metadata_strip_failed_upload">Trotzdem hochladen</string>
-    <string name="metadata_strip_failed_upload_cancelled">Private Metadaten konnten nicht aus der Mediendatei entfernt werden. Hochladen abgebrochen.</string>
-    <string name="upload_cancelled">Hochladen abgebrochen</string>
 </resources>

@@ -638,6 +638,10 @@
     <string name="app_notification_zaps_channel_message">%1$s satoshi</string>
     <string name="app_notification_zaps_channel_message_from">Tőle: %1$s</string>
     <string name="app_notification_zaps_channel_message_for">neki: %1$s</string>
+    <string name="app_notification_reply_label">Válasz</string>
+    <string name="app_notification_mark_read_label">Megjelölés olvasottként</string>
+    <string name="app_notification_dms_summary">Új üzenetek</string>
+    <string name="app_notification_zaps_summary">Új zap-ek</string>
     <string name="reply_notify">Értesítés: </string>
     <string name="channel_list_join_conversation">Csatlakozás a beszélgetéshez</string>
     <string name="channel_list_user_or_group_id">Felhasználó- vagy csoport-azonosító</string>
@@ -1048,6 +1052,13 @@
     <string name="media_compression_quality_uncompressed">Tömörítetlen</string>
     <string name="video_codec_h265_label">H.265/HEVC-kodek használata</string>
     <string name="video_codec_h265_description">Jobb minőség kisebb fájlméret mellett, de nem minden eszköz támogatja a H.265 lejátszást.</string>
+    <string name="strip_metadata_label">Privát metaadatok törlése</string>
+    <string name="strip_metadata_description">Kísérletek a támogatott médiafájlokból a privát metaadatok eltávolítására a feltöltés előtt</string>
+    <string name="metadata_strip_failed_title">A metaadatok nem távolíthatók el</string>
+    <string name="metadata_strip_failed_body">Ez a fájlformátum nem támogatja a metaadatok eltávolítását. Lehet, hogy a fájl tartalmaz személyes adatokat, például hely- és eszközadatokat. Mindenképp fel akarja tölteni?</string>
+    <string name="metadata_strip_failed_upload">Feltöltés mindenképp</string>
+    <string name="metadata_strip_failed_upload_cancelled">Nem sikerült eltávolítani a médiafájlokból a privát metaadatokat. Feltöltés megszakítva.</string>
+    <string name="upload_cancelled">Feltölrés megszakítva</string>
     <string name="edit_draft">Piszkozat szerkesztése</string>
     <string name="login_with_qr_code">Bejelentkezés QR-kóddal</string>
     <string name="route">Útvonal</string>
@@ -1152,6 +1163,7 @@
     <string name="dm_relays_not_found_examples2">Jó választási lehetőségek:\n - auth.nostr1.com (ingyenes)\n - inbox.nostr.wine (fizetős)\n - relay.0xchat.com (ingyenes)</string>
     <string name="dm_relays_not_found_editing">Adjon hozzá 1–3 átjátszót, hogy privát postafiókként szolgáljanak. A bejövő privát üzenetek átjátszóinak el kell fogadniuk bármely üzenetet bárkitől, de azok letöltését csak Ön engedélyezheti.</string>
     <string name="dm_relays_not_found_create_now">Beállítás most</string>
+    <string name="recipient_missing_dm_relays">Nem találhatók a beérkező közvetlen üzenetek átjátszói. Az üzenetek kézbesítése addig nem lehetséges, amíg be nem állítja az átjátszók listáját.</string>
     <string name="search_relays_title">Keresési átjátszók</string>
     <string name="search_relays_not_found">Keresési átjátszók beállítása</string>
     <string name="search_relays_not_found_description">A kifejezetten a kereséshez és a felhasználói címkézéshez tervezett átjátszólista létrehozása javítani fogja ezeket az eredményeket.</string>
