@@ -134,7 +134,7 @@ object WalletManager {
     const val MONERO_DIR = "monero"
 
     fun getWalletDir(): String {
-        val context = Amethyst.instance.applicationContext
+        val context = Amethyst.instance.appContext
         val path = Path(context.filesDir.absolutePath, "monero")
         try {
             path.createDirectory()

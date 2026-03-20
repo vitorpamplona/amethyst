@@ -21,13 +21,12 @@
 package com.vitorpamplona.amethyst.service
 
 import android.util.Log
-import androidx.lifecycle.asFlow
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.quartz.experimental.moneroTips.TipEvent
+import com.vitorpamplona.quartz.experimental.moneroTips.tipSplitSetup
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
