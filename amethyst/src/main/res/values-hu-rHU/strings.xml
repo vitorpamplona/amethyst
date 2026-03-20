@@ -241,7 +241,7 @@
     <string name="already_have_an_account">Már van Nostr-fiókja?</string>
     <string name="create_a_new_account">Új fiók létrehozása</string>
     <string name="generate_a_new_key">Új kulcs előállítása</string>
-    <string name="loading_feed">Hírforrás betöltése…</string>
+    <string name="loading_feed">Hírfolyam betöltése…</string>
     <string name="loading_account">Fiók betöltése…</string>
     <string name="error_loading_replies">"Hiba a válaszok betöltésekor: "</string>
     <string name="try_again">Próbálja újra</string>
@@ -770,7 +770,7 @@
     <string name="discover_follows">Követett csomagok</string>
     <string name="discover_follows_explainer">Ezek a listák azon felhasználók listái, akiket másoknak ajánlhat. Csak nyilvános felhasználók szerepelhetnek a listán.</string>
     <string name="discover_reads">Olvasmányok</string>
-    <string name="discover_content_v2">Hírforrás-algoritmus</string>
+    <string name="discover_content_v2">Hírfolyam-algoritmus</string>
     <string name="discover_marketplace">Piac</string>
     <string name="discover_live_v2">Élő közvetítések</string>
     <string name="discover_community_v2">Közösségek</string>
@@ -1315,6 +1315,10 @@
     <string name="my_lists">Saját listák</string>
     <string name="people_list_label">Felhasználók</string>
     <string name="select_list_to_filter">Lista kiválasztása a hírfolyam szűréséhez</string>
+    <string name="feed_group_feeds">Hírfolyamok</string>
+    <string name="feed_group_hashtags">Hashtagek</string>
+    <string name="feed_group_communities">Közösségek</string>
+    <string name="feed_group_lists">Listák</string>
     <string name="temporary_account">Kijelentkeztetés az eszköz zárolása esetén</string>
     <string name="private_message">Privát üzenet</string>
     <string name="public_message">Nyílvános üzenet</string>
