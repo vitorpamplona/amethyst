@@ -42,15 +42,15 @@ import kotlin.coroutines.CoroutineContext
  *
  * @param store The [EventStore] backing this relay.
  * @param relayUrl The URL of this relay, used for NIP-42 authentication.
- * @param requireAuth When true, clients must authenticate (NIP-42) before
- *                    sending EVENT, REQ, or COUNT commands.
+ * @param authPolicy Controls authentication requirements for relay commands.
+ *                   Defaults to [OpenPolicy] (no authentication required).
  * @param verify Validates incoming events. Defaults to cryptographic
  *                      verification (id + signature). Override for testing.
  */
 class NostrServer(
     private val store: IEventStore,
     val relayUrl: NormalizedRelayUrl = NormalizedRelayUrl("wss://relay.example.com/"),
-    val requireAuth: Boolean = false,
+    val authPolicy: AuthPolicy = OpenPolicy(),
     private val parentContext: CoroutineContext = SupervisorJob(),
     private val verify: (Event) -> Boolean = { it.verify() },
 ) {

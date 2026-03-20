@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.relay.server
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EoseMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
@@ -63,12 +64,12 @@ class NostrServerTest {
     private fun createServer(
         store: IEventStore = EventStore(null),
         dispatcher: kotlinx.coroutines.CoroutineDispatcher,
-        requireAuth: Boolean = false,
+        authPolicy: AuthPolicy = OpenPolicy(),
     ): NostrServer =
         NostrServer(
             store = store,
             relayUrl = relayUrl,
-            requireAuth = requireAuth,
+            authPolicy = authPolicy,
             parentContext = dispatcher,
             verify = { true },
         )
@@ -605,7 +606,7 @@ class NostrServerTest {
     fun requireAuthRejectsEventWithoutAuth() =
         runTest {
             val dispatcher = UnconfinedTestDispatcher(testScheduler)
-            val server = createServer(dispatcher = dispatcher, requireAuth = true)
+            val server = createServer(dispatcher = dispatcher, authPolicy = RequireAuthPolicy())
             val collector = MessageCollector()
 
             val session = server.connect(collector.sendCallback)
@@ -625,7 +626,7 @@ class NostrServerTest {
     fun requireAuthRejectsReqWithoutAuth() =
         runTest {
             val dispatcher = UnconfinedTestDispatcher(testScheduler)
-            val server = createServer(dispatcher = dispatcher, requireAuth = true)
+            val server = createServer(dispatcher = dispatcher, authPolicy = RequireAuthPolicy())
             val collector = MessageCollector()
 
             val session = server.connect(collector.sendCallback)
@@ -642,7 +643,7 @@ class NostrServerTest {
     fun requireAuthRejectsCountWithoutAuth() =
         runTest {
             val dispatcher = UnconfinedTestDispatcher(testScheduler)
-            val server = createServer(dispatcher = dispatcher, requireAuth = true)
+            val server = createServer(dispatcher = dispatcher, authPolicy = RequireAuthPolicy())
             val collector = MessageCollector()
 
             val session = server.connect(collector.sendCallback)
@@ -660,7 +661,7 @@ class NostrServerTest {
         runTest {
             val dispatcher = UnconfinedTestDispatcher(testScheduler)
             val store = EventStore(null)
-            val server = createServer(store = store, dispatcher = dispatcher, requireAuth = true)
+            val server = createServer(store = store, dispatcher = dispatcher, authPolicy = RequireAuthPolicy())
             val collector = MessageCollector()
 
             val session = server.connect(collector.sendCallback)
@@ -694,18 +695,182 @@ class NostrServerTest {
     fun noAuthRequiredAllowsCommandsWithoutAuth() =
         runTest {
             val dispatcher = UnconfinedTestDispatcher(testScheduler)
-            val server = createServer(dispatcher = dispatcher, requireAuth = false)
+            val server = createServer(dispatcher = dispatcher)
             val collector = MessageCollector()
 
             val session = server.connect(collector.sendCallback)
 
-            // EVENT should work without auth when requireAuth is false
+            // EVENT should work without auth when using OpenPolicy
             val event = testEvent()
             session.processMessage("""["EVENT",${event.toJson()}]""")
 
             val okMessages = collector.rawMessagesContaining("OK")
             assertEquals(1, okMessages.size)
             assertTrue(okMessages[0].contains("\"true\""))
+
+            server.shutdown()
+        }
+
+    // -- Custom AuthPolicy tests -----------------------------------------------
+
+    @Test
+    fun customPolicyRejectsSpecificEventKinds() =
+        runTest {
+            // Policy that blocks kind 4 (DMs) from unauthenticated users.
+            val policy =
+                object : AuthPolicy {
+                    override fun acceptEvent(
+                        event: Event,
+                        authedPubkeys: Set<HexKey>,
+                    ) = if (event.kind == 4 && authedPubkeys.isEmpty()) {
+                        PolicyResult.Rejected("auth-required: kind 4 events require authentication")
+                    } else {
+                        PolicyResult.Accepted
+                    }
+
+                    override fun acceptReq(
+                        filters: List<Filter>,
+                        authedPubkeys: Set<HexKey>,
+                    ) = ReqPolicyResult.Accepted()
+
+                    override fun acceptCount(
+                        filters: List<Filter>,
+                        authedPubkeys: Set<HexKey>,
+                    ) = PolicyResult.Accepted
+                }
+
+            val dispatcher = UnconfinedTestDispatcher(testScheduler)
+            val server = createServer(dispatcher = dispatcher, authPolicy = policy)
+            val collector = MessageCollector()
+            val session = server.connect(collector.sendCallback)
+
+            // Kind 1 should be accepted without auth
+            val note = testEvent(hexId(1), kind = 1)
+            session.processMessage("""["EVENT",${note.toJson()}]""")
+            assertTrue(collector.rawMessagesContaining("OK")[0].contains("\"true\""))
+
+            // Kind 4 should be rejected without auth
+            val dm = testEvent(hexId(2), kind = 4)
+            session.processMessage("""["EVENT",${dm.toJson()}]""")
+            val okMessages = collector.rawMessagesContaining("OK")
+            assertEquals(2, okMessages.size)
+            assertTrue(okMessages[1].contains("\"false\""))
+            assertTrue(okMessages[1].contains("auth-required:"))
+
+            server.shutdown()
+        }
+
+    @Test
+    fun customPolicyRewritesFilters() =
+        runTest {
+            // Policy that restricts kind 4 queries to the authed user's own messages.
+            val policy =
+                object : AuthPolicy {
+                    override fun acceptEvent(
+                        event: Event,
+                        authedPubkeys: Set<HexKey>,
+                    ) = PolicyResult.Accepted
+
+                    override fun acceptReq(
+                        filters: List<Filter>,
+                        authedPubkeys: Set<HexKey>,
+                    ): ReqPolicyResult {
+                        val hasDmFilter = filters.any { it.kinds?.contains(4) == true }
+                        if (!hasDmFilter) return ReqPolicyResult.Accepted()
+                        if (authedPubkeys.isEmpty()) {
+                            return ReqPolicyResult.Rejected("auth-required: kind 4 requires auth")
+                        }
+                        // Rewrite: restrict to authed user's pubkey as author
+                        val rewritten =
+                            filters.map { filter ->
+                                if (filter.kinds?.contains(4) == true) {
+                                    filter.copy(authors = authedPubkeys.toList())
+                                } else {
+                                    filter
+                                }
+                            }
+                        return ReqPolicyResult.Accepted(rewritten)
+                    }
+
+                    override fun acceptCount(
+                        filters: List<Filter>,
+                        authedPubkeys: Set<HexKey>,
+                    ) = PolicyResult.Accepted
+                }
+
+            val dispatcher = UnconfinedTestDispatcher(testScheduler)
+            val store = EventStore(null)
+            val server = createServer(store = store, dispatcher = dispatcher, authPolicy = policy)
+
+            // Insert DMs from two different authors
+            store.insert(testEvent(hexId(1), kind = 4, createdAt = 100L)) // from pubkey
+            store.insert(
+                Event(hexId(2), pubkey2, 200L, 4, emptyArray(), "secret", sig),
+            ) // from pubkey2
+
+            val collector = MessageCollector()
+            val session = server.connect(collector.sendCallback)
+
+            // Authenticate as pubkey
+            val auth = authEvent(challenge = session.challenge, pubKey = pubkey)
+            session.processMessage(authJson(auth))
+
+            // Query kind 4 — policy should rewrite to only return pubkey's events
+            session.processMessage("""["REQ","sub1",{"kinds":[4]}]""")
+
+            val events = collector.parsedEventMessages().filterIsInstance<EventMessage>()
+            assertEquals(1, events.size)
+            assertEquals(pubkey, events[0].event.pubKey)
+
+            server.shutdown()
+        }
+
+    @Test
+    fun customPolicyFiltersLiveEvents() =
+        runTest {
+            // Policy that only delivers events to authenticated sessions
+            val policy =
+                object : AuthPolicy {
+                    override fun acceptEvent(
+                        event: Event,
+                        authedPubkeys: Set<HexKey>,
+                    ) = PolicyResult.Accepted
+
+                    override fun acceptReq(
+                        filters: List<Filter>,
+                        authedPubkeys: Set<HexKey>,
+                    ) = ReqPolicyResult.Accepted()
+
+                    override fun acceptCount(
+                        filters: List<Filter>,
+                        authedPubkeys: Set<HexKey>,
+                    ) = PolicyResult.Accepted
+
+                    override fun canSendToSession(
+                        event: Event,
+                        authedPubkeys: Set<HexKey>,
+                    ) = authedPubkeys.isNotEmpty()
+                }
+
+            val dispatcher = UnconfinedTestDispatcher(testScheduler)
+            val store = EventStore(null)
+            val server = createServer(store = store, dispatcher = dispatcher, authPolicy = policy)
+
+            // Unauthenticated subscriber
+            val unauthCollector = MessageCollector()
+            val unauthSession = server.connect(unauthCollector.sendCallback)
+            unauthSession.processMessage("""["REQ","sub1",{"kinds":[1]}]""")
+            val countAfterEose = unauthCollector.messages.size
+
+            // Authenticated publisher
+            val pubCollector = MessageCollector()
+            val pubSession = server.connect(pubCollector.sendCallback)
+
+            // Publish an event
+            pubSession.insert(testEvent(hexId(1), kind = 1))
+
+            // Unauthenticated session should NOT receive the live event
+            assertEquals(countAfterEose, unauthCollector.messages.size)
 
             server.shutdown()
         }

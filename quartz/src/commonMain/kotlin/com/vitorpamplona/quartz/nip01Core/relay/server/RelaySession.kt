@@ -200,8 +200,9 @@ class RelaySession(
     private fun handleEvent(cmd: EventCmd) {
         val event = cmd.event
 
-        if (server.requireAuth && !isAuthenticated()) {
-            send(OkMessage(event.id, false, "auth-required: this relay requires authentication"))
+        val result = server.authPolicy.acceptEvent(event, authenticatedPubkeys())
+        if (result is PolicyResult.Rejected) {
+            send(OkMessage(event.id, false, result.reason))
             return
         }
 
@@ -220,20 +221,30 @@ class RelaySession(
 
     // -- NIP-01: REQ ----------------------------------------------------------
     private fun handleReq(cmd: ReqCmd) {
-        if (server.requireAuth && !isAuthenticated()) {
-            send(ClosedMessage(cmd.subId, "auth-required: this relay requires authentication"))
+        val result = server.authPolicy.acceptReq(cmd.filters, authenticatedPubkeys())
+        if (result is ReqPolicyResult.Rejected) {
+            send(ClosedMessage(cmd.subId, result.reason))
             return
         }
+
+        // Policy may rewrite filters to match the user's access level.
+        val filters = (result as ReqPolicyResult.Accepted).filters ?: cmd.filters
 
         // Cancel any existing subscription with the same id (NIP-01 spec).
         cancelSubscription(cmd.subId)
 
+        val authed = authenticatedPubkeys()
+        val policy = server.authPolicy
         val job =
             scope.launch {
                 try {
                     store.query(
-                        filters = cmd.filters,
-                        onEach = { send(EventMessage(cmd.subId, it)) },
+                        filters = filters,
+                        onEach = { event ->
+                            if (policy.canSendToSession(event, authed)) {
+                                send(EventMessage(cmd.subId, event))
+                            }
+                        },
                         onEose = { send(EoseMessage(cmd.subId)) },
                     )
                 } catch (_: kotlinx.coroutines.CancellationException) {
@@ -254,8 +265,9 @@ class RelaySession(
 
     // -- NIP-45: COUNT --------------------------------------------------------
     private fun handleCount(cmd: CountCmd) {
-        if (server.requireAuth && !isAuthenticated()) {
-            send(ClosedMessage(cmd.queryId, "auth-required: this relay requires authentication"))
+        val result = server.authPolicy.acceptCount(cmd.filters, authenticatedPubkeys())
+        if (result is PolicyResult.Rejected) {
+            send(ClosedMessage(cmd.queryId, result.reason))
             return
         }
 
