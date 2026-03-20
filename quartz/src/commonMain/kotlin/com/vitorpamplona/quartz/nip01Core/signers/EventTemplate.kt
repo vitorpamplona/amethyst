@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip01Core.signers
 
+import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedSerializable
@@ -27,8 +28,12 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.builder
 import com.vitorpamplona.quartz.nip01Core.core.tagArray
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.EventTemplateKSerializer
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.serialization.Serializable
 
+@Immutable
+@Serializable(with = EventTemplateKSerializer::class)
 class EventTemplate<T : Event>(
     val createdAt: Long,
     val kind: Int,

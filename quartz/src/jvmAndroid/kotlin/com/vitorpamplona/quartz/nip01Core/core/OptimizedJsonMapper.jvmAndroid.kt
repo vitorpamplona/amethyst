@@ -72,6 +72,13 @@ actual object OptimizedJsonMapper {
             throw IllegalArgumentException(e.message, e)
         }
 
+    actual fun fromJsonToEventList(json: String): List<Event> =
+        try {
+            JacksonMapper.fromJsonToEventList(json)
+        } catch (e: com.fasterxml.jackson.core.JsonParseException) {
+            throw IllegalArgumentException(e.message, e)
+        }
+
     actual fun toJson(tags: Array<Array<String>>): String = JacksonMapper.toJson(tags)
 
     actual inline fun <reified T : OptimizedSerializable> fromJsonTo(json: String): T =

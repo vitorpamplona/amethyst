@@ -41,6 +41,8 @@ expect object OptimizedJsonMapper {
 
     fun fromJsonToEventTemplate(json: String): EventTemplate<Event>
 
+    fun fromJsonToEventList(json: String): List<Event>
+
     fun fromJsonToRumor(json: String): Rumor
 
     fun toJson(tags: Array<Array<String>>): String

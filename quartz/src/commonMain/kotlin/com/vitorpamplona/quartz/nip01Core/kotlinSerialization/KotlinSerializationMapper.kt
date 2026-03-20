@@ -64,6 +64,8 @@ class KotlinSerializationMapper {
 
         fun fromJsonToEventTemplate(jsonStr: String): EventTemplate<Event> = json.decodeFromString(EventTemplateKSerializer, jsonStr)
 
+        fun fromJsonToEventList(jsonStr: String): List<Event> = json.decodeFromString(jsonStr)
+
         fun toJson(event: Event): String = json.encodeToString(EventKSerializer, event)
 
         fun toJson(tags: TagArray): String = json.encodeToString(TagArrayKSerializer, tags)
