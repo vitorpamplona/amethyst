@@ -44,12 +44,20 @@ object Constants {
 
     val news = RelayUrlNormalizer.normalize("wss://news.utxo.one")
 
+    // Paid Monero Nostr Relays (pmnr.xmr.rocks)
+    val xmrUsenostr = RelayUrlNormalizer.normalize("wss://xmr.usenostr.org")
+    val nostrXmrRocks = RelayUrlNormalizer.normalize("wss://nostr.xmr.rocks")
+    val nerostrXmrRocks = RelayUrlNormalizer.normalize("wss://nerostr.xmr.rocks")
+    val xmrIthurts = RelayUrlNormalizer.normalize("wss://xmr.ithurtswhenip.ee")
+
+    val moneroRelays = setOf(xmrUsenostr, nostrXmrRocks, nerostrXmrRocks, xmrIthurts)
+
     val purplepages = RelayUrlNormalizer.normalize("wss://purplepag.es")
     val coracle = RelayUrlNormalizer.normalize("wss://indexer.coracle.social")
     val userkinds = RelayUrlNormalizer.normalize("wss://user.kindpag.es")
     val yabu = RelayUrlNormalizer.normalize("wss://directory.yabu.me")
     val nostr1 = RelayUrlNormalizer.normalize("wss://profiles.nostr1.com")
 
-    val bootstrapInbox = setOf(damus, primal, mom, nos, bitcoiner, oxtr, yabu)
-    val eventFinderRelays = setOf(wine, damus, primal, mom, nos, bitcoiner, oxtr)
+    val bootstrapInbox = setOf(damus, primal, mom, nos, bitcoiner, oxtr, yabu) + moneroRelays
+    val eventFinderRelays = setOf(wine, damus, primal, mom, nos, bitcoiner, oxtr) + moneroRelays
 }

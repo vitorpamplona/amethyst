@@ -33,7 +33,7 @@ import kotlinx.coroutines.flow.first
 import kotlin.coroutines.cancellation.CancellationException
 
 data class MoneroSettings(
-    val daemon: String = "node.monerodevs.org:18089",
+    val daemon: String = "node.xmr.rocks:18089",
     val daemonUsername: String = "",
     val daemonPassword: String = "",
     val isSeedBackedUp: Boolean = false,
@@ -60,7 +60,7 @@ class MoneroSharedPreferences(
         try {
             val preferences = context.sharedPreferencesDataStore.data.first()
             MoneroSettings(
-                daemon = preferences[MONERO_DAEMON_KEY] ?: "node.monerodevs.org:18089",
+                daemon = preferences[MONERO_DAEMON_KEY] ?: "node.xmr.rocks:18089",
                 daemonUsername = preferences[MONERO_DAEMON_USERNAME_KEY] ?: "",
                 daemonPassword = preferences[MONERO_DAEMON_PASSWORD_KEY] ?: "",
                 isSeedBackedUp = preferences[MONERO_SEED_BACKED_UP_KEY] ?: false,
