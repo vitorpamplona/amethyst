@@ -4,7 +4,6 @@ plugins {
     alias(libs.plugins.jetbrainsKotlinJvm) apply false
     alias(libs.plugins.androidBenchmark) apply false
     alias(libs.plugins.diffplugSpotless)
-    alias(libs.plugins.googleServices) apply false
     alias(libs.plugins.jetbrainsComposeCompiler) apply false
     alias(libs.plugins.composeMultiplatform) apply false
     alias(libs.plugins.kotlinMultiplatform) apply false

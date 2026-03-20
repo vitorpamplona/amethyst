@@ -65,6 +65,7 @@ commonsImaging = "1.0.0-alpha5"
 zxing = "3.5.4"
 zxingAndroidEmbedded = "4.3.0"
 windowCoreAndroid = "1.5.1"
+workRuntimeKtx = "2.10.0"
 androidxCamera = "1.5.3"
 androidxCollection = "1.6.0"
 androidxExifinterface = "1.4.1"
@@ -178,6 +179,7 @@ zoomable = { group = "net.engawapg.lib", name = "zoomable", version.ref = "zooma
 zxing = { group = "com.google.zxing", name = "core", version.ref = "zxing" }
 zxing-embedded = { group = "com.journeyapps", name = "zxing-android-embedded", version.ref = "zxingAndroidEmbedded" }
 androidx-window-core-android = { group = "androidx.window", name = "window-core-android", version.ref = "windowCoreAndroid" }
+androidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "workRuntimeKtx" }
 kotlin-stdlib = { group = "org.jetbrains.kotlin", name = "kotlin-stdlib", version.ref = "kotlin" }
 kotlin-test = { group = "org.jetbrains.kotlin", name = "kotlin-test", version.ref = "kotlinTest" }
 androidx-core = { group = "androidx.test", name = "core", version.ref = "core" }

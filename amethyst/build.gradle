@@ -2,7 +2,6 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.androidApplication)
-    alias(libs.plugins.googleServices)
     alias(libs.plugins.jetbrainsComposeCompiler)
     alias(libs.plugins.serialization)
     alias(libs.plugins.stability.analyzer)
@@ -52,7 +51,7 @@ android {
     compileSdk = libs.versions.android.compileSdk.get().toInteger()
 
     defaultConfig {
-        applicationId = "com.vitorpamplona.amethyst"
+        applicationId = "com.retrnull.garnet"
         minSdk = libs.versions.android.minSdk.get().toInteger()
         targetSdk = libs.versions.android.targetSdk.get().toInteger()
         versionCode = 432
@@ -62,6 +61,12 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
+        }
+        externalNativeBuild {
+            cmake {
+                cppFlags "-std=c++11"
+                arguments "-DANDROID_STL=c++_shared"
+            }
         }
         resourceConfigurations += [
             'ar',
@@ -172,16 +177,32 @@ android {
         }
     }
 
-    flavorDimensions = ["channel"]
+    flavorDimensions = ["net", "channel"]
 
     productFlavors {
-        play {
+        mainnet {
             getIsDefault().set(true)
+            dimension "net"
+        }
+
+        stagenet {
+            dimension "net"
+            applicationIdSuffix '.stage'
+        }
+
+        play {
             dimension "channel"
         }
 
         fdroid {
+            getIsDefault().set(true)
             dimension "channel"
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path "CMakeLists.txt"
         }
     }
 
@@ -296,6 +317,8 @@ dependencies {
 
     // important for proxy / tor
     implementation libs.androidx.media3.datasource.okhttp
+
+    implementation libs.androidx.work.runtime.ktx
 
     // Load images from the web.
     implementation libs.coil.compose
