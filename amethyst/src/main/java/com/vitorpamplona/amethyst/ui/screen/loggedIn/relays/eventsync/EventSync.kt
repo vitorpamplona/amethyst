@@ -80,6 +80,7 @@ class EventSync(
     private val inboxTargets: () -> Set<NormalizedRelayUrl>,
     private val dmTargets: () -> Set<NormalizedRelayUrl>,
     private val clientBuilder: () -> INostrClient,
+    private val onSyncComplete: (Long) -> Unit,
     private val scope: CoroutineScope,
 ) {
     companion object {
@@ -284,12 +285,18 @@ class EventSync(
 
     private var syncJob: Job? = null
 
+    /** User-selected date range for the sync filter (epoch seconds). */
+    val sinceSecs = MutableStateFlow<Long?>(null)
+    val untilSecs = MutableStateFlow<Long?>(null)
+
     fun start() {
         if (_syncState.value is SyncState.Running) return
         _liveActivity.value = LiveSyncActivity()
+        val capturedSince = sinceSecs.value
+        val capturedUntil = untilSecs.value
         syncJob =
             scope.launch(Dispatchers.IO) {
-                runSync()
+                runSync(capturedSince, capturedUntil)
             }
     }
 
@@ -300,7 +307,10 @@ class EventSync(
     // -------------------------------------------------------------------------
     // Sync logic
     // -------------------------------------------------------------------------
-    suspend fun runSync() {
+    suspend fun runSync(
+        filterSince: Long? = null,
+        filterUntil: Long? = null,
+    ) {
         val startTime = System.currentTimeMillis()
 
         _liveActivity.value = LiveSyncActivity()
@@ -323,9 +333,9 @@ class EventSync(
 
         val defaultFilters =
             buildList {
-                if (outboxTargets.isNotEmpty()) add(Filter(authors = listOf(myPubKey)))
+                if (outboxTargets.isNotEmpty()) add(Filter(authors = listOf(myPubKey), since = filterSince, until = filterUntil))
                 if (inboxTargets.isNotEmpty() || dmTargets.isNotEmpty()) {
-                    add(Filter(tags = mapOf("p" to listOf(myPubKey))))
+                    add(Filter(tags = mapOf("p" to listOf(myPubKey)), since = filterSince, until = filterUntil))
                 }
             }
 
@@ -342,9 +352,9 @@ class EventSync(
                     defaultFilters
                 } else {
                     buildList {
-                        if (it !in outboxTargets) add(Filter(authors = listOf(myPubKey)))
+                        if (it !in outboxTargets) add(Filter(authors = listOf(myPubKey), since = filterSince, until = filterUntil))
                         if (it !in inboxTargets && it !in dmTargets) {
-                            add(Filter(tags = mapOf("p" to listOf(myPubKey))))
+                            add(Filter(tags = mapOf("p" to listOf(myPubKey)), since = filterSince, until = filterUntil))
                         }
                     }
                 }
@@ -556,6 +566,9 @@ class EventSync(
                         runningState.relaysCompleted.update { it + 1 }
                     },
                 )
+
+                val completionTimestamp = System.currentTimeMillis() / 1000
+                onSyncComplete(completionTimestamp)
 
                 _syncState.value =
                     SyncState.Done(

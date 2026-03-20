@@ -43,6 +43,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.RangeSlider
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -70,6 +71,9 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun EventSyncScreen(
@@ -80,6 +84,8 @@ fun EventSyncScreen(
     val isMobileOrMetered by accountViewModel.settings.isMobileOrMeteredConnection.collectAsStateWithLifecycle()
     val syncState by syncViewModel.syncState.collectAsStateWithLifecycle()
     val liveActivity by syncViewModel.liveActivity.collectAsStateWithLifecycle()
+    val lastSyncTimestamp by accountViewModel.account.settings.lastRelaySyncTimestamp
+        .collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -94,6 +100,9 @@ fun EventSyncScreen(
                 syncState = syncState,
                 liveActivity = liveActivity,
                 isMobileOrMetered = isMobileOrMetered,
+                lastSyncTimestamp = lastSyncTimestamp,
+                onSinceChanged = { syncViewModel.sinceSecs.value = it },
+                onUntilChanged = { syncViewModel.untilSecs.value = it },
                 onStart = syncViewModel::start,
                 onCancel = syncViewModel::cancel,
             )
@@ -106,6 +115,9 @@ fun EventScreenBody(
     syncState: EventSync.SyncState,
     liveActivity: EventSync.LiveSyncActivity,
     isMobileOrMetered: Boolean = false,
+    lastSyncTimestamp: Long? = null,
+    onSinceChanged: (Long?) -> Unit = {},
+    onUntilChanged: (Long?) -> Unit = {},
     onStart: () -> Unit = {},
     onCancel: () -> Unit = {},
 ) {
@@ -119,10 +131,41 @@ fun EventScreenBody(
         item {
             // ---- Progress / Status area ----
             when (syncState) {
-                is EventSync.SyncState.Idle -> ExplanationCard(isMobileOrMetered, onStart)
-                is EventSync.SyncState.Running -> SyncProgressCard(state = syncState, onCancel)
-                is EventSync.SyncState.Done -> DoneCard(state = syncState, isMobileOrMetered, onStart)
-                is EventSync.SyncState.Error -> ErrorCard(syncState.message, isMobileOrMetered, onStart)
+                is EventSync.SyncState.Idle -> {
+                    ExplanationCard(
+                        isMobileOrMetered = isMobileOrMetered,
+                        lastSyncTimestamp = lastSyncTimestamp,
+                        onSinceChanged = onSinceChanged,
+                        onUntilChanged = onUntilChanged,
+                        onStart = onStart,
+                    )
+                }
+
+                is EventSync.SyncState.Running -> {
+                    SyncProgressCard(state = syncState, onCancel)
+                }
+
+                is EventSync.SyncState.Done -> {
+                    DoneCard(
+                        state = syncState,
+                        isMobileOrMetered = isMobileOrMetered,
+                        lastSyncTimestamp = lastSyncTimestamp,
+                        onSinceChanged = onSinceChanged,
+                        onUntilChanged = onUntilChanged,
+                        onStart = onStart,
+                    )
+                }
+
+                is EventSync.SyncState.Error -> {
+                    ErrorCard(
+                        message = syncState.message,
+                        isMobileOrMetered = isMobileOrMetered,
+                        lastSyncTimestamp = lastSyncTimestamp,
+                        onSinceChanged = onSinceChanged,
+                        onUntilChanged = onUntilChanged,
+                        onStart = onStart,
+                    )
+                }
             }
         }
 
@@ -231,6 +274,9 @@ private fun StartSyncButton(
 @Composable
 private fun ExplanationCard(
     isMobileOrMetered: Boolean,
+    lastSyncTimestamp: Long? = null,
+    onSinceChanged: (Long?) -> Unit = {},
+    onUntilChanged: (Long?) -> Unit = {},
     onStart: () -> Unit,
 ) {
     // ---- Explanation card ----
@@ -255,6 +301,14 @@ private fun ExplanationCard(
             StepRow(number = "2", text = stringRes(R.string.event_sync_step2))
             Spacer(Modifier.height(4.dp))
             StepRow(number = "3", text = stringRes(R.string.event_sync_step3))
+            Spacer(Modifier.height(14.dp))
+
+            DateRangeFilterCard(
+                lastSyncTimestamp = lastSyncTimestamp,
+                onSinceChanged = onSinceChanged,
+                onUntilChanged = onUntilChanged,
+            )
+
             Spacer(Modifier.height(10.dp))
             // ---- WiFi warning ----
             if (isMobileOrMetered) {
@@ -352,6 +406,9 @@ private fun RelayStatement(state: EventSync.SyncState.Running) {
 private fun DoneCard(
     state: EventSync.SyncState.Done,
     isMobileOrMetered: Boolean = false,
+    lastSyncTimestamp: Long? = null,
+    onSinceChanged: (Long?) -> Unit = {},
+    onUntilChanged: (Long?) -> Unit = {},
     onStart: () -> Unit = { },
 ) {
     Card(
@@ -387,6 +444,14 @@ private fun DoneCard(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
             )
+            Spacer(Modifier.height(14.dp))
+
+            DateRangeFilterCard(
+                lastSyncTimestamp = lastSyncTimestamp,
+                onSinceChanged = onSinceChanged,
+                onUntilChanged = onUntilChanged,
+            )
+
             Spacer(Modifier.height(10.dp))
             StartSyncButton(isMobileOrMetered, onStart)
         }
@@ -397,6 +462,9 @@ private fun DoneCard(
 private fun ErrorCard(
     message: String,
     isMobileOrMetered: Boolean = false,
+    lastSyncTimestamp: Long? = null,
+    onSinceChanged: (Long?) -> Unit = {},
+    onUntilChanged: (Long?) -> Unit = {},
     onStart: () -> Unit = {},
 ) {
     Card(
@@ -419,6 +487,14 @@ private fun ErrorCard(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onErrorContainer,
             )
+            Spacer(Modifier.height(14.dp))
+
+            DateRangeFilterCard(
+                lastSyncTimestamp = lastSyncTimestamp,
+                onSinceChanged = onSinceChanged,
+                onUntilChanged = onUntilChanged,
+            )
+
             Spacer(Modifier.height(10.dp))
             StartSyncButton(isMobileOrMetered, onStart)
         }
@@ -661,6 +737,123 @@ private fun ActivityLogRow(info: EventSync.LiveSyncActivity.SourceRelayInfo) {
 }
 
 // -------------------------------------------------------------------------
+// Date range filter
+// -------------------------------------------------------------------------
+
+/** Oldest possible "since" — roughly 2020-01-01 in epoch seconds. */
+private const val EPOCH_2020 = 1_577_836_800L
+
+@Composable
+private fun DateRangeFilterCard(
+    lastSyncTimestamp: Long? = null,
+    onSinceChanged: (Long?) -> Unit = {},
+    onUntilChanged: (Long?) -> Unit = {},
+) {
+    val now = remember { System.currentTimeMillis() / 1000 }
+
+    // Slider range: 0f = EPOCH_2020, 1f = now
+    val range = (now - EPOCH_2020).toFloat()
+
+    // Initialise from lastSyncTimestamp when available, otherwise full range
+    var sliderValues by remember(lastSyncTimestamp) {
+        val initialSince =
+            if (lastSyncTimestamp != null) {
+                ((lastSyncTimestamp - EPOCH_2020) / range).coerceIn(0f, 1f)
+            } else {
+                0f
+            }
+        mutableStateOf(initialSince..1f)
+    }
+
+    // Derive actual timestamps
+    val sinceEpoch = (EPOCH_2020 + (sliderValues.start * range).toLong())
+    val untilEpoch = (EPOCH_2020 + (sliderValues.endInclusive * range).toLong())
+
+    // Fire callbacks
+    val effectiveSince = if (sliderValues.start <= 0.001f) null else sinceEpoch
+    val effectiveUntil = if (sliderValues.endInclusive >= 0.999f) null else untilEpoch
+
+    // Notify parent on each change
+    androidx.compose.runtime.LaunchedEffect(effectiveSince) { onSinceChanged(effectiveSince) }
+    androidx.compose.runtime.LaunchedEffect(effectiveUntil) { onUntilChanged(effectiveUntil) }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = stringRes(R.string.event_sync_date_filter_title),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+
+            if (lastSyncTimestamp != null) {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = stringRes(R.string.event_sync_date_filter_last_sync, formatEpochDate(lastSyncTimestamp)),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            // Labels for current selection
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text =
+                        if (effectiveSince == null) {
+                            stringRes(R.string.event_sync_date_filter_all_time)
+                        } else {
+                            stringRes(R.string.event_sync_date_filter_since) + " " + formatEpochDate(sinceEpoch)
+                        },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    text =
+                        if (effectiveUntil == null) {
+                            stringRes(R.string.event_sync_date_filter_now)
+                        } else {
+                            stringRes(R.string.event_sync_date_filter_until) + " " + formatEpochDate(untilEpoch)
+                        },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+
+            RangeSlider(
+                value = sliderValues,
+                onValueChange = { sliderValues = it },
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            if (lastSyncTimestamp != null) {
+                OutlinedButton(
+                    onClick = {
+                        val syncNorm = ((lastSyncTimestamp - EPOCH_2020) / range).coerceIn(0f, 1f)
+                        sliderValues = syncNorm..1f
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringRes(R.string.event_sync_date_filter_since_last_sync))
+                }
+            }
+        }
+    }
+}
+
+private fun formatEpochDate(epochSecs: Long): String {
+    val sdf = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
+    return sdf.format(Date(epochSecs * 1000))
+}
+
+// -------------------------------------------------------------------------
 // Helpers
 // -------------------------------------------------------------------------
 
@@ -747,7 +940,7 @@ private val previewActivity =
 @Preview
 fun IdleCardWifiPreview() {
     ThemeComparisonColumn {
-        ExplanationCard(false, {})
+        ExplanationCard(isMobileOrMetered = false, onStart = {})
     }
 }
 
@@ -755,7 +948,7 @@ fun IdleCardWifiPreview() {
 @Preview
 fun IdleCardMobilePreview() {
     ThemeComparisonColumn {
-        ExplanationCard(true, {})
+        ExplanationCard(isMobileOrMetered = true, onStart = {})
     }
 }
 

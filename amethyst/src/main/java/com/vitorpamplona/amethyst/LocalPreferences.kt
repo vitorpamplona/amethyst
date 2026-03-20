@@ -500,7 +500,6 @@ object LocalPreferences {
 
                     val keyPair = KeyPair(privKey = privKey?.hexToByteArray(), pubKey = pubKey.hexToByteArray())
                     val hasDonatedInVersion = getStringSet(PrefKeys.HAS_DONATED_IN_VERSION, null) ?: setOf()
-
                     return@with AccountSettings(
                         keyPair = keyPair,
                         transientAccount = false,

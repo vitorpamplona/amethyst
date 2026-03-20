@@ -1873,4 +1873,12 @@
     <string name="event_sync_status_downloading">Downloading</string>
     <string name="event_sync_status_error">Error</string>
     <string name="event_sync_status_completed">Completed</string>
+
+    <string name="event_sync_date_filter_title">Date Range</string>
+    <string name="event_sync_date_filter_since">Since</string>
+    <string name="event_sync_date_filter_until">Until</string>
+    <string name="event_sync_date_filter_now">Now</string>
+    <string name="event_sync_date_filter_all_time">All time</string>
+    <string name="event_sync_date_filter_last_sync">Last sync: %1$s</string>
+    <string name="event_sync_date_filter_since_last_sync">Since Last Sync</string>
 </resources>

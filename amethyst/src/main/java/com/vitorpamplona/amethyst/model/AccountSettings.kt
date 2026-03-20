@@ -190,6 +190,7 @@ class AccountSettings(
     val lastReadPerRoute: MutableStateFlow<Map<String, MutableStateFlow<Long>>> = MutableStateFlow(mapOf()),
     val hasDonatedInVersion: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
     val pendingAttestations: MutableStateFlow<Map<HexKey, String>> = MutableStateFlow(mapOf()),
+    val lastRelaySyncTimestamp: MutableStateFlow<Long?> = MutableStateFlow(null),
     var backupNipA3PaymentTargets: PaymentTargetsEvent? = null,
 ) : EphemeralChatRepository,
     PublicChatListRepository {
@@ -677,6 +678,15 @@ class AccountSettings(
                 saveAccountSettings()
             }
         }
+    }
+
+    // ---
+    // relay sync
+    // ---
+
+    fun updateLastRelaySyncTimestamp(timestamp: Long) {
+        lastRelaySyncTimestamp.tryEmit(timestamp)
+        saveAccountSettings()
     }
 
     // ---

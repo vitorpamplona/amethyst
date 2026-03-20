@@ -207,6 +207,7 @@ class AccountViewModel(
             outboxTargets = { account.nip65RelayList.outboxFlow.value },
             inboxTargets = { account.nip65RelayList.inboxFlow.value },
             dmTargets = { account.dmRelayList.flow.value },
+            onSyncComplete = { timestamp -> account.settings.updateLastRelaySyncTimestamp(timestamp) },
             clientBuilder = {
                 // creates a new client to make sure these events don't end up polluting the local cache.
 
