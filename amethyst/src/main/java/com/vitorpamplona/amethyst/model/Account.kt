@@ -82,6 +82,7 @@ import com.vitorpamplona.amethyst.model.nip51Lists.searchRelays.SearchRelayListS
 import com.vitorpamplona.amethyst.model.nip51Lists.trustedRelays.TrustedRelayListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.trustedRelays.TrustedRelayListState
 import com.vitorpamplona.amethyst.model.nip65RelayList.Nip65RelayListState
+import com.vitorpamplona.amethyst.model.nip66RelayLiveness.RelayLivenessState
 import com.vitorpamplona.amethyst.model.nip72Communities.CommunityListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip72Communities.CommunityListState
 import com.vitorpamplona.amethyst.model.nip78AppSpecific.AppSpecificState
@@ -137,6 +138,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.downloadFirstEvent
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
@@ -238,6 +240,7 @@ class Account(
     val otsResolverBuilder: OtsResolverBuilder,
     val cache: LocalCache,
     val client: INostrClient,
+    val websocketBuilder: WebsocketBuilder,
     val scope: CoroutineScope,
 ) : IAccount {
     private var userProfileCache: User? = null
@@ -263,8 +266,11 @@ class Account(
     val privateStorageDecryptionCache = PrivateStorageRelayListDecryptionCache(signer)
     val privateStorageRelayList = PrivateStorageRelayListState(signer, cache, privateStorageDecryptionCache, scope, settings)
 
+    // NIP-66 relay liveness filtering
+    val relayLiveness = RelayLivenessState(websocketBuilder, scope)
+
     val searchRelayListDecryptionCache = SearchRelayListDecryptionCache(signer)
-    val searchRelayList = SearchRelayListState(signer, cache, searchRelayListDecryptionCache, scope, settings)
+    val searchRelayList = SearchRelayListState(signer, cache, searchRelayListDecryptionCache, relayLiveness, scope, settings)
 
     val trustedRelayListDecryptionCache = TrustedRelayListDecryptionCache(signer)
     val trustedRelayList = TrustedRelayListState(signer, cache, trustedRelayListDecryptionCache, scope, settings)
@@ -331,10 +337,10 @@ class Account(
     val trustedRelays = TrustedRelayListsState(nip65RelayList, privateStorageRelayList, localRelayList, dmRelayList, searchRelayList, trustedRelayList, broadcastRelayList, scope)
 
     // Follows Relays
-    val followOutboxesOrProxy = FollowListOutboxOrProxyRelays(kind3FollowList, blockedRelayList, proxyRelayList, cache, scope)
+    val followOutboxesOrProxy = FollowListOutboxOrProxyRelays(kind3FollowList, blockedRelayList, proxyRelayList, relayLiveness, cache, scope)
 
     // only follow relays that are declared in more than one user.
-    val followSharedOutboxesOrProxy = FollowListReusedOutboxOrProxyRelays(kind3FollowList, blockedRelayList, proxyRelayList, cache, scope)
+    val followSharedOutboxesOrProxy = FollowListReusedOutboxOrProxyRelays(kind3FollowList, blockedRelayList, proxyRelayList, relayLiveness, cache, scope)
 
     val followPlusAllMineWithIndex = MergedFollowPlusMineWithIndexRelayListsState(followOutboxesOrProxy, nip65RelayList, privateStorageRelayList, localRelayList, indexerRelayList, scope)
     val followPlusAllMineWithSearch = MergedFollowPlusMineWithSearchRelayListsState(followOutboxesOrProxy, nip65RelayList, privateStorageRelayList, localRelayList, searchRelayList, scope)
@@ -345,7 +351,7 @@ class Account(
     val declaredFollowsPerUsingRelay = DeclaredFollowsPerUsingRelay(kind3FollowList, cache, scope).flow
 
     // keeps a cache of the outbox relays for each author
-    val followsPerRelay = FollowsPerOutboxRelay(kind3FollowList, blockedRelayList, proxyRelayList, cache, scope).flow
+    val followsPerRelay = FollowsPerOutboxRelay(kind3FollowList, blockedRelayList, proxyRelayList, relayLiveness, cache, scope).flow
 
     // Merges all follow lists to create a single All Follows feed.
     val allFollows = MergedFollowListsState(kind3FollowList, peopleLists, followLists, hashtagList, geohashList, communityList, scope)
