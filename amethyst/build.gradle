@@ -51,7 +51,7 @@ android {
     compileSdk = libs.versions.android.compileSdk.get().toInteger()
 
     defaultConfig {
-        applicationId = "com.retrnull.garnet"
+        applicationId = "rocks.xmr.monostr"
         minSdk = libs.versions.android.minSdk.get().toInteger()
         targetSdk = libs.versions.android.targetSdk.get().toInteger()
         versionCode = 432
