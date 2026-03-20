@@ -1609,4 +1609,17 @@
     <string name="event_sync_status_downloading">Laddar ner</string>
     <string name="event_sync_status_error">Fel</string>
     <string name="event_sync_status_completed">Slutfört</string>
+    <string name="app_notification_reply_label">Svara</string>
+    <string name="app_notification_mark_read_label">Markera som läst</string>
+    <string name="app_notification_dms_summary">Nya meddelanden</string>
+    <string name="app_notification_zaps_summary">Nya zaps</string>
+
+    <string name="strip_metadata_label">Ta bort privat metadata</string>
+    <string name="strip_metadata_description">Försöker ta bort privat metadata från mediefiler som stöds innan uppladdning</string>
+
+    <string name="metadata_strip_failed_title">Metadata kunde inte tas bort</string>
+    <string name="metadata_strip_failed_body">Detta filformat stöder inte borttagning av metadata. Privat information som plats och enhetsinformation kan ingå. Ladda upp ändå?</string>
+    <string name="metadata_strip_failed_upload">Ladda upp ändå</string>
+    <string name="metadata_strip_failed_upload_cancelled">Kunde inte ta bort privat metadata från media. Uppladdning avbruten.</string>
+    <string name="upload_cancelled">Uppladdning avbruten</string>
 </resources>

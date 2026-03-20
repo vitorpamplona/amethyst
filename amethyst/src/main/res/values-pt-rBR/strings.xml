@@ -1610,4 +1610,17 @@
     <string name="event_sync_status_downloading">Baixando</string>
     <string name="event_sync_status_error">Erro</string>
     <string name="event_sync_status_completed">Concluído</string>
+    <string name="app_notification_reply_label">Responder</string>
+    <string name="app_notification_mark_read_label">Marcar como lida</string>
+    <string name="app_notification_dms_summary">Novas mensagens</string>
+    <string name="app_notification_zaps_summary">Novos zaps</string>
+
+    <string name="strip_metadata_label">Remover metadados privados</string>
+    <string name="strip_metadata_description">Tenta remover metadados privados de arquivos de mídia compatíveis antes do envio</string>
+
+    <string name="metadata_strip_failed_title">Não foi possível remover os metadados</string>
+    <string name="metadata_strip_failed_body">Este formato de arquivo não suporta a remoção de metadados. Informações privadas como localização e dados do dispositivo podem estar incluídas. Enviar mesmo assim?</string>
+    <string name="metadata_strip_failed_upload">Enviar mesmo assim</string>
+    <string name="metadata_strip_failed_upload_cancelled">Não foi possível remover metadados privados da mídia. Envio cancelado.</string>
+    <string name="upload_cancelled">Envio cancelado</string>
 </resources>

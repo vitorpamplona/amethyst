@@ -1610,4 +1610,21 @@
     <string name="event_sync_status_downloading">Stahování</string>
     <string name="event_sync_status_error">Chyba</string>
     <string name="event_sync_status_completed">Dokončeno</string>
+
+    <string name="app_notification_reply_label">Odpovědět</string>
+    <string name="app_notification_mark_read_label">Označit jako přečtené</string>
+    <string name="app_notification_dms_summary">Nové zprávy</string>
+    <string name="app_notification_zaps_summary">Nové zapsy</string>
+
+    <string name="strip_metadata_label">Odstranit soukromá metadata</string>
+    <string name="strip_metadata_description">Pokusí se odstranit soukromá metadata z podporovaných mediálních souborů před nahráním</string>
+
+    <string name="metadata_strip_failed_title">Metadata nelze odstranit</string>
+    <string name="metadata_strip_failed_body">Tento formát souboru nepodporuje odstranění metadat. Mohou být obsaženy soukromé informace, jako je poloha a informace o zařízení. Přesto nahrát?</string>
+    <string name="metadata_strip_failed_upload">Přesto nahrát</string>
+    <string name="metadata_strip_failed_upload_cancelled">Nepodařilo se odstranit soukromá metadata z média. Nahrávání zrušeno.</string>
+    <string name="upload_cancelled">Nahrávání zrušeno</string>
+
+
+
 </resources>

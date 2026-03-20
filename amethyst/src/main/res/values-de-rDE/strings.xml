@@ -1615,4 +1615,17 @@ anz der Bedingungen ist erforderlich</string>
     <string name="event_sync_status_downloading">Herunterladen</string>
     <string name="event_sync_status_error">Fehler</string>
     <string name="event_sync_status_completed">Abgeschlossen</string>
+    <string name="app_notification_reply_label">Antworten</string>
+    <string name="app_notification_mark_read_label">Als gelesen markieren</string>
+    <string name="app_notification_dms_summary">Neue Nachrichten</string>
+    <string name="app_notification_zaps_summary">Neue Zaps</string>
+
+    <string name="strip_metadata_label">Private Metadaten entfernen</string>
+    <string name="strip_metadata_description">Versucht, private Metadaten aus unterstützten Mediendateien vor dem Hochladen zu entfernen</string>
+
+    <string name="metadata_strip_failed_title">Metadaten konnten nicht entfernt werden</string>
+    <string name="metadata_strip_failed_body">Dieses Dateiformat unterstützt das Entfernen von Metadaten nicht. Private Informationen wie Standort und Geräteinformationen können enthalten sein. Trotzdem hochladen?</string>
+    <string name="metadata_strip_failed_upload">Trotzdem hochladen</string>
+    <string name="metadata_strip_failed_upload_cancelled">Private Metadaten konnten nicht aus der Mediendatei entfernt werden. Hochladen abgebrochen.</string>
+    <string name="upload_cancelled">Hochladen abgebrochen</string>
 </resources>
