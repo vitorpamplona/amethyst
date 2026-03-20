@@ -30,18 +30,14 @@ import kotlinx.coroutines.cancel
 import kotlin.coroutines.CoroutineContext
 
 /**
- * This class manages per-connection subscriptions as coroutines. Each
- * subscription ([REQ]) launches a child coroutine that first replays stored
- * events matching the filters, sends EOSE, and then streams live events.
- * Closing a subscription ([CLOSE]) immediately cancels its coroutine.
+ * Represents a Nostr relay server that manages client connections, event storage, and verification.
  *
- * The server is transport-agnostic: callers feed incoming JSON via
- * [processMessage] and receive outgoing JSON via the [send] callback
- * provided to [connect]. This allows use with any WebSocket library.
+ * This class acts as the central coordinator for a relay server, handling the lifecycle of [RelaySession]s
+ * and providing access to the underlying event store.
  *
- * @param store The [EventStore] backing this relay.
- * @param verify Validates incoming events. Defaults to cryptographic
- *                      verification (id + signature). Override for testing.
+ * @property store The persistent storage engine for Nostr events.
+ * @property parentContext The coroutine context used as a base for the server's execution scope.
+ * @property verify The function used to validate the integrity and signatures of incoming events.
  */
 class NostrServer(
     private val store: IEventStore,

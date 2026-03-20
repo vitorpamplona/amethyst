@@ -26,6 +26,16 @@ import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 
+/**
+ * A reactive event store that combines historical data retrieval with live event streaming.
+ *
+ * This class wraps an [IEventStore] to provide real-time updates. When a [query] is executed,
+ * it first replays all matching historical events from the underlying store, signals the
+ * End of Stored Events (EOSE), and then continues to stream matching new events as they
+ * are inserted.
+ *
+ * @property store The underlying persistent storage for events.
+ */
 class LiveEventStore(
     private val store: IEventStore,
 ) {

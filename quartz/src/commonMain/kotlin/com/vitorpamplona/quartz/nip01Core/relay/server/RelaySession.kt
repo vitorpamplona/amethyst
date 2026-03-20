@@ -41,7 +41,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 /**
- * Represents a single connected client with its active subscriptions.
+ * Represents an active session between a Nostr client and the relay.
+ * Each one of these is a connection that can hold many subscriptions
  */
 class RelaySession(
     private val store: LiveEventStore,
