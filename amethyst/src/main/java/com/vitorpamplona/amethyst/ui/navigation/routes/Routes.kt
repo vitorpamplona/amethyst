@@ -98,6 +98,8 @@ sealed class Route {
 
     @Serializable object Drafts : Route()
 
+    @Serializable object MoneroWallet : Route()
+
     @Serializable object AllSettings : Route()
 
     @Serializable object AccountBackup : Route()

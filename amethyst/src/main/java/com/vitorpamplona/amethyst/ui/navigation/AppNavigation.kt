@@ -62,6 +62,7 @@ import com.vitorpamplona.amethyst.ui.note.nip22Comments.ReplyCommentPostScreen
 import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountSwitcherAndLeftDrawerLayout
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.MoneroWalletScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.default.BookmarkListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.display.BookmarkGroupScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.list.ListOfBookmarkGroupsScreen
@@ -169,6 +170,7 @@ fun AppNavigation(
             composable<Route.Notification> { NotificationScreen(accountViewModel, nav) }
             composable<Route.Chess> { ChessLobbyScreen(accountViewModel, nav) }
 
+            composableFromEnd<Route.MoneroWallet> { MoneroWalletScreen(accountViewModel, nav) }
             composableFromEnd<Route.Wallet> { WalletScreen(accountViewModel, nav) }
             composableFromEnd<Route.WalletSend> { WalletSendScreen(accountViewModel, nav) }
             composableFromEnd<Route.WalletReceive> { WalletReceiveScreen(accountViewModel, nav) }

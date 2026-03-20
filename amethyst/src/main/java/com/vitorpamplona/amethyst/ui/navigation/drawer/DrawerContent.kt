@@ -474,6 +474,15 @@ fun ListContent(
         )
 
         NavigationRow(
+            title = R.string.monero,
+            icon = R.drawable.monero,
+            iconReference = 1,
+            tint = MaterialTheme.colorScheme.onBackground,
+            nav = nav,
+            route = Route.MoneroWallet,
+        )
+
+        NavigationRow(
             title = R.string.route_chess,
             icon = R.drawable.ic_chess,
             iconReference = 1,
