@@ -165,6 +165,7 @@ private fun FeedLoaded(
     nav: INav,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
+    val openPolls by openPollsState(accountViewModel)
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -173,6 +174,34 @@ private fun FeedLoaded(
     ) {
         item {
             ShowDonationCard(accountViewModel, nav)
+        }
+
+        if (openPolls.isNotEmpty()) {
+            item {
+                OpenPollsSectionHeader()
+            }
+
+            itemsIndexed(
+                items = openPolls,
+                key = { _, item -> "open-poll-${item.idHex}" },
+                contentType = { _, _ -> "OpenPoll" },
+            ) { _, note ->
+                Row(Modifier.fillMaxWidth().animateItem()) {
+                    NoteCompose(
+                        baseNote = note,
+                        modifier = Modifier.fillMaxWidth(),
+                        routeForLastRead = routeForLastRead,
+                        isBoostedNote = false,
+                        isQuotedNote = false,
+                        quotesLeft = 3,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                }
+                HorizontalDivider(
+                    thickness = DividerThickness,
+                )
+            }
         }
 
         itemsIndexed(
