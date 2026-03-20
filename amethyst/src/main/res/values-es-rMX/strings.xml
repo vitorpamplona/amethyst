@@ -1159,4 +1159,5 @@
     <string name="dont_translate_from_description">Los idiomas que se muestran aquí no se traducirán. Selecciona un idioma para eliminarlo y traducirlo de nuevo.</string>
     <string name="select_signer">Seleccionar firmante</string>
     <!-- Kind display names for relay subscription filter chips -->
+    <!-- M3 Action Dialog titles -->
 </resources>

@@ -1621,4 +1621,5 @@
     <string name="event_sync_status_downloading">Stahování</string>
     <string name="event_sync_status_error">Chyba</string>
     <string name="event_sync_status_completed">Dokončeno</string>
+    <!-- M3 Action Dialog titles -->
 </resources>

@@ -1626,4 +1626,5 @@
     <string name="event_sync_status_downloading">下载中</string>
     <string name="event_sync_status_error">错误</string>
     <string name="event_sync_status_completed">已完成</string>
+    <!-- M3 Action Dialog titles -->
 </resources>

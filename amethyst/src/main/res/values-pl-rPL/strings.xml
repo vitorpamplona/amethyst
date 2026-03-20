@@ -1589,4 +1589,5 @@
     <string name="event_sync_status_downloading">Pobieranie</string>
     <string name="event_sync_status_error">Błąd</string>
     <string name="event_sync_status_completed">Zakończone</string>
+    <!-- M3 Action Dialog titles -->
 </resources>
