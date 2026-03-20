@@ -21,20 +21,37 @@
 package com.vitorpamplona.amethyst.ui.navigation.topbars
 
 import android.Manifest
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.outlined.Groups
+import androidx.compose.material.icons.outlined.LocationOn
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Public
+import androidx.compose.material.icons.outlined.SensorDoor
+import androidx.compose.material.icons.outlined.ViewList
+import androidx.compose.material.icons.outlined.VolumeOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -43,14 +60,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
@@ -62,7 +82,6 @@ import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.components.LoadingAnimation
-import com.vitorpamplona.amethyst.ui.components.SpinnerSelectionDialog
 import com.vitorpamplona.amethyst.ui.note.creators.location.LoadCityName
 import com.vitorpamplona.amethyst.ui.screen.CommunityName
 import com.vitorpamplona.amethyst.ui.screen.FeedDefinition
@@ -217,7 +236,7 @@ fun FeedFilterSpinner(
 
     if (optionsShowing) {
         options.isNotEmpty().also {
-            SpinnerSelectionDialog(
+            GroupedFeedFilterDialog(
                 title = explainer,
                 options = options,
                 onDismiss = { optionsShowing = false },
@@ -241,84 +260,258 @@ fun RenderOption(
     when (option) {
         is GeoHashName -> {
             LoadCityName(option.geoHashTag) {
-                Row(
-                    horizontalArrangement = Arrangement.Center,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(text = "/g/$it", color = MaterialTheme.colorScheme.onSurface)
-                }
+                Text(text = "/g/$it", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
             }
         }
 
         is HashtagName -> {
-            Row(
-                horizontalArrangement = Arrangement.Center,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(text = option.name(), color = MaterialTheme.colorScheme.onSurface)
-            }
+            Text(text = option.name(), fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
         }
 
         is ResourceName -> {
-            Row(
-                horizontalArrangement = Arrangement.Center,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(
-                    text = stringRes(id = option.resourceId),
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-            }
+            Text(
+                text = stringRes(id = option.resourceId),
+                fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
         }
 
         is PeopleListName -> {
-            Row(
-                horizontalArrangement = Arrangement.Center,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                val noteState by observeNote(option.note, accountViewModel)
+            val noteState by observeNote(option.note, accountViewModel)
 
-                val noteEvent = noteState.note.event
-                val name =
-                    when (noteEvent) {
-                        is PeopleListEvent -> {
-                            noteEvent.titleOrName() ?: option.note.dTag()
-                        }
-
-                        is FollowListEvent -> {
-                            noteEvent.title() ?: option.note.dTag()
-                        }
-
-                        else -> {
-                            option.note.dTag()
-                        }
+            val noteEvent = noteState.note.event
+            val name =
+                when (noteEvent) {
+                    is PeopleListEvent -> {
+                        noteEvent.titleOrName() ?: option.note.dTag()
                     }
 
-                Text(text = name, color = MaterialTheme.colorScheme.onSurface)
-            }
+                    is FollowListEvent -> {
+                        noteEvent.title() ?: option.note.dTag()
+                    }
+
+                    else -> {
+                        option.note.dTag()
+                    }
+                }
+
+            Text(text = name, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
         }
 
         is CommunityName -> {
-            Row(
-                horizontalArrangement = Arrangement.Center,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                val it by observeNote(option.note, accountViewModel)
+            val it by observeNote(option.note, accountViewModel)
 
-                Text(text = "/n/${((it.note as? AddressableNote)?.dTag() ?: "")}", color = MaterialTheme.colorScheme.onSurface)
-            }
+            Text(text = "/n/${((it.note as? AddressableNote)?.dTag() ?: "")}", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
         }
 
         is RelayName -> {
-            Row(
-                horizontalArrangement = Arrangement.Center,
-                modifier = Modifier.fillMaxWidth(),
+            Text(
+                text = option.name(),
+                fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+    }
+}
+
+@Immutable
+private data class IndexedFeedDefinition(
+    val originalIndex: Int,
+    val item: FeedDefinition,
+)
+
+private enum class FeedGroup(
+    val label: String,
+) {
+    FEEDS("Feeds"),
+    HASHTAGS("Hashtags"),
+    COMMUNITIES("Communities"),
+    LISTS("Lists"),
+}
+
+private fun groupFeedDefinitions(options: ImmutableList<FeedDefinition>): Map<FeedGroup, List<IndexedFeedDefinition>> {
+    val indexed = options.mapIndexed { index, item -> IndexedFeedDefinition(index, item) }
+    return indexed.groupBy { entry ->
+        when (entry.item.name) {
+            is HashtagName -> FeedGroup.HASHTAGS
+            is CommunityName -> FeedGroup.COMMUNITIES
+            is PeopleListName -> FeedGroup.LISTS
+            else -> FeedGroup.FEEDS
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun GroupedFeedFilterDialog(
+    title: String,
+    options: ImmutableList<FeedDefinition>,
+    onSelect: (Int) -> Unit,
+    onDismiss: () -> Unit,
+    onRenderItem: @Composable (FeedDefinition) -> Unit,
+) {
+    val grouped = remember(options) { groupFeedDefinitions(options) }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(28.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        ) {
+            LazyColumn(
+                modifier = Modifier.padding(vertical = 20.dp),
             ) {
-                Text(
-                    text = option.name(),
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
+                item {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
+                    )
+                }
+
+                FeedGroup.entries.forEach { group ->
+                    val items = grouped[group]
+                    if (!items.isNullOrEmpty()) {
+                        item {
+                            GroupSection(
+                                label = group.label,
+                                items = items,
+                                isChipLayout = group == FeedGroup.HASHTAGS,
+                                onSelect = onSelect,
+                                onRenderItem = onRenderItem,
+                            )
+                        }
+                    }
+                }
             }
         }
     }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun GroupSection(
+    label: String,
+    items: List<IndexedFeedDefinition>,
+    isChipLayout: Boolean,
+    onSelect: (Int) -> Unit,
+    onRenderItem: @Composable (FeedDefinition) -> Unit,
+) {
+    Surface(
+        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+    ) {
+        Column {
+            Text(
+                text = label.uppercase(),
+                fontSize = 12.sp,
+                letterSpacing = 0.8.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 6.dp),
+            )
+
+            if (isChipLayout) {
+                FlowRow(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    items.forEach { entry ->
+                        Surface(
+                            modifier = Modifier.clickable { onSelect(entry.originalIndex) },
+                            shape = RoundedCornerShape(18.dp),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                            color = Color.Transparent,
+                        ) {
+                            Text(
+                                text = entry.item.name.name(),
+                                fontSize = 13.sp,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp),
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+            } else {
+                items.forEach { entry ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .clickable { onSelect(entry.originalIndex) }
+                                .padding(horizontal = 16.dp, vertical = 6.dp),
+                    ) {
+                        FeedIcon(
+                            item = entry.item,
+                            modifier = Modifier.size(20.dp),
+                        )
+                        Spacer(modifier = Modifier.padding(start = 12.dp))
+                        Column(modifier = Modifier.weight(1f)) { onRenderItem(entry.item) }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FeedIcon(
+    item: FeedDefinition,
+    modifier: Modifier = Modifier,
+) {
+    val icon =
+        when (item.code) {
+            is TopFilter.Global -> {
+                Icons.Outlined.Public
+            }
+
+            is TopFilter.AroundMe -> {
+                Icons.Outlined.LocationOn
+            }
+
+            is TopFilter.AllFollows -> {
+                Icons.Outlined.Groups
+            }
+
+            is TopFilter.AllUserFollows -> {
+                Icons.Outlined.Person
+            }
+
+            is TopFilter.DefaultFollows -> {
+                Icons.Outlined.Groups
+            }
+
+            is TopFilter.MuteList -> {
+                Icons.Outlined.VolumeOff
+            }
+
+            is TopFilter.Chess -> {
+                Icons.Outlined.Groups
+            }
+
+            is TopFilter.PeopleList -> {
+                Icons.Outlined.ViewList
+            }
+
+            else -> {
+                when (item.name) {
+                    is GeoHashName -> Icons.Outlined.LocationOn
+                    is RelayName -> Icons.Outlined.SensorDoor
+                    is CommunityName -> Icons.Outlined.Groups
+                    is PeopleListName -> Icons.Outlined.ViewList
+                    else -> Icons.Outlined.Person
+                }
+            }
+        }
+    Icon(
+        imageVector = icon,
+        contentDescription = null,
+        modifier = modifier,
+        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
 }
