@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -42,7 +43,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.model.AccountMoneroManager
@@ -220,15 +223,43 @@ fun WalletInfoCard() {
             }
 
             AccountMoneroManager.getMoneroAddress()?.let { addr ->
+                val clipboardManager = LocalClipboardManager.current
+                val context = LocalContext.current
+
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Address",
+                    text = "Address (tap to open wallet, long press to copy)",
                     style = MaterialTheme.typography.labelSmall,
                 )
                 Text(
                     text = addr,
                     style = MaterialTheme.typography.bodySmall,
                     maxLines = 2,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier =
+                        Modifier.combinedClickable(
+                            onClick = {
+                                try {
+                                    val intent =
+                                        android.content.Intent(
+                                            android.content.Intent.ACTION_VIEW,
+                                            android.net.Uri.parse("monero:$addr"),
+                                        )
+                                    context.startActivity(intent)
+                                } catch (e: android.content.ActivityNotFoundException) {
+                                    clipboardManager.setText(AnnotatedString(addr))
+                                    android.widget.Toast
+                                        .makeText(context, "Address copied (no wallet app found)", android.widget.Toast.LENGTH_SHORT)
+                                        .show()
+                                }
+                            },
+                            onLongClick = {
+                                clipboardManager.setText(AnnotatedString(addr))
+                                android.widget.Toast
+                                    .makeText(context, "Address copied", android.widget.Toast.LENGTH_SHORT)
+                                    .show()
+                            },
+                        ),
                 )
             }
         }
