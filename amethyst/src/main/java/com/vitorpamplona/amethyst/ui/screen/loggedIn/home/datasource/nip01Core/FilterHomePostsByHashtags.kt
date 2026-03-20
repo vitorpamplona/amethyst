@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip01Core
 import com.vitorpamplona.amethyst.model.topNavFeeds.hashtag.HashtagTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip22Comments.filterHomePostsByScopes
+import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
@@ -39,7 +40,6 @@ import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
-import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 
 val HomePostsBuHashtagsKinds =
     listOf(
@@ -50,12 +50,12 @@ val HomePostsBuHashtagsKinds =
         ClassifiedsEvent.KIND,
         HighlightEvent.KIND,
         AudioHeaderEvent.KIND,
-        InteractiveStoryPrologueEvent.KIND,
         CommentEvent.KIND,
         WikiNoteEvent.KIND,
         NipTextEvent.KIND,
         VoiceEvent.KIND,
-        VoiceReplyEvent.KIND,
+        AttestationEvent.KIND,
+        InteractiveStoryPrologueEvent.KIND,
     )
 
 fun filterHomePostsByHashtags(

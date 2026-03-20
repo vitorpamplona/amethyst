@@ -128,6 +128,10 @@ import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.ui.theme.bitcoinColor
 import com.vitorpamplona.amethyst.ui.theme.redColorOnSecondSurface
+import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
+import com.vitorpamplona.quartz.experimental.attestations.proficiency.AttestorProficiencyEvent
+import com.vitorpamplona.quartz.experimental.attestations.recommendation.AttestorRecommendationEvent
+import com.vitorpamplona.quartz.experimental.attestations.request.AttestationRequestEvent
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
@@ -529,6 +533,10 @@ private fun kindDisplayName(kind: Int): Int =
         AppSpecificDataEvent.KIND -> R.string.kind_user_settings
         AudioHeaderEvent.KIND -> R.string.kind_audio_header
         AudioTrackEvent.KIND -> R.string.kind_audio_track
+        AttestationEvent.KIND -> R.string.attestation
+        AttestationRequestEvent.KIND -> R.string.attestation_request
+        AttestorRecommendationEvent.KIND -> R.string.attestor_recommendation
+        AttestorProficiencyEvent.KIND -> R.string.attestor_proficiency
         BadgeAwardEvent.KIND -> R.string.kind_badge_awards
         BadgeDefinitionEvent.KIND -> R.string.kind_badge_definitions
         BadgeProfilesEvent.KIND -> R.string.kind_profile_badges

@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip01Notifications
 
+import com.vitorpamplona.quartz.experimental.attestations.recommendation.AttestorRecommendationEvent
+import com.vitorpamplona.quartz.experimental.attestations.request.AttestationRequestEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStorySceneEvent
@@ -85,6 +87,12 @@ val NotificationsPerKeyKinds2 =
         InteractiveStorySceneEvent.KIND,
     )
 
+val NotificationsPerKeyKinds3 =
+    listOf(
+        AttestationRequestEvent.KIND,
+        AttestorRecommendationEvent.KIND,
+    )
+
 fun filterSummaryNotificationsToPubkey(
     relay: NormalizedRelayUrl,
     pubkey: HexKey?,
@@ -130,7 +138,17 @@ fun filterNotificationsToPubkey(
                 Filter(
                     kinds = NotificationsPerKeyKinds2,
                     tags = mapOf("p" to listOf(pubkey)),
-                    limit = 500,
+                    limit = 200,
+                    since = since,
+                ),
+        ),
+        RelayBasedFilter(
+            relay = relay,
+            filter =
+                Filter(
+                    kinds = NotificationsPerKeyKinds3,
+                    tags = mapOf("p" to listOf(pubkey)),
+                    limit = 10,
                     since = since,
                 ),
         ),
@@ -171,7 +189,17 @@ fun filterJustTheLatestNotificationsToPubkeyFromRandomRelays(
                 Filter(
                     kinds = NotificationsPerKeyKinds2,
                     tags = mapOf("p" to listOf(pubkey)),
-                    limit = 20,
+                    limit = 10,
+                    since = since,
+                ),
+        ),
+        RelayBasedFilter(
+            relay = relay,
+            filter =
+                Filter(
+                    kinds = NotificationsPerKeyKinds3,
+                    tags = mapOf("p" to listOf(pubkey)),
+                    limit = 2,
                     since = since,
                 ),
         ),

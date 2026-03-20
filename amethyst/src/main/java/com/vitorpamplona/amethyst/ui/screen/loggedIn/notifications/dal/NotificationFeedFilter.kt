@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.model.filterIntoSet
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
+import com.vitorpamplona.quartz.experimental.attestations.request.AttestationRequestEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.forks.IForkableEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
@@ -87,6 +88,7 @@ class NotificationFeedFilter(
                 VideoVerticalEvent.KIND,
                 VideoHorizontalEvent.KIND,
                 WikiNoteEvent.KIND,
+                AttestationRequestEvent.KIND,
             )
 
         val NOTIFICATION_KINDS =

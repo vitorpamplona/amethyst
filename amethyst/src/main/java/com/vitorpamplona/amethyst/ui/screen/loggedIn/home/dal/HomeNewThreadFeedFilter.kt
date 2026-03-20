@@ -65,9 +65,6 @@ class HomeNewThreadFeedFilter(
                 LiveChessGameChallengeEvent.KIND,
                 LiveChessGameEndEvent.KIND,
                 AttestationEvent.KIND,
-                AttestationRequestEvent.KIND,
-                AttestorRecommendationEvent.KIND,
-                AttestorProficiencyEvent.KIND,
             )
     }
 

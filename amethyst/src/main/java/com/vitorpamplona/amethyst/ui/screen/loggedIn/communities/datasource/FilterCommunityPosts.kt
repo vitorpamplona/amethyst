@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.datasource
 
+import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -42,6 +43,7 @@ val CommunityPostKinds =
         ClassifiedsEvent.KIND,
         LongTextNoteEvent.KIND,
         CommunityPostApprovalEvent.KIND,
+        AttestationEvent.KIND,
     )
 
 fun filterCommunityPosts(

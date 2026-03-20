@@ -24,9 +24,6 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsTopN
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
-import com.vitorpamplona.quartz.experimental.attestations.proficiency.AttestorProficiencyEvent
-import com.vitorpamplona.quartz.experimental.attestations.recommendation.AttestorRecommendationEvent
-import com.vitorpamplona.quartz.experimental.attestations.request.AttestationRequestEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
@@ -54,7 +51,7 @@ import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import kotlin.math.min
 
-val HomePostsNewThreadKinds =
+val HomePostsNewThreadKinds1 =
     listOf(
         TextNoteEvent.KIND,
         RepostEvent.KIND,
@@ -62,18 +59,19 @@ val HomePostsNewThreadKinds =
         ClassifiedsEvent.KIND,
         LongTextNoteEvent.KIND,
         HighlightEvent.KIND,
-        WikiNoteEvent.KIND,
-        NipTextEvent.KIND,
         ZapPollEvent.KIND,
         PollEvent.KIND,
+        WikiNoteEvent.KIND,
+        AttestationEvent.KIND,
+        NipTextEvent.KIND,
+    )
+
+val HomePostsNewThreadKinds2 =
+    listOf(
         InteractiveStoryPrologueEvent.KIND,
         ChessGameEvent.KIND,
         LiveChessGameChallengeEvent.KIND,
         LiveChessGameEndEvent.KIND,
-        AttestationEvent.KIND,
-        AttestationRequestEvent.KIND,
-        AttestorRecommendationEvent.KIND,
-        AttestorProficiencyEvent.KIND,
     )
 
 val HomePostsConversationKinds =
@@ -99,9 +97,19 @@ fun filterNewHomePostsByAuthors(
             relay = relay,
             filter =
                 Filter(
-                    kinds = HomePostsNewThreadKinds,
+                    kinds = HomePostsNewThreadKinds1,
                     authors = authorList,
                     limit = min(authorList.size * 10, 500),
+                    since = since,
+                ),
+        ),
+        RelayBasedFilter(
+            relay = relay,
+            filter =
+                Filter(
+                    kinds = HomePostsNewThreadKinds2,
+                    authors = authorList,
+                    limit = min(authorList.size * 10, 5),
                     since = since,
                 ),
         ),
