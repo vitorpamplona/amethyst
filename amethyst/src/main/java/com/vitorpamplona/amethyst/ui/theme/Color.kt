@@ -24,17 +24,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 
-val Primary50 = Color(red = 127, green = 103, blue = 190)
-val Primary60 = Color(red = 154, green = 130, blue = 219)
-val Primary70 = Color(red = 182, green = 157, blue = 248)
-val Primary80 = Color(red = 208, green = 188, blue = 255)
+// Monero-inspired orange palette (from monero-coin-glass.svg)
+val Primary50 = Color(0xFFB91700)
+val Primary60 = Color(0xFFCC3400)
+val Primary70 = Color(0xFFFF7B4C)
+val Primary80 = Color(0xFFFFCFB3)
 
-val DEFAULT_PRIMARY = Color(red = 208, green = 188, blue = 255)
-val LIGHT_PURPLE = Color(red = 187, green = 134, blue = 252)
+val DEFAULT_PRIMARY = Color(0xFFFFCFB3)
+val LIGHT_PURPLE = Color(0xFFFF8C66)
 
-val Purple200 = Color(0xFFBB86FC)
-val Purple500 = Color(0xFF6200EE)
-val Purple700 = Color(0xFF3700B3)
+val Purple200 = Color(0xFFFF8C66) // Monero coral (was purple)
+val Purple500 = Color(0xFFFD6301) // Monero orange (was purple)
+val Purple700 = Color(0xFFB91700) // Monero dark red (was purple)
 val Teal200 = Color(0xFF03DAC5)
 val BitcoinOrange = Color(0xFFF7931A)
 val RoyalBlue = Color(0xFF4169E1)
@@ -46,9 +47,9 @@ val Following = Color(0xFF03DAC5)
 val FollowsFollow = Color.Yellow
 val NIP05Verified = Color.Blue
 
-val Nip05EmailColor = Color(0xFFb198ec)
-val Nip05EmailColorDark = Color(0xFF6e5490)
-val Nip05EmailColorLight = Color(0xFFa770f3)
+val Nip05EmailColor = Color(0xFFFFB399)
+val Nip05EmailColorDark = Color(0xFFCC3400)
+val Nip05EmailColorLight = Color(0xFFFF7B4C)
 
 val DarkerGreen = Color.Green.copy(alpha = 0.32f)
 
