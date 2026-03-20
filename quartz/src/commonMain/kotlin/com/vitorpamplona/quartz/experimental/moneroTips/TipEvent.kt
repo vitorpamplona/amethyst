@@ -115,3 +115,10 @@ data class TipProof(
     val proofs: Map<String, List<String>>,
     val message: String? = null,
 )
+
+data class TipSplitSetup(
+    val addressOrPubKeyHex: String,
+    val relay: String?,
+    val weight: Double?,
+    val isAddress: Boolean,
+)
