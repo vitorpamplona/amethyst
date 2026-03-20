@@ -24,27 +24,32 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.model.AccountMoneroManager
-import com.vitorpamplona.amethyst.service.MoneroDataSource
+import com.vitorpamplona.amethyst.model.preferences.MoneroSettings
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
 fun MoneroWalletScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val balance by MoneroDataSource.balance().collectAsState(initial = 0L)
-    val status by MoneroDataSource.status().collectAsState(initial = null)
+    val context = LocalContext.current
+    var walletStarted by remember { mutableStateOf(false) }
+    val address = if (walletStarted) AccountMoneroManager.getMoneroAddress() else null
+    val balance = if (walletStarted) AccountMoneroManager.getMoneroBalance() else 0L
 
     Scaffold { paddingValues ->
         Column(
@@ -61,28 +66,41 @@ fun MoneroWalletScreen(
                 style = MaterialTheme.typography.headlineMedium,
             )
 
-            Text(
-                text = "Balance: ${balance / 1_000_000_000_000.0} XMR",
-                style = MaterialTheme.typography.titleLarge,
-            )
-
-            status?.let {
+            if (!walletStarted) {
                 Text(
-                    text = "Status: ${it.type.name}${it.description?.let { d -> ": $d" } ?: ""}",
-                    style = MaterialTheme.typography.bodyMedium,
+                    text = "Wallet not connected",
+                    style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-            }
 
-            AccountMoneroManager.getMoneroAddress()?.let { address ->
+                Button(onClick = {
+                    AccountMoneroManager.startMonero(
+                        context = context,
+                        spendKey = "",
+                        walletName = "default",
+                        password = "",
+                        settings = MoneroSettings(),
+                    )
+                    walletStarted = true
+                }) {
+                    Text("Connect Wallet")
+                }
+            } else {
                 Text(
-                    text = "Address:",
-                    style = MaterialTheme.typography.labelMedium,
+                    text = "Balance: ${balance / 1_000_000_000_000.0} XMR",
+                    style = MaterialTheme.typography.titleLarge,
                 )
-                Text(
-                    text = address,
-                    style = MaterialTheme.typography.bodySmall,
-                )
+
+                address?.let { addr ->
+                    Text(
+                        text = "Address:",
+                        style = MaterialTheme.typography.labelMedium,
+                    )
+                    Text(
+                        text = addr,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
             }
         }
     }
