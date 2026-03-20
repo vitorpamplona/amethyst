@@ -32,10 +32,12 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Article
 import androidx.compose.material.icons.outlined.CollectionsBookmark
+import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
@@ -57,6 +59,9 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.nip51Lists.labeledBookmarkLists.LabeledBookmarkList
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
+import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
+import com.vitorpamplona.amethyst.ui.components.M3ActionRow
+import com.vitorpamplona.amethyst.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.ui.note.VerticalDotsIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.BookmarkType
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -258,18 +263,18 @@ private fun BookmarkGroupOptionsButton(
         onClick = { isMenuOpen.value = true },
     ) {
         VerticalDotsIcon()
-
-        GroupOptionsMenu(
-            groupName = bookmarkGroupName,
-            groupDescription = bookmarkGroupDescription,
-            isExpanded = isMenuOpen.value,
-            onDismiss = { isMenuOpen.value = false },
-            onGroupRename = onGroupRename,
-            onGroupDescriptionChange = onGroupDescriptionChange,
-            onGroupClone = onGroupCloneCreate,
-            onDelete = onGroupDelete,
-        )
     }
+
+    GroupOptionsMenu(
+        groupName = bookmarkGroupName,
+        groupDescription = bookmarkGroupDescription,
+        isExpanded = isMenuOpen.value,
+        onDismiss = { isMenuOpen.value = false },
+        onGroupRename = onGroupRename,
+        onGroupDescriptionChange = onGroupDescriptionChange,
+        onGroupClone = onGroupCloneCreate,
+        onDelete = onGroupDelete,
+    )
 }
 
 @Composable
@@ -288,45 +293,32 @@ private fun GroupOptionsMenu(
     val optionalCloneName = remember { mutableStateOf<String?>(null) }
     val optionalCloneDescription = remember { mutableStateOf<String?>(null) }
 
-    DropdownMenu(
-        expanded = isExpanded,
-        onDismissRequest = onDismiss,
-    ) {
-        DropdownMenuItem(
-            text = {
-                Text(text = stringRes(R.string.follow_set_rename_btn_label))
-            },
-            onClick = {
-                onGroupRename()
-                onDismiss()
-            },
-        )
-        DropdownMenuItem(
-            text = {
-                Text(text = stringRes(R.string.follow_set_desc_modify_label))
-            },
-            onClick = {
-                onGroupDescriptionChange()
-                onDismiss()
-            },
-        )
-        DropdownMenuItem(
-            text = {
-                Text(text = stringRes(R.string.follow_set_copy_action_btn_label))
-            },
-            onClick = {
-                isCopyDialogOpen.value = true
-                onDismiss()
-            },
-        )
-        DropdownMenuItem(
-            text = {
-                Text(text = stringRes(R.string.quick_action_delete))
-            },
-            onClick = {
-                onDelete()
-            },
-        )
+    if (isExpanded) {
+        M3ActionDialog(
+            title = stringRes(R.string.group_actions_dialog_title),
+            onDismiss = onDismiss,
+        ) {
+            M3ActionSection {
+                M3ActionRow(icon = Icons.Outlined.Edit, text = stringRes(R.string.follow_set_rename_btn_label)) {
+                    onGroupRename()
+                    onDismiss()
+                }
+                M3ActionRow(icon = Icons.Outlined.Description, text = stringRes(R.string.follow_set_desc_modify_label)) {
+                    onGroupDescriptionChange()
+                    onDismiss()
+                }
+                M3ActionRow(icon = Icons.Outlined.ContentCopy, text = stringRes(R.string.follow_set_copy_action_btn_label)) {
+                    isCopyDialogOpen.value = true
+                    onDismiss()
+                }
+            }
+            M3ActionSection {
+                M3ActionRow(icon = Icons.Outlined.Delete, text = stringRes(R.string.quick_action_delete), isDestructive = true) {
+                    onDelete()
+                    onDismiss()
+                }
+            }
+        }
     }
 
     if (isCopyDialogOpen.value) {

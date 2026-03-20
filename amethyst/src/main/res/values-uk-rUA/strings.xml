@@ -500,4 +500,5 @@
     <string name="could_not_download_from_the_server">Не вдалося завантажити завантажені медіафайли з сервера</string>
     <string name="could_not_prepare_local_file_to_upload">Не вдалося підготувати локальний файл для завантаження: %1$s</string>
     <!-- Kind display names for relay subscription filter chips -->
+    <!-- M3 Action Dialog titles -->
 </resources>

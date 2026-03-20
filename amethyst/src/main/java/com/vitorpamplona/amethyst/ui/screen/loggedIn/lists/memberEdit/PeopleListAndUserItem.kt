@@ -33,10 +33,9 @@ import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.PersonRemove
 import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.PersonAdd
 import androidx.compose.material.icons.outlined.Public
 import androidx.compose.material.icons.outlined.RemoveCircleOutline
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -50,6 +49,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
+import com.vitorpamplona.amethyst.ui.components.M3ActionRow
+import com.vitorpamplona.amethyst.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.list.DisplayParticipantNumberAndStatus
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.HalfHalfVertPadding
@@ -193,6 +195,30 @@ private fun UserAdditionOptions(
 ) {
     val isUserAddTapped = remember { mutableStateOf(false) }
 
+    if (isUserAddTapped.value) {
+        M3ActionDialog(
+            title = stringRes(R.string.add_member_dialog_title),
+            onDismiss = { isUserAddTapped.value = false },
+        ) {
+            M3ActionSection {
+                M3ActionRow(
+                    icon = Icons.Outlined.PersonAdd,
+                    text = stringRes(R.string.follow_set_public_member_add_label),
+                ) {
+                    onAddUserToList(false)
+                    isUserAddTapped.value = false
+                }
+                M3ActionRow(
+                    icon = Icons.Outlined.Lock,
+                    text = stringRes(R.string.follow_set_private_member_add_label),
+                ) {
+                    onAddUserToList(true)
+                    isUserAddTapped.value = false
+                }
+            }
+        }
+    }
+
     Column(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -230,30 +256,6 @@ private fun UserAdditionOptions(
                     tint = MaterialTheme.colorScheme.onPrimary,
                 )
             }
-        }
-
-        DropdownMenu(
-            expanded = isUserAddTapped.value,
-            onDismissRequest = { isUserAddTapped.value = false },
-        ) {
-            DropdownMenuItem(
-                text = {
-                    Text(text = stringRes(R.string.follow_set_public_member_add_label))
-                },
-                onClick = {
-                    onAddUserToList(false)
-                    isUserAddTapped.value = false
-                },
-            )
-            DropdownMenuItem(
-                text = {
-                    Text(text = stringRes(R.string.follow_set_private_member_add_label))
-                },
-                onClick = {
-                    onAddUserToList(true)
-                    isUserAddTapped.value = false
-                },
-            )
         }
     }
 }
