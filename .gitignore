@@ -33,6 +33,10 @@
 /captures
 .cxx
 
+# superpowers skill
+.superpowers
+docs/brainstorms
+docs/superpowers
 
 # Built application files
 *.apk
