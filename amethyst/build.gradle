@@ -54,8 +54,8 @@ android {
         applicationId = "rocks.xmr.monostr"
         minSdk = libs.versions.android.minSdk.get().toInteger()
         targetSdk = libs.versions.android.targetSdk.get().toInteger()
-        versionCode = 432
-        versionName = generateVersionName("1.05.1")
+        versionCode = 1
+        versionName = generateVersionName("0.1.0")
         buildConfigField "String", "RELEASE_NOTES_ID", "\"b457a20195ffcf501389fcb708f0ef73f4ee263e3bba63f1b893a896129e4c79\""
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
