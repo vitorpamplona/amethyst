@@ -139,6 +139,10 @@ import com.vitorpamplona.amethyst.ui.note.types.FileHeaderDisplay
 import com.vitorpamplona.amethyst.ui.note.types.FileStorageHeaderDisplay
 import com.vitorpamplona.amethyst.ui.note.types.PictureDisplay
 import com.vitorpamplona.amethyst.ui.note.types.RenderAppDefinition
+import com.vitorpamplona.amethyst.ui.note.types.RenderAttestation
+import com.vitorpamplona.amethyst.ui.note.types.RenderAttestationRequest
+import com.vitorpamplona.amethyst.ui.note.types.RenderAttestorProficiency
+import com.vitorpamplona.amethyst.ui.note.types.RenderAttestorRecommendation
 import com.vitorpamplona.amethyst.ui.note.types.RenderCalendarDateSlotEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderCalendarTimeSlotEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderChannelMessage
@@ -190,6 +194,10 @@ import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.selectedNote
+import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
+import com.vitorpamplona.quartz.experimental.attestations.proficiency.AttestorProficiencyEvent
+import com.vitorpamplona.quartz.experimental.attestations.recommendation.AttestorRecommendationEvent
+import com.vitorpamplona.quartz.experimental.attestations.request.AttestationRequestEvent
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.bounties.bountyBaseReward
@@ -620,6 +628,14 @@ private fun FullBleedNoteCompose(
                         accountViewModel,
                         nav,
                     )
+                } else if (noteEvent is AttestationEvent) {
+                    RenderAttestation(baseNote, 3, backgroundColor, accountViewModel, nav)
+                } else if (noteEvent is AttestationRequestEvent) {
+                    RenderAttestationRequest(baseNote, 3, backgroundColor, accountViewModel, nav)
+                } else if (noteEvent is AttestorRecommendationEvent) {
+                    RenderAttestorRecommendation(baseNote, backgroundColor, accountViewModel, nav)
+                } else if (noteEvent is AttestorProficiencyEvent) {
+                    RenderAttestorProficiency(baseNote, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is AdvertisedRelayListEvent) {
                     DisplayNIP65RelayList(baseNote, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is LnZapEvent) {
