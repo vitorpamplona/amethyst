@@ -1877,4 +1877,22 @@
     <string name="event_sync_status_downloading">Downloading</string>
     <string name="event_sync_status_error">Error</string>
     <string name="event_sync_status_completed">Completed</string>
+
+    <string name="attestation">Attestation</string>
+    <string name="attestation_valid">Valid</string>
+    <string name="attestation_invalid">Invalid</string>
+    <string name="attestation_status_accepted">Accepted</string>
+    <string name="attestation_status_rejected">Rejected</string>
+    <string name="attestation_status_verifying">Verifying</string>
+    <string name="attestation_status_verified">Verified</string>
+    <string name="attestation_status_revoked">Revoked</string>
+    <string name="attestation_valid_from">Valid from %1$s</string>
+    <string name="attestation_valid_to">Valid to %1$s</string>
+    <string name="attestation_request">Attestation Request</string>
+    <string name="attestation_request_description">Requesting attestation for an event</string>
+    <string name="attestor_recommendation">Attestor Recommendation</string>
+    <string name="attestor_recommendation_for_kinds">Recommended for kinds: %1$s</string>
+    <string name="attestor_proficiency">Attestor Proficiency</string>
+    <string name="attestor_proficiency_for_kinds">Proficient in verifying kinds: %1$s</string>
+    <string name="attestation_attests_to">Attests to</string>
 </resources>
