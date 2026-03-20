@@ -20,12 +20,38 @@
  */
 package com.vitorpamplona.quartz.utils
 
+import com.goterl.lazysodium.LazySodium
 import com.goterl.lazysodium.LazySodiumAndroid
+import com.goterl.lazysodium.Sodium
 import com.goterl.lazysodium.SodiumAndroid
 
 actual object LibSodiumInstance {
-    private val libSodium = SodiumAndroid()
-    private val lazySodium = LazySodiumAndroid(libSodium)
+    private val libSodium: Sodium =
+        try {
+            // If we are running in a host test, SodiumJava might be available.
+            // SodiumJava uses a ResourceLoader to find the dylib/so/dll in the jar.
+            Class
+                .forName("com.goterl.lazysodium.SodiumJava")
+                .getConstructor()
+                .newInstance() as Sodium
+        } catch (_: Exception) {
+            SodiumAndroid()
+        }
+
+    private val lazySodium: LazySodium =
+        if (libSodium is SodiumAndroid) {
+            LazySodiumAndroid(libSodium)
+        } else {
+            // this should only happen on test cases
+            val sodiumJava =
+                Class
+                    .forName("com.goterl.lazysodium.SodiumJava")
+
+            Class
+                .forName("com.goterl.lazysodium.LazySodiumJava")
+                .getConstructor(sodiumJava)
+                .newInstance(libSodium) as LazySodium
+        }
 
     actual fun cryptoAeadXChaCha20Poly1305IetfDecrypt(
         message: ByteArray,

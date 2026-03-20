@@ -635,6 +635,10 @@
     <string name="app_notification_zaps_channel_message">%1$s Satsów</string>
     <string name="app_notification_zaps_channel_message_from">Od %1$s</string>
     <string name="app_notification_zaps_channel_message_for">dla %1$s</string>
+    <string name="app_notification_reply_label">Odpowiedź</string>
+    <string name="app_notification_mark_read_label">Oznacz jako przeczytane</string>
+    <string name="app_notification_dms_summary">Nowe wiadomości</string>
+    <string name="app_notification_zaps_summary">Nowe zapy</string>
     <string name="reply_notify">Powiadom: </string>
     <string name="channel_list_join_conversation">Dołącz do dyskusji</string>
     <string name="channel_list_user_or_group_id">ID Użytkownika lub Grupy</string>
@@ -1045,6 +1049,13 @@
     <string name="media_compression_quality_uncompressed">Nieskompresowane</string>
     <string name="video_codec_h265_label">Użyj kodeka H.265/HEVC</string>
     <string name="video_codec_h265_description">Lepsza jakość przy mniejszych rozmiarach plików, lecz nie wszystkie urządzenia obsługują odtwarzanie H.265.</string>
+    <string name="strip_metadata_label">Usuń prywatne metadane</string>
+    <string name="strip_metadata_description">Próba usunięcia prywatnych metadanych z obsługiwanych plików multimedialnych przed przesłaniem</string>
+    <string name="metadata_strip_failed_title">Metadane nie mogą zostać usunięte</string>
+    <string name="metadata_strip_failed_body">Ten format pliku nie obsługuje usuwania metadanych. Plik może zawierać dane osobowe, takie jak informacje o lokalizacji i urządzeniu. Czy mimo to chcesz go przesłać?</string>
+    <string name="metadata_strip_failed_upload">Prześlij mimo wszystko</string>
+    <string name="metadata_strip_failed_upload_cancelled">Nie udało się usunąć prywatnych metadanych z plików multimedialnych. Przesyłanie anulowane.</string>
+    <string name="upload_cancelled">Anulowano przesyłanie</string>
     <string name="edit_draft">Edytuj wersję roboczą</string>
     <string name="login_with_qr_code">Zaloguj się przy użyciu QR kodu</string>
     <string name="route">Ścieżka</string>
@@ -1299,6 +1310,8 @@
     <string name="my_lists">Moje listy</string>
     <string name="people_list_label">Użytkownicy</string>
     <string name="select_list_to_filter">Wybierz listę profili, aby filtrować aktualności</string>
+    <string name="feed_group_hashtags">Hashtagi</string>
+    <string name="feed_group_communities">Społeczności</string>
     <string name="temporary_account">Wyloguj się przy blokowaniu urządzenia</string>
     <string name="private_message">Wiadomość prywatna</string>
     <string name="public_message">Publiczna wiadomość</string>

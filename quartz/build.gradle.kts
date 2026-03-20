@@ -159,9 +159,10 @@ kotlin {
     }
 
     // This makes sure that the resource file directory is visible for iOS tests.
-    val rootDir = "${rootProject.rootDir.path}/quartz/src/iosTest/resources"
+    val rootDir = "${rootProject.rootDir.path}/quartz/src/commonTest/resources"
 
     tasks.withType<Test>().configureEach {
+        maxHeapSize = "4g"
         environment("TEST_RESOURCES_ROOT", rootDir)
     }
 
@@ -196,6 +197,10 @@ kotlin {
 
                 // immutable collections to avoid recomposition
                 implementation(libs.kotlinx.collections.immutable)
+
+                // SQLite KMP driver for event store
+                api(libs.androidx.sqlite)
+                implementation(libs.androidx.sqlite.bundled)
             }
         }
 
@@ -203,6 +208,10 @@ kotlin {
             dependencies {
                 implementation(libs.kotlin.test)
                 implementation(libs.kotlinx.coroutines.test)
+
+                // SQLite bundled driver for tests
+                api(libs.androidx.sqlite)
+                implementation(libs.androidx.sqlite.bundled)
             }
         }
 
@@ -256,6 +265,9 @@ kotlin {
             dependencies {
                 // Bitcoin secp256k1 bindings
                 implementation(libs.secp256k1.kmp.jni.jvm)
+
+                // SQLite bundled driver for JVM tests
+                implementation(libs.androidx.sqlite.bundled.jvm)
             }
         }
 
@@ -284,6 +296,9 @@ kotlin {
                 // LibSodium for ChaCha encryption (NIP-44) - Needed for host tests
                 implementation(libs.lazysodium.java)
                 implementation(libs.jna)
+
+                // SQLite bundled driver for Host tests
+                implementation(libs.androidx.sqlite.bundled.jvm)
             }
         }
 

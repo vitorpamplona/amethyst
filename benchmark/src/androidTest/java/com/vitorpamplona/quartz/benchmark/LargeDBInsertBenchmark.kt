@@ -51,7 +51,7 @@ class LargeDBInsertBenchmark : BaseLargeCacheBenchmark() {
         benchmarkRule.measureRepeated {
             val db =
                 runWithMeasurementDisabled {
-                    EventStore(context, null)
+                    EventStore(null)
                 }
             firstThousandEvents.forEach { event ->
                 try {
@@ -81,7 +81,8 @@ class LargeDBInsertBenchmark : BaseLargeCacheBenchmark() {
         benchmarkRule.measureRepeated {
             val db =
                 runWithMeasurementDisabled {
-                    val db = EventStore(context, null)
+                    val db =
+                        EventStore(null)
                     toBeDeletedEvents.forEach { event ->
                         try {
                             db.insert(event)

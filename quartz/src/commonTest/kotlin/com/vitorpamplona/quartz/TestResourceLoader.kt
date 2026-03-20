@@ -21,5 +21,7 @@
 package com.vitorpamplona.quartz
 
 expect class TestResourceLoader() {
+    fun loadDecompressString(file: String): String
+
     fun loadString(file: String): String
 }

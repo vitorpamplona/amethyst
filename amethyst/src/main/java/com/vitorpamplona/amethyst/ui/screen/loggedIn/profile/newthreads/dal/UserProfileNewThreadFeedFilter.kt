@@ -27,6 +27,10 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
+import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
+import com.vitorpamplona.quartz.experimental.attestations.proficiency.AttestorProficiencyEvent
+import com.vitorpamplona.quartz.experimental.attestations.recommendation.AttestorRecommendationEvent
+import com.vitorpamplona.quartz.experimental.attestations.request.AttestationRequestEvent
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
@@ -87,7 +91,11 @@ class UserProfileNewThreadFeedFilter(
                     it.event is AudioTrackEvent ||
                     it.event is AudioHeaderEvent ||
                     it.event is VoiceEvent ||
-                    it.event is TorrentEvent
+                    it.event is TorrentEvent ||
+                    it.event is AttestationEvent ||
+                    it.event is AttestationRequestEvent ||
+                    it.event is AttestorRecommendationEvent ||
+                    it.event is AttestorProficiencyEvent
             ) &&
             it.isNewThread() &&
             account.isAcceptable(it)

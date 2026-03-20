@@ -23,6 +23,10 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.datasource
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
+import com.vitorpamplona.quartz.experimental.attestations.proficiency.AttestorProficiencyEvent
+import com.vitorpamplona.quartz.experimental.attestations.recommendation.AttestorRecommendationEvent
+import com.vitorpamplona.quartz.experimental.attestations.request.AttestationRequestEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.publicMessages.PublicMessageEvent
@@ -66,6 +70,10 @@ val UserProfilePostKinds2 =
         VoiceReplyEvent.KIND,
         ZapPollEvent.KIND,
         PinListEvent.KIND,
+        AttestationEvent.KIND,
+        AttestationRequestEvent.KIND,
+        AttestorRecommendationEvent.KIND,
+        AttestorProficiencyEvent.KIND,
     )
 
 fun filterUserProfilePosts(
