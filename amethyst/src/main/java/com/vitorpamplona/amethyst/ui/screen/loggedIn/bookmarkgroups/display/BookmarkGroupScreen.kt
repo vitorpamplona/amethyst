@@ -308,7 +308,7 @@ fun BookmarkGroupActionsMenuButton(
 
     if (isActionListOpen.value) {
         M3ActionDialog(
-            title = stringRes(R.string.bookmark_list_actions_dialog_title),
+            title = stringRes(R.string.list_actions_dialog_title),
             onDismiss = { isActionListOpen.value = false },
         ) {
             M3ActionSection {

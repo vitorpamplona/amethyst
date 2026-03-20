@@ -58,9 +58,8 @@ fun UrlPreviewCard(
             mutableStateOf(false)
         }
 
-    val clipboardManager = LocalClipboardManager.current
-
     if (popupExpanded.value) {
+        val clipboardManager = LocalClipboardManager.current
         M3ActionDialog(
             title = stringRes(R.string.link_actions_dialog_title),
             onDismiss = { popupExpanded.value = false },

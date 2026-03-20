@@ -780,29 +780,29 @@ fun ShareMediaAction(
             val clipboardManager = LocalClipboardManager.current
 
             // Copy & Gallery section
-            M3ActionSection {
-                if (videoUri != null && !videoUri.startsWith("file")) {
-                    M3ActionRow(icon = Icons.Outlined.Link, text = stringRes(R.string.copy_url_to_clipboard)) {
-                        clipboardManager.setText(AnnotatedString(videoUri))
-                        onDismiss()
-                    }
-                }
-                postNostrUri?.let {
-                    M3ActionRow(icon = Icons.Outlined.ContentCopy, text = stringRes(R.string.copy_the_note_id_to_the_clipboard)) {
-                        clipboardManager.setText(AnnotatedString(it))
-                        onDismiss()
-                    }
-                }
-                postNostrUri?.let {
-                    M3ActionRow(icon = Icons.Outlined.Collections, text = stringRes(R.string.add_media_to_gallery)) {
-                        if (videoUri != null) {
-                            val n19 = Nip19Parser.uriToRoute(postNostrUri)?.entity as? NEvent
-                            if (n19 != null) {
-                                accountViewModel.addMediaToGallery(n19.hex, videoUri, n19.relay.getOrNull(0), blurhash, dim, hash, mimeType)
-                                accountViewModel.toastManager.toast(R.string.media_added, R.string.media_added_to_profile_gallery)
-                            }
+            if ((videoUri != null && !videoUri.startsWith("file")) || postNostrUri != null) {
+                M3ActionSection {
+                    if (videoUri != null && !videoUri.startsWith("file")) {
+                        M3ActionRow(icon = Icons.Outlined.Link, text = stringRes(R.string.copy_url_to_clipboard)) {
+                            clipboardManager.setText(AnnotatedString(videoUri))
+                            onDismiss()
                         }
-                        onDismiss()
+                    }
+                    postNostrUri?.let {
+                        M3ActionRow(icon = Icons.Outlined.ContentCopy, text = stringRes(R.string.copy_the_note_id_to_the_clipboard)) {
+                            clipboardManager.setText(AnnotatedString(it))
+                            onDismiss()
+                        }
+                        M3ActionRow(icon = Icons.Outlined.Collections, text = stringRes(R.string.add_media_to_gallery)) {
+                            if (videoUri != null) {
+                                val n19 = Nip19Parser.uriToRoute(postNostrUri)?.entity as? NEvent
+                                if (n19 != null) {
+                                    accountViewModel.addMediaToGallery(n19.hex, videoUri, n19.relay.getOrNull(0), blurhash, dim, hash, mimeType)
+                                    accountViewModel.toastManager.toast(R.string.media_added, R.string.media_added_to_profile_gallery)
+                                }
+                            }
+                            onDismiss()
+                        }
                     }
                 }
             }

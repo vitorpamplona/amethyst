@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -40,8 +41,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -122,8 +121,7 @@ fun M3ActionRow(
             Modifier
                 .fillMaxWidth()
                 .alpha(alpha)
-                .semantics { role = Role.Button }
-                .then(if (enabled) Modifier.clickable { onClick() } else Modifier)
+                .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
                 .padding(horizontal = 16.dp, vertical = 10.dp),
     ) {
         Icon(
@@ -132,7 +130,7 @@ fun M3ActionRow(
             modifier = Size20Modifier,
             tint = tint,
         )
-        Spacer(modifier = Modifier.padding(start = 12.dp))
+        Spacer(modifier = Modifier.width(12.dp))
         Text(
             text = text,
             fontSize = Font14SP,
