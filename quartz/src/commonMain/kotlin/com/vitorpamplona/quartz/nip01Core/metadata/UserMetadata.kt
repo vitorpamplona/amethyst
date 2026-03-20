@@ -48,9 +48,14 @@ class UserMetadata {
 
     var twitter: String? = null
 
+    @SerialName("cryptocurrency_addresses")
+    var cryptocurrencyAddresses: Map<String, String>? = null
+
     fun anyName(): String? = displayName ?: name
 
     fun lnAddress(): String? = lud16 ?: lud06
+
+    fun moneroAddress(): String? = cryptocurrencyAddresses?.get("monero")
 
     fun bestName(): String? = displayName ?: name
 

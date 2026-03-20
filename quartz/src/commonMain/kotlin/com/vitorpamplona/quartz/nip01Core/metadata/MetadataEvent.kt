@@ -124,6 +124,7 @@ class MetadataEvent(
             lnAddress: String? = null,
             lnURL: String? = null,
             pronouns: String? = null,
+            moneroAddress: String? = null,
             twitter: String? = null,
             mastodon: String? = null,
             github: String? = null,
@@ -146,6 +147,8 @@ class MetadataEvent(
                 lnURL,
                 pronouns,
             )
+
+            updateMoneroAddress(currentMetadata, moneroAddress)
 
             val newJsonObject = JsonObject(currentMetadata)
             val content = Json.encodeToString(JsonObject.serializer(), newJsonObject)
@@ -179,6 +182,7 @@ class MetadataEvent(
             lnAddress: String? = null,
             lnURL: String? = null,
             pronouns: String? = null,
+            moneroAddress: String? = null,
             twitter: String? = null,
             mastodon: String? = null,
             github: String? = null,
@@ -201,6 +205,8 @@ class MetadataEvent(
                 lnURL,
                 pronouns,
             )
+
+            updateMoneroAddress(currentMetadata, moneroAddress)
 
             val newJsonObject = JsonObject(currentMetadata)
             val content = Json.encodeToString(JsonObject.serializer(), newJsonObject)
@@ -258,6 +264,28 @@ class MetadataEvent(
             currentMetadata[Nip05Tag.TAG_NAME]?.let { nip05(it.text) } ?: run { remove(Nip05Tag.TAG_NAME) }
             currentMetadata[Lud16Tag.TAG_NAME]?.let { lud16(it.text) } ?: run { remove(Lud16Tag.TAG_NAME) }
             currentMetadata[Lud06Tag.TAG_NAME]?.let { lud06(it.text) } ?: run { remove(Lud06Tag.TAG_NAME) }
+        }
+
+        private fun updateMoneroAddress(
+            currentMetadata: MutableMap<String, JsonElement>,
+            moneroAddress: String?,
+        ) {
+            moneroAddress?.let { addr ->
+                val existingCryptos = (currentMetadata["cryptocurrency_addresses"] as? JsonObject)
+                    ?.toMutableMap() ?: mutableMapOf()
+
+                if (addr.isBlank()) {
+                    existingCryptos.remove("monero")
+                } else {
+                    existingCryptos["monero"] = JsonPrimitive(addr.trim())
+                }
+
+                if (existingCryptos.isEmpty()) {
+                    currentMetadata.remove("cryptocurrency_addresses")
+                } else {
+                    currentMetadata["cryptocurrency_addresses"] = JsonObject(existingCryptos)
+                }
+            }
         }
 
         private fun addIfNotBlank(
