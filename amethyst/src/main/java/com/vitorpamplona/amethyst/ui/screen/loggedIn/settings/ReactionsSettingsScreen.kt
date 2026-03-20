@@ -361,6 +361,7 @@ fun reactionActionName(action: ReactionRowAction): String =
         ReactionRowAction.Boost -> stringRes(R.string.reactions_settings_boost)
         ReactionRowAction.Like -> stringRes(R.string.reactions_settings_like)
         ReactionRowAction.Zap -> stringRes(R.string.reactions_settings_zap)
+        ReactionRowAction.Tip -> stringRes(R.string.tip_description)
         ReactionRowAction.Share -> stringRes(R.string.reactions_settings_share)
     }
 
@@ -371,5 +372,6 @@ fun reactionActionDescription(action: ReactionRowAction): String =
         ReactionRowAction.Boost -> stringRes(R.string.reactions_settings_boost_description)
         ReactionRowAction.Like -> stringRes(R.string.reactions_settings_like_description)
         ReactionRowAction.Zap -> stringRes(R.string.reactions_settings_zap_description)
+        ReactionRowAction.Tip -> stringRes(R.string.tip_type_public_explainer)
         ReactionRowAction.Share -> stringRes(R.string.reactions_settings_share_description)
     }

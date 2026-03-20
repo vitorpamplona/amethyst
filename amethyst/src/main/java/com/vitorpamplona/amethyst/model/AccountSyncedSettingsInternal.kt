@@ -45,6 +45,7 @@ enum class ReactionRowAction {
     Boost,
     Like,
     Zap,
+    Tip,
     Share,
 }
 
@@ -61,6 +62,7 @@ val DefaultReactionRowItems =
         ReactionRowItem(ReactionRowAction.Boost),
         ReactionRowItem(ReactionRowAction.Like),
         ReactionRowItem(ReactionRowAction.Zap),
+        ReactionRowItem(ReactionRowAction.Tip),
         ReactionRowItem(ReactionRowAction.Share, showCounter = false),
     )
 

@@ -38,6 +38,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -55,6 +56,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProgressIndicatorDefaults
@@ -84,6 +86,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.style.TextAlign
@@ -270,6 +273,15 @@ private fun InnerReactionRow(
                         accountViewModel,
                         nav = nav,
                         showCounter = item.showCounter,
+                    )
+                }
+
+                ReactionRowAction.Tip -> {
+                    TipReaction(
+                        baseNote,
+                        MaterialTheme.colorScheme.placeholderText,
+                        accountViewModel,
+                        nav = nav,
                     )
                 }
 
@@ -1801,4 +1813,45 @@ fun showCount(count: Int?): String {
         count >= 10000 -> "${(count / 1000f).roundToInt()}k"
         else -> "$count"
     }
+}
+
+@Composable
+fun TipReaction(
+    baseNote: Note,
+    grayTint: Color,
+    accountViewModel: AccountViewModel,
+    iconSizeModifier: Modifier = Size20Modifier,
+    nav: INav,
+) {
+    val context = LocalContext.current
+
+    Row(
+        verticalAlignment = CenterVertically,
+        modifier =
+            iconSizeModifier.clickable(
+                role = Role.Button,
+                interactionSource = remember { MutableInteractionSource() },
+                indication = ripple24dp,
+                onClick = {
+                    android.widget.Toast
+                        .makeText(context, "Monero tipping coming soon", android.widget.Toast.LENGTH_SHORT)
+                        .show()
+                },
+            ),
+    ) {
+        MoneroTipIcon(iconSizeModifier, grayTint)
+    }
+}
+
+@Composable
+fun MoneroTipIcon(
+    modifier: Modifier,
+    tint: Color,
+) {
+    Icon(
+        painter = painterResource(R.drawable.monero),
+        contentDescription = stringRes(R.string.tip_description),
+        modifier = modifier,
+        tint = tint,
+    )
 }
