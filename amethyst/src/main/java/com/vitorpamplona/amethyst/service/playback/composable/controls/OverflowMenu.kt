@@ -32,12 +32,9 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PictureInPicture
 import androidx.compose.material.icons.filled.SaveAlt
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
@@ -45,9 +42,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
+import com.vitorpamplona.amethyst.ui.components.M3ActionRow
+import com.vitorpamplona.amethyst.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
@@ -134,61 +133,41 @@ fun OverflowMenuButton(
                 modifier = Size20Modifier,
             )
         }
+    }
 
-        DropdownMenu(
-            expanded = menuExpanded.value,
-            onDismissRequest = { menuExpanded.value = false },
-            containerColor = Color.Black.copy(alpha = 0.85f),
+    if (menuExpanded.value) {
+        M3ActionDialog(
+            title = stringRes(R.string.playback_actions_dialog_title),
+            onDismiss = { menuExpanded.value = false },
         ) {
-            if (showShare) {
-                DropdownMenuItem(
-                    text = { Text(stringRes(R.string.share_or_save), color = Color.White) },
-                    onClick = {
+            M3ActionSection {
+                if (showShare) {
+                    M3ActionRow(
+                        icon = Icons.Default.Share,
+                        text = stringRes(R.string.share_or_save),
+                    ) {
                         menuExpanded.value = false
                         onShareClick()
-                    },
-                    leadingIcon = {
-                        Icon(
-                            Icons.Default.Share,
-                            contentDescription = null,
-                            tint = Color.White,
-                        )
-                    },
-                )
-            }
-
-            if (showSave) {
-                DropdownMenuItem(
-                    text = { Text(stringRes(R.string.download_to_phone), color = Color.White) },
-                    onClick = {
+                    }
+                }
+                if (showSave) {
+                    M3ActionRow(
+                        icon = Icons.Default.SaveAlt,
+                        text = stringRes(R.string.download_to_phone),
+                    ) {
                         menuExpanded.value = false
                         onSaveClick()
-                    },
-                    leadingIcon = {
-                        Icon(
-                            Icons.Default.SaveAlt,
-                            contentDescription = null,
-                            tint = Color.White,
-                        )
-                    },
-                )
-            }
-
-            if (showPip) {
-                DropdownMenuItem(
-                    text = { Text(stringRes(R.string.picture_in_picture), color = Color.White) },
-                    onClick = {
+                    }
+                }
+                if (showPip) {
+                    M3ActionRow(
+                        icon = Icons.Default.PictureInPicture,
+                        text = stringRes(R.string.picture_in_picture),
+                    ) {
                         menuExpanded.value = false
                         onPipClick()
-                    },
-                    leadingIcon = {
-                        Icon(
-                            Icons.Default.PictureInPicture,
-                            contentDescription = null,
-                            tint = Color.White,
-                        )
-                    },
-                )
+                    }
+                }
             }
         }
     }
