@@ -1545,7 +1545,11 @@
     <string name="my_lists_and_sets">My Lists/Sets</string>
     <string name="my_lists">My Lists</string>
     <string name="people_list_label">Users</string>
-    <string name="select_list_to_filter">Select a list to filter the feed</string>
+    <string name="select_list_to_filter">Select an option to filter the feed</string>
+    <string name="feed_group_feeds">Feeds</string>
+    <string name="feed_group_hashtags">Hashtags</string>
+    <string name="feed_group_communities">Communities</string>
+    <string name="feed_group_lists">Lists</string>
 
     <string name="temporary_account">Log off on device lock</string>
     <string name="private_message">Private Message</string>
