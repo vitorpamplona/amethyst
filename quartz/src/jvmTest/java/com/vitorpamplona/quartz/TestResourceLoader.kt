@@ -20,7 +20,17 @@
  */
 package com.vitorpamplona.quartz
 
+import java.util.zip.GZIPInputStream
+
 actual class TestResourceLoader {
+    actual fun loadDecompressString(file: String): String =
+        this@TestResourceLoader
+            .javaClass.classLoader
+            ?.getResourceAsStream(file)
+            ?.let { GZIPInputStream(it) }
+            ?.bufferedReader()
+            ?.use { it.readText() } ?: throw IllegalArgumentException("Resource not found: $file")
+
     actual fun loadString(file: String): String =
         this@TestResourceLoader
             .javaClass.classLoader

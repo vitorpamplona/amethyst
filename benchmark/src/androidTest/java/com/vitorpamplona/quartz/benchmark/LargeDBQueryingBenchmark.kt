@@ -49,14 +49,14 @@ class LargeDBQueryingBenchmark : BaseLargeCacheBenchmark() {
         val allEvents = getEventDB().distinctBy { it.id }.sortedBy { it.createdAt }
     }
 
-    lateinit var db: EventStore
+    lateinit var db: com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 
     @Before
     fun setup() {
         val context = ApplicationProvider.getApplicationContext<Context>()
 
         context.deleteDatabase("allEvents.db")
-        db = EventStore(context, "allEvents.db")
+        db = EventStore("allEvents.db")
         allEvents.forEach { event ->
             try {
                 db.insert(event)
