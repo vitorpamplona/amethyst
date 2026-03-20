@@ -87,7 +87,7 @@ private fun filterOpenPolls(notes: List<Note>): List<Note> {
 @Composable
 fun OpenPollsSectionHeader() {
     Text(
-        text = stringRes(R.string.open_polls),
+        text = stringRes(R.string.open_poll),
         style = MaterialTheme.typography.titleSmall,
         fontWeight = FontWeight.Bold,
         modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),

@@ -1,4 +1,6 @@
 Adds support for creating and rendering NIP-85 Polls
+- Redesign of the poll and zap poll cards
+- Adds Special notification card that stays while the poll is running
 
 Adds support for Relay Feeds
 - Adds support for NIP-51 favorite relay feeds
