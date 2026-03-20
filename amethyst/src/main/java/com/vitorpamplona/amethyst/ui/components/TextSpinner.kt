@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.components
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -34,7 +33,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -61,7 +59,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import kotlinx.collections.immutable.ImmutableList
 
@@ -211,14 +208,14 @@ fun <T> SpinnerSelectionDialog(
 ) {
     Dialog(onDismissRequest = onDismiss) {
         Surface(
-            border = BorderStroke(0.25.dp, Color.LightGray),
-            shape = RoundedCornerShape(5.dp),
+            shape = RoundedCornerShape(28.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
         ) {
             LazyColumn {
                 title?.let {
                     item {
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(16.dp, 16.dp),
+                            modifier = Modifier.fillMaxWidth().padding(20.dp),
                             horizontalArrangement = Arrangement.Center,
                         ) {
                             Text(
@@ -227,7 +224,6 @@ fun <T> SpinnerSelectionDialog(
                                 fontWeight = FontWeight.Bold,
                             )
                         }
-                        HorizontalDivider(color = Color.LightGray, thickness = DividerThickness)
                     }
                 }
                 itemsIndexed(options) { index, item ->
@@ -237,16 +233,13 @@ fun <T> SpinnerSelectionDialog(
                             Modifier
                                 .fillMaxWidth()
                                 .clickable { onSelect(index) }
-                                .padding(16.dp, 16.dp)
+                                .padding(horizontal = 16.dp, vertical = 12.dp)
                                 .semantics {
                                     role = Role.Button
                                     contentDescription = optionsOfLabel
                                 },
                     ) {
                         Column { onRenderItem(item) }
-                    }
-                    if (index < options.lastIndex) {
-                        HorizontalDivider(color = Color.LightGray, thickness = DividerThickness)
                     }
                 }
             }
