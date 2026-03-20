@@ -32,15 +32,16 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Report
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material.icons.outlined.Collections
+import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.Link
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -771,119 +772,101 @@ fun ShareMediaAction(
     // Track if video is downloading - hoisted here to block menu dismiss during download
     val isDownloadingVideo = remember { mutableStateOf(false) }
 
-    DropdownMenu(
-        expanded = popupExpanded.value,
-        onDismissRequest = { if (!isDownloadingVideo.value) onDismiss() },
-    ) {
-        val clipboardManager = LocalClipboardManager.current
+    if (popupExpanded.value) {
+        M3ActionDialog(
+            title = stringRes(R.string.media_actions_dialog_title),
+            onDismiss = { if (!isDownloadingVideo.value) onDismiss() },
+        ) {
+            val clipboardManager = LocalClipboardManager.current
 
-        if (videoUri != null && !videoUri.startsWith("file")) {
-            DropdownMenuItem(
-                text = { Text(stringRes(R.string.copy_url_to_clipboard)) },
-                onClick = {
-                    clipboardManager.setText(AnnotatedString(videoUri))
-                    onDismiss()
-                },
-            )
-        }
-
-        postNostrUri?.let {
-            DropdownMenuItem(
-                text = { Text(stringRes(R.string.copy_the_note_id_to_the_clipboard)) },
-                onClick = {
-                    clipboardManager.setText(AnnotatedString(it))
-                    onDismiss()
-                },
-            )
-        }
-
-        postNostrUri?.let {
-            DropdownMenuItem(
-                text = { Text(stringRes(R.string.add_media_to_gallery)) },
-                onClick = {
-                    if (videoUri != null) {
-                        val n19 = Nip19Parser.uriToRoute(postNostrUri)?.entity as? NEvent
-                        if (n19 != null) {
-                            accountViewModel.addMediaToGallery(n19.hex, videoUri, n19.relay.getOrNull(0), blurhash, dim, hash, mimeType) // TODO Whole list or first?
-                            accountViewModel.toastManager.toast(R.string.media_added, R.string.media_added_to_profile_gallery)
-                        }
-                    }
-
-                    onDismiss()
-                },
-            )
-        }
-
-        content?.let {
-            val context = LocalContext.current
-
-            when (content) {
-                is MediaUrlImage -> {
-                    videoUri?.let {
-                        if (videoUri.isNotEmpty()) {
-                            DropdownMenuItem(
-                                text = { Text(stringRes(R.string.share_image)) },
-                                onClick = {
-                                    scope.launch { shareImageFile(context, videoUri, mimeType) }
-                                    onDismiss()
-                                },
-                            )
-                        }
+            // Copy & Gallery section
+            M3ActionSection {
+                if (videoUri != null && !videoUri.startsWith("file")) {
+                    M3ActionRow(icon = Icons.Outlined.Link, text = stringRes(R.string.copy_url_to_clipboard)) {
+                        clipboardManager.setText(AnnotatedString(videoUri))
+                        onDismiss()
                     }
                 }
+                postNostrUri?.let {
+                    M3ActionRow(icon = Icons.Outlined.ContentCopy, text = stringRes(R.string.copy_the_note_id_to_the_clipboard)) {
+                        clipboardManager.setText(AnnotatedString(it))
+                        onDismiss()
+                    }
+                }
+                postNostrUri?.let {
+                    M3ActionRow(icon = Icons.Outlined.Collections, text = stringRes(R.string.add_media_to_gallery)) {
+                        if (videoUri != null) {
+                            val n19 = Nip19Parser.uriToRoute(postNostrUri)?.entity as? NEvent
+                            if (n19 != null) {
+                                accountViewModel.addMediaToGallery(n19.hex, videoUri, n19.relay.getOrNull(0), blurhash, dim, hash, mimeType)
+                                accountViewModel.toastManager.toast(R.string.media_added, R.string.media_added_to_profile_gallery)
+                            }
+                        }
+                        onDismiss()
+                    }
+                }
+            }
 
-                is MediaUrlVideo -> {
-                    videoUri?.let {
-                        if (videoUri.isNotEmpty()) {
-                            DropdownMenuItem(
-                                text = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(stringRes(R.string.share_video))
-                                        if (isDownloadingVideo.value) {
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            LoadingAnimation(indicatorSize = 16.dp, circleWidth = 2.dp)
+            // Share section
+            content?.let {
+                val context = LocalContext.current
+
+                M3ActionSection {
+                    when (content) {
+                        is MediaUrlImage -> {
+                            videoUri?.let {
+                                if (videoUri.isNotEmpty()) {
+                                    M3ActionRow(icon = Icons.Outlined.Share, text = stringRes(R.string.share_image)) {
+                                        scope.launch { shareImageFile(context, videoUri, mimeType) }
+                                        onDismiss()
+                                    }
+                                }
+                            }
+                        }
+
+                        is MediaUrlVideo -> {
+                            videoUri?.let {
+                                if (videoUri.isNotEmpty()) {
+                                    M3ActionRow(
+                                        icon = Icons.Outlined.Share,
+                                        text = stringRes(R.string.share_video),
+                                        enabled = !isDownloadingVideo.value,
+                                    ) {
+                                        isDownloadingVideo.value = true
+                                        scope.launch {
+                                            shareVideoFile(
+                                                context = context,
+                                                videoUrl = videoUri,
+                                                mimeType = mimeType,
+                                                okHttpClient = { url ->
+                                                    accountViewModel.httpClientBuilder.okHttpClientForVideo(url)
+                                                },
+                                                onComplete = {
+                                                    isDownloadingVideo.value = false
+                                                    onDismiss()
+                                                },
+                                                onError = {
+                                                    isDownloadingVideo.value = false
+                                                },
+                                            )
                                         }
                                     }
-                                },
-                                enabled = !isDownloadingVideo.value,
-                                onClick = {
-                                    isDownloadingVideo.value = true
-                                    scope.launch {
-                                        shareVideoFile(
-                                            context = context,
-                                            videoUrl = videoUri,
-                                            mimeType = mimeType,
-                                            okHttpClient = { url ->
-                                                accountViewModel.httpClientBuilder.okHttpClientForVideo(url)
-                                            },
-                                            onComplete = {
-                                                isDownloadingVideo.value = false
-                                                onDismiss()
-                                            },
-                                            onError = {
-                                                isDownloadingVideo.value = false
-                                            },
-                                        )
-                                    }
-                                },
-                            )
+                                }
+                            }
                         }
+
+                        is MediaLocalVideo -> {
+                            content.localFile?.let { localFile ->
+                                M3ActionRow(icon = Icons.Outlined.Share, text = stringRes(R.string.share_video)) {
+                                    scope.launch { shareLocalVideoFile(context, localFile, mimeType) }
+                                    onDismiss()
+                                }
+                            }
+                        }
+
+                        else -> { /* No share option for other types */ }
                     }
                 }
-
-                is MediaLocalVideo -> {
-                    content.localFile?.let { localFile ->
-                        DropdownMenuItem(
-                            text = { Text(stringRes(R.string.share_video)) },
-                            onClick = {
-                                scope.launch { shareLocalVideoFile(context, localFile, mimeType) }
-                                onDismiss()
-                            },
-                        )
-                    }
-                }
-
-                else -> { /* No share option for other types */ }
             }
         }
     }
