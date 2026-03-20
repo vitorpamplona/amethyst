@@ -1,6 +1,6 @@
-FROM debian:stable
+FROM debian:bullseye
 
-RUN set -x && apt-get update && apt-get install -y unzip automake build-essential curl file pkg-config git python3 python-is-python3 libtool libtinfo5
+RUN set -x && apt-get update && apt-get install -y unzip automake build-essential curl file pkg-config git python3 python-is-python3 libtool libtinfo5 bison flex
 
 WORKDIR /opt/android
 ## INSTALL ANDROID SDK
@@ -50,7 +50,7 @@ ARG BOOST_VERSION=1_70_0
 ARG BOOST_VERSION_DOT=1.70.0
 ARG BOOST_HASH=430ae8354789de4fd19ee52f3b1f739e1fba576f0aded0897c3c2bc00fb38778
 RUN set -x \
-    && curl -L -o  boost_${BOOST_VERSION}.tar.bz2 https://boostorg.jfrog.io/artifactory/main/release/${BOOST_VERSION_DOT}/source/boost_${BOOST_VERSION}.tar.bz2 \
+    && curl -L -o  boost_${BOOST_VERSION}.tar.bz2 https://archives.boost.io/release/${BOOST_VERSION_DOT}/source/boost_${BOOST_VERSION}.tar.bz2 \
     && echo "${BOOST_HASH}  boost_${BOOST_VERSION}.tar.bz2" | sha256sum -c \
     && tar -xvf boost_${BOOST_VERSION}.tar.bz2 \
     && rm -f boost_${BOOST_VERSION}.tar.bz2 \
@@ -83,7 +83,7 @@ RUN set -x \
 ENV ZLIB_VERSION 1.3.1
 ENV ZLIB_HASH 9a93b2b7dfdac77ceba5a558a580e74667dd6fede4585b91eefb60f03b72df23
 RUN set -x \
-    && curl -O https://zlib.net/zlib-${ZLIB_VERSION}.tar.gz \
+    && curl -L -o zlib-${ZLIB_VERSION}.tar.gz https://github.com/madler/zlib/releases/download/v${ZLIB_VERSION}/zlib-${ZLIB_VERSION}.tar.gz \
     && echo "${ZLIB_HASH}  zlib-${ZLIB_VERSION}.tar.gz" | sha256sum -c \
     && tar -xzf zlib-${ZLIB_VERSION}.tar.gz \
     && rm zlib-${ZLIB_VERSION}.tar.gz \
@@ -96,7 +96,7 @@ ARG OPENSSL_VERSION=3.0.5
 ARG OPENSSL_HASH=aa7d8d9bef71ad6525c55ba11e5f4397889ce49c2c9349dcea6d3e4f0b024a7a
 # openssl explicitly demands to be built by a clang that has a "/prebuilt/" somewhere along its path, so use the prebuilt version, but make sure to specify the target android api
 RUN set -x \
-    && curl -O https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz \
+    && curl -L -o openssl-${OPENSSL_VERSION}.tar.gz https://github.com/openssl/openssl/releases/download/openssl-${OPENSSL_VERSION}/openssl-${OPENSSL_VERSION}.tar.gz \
     && echo "${OPENSSL_HASH}  openssl-${OPENSSL_VERSION}.tar.gz" | sha256sum -c \
     && tar -xzf openssl-${OPENSSL_VERSION}.tar.gz \
     && rm openssl-${OPENSSL_VERSION}.tar.gz \
@@ -125,7 +125,7 @@ RUN set -x \
 
 # Sodium
 ARG SODIUM_VERSION=1.0.18
-ARG SODIUM_HASH=4f5e89fa84ce1d178a6765b8b46f2b6f91216677
+ARG SODIUM_HASH=45b09a607d596e40adbff9ab812e47d85175c053
 RUN set -x \
     && git clone https://github.com/jedisct1/libsodium.git -b ${SODIUM_VERSION} \
     && cd libsodium \
