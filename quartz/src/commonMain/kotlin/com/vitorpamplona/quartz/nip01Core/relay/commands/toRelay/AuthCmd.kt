@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay
 
-import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
+import com.vitorpamplona.quartz.nip01Core.core.Event
 
 class AuthCmd(
-    val event: RelayAuthEvent,
+    val event: Event,
 ) : Command {
     override fun label(): String = LABEL
 

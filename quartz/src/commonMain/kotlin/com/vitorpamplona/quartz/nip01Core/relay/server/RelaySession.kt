@@ -21,7 +21,9 @@
 package com.vitorpamplona.quartz.nip01Core.relay.server
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.AuthMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CountMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CountResult
@@ -30,11 +32,15 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NoticeMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.AuthCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CloseCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CountCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
+import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.RandomInstance
+import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -42,8 +48,13 @@ import kotlinx.coroutines.launch
 
 /**
  * Represents a single connected client with its active subscriptions.
+ *
+ * Supports NIP-42 authentication. Multiple pubkeys may authenticate on
+ * the same session. When [NostrServer.requireAuth] is true, EVENT, REQ
+ * and COUNT commands are rejected until at least one pubkey authenticates.
  */
 class RelaySession(
+    private val server: NostrServer,
     private val store: LiveEventStore,
     private val verify: (Event) -> Boolean,
     private val scope: CoroutineScope,
@@ -51,6 +62,26 @@ class RelaySession(
     private val onClose: (RelaySession) -> Unit,
 ) : AutoCloseable {
     private val subscriptions = LargeCache<String, Job>()
+
+    /** The challenge string sent to this client for NIP-42 authentication. */
+    val challenge: String = RandomInstance.randomChars(32)
+
+    /** Set of pubkeys that have successfully authenticated on this session. */
+    private val authenticatedUsers = mutableSetOf<HexKey>()
+
+    /** Returns true if at least one pubkey has authenticated. */
+    fun isAuthenticated(): Boolean = authenticatedUsers.isNotEmpty()
+
+    /** Returns the set of authenticated pubkeys for this session. */
+    fun authenticatedPubkeys(): Set<HexKey> = authenticatedUsers.toSet()
+
+    /**
+     * Sends the AUTH challenge to the client.
+     * Call this after the WebSocket connection is established.
+     */
+    fun sendAuthChallenge() {
+        send(AuthMessage(challenge))
+    }
 
     fun send(message: Message) {
         try {
@@ -101,6 +132,7 @@ class RelaySession(
         }
 
         when (cmd) {
+            is AuthCmd -> handleAuth(cmd)
             is EventCmd -> handleEvent(cmd)
             is ReqCmd -> handleReq(cmd)
             is CloseCmd -> handleClose(cmd)
@@ -109,9 +141,69 @@ class RelaySession(
         }
     }
 
+    // -- NIP-42: AUTH ---------------------------------------------------------
+    private fun handleAuth(cmd: AuthCmd) {
+        val event = cmd.event
+
+        // Must be kind 22242
+        if (event.kind != RelayAuthEvent.KIND) {
+            send(OkMessage(event.id, false, "invalid: wrong event kind"))
+            return
+        }
+
+        // Verify signature and id
+        if (!verify(event)) {
+            send(OkMessage(event.id, false, "invalid: bad signature or id"))
+            return
+        }
+
+        // created_at must be within 10 minutes
+        val now = TimeUtils.now()
+        val tenMinutes = 600L
+        if (event.createdAt < now - tenMinutes || event.createdAt > now + tenMinutes) {
+            send(OkMessage(event.id, false, "invalid: created_at is too far from the current time"))
+            return
+        }
+
+        // Challenge tag must match
+        val eventChallenge =
+            event.tags.firstNotNullOfOrNull { tag ->
+                if (tag.size >= 2 && tag[0] == "challenge") tag[1] else null
+            }
+        if (eventChallenge != challenge) {
+            send(OkMessage(event.id, false, "invalid: challenge does not match"))
+            return
+        }
+
+        // Relay tag must match this relay's URL
+        val eventRelay =
+            event.tags.firstNotNullOfOrNull { tag ->
+                if (tag.size >= 2 && tag[0] == "relay") tag[1] else null
+            }
+        if (eventRelay == null || !relayUrlMatches(eventRelay)) {
+            send(OkMessage(event.id, false, "invalid: relay url does not match"))
+            return
+        }
+
+        // Authentication successful — add pubkey
+        authenticatedUsers.add(event.pubKey)
+        send(OkMessage(event.id, true, ""))
+    }
+
+    private fun relayUrlMatches(eventRelayUrl: String): Boolean {
+        val ours = server.relayUrl.url.trimEnd('/')
+        val theirs = eventRelayUrl.trimEnd('/')
+        return ours.equals(theirs, ignoreCase = true)
+    }
+
     // -- NIP-01: EVENT --------------------------------------------------------
     private fun handleEvent(cmd: EventCmd) {
         val event = cmd.event
+
+        if (server.requireAuth && !isAuthenticated()) {
+            send(OkMessage(event.id, false, "auth-required: this relay requires authentication"))
+            return
+        }
 
         if (!verify(event)) {
             send(OkMessage(event.id, false, "invalid: bad signature or id"))
@@ -128,6 +220,11 @@ class RelaySession(
 
     // -- NIP-01: REQ ----------------------------------------------------------
     private fun handleReq(cmd: ReqCmd) {
+        if (server.requireAuth && !isAuthenticated()) {
+            send(ClosedMessage(cmd.subId, "auth-required: this relay requires authentication"))
+            return
+        }
+
         // Cancel any existing subscription with the same id (NIP-01 spec).
         cancelSubscription(cmd.subId)
 
@@ -157,6 +254,11 @@ class RelaySession(
 
     // -- NIP-45: COUNT --------------------------------------------------------
     private fun handleCount(cmd: CountCmd) {
+        if (server.requireAuth && !isAuthenticated()) {
+            send(ClosedMessage(cmd.queryId, "auth-required: this relay requires authentication"))
+            return
+        }
+
         val total = store.count(cmd.filters)
         send(CountMessage(cmd.queryId, CountResult(total)))
     }

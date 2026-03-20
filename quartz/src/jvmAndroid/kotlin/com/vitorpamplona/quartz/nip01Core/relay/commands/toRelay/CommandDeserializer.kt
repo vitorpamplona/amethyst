@@ -28,7 +28,6 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import com.vitorpamplona.quartz.nip01Core.jackson.EventDeserializer
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.ManualFilterDeserializer
-import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 
 class CommandDeserializer : StdDeserializer<Command>(Command::class.java) {
     val eventDeserializer = EventDeserializer()
@@ -93,7 +92,7 @@ class CommandDeserializer : StdDeserializer<Command>(Command::class.java) {
                 AuthCmd.LABEL -> {
                     jp.nextToken()
                     AuthCmd(
-                        event = eventDeserializer.deserialize(jp, ctxt) as RelayAuthEvent,
+                        event = eventDeserializer.deserialize(jp, ctxt),
                     )
                 }
 

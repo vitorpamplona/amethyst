@@ -26,7 +26,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CountCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
-import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.descriptors.buildClassSerialDescriptor
@@ -116,7 +115,7 @@ object CommandKSerializer : KSerializer<Command> {
             }
 
             AuthCmd.LABEL -> {
-                AuthCmd(EventKSerializer.deserializeFromElement(array[1].jsonObject) as RelayAuthEvent)
+                AuthCmd(EventKSerializer.deserializeFromElement(array[1].jsonObject))
             }
 
             else -> {

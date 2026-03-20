@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip01Core.relay.server
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.CoroutineScope
@@ -40,11 +41,16 @@ import kotlin.coroutines.CoroutineContext
  * provided to [connect]. This allows use with any WebSocket library.
  *
  * @param store The [EventStore] backing this relay.
+ * @param relayUrl The URL of this relay, used for NIP-42 authentication.
+ * @param requireAuth When true, clients must authenticate (NIP-42) before
+ *                    sending EVENT, REQ, or COUNT commands.
  * @param verify Validates incoming events. Defaults to cryptographic
  *                      verification (id + signature). Override for testing.
  */
 class NostrServer(
     private val store: IEventStore,
+    val relayUrl: NormalizedRelayUrl = NormalizedRelayUrl("wss://relay.example.com/"),
+    val requireAuth: Boolean = false,
     private val parentContext: CoroutineContext = SupervisorJob(),
     private val verify: (Event) -> Boolean = { it.verify() },
 ) {
@@ -63,6 +69,7 @@ class NostrServer(
      */
     fun connect(send: (String) -> Unit) =
         RelaySession(
+            server = this,
             store = subStore,
             verify = verify,
             scope = scope,
