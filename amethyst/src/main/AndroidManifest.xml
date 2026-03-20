@@ -245,6 +245,10 @@
             android:name=".service.notifications.NotificationReplyReceiver"
             android:exported="false" />
 
+        <service
+            android:name=".service.WalletService"
+            android:exported="false" />
+
     </application>
 
 
