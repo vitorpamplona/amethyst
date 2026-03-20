@@ -62,23 +62,26 @@ private fun filterOpenPolls(notes: List<Note>): List<Note> {
     val now = TimeUtils.now()
     val oneDayInSeconds = TimeUtils.ONE_DAY
 
-    return notes.filter { note ->
-        val event = note.event ?: return@filter false
+    return notes
+        .filter { note ->
+            val event = note.event ?: return@filter false
 
-        when (event) {
-            is PollEvent -> {
-                val endsAt = event.endsAt()
-                if (endsAt != null) endsAt > now else event.createdAt + oneDayInSeconds > now
+            when (event) {
+                is PollEvent -> {
+                    val endsAt = event.endsAt()
+                    if (endsAt != null) endsAt > now else event.createdAt + oneDayInSeconds > now
+                }
+
+                is ZapPollEvent -> {
+                    val closedAt = event.closedAt()
+                    if (closedAt != null) closedAt > now else event.createdAt + oneDayInSeconds > now
+                }
+
+                else -> {
+                    false
+                }
             }
-
-            is ZapPollEvent -> {
-                val closedAt = event.closedAt()
-                if (closedAt != null) closedAt > now else event.createdAt + oneDayInSeconds > now
-            }
-
-            else -> false
-        }
-    }.sortedByDescending { it.createdAt() }
+        }.sortedByDescending { it.createdAt() }
 }
 
 @Composable
