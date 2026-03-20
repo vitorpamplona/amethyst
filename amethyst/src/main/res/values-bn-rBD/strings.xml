@@ -573,4 +573,5 @@
     <string name="donate_now">এখনই দান করুন</string>
     <string name="accessibility_scan_qr_code">QR কোড স্ক্যান করুন</string>
     <!-- Kind display names for relay subscription filter chips -->
+    <!-- M3 Action Dialog titles -->
 </resources>

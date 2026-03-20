@@ -1558,4 +1558,5 @@
     <string name="uptime">%1$d%% समय निरन्तर उपलब्ध</string>
     <string name="namecoin_settings">नामरूप्य स्थापना विकल्प</string>
     <string name="ots_explorer_settings">द्व्यंकरूप्य समन्वेषक (ओटीएस॰)</string>
+    <!-- M3 Action Dialog titles -->
 </resources>

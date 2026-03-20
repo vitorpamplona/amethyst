@@ -1620,4 +1620,5 @@
     <string name="event_sync_status_downloading">Laddar ner</string>
     <string name="event_sync_status_error">Fel</string>
     <string name="event_sync_status_completed">Slutfört</string>
+    <!-- M3 Action Dialog titles -->
 </resources>

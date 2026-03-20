@@ -1626,4 +1626,5 @@ anz der Bedingungen ist erforderlich</string>
     <string name="event_sync_status_downloading">Herunterladen</string>
     <string name="event_sync_status_error">Fehler</string>
     <string name="event_sync_status_completed">Abgeschlossen</string>
+    <!-- M3 Action Dialog titles -->
 </resources>

@@ -1630,4 +1630,5 @@
     <string name="event_sync_status_downloading">Letöltés</string>
     <string name="event_sync_status_error">Hiba</string>
     <string name="event_sync_status_completed">Kész</string>
+    <!-- M3 Action Dialog titles -->
 </resources>

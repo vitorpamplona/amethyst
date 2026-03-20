@@ -1365,4 +1365,5 @@
     <string name="continue_txt">Continuer</string>
     <string name="skip_for_now">Ignorer pour le moment</string>
     <string name="select_all">Tout sélectionner</string>
+    <!-- M3 Action Dialog titles -->
 </resources>

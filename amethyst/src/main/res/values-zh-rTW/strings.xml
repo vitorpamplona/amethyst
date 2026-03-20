@@ -763,4 +763,5 @@
     <string name="dvm_waiting_to_confirm_payment">正在等待 DVM 確認付款或返回結果</string>
     <string name="add_a_nip96_server">添加 NIP-96 服務器</string>
     <!-- Kind display names for relay subscription filter chips -->
+    <!-- M3 Action Dialog titles -->
 </resources>

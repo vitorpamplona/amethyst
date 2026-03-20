@@ -1642,4 +1642,5 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="event_sync_status_downloading">Prenašam</string>
     <string name="event_sync_status_error">Napaka</string>
     <string name="event_sync_status_completed">Zaključeno</string>
+    <!-- M3 Action Dialog titles -->
 </resources>

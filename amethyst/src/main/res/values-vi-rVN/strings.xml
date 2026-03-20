@@ -12,4 +12,5 @@
     <string name="note_to_receiver">Lưu ý cho người nhận</string>
     <string name="thank_you_so_much">Cảm ơn rất nhiều!</string>
     <!-- Kind display names for relay subscription filter chips -->
+    <!-- M3 Action Dialog titles -->
 </resources>
