@@ -34,18 +34,17 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ViewList
+import androidx.compose.material.icons.automirrored.outlined.VolumeOff
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Public
 import androidx.compose.material.icons.outlined.SensorDoor
-import androidx.compose.material.icons.outlined.ViewList
-import androidx.compose.material.icons.outlined.VolumeOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -93,6 +92,8 @@ import com.vitorpamplona.amethyst.ui.screen.RelayName
 import com.vitorpamplona.amethyst.ui.screen.ResourceName
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.Font12SP
+import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -139,6 +140,8 @@ fun FeedFilterSpinner(
             stringRes(R.string.feed_filter_select_an_option, selectAnOption)
         }
 
+    val openDropdownLabel = stringRes(R.string.open_dropdown_menu)
+
     Box(
         modifier = modifier,
         contentAlignment = Alignment.Center,
@@ -156,7 +159,7 @@ fun FeedFilterSpinner(
 
                         Text(
                             text = stringRes(R.string.lack_location_permissions),
-                            fontSize = 12.sp,
+                            fontSize = Font12SP,
                             lineHeight = 12.sp,
                         )
                     } else {
@@ -171,7 +174,7 @@ fun FeedFilterSpinner(
                                         Row {
                                             Text(
                                                 text = "(${myLocation.geoHash})",
-                                                fontSize = 12.sp,
+                                                fontSize = Font12SP,
                                                 lineHeight = 12.sp,
                                             )
                                             Spacer(modifier = StdHorzSpacer)
@@ -181,7 +184,7 @@ fun FeedFilterSpinner(
                                 ) { cityName ->
                                     Text(
                                         text = "($cityName)",
-                                        fontSize = 12.sp,
+                                        fontSize = Font12SP,
                                         lineHeight = 12.sp,
                                     )
                                 }
@@ -190,7 +193,7 @@ fun FeedFilterSpinner(
                             LocationState.LocationResult.LackPermission -> {
                                 Text(
                                     text = stringRes(R.string.lack_location_permissions),
-                                    fontSize = 12.sp,
+                                    fontSize = Font12SP,
                                     lineHeight = 12.sp,
                                 )
                             }
@@ -198,7 +201,7 @@ fun FeedFilterSpinner(
                             LocationState.LocationResult.Loading -> {
                                 Text(
                                     text = stringRes(R.string.loading_location),
-                                    fontSize = 12.sp,
+                                    fontSize = Font12SP,
                                     lineHeight = 12.sp,
                                 )
                             }
@@ -226,7 +229,7 @@ fun FeedFilterSpinner(
                     }.semantics {
                         role = Role.DropdownList
                         stateDescription = accessibilityDescription
-                        onClick(label = "Open feed filter menu") {
+                        onClick(label = openDropdownLabel) {
                             optionsShowing = true
                             return@onClick true
                         }
@@ -234,20 +237,18 @@ fun FeedFilterSpinner(
         )
     }
 
-    if (optionsShowing) {
-        options.isNotEmpty().also {
-            GroupedFeedFilterDialog(
-                title = explainer,
-                options = options,
-                onDismiss = { optionsShowing = false },
-                onSelect = {
-                    selected = options[it]
-                    optionsShowing = false
-                    onSelect(it)
-                },
-            ) {
-                RenderOption(it.name, accountViewModel)
-            }
+    if (optionsShowing && options.isNotEmpty()) {
+        GroupedFeedFilterDialog(
+            title = explainer,
+            options = options,
+            onDismiss = { optionsShowing = false },
+            onSelect = {
+                selected = options[it]
+                optionsShowing = false
+                onSelect(it)
+            },
+        ) {
+            RenderOption(it.name, accountViewModel)
         }
     }
 }
@@ -260,18 +261,18 @@ fun RenderOption(
     when (option) {
         is GeoHashName -> {
             LoadCityName(option.geoHashTag) {
-                Text(text = "/g/$it", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
+                Text(text = "/g/$it", fontSize = Font14SP, color = MaterialTheme.colorScheme.onSurface)
             }
         }
 
         is HashtagName -> {
-            Text(text = option.name(), fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
+            Text(text = option.name(), fontSize = Font14SP, color = MaterialTheme.colorScheme.onSurface)
         }
 
         is ResourceName -> {
             Text(
                 text = stringRes(id = option.resourceId),
-                fontSize = 14.sp,
+                fontSize = Font14SP,
                 color = MaterialTheme.colorScheme.onSurface,
             )
         }
@@ -295,19 +296,19 @@ fun RenderOption(
                     }
                 }
 
-            Text(text = name, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
+            Text(text = name, fontSize = Font14SP, color = MaterialTheme.colorScheme.onSurface)
         }
 
         is CommunityName -> {
             val it by observeNote(option.note, accountViewModel)
 
-            Text(text = "/n/${((it.note as? AddressableNote)?.dTag() ?: "")}", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
+            Text(text = "/n/${((it.note as? AddressableNote)?.dTag() ?: "")}", fontSize = Font14SP, color = MaterialTheme.colorScheme.onSurface)
         }
 
         is RelayName -> {
             Text(
                 text = option.name(),
-                fontSize = 14.sp,
+                fontSize = Font14SP,
                 color = MaterialTheme.colorScheme.onSurface,
             )
         }
@@ -321,12 +322,12 @@ private data class IndexedFeedDefinition(
 )
 
 private enum class FeedGroup(
-    val label: String,
+    @param:androidx.annotation.StringRes val labelRes: Int,
 ) {
-    FEEDS("Feeds"),
-    HASHTAGS("Hashtags"),
-    COMMUNITIES("Communities"),
-    LISTS("Lists"),
+    FEEDS(R.string.feed_group_feeds),
+    HASHTAGS(R.string.feed_group_hashtags),
+    COMMUNITIES(R.string.feed_group_communities),
+    LISTS(R.string.feed_group_lists),
 }
 
 private fun groupFeedDefinitions(options: ImmutableList<FeedDefinition>): Map<FeedGroup, List<IndexedFeedDefinition>> {
@@ -375,7 +376,7 @@ private fun GroupedFeedFilterDialog(
                     if (!items.isNullOrEmpty()) {
                         item {
                             GroupSection(
-                                label = group.label,
+                                label = stringRes(group.labelRes),
                                 items = items,
                                 isChipLayout = group == FeedGroup.HASHTAGS,
                                 onSelect = onSelect,
@@ -406,7 +407,7 @@ private fun GroupSection(
         Column {
             Text(
                 text = label.uppercase(),
-                fontSize = 12.sp,
+                fontSize = Font12SP,
                 letterSpacing = 0.8.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
@@ -448,7 +449,7 @@ private fun GroupSection(
                     ) {
                         FeedIcon(
                             item = entry.item,
-                            modifier = Modifier.size(20.dp),
+                            modifier = Size20Modifier,
                         )
                         Spacer(modifier = Modifier.padding(start = 12.dp))
                         Column(modifier = Modifier.weight(1f)) { onRenderItem(entry.item) }
@@ -487,7 +488,7 @@ private fun FeedIcon(
             }
 
             is TopFilter.MuteList -> {
-                Icons.Outlined.VolumeOff
+                Icons.AutoMirrored.Outlined.VolumeOff
             }
 
             is TopFilter.Chess -> {
@@ -495,7 +496,7 @@ private fun FeedIcon(
             }
 
             is TopFilter.PeopleList -> {
-                Icons.Outlined.ViewList
+                Icons.AutoMirrored.Outlined.ViewList
             }
 
             else -> {
@@ -503,7 +504,7 @@ private fun FeedIcon(
                     is GeoHashName -> Icons.Outlined.LocationOn
                     is RelayName -> Icons.Outlined.SensorDoor
                     is CommunityName -> Icons.Outlined.Groups
-                    is PeopleListName -> Icons.Outlined.ViewList
+                    is PeopleListName -> Icons.AutoMirrored.Outlined.ViewList
                     else -> Icons.Outlined.Person
                 }
             }

@@ -156,13 +156,11 @@ private fun BaseTextSpinner(
         )
     }
 
-    if (optionsShowing) {
-        options.isNotEmpty().also {
-            SpinnerSelectionDialog(options = options, onDismiss = { optionsShowing = false }) {
-                currentText = options[it].title
-                optionsShowing = false
-                onSelect(it)
-            }
+    if (optionsShowing && options.isNotEmpty()) {
+        SpinnerSelectionDialog(options = options, onDismiss = { optionsShowing = false }) {
+            currentText = options[it].title
+            optionsShowing = false
+            onSelect(it)
         }
     }
 }
