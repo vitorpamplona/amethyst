@@ -634,6 +634,10 @@
     <string name="app_notification_zaps_channel_message">%1$s satů</string>
     <string name="app_notification_zaps_channel_message_from">Od %1$s</string>
     <string name="app_notification_zaps_channel_message_for">pro %1$s</string>
+    <string name="app_notification_reply_label">Odpovědět</string>
+    <string name="app_notification_mark_read_label">Označit jako přečtené</string>
+    <string name="app_notification_dms_summary">Nové zprávy</string>
+    <string name="app_notification_zaps_summary">Nové zapsy</string>
     <string name="reply_notify">Upozornit: </string>
     <string name="channel_list_join_conversation">Připojit se ke konverzaci</string>
     <string name="channel_list_user_or_group_id">ID uživatele nebo skupiny</string>
@@ -1043,6 +1047,13 @@
     <string name="media_compression_quality_uncompressed">Bez komprese</string>
     <string name="video_codec_h265_label">Použít kodek H.265/HEVC</string>
     <string name="video_codec_h265_description">Lepší kvalita při menší velikosti souboru, ale ne všechna zařízení podporují přehrávání H.265.</string>
+    <string name="strip_metadata_label">Odstranit soukromá metadata</string>
+    <string name="strip_metadata_description">Pokusí se odstranit soukromá metadata z podporovaných mediálních souborů před nahráním</string>
+    <string name="metadata_strip_failed_title">Metadata nelze odstranit</string>
+    <string name="metadata_strip_failed_body">Tento formát souboru nepodporuje odstranění metadat. Mohou být obsaženy soukromé informace, jako je poloha a informace o zařízení. Přesto nahrát?</string>
+    <string name="metadata_strip_failed_upload">Přesto nahrát</string>
+    <string name="metadata_strip_failed_upload_cancelled">Nepodařilo se odstranit soukromá metadata z média. Nahrávání zrušeno.</string>
+    <string name="upload_cancelled">Nahrávání zrušeno</string>
     <string name="edit_draft">Upravit koncept</string>
     <string name="login_with_qr_code">Přihlášení pomocí QR kódu</string>
     <string name="route">Trasa</string>

@@ -89,6 +89,7 @@ import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
+import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
@@ -473,14 +474,16 @@ fun ListContent(
             route = Route.Wallet,
         )
 
-        NavigationRow(
-            title = R.string.route_chess,
-            icon = R.drawable.ic_chess,
-            iconReference = 1,
-            tint = MaterialTheme.colorScheme.onBackground,
-            nav = nav,
-            route = Route.Chess,
-        )
+        if (isDebug) {
+            NavigationRow(
+                title = R.string.route_chess,
+                icon = R.drawable.ic_chess,
+                iconReference = 1,
+                tint = MaterialTheme.colorScheme.onBackground,
+                nav = nav,
+                route = Route.Chess,
+            )
+        }
 
         NavigationRow(
             title = R.string.event_sync_title,

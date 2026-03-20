@@ -634,6 +634,10 @@
     <string name="app_notification_zaps_channel_message">%1$s sats</string>
     <string name="app_notification_zaps_channel_message_from">De %1$s</string>
     <string name="app_notification_zaps_channel_message_for">por %1$s</string>
+    <string name="app_notification_reply_label">Responder</string>
+    <string name="app_notification_mark_read_label">Marcar como lida</string>
+    <string name="app_notification_dms_summary">Novas mensagens</string>
+    <string name="app_notification_zaps_summary">Novos zaps</string>
     <string name="reply_notify">Notificar: </string>
     <string name="channel_list_join_conversation">Entrar na conversa</string>
     <string name="channel_list_user_or_group_id">ID do usuário ou grupo</string>
@@ -1043,6 +1047,13 @@
     <string name="media_compression_quality_uncompressed">Sem compressão</string>
     <string name="video_codec_h265_label">Usar codec H.265/HEVC</string>
     <string name="video_codec_h265_description">Melhor qualidade em arquivos menores, mas nem todos os dispositivos suportam reprodução em H.265.</string>
+    <string name="strip_metadata_label">Remover metadados privados</string>
+    <string name="strip_metadata_description">Tenta remover metadados privados de arquivos de mídia compatíveis antes do envio</string>
+    <string name="metadata_strip_failed_title">Não foi possível remover os metadados</string>
+    <string name="metadata_strip_failed_body">Este formato de arquivo não suporta a remoção de metadados. Informações privadas como localização e dados do dispositivo podem estar incluídas. Enviar mesmo assim?</string>
+    <string name="metadata_strip_failed_upload">Enviar mesmo assim</string>
+    <string name="metadata_strip_failed_upload_cancelled">Não foi possível remover metadados privados da mídia. Envio cancelado.</string>
+    <string name="upload_cancelled">Envio cancelado</string>
     <string name="edit_draft">Editar rascunho</string>
     <string name="login_with_qr_code">Entrar com Código QR</string>
     <string name="route">Rota</string>

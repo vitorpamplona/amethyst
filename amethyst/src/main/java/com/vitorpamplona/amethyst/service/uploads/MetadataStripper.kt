@@ -171,7 +171,9 @@ object MetadataStripper {
             if (muxerStarted) runCatching { muxer?.stop() }
             muxer?.release()
             extractor.release()
-            if (!succeeded) outputFile.delete()
+            if (!succeeded && !outputFile.delete()) {
+                Log.w("MetadataStripper", "Failed to delete temp file: ${outputFile.absolutePath}")
+            }
         }
         return succeeded
     }
@@ -199,7 +201,9 @@ object MetadataStripper {
             val inputStream =
                 context.contentResolver.openInputStream(uri)
                     ?: run {
-                        tempFile.delete()
+                        if (!tempFile.delete()) {
+                            Log.w("MetadataStripper", "Failed to delete temp file: ${tempFile.absolutePath}")
+                        }
                         return StrippingResult(uri, false)
                     }
             inputStream.use { input ->
@@ -218,7 +222,9 @@ object MetadataStripper {
             StrippingResult(tempFile.toUri(), true)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            tempFile?.delete()
+            if (tempFile?.delete() == false) {
+                Log.w("MetadataStripper", "Failed to delete temp file: ${tempFile.absolutePath}")
+            }
             Log.d("MetadataStripper", "Failed to strip image metadata: ${e.message}")
             StrippingResult(uri, false)
         }
@@ -304,7 +310,9 @@ object MetadataStripper {
                     input.copyTo(output)
                 }
             } ?: run {
-                tempInputFile.delete()
+                if (!tempInputFile.delete()) {
+                    Log.w("MetadataStripper", "Failed to delete temp file: ${tempInputFile.absolutePath}")
+                }
                 return StrippingResult(uri, false)
             }
 
@@ -345,7 +353,9 @@ object MetadataStripper {
             }
 
             if (startOffset == 0L && endOffset == fileSize) {
-                tempInputFile.delete()
+                if (!tempInputFile.delete()) {
+                    Log.w("MetadataStripper", "Failed to delete temp file: ${tempInputFile.absolutePath}")
+                }
                 tempInputFile = null
                 return StrippingResult(uri, true) // no tags found, already clean
             }
@@ -365,14 +375,18 @@ object MetadataStripper {
                     }
                 }
             }
-            tempInputFile.delete()
+            if (!tempInputFile.delete()) {
+                Log.w("MetadataStripper", "Failed to delete temp file: ${tempInputFile.absolutePath}")
+            }
             tempInputFile = null
 
             Log.d("MetadataStripper", "Stripped ID3 tags from MP3")
             StrippingResult(tempOutputFile.toUri(), true)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            tempInputFile?.delete()
+            if (tempInputFile?.delete() == false) {
+                Log.w("MetadataStripper", "Failed to delete temp file: ${tempInputFile.absolutePath}")
+            }
             Log.d("MetadataStripper", "Failed to strip MP3 metadata: ${e.message}")
             StrippingResult(uri, false)
         }
