@@ -1878,6 +1878,21 @@
     <string name="event_sync_status_error">Error</string>
     <string name="event_sync_status_completed">Completed</string>
 
+    <!-- M3 Action Dialog titles -->
+    <string name="mark_as_read_dialog_title">Mark as Read</string>
+    <string name="note_actions_dialog_title">Note Actions</string>
+    <string name="profile_actions_dialog_title">Profile Actions</string>
+    <string name="media_actions_dialog_title">Media Actions</string>
+    <string name="playback_actions_dialog_title">Playback</string>
+    <string name="pack_actions_dialog_title">Pack Actions</string>
+    <string name="list_actions_dialog_title">List Actions</string>
+    <string name="bookmark_item_actions_dialog_title">Bookmark Actions</string>
+    <string name="group_actions_dialog_title">Group Actions</string>
+    <string name="add_bookmark_dialog_title">Add Bookmark</string>
+    <string name="add_member_dialog_title">Add Member</string>
+    <string name="list_management_dialog_title">List Management</string>
+    <string name="link_actions_dialog_title">Link Actions</string>
+    <string name="export_actions_dialog_title">Export</string>
     <string name="attestation">Attestation</string>
     <string name="attestation_valid">Valid</string>
     <string name="attestation_invalid">Invalid</string>

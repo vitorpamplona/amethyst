@@ -30,12 +30,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BookmarkAdd
 import androidx.compose.material.icons.filled.BookmarkRemove
+import androidx.compose.material.icons.outlined.BookmarkAdd
 import androidx.compose.material.icons.outlined.CollectionsBookmark
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Public
 import androidx.compose.material.icons.outlined.RemoveCircleOutline
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -48,6 +47,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
+import com.vitorpamplona.amethyst.ui.components.M3ActionRow
+import com.vitorpamplona.amethyst.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.list.BookmarkMembershipStatusAndNumberDisplay
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.HalfHalfVertPadding
@@ -158,6 +160,30 @@ fun BookmarkManagementOptions(
 ) {
     val isBookmarkAddTapped = remember { mutableStateOf(false) }
 
+    if (isBookmarkAddTapped.value) {
+        M3ActionDialog(
+            title = stringRes(R.string.add_bookmark_dialog_title),
+            onDismiss = { isBookmarkAddTapped.value = false },
+        ) {
+            M3ActionSection {
+                M3ActionRow(
+                    icon = Icons.Outlined.BookmarkAdd,
+                    text = stringRes(R.string.public_bookmark_add_action_label),
+                ) {
+                    onAddBookmark(false)
+                    isBookmarkAddTapped.value = false
+                }
+                M3ActionRow(
+                    icon = Icons.Outlined.Lock,
+                    text = stringRes(R.string.private_bookmark_add_action_label),
+                ) {
+                    onAddBookmark(true)
+                    isBookmarkAddTapped.value = false
+                }
+            }
+        }
+    }
+
     Column(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -195,30 +221,6 @@ fun BookmarkManagementOptions(
                     tint = MaterialTheme.colorScheme.onPrimary,
                 )
             }
-        }
-
-        DropdownMenu(
-            expanded = isBookmarkAddTapped.value,
-            onDismissRequest = { isBookmarkAddTapped.value = false },
-        ) {
-            DropdownMenuItem(
-                text = {
-                    Text(text = stringRes(R.string.public_bookmark_add_action_label))
-                },
-                onClick = {
-                    onAddBookmark(false)
-                    isBookmarkAddTapped.value = false
-                },
-            )
-            DropdownMenuItem(
-                text = {
-                    Text(text = stringRes(R.string.private_bookmark_add_action_label))
-                },
-                onClick = {
-                    onAddBookmark(true)
-                    isBookmarkAddTapped.value = false
-                },
-            )
         }
     }
 }

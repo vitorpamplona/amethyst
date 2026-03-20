@@ -29,13 +29,14 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Public
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.Text
@@ -59,6 +60,9 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.nip51Lists.peopleList.PeopleList
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
+import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
+import com.vitorpamplona.amethyst.ui.components.M3ActionRow
+import com.vitorpamplona.amethyst.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.ui.note.VerticalDotsIcon
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
@@ -286,15 +290,15 @@ private fun PeopleListOptionsButton(
         onClick = { isMenuOpen.value = true },
     ) {
         VerticalDotsIcon()
-
-        ListOptionsMenu(
-            isExpanded = isMenuOpen.value,
-            onListEditMetadata = onListEditMetadata,
-            onListClone = onListCloneCreate,
-            onDelete = onListDelete,
-            onDismiss = { isMenuOpen.value = false },
-        )
     }
+
+    ListOptionsMenu(
+        isExpanded = isMenuOpen.value,
+        onListEditMetadata = onListEditMetadata,
+        onListClone = onListCloneCreate,
+        onDelete = onListDelete,
+        onDismiss = { isMenuOpen.value = false },
+    )
 }
 
 @Composable
@@ -309,36 +313,28 @@ private fun ListOptionsMenu(
     val optionalCloneName = remember { mutableStateOf<String?>(null) }
     val optionalCloneDescription = remember { mutableStateOf<String?>(null) }
 
-    DropdownMenu(
-        expanded = isExpanded,
-        onDismissRequest = onDismiss,
-    ) {
-        DropdownMenuItem(
-            text = {
-                Text(text = stringRes(R.string.follow_set_edit_list_metadata))
-            },
-            onClick = {
-                onListEditMetadata()
-                onDismiss()
-            },
-        )
-        DropdownMenuItem(
-            text = {
-                Text(text = stringRes(R.string.follow_set_copy_action_btn_label))
-            },
-            onClick = {
-                isCopyDialogOpen.value = true
-                onDismiss()
-            },
-        )
-        DropdownMenuItem(
-            text = {
-                Text(text = stringRes(R.string.quick_action_delete))
-            },
-            onClick = {
-                onDelete()
-            },
-        )
+    if (isExpanded) {
+        M3ActionDialog(
+            title = stringRes(R.string.list_management_dialog_title),
+            onDismiss = onDismiss,
+        ) {
+            M3ActionSection {
+                M3ActionRow(icon = Icons.Outlined.Edit, text = stringRes(R.string.follow_set_edit_list_metadata)) {
+                    onListEditMetadata()
+                    onDismiss()
+                }
+                M3ActionRow(icon = Icons.Outlined.ContentCopy, text = stringRes(R.string.follow_set_copy_action_btn_label)) {
+                    isCopyDialogOpen.value = true
+                    onDismiss()
+                }
+            }
+            M3ActionSection {
+                M3ActionRow(icon = Icons.Outlined.Delete, text = stringRes(R.string.quick_action_delete), isDestructive = true) {
+                    onDelete()
+                    onDismiss()
+                }
+            }
+        }
     }
 
     if (isCopyDialogOpen.value) {

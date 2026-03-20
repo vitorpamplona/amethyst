@@ -29,8 +29,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.FolderZip
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -53,6 +53,9 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.DefaultDMRelayList
 import com.vitorpamplona.amethyst.model.DefaultIndexerRelayList
 import com.vitorpamplona.amethyst.model.DefaultSearchRelayList
+import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
+import com.vitorpamplona.amethyst.ui.components.M3ActionRow
+import com.vitorpamplona.amethyst.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -490,6 +493,7 @@ fun SettingsCategoryWithButton(
 @Composable
 fun ExportDropdownMenu(collection: () -> RelayListCollection) {
     var expanded by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     IconButton(onClick = { expanded = true }) {
         Icon(
@@ -498,24 +502,27 @@ fun ExportDropdownMenu(collection: () -> RelayListCollection) {
         )
     }
 
-    DropdownMenu(
-        expanded = expanded,
-        onDismissRequest = { expanded = false },
-    ) {
-        val context = LocalContext.current
-        DropdownMenuItem(
-            text = { Text(stringRes(R.string.export_as_text)) },
-            onClick = {
-                expanded = false
-                RelayExporter(context).export(collection())
-            },
-        )
-        DropdownMenuItem(
-            text = { Text(stringRes(R.string.export_as_zip)) },
-            onClick = {
-                expanded = false
-                RelayZipExporter(context).export(collection())
-            },
-        )
+    if (expanded) {
+        M3ActionDialog(
+            title = stringRes(R.string.export_actions_dialog_title),
+            onDismiss = { expanded = false },
+        ) {
+            M3ActionSection {
+                M3ActionRow(
+                    icon = Icons.Outlined.Description,
+                    text = stringRes(R.string.export_as_text),
+                ) {
+                    expanded = false
+                    RelayExporter(context).export(collection())
+                }
+                M3ActionRow(
+                    icon = Icons.Outlined.FolderZip,
+                    text = stringRes(R.string.export_as_zip),
+                ) {
+                    expanded = false
+                    RelayZipExporter(context).export(collection())
+                }
+            }
+        }
     }
 }
