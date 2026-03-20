@@ -1309,6 +1309,10 @@
     <string name="my_lists">Mina listor</string>
     <string name="people_list_label">Användare</string>
     <string name="select_list_to_filter">Välj en lista för att filtrera flödet</string>
+    <string name="feed_group_feeds">Flöden</string>
+    <string name="feed_group_hashtags">Hashtaggar</string>
+    <string name="feed_group_communities">Gemenskaper</string>
+    <string name="feed_group_lists">Listor</string>
     <string name="temporary_account">Logga ut när enheten låses</string>
     <string name="private_message">Privat meddelande</string>
     <string name="public_message">Offentligt meddelande</string>
@@ -1621,4 +1625,35 @@
     <string name="event_sync_status_error">Fel</string>
     <string name="event_sync_status_completed">Slutfört</string>
     <!-- M3 Action Dialog titles -->
+    <string name="mark_as_read_dialog_title">Markera som läst</string>
+    <string name="note_actions_dialog_title">Anteckningsåtgärder</string>
+    <string name="profile_actions_dialog_title">Profilåtgärder</string>
+    <string name="media_actions_dialog_title">Medieåtgärder</string>
+    <string name="playback_actions_dialog_title">Uppspelning</string>
+    <string name="pack_actions_dialog_title">Paketåtgärder</string>
+    <string name="list_actions_dialog_title">Liståtgärder</string>
+    <string name="bookmark_item_actions_dialog_title">Bokmärkesåtgärder</string>
+    <string name="group_actions_dialog_title">Gruppåtgärder</string>
+    <string name="add_bookmark_dialog_title">Lägg till bokmärke</string>
+    <string name="add_member_dialog_title">Lägg till medlem</string>
+    <string name="list_management_dialog_title">Listhantering</string>
+    <string name="link_actions_dialog_title">Länkåtgärder</string>
+    <string name="export_actions_dialog_title">Exportera</string>
+    <string name="attestation">Attestering</string>
+    <string name="attestation_valid">Giltig</string>
+    <string name="attestation_invalid">Ogiltig</string>
+    <string name="attestation_status_accepted">Accepterad</string>
+    <string name="attestation_status_rejected">Avvisad</string>
+    <string name="attestation_status_verifying">Verifierar</string>
+    <string name="attestation_status_verified">Verifierad</string>
+    <string name="attestation_status_revoked">Återkallad</string>
+    <string name="attestation_valid_from">Giltig från %1$s</string>
+    <string name="attestation_valid_to">Giltig till %1$s</string>
+    <string name="attestation_request">Attesteringsförfrågan</string>
+    <string name="attestation_request_description">Begär attestering för en händelse</string>
+    <string name="attestor_recommendation">Attestantens rekommendation</string>
+    <string name="attestor_recommendation_for_kinds">Rekommenderad för typer: %1$s</string>
+    <string name="attestor_proficiency">Attestantens kompetens</string>
+    <string name="attestor_proficiency_for_kinds">Kompetent att verifiera typer: %1$s</string>
+    <string name="attestation_attests_to">Intygar</string>
 </resources>
