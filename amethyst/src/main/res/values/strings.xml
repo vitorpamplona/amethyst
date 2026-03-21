@@ -1907,8 +1907,9 @@
     <string name="attestation_request">Attestation Request</string>
     <string name="attestation_request_description">Requesting attestation for an event</string>
     <string name="attestor_recommendation">Attestor Recommendation</string>
-    <string name="attestor_recommendation_for_kinds">Recommended for kinds: %1$s</string>
+    <string name="attestor_recommendation_for_kinds">Recommended for kinds: </string>
     <string name="attestor_proficiency">Attestor Proficiency</string>
     <string name="attestor_proficiency_for_kinds">Proficient in verifying kinds: %1$s</string>
     <string name="attestation_attests_to">Attests to</string>
+    <string name="attestation_requests_attestation_to">Requests attestation to</string>
 </resources>

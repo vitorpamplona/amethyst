@@ -46,6 +46,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,13 +55,28 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.EmptyTagList
+import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.components.LoadNote
+import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
+import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
+import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.KindChip
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
 import com.vitorpamplona.quartz.experimental.attestations.attestation.tags.AttestationStatus
@@ -71,16 +88,75 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+@Preview
+@Composable
+fun RenderAttestationPreview() {
+    val event =
+        AttestationEvent(
+            id = "f8e05e4fa964d9dfbeb339ae0450d0b3424aaf8f6083d95f38c780335c3dbd56",
+            pubKey = "c4f5e7a75a8ce3683d529cff06368439c529e5243c6b125ba68789198856cac7",
+            createdAt = 1773941524,
+            content = "This is Frank's new npub.",
+            sig = "61dde5dc5738bfa637aa04451eec63d45f649902a0772abbaf55711aad5b7ce376bc7712c937f9ffc504655c4fd7e39f78139dc3f1a90953d150b43f3e2428fb",
+            tags =
+                arrayOf(
+                    arrayOf("d", "af5aa898:fe108febb997:1773941524"),
+                    arrayOf("e", "fe108febb99796c4091775e00aa1fc3ffc489ad22fdf1f8c559b2472815c09c7"),
+                    arrayOf("s", "verified"),
+                    arrayOf("v", "valid"),
+                    arrayOf("client", "attestr.xyz"),
+                ),
+        )
+
+    LocalCache.justConsume(event, null, true)
+    val note = LocalCache.getOrCreateNote(event.id)
+
+    ThemeComparisonColumn(
+        toPreview = {
+            RenderAttestation(
+                baseNote = note,
+                quotesLeft = 3,
+                backgroundColor = remember { mutableStateOf(Color.Transparent) },
+                accountViewModel = mockAccountViewModel(),
+                nav = EmptyNav(),
+            )
+        },
+    )
+}
+
 @Composable
 fun RenderAttestation(
-    note: Note,
+    baseNote: Note,
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteEvent = note.event as? AttestationEvent ?: return
+    val noteState by baseNote
+        .flow()
+        .metadata.stateFlow
+        .collectAsStateWithLifecycle()
+    val noteEvent = noteState.note.event as? AttestationEvent ?: return
 
+    RenderAttestation(
+        baseNote,
+        noteEvent,
+        quotesLeft,
+        backgroundColor,
+        accountViewModel,
+        nav,
+    )
+}
+
+@Composable
+fun RenderAttestation(
+    note: Note,
+    noteEvent: AttestationEvent,
+    quotesLeft: Int,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
     val validity = remember(noteEvent) { noteEvent.validity() }
     val status = remember(noteEvent) { noteEvent.status() }
     val validFrom = remember(noteEvent) { noteEvent.validFrom() }
@@ -90,6 +166,10 @@ fun RenderAttestation(
     val statusColor = remember(status, validity) { attestationColor(status, validity) }
     val statusIcon = remember(status, validity) { attestationIcon(status, validity) }
     val statusLabel = attestationStatusLabel(status, validity)
+
+    val aboutAddress = remember(noteEvent) { noteEvent.assertionAddress() }
+    val aboutEvent = remember(noteEvent) { noteEvent.assertionEventId() }
+    val aboutPubkey = remember(noteEvent) { noteEvent.assertionPubkey() }
 
     Column(
         modifier =
@@ -119,7 +199,7 @@ fun RenderAttestation(
         }
 
         if (validFrom != null || validTo != null) {
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = DoubleVertSpacer)
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 validFrom?.let {
                     Text(
@@ -138,32 +218,62 @@ fun RenderAttestation(
             }
         }
 
-        content?.let {
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = it,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
+        if (quotesLeft > 0) {
+            if (aboutAddress != null) {
+                LoadAddressableNote(aboutAddress, accountViewModel) {
+                    if (it != null) {
+                        Spacer(modifier = DoubleVertSpacer)
+                        NoteCompose(
+                            baseNote = it,
+                            modifier = MaterialTheme.colorScheme.replyModifier,
+                            isQuotedNote = true,
+                            unPackReply = ReplyRenderType.NONE,
+                            makeItShort = true,
+                            quotesLeft = quotesLeft - 1,
+                            parentBackgroundColor = backgroundColor,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                        )
+                    }
+                }
+            } else if (aboutEvent != null) {
+                LoadNote(aboutEvent, accountViewModel) {
+                    if (it != null) {
+                        Spacer(modifier = DoubleVertSpacer)
+                        NoteCompose(
+                            baseNote = it,
+                            modifier = MaterialTheme.colorScheme.replyModifier,
+                            isQuotedNote = true,
+                            unPackReply = ReplyRenderType.NONE,
+                            makeItShort = true,
+                            quotesLeft = quotesLeft - 1,
+                            parentBackgroundColor = backgroundColor,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                        )
+                    }
+                }
+            } else if (aboutPubkey != null) {
+                LoadUser(aboutPubkey, accountViewModel) {
+                    if (it != null) {
+                        Spacer(modifier = DoubleVertSpacer)
+                        UserCompose(it, accountViewModel = accountViewModel, nav = nav)
+                    }
+                }
+            }
         }
-    }
 
-    if (quotesLeft > 0) {
-        note.replyTo?.firstOrNull()?.let {
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = stringRes(R.string.attestation_attests_to),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            NoteCompose(
-                baseNote = it,
-                modifier = MaterialTheme.colorScheme.replyModifier,
-                isQuotedNote = true,
-                unPackReply = ReplyRenderType.NONE,
-                makeItShort = true,
-                quotesLeft = quotesLeft - 1,
-                parentBackgroundColor = backgroundColor,
+        content?.let {
+            Spacer(modifier = DoubleVertSpacer)
+            TranslatableRichTextViewer(
+                content = it,
+                canPreview = true,
+                quotesLeft = quotesLeft,
+                modifier = Modifier.fillMaxWidth(),
+                tags = remember(note) { note.event?.tags?.toImmutableListOfLists() ?: EmptyTagList },
+                backgroundColor = backgroundColor,
+                id = note.idHex,
+                callbackUri = note.toNostrUri(),
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
@@ -179,8 +289,17 @@ fun RenderAttestationRequest(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteEvent = note.event as? AttestationRequestEvent ?: return
+    val noteState by note
+        .flow()
+        .metadata.stateFlow
+        .collectAsStateWithLifecycle()
+    val noteEvent = noteState.note.event as? AttestationRequestEvent ?: return
+
     val content = remember(noteEvent) { noteEvent.content.ifBlank { null } }
+
+    val aboutAddress = remember(noteEvent) { noteEvent.assertionAddress() }
+    val aboutEvent = remember(noteEvent) { noteEvent.assertionEventId() }
+    val aboutPubkey = remember(noteEvent) { noteEvent.assertionPubkey() }
 
     Column(
         modifier =
@@ -213,29 +332,79 @@ fun RenderAttestationRequest(
         }
 
         content?.let {
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = it,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface,
+            Spacer(modifier = DoubleVertSpacer)
+            TranslatableRichTextViewer(
+                content = it,
+                canPreview = true,
+                quotesLeft = quotesLeft,
+                modifier = Modifier.fillMaxWidth(),
+                tags = remember(note) { note.event?.tags?.toImmutableListOfLists() ?: EmptyTagList },
+                backgroundColor = backgroundColor,
+                id = note.idHex,
+                callbackUri = note.toNostrUri(),
+                accountViewModel = accountViewModel,
+                nav = nav,
             )
         }
     }
 
     if (quotesLeft > 0) {
-        note.replyTo?.firstOrNull()?.let {
-            Spacer(modifier = Modifier.height(8.dp))
-            NoteCompose(
-                baseNote = it,
-                modifier = MaterialTheme.colorScheme.replyModifier,
-                isQuotedNote = true,
-                unPackReply = ReplyRenderType.NONE,
-                makeItShort = true,
-                quotesLeft = quotesLeft - 1,
-                parentBackgroundColor = backgroundColor,
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
+        if (aboutAddress != null) {
+            LoadAddressableNote(aboutAddress, accountViewModel) {
+                if (it != null) {
+                    Spacer(modifier = DoubleVertSpacer)
+                    Text(
+                        text = stringRes(R.string.attestation_requests_attestation_to),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    NoteCompose(
+                        baseNote = it,
+                        modifier = MaterialTheme.colorScheme.replyModifier,
+                        isQuotedNote = true,
+                        unPackReply = ReplyRenderType.NONE,
+                        makeItShort = true,
+                        quotesLeft = quotesLeft - 1,
+                        parentBackgroundColor = backgroundColor,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                }
+            }
+        } else if (aboutEvent != null) {
+            LoadNote(aboutEvent, accountViewModel) {
+                if (it != null) {
+                    Spacer(modifier = DoubleVertSpacer)
+                    Text(
+                        text = stringRes(R.string.attestation_requests_attestation_to),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    NoteCompose(
+                        baseNote = it,
+                        modifier = MaterialTheme.colorScheme.replyModifier,
+                        isQuotedNote = true,
+                        unPackReply = ReplyRenderType.NONE,
+                        makeItShort = true,
+                        quotesLeft = quotesLeft - 1,
+                        parentBackgroundColor = backgroundColor,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                }
+            }
+        } else if (aboutPubkey != null) {
+            LoadUser(aboutPubkey, accountViewModel) {
+                if (it != null) {
+                    Spacer(modifier = DoubleVertSpacer)
+                    Text(
+                        text = stringRes(R.string.attestation_requests_attestation_to),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    UserCompose(it, accountViewModel = accountViewModel, nav = nav)
+                }
+            }
         }
     }
 }
@@ -244,13 +413,20 @@ fun RenderAttestationRequest(
 @Composable
 fun RenderAttestorRecommendation(
     note: Note,
+    quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteEvent = note.event as? AttestorRecommendationEvent ?: return
+    val noteState by note
+        .flow()
+        .metadata.stateFlow
+        .collectAsStateWithLifecycle()
+    val noteEvent = noteState.note.event as? AttestorRecommendationEvent ?: return
+
     val kinds = remember(noteEvent) { noteEvent.kinds() }
     val description = remember(noteEvent) { noteEvent.description() }
+    val aboutPubKey = remember(noteEvent) { noteEvent.dTag() }
 
     Column(
         modifier =
@@ -282,25 +458,45 @@ fun RenderAttestorRecommendation(
             )
         }
 
+        LoadUser(aboutPubKey, accountViewModel) {
+            if (it != null) {
+                Spacer(modifier = DoubleVertSpacer)
+                UserCompose(it, accountViewModel = accountViewModel, nav = nav)
+            }
+        }
+
         if (kinds.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text =
-                    stringRes(
-                        R.string.attestor_recommendation_for_kinds,
-                        kinds.joinToString(", "),
-                    ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Spacer(modifier = DoubleVertSpacer)
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    text = stringRes(R.string.attestor_recommendation_for_kinds),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+
+                // Kinds
+                kinds.forEach { kind ->
+                    KindChip(kind)
+                }
+            }
         }
 
         description?.let {
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = it,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface,
+            Spacer(modifier = DoubleVertSpacer)
+            TranslatableRichTextViewer(
+                content = it,
+                canPreview = true,
+                quotesLeft = quotesLeft,
+                modifier = Modifier.fillMaxWidth(),
+                tags = remember(note) { note.event?.tags?.toImmutableListOfLists() ?: EmptyTagList },
+                backgroundColor = backgroundColor,
+                id = note.idHex,
+                callbackUri = note.toNostrUri(),
+                accountViewModel = accountViewModel,
+                nav = nav,
             )
         }
     }
@@ -310,11 +506,17 @@ fun RenderAttestorRecommendation(
 @Composable
 fun RenderAttestorProficiency(
     note: Note,
+    quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteEvent = note.event as? AttestorProficiencyEvent ?: return
+    val noteState by note
+        .flow()
+        .metadata.stateFlow
+        .collectAsStateWithLifecycle()
+    val noteEvent = noteState.note.event as? AttestorProficiencyEvent ?: return
+
     val kinds = remember(noteEvent) { noteEvent.kinds() }
     val description = remember(noteEvent) { noteEvent.description() }
 
@@ -368,10 +570,17 @@ fun RenderAttestorProficiency(
 
         description?.let {
             Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = it,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface,
+            TranslatableRichTextViewer(
+                content = it,
+                canPreview = true,
+                quotesLeft = quotesLeft,
+                modifier = Modifier.fillMaxWidth(),
+                tags = remember(note) { note.event?.tags?.toImmutableListOfLists() ?: EmptyTagList },
+                backgroundColor = backgroundColor,
+                id = note.idHex,
+                callbackUri = note.toNostrUri(),
+                accountViewModel = accountViewModel,
+                nav = nav,
             )
         }
     }

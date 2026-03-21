@@ -784,11 +784,11 @@ private fun RenderNoteRow(
         }
 
         is AttestorRecommendationEvent -> {
-            RenderAttestorRecommendation(baseNote, backgroundColor, accountViewModel, nav)
+            RenderAttestorRecommendation(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
         }
 
         is AttestorProficiencyEvent -> {
-            RenderAttestorProficiency(baseNote, backgroundColor, accountViewModel, nav)
+            RenderAttestorProficiency(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
         }
 
         is AudioTrackEvent -> {

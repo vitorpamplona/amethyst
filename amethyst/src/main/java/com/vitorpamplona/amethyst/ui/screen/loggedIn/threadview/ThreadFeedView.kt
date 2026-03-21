@@ -633,9 +633,9 @@ private fun FullBleedNoteCompose(
                 } else if (noteEvent is AttestationRequestEvent) {
                     RenderAttestationRequest(baseNote, 3, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is AttestorRecommendationEvent) {
-                    RenderAttestorRecommendation(baseNote, backgroundColor, accountViewModel, nav)
+                    RenderAttestorRecommendation(baseNote, 3, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is AttestorProficiencyEvent) {
-                    RenderAttestorProficiency(baseNote, backgroundColor, accountViewModel, nav)
+                    RenderAttestorProficiency(baseNote, 3, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is AdvertisedRelayListEvent) {
                     DisplayNIP65RelayList(baseNote, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is LnZapEvent) {

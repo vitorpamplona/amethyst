@@ -669,7 +669,7 @@ val zaps = setOf(9734, 9735, 9041, 17375, 23194, 23195)
 val reports = setOf(ReportEvent.KIND, MuteListEvent.KIND, DeletionEvent.KIND, RequestToVanishEvent.KIND)
 
 @Composable
-private fun KindChip(kind: Int) {
+fun KindChip(kind: Int) {
     val nameResId = kindDisplayName(kind)
     val name = if (nameResId != -1) stringResource(nameResId) else "k$kind"
     val (bg, fg) =
