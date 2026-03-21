@@ -1657,4 +1657,6 @@
     <string name="attestor_proficiency">Odbornost atestátora</string>
     <string name="attestor_proficiency_for_kinds">Odborník na ověřování druhů: %1$s</string>
     <string name="attestation_attests_to">Potvrzuje</string>
+    <string name="attestation_requests_attestation_to">Žádosti o atestaci pro</string>
+    <string name="open_poll">Otevřená anketa</string>
 </resources>

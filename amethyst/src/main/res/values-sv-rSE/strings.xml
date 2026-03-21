@@ -1656,4 +1656,6 @@
     <string name="attestor_proficiency">Attestantens kompetens</string>
     <string name="attestor_proficiency_for_kinds">Kompetent att verifiera typer: %1$s</string>
     <string name="attestation_attests_to">Intygar</string>
+    <string name="attestation_requests_attestation_to">Begär attestering till</string>
+    <string name="open_poll">Öppen omröstning</string>
 </resources>

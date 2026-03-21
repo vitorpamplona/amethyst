@@ -1657,4 +1657,6 @@
     <string name="attestor_proficiency">Competência do atestante</string>
     <string name="attestor_proficiency_for_kinds">Competente na verificação de tipos: %1$s</string>
     <string name="attestation_attests_to">Atesta</string>
+    <string name="attestation_requests_attestation_to">Solicita atestação para</string>
+    <string name="open_poll">Enquete aberta</string>
 </resources>
