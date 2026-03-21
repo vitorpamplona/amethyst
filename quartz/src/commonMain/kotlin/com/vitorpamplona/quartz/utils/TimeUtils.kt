@@ -24,6 +24,7 @@ object TimeUtils {
     const val TEN_SECONDS = 10
     const val ONE_MINUTE = 60
     const val FIVE_MINUTES = 5 * ONE_MINUTE
+    const val TEN_MINUTES = 10 * ONE_MINUTE
     const val FIFTEEN_MINUTES = 15 * ONE_MINUTE
     const val ONE_HOUR = 60 * ONE_MINUTE
     const val EIGHT_HOURS = 8 * ONE_HOUR
@@ -70,4 +71,9 @@ object TimeUtils {
     fun ninetyDaysFromNow() = now() + NINETY_DAYS
 
     fun oneYearAgo() = now() - ONE_YEAR
+
+    fun withinTenMinutes(time: Long): Boolean {
+        val now = now()
+        return time > now - TEN_MINUTES && time < now + TEN_MINUTES
+    }
 }

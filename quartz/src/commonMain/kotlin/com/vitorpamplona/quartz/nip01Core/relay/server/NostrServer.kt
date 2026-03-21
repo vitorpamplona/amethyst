@@ -20,8 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.server
 
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.crypto.verify
+import com.vitorpamplona.quartz.nip01Core.relay.server.policies.VerifyPolicy
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.CoroutineScope
@@ -35,17 +34,17 @@ import kotlin.coroutines.CoroutineContext
  * This class acts as the central coordinator for a relay server, handling the lifecycle of [RelaySession]s
  * and providing access to the underlying event store.
  *
- * @property store The persistent storage engine for Nostr events.
- * @property parentContext The coroutine context used as a base for the server's execution scope.
- * @property verify The function used to validate the integrity and signatures of incoming events.
+ * @param store The [IEventStore] backing this relay.
+ * @param policyBuilder Controls requirements for relay commands.
  */
 class NostrServer(
     private val store: IEventStore,
+    private val policyBuilder: () -> IRelayPolicy = { VerifyPolicy },
     private val parentContext: CoroutineContext = SupervisorJob(),
-    private val verify: (Event) -> Boolean = { it.verify() },
 ) {
     private val subStore = LiveEventStore(store)
 
+    /** Scope for all subscriptions. */
     private val scope = CoroutineScope(parentContext + SupervisorJob())
 
     /** Active client sessions keyed by an opaque connection id. */
@@ -59,25 +58,22 @@ class NostrServer(
      */
     fun connect(send: (String) -> Unit) =
         RelaySession(
+            policy = policyBuilder(),
             store = subStore,
-            verify = verify,
             scope = scope,
             onSend = send,
-            onClose = ::disconnect,
-        ).also { session -> connections.put(session.hashCode(), session) }
-
-    /**
-     * Removes a client connection and cancels all its subscriptions.
-     */
-    private fun disconnect(session: RelaySession) {
-        connections.remove(session.hashCode())
-    }
+            onClose = { session ->
+                connections.remove(session.hashCode())
+            },
+        ).also { session ->
+            connections.put(session.hashCode(), session)
+        }
 
     /**
      * Shuts down the server, cancelling all subscriptions and sessions.
      */
     fun shutdown() {
-        connections.forEach { id, session -> session.cancelAllSubscriptions() }
+        connections.forEach { _, session -> session.cancelAllSubscriptions() }
         connections.clear()
         scope.cancel()
     }

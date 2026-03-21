@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.server
 
-import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CountMessage
@@ -30,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NoticeMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.AuthCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CloseCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CountCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
@@ -46,27 +46,19 @@ import kotlinx.coroutines.launch
  */
 class RelaySession(
     private val store: LiveEventStore,
-    private val verify: (Event) -> Boolean,
+    val policy: IRelayPolicy,
     private val scope: CoroutineScope,
     private val onSend: (String) -> Unit,
     private val onClose: (RelaySession) -> Unit,
 ) : AutoCloseable {
     private val subscriptions = LargeCache<String, Job>()
 
-    fun send(message: Message) {
-        try {
-            onSend(OptimizedJsonMapper.toJson(message))
-        } catch (e: Exception) {
-            Log.w("ClientSession", "Failed to send to ${e.message}")
-        }
-    }
-
-    fun addSubscription(
+    private fun addSubscription(
         subId: String,
         job: Job,
     ) = subscriptions.put(subId, job)
 
-    fun cancelSubscription(subId: String): Boolean =
+    private fun cancelSubscription(subId: String): Boolean =
         subscriptions.remove(subId)?.let {
             it.cancel()
             true
@@ -75,6 +67,14 @@ class RelaySession(
     fun cancelAllSubscriptions() {
         subscriptions.forEach { _, job -> job.cancel() }
         subscriptions.clear()
+    }
+
+    fun send(message: Message) {
+        try {
+            onSend(OptimizedJsonMapper.toJson(message))
+        } catch (e: Exception) {
+            Log.w("ClientSession", "Failed to send to ${e.message}")
+        }
     }
 
     override fun close() {
@@ -87,10 +87,10 @@ class RelaySession(
      *
      * Parses the message as a NIP-01 command and dispatches it.
      */
-    suspend fun processMessage(message: String) {
+    suspend fun receive(command: String) {
         val cmd =
             try {
-                OptimizedJsonMapper.fromJsonToCommand(message)
+                OptimizedJsonMapper.fromJsonToCommand(command)
             } catch (_: Exception) {
                 send(NoticeMessage("error: could not parse message"))
                 return
@@ -102,6 +102,7 @@ class RelaySession(
         }
 
         when (cmd) {
+            is AuthCmd -> handleAuth(cmd)
             is EventCmd -> handleEvent(cmd)
             is ReqCmd -> handleReq(cmd)
             is CloseCmd -> handleClose(cmd)
@@ -110,21 +111,15 @@ class RelaySession(
         }
     }
 
-    // -- NIP-01: EVENT --------------------------------------------------------
-    private fun handleEvent(cmd: EventCmd) {
-        val event = cmd.event
-
-        if (!verify(event)) {
-            send(OkMessage(event.id, false, "invalid: bad signature or id"))
+    // -- NIP-42: AUTH ---------------------------------------------------------
+    private fun handleAuth(cmd: AuthCmd) {
+        val result = policy.accept(cmd)
+        if (result is PolicyResult.Rejected) {
+            send(OkMessage(cmd.event.id, false, result.reason))
             return
         }
 
-        try {
-            store.insert(event)
-            send(OkMessage(event.id, true, ""))
-        } catch (e: Exception) {
-            send(OkMessage(event.id, false, e.message ?: e::class.simpleName ?: "unkown error"))
-        }
+        send(OkMessage(cmd.event.id, true, ""))
     }
 
     // -- NIP-01: REQ ----------------------------------------------------------
@@ -132,12 +127,25 @@ class RelaySession(
         // Cancel any existing subscription with the same id (NIP-01 spec).
         cancelSubscription(cmd.subId)
 
+        val result = policy.accept(cmd)
+        if (result is PolicyResult.Rejected) {
+            send(ClosedMessage(cmd.subId, result.reason))
+            return
+        }
+
+        // Policy may rewrite filters to match the user's access level.
+        val filters = (result as PolicyResult.Accepted).cmd.filters
+
         val job =
             scope.launch {
                 try {
                     store.query(
-                        filters = cmd.filters,
-                        onEach = { send(EventMessage(cmd.subId, it)) },
+                        filters = filters,
+                        onEach = { event ->
+                            if (policy.canSendToSession(event)) {
+                                send(EventMessage(cmd.subId, event))
+                            }
+                        },
                         onEose = { send(EoseMessage(cmd.subId)) },
                     )
                 } catch (_: kotlinx.coroutines.CancellationException) {
@@ -156,9 +164,39 @@ class RelaySession(
         }
     }
 
+    // -- NIP-01: EVENT --------------------------------------------------------
+    private fun handleEvent(cmd: EventCmd) {
+        val result = policy.accept(cmd)
+        if (result is PolicyResult.Rejected) {
+            send(OkMessage(cmd.event.id, false, result.reason))
+            return
+        }
+
+        try {
+            store.insert(cmd.event)
+            send(OkMessage(cmd.event.id, true, ""))
+        } catch (e: Exception) {
+            send(OkMessage(cmd.event.id, false, e.message ?: e::class.simpleName ?: "unkown error"))
+        }
+    }
+
     // -- NIP-45: COUNT --------------------------------------------------------
     private fun handleCount(cmd: CountCmd) {
-        val total = store.count(cmd.filters)
+        val result = policy.accept(cmd)
+        if (result is PolicyResult.Rejected) {
+            send(ClosedMessage(cmd.queryId, result.reason))
+            return
+        }
+
+        // Policy may rewrite filters to match the user's access level.
+        val filters = (result as PolicyResult.Accepted).cmd.filters
+
+        val total = store.count(filters)
+
         send(CountMessage(cmd.queryId, CountResult(total)))
+    }
+
+    init {
+        policy.onConnect(::send)
     }
 }

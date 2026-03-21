@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EoseMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.server.policies.EmptyPolicy
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -55,18 +56,19 @@ class NostrServerTest {
      * in tests (UnconfinedTestDispatcher).
      */
     private fun createServer(
-        store: IEventStore = EventStore(null),
         dispatcher: kotlinx.coroutines.CoroutineDispatcher,
+        store: IEventStore = EventStore(null),
+        policyBuilder: () -> IRelayPolicy = { EmptyPolicy },
     ): NostrServer =
         NostrServer(
             store = store,
+            policyBuilder = policyBuilder,
             parentContext = dispatcher,
-            verify = { true },
         )
 
     private suspend fun RelaySession.insert(event: Event) {
         val cmd = EventCmd(event)
-        this.processMessage(OptimizedJsonMapper.toJson(cmd))
+        this.receive(OptimizedJsonMapper.toJson(cmd))
     }
 
     /** Collects sent JSON messages for a connection. */
@@ -96,14 +98,14 @@ class NostrServerTest {
         runTest {
             val dispatcher = UnconfinedTestDispatcher(testScheduler)
             val store = EventStore(null)
-            val server = createServer(store, dispatcher)
+            val server = createServer(dispatcher, store)
             val collector = MessageCollector()
 
             val c1 = server.connect(collector.sendCallback)
 
             val event = testEvent()
             val eventJson = """["EVENT",${event.toJson()}]"""
-            c1.processMessage(eventJson)
+            c1.receive(eventJson)
 
             val okMessages = collector.rawMessagesContaining("OK")
             assertEquals(1, okMessages.size)
@@ -121,15 +123,15 @@ class NostrServerTest {
         runTest {
             val dispatcher = UnconfinedTestDispatcher(testScheduler)
             val store = EventStore(null)
-            val server = createServer(store, dispatcher)
+            val server = createServer(dispatcher, store)
             val collector = MessageCollector()
 
             val c1 = server.connect(collector.sendCallback)
 
             val event = testEvent()
             val eventJson = """["EVENT",${event.toJson()}]"""
-            c1.processMessage(eventJson)
-            c1.processMessage(eventJson)
+            c1.receive(eventJson)
+            c1.receive(eventJson)
 
             val okMessages = collector.rawMessagesContaining("OK")
             assertEquals(2, okMessages.size)
@@ -146,7 +148,7 @@ class NostrServerTest {
         runTest {
             val dispatcher = UnconfinedTestDispatcher(testScheduler)
             val store = EventStore(null)
-            val server = createServer(store, dispatcher)
+            val server = createServer(dispatcher, store)
 
             // Pre-populate store
             store.insert(testEvent(hexId(1), kind = 1, createdAt = 100L))
@@ -157,7 +159,7 @@ class NostrServerTest {
             val c1 = server.connect(collector.sendCallback)
 
             val reqJson = """["REQ","sub1",{"kinds":[1]}]"""
-            c1.processMessage(reqJson)
+            c1.receive(reqJson)
 
             val parsed = collector.parsedEventMessages()
             val events = parsed.filterIsInstance<EventMessage>()
@@ -178,7 +180,7 @@ class NostrServerTest {
         runTest {
             val dispatcher = UnconfinedTestDispatcher(testScheduler)
             val store = EventStore(null)
-            val server = createServer(store, dispatcher)
+            val server = createServer(dispatcher, store)
 
             for (i in 1..10) {
                 store.insert(testEvent(hexId(i), createdAt = i.toLong()))
@@ -188,7 +190,7 @@ class NostrServerTest {
             val c1 = server.connect(collector.sendCallback)
 
             val reqJson = """["REQ","sub1",{"limit":3}]"""
-            c1.processMessage(reqJson)
+            c1.receive(reqJson)
 
             val events = collector.parsedEventMessages().filterIsInstance<EventMessage>()
             assertEquals(3, events.size)
@@ -202,8 +204,8 @@ class NostrServerTest {
     fun liveSubscriptionReceivesNewEvents() =
         runTest {
             val dispatcher = UnconfinedTestDispatcher(testScheduler)
-            val store = EventStore(null)
-            val server = createServer(store, dispatcher)
+
+            val server = createServer(dispatcher)
             val collector1 = MessageCollector()
             val collector2 = MessageCollector()
 
@@ -212,7 +214,7 @@ class NostrServerTest {
 
             // Subscribe to kind 1
             val reqJson = """["REQ","sub1",{"kinds":[1]}]"""
-            c1.processMessage(reqJson)
+            c1.receive(reqJson)
 
             // After REQ, we should have EOSE
             val countAfterEose = collector1.messages.size
@@ -231,8 +233,8 @@ class NostrServerTest {
     fun liveSubscriptionFiltersNonMatchingEvents() =
         runTest {
             val dispatcher = UnconfinedTestDispatcher(testScheduler)
-            val store = EventStore(null)
-            val server = createServer(store, dispatcher)
+
+            val server = createServer(dispatcher)
             val collector1 = MessageCollector()
             val collector2 = MessageCollector()
 
@@ -240,7 +242,7 @@ class NostrServerTest {
             val c2 = server.connect(collector2.sendCallback)
 
             val reqJson = """["REQ","sub1",{"kinds":[1]}]"""
-            c1.processMessage(reqJson)
+            c1.receive(reqJson)
 
             val countAfterEose = collector1.messages.size
 
@@ -258,8 +260,8 @@ class NostrServerTest {
     fun closeStopsSubscription() =
         runTest {
             val dispatcher = UnconfinedTestDispatcher(testScheduler)
-            val store = EventStore(null)
-            val server = createServer(store, dispatcher)
+
+            val server = createServer(dispatcher)
             val collector1 = MessageCollector()
             val collector2 = MessageCollector()
 
@@ -267,11 +269,11 @@ class NostrServerTest {
             val c2 = server.connect(collector2.sendCallback)
 
             val reqJson = """["REQ","sub1",{"kinds":[1]}]"""
-            c1.processMessage(reqJson)
+            c1.receive(reqJson)
 
             // Close the subscription
             val closeJson = """["CLOSE","sub1"]"""
-            c1.processMessage(closeJson)
+            c1.receive(closeJson)
 
             val countAfterClose = collector1.messages.size
 
@@ -287,7 +289,7 @@ class NostrServerTest {
     fun replacingSubscriptionCancelsOld() =
         runTest {
             val dispatcher = UnconfinedTestDispatcher(testScheduler)
-            val server = createServer(EventStore(null), dispatcher)
+            val server = createServer(dispatcher)
             val collector1 = MessageCollector()
             val collector2 = MessageCollector()
 
@@ -295,10 +297,10 @@ class NostrServerTest {
             val c2 = server.connect(collector2.sendCallback)
 
             // First subscription for kind 1
-            c1.processMessage("""["REQ","sub1",{"kinds":[1]}]""")
+            c1.receive("""["REQ","sub1",{"kinds":[1]}]""")
 
             // Replace with kind 4
-            c1.processMessage("""["REQ","sub1",{"kinds":[4]}]""")
+            c1.receive("""["REQ","sub1",{"kinds":[4]}]""")
 
             val countAfterReplace = collector1.messages.size
 
@@ -326,7 +328,7 @@ class NostrServerTest {
         runTest {
             val dispatcher = UnconfinedTestDispatcher(testScheduler)
             val store = EventStore(null)
-            val server = createServer(store, dispatcher)
+            val server = createServer(dispatcher, store)
 
             store.insert(testEvent(hexId(1), kind = 1))
             store.insert(testEvent(hexId(2), kind = 1))
@@ -336,7 +338,7 @@ class NostrServerTest {
             val c1 = server.connect(collector.sendCallback)
 
             val countJson = """["COUNT","q1",{"kinds":[1]}]"""
-            c1.processMessage(countJson)
+            c1.receive(countJson)
 
             val countMessages = collector.rawMessagesContaining("COUNT")
             assertEquals(1, countMessages.size)
@@ -351,16 +353,16 @@ class NostrServerTest {
     fun disconnectCancelsAllSubscriptions() =
         runTest {
             val dispatcher = UnconfinedTestDispatcher(testScheduler)
-            val store = EventStore(null)
-            val server = createServer(store, dispatcher)
+
+            val server = createServer(dispatcher)
             val collector1 = MessageCollector()
             val collector2 = MessageCollector()
 
             val c1 = server.connect(collector1.sendCallback)
             val c2 = server.connect(collector2.sendCallback)
 
-            c1.processMessage("""["REQ","sub1",{"kinds":[1]}]""")
-            c1.processMessage("""["REQ","sub2",{"kinds":[4]}]""")
+            c1.receive("""["REQ","sub1",{"kinds":[1]}]""")
+            c1.receive("""["REQ","sub2",{"kinds":[4]}]""")
 
             c1.close()
 
@@ -385,7 +387,7 @@ class NostrServerTest {
             val collector = MessageCollector()
 
             val c1 = server.connect(collector.sendCallback)
-            c1.processMessage("not valid json")
+            c1.receive("not valid json")
 
             assertEquals(1, collector.messages.size)
             assertTrue(collector.messages[0].contains("NOTICE"))
