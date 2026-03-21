@@ -1,3 +1,6 @@
+<a id="v1.06.0"></a>
+# [Release v1.06.0: Polls, Relay Feeds, Wallets and much more](https://github.com/vitorpamplona/amethyst/releases/tag/v1.06.0) - 2025-03-21
+
 Adds support for creating and rendering NIP-85 Polls
 - Redesign of the poll and zap poll cards
 - Adds Special notification card that stays while the poll is running
@@ -34,7 +37,8 @@ Adds support for NIP-A3 Payment targets (PayTo: 10133) by @npub1w4uswmv6lu9yel00
 
 Adds support for BUD-10 "Blossom:" URIs in images, audios, videos, and documents.
 
-Adds support for NIP-40 Expirations in any new post.
+Adds support for custom NIP-40 Expirations in any new post.
+- Displays expirations on posts and DMs
 
 Adds support for NIP-66 Relay Monitor and discovery support to Quartz
 
@@ -44,11 +48,7 @@ Adds basic support for Chess with Jester protocol
 
 Adds NIP-46 Bunker support to Quartz and Amethyst Desktop
 
-Adds a Broadcasting feedback pop-up in the Complete UI mode
-
-Adds support for rendering Zap events when quoted inside of posts.
-
-Adds support for inline reply from Push Notifications
+Adds support for inline reply, mark as read from Push Notifications
 
 Removes NIP-04 DMs and blocks DM sending if the receiver doesn't have NIP-17 relay lists.
 
@@ -59,7 +59,7 @@ Uploads:
 - Removes support for NIP-96 and updates Blossom recommendations
 
 Content warning improvements:
-- Adds optional description field for sensitive content warnings in new posts.
+- Adds an optional description field for sensitive content warnings in new posts.
 - Displays additional information on warning composables
 
 Settings redesign
@@ -83,6 +83,8 @@ UI Improvements:
 - New UI for feed filters by @npub1e2yuky03caw4ke3zy68lg0fz3r4gkt94hx4fjmlelacyljgyk79svn3eef
 - Draft Screen requests confirmation before deleting drafts on swipe
 - Swipe to switch tabs. Main screen and messages by @npub1e2yuky03caw4ke3zy68lg0fz3r4gkt94hx4fjmlelacyljgyk79svn3eef
+- Adds support for rendering Zap events when quoted inside of posts.
+- Adds a Broadcasting feedback pop-up in the Complete UI mode
 
 Relay Management:
 - Adds relay search tooltip when adding relays
@@ -159,9 +161,12 @@ Defaults:
 - Adds electrumx.testls.space, nmc2.bitcoins.sk, 46.229.238.187 and i665jpwsq46zlsdbnj4axgzd3s56uzey5uhotsnxzsknzbn36jaddsid.onion as ElectrumX servers
 
 Quartz:
-- Adds a Relay Server implementation to Quartz
+- Adds Relay Server implementation with NIP-45 COUNT and NIP-42 AUTH support
+- Adds support for dynamic policies to the relay implementation.
 - Migrates Quartz EventStore from Android-only to KMP
 - Adds a reqUntilEoseAsFlow extension to the Nostr Client
+- Adds comprehensive NIP-46 Bunker support
+- Adds comprehensive support for NIP-47 non-payment methods.
 
 Adds complete support for iOS to Quartz by @npub1a3tx8wcrt789skl6gg7rqwj4wey0j53eesr4z6asd4h4jwrd62jq0wkq4k
 - Provide implementation for Rfc3986 on iOS, using the Swift Rfc3986UriBridge.
