@@ -2373,8 +2373,21 @@ object LocalCache : ILocalCache, ICacheProvider {
 
         if (key != null) {
             val note = getNoteIfExists(key)
-            if ((note != null) && !excludeNoteEventFromSearchResults(note)) {
-                return listOfNotNull(note)
+            val noteEvent = note?.event
+            val newNote =
+                if (noteEvent is AddressableEvent) {
+                    val addressableNote = getAddressableNoteIfExists(noteEvent.address())
+                    if (addressableNote?.event?.id == note.idHex) {
+                        addressableNote
+                    } else {
+                        note
+                    }
+                } else {
+                    note
+                }
+
+            if ((newNote != null) && !excludeNoteEventFromSearchResults(newNote)) {
+                return listOfNotNull(newNote)
             }
         }
 
