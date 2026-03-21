@@ -250,6 +250,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="error_loading_replies">"Fehler beim Laden der Antworten: "</string>
     <string name="try_again">Erneut versuchen</string>
     <string name="notification_feed_is_empty">Noch keine Benachrichtigungen.</string>
+    <string name="open_poll">Offene Umfrage</string>
     <string name="feed_is_empty">Feed ist leer.</string>
     <string name="refresh">Aktualisieren</string>
     <string name="created">erstellt</string>
@@ -1663,5 +1664,4 @@ anz der Bedingungen ist erforderlich</string>
     <string name="attestor_proficiency_for_kinds">Kompetent für die Verifizierung von Arten: %1$s</string>
     <string name="attestation_attests_to">Bestätigt</string>
     <string name="attestation_requests_attestation_to">Beantragt Attestierung für</string>
-    <string name="open_poll">Offene Umfrage</string>
 </resources>
