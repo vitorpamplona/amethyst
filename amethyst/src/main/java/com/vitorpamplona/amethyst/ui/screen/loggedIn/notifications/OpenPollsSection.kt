@@ -24,65 +24,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
-import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.map
-
-@Composable
-fun openPollsState(accountViewModel: AccountViewModel) =
-    remember(accountViewModel) {
-        val userPubkeyHex = accountViewModel.account.userProfile().pubkeyHex
-
-        val filter =
-            Filter(
-                kinds = listOf(PollEvent.KIND, ZapPollEvent.KIND),
-                authors = listOf(userPubkeyHex),
-            )
-
-        accountViewModel.account.cache
-            .observeNotes(filter)
-            .map { notes -> filterOpenPolls(notes) }
-            .flowOn(Dispatchers.IO)
-    }.collectAsStateWithLifecycle(initialValue = emptyList())
-
-private fun filterOpenPolls(notes: List<Note>): List<Note> {
-    val now = TimeUtils.now()
-    val oneDayInSeconds = TimeUtils.ONE_DAY
-
-    return notes
-        .filter { note ->
-            val event = note.event ?: return@filter false
-
-            when (event) {
-                is PollEvent -> {
-                    val endsAt = event.endsAt()
-                    if (endsAt != null) endsAt > now else event.createdAt + oneDayInSeconds > now
-                }
-
-                is ZapPollEvent -> {
-                    val closedAt = event.closedAt()
-                    if (closedAt != null) closedAt > now else event.createdAt + oneDayInSeconds > now
-                }
-
-                else -> {
-                    false
-                }
-            }
-        }.sortedByDescending { it.createdAt() }
-}
 
 @Composable
 fun OpenPollsSectionHeader() {

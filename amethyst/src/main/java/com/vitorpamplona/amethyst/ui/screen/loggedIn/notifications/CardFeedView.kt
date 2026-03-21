@@ -32,7 +32,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Card
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -52,9 +51,6 @@ import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
-import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
-import com.vitorpamplona.amethyst.ui.feeds.WatchScrollToTop
-import com.vitorpamplona.amethyst.ui.feeds.rememberForeverLazyListState
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.BadgeCompose
 import com.vitorpamplona.amethyst.ui.note.MessageSetCompose
@@ -72,42 +68,9 @@ import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
 
 @Composable
-fun RefreshableCardView(
-    feedContent: CardFeedContentState,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-    routeForLastRead: String,
-    scrollStateKey: String? = null,
-    enablePullRefresh: Boolean = true,
-) {
-    RefresheableBox(feedContent, enablePullRefresh) {
-        SaveableCardFeedState(feedContent, accountViewModel, nav, routeForLastRead, scrollStateKey)
-    }
-}
-
-@Composable
-private fun SaveableCardFeedState(
-    feedContent: CardFeedContentState,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-    routeForLastRead: String,
-    scrollStateKey: String? = null,
-) {
-    val listState =
-        if (scrollStateKey != null) {
-            rememberForeverLazyListState(scrollStateKey)
-        } else {
-            rememberLazyListState()
-        }
-
-    WatchScrollToTop(feedContent, listState)
-
-    RenderCardFeed(feedContent, accountViewModel, listState, nav, routeForLastRead)
-}
-
-@Composable
 fun RenderCardFeed(
     feedContent: CardFeedContentState,
+    pollContent: OpenPollsState,
     accountViewModel: AccountViewModel,
     listState: LazyListState,
     nav: INav,
@@ -133,6 +96,7 @@ fun RenderCardFeed(
             is CardFeedState.Loaded -> {
                 FeedLoaded(
                     loaded = state,
+                    polls = pollContent,
                     listState = listState,
                     routeForLastRead = routeForLastRead,
                     accountViewModel = accountViewModel,
@@ -164,13 +128,14 @@ fun NotificationFeedEmpty(onRefresh: () -> Unit) {
 @Composable
 private fun FeedLoaded(
     loaded: CardFeedState.Loaded,
+    polls: OpenPollsState,
     listState: LazyListState,
     routeForLastRead: String,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
-    val openPolls by openPollsState(accountViewModel)
+    val openPolls by polls.flow.collectAsStateWithLifecycle()
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
