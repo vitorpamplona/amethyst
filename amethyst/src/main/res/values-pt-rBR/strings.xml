@@ -246,6 +246,7 @@
     <string name="error_loading_replies">"Erro ao carregar respostas"</string>
     <string name="try_again">Tente novamente</string>
     <string name="notification_feed_is_empty">Ainda não há notificações.</string>
+    <string name="open_poll">Enquete aberta</string>
     <string name="feed_is_empty">Feed está vazio</string>
     <string name="refresh">Atualizar</string>
     <string name="created">criado</string>
@@ -1658,5 +1659,4 @@
     <string name="attestor_proficiency_for_kinds">Competente na verificação de tipos: %1$s</string>
     <string name="attestation_attests_to">Atesta</string>
     <string name="attestation_requests_attestation_to">Solicita atestação para</string>
-    <string name="open_poll">Enquete aberta</string>
 </resources>

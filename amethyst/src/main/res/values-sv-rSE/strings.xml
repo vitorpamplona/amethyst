@@ -246,6 +246,7 @@
     <string name="error_loading_replies">"Det gick inte att läsa in svar: "</string>
     <string name="try_again">Försök igen</string>
     <string name="notification_feed_is_empty">Inga aviseringar ännu.</string>
+    <string name="open_poll">Öppen omröstning</string>
     <string name="feed_is_empty">Flöde är tomt.</string>
     <string name="refresh">Uppdatera</string>
     <string name="created">Skapad</string>
@@ -1657,5 +1658,4 @@
     <string name="attestor_proficiency_for_kinds">Kompetent att verifiera typer: %1$s</string>
     <string name="attestation_attests_to">Intygar</string>
     <string name="attestation_requests_attestation_to">Begär attestering till</string>
-    <string name="open_poll">Öppen omröstning</string>
 </resources>

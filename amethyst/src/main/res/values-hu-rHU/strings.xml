@@ -246,6 +246,7 @@
     <string name="error_loading_replies">"Hiba a válaszok betöltésekor: "</string>
     <string name="try_again">Próbálja újra</string>
     <string name="notification_feed_is_empty">Még nincsenek értesítések.</string>
+    <string name="open_poll">Szavazás megnyitása</string>
     <string name="feed_is_empty">A hírfolyam üres.</string>
     <string name="refresh">Frissítés</string>
     <string name="created">létrehozva</string>
@@ -1205,8 +1206,8 @@
     <string name="trusted_relays_title">Megbízható átjátszók</string>
     <string name="trusted_section">Megbízható átjátszók</string>
     <string name="trusted_section_explainer">Az átjátszóknak, amelyekben megbízik, nincs szükségük Tor kapcsolatra a következőhöz:</string>
-    <string name="favorite_relays_title">Kedvenc átjátszó-hírforrások</string>
-    <string name="favorite_section">Kedvenc átjátszó-hírforrások</string>
+    <string name="favorite_relays_title">Kedvenc hírfolyam-átjátszók</string>
+    <string name="favorite_section">Kedvenc hírfolyam-átjátszók</string>
     <string name="favorite_section_explainer">Átjátszók, amelyeket gyakran felkeres a globális hírfolyamuk megtekintéséhez</string>
     <string name="proxy_relays_title">Proxyzott átjátszók</string>
     <string name="proxy_section">Proxyzott átjátszók</string>
@@ -1314,7 +1315,7 @@
     <string name="my_lists_and_sets">Saját lista/gyüjtemény</string>
     <string name="my_lists">Saját listák</string>
     <string name="people_list_label">Felhasználók</string>
-    <string name="select_list_to_filter">Lista kiválasztása a hírfolyam szűréséhez</string>
+    <string name="select_list_to_filter">Szempont kiválasztása a hírfolyam szűréséhez</string>
     <string name="feed_group_feeds">Hírfolyamok</string>
     <string name="feed_group_hashtags">Hashtagek</string>
     <string name="feed_group_communities">Közösségek</string>
@@ -1631,4 +1632,36 @@
     <string name="event_sync_status_error">Hiba</string>
     <string name="event_sync_status_completed">Kész</string>
     <!-- M3 Action Dialog titles -->
+    <string name="mark_as_read_dialog_title">Megjelölés olvasottként</string>
+    <string name="note_actions_dialog_title">Bejegyzésműveletek</string>
+    <string name="profile_actions_dialog_title">Profilműveletek</string>
+    <string name="media_actions_dialog_title">Médiaműveletek</string>
+    <string name="playback_actions_dialog_title">Lejátszás</string>
+    <string name="pack_actions_dialog_title">Csomagműveletek</string>
+    <string name="list_actions_dialog_title">Listaműveletek</string>
+    <string name="bookmark_item_actions_dialog_title">Könyvjelző-műveletek</string>
+    <string name="group_actions_dialog_title">Csoportműveletek</string>
+    <string name="add_bookmark_dialog_title">Könyvjelző hozzáadása</string>
+    <string name="add_member_dialog_title">Tag hozzáadása</string>
+    <string name="list_management_dialog_title">Listakezelés</string>
+    <string name="link_actions_dialog_title">Listaműveletek</string>
+    <string name="export_actions_dialog_title">Exportálás</string>
+    <string name="attestation">Tanúsítás</string>
+    <string name="attestation_valid">Érvényes</string>
+    <string name="attestation_invalid">Érvénytelen</string>
+    <string name="attestation_status_accepted">Elfogadva</string>
+    <string name="attestation_status_rejected">Elutasítva</string>
+    <string name="attestation_status_verifying">Ellenőrzés</string>
+    <string name="attestation_status_verified">Ellenőrizve</string>
+    <string name="attestation_status_revoked">Visszavonva</string>
+    <string name="attestation_valid_from">Érvényes ekkortól: %1$s</string>
+    <string name="attestation_valid_to">Érvényes eddig: %1$s</string>
+    <string name="attestation_request">Tanúsításkérés</string>
+    <string name="attestation_request_description">Tanúsításkérés egy eseményhez</string>
+    <string name="attestor_recommendation">Tanúsító ajánlása</string>
+    <string name="attestor_recommendation_for_kinds">Javasolt az alábbi típusokhoz: </string>
+    <string name="attestor_proficiency">Tanúsítói jártasság</string>
+    <string name="attestor_proficiency_for_kinds">Jártas a következő típusok igazolásában: %1$s</string>
+    <string name="attestation_attests_to">Tanúsítás ehhez:</string>
+    <string name="attestation_requests_attestation_to">Tanúsítás kérése ehhez:</string>
 </resources>

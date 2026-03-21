@@ -246,6 +246,7 @@
     <string name="error_loading_replies">"加载回复出错："</string>
     <string name="try_again">重试</string>
     <string name="notification_feed_is_empty">暂无通知</string>
+    <string name="open_poll">开放投票</string>
     <string name="feed_is_empty">信息流为空。</string>
     <string name="refresh">刷新</string>
     <string name="created">创建</string>
@@ -1315,6 +1316,10 @@
     <string name="my_lists">我的列表</string>
     <string name="people_list_label">用户</string>
     <string name="select_list_to_filter">选择一个用于过滤订阅源的列表</string>
+    <string name="feed_group_feeds">源</string>
+    <string name="feed_group_hashtags">话题标签</string>
+    <string name="feed_group_communities">社区</string>
+    <string name="feed_group_lists">列表</string>
     <string name="temporary_account">当设备锁定时注销</string>
     <string name="private_message">私信</string>
     <string name="public_message">公开消息</string>
@@ -1627,4 +1632,36 @@
     <string name="event_sync_status_error">错误</string>
     <string name="event_sync_status_completed">已完成</string>
     <!-- M3 Action Dialog titles -->
+    <string name="mark_as_read_dialog_title">标记为已读</string>
+    <string name="note_actions_dialog_title">笔记操作</string>
+    <string name="profile_actions_dialog_title">配置文件操作</string>
+    <string name="media_actions_dialog_title">媒体操作</string>
+    <string name="playback_actions_dialog_title">播放</string>
+    <string name="pack_actions_dialog_title">包操作</string>
+    <string name="list_actions_dialog_title">列表操作</string>
+    <string name="bookmark_item_actions_dialog_title">书签操作</string>
+    <string name="group_actions_dialog_title">群操作</string>
+    <string name="add_bookmark_dialog_title">添加书签</string>
+    <string name="add_member_dialog_title">添加成员</string>
+    <string name="list_management_dialog_title">列表管理</string>
+    <string name="link_actions_dialog_title">链接操作</string>
+    <string name="export_actions_dialog_title">导出</string>
+    <string name="attestation">证明</string>
+    <string name="attestation_valid">有效</string>
+    <string name="attestation_invalid">无效</string>
+    <string name="attestation_status_accepted">已接受</string>
+    <string name="attestation_status_rejected">已拒绝</string>
+    <string name="attestation_status_verifying">验证中</string>
+    <string name="attestation_status_verified">已验证</string>
+    <string name="attestation_status_revoked">已撤销</string>
+    <string name="attestation_valid_from">有效期从 %1$s</string>
+    <string name="attestation_valid_to">有效期到 %1$s</string>
+    <string name="attestation_request">证明请求</string>
+    <string name="attestation_request_description">请求某个事件的证明</string>
+    <string name="attestor_recommendation">证明人建议</string>
+    <string name="attestor_recommendation_for_kinds">推荐的类型： </string>
+    <string name="attestor_proficiency">证明人熟练度</string>
+    <string name="attestor_proficiency_for_kinds">熟练验证类型：%1$s</string>
+    <string name="attestation_attests_to">证明</string>
+    <string name="attestation_requests_attestation_to">请求证明</string>
 </resources>
