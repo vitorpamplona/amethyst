@@ -20,22 +20,108 @@
  */
 package com.vitorpamplona.quartz.experimental.attestations.attestation.tags
 
+import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip72ModCommunities.approval.tags.ApprovedAddressTag
+import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.ensure
 
-class RequestTag {
+class RequestTag(
+    val address: Address,
+    val relayHint: NormalizedRelayUrl? = null,
+) {
+    fun toTag() = Address.assemble(address.kind, address.pubKeyHex, address.dTag)
+
+    fun toTagArray() = assemble(address, relayHint)
+
+    fun toTagIdOnly() = assemble(address, null)
+
     companion object {
         const val TAG_NAME = "request"
 
-        fun isTag(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
+        fun isTagged(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && !Address.isOfKind(tag[1], CommunityDefinitionEvent.KIND_STR)
 
-        fun parse(tag: Array<String>): String? {
+        fun isTagged(
+            tag: Array<String>,
+            addressId: String,
+        ) = tag.has(1) && tag[0] == TAG_NAME && tag[1] == addressId
+
+        fun isTagged(
+            tag: Array<String>,
+            address: ApprovedAddressTag,
+        ) = tag.has(1) && tag[0] == TAG_NAME && tag[1] == address.toTag()
+
+        fun isIn(
+            tag: Array<String>,
+            addressIds: Set<String>,
+        ) = tag.has(1) && tag[0] == TAG_NAME && tag[1] in addressIds
+
+        fun parse(tag: Array<String>): ApprovedAddressTag? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(!Address.isOfKind(tag[1], CommunityDefinitionEvent.KIND_STR)) { return null }
+
+            val address = Address.parse(tag[1]) ?: return null
+            val relayHint = tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeOrNull(it) }
+            return ApprovedAddressTag(address, relayHint)
+        }
+
+        fun parseValidAddress(tag: Array<String>): String? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(!Address.isOfKind(tag[1], CommunityDefinitionEvent.KIND_STR)) { return null }
+            return Address.parse(tag[1])?.toValue()
+        }
+
+        fun parseAddress(tag: Array<String>): Address? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].isNotEmpty()) { return null }
+            val address = Address.parse(tag[1]) ?: return null
+            ensure(address.kind != CommunityDefinitionEvent.KIND) { return null }
+            return address
+        }
+
+        fun parseAddressId(tag: Array<String>): String? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(!Address.isOfKind(tag[1], CommunityDefinitionEvent.KIND_STR)) { return null }
             return tag[1]
         }
 
-        fun assemble(requestAddress: String) = arrayOf(TAG_NAME, requestAddress)
+        fun parseAsHint(tag: Array<String>): AddressHint? {
+            ensure(tag.has(2)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(!Address.isOfKind(tag[1], CommunityDefinitionEvent.KIND_STR)) { return null }
+            ensure(tag[1].contains(':')) { return null }
+            ensure(tag[2].isNotEmpty()) { return null }
+
+            val relayHint = RelayUrlNormalizer.normalizeOrNull(tag[2])
+            ensure(relayHint != null) { return null }
+
+            return AddressHint(tag[1], relayHint)
+        }
+
+        fun assemble(
+            aTagId: HexKey,
+            relay: NormalizedRelayUrl?,
+        ) = arrayOfNotNull(TAG_NAME, aTagId, relay?.url)
+
+        fun assemble(
+            address: Address,
+            relay: NormalizedRelayUrl?,
+        ) = arrayOfNotNull(TAG_NAME, address.toValue(), relay?.url)
+
+        fun assemble(
+            kind: Int,
+            pubKey: String,
+            dTag: String,
+            relay: NormalizedRelayUrl?,
+        ) = assemble(Address.assemble(kind, pubKey, dTag), relay)
     }
 }

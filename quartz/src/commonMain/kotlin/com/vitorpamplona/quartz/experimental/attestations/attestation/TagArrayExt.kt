@@ -36,3 +36,7 @@ fun TagArray.validFrom() = firstNotNullOfOrNull(ValidFromTag::parse)
 fun TagArray.validTo() = firstNotNullOfOrNull(ValidToTag::parse)
 
 fun TagArray.request() = firstNotNullOfOrNull(RequestTag::parse)
+
+fun TagArray.requestId() = firstNotNullOfOrNull(RequestTag::parseAddressId)
+
+fun TagArray.requestAddress() = firstNotNullOfOrNull(RequestTag::parseAddress)

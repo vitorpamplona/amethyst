@@ -28,11 +28,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.Card
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -64,7 +67,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.donations.Sho
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
+import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.imageModifier
 
 @Composable
 fun RefreshableCardView(
@@ -165,6 +170,7 @@ private fun FeedLoaded(
     nav: INav,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
+    val openPolls by openPollsState(accountViewModel)
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -173,6 +179,37 @@ private fun FeedLoaded(
     ) {
         item {
             ShowDonationCard(accountViewModel, nav)
+        }
+
+        if (openPolls.isNotEmpty()) {
+            itemsIndexed(
+                items = openPolls,
+                key = { _, item -> "open-poll-${item.idHex}" },
+                contentType = { _, _ -> "OpenPoll" },
+            ) { _, note ->
+                Row(modifier = Modifier.padding(start = Size10dp, end = Size10dp, bottom = Size10dp)) {
+                    Card(
+                        modifier = MaterialTheme.colorScheme.imageModifier,
+                    ) {
+                        OpenPollsSectionHeader()
+                        Row(Modifier.fillMaxWidth().animateItem()) {
+                            NoteCompose(
+                                baseNote = note,
+                                modifier = Modifier.fillMaxWidth(),
+                                routeForLastRead = routeForLastRead,
+                                isBoostedNote = false,
+                                isQuotedNote = false,
+                                quotesLeft = 3,
+                                accountViewModel = accountViewModel,
+                                nav = nav,
+                            )
+                        }
+                        HorizontalDivider(
+                            thickness = DividerThickness,
+                        )
+                    }
+                }
+            }
         }
 
         itemsIndexed(

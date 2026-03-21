@@ -27,7 +27,14 @@ import com.vitorpamplona.quartz.experimental.attestations.attestation.tags.Valid
 import com.vitorpamplona.quartz.experimental.attestations.attestation.tags.ValidToTag
 import com.vitorpamplona.quartz.experimental.attestations.attestation.tags.Validity
 import com.vitorpamplona.quartz.experimental.attestations.attestation.tags.ValidityTag
+import com.vitorpamplona.quartz.experimental.attestations.request.AttestationRequestEvent
+import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
+import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 
 fun TagArrayBuilder<AttestationEvent>.validity(validity: Validity) = addUnique(ValidityTag.assemble(validity))
 
@@ -37,4 +44,10 @@ fun TagArrayBuilder<AttestationEvent>.validFrom(timestamp: Long) = addUnique(Val
 
 fun TagArrayBuilder<AttestationEvent>.validTo(timestamp: Long) = addUnique(ValidToTag.assemble(timestamp))
 
-fun TagArrayBuilder<AttestationEvent>.request(requestAddress: String) = addUnique(RequestTag.assemble(requestAddress))
+fun TagArrayBuilder<AttestationEvent>.request(request: EventHintBundle<AttestationRequestEvent>) = addUnique(RequestTag.assemble(request.event.address(), request.relay))
+
+fun TagArrayBuilder<AttestationEvent>.aboutAddressable(request: EventHintBundle<BaseAddressableEvent>) = addUnique(ATag.assemble(request.event.address(), request.relay))
+
+fun TagArrayBuilder<AttestationEvent>.aboutReplaceable(request: EventHintBundle<BaseReplaceableEvent>) = addUnique(ATag.assemble(request.event.address(), request.relay))
+
+fun TagArrayBuilder<AttestationEvent>.about(request: EventHintBundle<Event>) = addUnique(ETag.assemble(request.event.id, request.relay, request.event.pubKey))

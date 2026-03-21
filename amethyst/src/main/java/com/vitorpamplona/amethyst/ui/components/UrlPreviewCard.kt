@@ -24,12 +24,11 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
@@ -47,27 +46,6 @@ import com.vitorpamplona.amethyst.ui.theme.MaxWidthWithHorzPadding
 import com.vitorpamplona.amethyst.ui.theme.innerPostModifier
 import com.vitorpamplona.amethyst.ui.theme.previewCardImageModifier
 
-@Composable
-private fun CopyToClipboard(
-    popupExpanded: MutableState<Boolean>,
-    content: String,
-    onDismiss: () -> Unit,
-) {
-    DropdownMenu(
-        expanded = popupExpanded.value,
-        onDismissRequest = onDismiss,
-    ) {
-        val clipboardManager = LocalClipboardManager.current
-        DropdownMenuItem(
-            text = { Text(stringRes(R.string.copy_url_to_clipboard)) },
-            onClick = {
-                clipboardManager.setText(AnnotatedString(content))
-                onDismiss()
-            },
-        )
-    }
-}
-
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun UrlPreviewCard(
@@ -81,11 +59,20 @@ fun UrlPreviewCard(
         }
 
     if (popupExpanded.value) {
-        CopyToClipboard(
-            popupExpanded = popupExpanded,
-            content = url,
+        val clipboardManager = LocalClipboardManager.current
+        M3ActionDialog(
+            title = stringRes(R.string.link_actions_dialog_title),
+            onDismiss = { popupExpanded.value = false },
         ) {
-            popupExpanded.value = false
+            M3ActionSection {
+                M3ActionRow(
+                    icon = Icons.Outlined.ContentCopy,
+                    text = stringRes(R.string.copy_url_to_clipboard),
+                ) {
+                    clipboardManager.setText(AnnotatedString(url))
+                    popupExpanded.value = false
+                }
+            }
         }
     }
 

@@ -39,6 +39,10 @@ import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
 import com.vitorpamplona.amethyst.service.BundledInsert
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.note.dateFormatter
+import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
+import com.vitorpamplona.quartz.experimental.attestations.proficiency.AttestorProficiencyEvent
+import com.vitorpamplona.quartz.experimental.attestations.recommendation.AttestorRecommendationEvent
+import com.vitorpamplona.quartz.experimental.attestations.request.AttestationRequestEvent
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
@@ -615,6 +619,30 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     fun consume(
         event: InteractiveStoryReadingStateEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
+
+    fun consume(
+        event: AttestationEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
+
+    fun consume(
+        event: AttestationRequestEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
+
+    fun consume(
+        event: AttestorRecommendationEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
+
+    fun consume(
+        event: AttestorProficiencyEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
@@ -3051,6 +3079,10 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is AppDefinitionEvent -> consume(event, relay, wasVerified)
                 is AppRecommendationEvent -> consume(event, relay, wasVerified)
                 is AppSpecificDataEvent -> consume(event, relay, wasVerified)
+                is AttestationEvent -> consume(event, relay, wasVerified)
+                is AttestationRequestEvent -> consume(event, relay, wasVerified)
+                is AttestorRecommendationEvent -> consume(event, relay, wasVerified)
+                is AttestorProficiencyEvent -> consume(event, relay, wasVerified)
                 is AudioHeaderEvent -> consume(event, relay, wasVerified)
                 is AudioTrackEvent -> consume(event, relay, wasVerified)
                 is BadgeAwardEvent -> consume(event, relay, wasVerified)

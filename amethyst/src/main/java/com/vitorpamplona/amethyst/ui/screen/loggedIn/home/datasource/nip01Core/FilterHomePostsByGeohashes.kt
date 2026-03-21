@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip01Core
 import com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe.LocationTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip22Comments.filterHomePostsByScopes
+import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -36,7 +37,6 @@ import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
-import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 
 val HomePostsByGeohashKinds =
     listOf(
@@ -46,11 +46,11 @@ val HomePostsByGeohashKinds =
         LongTextNoteEvent.KIND,
         ClassifiedsEvent.KIND,
         HighlightEvent.KIND,
-        InteractiveStoryPrologueEvent.KIND,
         WikiNoteEvent.KIND,
         CommentEvent.KIND,
         VoiceEvent.KIND,
-        VoiceReplyEvent.KIND,
+        AttestationEvent.KIND,
+        InteractiveStoryPrologueEvent.KIND,
     )
 
 fun filterHomePostsByGeohashes(
