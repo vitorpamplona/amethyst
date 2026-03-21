@@ -1315,6 +1315,10 @@ anz der Bedingungen ist erforderlich</string>
     <string name="my_lists">Meine Listen</string>
     <string name="people_list_label">Benutzer</string>
     <string name="select_list_to_filter">Liste zum Filtern des Feeds auswählen</string>
+    <string name="feed_group_feeds">Feeds</string>
+    <string name="feed_group_hashtags">Hash-Tags</string>
+    <string name="feed_group_communities">Gemeinschaften</string>
+    <string name="feed_group_lists">Listen</string>
     <string name="temporary_account">Beim Sperren des Geräts abmelden</string>
     <string name="private_message">Private Nachricht</string>
     <string name="public_message">Öffentliche Nachricht</string>
@@ -1627,4 +1631,35 @@ anz der Bedingungen ist erforderlich</string>
     <string name="event_sync_status_error">Fehler</string>
     <string name="event_sync_status_completed">Abgeschlossen</string>
     <!-- M3 Action Dialog titles -->
+    <string name="mark_as_read_dialog_title">Als gelesen markieren</string>
+    <string name="note_actions_dialog_title">Notiz-Aktionen</string>
+    <string name="profile_actions_dialog_title">Profilaktionen</string>
+    <string name="media_actions_dialog_title">Medienaktionen</string>
+    <string name="playback_actions_dialog_title">Wiedergabe</string>
+    <string name="pack_actions_dialog_title">Paket-Aktionen</string>
+    <string name="list_actions_dialog_title">Listenaktionen</string>
+    <string name="bookmark_item_actions_dialog_title">Lesezeichen-Aktionen</string>
+    <string name="group_actions_dialog_title">Gruppenaktionen</string>
+    <string name="add_bookmark_dialog_title">Lesezeichen hinzufügen</string>
+    <string name="add_member_dialog_title">Mitglied hinzufügen</string>
+    <string name="list_management_dialog_title">Listenverwaltung</string>
+    <string name="link_actions_dialog_title">Link-Aktionen</string>
+    <string name="export_actions_dialog_title">Exportieren</string>
+    <string name="attestation">Attestierung</string>
+    <string name="attestation_valid">Gültig</string>
+    <string name="attestation_invalid">Ungültig</string>
+    <string name="attestation_status_accepted">Akzeptiert</string>
+    <string name="attestation_status_rejected">Abgelehnt</string>
+    <string name="attestation_status_verifying">Wird verifiziert</string>
+    <string name="attestation_status_verified">Verifiziert</string>
+    <string name="attestation_status_revoked">Widerrufen</string>
+    <string name="attestation_valid_from">Gültig ab %1$s</string>
+    <string name="attestation_valid_to">Gültig bis %1$s</string>
+    <string name="attestation_request">Attestierungsanfrage</string>
+    <string name="attestation_request_description">Attestierung für ein Ereignis anfordern</string>
+    <string name="attestor_recommendation">Empfehlung des Attestierers</string>
+    <string name="attestor_recommendation_for_kinds">Empfohlen für Arten: %1$s</string>
+    <string name="attestor_proficiency">Kompetenz des Attestierers</string>
+    <string name="attestor_proficiency_for_kinds">Kompetent für die Verifizierung von Arten: %1$s</string>
+    <string name="attestation_attests_to">Bestätigt</string>
 </resources>
