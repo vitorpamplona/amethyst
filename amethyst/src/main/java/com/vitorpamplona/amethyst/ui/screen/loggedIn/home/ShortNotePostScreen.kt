@@ -307,7 +307,7 @@ private fun NewPostScreenBody(
                 if (postViewModel.wantsZapPoll) {
                     Row(
                         verticalAlignment = CenterVertically,
-                        modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
+                        modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
                     ) {
                         ZapPollField(postViewModel)
                     }
