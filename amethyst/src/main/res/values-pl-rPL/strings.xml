@@ -246,7 +246,7 @@
     <string name="error_loading_replies">"Błąd wczytywania odpowiedzi: "</string>
     <string name="try_again">Spróbuj ponownie</string>
     <string name="notification_feed_is_empty">Brak powiadomień.</string>
-    <string name="open_poll">Utwórz ankietę</string>
+    <string name="open_poll">Ankieta Otwarta</string>
     <string name="feed_is_empty">Brak zawartości.</string>
     <string name="refresh">Odśwież</string>
     <string name="created">stworzył (a)</string>
@@ -519,7 +519,7 @@
     <string name="follow_list_kind3follows">Obserwowane</string>
     <string name="follow_list_kind3follows_users_only">Wszystkie obserwowane</string>
     <string name="follow_list_kind3_follows_users_only">Domyślna lista obserwowanych</string>
-    <string name="follow_list_kind3follows_proxy">Obserwuje przez proxy</string>
+    <string name="follow_list_kind3follows_proxy">Obserwowani przez proxy</string>
     <string name="follow_list_aroundme">W pobliżu</string>
     <string name="follow_list_global">Wszystkie</string>
     <string name="follow_list_chess">Szachy</string>
@@ -636,8 +636,8 @@
     <string name="app_notification_zaps_channel_message">%1$s Satsów</string>
     <string name="app_notification_zaps_channel_message_from">Od %1$s</string>
     <string name="app_notification_zaps_channel_message_for">dla %1$s</string>
-    <string name="app_notification_reply_label">Odpowiedź</string>
-    <string name="app_notification_mark_read_label">Oznacz jako przeczytane</string>
+    <string name="app_notification_reply_label">Odpowiedz</string>
+    <string name="app_notification_mark_read_label">Przeczytane</string>
     <string name="app_notification_dms_summary">Nowe wiadomości</string>
     <string name="app_notification_zaps_summary">Nowe zapy</string>
     <string name="reply_notify">Powiadom: </string>
@@ -1091,10 +1091,11 @@
     <string name="wallet_incoming">Otrzymano</string>
     <string name="wallet_outgoing">Wysłano</string>
     <string name="wallet_refresh">Odśwież</string>
+    <string name="wallet_filter_all">Wszystkie</string>
     <string name="wallet_filter_zaps">Zapy</string>
     <string name="wallet_filter_non_zaps">Bez zapów</string>
     <string name="route_security_filters">Filtry bezpieczeństwa</string>
-    <string name="route_import_follows">Importuj Obserwujących</string>
+    <string name="route_import_follows">Import Obserwowanych</string>
     <string name="new_post">Nowy post</string>
     <string name="new_short">Nowe Króciaki: zdjęcia lub filmiki</string>
     <string name="new_community_note">Nowy wpis w społeczności</string>
@@ -1102,7 +1103,7 @@
     <string name="new_exclusive_geo_note">Nowy GEO-ekskluzywny Wpis</string>
     <string name="open_all_reactions_to_this_post">Otwórz wszystkie odzewy na ten post</string>
     <string name="close_all_reactions_to_this_post">Zamknij wszystkie odzewy na ten post</string>
-    <string name="reply_description">Odpowiedz</string>
+    <string name="reply_description">Odpowiedź</string>
     <string name="boost_or_quote_description">Powtórz lub Zacytuj</string>
     <string name="like_description">Lubię</string>
     <string name="zap_description">Zap</string>
@@ -1160,6 +1161,7 @@
     <string name="dm_relays_not_found_examples2">Dobre opcje to:\n - auth.nostr1.com (darmowe)\n - inbox.nostr.wine (płatne)\n - relay.0xchat.com (darmowe)</string>
     <string name="dm_relays_not_found_editing">Wstaw od 1 do 3 transmiterów, które będą służyć jako Twoja prywatna skrzynka odbiorcza. Transmitery DM powinny akceptować dowolne wiadomości od każdego, ale pozwalać tylko na ich pobieranie.</string>
     <string name="dm_relays_not_found_create_now">Konfiguruj</string>
+    <string name="recipient_missing_dm_relays">Nie znaleziono transmiterów skrzynki odbiorczej prywatnych wiadomości. Wiadomości nie mogą zostać dostarczone, dopóki nie skonfigurują listy transmiterów.</string>
     <string name="search_relays_title">Transmitery wyszukujące</string>
     <string name="search_relays_not_found">Skonfiguruj transmitery wyszukujące</string>
     <string name="search_relays_not_found_description">Stworzenie listy transmiterów specjalnie przeznaczonych do wyszukiwania i tagowania użytkowników poprawi te wyniki.</string>
@@ -1311,8 +1313,10 @@
     <string name="my_lists">Moje listy</string>
     <string name="people_list_label">Użytkownicy</string>
     <string name="select_list_to_filter">Wybierz listę profili, aby filtrować aktualności</string>
+    <string name="feed_group_feeds">Kanały</string>
     <string name="feed_group_hashtags">Hashtagi</string>
     <string name="feed_group_communities">Społeczności</string>
+    <string name="feed_group_lists">Listy</string>
     <string name="temporary_account">Wyloguj się przy blokowaniu urządzenia</string>
     <string name="private_message">Wiadomość prywatna</string>
     <string name="public_message">Publiczna wiadomość</string>
@@ -1485,7 +1489,11 @@
     <string name="kind_zap_goals">Cele Zap-a</string>
     <string name="kind_hashtag_follows">Obserwacja hashtagów</string>
     <string name="kind_highlights">Najważniejsze informacje</string>
+    <string name="kind_http_auth">Autoryzacja http</string>
     <string name="kind_index_relay_list">Indeks listy transmiterów</string>
+    <string name="kind_adventure_prologue">Wstęp do przygody</string>
+    <string name="kind_adventure_scene">Scena Przygody</string>
+    <string name="kind_adventure_reading">Lektura przygody</string>
     <string name="kind_named_bookmarks">Opisane zakładki</string>
     <string name="kind_live_chats">Czaty na żywo</string>
     <string name="kind_live_streams">Na żywo</string>
@@ -1493,8 +1501,10 @@
     <string name="kind_nwc_request">Zapytanie NWC</string>
     <string name="kind_nwc_response">Odpowiedź NWC</string>
     <string name="kind_private_zaps">Prywatne Zapy</string>
+    <string name="kind_zap_req">Sugestia zapa</string>
     <string name="kind_blogs">Blogi</string>
     <string name="kind_meeting_room">Pokój spotkań</string>
+    <string name="kind_room_presence">Stan pokoju</string>
     <string name="kind_meeting_space">Strefa spotkań</string>
     <string name="kind_profile">Profil</string>
     <string name="kind_mute_list">Lista zablokowanych</string>
@@ -1502,6 +1512,10 @@
     <string name="kind_nip">NIP</string>
     <string name="kind_nostr_connect">Nostr Connect</string>
     <string name="kind_dvm_status">Status DVM</string>
+    <string name="kind_dvm_content_req">Żądania treści DVM</string>
+    <string name="kind_dvm_content_resp">Treść odpowiedzi DVM</string>
+    <string name="kind_dvm_user_req">Żądanie użytkownika DVM</string>
+    <string name="kind_dvm_user_resp">Odpowiedź użytkownika DVM</string>
     <string name="kind_ots">OTS</string>
     <string name="kind_pay_to">Płatność dla</string>
     <string name="kind_people_lists">Listy osób</string>
@@ -1548,6 +1562,7 @@
     <string name="look_up_follow_list">Sprawdź listę obserwowanych</string>
     <string name="accounts_found">Znaleziono %1$d kont(a)</string>
     <string name="num_selected">Wybrano: %1$d</string>
+    <string name="resolved_via_namecoin">Rozwiązane przez Namecoin</string>
     <string name="now_following_accounts">Teraz obserwujesz %1$d kont(a)</string>
     <string name="your_feed_is_ready">Twój kanał jest gotowy.</string>
     <string name="skip">Pomiń</string>
@@ -1556,10 +1571,14 @@
     <string name="import_more">Pobierz więcej</string>
     <string name="continue_txt">Kontynuuj</string>
     <string name="skip_for_now">Na razie pomiń</string>
+    <string name="resolving">Rozwiązywanie %1$s…</string>
+    <string name="fetching_follow_list">Pobieranie listy obserwowanych…</string>
     <string name="no_follows_found">Nie znaleziono obserwowanych</string>
     <string name="following_accounts">Obserwujesz %1$d kont(a)…</string>
     <string name="import_follows_tips">"Wprowadź profil znajomego lub lidera społeczności. Możesz użyć ich npub-u, adresu NIP-05 lub nazwy jak alicja@domena.pl lub id/alicja dla zweryfikowanych przez blockchain tożsamości."</string>
     <string name="select_all">Wybierz Wszystkie</string>
+    <string name="uptime">Czas działania %1$d%%</string>
+    <string name="namecoin_settings">Ustawienia Namecoin</string>
     <string name="event_sync_title">Synchronizacja Transmitera</string>
     <string name="event_sync_section">Synchronizacja Transmitera</string>
     <string name="event_sync_section_explainer">Opublikuj ponownie swoje wpisy na wszystkich znanych transmiterach, aby zaktualizować transmitery odbiorcze, nadawcze i wiadomości prywatnych. Wymagane połączenie Wi-Fi — może to spowodować zużycie dużej ilości danych.</string>
@@ -1594,7 +1613,9 @@
     <string name="event_sync_activity_log_finished">Ukończono (%1$d transmiterów)</string>
     <string name="event_sync_log_sent">wysłano %1$s</string>
     <string name="event_sync_log_recv">odebrano %1$s</string>
+    <string name="event_sync_log_new">nowa %1$s</string>
     <string name="event_sync_no_events">brak wydarzeń</string>
+    <string name="ots_explorer_settings">Eksplorator Bitcoin (OTS)</string>
     <string name="events">wydarzenia</string>
     <string name="dms">DMs</string>
     <string name="profiles">profile</string>
