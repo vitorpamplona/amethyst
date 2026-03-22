@@ -33,6 +33,7 @@ import coil3.network.NetworkFetcher
 import coil3.network.okhttp.asNetworkClient
 import coil3.request.Options
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.BlossomServerResolver
+import com.vitorpamplona.quartz.utils.startsWithIgnoreCase
 import okhttp3.Call
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -43,18 +44,14 @@ class BlossomFetcher(
     private val blossomServerResolver: BlossomServerResolver,
     private val networkFetcher: (url: String) -> Fetcher,
 ) : Fetcher {
-    override suspend fun fetch(): FetchResult? {
-        println("BlossomFetcher: starting $data")
-        return try {
+    override suspend fun fetch(): FetchResult? =
+        try {
             val urlResult = blossomServerResolver.findServers(data.toString())
-            println("BlossomFetcher: finished $data to ${urlResult?.serverUrl}")
             networkFetcher(urlResult?.serverUrl ?: data.toString()).fetch()
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            println("BlossomFetcher: cancelled or error: $e $data")
             null
         }
-    }
 
     @OptIn(ExperimentalCoilApi::class)
     class Factory(
@@ -68,11 +65,7 @@ class BlossomFetcher(
             options: Options,
             imageLoader: ImageLoader,
         ): Fetcher? {
-            println("BlossomFetcher: PreFactory $data")
             if (!isApplicable(data)) return null
-
-            println("BlossomFetcher: Factory $data")
-
             return BlossomFetcher(options, data, blossomServerResolver) { url ->
                 NetworkFetcher(
                     url = url,
@@ -86,6 +79,6 @@ class BlossomFetcher(
             }
         }
 
-        private fun isApplicable(data: Uri): Boolean = data.scheme?.lowercase() == "blossom"
+        private fun isApplicable(data: Uri): Boolean = data.scheme?.startsWithIgnoreCase("blossom", "BLOSSOM") == true
     }
 }
