@@ -98,37 +98,40 @@ suspend fun INostrClient.sendAndWaitForResponseDetailed(
             }
         }
 
-    subscribe(subscription)
+    val receivedResults =
+        try {
+            subscribe(subscription)
 
-    // subscribe before sending the result.
-    val resultSubscription =
-        coroutineScope {
-            val result =
-                async {
-                    val receivedResults = mutableMapOf<NormalizedRelayUrl, Boolean>()
-                    // The withTimeout block will cancel the coroutine if the loop takes too long
-                    withTimeoutOrNull(timeoutInSeconds * 1000) {
-                        while (receivedResults.size < relayList.size) {
-                            val result = resultChannel.receive()
+            // subscribe before sending the result.
+            val resultSubscription =
+                coroutineScope {
+                    val result =
+                        async {
+                            val receivedResults = mutableMapOf<NormalizedRelayUrl, Boolean>()
+                            // The withTimeout block will cancel the coroutine if the loop takes too long
+                            withTimeoutOrNull(timeoutInSeconds * 1000) {
+                                while (receivedResults.size < relayList.size) {
+                                    val result = resultChannel.receive()
 
-                            val currentResult = receivedResults[result.relay]
-                            // do not override a successful result.
-                            if (currentResult == null || !currentResult) {
-                                receivedResults[result.relay] = result.success
+                                    val currentResult = receivedResults[result.relay]
+                                    // do not override a successful result.
+                                    if (currentResult == null || !currentResult) {
+                                        receivedResults[result.relay] = result.success
+                                    }
+                                }
                             }
+                            receivedResults
                         }
-                    }
-                    receivedResults
+
+                    send(event, relayList)
+
+                    result
                 }
 
-            send(event, relayList)
-
-            result
+            resultSubscription.await()
+        } finally {
+            unsubscribe(subscription)
         }
-
-    val receivedResults = resultSubscription.await()
-
-    unsubscribe(subscription)
 
     // Clean up the channel
     resultChannel.close()

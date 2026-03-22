@@ -104,14 +104,16 @@ suspend fun INostrClient.downloadFirstEvent(
             }
         }
 
-    openReqSubscription(subscriptionId, filters, listener)
-
     val result =
-        withTimeoutOrNull(30000) {
-            resultChannel.receive()
-        }
+        try {
+            openReqSubscription(subscriptionId, filters, listener)
 
-    close(subscriptionId)
+            withTimeoutOrNull(30000) {
+                resultChannel.receive()
+            }
+        } finally {
+            close(subscriptionId)
+        }
 
     resultChannel.close()
 
