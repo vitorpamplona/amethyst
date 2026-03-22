@@ -125,6 +125,7 @@
     <string name="bytes">Octets</string>
     <string name="error">Erreur</string>
     <string name="errors">Erreurs</string>
+    <string name="connection_success_rate_description">Pourcentage de connexions réussies vers le relais</string>
     <string name="errors_description">Le nombre d\'erreurs de connexion dans cette session</string>
     <string name="home_feed">Vos notifications</string>
     <string name="private_message_feed">Flux de messages privés</string>
@@ -245,6 +246,7 @@
     <string name="error_loading_replies">"Erreur lors du chargement des réponses : "</string>
     <string name="try_again">Essayer à nouveau</string>
     <string name="notification_feed_is_empty">Aucune notification pour le moment.</string>
+    <string name="open_poll">Ouvrir le sondage</string>
     <string name="feed_is_empty">Le flux est vide.</string>
     <string name="refresh">Rafraîchir</string>
     <string name="created">créé</string>
@@ -633,6 +635,10 @@
     <string name="app_notification_zaps_channel_message">%1$s sats</string>
     <string name="app_notification_zaps_channel_message_from">De %1$s</string>
     <string name="app_notification_zaps_channel_message_for">pour %1$s</string>
+    <string name="app_notification_reply_label">Répondre</string>
+    <string name="app_notification_mark_read_label">Marquer comme lu</string>
+    <string name="app_notification_dms_summary">Nouveaux messages</string>
+    <string name="app_notification_zaps_summary">Nouveaux zaps</string>
     <string name="reply_notify">Notifier: </string>
     <string name="channel_list_join_conversation">Rejoindre Conversation</string>
     <string name="channel_list_user_or_group_id">Utilisateur ou Groupe ID</string>
@@ -641,6 +647,7 @@
     <string name="channel_list_join_channel">Rejoindre</string>
     <string name="today">Aujourd\'hui</string>
     <string name="content_warning">Avertissement de contenu</string>
+    <string name="content_warning_with_reason">Attention : %1$s</string>
     <string name="content_warning_explanation">Ce message contient du contenu sensible que certaines personnes peuvent trouver offensant ou dérangeant</string>
     <string name="content_warning_hide_all_sensitive_content">Toujours cacher les contenus sensibles</string>
     <string name="content_warning_show_all_sensitive_content">Toujours afficher les contenus sensibles</string>
@@ -667,6 +674,7 @@
     <string name="write_to_relay">Écrire sur le Relay</string>
     <string name="write_to_relay_description">Le nombre d\'octets qui ont été envoyés à ce relais, y compris les filtres et les événements</string>
     <string name="read_from_relay_description">Le nombre d\'octets qui ont été reçus depuis ce relais, y compris les filtres et les événements</string>
+    <string name="relay_event_count">Événements enregistrés</string>
     <string name="an_error_occurred_trying_to_get_relay_information">Une erreur s\'est produite en récupérant les informations du relay depuis %1$s</string>
     <string name="owner">Propriétaire</string>
     <string name="used_by">Utilisé par</string>
@@ -700,6 +708,9 @@
     <string name="not_available_acronym">N/A</string>
     <string name="relay_error_messages">Erreurs et Notifications de ce Relais</string>
     <string name="relay_active_subscriptions">Abonnements actifs</string>
+    <string name="relay_req_subscriptions">Abonnements REQ (%1$d)</string>
+    <string name="relay_count_subscriptions">Abonnements COUNT (%1$d)</string>
+    <string name="relay_no_active_subscriptions">Aucun abonnement actif pour ce relais</string>
     <string name="relay_filter_authors">%1$d auteurs</string>
     <string name="relay_filter_ids">%1$d ids</string>
     <string name="relay_filter_since">depuis %1$s</string>
@@ -822,6 +833,7 @@
     <string name="loading_location">Chargement de la localisation</string>
     <string name="lack_location_permissions">Pas d\'autorisations de localisation</string>
     <string name="add_sensitive_content_explainer">Ajoute un avertissement de contenu sensible avant de montrer votre contenu. C\'est idéal pour tout contenu NSFW ou contenu que certaines personnes peuvent trouver offensant ou dérangeant</string>
+    <string name="add_sensitive_content_description_placeholder">Raison (optionnel)</string>
     <string name="new_feature_nip17_might_not_be_available_title">Nouvelle Fonctionnalité</string>
     <string name="new_feature_nip17_might_not_be_available_description">Pour activer ce mode, Amethyst doit envoyer un message NIP-17 (GiftWrapped, Sealed Direct et Group Messages). Le protocole NIP-17 est nouveau et la plupart des clients ne l\'ont pas encore mis en oeuvre. Assurez-vous que le destinataire utilise un client compatible.</string>
     <string name="new_feature_nip17_activate">Activer</string>
@@ -906,6 +918,8 @@
     <string name="sign_request_rejected_description">Assurez-vous que l\'application signataire a autorisé cette transaction</string>
     <string name="no_wallet_found_with_error">Aucun portefeuille trouvé pour payer une facture lightning (Erreur : %1$s). Veuillez installer un portefeuille Lightning pour utiliser les zaps</string>
     <string name="no_wallet_found">Aucun portefeuille trouvé pour payer une facture lightning. Veuillez installer un portefeuille Lightning pour utiliser les zaps</string>
+    <string name="no_blossom_apps_found_title">Impossible d\'ouvrir les liens Blossom</string>
+    <string name="no_blossom_apps_found_description">Les applications Blossom n\'ont pas été trouvées. Veuillez installer une application Blossom locale pour voir ce fichier</string>
     <string name="hidden_words">Mots Masqués</string>
     <string name="hide_new_word_label">Masquer un nouveau mot ou une phrase</string>
     <string name="automatically_show_profile_picture">Photo de profil</string>
@@ -1009,6 +1023,7 @@
     <string name="could_not_prepare_header">Impossible de préparer les informations d\'en-tête : %1$s</string>
     <string name="compression_cancelled">Compression annulée</string>
     <string name="compression_returned_null">La compression n\'a pas réussi à renvoyer un fichier</string>
+    <string name="encrypt_files_label">Chiffrer les fichiers</string>
     <string name="media_compression_quality_label">Qualité des médias</string>
     <string name="media_compression_quality_explainer">Sélectionnez une qualité basse pour compresser vos médias en un fichier plus petit, avec moins de qualité ou sélectionnez qualité haute pour compresser en un fichier plus grand, avec une meilleure qualité.</string>
     <string name="media_compression_quality_low">Basse</string>
@@ -1017,6 +1032,7 @@
     <string name="media_compression_quality_uncompressed">Non compressé</string>
     <string name="video_codec_h265_label">Utiliser le codec H.265/HEVC</string>
     <string name="video_codec_h265_description">Une meilleure qualité avec des tailles de fichier plus petites, mais tous les appareils ne supportent pas la lecture H.265.</string>
+    <string name="strip_metadata_label">Supprimer les métadonnées privées</string>
     <string name="edit_draft">Modifier le brouillon</string>
     <string name="login_with_qr_code">Se connecter avec un QR Code</string>
     <string name="route">Route</string>
@@ -1028,6 +1044,31 @@
     <string name="route_global">Général</string>
     <string name="route_video">Vidéos courtes</string>
     <string name="route_chess">Échecs</string>
+    <string name="wallet">Portefeuille</string>
+    <string name="wallet_balance">Solde</string>
+    <string name="wallet_send">Envoyer</string>
+    <string name="wallet_receive">Recevoir</string>
+    <string name="wallet_transactions">Transactions</string>
+    <string name="wallet_no_connection">Aucun portefeuille connecté</string>
+    <string name="wallet_setup">Configurer le portefeuille</string>
+    <string name="wallet_sats">sats</string>
+    <string name="wallet_paste_invoice">Coller une facture BOLT-11</string>
+    <string name="wallet_pay">Payer</string>
+    <string name="wallet_payment_success">Paiement réussi</string>
+    <string name="wallet_payment_sending">Envoi du paiement…</string>
+    <string name="wallet_amount_sats">Montant (sats)</string>
+    <string name="wallet_description">Description (optionnel)</string>
+    <string name="wallet_create_invoice">Créer une facture</string>
+    <string name="wallet_creating_invoice">Création de la facture…</string>
+    <string name="wallet_copy_invoice">Copier la facture</string>
+    <string name="wallet_no_transactions">Pas encore de transactions</string>
+    <string name="wallet_loading">Chargement…</string>
+    <string name="wallet_incoming">Reçu</string>
+    <string name="wallet_outgoing">Envoyé</string>
+    <string name="wallet_refresh">Rafraîchir</string>
+    <string name="wallet_filter_all">Tout</string>
+    <string name="wallet_filter_zaps">Zaps</string>
+    <string name="wallet_filter_non_zaps">Non Zaps</string>
     <string name="route_security_filters">Filtres de Sécurité</string>
     <string name="new_post">Nouveau Message</string>
     <string name="new_short">Nouveaux Shorts : images ou vidéos</string>
@@ -1072,6 +1113,13 @@
     <string name="cancel_zap_split">Annuler le partage des Zaps</string>
     <string name="add_content_warning">Ajouter un avertissement de contenu</string>
     <string name="remove_content_warning">Retirer l\'avertissement de contenu</string>
+    <string name="add_expiration_date">Ajouter une date d\'expiration</string>
+    <string name="remove_expiration_date">Supprimer la date d\'expiration</string>
+    <string name="expiration_date_label">Date d\'expiration</string>
+    <string name="expiration_date_explainer">La publication sera masquée par les clients après cette date (NIP-40)</string>
+    <string name="expiration_date_select">Sélectionner la date et l\'heure d\'expiration</string>
+    <string name="expiration_expires_in">Expire dans %1$s</string>
+    <string name="expiration_time">Date d\'expiration</string>
     <string name="show_npub_as_a_qr_code">Afficher npub en tant que QR code</string>
     <string name="show_nprofile_as_a_qr_code">Afficher le nprofile en tant que code QR</string>
     <string name="invalid_nip19_uri">Adresse invalide</string>
@@ -1137,6 +1185,8 @@
     <string name="blocked_relays_title">Relais bloqués</string>
     <string name="blocked_section">Relais bloqués</string>
     <string name="blocked_section_explainer">Amethyst ne se connectera jamais à ces relais</string>
+    <string name="export_as_text">Exporter en texte</string>
+    <string name="export_as_zip">Exporter en ZIP (JSON)</string>
     <string name="zap_the_devs_title">Zap les Devs !</string>
     <string name="zap_the_devs_description">Votre don nous aide à faire la différence. Chaque sat compte !</string>
     <string name="donate_now">Faire un don maintenant</string>
@@ -1229,6 +1279,10 @@
     <string name="my_lists">Mes listes</string>
     <string name="people_list_label">Utilisateurs</string>
     <string name="select_list_to_filter">Sélectionnez une liste pour filtrer le fil</string>
+    <string name="feed_group_feeds">Flux</string>
+    <string name="feed_group_hashtags">Hashtags</string>
+    <string name="feed_group_communities">Communautés</string>
+    <string name="feed_group_lists">Listes</string>
     <string name="temporary_account">Se déconnecter au verrouillage de l\'appareil</string>
     <string name="private_message">Message privé</string>
     <string name="public_message">Message public</string>
@@ -1242,6 +1296,16 @@
     <string name="search_by_hashtag">Hashtag de recherche : #%1$s</string>
     <string name="dont_translate_from">Ne pas traduire depuis</string>
     <string name="dont_translate_from_description">Les langues affichées ici ne seront pas traduites. Sélectionnez une langue pour la supprimer et l\'avoir traduite à nouveau.</string>
+    <string name="translate_to">Traduire vers</string>
+    <string name="translate_to_description">Choisir la langue dans laquelle traduire le contenu.</string>
+    <string name="language_preferences">Préférences d\'affichage de la langue</string>
+    <string name="language_preference_pair">%1$s - %2$s</string>
+    <string name="search_languages">Rechercher des langues</string>
+    <string name="add_language">Ajouter une langue</string>
+    <string name="add_language_pair">Ajouter une paire de langues</string>
+    <string name="source_language">Langue source</string>
+    <string name="target_language">Langue cible</string>
+    <string name="show_first">Afficher %1$s en premier</string>
     <string name="pause">Pause</string>
     <string name="play">Lecture</string>
     <string name="open_dropdown_menu">Ouvrir le menu déroulant</string>
@@ -1273,13 +1337,17 @@
     <string name="follow_set_delete">Supprimer la liste</string>
     <string name="follow_pack_delete">Supprimer le pack</string>
     <string name="kinds">Kinds</string>
+    <string name="retry_failed">Échec de la nouvelle tentative</string>
     <string name="tap_to_view_details">Appuyer pour afficher les détails</string>
     <string name="event_sent">%1$s envoyé</string>
     <string name="broadcast_results">Diffuser les résultats</string>
     <string name="broadcasts_number">Diffusions (%1$d)</string>
     <string name="collapse">Réduire</string>
     <string name="expand">Agrandir</string>
+    <string name="retry_failed_number">Échec de la nouvelle tentative (%1$d)</string>
     <string name="more_broadcasts_number">+%1$d diffusions supplémentaires</string>
+    <string name="number_in_progress">" (%1$d en cours)"</string>
+    <string name="share_of_relays">Relais %1$d/%2$d</string>
     <string name="timeout">Délai expiré</string>
     <string name="retrying">Nouvelle tentative…</string>
     <string name="retry">Réessayer</string>
@@ -1296,6 +1364,7 @@
     <string name="reaction">Réaction</string>
     <string name="voice_post">Message vocal</string>
     <string name="voice_reply">Réponse vocale</string>
+    <string name="closing_time">Heure de fermeture</string>
     <string name="confirm">Confirmer</string>
     <string name="next">Suivant</string>
     <string name="add_poll_option_button">Ajouter un bouton d\'option de sondage</string>
@@ -1320,6 +1389,7 @@
     <string name="kind_app_recommendations">Recommandations d\'applications</string>
     <string name="kind_user_settings">Paramètres utilisateur</string>
     <string name="kind_audio_track">Piste audio</string>
+    <string name="kind_badge_awards">Récompenses de badge</string>
     <string name="kind_blocked_relays">Relais bloqués</string>
     <string name="kind_calendar">Calendrier</string>
     <string name="kind_appointment">Rendez-vous</string>
@@ -1340,6 +1410,7 @@
     <string name="kind_blogs">Blogs</string>
     <string name="kind_profile">Profil</string>
     <string name="kind_mute_list">Liste en sourdine</string>
+    <string name="kind_nip">NIP</string>
     <string name="kind_nostr_connect">Nostr Connect</string>
     <string name="kind_people_lists">Listes de personnes</string>
     <string name="kind_pictures">Photos</string>
@@ -1365,5 +1436,7 @@
     <string name="continue_txt">Continuer</string>
     <string name="skip_for_now">Ignorer pour le moment</string>
     <string name="select_all">Tout sélectionner</string>
+    <string name="event_sync_start_over">Recommencer</string>
+    <string name="event_sync_cancel">Annuler</string>
     <!-- M3 Action Dialog titles -->
 </resources>
