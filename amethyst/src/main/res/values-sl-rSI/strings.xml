@@ -74,8 +74,8 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="signer_not_found_exception_description">Ali je bila aplikacija za podpisovanje odstranjena? Preverite, ali je aplikacija za podpisovanje nameščena in ima dostop do tega računa. Odjavite se in ponovno prijavite, če se je aplikacija morda spremenila.</string>
     <string name="zaps">Zapi</string>
     <string name="view_count">Števec vpogledov</string>
-    <string name="boost">Posreduj</string>
-    <string name="boosted">posredovano</string>
+    <string name="boost">Pošlji naprej</string>
+    <string name="boosted">Poslano naprej</string>
     <string name="edited">posodobljeno</string>
     <string name="edited_number">uredi #%1$s</string>
     <string name="original">original</string>
@@ -257,6 +257,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="error_loading_replies">"Napaka pri nalaganju odgovorov: "</string>
     <string name="try_again">Poskusi ponovno</string>
     <string name="notification_feed_is_empty">Ni še obvestil.</string>
+    <string name="open_poll">Aktivna anketa</string>
     <string name="feed_is_empty">Ni vsebin.</string>
     <string name="refresh">Osveži</string>
     <string name="created">ustvarjeno</string>
@@ -333,7 +334,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="badge_award_image_for">"Slika nagradne značke za %1$s"</string>
     <string name="badge_award_image">\"Slika nagradne značke</string>
     <string name="new_badge_award_notif">Prejel/a si novo nagradno značko</string>
-    <string name="award_granted_to">Nagradna zančka podeljena</string>
+    <string name="award_granted_to">Nagradna značka podeljena</string>
     <string name="copied_note_text_to_clipboard">Tekst zapiska kopiran v odložišče</string>
     <string name="copied_user_id_to_clipboard" tools:ignore="Typos">Avtorjev @npub kopiran v odložišče</string>
     <string name="copied_note_id_to_clipboard" tools:ignore="Typos">Zapiskov ID (@note1) kopiran v odložišče</string>
@@ -458,7 +459,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="poll_consensus_threshold">Soglasje</string>
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_closing_date_time">Datum in čas konca glasovanja</string>
-    <string name="poll_closing_in">Glasovanje se zaključi  %1$s</string>
+    <string name="poll_closing_in">Anketa se zaključi  %1$s</string>
     <string name="poll_closing_time">Zapri po</string>
     <string name="poll_closing_time_days">dni</string>
     <string name="poll_unable_to_vote">Nezmožen za glasovanje</string>
@@ -561,7 +562,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="follow_set_private_members_header_label">Zasebni profili</string>
     <string name="follow_set_single_member_label">član</string>
     <string name="follow_set_multiple_member_label">člani</string>
-    <string name="follow_set_empty_label">ni članov</string>
+    <string name="follow_set_empty_label">Ni članov</string>
     <string name="follow_set_empty_label2">Prazno</string>
     <string name="follow_set_absence_indicator">%1$s ni v tem seznamu</string>
     <string name="follow_set_absence_indicator2">%1$s ni član</string>
@@ -1114,6 +1115,13 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="new_community_note">Novo zapisek skupnosti</string>
     <string name="new_product">Nov produkt</string>
     <string name="new_exclusive_geo_note">Nova geo-ekskluzivna objava</string>
+    <string name="new_long_form_post">Nov članek</string>
+    <string name="article_title">Naslov</string>
+    <string name="article_summary">Povzetek (neobvezno)</string>
+    <string name="article_cover_image_url">URL naslov naslovne slike (neobvezno)</string>
+    <string name="write_your_article_in_markdown">Napiši članek v obliki Markdown…</string>
+    <string name="markdown_preview">Predogled</string>
+    <string name="markdown_edit">Uredi</string>
     <string name="open_all_reactions_to_this_post">Odpri vse reakcije na to objavo</string>
     <string name="close_all_reactions_to_this_post">Zapri vse reakcije na to objavo</string>
     <string name="reply_description">Odgovori</string>
@@ -1128,7 +1136,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="reactions_settings_reorder">Prerazporedi</string>
     <string name="reactions_settings_reply">Odgovori</string>
     <string name="reactions_settings_reply_description">Odgovori na ta zapisek</string>
-    <string name="reactions_settings_boost">Potisni</string>
+    <string name="reactions_settings_boost">Pošlji naprej</string>
     <string name="reactions_settings_boost_description">Ponovno objavi ali citiraj to objavo</string>
     <string name="reactions_settings_like">Všečkaj</string>
     <string name="reactions_settings_like_description">Odzovi se na to objavo z emojijem</string>
@@ -1422,7 +1430,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="closing_time">Končni čas</string>
     <string name="confirm">Potrdi</string>
     <string name="next">Naprej</string>
-    <string name="add_poll_option_button">Dodaj gumb za glasovanje</string>
+    <string name="add_poll_option_button">Dodaj gumb za anketo</string>
     <string name="go_back">Nazaj</string>
     <string name="approve">Dovoli</string>
     <string name="connected">Povezano</string>
@@ -1537,8 +1545,8 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="kind_pictures">Fotografije</string>
     <string name="kind_pins">Bucike</string>
     <string name="kind_zap_poll">Zap sklad</string>
-    <string name="kind_poll">Glasovanje</string>
-    <string name="kind_poll_response">Odziv na glasovanje</string>
+    <string name="kind_poll">Anketa</string>
+    <string name="kind_poll_response">Odziv na anketo</string>
     <string name="kind_nip04_dms">NIP-04 ZS</string>
     <string name="kind_private_relays">Zasebni releji</string>
     <string name="kind_proxy_relays">Proxy releji</string>
@@ -1600,7 +1608,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="event_sync_section_explainer">Ponovno objavite svoje dogodke na vseh znanih relejih, da posodobite svoje izhodne, vhodne in releje ZS. Zahtevana je povezava Wi-Fi — postopek lahko porabi veliko podatkov.</string>
     <string name="event_sync_open_button">Odpri sinhronizacijo relejev…</string>
     <string name="event_sync_what_happens_title">Kaj to naredi</string>
-    <string name="event_sync_what_happens_body">To orodje pregleda vse releje, ki jih je zaznala vaša aplikacija, in vaše dogodke prerazporedi na ustrezne cilje:</string>
+    <string name="event_sync_what_happens_body">To orodje pregleda vse releje, ki jih je zaznala vaša aplikacija, in vaše dogodke prerazporedi na ustrezne cilje: </string>
     <string name="event_sync_step1">Prenesite vse dogodke katere ste ustvarili, in jih pošljite v vaše izhodne releje.</string>
     <string name="event_sync_step2">Prenesite vse dogodke, v katerih ste omenjeni, in jih pošljite v vaše vhodne releje.</string>
     <string name="event_sync_step3">Prenesite vsa zasebna sporočila, naslovljena na vas, in jih pošljite v svoje releje za zasebna sporočila.</string>
@@ -1619,14 +1627,14 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="event_sync_done_title">Sinhronizacija zaključena</string>
     <string name="event_sync_done_sent">Naprej posredovanih %1$d od %2$d prejetih dogodkov do ciljnih relejev.</string>
     <string name="event_sync_done_accepted">Število dogodkov, ki jih je ciljni rele sprejel kot nove: %1$d.</string>
-    <string name="event_sync_done_duration">Zaključeno v %1$d sekundah</string>
+    <string name="event_sync_done_duration">Zaključeno v %1$d sekundah.</string>
     <string name="event_sync_error_title">Napaka pri sinhronizaciji</string>
     <string name="event_sync_sending_to">Pošiljam k</string>
     <string name="event_sync_outbox_relays">Odhodni</string>
     <string name="event_sync_inbox_relays">Vhodni</string>
     <string name="event_sync_dm_relays">ZS</string>
     <string name="event_sync_activity_log">Trenutno preverjam (%1$d relejev)</string>
-    <string name="event_sync_activity_log_finished">Finished (%1$d relays)</string>
+    <string name="event_sync_activity_log_finished">Zaključeno (%1$d relejev)</string>
     <string name="event_sync_log_sent">poslano %1$s</string>
     <string name="event_sync_log_recv">sprejeto %1$s</string>
     <string name="event_sync_log_new">nov %1$s</string>
@@ -1643,4 +1651,43 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="event_sync_status_error">Napaka</string>
     <string name="event_sync_status_completed">Zaključeno</string>
     <!-- M3 Action Dialog titles -->
+    <string name="mark_as_read_dialog_title">Označi kot prebrano</string>
+    <string name="note_actions_dialog_title">Možnosti zapiska</string>
+    <string name="profile_actions_dialog_title">Možnosti profila</string>
+    <string name="media_actions_dialog_title">Možnosti predstavnosti</string>
+    <string name="playback_actions_dialog_title">Predvajaj</string>
+    <string name="pack_actions_dialog_title">Možnosti paketa</string>
+    <string name="list_actions_dialog_title">Možnosti seznama</string>
+    <string name="bookmark_item_actions_dialog_title">Možnosti zaznamkov</string>
+    <string name="group_actions_dialog_title">Možnosti skupine</string>
+    <string name="add_bookmark_dialog_title">Dodaj zaznamek</string>
+    <string name="add_member_dialog_title">Dodaj člana</string>
+    <string name="list_management_dialog_title">Urejanje seznamov</string>
+    <string name="link_actions_dialog_title">Možnosti povezave</string>
+    <string name="export_actions_dialog_title">Izvozi</string>
+    <string name="attestation">Overitev</string>
+    <string name="attestation_valid">Veljaven</string>
+    <string name="attestation_invalid">Neveljaven</string>
+    <string name="attestation_status_accepted">Sprejeto</string>
+    <string name="attestation_status_rejected">Zavrnjeno</string>
+    <string name="attestation_status_verifying">Preverjam</string>
+    <string name="attestation_status_verified">Preverjeno</string>
+    <string name="attestation_status_revoked">Preklicano</string>
+    <string name="attestation_valid_from">Veljaven od %1$s</string>
+    <string name="attestation_valid_to">Veljaven do %1$s</string>
+    <string name="attestation_request">Prošnja za overitev</string>
+    <string name="attestation_request_description">Pridobivanje overitve za dogodek</string>
+    <string name="attestor_recommendation">Priporočeni potrjevalci</string>
+    <string name="attestor_recommendation_for_kinds">Priporočeno za tipe: </string>
+    <string name="attestor_proficiency">Usposobljenost potrjevalca</string>
+    <string name="attestor_proficiency_for_kinds">Izurjen za preverjanje tipov (Kinds): %1$s</string>
+    <string name="attestation_attests_to">Overja</string>
+    <string name="attestation_requests_attestation_to">Zahteva overitev za</string>
+    <string name="event_sync_date_filter_title">Časovno obdobje</string>
+    <string name="event_sync_date_filter_since">Od</string>
+    <string name="event_sync_date_filter_until">Do</string>
+    <string name="event_sync_date_filter_now">Zdaj</string>
+    <string name="event_sync_date_filter_all_time">Vse do zdaj</string>
+    <string name="event_sync_date_filter_last_sync">Zadnja sinhronizacija: %1$s</string>
+    <string name="event_sync_date_filter_since_last_sync">Od zadnje sinhronizacije</string>
 </resources>
