@@ -3,7 +3,7 @@
 
 Adds support for creating and rendering NIP-85 Polls
 - Redesign of the poll and zap poll cards
-- Adds Special notification card that stays while the poll is running
+- Adds special notification card while the poll is running
 
 Adds support for Relay Feeds
 - Adds support for NIP-51 favorite relay feeds
@@ -26,31 +26,52 @@ Adds support for NIP-47 Wallets and compete NWC spec
 - Added several test cases from other repos to guarantee interoperability
 
 Adds support for NIP-52 Calendar appointments
-
-Adds support for NIP-39 External Identities with kind 10011
+- Adds proper display of calendar time slot and date slot events in the note feed
+- Refactored the early implementation on Quartz for easier use
 
 Adds support for NIP-C0 Code Snippets
+- Includes Quartz support
+- Replies using NIP-22
 
 Adds support for NIPs on Nostr (event kind 30817)
+- Includes Quartz support
+- Replies using NIP-22
 
 Adds support for NIP-A3 Payment targets (PayTo: 10133) by @npub1w4uswmv6lu9yel005l3qgheysmr7tk9uvwluddznju3nuxalevvs2d0jr5
+- Includes Quartz support
 
-Adds support for BUD-10 "Blossom:" URIs in images, audios, videos, and documents.
+Adds support for BUD-10 "Blossom:" URIs on the post
+- Supports automatic discovery of blossom servers
+- Renders/Previews images, audios, videos, and documents
+- Includes support for encryption when using it in NIP-17 DMs.
 
 Adds support for custom NIP-40 Expirations in any new post.
 - Displays expirations on posts and DMs
 
 Adds support for NIP-66 Relay Monitor and discovery support to Quartz
 
-Adds support for Attestations (https://attestr.xyz/)
+Adds support for rendering Attestations (https://attestr.xyz/)
+- Recommendations, Requests and Attestor Declarations are also included.
 
 Adds basic support for Chess with Jester protocol
+- Full chess game implemented
+- Supports for game challenges and view external games
+- Running on debug only for now
 
-Adds NIP-46 Bunker support to Quartz and Amethyst Desktop
+DMs:
+- Removes NIP-04 DMs
+- Blocks DM sending if the receiver doesn't have NIP-17 relay lists.
+- Removed incognito icon from the new post field.
 
-Adds support for inline reply, mark as read from Push Notifications
+Push Notifications:
+- Adds support for inline reply
+- Adds support for notification grouping
+- Adds support for Async image Loading
+- Removed NIP-04 notifications
 
-Removes NIP-04 DMs and blocks DM sending if the receiver doesn't have NIP-17 relay lists.
+Adds support for writing Long Form/Markdown content
+- Includes support for automatic Draft saving and editing
+- Includes support for editing
 
 Uploads:
 - Adds support to upload Documents to all new post screens.
@@ -106,6 +127,7 @@ Search fixes
 - Removes outdated versions of addressables from the search results
 
 Profiles:
+- Adds support for NIP-39 External Identities with kind 10011
 - Adds a profile picture upload button when the user has no picture
 - Adds last seen to the user profile
 - Adds nprofile and npub copy options to the profile
@@ -149,6 +171,7 @@ Fixes:
 - Fixing IO Dispatchers and coroutine scopes of choice
 - Fixes anySync parallel operation that was returning the first result, not the first positive "any".
 - Fixes Req onCannotConnect listeners to the relays that actually sent the req
+- Fixes hanging subscriptions when exceptions happen during NostrClient utility methods
 
 AI:
 - Add SKILL.md for AI agent customization
@@ -162,9 +185,10 @@ Defaults:
 
 Quartz:
 - Adds Relay Server implementation with NIP-45 COUNT and NIP-42 AUTH support
-- Adds support for dynamic policies to the relay implementation.
+- Adds support for dynamic auth policies to the relay implementation.
 - Migrates Quartz EventStore from Android-only to KMP
 - Adds a reqUntilEoseAsFlow extension to the Nostr Client
+- Adds a reqBypassingRelayLimits extension to the Nostr Client
 - Adds comprehensive NIP-46 Bunker support
 - Adds comprehensive support for NIP-47 non-payment methods.
 
