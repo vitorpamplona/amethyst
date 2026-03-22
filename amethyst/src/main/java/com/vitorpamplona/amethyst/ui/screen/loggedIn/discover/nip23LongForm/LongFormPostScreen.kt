@@ -201,7 +201,7 @@ private fun MarkdownPostScreenBody(
                             .padding(horizontal = Size10dp, vertical = Size5dp),
                     textStyle =
                         LocalTextStyle.current.copy(
-                            fontSize = 20.sp,
+                            fontSize = 18.sp,
                             textDirection = TextDirection.Content,
                         ),
                     singleLine = true,

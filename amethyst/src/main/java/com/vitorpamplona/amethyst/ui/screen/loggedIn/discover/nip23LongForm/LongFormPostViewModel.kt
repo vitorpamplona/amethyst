@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip23LongForm
 
+import android.R.attr.version
 import android.content.Context
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
@@ -201,7 +202,6 @@ class LongFormPostViewModel :
     fun hasLnAddress(): Boolean = account.userProfile().lnAddress() != null
 
     // Editing existing article
-    var editingNote: Note? by mutableStateOf(null)
     var existingDTag: String? = null
 
     fun init(accountVM: AccountViewModel) {
@@ -244,7 +244,6 @@ class LongFormPostViewModel :
                 coverImageUrl = noteEvent.image() ?: ""
                 message = TextFieldValue(noteEvent.content)
                 existingDTag = noteEvent.dTag()
-                editingNote = version
             }
 
             val user = account.userProfile()
@@ -263,6 +262,13 @@ class LongFormPostViewModel :
     }
 
     private fun loadFromDraft(draftEvent: LongTextNoteEvent) {
+        title = TextFieldValue(draftEvent.title() ?: "")
+        summary = TextFieldValue(draftEvent.summary() ?: "")
+        publishedAt = draftEvent.publishedAt() ?: draftEvent.createdAt
+        coverImageUrl = draftEvent.image() ?: ""
+        message = TextFieldValue(draftEvent.content)
+        existingDTag = draftEvent.dTag()
+
         canAddInvoice = accountViewModel.userProfile().lnAddress() != null
         canAddZapRaiser = accountViewModel.userProfile().lnAddress() != null
         multiOrchestrator = null
@@ -300,8 +306,6 @@ class LongFormPostViewModel :
         if (forwardZapTo.value.items.isNotEmpty()) {
             wantsForwardZapTo = true
         }
-
-        message = TextFieldValue(draftEvent.content)
 
         iMetaAttachments.addAll(draftEvent.imetas())
     }
@@ -560,7 +564,6 @@ class LongFormPostViewModel :
         publishedAt = TimeUtils.now()
         showPreview = false
 
-        editingNote = null
         existingDTag = null
 
         multiOrchestrator = null

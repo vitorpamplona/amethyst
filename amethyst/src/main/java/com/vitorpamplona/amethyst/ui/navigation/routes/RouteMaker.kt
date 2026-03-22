@@ -39,6 +39,7 @@ import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.base.IsInPublicChatChannel
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
@@ -328,6 +329,10 @@ suspend fun routeEditDraftTo(
 
         is TextNoteEvent -> {
             Route.NewShortNote(draft = note.idHex)
+        }
+
+        is LongTextNoteEvent -> {
+            Route.NewLongFormPost(draft = note.idHex)
         }
 
         is ClassifiedsEvent -> {
