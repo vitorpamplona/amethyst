@@ -27,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
@@ -76,6 +77,8 @@ fun DisplayLocationInTitle(geohash: String) {
             text = cityName,
             fontSize = 20.sp,
             fontWeight = FontWeight.W500,
+            maxLines = 1,
+            overflow = TextOverflow.MiddleEllipsis,
             modifier = Modifier.padding(start = Size5dp),
         )
     }

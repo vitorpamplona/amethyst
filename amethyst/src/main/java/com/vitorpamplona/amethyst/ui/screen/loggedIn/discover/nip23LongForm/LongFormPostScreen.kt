@@ -18,17 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.home
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip23LongForm
 
-import android.annotation.SuppressLint
-import android.content.Intent
-import android.net.Uri
-import android.os.Parcelable
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -36,47 +31,45 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Poll
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
-import androidx.core.util.Consumer
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.FileServerSelectionRow
-import com.vitorpamplona.amethyst.ui.actions.uploads.MAX_VOICE_RECORD_SECONDS
-import com.vitorpamplona.amethyst.ui.actions.uploads.RecordVoiceButton
+import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromFiles
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
-import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.ui.actions.uploads.SelectSingleFromGallery
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakePictureButton
-import com.vitorpamplona.amethyst.ui.actions.uploads.TakeVideoButton
-import com.vitorpamplona.amethyst.ui.actions.uploads.UploadProgressIndicator
-import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceAnonymizationSection
-import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceMessagePreview
-import com.vitorpamplona.amethyst.ui.components.getActivity
+import com.vitorpamplona.amethyst.ui.components.markdown.RenderContentAsMarkdown
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.PostingTopBar
-import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
-import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.creators.contentWarning.ContentSensitivityExplainer
 import com.vitorpamplona.amethyst.ui.note.creators.contentWarning.MarkAsSensitiveButton
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.ShowEmojiSuggestionList
@@ -87,102 +80,39 @@ import com.vitorpamplona.amethyst.ui.note.creators.invoice.AddLnInvoiceButton
 import com.vitorpamplona.amethyst.ui.note.creators.invoice.InvoiceRequest
 import com.vitorpamplona.amethyst.ui.note.creators.location.AddGeoHashButton
 import com.vitorpamplona.amethyst.ui.note.creators.location.LocationAsHash
-import com.vitorpamplona.amethyst.ui.note.creators.messagefield.MessageField
-import com.vitorpamplona.amethyst.ui.note.creators.notify.Notifying
-import com.vitorpamplona.amethyst.ui.note.creators.polls.PollOptionsField
-import com.vitorpamplona.amethyst.ui.note.creators.previews.DisplayPreviews
 import com.vitorpamplona.amethyst.ui.note.creators.secretEmoji.AddSecretEmojiButton
 import com.vitorpamplona.amethyst.ui.note.creators.secretEmoji.SecretEmojiRequest
 import com.vitorpamplona.amethyst.ui.note.creators.uploads.ImageVideoDescription
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
-import com.vitorpamplona.amethyst.ui.note.creators.zappolls.ZapPollField
 import com.vitorpamplona.amethyst.ui.note.creators.zapraiser.AddZapraiserButton
 import com.vitorpamplona.amethyst.ui.note.creators.zapraiser.ZapRaiserRequest
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapTo
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapToButton
-import com.vitorpamplona.amethyst.ui.note.types.ReplyRenderType
-import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ObserveInboxRelayListAndDisplayIfNotFound
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
-import com.vitorpamplona.amethyst.ui.theme.Size19Modifier
-import com.vitorpamplona.amethyst.ui.theme.Size35dp
-import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightPage
-import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
-import com.vitorpamplona.amethyst.ui.theme.replyModifier
-import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.withContext
-
-@OptIn(ExperimentalMaterial3Api::class, FlowPreview::class)
-@Composable
-fun ShortNotePostScreen(
-    message: String? = null,
-    attachment: Uri? = null,
-    baseReplyTo: Note? = null,
-    quote: Note? = null,
-    fork: Note? = null,
-    version: Note? = null,
-    draft: Note? = null,
-    accountViewModel: AccountViewModel,
-    nav: Nav,
-) {
-    val postViewModel: ShortNotePostViewModel = viewModel()
-    postViewModel.init(accountViewModel)
-
-    val context = LocalContext.current
-    val activity = context.getActivity()
-
-    LaunchedEffect(postViewModel, accountViewModel) {
-        postViewModel.load(baseReplyTo, quote, fork, version, draft)
-        message?.ifBlank { null }?.let {
-            postViewModel.updateMessage(TextFieldValue(it))
-        }
-        attachment?.let {
-            withContext(Dispatchers.IO) {
-                val mediaType = context.contentResolver.getType(it)
-                postViewModel.selectImage(persistentListOf(SelectedMedia(it, mediaType)))
-            }
-        }
-    }
-
-    DisposableEffect(nav, activity) {
-        // Microsoft's swift key sends Gifs as new actions
-        val consumer =
-            Consumer<Intent> { intent ->
-                if (intent.action == Intent.ACTION_SEND) {
-                    intent.getStringExtra(Intent.EXTRA_TEXT)?.ifBlank { null }?.let {
-                        postViewModel.addToMessage(it)
-                    }
-
-                    (intent.getParcelableExtra<Parcelable>(Intent.EXTRA_STREAM) as? Uri)?.let {
-                        val mediaType = context.contentResolver.getType(it)
-                        postViewModel.selectImage(persistentListOf(SelectedMedia(it, mediaType)))
-                    }
-                }
-            }
-
-        activity.addOnNewIntentListener(consumer)
-        onDispose { activity.removeOnNewIntentListener(consumer) }
-    }
-
-    NewPostScreenInner(postViewModel, accountViewModel, nav)
-}
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun NewPostScreenInner(
-    postViewModel: ShortNotePostViewModel,
+fun LongFormPostScreen(
+    draft: Note? = null,
+    version: Note? = null,
     accountViewModel: AccountViewModel,
     nav: Nav,
 ) {
-    WatchAndLoadMyEmojiList(accountViewModel)
+    val postViewModel: LongFormPostViewModel = viewModel()
+    postViewModel.init(accountViewModel)
 
-    StrippingFailureDialog(postViewModel.strippingFailureConfirmation)
+    LaunchedEffect(postViewModel, accountViewModel) {
+        postViewModel.load(draft, version)
+    }
+
+    WatchAndLoadMyEmojiList(accountViewModel)
 
     BackHandler {
         accountViewModel.launchSigner {
@@ -195,18 +125,15 @@ private fun NewPostScreenInner(
     Scaffold(
         topBar = {
             PostingTopBar(
+                titleRes = R.string.new_long_form_post,
                 isActive = postViewModel::canPost,
                 onPost = {
-                    // uses the accountViewModel scope to avoid cancelling this
-                    // function when the postViewModel is released
                     accountViewModel.launchSigner {
                         postViewModel.sendPostSync()
                         nav.popBack()
                     }
                 },
                 onCancel = {
-                    // uses the accountViewModel scope to avoid cancelling this
-                    // function when the postViewModel is released
                     accountViewModel.launchSigner {
                         postViewModel.sendDraftSync()
                         postViewModel.cancel()
@@ -223,14 +150,14 @@ private fun NewPostScreenInner(
                     .consumeWindowInsets(pad)
                     .imePadding(),
         ) {
-            NewPostScreenBody(postViewModel, accountViewModel, nav)
+            MarkdownPostScreenBody(postViewModel, accountViewModel, nav)
         }
     }
 }
 
 @Composable
-private fun NewPostScreenBody(
-    postViewModel: ShortNotePostViewModel,
+private fun MarkdownPostScreenBody(
+    postViewModel: LongFormPostViewModel,
     accountViewModel: AccountViewModel,
     nav: Nav,
 ) {
@@ -256,65 +183,154 @@ private fun NewPostScreenBody(
                         .fillMaxWidth()
                         .verticalScroll(scrollState, reverseScrolling = true),
             ) {
-                postViewModel.originalNote?.let {
-                    Row {
-                        NoteCompose(
-                            baseNote = it,
-                            modifier = MaterialTheme.colorScheme.replyModifier,
-                            isQuotedNote = true,
-                            unPackReply = ReplyRenderType.NONE,
-                            makeItShort = true,
+                // Title field
+                OutlinedTextField(
+                    value = postViewModel.title,
+                    onValueChange = {
+                        postViewModel.title = it
+                        postViewModel.draftTag.newVersion()
+                    },
+                    label = { Text(stringRes(R.string.article_title)) },
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = Size10dp, vertical = Size5dp),
+                    textStyle =
+                        LocalTextStyle.current.copy(
+                            fontSize = 20.sp,
+                            textDirection = TextDirection.Content,
+                        ),
+                    singleLine = true,
+                    keyboardOptions =
+                        KeyboardOptions.Default.copy(
+                            capitalization = KeyboardCapitalization.Words,
+                        ),
+                )
+
+                // Summary field
+                OutlinedTextField(
+                    value = postViewModel.summary,
+                    onValueChange = {
+                        postViewModel.summary = it
+                        postViewModel.draftTag.newVersion()
+                    },
+                    label = { Text(stringRes(R.string.article_summary)) },
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = Size10dp, vertical = Size5dp),
+                    textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
+                    maxLines = 3,
+                    keyboardOptions =
+                        KeyboardOptions.Default.copy(
+                            capitalization = KeyboardCapitalization.Sentences,
+                        ),
+                )
+
+                val context = LocalContext.current
+
+                // Cover image URL field
+                OutlinedTextField(
+                    value = postViewModel.coverImageUrl,
+                    onValueChange = {
+                        postViewModel.coverImageUrl = it
+                        postViewModel.draftTag.newVersion()
+                    },
+                    label = { Text(stringRes(R.string.article_cover_image_url)) },
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = Size10dp, vertical = Size5dp),
+                    singleLine = true,
+                    placeholder = {
+                        Text(
+                            text = "https://mywebsite.com/mypost.jpg",
+                            color = MaterialTheme.colorScheme.placeholderText,
+                        )
+                    },
+                    leadingIcon = {
+                        SelectSingleFromGallery(
+                            isUploading = postViewModel.isUploadingCoverImage,
+                            tint = MaterialTheme.colorScheme.placeholderText,
+                            modifier = Modifier.padding(start = 5.dp),
+                        ) {
+                            postViewModel.uploadCoverImage(it, context, onError = accountViewModel.toastManager::toast)
+                        }
+                    },
+                )
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = Size5dp))
+
+                // Edit / Preview tabs
+                TabRow(
+                    selectedTabIndex = if (postViewModel.showPreview) 1 else 0,
+                ) {
+                    Tab(
+                        selected = !postViewModel.showPreview,
+                        onClick = { postViewModel.showPreview = false },
+                        text = { Text(stringRes(R.string.markdown_edit)) },
+                    )
+                    Tab(
+                        selected = postViewModel.showPreview,
+                        onClick = { postViewModel.showPreview = true },
+                        text = { Text(stringRes(R.string.markdown_preview)) },
+                    )
+                }
+
+                if (postViewModel.showPreview) {
+                    // Markdown preview (scrollable)
+                    val backgroundColor = remember { mutableStateOf(Color.Transparent) }
+                    Column(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(Size10dp),
+                    ) {
+                        RenderContentAsMarkdown(
+                            content = postViewModel.message.text,
+                            tags = EmptyTagList,
+                            canPreview = true,
                             quotesLeft = 1,
+                            backgroundColor = backgroundColor,
                             accountViewModel = accountViewModel,
                             nav = nav,
                         )
-                        Spacer(modifier = StdVertSpacer)
                     }
+                } else {
+                    // Markdown editor
+                    OutlinedTextField(
+                        value = postViewModel.message,
+                        onValueChange = postViewModel::updateMessage,
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = Size10dp, vertical = Size5dp),
+                        placeholder = {
+                            Text(
+                                text = stringRes(R.string.write_your_article_in_markdown),
+                                color = MaterialTheme.colorScheme.placeholderText,
+                            )
+                        },
+                        textStyle =
+                            LocalTextStyle.current.copy(
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 14.sp,
+                                textDirection = TextDirection.Content,
+                            ),
+                        colors =
+                            OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Color.Transparent,
+                                unfocusedBorderColor = Color.Transparent,
+                            ),
+                        visualTransformation = UrlUserTagTransformation(MaterialTheme.colorScheme.primary),
+                        keyboardOptions =
+                            KeyboardOptions.Default.copy(
+                                capitalization = KeyboardCapitalization.Sentences,
+                            ),
+                    )
                 }
 
-                Row {
-                    Notifying(postViewModel.pTags?.toImmutableList(), accountViewModel) {
-                        postViewModel.removeFromReplyList(it)
-                    }
-                }
-
-                // Only show text input if no voice message is being posted
-                if (postViewModel.voiceMetadata == null && postViewModel.voiceRecording == null) {
-                    Row(
-                        modifier = Modifier.padding(vertical = Size10dp),
-                    ) {
-                        BaseUserPicture(
-                            accountViewModel.userProfile(),
-                            Size35dp,
-                            accountViewModel = accountViewModel,
-                        )
-                        MessageField(
-                            R.string.what_s_on_your_mind,
-                            postViewModel,
-                        )
-                    }
-                }
-
-                if (postViewModel.wantsPoll) {
-                    Row(
-                        verticalAlignment = CenterVertically,
-                        modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
-                    ) {
-                        PollOptionsField(postViewModel)
-                    }
-                }
-
-                if (postViewModel.wantsZapPoll) {
-                    Row(
-                        verticalAlignment = CenterVertically,
-                        modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
-                    ) {
-                        ZapPollField(postViewModel)
-                    }
-                }
-
-                DisplayPreviews(postViewModel.urlPreviews, accountViewModel, nav)
-
+                // Content warning section
                 if (postViewModel.wantsToMarkAsSensitive) {
                     Row(
                         verticalAlignment = CenterVertically,
@@ -352,6 +368,7 @@ private fun NewPostScreenBody(
                     }
                 }
 
+                // Forward zap section
                 if (postViewModel.wantsForwardZapTo) {
                     Row(
                         verticalAlignment = CenterVertically,
@@ -361,6 +378,7 @@ private fun NewPostScreenBody(
                     }
                 }
 
+                // Image upload section
                 postViewModel.multiOrchestrator?.let {
                     Row(
                         verticalAlignment = CenterVertically,
@@ -370,61 +388,13 @@ private fun NewPostScreenBody(
                         ImageVideoDescription(
                             it,
                             accountViewModel.account.settings.defaultFileServer,
-                            isUploading = postViewModel.mediaUploadTracker.isUploading,
-                            onAdd = { alt, server, sensitiveContent, mediaQuality, useH265, stripMetadata ->
-                                postViewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, server, accountViewModel.toastManager::toast, context, useH265, stripMetadata)
+                            onAdd = { alt, server, sensitiveContent, mediaQuality, useH265 ->
+                                postViewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, server, accountViewModel.toastManager::toast, context, useH265)
                                 accountViewModel.account.settings.changeDefaultFileServer(server)
                             },
                             onDelete = postViewModel::deleteMediaToUpload,
                             onCancel = { postViewModel.multiOrchestrator = null },
                             accountViewModel = accountViewModel,
-                        )
-                    }
-                }
-
-                // Show preview for both uploaded messages (voiceMetadata) and pending recordings
-                (postViewModel.voiceMetadata ?: postViewModel.getVoicePreviewMetadata())?.let { metadata ->
-                    val fileServersState =
-                        accountViewModel.account.blossomServers.hostNameFlow
-                            .collectAsState()
-                    val fileServers = fileServersState.value
-
-                    Column(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = Size10dp, horizontal = Size10dp),
-                    ) {
-                        // Display voice preview or uploading progress
-                        postViewModel.voiceOrchestrator?.let { orchestrator ->
-                            UploadProgressIndicator(orchestrator)
-                        } ?: run {
-                            val displayMetadata =
-                                metadata.copy(
-                                    waveform = postViewModel.activeWaveform ?: metadata.waveform,
-                                )
-                            VoiceMessagePreview(
-                                voiceMetadata = displayMetadata,
-                                localFile = postViewModel.activeFile,
-                                onReRecord = { recording -> postViewModel.selectVoiceRecording(recording) },
-                                isUploading = postViewModel.isUploadingVoice,
-                                onRemove = { postViewModel.removeVoiceMessage() },
-                            )
-
-                            // Voice anonymization section (only show when not uploading and voice is pending)
-                            if (postViewModel.voiceRecording != null) {
-                                VoiceAnonymizationSection(
-                                    selectedPreset = postViewModel.selectedPreset,
-                                    processingPreset = postViewModel.processingPreset,
-                                    onPresetSelected = { postViewModel.selectPreset(it) },
-                                )
-                            }
-                        }
-
-                        FileServerSelectionRow(
-                            fileServers = fileServers,
-                            selectedServer = postViewModel.voiceSelectedServer ?: accountViewModel.account.settings.defaultFileServer,
-                            onSelect = { postViewModel.voiceSelectedServer = it },
                         )
                     }
                 }
@@ -465,6 +435,7 @@ private fun NewPostScreenBody(
                     }
                 }
 
+                // Zap raiser section
                 if (postViewModel.wantsZapRaiser && postViewModel.hasLnAddress()) {
                     Row(
                         verticalAlignment = CenterVertically,
@@ -479,6 +450,7 @@ private fun NewPostScreenBody(
             }
         }
 
+        // User suggestions
         postViewModel.userSuggestions?.let {
             ShowUserSuggestionList(
                 it,
@@ -488,6 +460,7 @@ private fun NewPostScreenBody(
             )
         }
 
+        // Emoji suggestions
         postViewModel.emojiSuggestions?.let {
             ShowEmojiSuggestionList(
                 it,
@@ -497,12 +470,13 @@ private fun NewPostScreenBody(
             )
         }
 
-        BottomRowActions(postViewModel)
+        // Bottom action bar
+        MarkdownBottomRowActions(postViewModel)
     }
 }
 
 @Composable
-private fun BottomRowActions(postViewModel: ShortNotePostViewModel) {
+private fun MarkdownBottomRowActions(postViewModel: LongFormPostViewModel) {
     val scrollState = rememberScrollState()
     Row(
         modifier =
@@ -514,7 +488,6 @@ private fun BottomRowActions(postViewModel: ShortNotePostViewModel) {
     ) {
         SelectFromGallery(
             isUploading = postViewModel.isUploadingImage,
-            enabled = !postViewModel.isUploadingFile,
             tint = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier,
         ) {
@@ -522,8 +495,7 @@ private fun BottomRowActions(postViewModel: ShortNotePostViewModel) {
         }
 
         SelectFromFiles(
-            isUploading = postViewModel.isUploadingFile,
-            enabled = !postViewModel.isUploadingImage,
+            isUploading = postViewModel.isUploadingImage,
             tint = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier,
         ) {
@@ -535,41 +507,6 @@ private fun BottomRowActions(postViewModel: ShortNotePostViewModel) {
                 postViewModel.selectImage(it)
             },
         )
-
-        TakeVideoButton(
-            onVideoTaken = {
-                postViewModel.selectImage(it)
-            },
-        )
-
-        RecordVoiceButton(
-            onVoiceTaken = { recording ->
-                postViewModel.selectVoiceRecording(recording)
-            },
-            maxDurationSeconds = MAX_VOICE_RECORD_SECONDS,
-        )
-
-        if (postViewModel.canUsePoll) {
-            AddPollButton(postViewModel.wantsPoll) {
-                postViewModel.wantsPoll = !postViewModel.wantsPoll
-                if (postViewModel.wantsPoll) {
-                    if (postViewModel.wantsZapPoll) {
-                        postViewModel.wantsZapPoll = false
-                    }
-                }
-            }
-        }
-
-        if (postViewModel.canUseZapPoll) {
-            AddZapPollButton(postViewModel.wantsZapPoll) {
-                postViewModel.wantsZapPoll = !postViewModel.wantsZapPoll
-                if (postViewModel.wantsZapPoll) {
-                    if (postViewModel.wantsPoll) {
-                        postViewModel.wantsPoll = false
-                    }
-                }
-            }
-        }
 
         ForwardZapToButton(postViewModel.wantsForwardZapTo) {
             postViewModel.wantsForwardZapTo = !postViewModel.wantsForwardZapTo
@@ -601,69 +538,6 @@ private fun BottomRowActions(postViewModel: ShortNotePostViewModel) {
             AddLnInvoiceButton(postViewModel.wantsInvoice) {
                 postViewModel.wantsInvoice = !postViewModel.wantsInvoice
             }
-        }
-    }
-}
-
-@SuppressLint("ViewModelConstructorInComposable")
-@Preview
-@Composable
-private fun BottomRowActionsPreview() {
-    val model = ShortNotePostViewModel()
-    model.canUsePoll = true
-    ThemeComparisonColumn {
-        BottomRowActions(model)
-    }
-}
-
-@Composable
-private fun AddZapPollButton(
-    isPollActive: Boolean,
-    onClick: () -> Unit,
-) {
-    IconButton(
-        onClick = { onClick() },
-    ) {
-        if (!isPollActive) {
-            Icon(
-                painter = painterRes(R.drawable.ic_poll, 1),
-                contentDescription = stringRes(id = R.string.poll),
-                modifier = Size19Modifier,
-                tint = MaterialTheme.colorScheme.onBackground,
-            )
-        } else {
-            Icon(
-                painter = painterRes(R.drawable.ic_poll, 1),
-                contentDescription = stringRes(id = R.string.disable_poll),
-                modifier = Size19Modifier,
-                tint = MaterialTheme.colorScheme.primary,
-            )
-        }
-    }
-}
-
-@Composable
-private fun AddPollButton(
-    isPollActive: Boolean,
-    onClick: () -> Unit,
-) {
-    IconButton(
-        onClick = { onClick() },
-    ) {
-        if (!isPollActive) {
-            Icon(
-                imageVector = Icons.Outlined.Poll,
-                contentDescription = stringRes(id = R.string.poll),
-                modifier = Modifier.height(22.dp),
-                tint = MaterialTheme.colorScheme.onBackground,
-            )
-        } else {
-            Icon(
-                imageVector = Icons.Outlined.Poll,
-                contentDescription = stringRes(id = R.string.disable_poll),
-                modifier = Modifier.height(22.dp),
-                tint = MaterialTheme.colorScheme.primary,
-            )
         }
     }
 }
