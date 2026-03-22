@@ -188,4 +188,9 @@ class PoolEventOutbox {
             }
         }
     }
+
+    fun destroy() {
+        eventOutbox = emptyMap()
+        relays.tryEmit(emptySet())
+    }
 }

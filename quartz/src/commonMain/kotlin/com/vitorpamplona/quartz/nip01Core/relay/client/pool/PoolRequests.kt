@@ -333,4 +333,11 @@ class PoolRequests {
             // They are the same don't do anything.
         }
     }
+
+    fun destroy() {
+        relayState.clear()
+        desiredSubs.clear()
+        desiredSubListeners.clear()
+        desiredRelays.tryEmit(emptySet())
+    }
 }
