@@ -353,6 +353,9 @@ dependencies {
     // GeoHash
     implementation libs.drfonfon.geohash
 
+    // OpenStreetMap for location picker
+    implementation libs.osmdroid
+
     // Waveform visualizer
     implementation libs.audiowaveform
 

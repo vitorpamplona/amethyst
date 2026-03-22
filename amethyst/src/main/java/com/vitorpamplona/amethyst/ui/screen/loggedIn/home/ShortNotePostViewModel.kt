@@ -277,6 +277,7 @@ open class ShortNotePostViewModel :
     var wantsToAddGeoHash by mutableStateOf(false)
     var location: StateFlow<LocationState.LocationResult>? = null
     var wantsExclusiveGeoPost by mutableStateOf(false)
+    var customGeohash by mutableStateOf<String?>(null)
 
     // ZapRaiser
     var canAddZapRaiser by mutableStateOf(false)
@@ -472,6 +473,7 @@ open class ShortNotePostViewModel :
 
         val geohash = draftEvent.getGeoHash()
         wantsToAddGeoHash = geohash != null
+        customGeohash = geohash
         if (geohash != null) {
             wantsExclusiveGeoPost = draftEvent.kind == CommentEvent.KIND
         }
@@ -558,6 +560,7 @@ open class ShortNotePostViewModel :
 
         val geohash = draftEvent.getGeoHash()
         wantsToAddGeoHash = geohash != null
+        customGeohash = geohash
         if (geohash != null) {
             wantsExclusiveGeoPost = draftEvent.kind == CommentEvent.KIND
         }
@@ -629,6 +632,7 @@ open class ShortNotePostViewModel :
 
         val geohash = draftEvent.getGeoHash()
         wantsToAddGeoHash = geohash != null
+        customGeohash = geohash
         if (geohash != null) {
             wantsExclusiveGeoPost = draftEvent.kind == CommentEvent.KIND
         }
@@ -808,7 +812,12 @@ open class ShortNotePostViewModel :
 
         val zapReceiver = if (wantsForwardZapTo) forwardZapTo.value.toZapSplitSetup() else null
 
-        val geoHash = if (wantsToAddGeoHash) (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString() else null
+        val geoHash =
+            if (wantsToAddGeoHash) {
+                customGeohash ?: (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString()
+            } else {
+                null
+            }
         val localZapRaiserAmount = if (wantsZapRaiser) zapRaiserAmount.value else null
 
         val emojis = findEmoji(tagger.message, account.emoji.myEmojis.value)
@@ -1072,6 +1081,7 @@ open class ShortNotePostViewModel :
         contentWarningDescription = ""
         wantsToAddGeoHash = false
         wantsExclusiveGeoPost = false
+        customGeohash = null
         wantsSecretEmoji = false
 
         forwardZapTo.value = SplitBuilder()

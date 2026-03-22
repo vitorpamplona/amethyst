@@ -24,6 +24,7 @@ import android.Manifest
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -31,10 +32,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Map
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment.Companion.CenterVertically
@@ -54,8 +57,15 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 @Composable
 fun LocationAsHash(
     postViewModel: ILocationGrabber,
+    customGeohash: String? = null,
+    onPickLocationOnMap: (() -> Unit)? = null,
     innerContent: @Composable () -> Unit = {},
 ) {
+    if (customGeohash != null) {
+        DisplayCustomLocationBox(customGeohash, onPickLocationOnMap, innerContent)
+        return
+    }
+
     val locationPermissionState =
         rememberPermissionState(
             Manifest.permission.ACCESS_COARSE_LOCATION,
@@ -66,7 +76,7 @@ fun LocationAsHash(
     }
 
     if (locationPermissionState.status.isGranted) {
-        DisplayLocationBox(postViewModel, innerContent)
+        DisplayLocationBox(postViewModel, onPickLocationOnMap, innerContent)
     } else {
         LaunchedEffect(locationPermissionState) { locationPermissionState.launchPermissionRequest() }
     }
@@ -75,6 +85,7 @@ fun LocationAsHash(
 @Composable
 fun DisplayLocationBox(
     model: ILocationGrabber,
+    onPickLocationOnMap: (() -> Unit)? = null,
     innerContent: @Composable () -> Unit,
 ) {
     Column(
@@ -108,6 +119,11 @@ fun DisplayLocationBox(
             )
 
             DisplayLocationObserver(model)
+
+            if (onPickLocationOnMap != null) {
+                Spacer(modifier = Modifier.weight(1f))
+                PickOnMapButton(onPickLocationOnMap)
+            }
         }
 
         HorizontalDivider(thickness = DividerThickness)
@@ -119,5 +135,77 @@ fun DisplayLocationBox(
         )
 
         innerContent()
+    }
+}
+
+@Composable
+fun DisplayCustomLocationBox(
+    geohash: String,
+    onPickLocationOnMap: (() -> Unit)? = null,
+    innerContent: @Composable () -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            verticalAlignment = CenterVertically,
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 10.dp),
+        ) {
+            Box(
+                Modifier
+                    .height(20.dp)
+                    .width(20.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.LocationOn,
+                    null,
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            }
+
+            Text(
+                text = stringRes(R.string.geohash_title),
+                fontSize = 20.sp,
+                fontWeight = FontWeight.W500,
+                modifier = Modifier.padding(start = 10.dp),
+            )
+
+            DisplayLocationInTitle(geohash = geohash)
+
+            if (onPickLocationOnMap != null) {
+                Spacer(modifier = Modifier.weight(1f))
+                PickOnMapButton(onPickLocationOnMap)
+            }
+        }
+
+        HorizontalDivider(thickness = DividerThickness)
+
+        Text(
+            text = stringRes(R.string.geohash_explainer),
+            color = MaterialTheme.colorScheme.placeholderText,
+            modifier = Modifier.padding(vertical = 10.dp),
+        )
+
+        innerContent()
+    }
+}
+
+@Composable
+private fun PickOnMapButton(onClick: () -> Unit) {
+    TextButton(onClick = onClick) {
+        Icon(
+            imageVector = Icons.Default.Map,
+            contentDescription = stringRes(R.string.pick_location_on_map),
+            modifier = Modifier.size(16.dp),
+        )
+        Text(
+            text = stringRes(R.string.pick_location_on_map),
+            fontSize = 12.sp,
+            modifier = Modifier.padding(start = 4.dp),
+        )
     }
 }

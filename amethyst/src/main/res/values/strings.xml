@@ -1336,6 +1336,12 @@
 
     <string name="add_location">Location</string>
     <string name="remove_location">Remove Location</string>
+    <string name="pick_location_on_map">Pick on map</string>
+    <string name="location_picker_title">Pick Location</string>
+    <string name="location_picker_description">Tap on the map to select a location</string>
+    <string name="location_picker_confirm">Select</string>
+    <string name="location_picker_selected">Selected location</string>
+    <string name="location_custom">Custom location</string>
 
     <string name="add_zap_split">Zap splits</string>
     <string name="cancel_zap_split">Cancel Zap split</string>

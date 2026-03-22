@@ -50,6 +50,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -87,6 +91,7 @@ import com.vitorpamplona.amethyst.ui.note.creators.invoice.AddLnInvoiceButton
 import com.vitorpamplona.amethyst.ui.note.creators.invoice.InvoiceRequest
 import com.vitorpamplona.amethyst.ui.note.creators.location.AddGeoHashButton
 import com.vitorpamplona.amethyst.ui.note.creators.location.LocationAsHash
+import com.vitorpamplona.amethyst.ui.note.creators.location.LocationPickerDialog
 import com.vitorpamplona.amethyst.ui.note.creators.messagefield.MessageField
 import com.vitorpamplona.amethyst.ui.note.creators.notify.Notifying
 import com.vitorpamplona.amethyst.ui.note.creators.polls.PollOptionsField
@@ -338,11 +343,17 @@ private fun NewPostScreenBody(
                 }
 
                 if (postViewModel.wantsToAddGeoHash) {
+                    var showLocationPicker by remember { mutableStateOf(false) }
+
                     Row(
                         verticalAlignment = CenterVertically,
                         modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
                     ) {
-                        LocationAsHash(postViewModel) {
+                        LocationAsHash(
+                            postViewModel = postViewModel,
+                            customGeohash = postViewModel.customGeohash,
+                            onPickLocationOnMap = { showLocationPicker = true },
+                        ) {
                             SettingsRow(
                                 R.string.geohash_exclusive,
                                 R.string.geohash_exclusive_explainer,
@@ -350,6 +361,23 @@ private fun NewPostScreenBody(
                                 Switch(postViewModel.wantsExclusiveGeoPost, onCheckedChange = { postViewModel.wantsExclusiveGeoPost = it })
                             }
                         }
+                    }
+
+                    if (showLocationPicker) {
+                        val currentLocation = postViewModel.location?.value
+                        val currentGeoHash =
+                            (currentLocation as? com.vitorpamplona.amethyst.service.location.LocationState.LocationResult.Success)
+                                ?.geoHash
+
+                        LocationPickerDialog(
+                            initialLatitude = currentGeoHash?.toLocation()?.latitude,
+                            initialLongitude = currentGeoHash?.toLocation()?.longitude,
+                            onLocationSelected = { geohash ->
+                                postViewModel.customGeohash = geohash
+                                showLocationPicker = false
+                            },
+                            onDismiss = { showLocationPicker = false },
+                        )
                     }
                 }
 
