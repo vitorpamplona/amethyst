@@ -444,7 +444,7 @@ fun ListContent(
 
         NavigationRow(
             title = R.string.my_lists,
-            icon = ImageVector.vectorResource(R.drawable.format_list_bulleted_type),
+            icon = Icons.AutoMirrored.Filled.FormatListBulleted,
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
             route = Route.Lists,
