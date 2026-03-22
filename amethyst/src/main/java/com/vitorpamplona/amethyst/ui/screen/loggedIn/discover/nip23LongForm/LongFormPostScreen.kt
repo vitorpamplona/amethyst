@@ -65,6 +65,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromFiles
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
+import com.vitorpamplona.amethyst.ui.actions.uploads.SelectSingleFromGallery
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakePictureButton
 import com.vitorpamplona.amethyst.ui.components.markdown.RenderContentAsMarkdown
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
@@ -226,6 +227,8 @@ private fun MarkdownPostScreenBody(
                         ),
                 )
 
+                val context = LocalContext.current
+
                 // Cover image URL field
                 OutlinedTextField(
                     value = postViewModel.coverImageUrl,
@@ -239,6 +242,21 @@ private fun MarkdownPostScreenBody(
                             .fillMaxWidth()
                             .padding(horizontal = Size10dp, vertical = Size5dp),
                     singleLine = true,
+                    placeholder = {
+                        Text(
+                            text = "https://mywebsite.com/mypost.jpg",
+                            color = MaterialTheme.colorScheme.placeholderText,
+                        )
+                    },
+                    leadingIcon = {
+                        SelectSingleFromGallery(
+                            isUploading = postViewModel.isUploadingCoverImage,
+                            tint = MaterialTheme.colorScheme.placeholderText,
+                            modifier = Modifier.padding(start = 5.dp),
+                        ) {
+                            postViewModel.uploadCoverImage(it, context, onError = accountViewModel.toastManager::toast)
+                        }
+                    },
                 )
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = Size5dp))

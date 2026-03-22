@@ -40,11 +40,15 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.location.LocationState
+import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
+import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
+import com.vitorpamplona.amethyst.service.uploads.nip96.Nip96Uploader
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.ui.note.creators.draftTags.DraftTagState
@@ -105,6 +109,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.uuid.ExperimentalUuidApi
 
 @Stable
@@ -137,6 +142,8 @@ class LongFormPostViewModel :
     var summary by mutableStateOf(TextFieldValue(""))
     var coverImageUrl by mutableStateOf("")
     var publishedAt by mutableLongStateOf(TimeUtils.now())
+
+    var isUploadingCoverImage by mutableStateOf(false)
 
     override var message by mutableStateOf(TextFieldValue(""))
 
@@ -380,6 +387,75 @@ class LongFormPostViewModel :
         if (myEmojiSet == null) return emptyList()
         return CustomEmoji.findAllEmojiCodes(message).mapNotNull { possibleEmoji ->
             myEmojiSet.firstOrNull { it.code == possibleEmoji }?.let { EmojiUrlTag(it.code, it.link) }
+        }
+    }
+
+    fun uploadCoverImage(
+        uri: SelectedMedia,
+        context: Context,
+        onError: (String, String) -> Unit,
+    ) {
+        accountViewModel.launchSigner {
+            isUploadingCoverImage = true
+            try {
+                directUpload(
+                    galleryUri = uri,
+                    context = context,
+                    onError = onError,
+                )?.let {
+                    coverImageUrl = it
+                }
+            } finally {
+                isUploadingCoverImage = false
+            }
+        }
+    }
+
+    private suspend fun directUpload(
+        galleryUri: SelectedMedia,
+        context: Context,
+        onError: (String, String) -> Unit,
+    ): String? {
+        val compResult = MediaCompressor().compress(galleryUri.uri, galleryUri.mimeType, CompressorQuality.MEDIUM, context.applicationContext)
+
+        return try {
+            val result =
+                if (account.settings.defaultFileServer.type == ServerType.NIP96) {
+                    Nip96Uploader().upload(
+                        uri = compResult.uri,
+                        contentType = compResult.contentType,
+                        size = compResult.size,
+                        alt = null,
+                        sensitiveContent = null,
+                        serverBaseUrl = account.settings.defaultFileServer.baseUrl,
+                        okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
+                        onProgress = {},
+                        httpAuth = account::createHTTPAuthorization,
+                        context = context,
+                    )
+                } else {
+                    BlossomUploader().upload(
+                        uri = compResult.uri,
+                        contentType = compResult.contentType,
+                        size = compResult.size,
+                        alt = null,
+                        sensitiveContent = null,
+                        serverBaseUrl = account.settings.defaultFileServer.baseUrl,
+                        okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
+                        httpAuth = account::createBlossomUploadAuth,
+                        context = context,
+                    )
+                }
+
+            if (result.url == null) {
+                onError(stringRes(context, R.string.failed_to_upload_media_no_details), stringRes(context, R.string.server_did_not_provide_a_url_after_uploading))
+            }
+
+            result.url
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            onError(stringRes(context, R.string.failed_to_upload_media_no_details), e.message ?: e.javaClass.simpleName)
+            null
         }
     }
 
