@@ -70,10 +70,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.bookmarks.dal.UserP
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.conversations.TabNotesConversations
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.conversations.dal.UserProfileConversationsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.datasource.UserProfileFilterAssemblerSubscription
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.followers.FollowersTabHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.followers.TabFollowers
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.followers.dal.UserProfileFollowersUserFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.follows.FollowTabHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.follows.TabFollows
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.follows.dal.UserProfileFollowsUserFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.gallery.TabGallery
@@ -93,7 +91,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.reports.ReportsTabH
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.reports.TabReports
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.reports.dal.UserProfileReportFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.TabReceivedZaps
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.ZapTabHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.dal.UserProfileZapsViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
@@ -391,9 +388,22 @@ private fun RenderScreen(
     nav: INav,
 ) {
     val pagerState = rememberPagerState { 11 }
+    val coroutineScope = rememberCoroutineScope()
 
     Column {
-        ProfileHeader(baseUser, appRecommendations, externalIdentities, nav, accountViewModel)
+        ProfileHeader(
+            baseUser,
+            appRecommendations,
+            externalIdentities,
+            followsFeedViewModel,
+            followersFeedViewModel,
+            zapFeedViewModel,
+            nav,
+            accountViewModel,
+            onFollowingClick = { coroutineScope.launch { pagerState.animateScrollToPage(4) } },
+            onFollowersClick = { coroutineScope.launch { pagerState.animateScrollToPage(5) } },
+            onZapsClick = { coroutineScope.launch { pagerState.animateScrollToPage(6) } },
+        )
         ScrollableTabRow(
             containerColor = Color.Transparent,
             contentColor = MaterialTheme.colorScheme.onBackground,
@@ -516,9 +526,9 @@ private fun CreateAndRenderTabs(
             { Text(text = stringRes(R.string.replies)) },
             { Text(text = stringRes(R.string.mutual)) },
             { Text(text = stringRes(R.string.gallery)) },
-            { FollowTabHeader(followsFeedViewModel, accountViewModel) },
-            { FollowersTabHeader(baseUser, followersFeedViewModel, accountViewModel) },
-            { ZapTabHeader(zapFeedViewModel, accountViewModel) },
+            { Text(text = stringRes(R.string.following).trim()) },
+            { Text(text = stringRes(R.string.followers).trim()) },
+            { Text(text = stringRes(R.string.zaps)) },
             { BookmarkTabHeader(baseUser, accountViewModel) },
             { FollowedTagsTabHeader(baseUser, accountViewModel) },
             { ReportsTabHeader(baseUser, accountViewModel) },

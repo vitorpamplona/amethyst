@@ -21,7 +21,14 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header
 
 import android.content.ClipData
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -51,6 +58,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
@@ -68,15 +79,15 @@ import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.followers.dal.UserProfileFollowersUserFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.follows.dal.UserProfileFollowsUserFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.apps.UserAppRecommendationsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.identity.UserExternalIdentitiesViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.dal.UserProfileZapsViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
-import com.vitorpamplona.amethyst.ui.theme.Size100dp
-import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.amethyst.ui.theme.userProfileBorderModifier
 import kotlinx.coroutines.launch
 
 @Composable
@@ -84,14 +95,21 @@ fun ProfileHeader(
     baseUser: User,
     appRecommendations: UserAppRecommendationsFeedViewModel,
     externalIdentities: UserExternalIdentitiesViewModel,
+    followsFeedViewModel: UserProfileFollowsUserFeedViewModel,
+    followersFeedViewModel: UserProfileFollowersUserFeedViewModel,
+    zapFeedViewModel: UserProfileZapsViewModel,
     nav: INav,
     accountViewModel: AccountViewModel,
+    onFollowingClick: () -> Unit,
+    onFollowersClick: () -> Unit,
+    onZapsClick: () -> Unit,
 ) {
     var popupExpanded by remember { mutableStateOf(false) }
 
     Box {
         DrawBanner(baseUser, accountViewModel)
 
+        // More options button in top-right
         Box(
             modifier =
                 Modifier
@@ -109,7 +127,7 @@ fun ProfileHeader(
                 shape = ButtonBorder,
                 colors =
                     ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.background,
+                        containerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.7f),
                     ),
                 contentPadding = ZeroPadding,
             ) {
@@ -128,37 +146,121 @@ fun ProfileHeader(
             }
         }
 
+        // Main content overlapping the banner
         Column(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 10.dp)
-                    .padding(top = 100.dp),
+                    .padding(top = 140.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Bottom,
-            ) {
-                ProfilePictureWithUploadOverlay(
-                    baseUser = baseUser,
-                    accountViewModel = accountViewModel,
-                    size = Size100dp,
-                )
+            // Avatar with animated ring - overlaps banner
+            ProfilePictureWithAnimatedRing(
+                baseUser = baseUser,
+                accountViewModel = accountViewModel,
+                size = 110.dp,
+            )
 
-                Row(
-                    modifier =
-                        Modifier
-                            .height(Size35dp)
-                            .padding(bottom = 3.dp),
-                ) {
-                    ProfileActions(baseUser, accountViewModel, nav)
-                }
+            // Action buttons row right below avatar
+            Row(
+                modifier =
+                    Modifier
+                        .padding(top = 8.dp)
+                        .height(35.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                ProfileActions(baseUser, accountViewModel, nav)
             }
 
-            DrawAdditionalInfo(baseUser, appRecommendations, externalIdentities, accountViewModel, nav)
+            // Stats row: Following | Followers | Zaps
+            ProfileStatsRow(
+                baseUser = baseUser,
+                followsFeedViewModel = followsFeedViewModel,
+                followersFeedViewModel = followersFeedViewModel,
+                zapFeedViewModel = zapFeedViewModel,
+                accountViewModel = accountViewModel,
+                onFollowingClick = onFollowingClick,
+                onFollowersClick = onFollowersClick,
+                onZapsClick = onZapsClick,
+            )
+
+            // Additional info (name, bio, etc.)
+            Column(modifier = Modifier.padding(horizontal = 10.dp)) {
+                DrawAdditionalInfo(baseUser, appRecommendations, externalIdentities, accountViewModel, nav)
+            }
 
             HorizontalDivider(modifier = Modifier.padding(top = 6.dp))
+        }
+    }
+}
+
+@Composable
+fun ProfilePictureWithAnimatedRing(
+    baseUser: User,
+    accountViewModel: AccountViewModel,
+    size: Dp,
+) {
+    val isMe by remember(accountViewModel) { derivedStateOf { accountViewModel.userProfile() == baseUser } }
+
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val secondaryColor = MaterialTheme.colorScheme.tertiary
+    val backgroundColor = MaterialTheme.colorScheme.background
+
+    val infiniteTransition = rememberInfiniteTransition(label = "profile_ring")
+    val rotation by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec =
+            infiniteRepeatable(
+                animation = tween(8000, easing = LinearEasing),
+                repeatMode = RepeatMode.Restart,
+            ),
+        label = "ring_rotation",
+    )
+
+    val ringBrush =
+        remember(primaryColor, secondaryColor) {
+            Brush.sweepGradient(
+                listOf(
+                    primaryColor,
+                    secondaryColor,
+                    primaryColor.copy(alpha = 0.3f),
+                    secondaryColor,
+                    primaryColor,
+                ),
+            )
+        }
+
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier =
+            Modifier
+                .size(size + 8.dp)
+                .drawBehind {
+                    rotate(rotation) {
+                        drawCircle(
+                            brush = ringBrush,
+                            radius = (size.toPx() + 8.dp.toPx()) / 2f,
+                            style = Stroke(width = 3.dp.toPx()),
+                        )
+                    }
+                },
+    ) {
+        // White/background ring to separate avatar from animated ring
+        Box(
+            modifier =
+                Modifier
+                    .size(size + 4.dp)
+                    .clip(CircleShape)
+                    .background(backgroundColor),
+            contentAlignment = Alignment.Center,
+        ) {
+            ProfilePictureWithUploadOverlay(
+                baseUser = baseUser,
+                accountViewModel = accountViewModel,
+                size = size,
+            )
         }
     }
 }
@@ -178,7 +280,7 @@ fun ZoomableUserPicture(
         baseUser = baseUser,
         accountViewModel = accountViewModel,
         size = size,
-        modifier = MaterialTheme.colorScheme.userProfileBorderModifier,
+        modifier = Modifier.border(0.dp, MaterialTheme.colorScheme.background, CircleShape),
         onClick = {
             val pic = baseUser.profilePicture()
             if (pic != null) {

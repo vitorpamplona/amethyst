@@ -22,10 +22,13 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Mail
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.User
@@ -35,8 +38,35 @@ import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
+
+@Preview
+@Composable
+fun MessageButtonPreview() {
+    ThemeComparisonRow {
+        InnerMessageButton {}
+    }
+}
+
+@Composable
+private fun InnerMessageButton(onClick: () -> Unit) {
+    FilledTonalButton(
+        modifier =
+            Modifier
+                .padding(horizontal = 3.dp)
+                .width(50.dp),
+        onClick = onClick,
+        contentPadding = ZeroPadding,
+    ) {
+        Icon(
+            imageVector = Icons.Default.Mail,
+            contentDescription = "Message",
+            modifier = Size20Modifier,
+        )
+    }
+}
 
 @Composable
 fun MessageButton(

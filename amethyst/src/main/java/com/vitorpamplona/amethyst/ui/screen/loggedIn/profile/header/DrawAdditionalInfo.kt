@@ -21,6 +21,11 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header
 
 import android.content.ClipData
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
@@ -30,6 +35,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -40,6 +47,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -49,6 +57,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -77,7 +86,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.identity.Use
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.ui.theme.SpacedBy3dp
-import com.vitorpamplona.amethyst.ui.theme.SpacedBy5dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -112,17 +120,21 @@ fun DrawAdditionalInfo(
 
     val displayName = user.info.bestName()
 
+    var showTechnicalDetails by remember { mutableStateOf(false) }
+
     Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = SpacedBy3dp) {
+        // Display name - centered, large
         if (displayName != null) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(top = 7.dp),
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
             ) {
                 CreateTextWithEmoji(
                     text = displayName,
                     tags = user.tags,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 22.sp,
+                    fontSize = 24.sp,
                 )
                 Spacer(StdHorzSpacer)
                 user.info.pronouns?.let {
@@ -133,84 +145,26 @@ fun DrawAdditionalInfo(
                     )
                     Spacer(StdHorzSpacer)
                 }
-
                 DrawPlayName(displayName)
             }
         }
 
+        // Username (if different from display name) - centered
         if (displayName != user.info.name && !user.info.name.isNullOrBlank()) {
             Text(
                 color = MaterialTheme.colorScheme.placeholderText,
                 text = "@" + user.info.name,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
             )
         }
 
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = baseUser.pubkeyDisplayHex(),
-                color = MaterialTheme.colorScheme.placeholderText,
-                maxLines = 1,
-            )
-
-            IconButton(
-                modifier = Modifier.size(23.dp).padding(start = 5.dp),
-                onClick = {
-                    scope.launch {
-                        clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("npub", baseUser.pubkeyNpub())))
-                    }
-                },
-            ) {
-                Icon(
-                    imageVector = Icons.Default.ContentCopy,
-                    contentDescription = stringRes(id = R.string.copy_npub_to_clipboard),
-                    modifier = Size15Modifier,
-                    tint = MaterialTheme.colorScheme.placeholderText,
-                )
-            }
-        }
-
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = baseUser.toNProfile().toShortDisplay(6),
-                color = MaterialTheme.colorScheme.placeholderText,
-                maxLines = 1,
-            )
-
-            IconButton(
-                modifier = Modifier.size(23.dp).padding(start = 5.dp),
-                onClick = {
-                    scope.launch {
-                        clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("nprofile", baseUser.toNProfile())))
-                    }
-                },
-            ) {
-                Icon(
-                    imageVector = Icons.Default.ContentCopy,
-                    contentDescription = stringRes(id = R.string.copy_nprofile_to_clipboard),
-                    modifier = Size15Modifier,
-                    tint = MaterialTheme.colorScheme.placeholderText,
-                )
-            }
-
-            IconButton(
-                modifier = Modifier.size(23.dp),
-                onClick = { nav.nav(Route.QRDisplay(baseUser.pubkeyHex)) },
-            ) {
-                Icon(
-                    painter = painterRes(R.drawable.ic_qrcode, 1),
-                    contentDescription = stringRes(id = R.string.show_nprofile_as_a_qr_code),
-                    modifier = Size15Modifier,
-                    tint = MaterialTheme.colorScheme.placeholderText,
-                )
-            }
-        }
-
-        DisplayLastSeen(baseUser, accountViewModel)
-
+        // NIP-05 verification - centered
         DisplayNip05ProfileStatus(baseUser, accountViewModel)
 
+        // Lightning address
         val lud16 =
             remember(userState) {
                 userState?.info?.lud16?.trim()
@@ -218,9 +172,14 @@ fun DrawAdditionalInfo(
             }
         DisplayLNAddress(lud16, baseUser, accountViewModel, nav)
 
+        // Website
         val website = user.info.website
         if (!website.isNullOrEmpty()) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
                 Icon(
                     tint = MaterialTheme.colorScheme.placeholderText,
                     imageVector = Icons.Default.Link,
@@ -244,28 +203,39 @@ fun DrawAdditionalInfo(
             }
         }
 
+        // External identities
         val displayIdentities = identities.ifEmpty { user.identities }
         if (displayIdentities.isNotEmpty()) {
-            displayIdentities.forEach { identity: IdentityClaimTag ->
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        tint = Color.Unspecified,
-                        painter = painterRes(resourceId = getIdentityClaimIcon(identity), IDENTITY_ICON_CACHE_KEY),
-                        contentDescription = stringRes(getIdentityClaimDescription(identity)),
-                        modifier = Modifier.size(18.dp),
-                    )
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
+            ) {
+                displayIdentities.forEach { identity: IdentityClaimTag ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 6.dp),
+                    ) {
+                        Icon(
+                            tint = Color.Unspecified,
+                            painter = painterRes(resourceId = getIdentityClaimIcon(identity), IDENTITY_ICON_CACHE_KEY),
+                            contentDescription = stringRes(getIdentityClaimDescription(identity)),
+                            modifier = Modifier.size(18.dp),
+                        )
 
-                    ClickableTextPrimary(
-                        text = identity.identity,
-                        onClick = { runCatching { uri.openUri(identity.toProofUrl()) } },
-                        modifier = Modifier.padding(horizontal = 5.dp),
-                    )
+                        ClickableTextPrimary(
+                            text = identity.identity,
+                            onClick = { runCatching { uri.openUri(identity.toProofUrl()) } },
+                            modifier = Modifier.padding(horizontal = 5.dp),
+                        )
+                    }
                 }
             }
         }
 
+        // Badges
         DisplayBadges(baseUser, accountViewModel, nav)
 
+        // Bio/About section
         user.info.about?.let {
             Row(
                 modifier = Modifier.padding(top = 10.dp, bottom = 5.dp),
@@ -286,6 +256,119 @@ fun DrawAdditionalInfo(
             }
         }
 
+        // Collapsible technical details (npub, nprofile, last seen)
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clickable { showTechnicalDetails = !showTechnicalDetails }
+                    .padding(vertical = 4.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = baseUser.pubkeyDisplayHex(),
+                color = MaterialTheme.colorScheme.placeholderText,
+                maxLines = 1,
+                fontSize = 12.sp,
+            )
+            Icon(
+                imageVector =
+                    if (showTechnicalDetails) {
+                        Icons.Default.ExpandLess
+                    } else {
+                        Icons.Default.ExpandMore
+                    },
+                contentDescription = stringRes(R.string.show_more),
+                modifier = Modifier.size(18.dp),
+                tint = MaterialTheme.colorScheme.placeholderText,
+            )
+        }
+
+        AnimatedVisibility(
+            visible = showTechnicalDetails,
+            enter = expandVertically(),
+            exit = shrinkVertically(),
+        ) {
+            Column(verticalArrangement = SpacedBy3dp) {
+                // npub
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        text = baseUser.pubkeyDisplayHex(),
+                        color = MaterialTheme.colorScheme.placeholderText,
+                        maxLines = 1,
+                        fontSize = 12.sp,
+                    )
+
+                    IconButton(
+                        modifier = Modifier.size(23.dp).padding(start = 5.dp),
+                        onClick = {
+                            scope.launch {
+                                clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("npub", baseUser.pubkeyNpub())))
+                            }
+                        },
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ContentCopy,
+                            contentDescription = stringRes(id = R.string.copy_npub_to_clipboard),
+                            modifier = Size15Modifier,
+                            tint = MaterialTheme.colorScheme.placeholderText,
+                        )
+                    }
+                }
+
+                // nprofile
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        text = baseUser.toNProfile().toShortDisplay(6),
+                        color = MaterialTheme.colorScheme.placeholderText,
+                        maxLines = 1,
+                        fontSize = 12.sp,
+                    )
+
+                    IconButton(
+                        modifier = Modifier.size(23.dp).padding(start = 5.dp),
+                        onClick = {
+                            scope.launch {
+                                clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("nprofile", baseUser.toNProfile())))
+                            }
+                        },
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ContentCopy,
+                            contentDescription = stringRes(id = R.string.copy_nprofile_to_clipboard),
+                            modifier = Size15Modifier,
+                            tint = MaterialTheme.colorScheme.placeholderText,
+                        )
+                    }
+
+                    IconButton(
+                        modifier = Modifier.size(23.dp),
+                        onClick = { nav.nav(Route.QRDisplay(baseUser.pubkeyHex)) },
+                    ) {
+                        Icon(
+                            painter = painterRes(R.drawable.ic_qrcode, 1),
+                            contentDescription = stringRes(id = R.string.show_nprofile_as_a_qr_code),
+                            modifier = Size15Modifier,
+                            tint = MaterialTheme.colorScheme.placeholderText,
+                        )
+                    }
+                }
+
+                // Last seen
+                DisplayLastSeen(baseUser, accountViewModel)
+            }
+        }
+
+        // App recommendations
         DisplayAppRecommendations(appRecommendations, accountViewModel, nav)
     }
 }
@@ -313,6 +396,9 @@ fun DisplayLastSeen(
             color = MaterialTheme.colorScheme.placeholderText,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
+            fontSize = 12.sp,
         )
     }
 }
@@ -326,7 +412,11 @@ fun DisplayNip05ProfileStatus(
 
     when (val nip05State = nip05StateMetadata) {
         is Nip05State.Exists -> {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = SpacedBy5dp) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
                 ObserveAndRenderNIP05VerifiedSymbol(nip05State, 2, Size15Modifier, accountViewModel)
 
                 val uri = LocalUriHandler.current
@@ -349,7 +439,7 @@ fun DisplayNip05ProfileStatus(
             }
         }
 
-        else -> { }
+        else -> {}
     }
 }
 
