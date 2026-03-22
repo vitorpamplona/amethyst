@@ -33,6 +33,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.coroutineContext
+import kotlin.math.min
 
 /**
  * Downloads all pages of events matching [filters] from a single [relay] using
@@ -70,9 +71,19 @@ suspend fun INostrClient.reqBypassingRelayLimits(
     while (true) {
         coroutineContext.ensureActive()
 
+        val pagedFilters =
+            if (until == null) {
+                filters
+            } else {
+                onNewPage?.invoke(until)
+                filters.map {
+                    it.copy(until = until)
+                }
+            }
+
         // Only include filters that still need more events.
         val remainingFilters =
-            filters.filterIndexed { index, filter ->
+            pagedFilters.filterIndexed { index, filter ->
                 val limit = filter.limit
                 limit == null || matchCountPerFilter[index] < limit
             }
@@ -81,82 +92,79 @@ suspend fun INostrClient.reqBypassingRelayLimits(
 
         val doneChannel = Channel<Unit>(Channel.CONFLATED)
 
-        val activeFilters =
-            if (until == null) {
-                remainingFilters
-            } else {
-                onNewPage?.invoke(until)
-                remainingFilters.map { it.copy(until = until) }
-            }
-
         var pageCount = 0
         var pageMinTs = Long.MAX_VALUE
 
-        val listener =
-            object : IRequestListener {
-                override fun onEvent(
-                    event: Event,
-                    isLive: Boolean,
-                    relayInner: NormalizedRelayUrl,
-                    forFilters: List<Filter>?,
-                ) {
-                    onEvent(event)
-                    pageCount++
-                    if (event.createdAt < pageMinTs) pageMinTs = event.createdAt
-
-                    // Count this event against every base filter it matches.
-                    if (matchCountPerFilter.size == 1) {
-                        // no need to run the match.
-                        matchCountPerFilter[0]++
-                    } else {
-                        for (i in filters.indices) {
-                            val limit = filters[i].limit
-                            if ((limit == null || matchCountPerFilter[i] < limit) && filters[i].match(event)) {
+        try {
+            val listener =
+                object : IRequestListener {
+                    override fun onEvent(
+                        event: Event,
+                        isLive: Boolean,
+                        relay: NormalizedRelayUrl,
+                        forFilters: List<Filter>?,
+                    ) {
+                        // Check if the relay is returning what we asked before moving forward
+                        var atLeastOne = false
+                        for (i in pagedFilters.indices) {
+                            val limit = pagedFilters[i].limit
+                            if ((limit == null || matchCountPerFilter[i] < limit) && pagedFilters[i].match(event)) {
                                 matchCountPerFilter[i]++
+                                atLeastOne = true
+                            }
+                        }
+                        if (atLeastOne) {
+                            onEvent(event)
+                            pageCount++
+                            if (event.createdAt < pageMinTs) {
+                                pageMinTs = event.createdAt
                             }
                         }
                     }
+
+                    override fun onEose(
+                        relay: NormalizedRelayUrl,
+                        forFilters: List<Filter>?,
+                    ) {
+                        doneChannel.trySend(Unit)
+                    }
+
+                    override fun onClosed(
+                        message: String,
+                        relay: NormalizedRelayUrl,
+                        forFilters: List<Filter>?,
+                    ) {
+                        doneChannel.trySend(Unit)
+                    }
+
+                    override fun onCannotConnect(
+                        relay: NormalizedRelayUrl,
+                        message: String,
+                        forFilters: List<Filter>?,
+                    ) {
+                        doneChannel.trySend(Unit)
+                    }
                 }
 
-                override fun onEose(
-                    relayInner: NormalizedRelayUrl,
-                    forFilters: List<Filter>?,
-                ) {
-                    doneChannel.trySend(Unit)
-                }
+            openReqSubscription(subId, mapOf(relay to remainingFilters), listener)
 
-                override fun onClosed(
-                    message: String,
-                    relayInner: NormalizedRelayUrl,
-                    forFilters: List<Filter>?,
-                ) {
-                    doneChannel.trySend(Unit)
-                }
-
-                override fun onCannotConnect(
-                    relayInner: NormalizedRelayUrl,
-                    message: String,
-                    forFilters: List<Filter>?,
-                ) {
-                    doneChannel.trySend(Unit)
-                }
+            withTimeoutOrNull(timeoutMs) {
+                doneChannel.receive()
             }
 
-        openReqSubscription(subId, mapOf(relay to activeFilters), listener)
-
-        withTimeoutOrNull(timeoutMs) {
-            doneChannel.receive()
+            close(subId)
+            doneChannel.close()
+        } finally {
+            close(subId)
+            doneChannel.close()
         }
-
-        close(subId)
-        doneChannel.close()
 
         if (pageCount == 0) break
 
         totalEvents += pageCount
 
         // Advance cursor: next page starts just before the oldest event seen.
-        until = pageMinTs - 1
+        until = min((until ?: Long.MAX_VALUE) - 1, pageMinTs - 1)
     }
 
     return totalEvents
