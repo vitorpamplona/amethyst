@@ -223,7 +223,7 @@ private fun NewProductBody(
             if (postViewModel.wantsToMarkAsSensitive) {
                 Row(
                     verticalAlignment = CenterVertically,
-                    modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
+                    modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
                 ) {
                     ContentSensitivityExplainer(
                         description = postViewModel.contentWarningDescription,
@@ -235,7 +235,7 @@ private fun NewProductBody(
             if (postViewModel.wantsExpirationDate) {
                 Row(
                     verticalAlignment = CenterVertically,
-                    modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
+                    modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
                 ) {
                     ExpirationDatePicker(postViewModel)
                 }
@@ -244,7 +244,7 @@ private fun NewProductBody(
             if (postViewModel.wantsToAddGeoHash) {
                 Row(
                     verticalAlignment = CenterVertically,
-                    modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
+                    modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
                 ) {
                     LocationAsHash(postViewModel)
                 }
@@ -253,7 +253,7 @@ private fun NewProductBody(
             if (postViewModel.wantsForwardZapTo) {
                 Row(
                     verticalAlignment = CenterVertically,
-                    modifier = Modifier.padding(top = Size5dp, bottom = Size5dp, start = Size10dp),
+                    modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
                 ) {
                     ForwardZapTo(postViewModel, accountViewModel)
                 }
@@ -262,7 +262,7 @@ private fun NewProductBody(
             postViewModel.multiOrchestrator?.let {
                 Row(
                     verticalAlignment = CenterVertically,
-                    modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
+                    modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
                 ) {
                     val context = LocalContext.current
 
@@ -282,25 +282,30 @@ private fun NewProductBody(
 
             if (postViewModel.wantsInvoice) {
                 postViewModel.lnAddress()?.let { lud16 ->
-                    InvoiceRequest(
-                        lud16,
-                        accountViewModel.account.userProfile(),
-                        accountViewModel,
-                        stringRes(id = R.string.lightning_invoice),
-                        stringRes(id = R.string.lightning_create_and_add_invoice),
-                        onNewInvoice = {
-                            postViewModel.insertAtCursor(it)
-                            postViewModel.wantsInvoice = false
-                        },
-                        onError = { title, message -> accountViewModel.toastManager.toast(title, message) },
-                    )
+                    Row(
+                        verticalAlignment = CenterVertically,
+                        modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
+                    ) {
+                        InvoiceRequest(
+                            lud16,
+                            accountViewModel.account.userProfile(),
+                            accountViewModel,
+                            stringRes(id = R.string.lightning_invoice),
+                            stringRes(id = R.string.lightning_create_and_add_invoice),
+                            onNewInvoice = {
+                                postViewModel.insertAtCursor(it)
+                                postViewModel.wantsInvoice = false
+                            },
+                            onError = { title, message -> accountViewModel.toastManager.toast(title, message) },
+                        )
+                    }
                 }
             }
 
             if (postViewModel.wantsSecretEmoji) {
                 Row(
                     verticalAlignment = CenterVertically,
-                    modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
+                    modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
                 ) {
                     Column(Modifier.fillMaxWidth()) {
                         SecretEmojiRequest {
@@ -314,7 +319,7 @@ private fun NewProductBody(
             if (postViewModel.wantsZapraiser && postViewModel.hasLnAddress()) {
                 Row(
                     verticalAlignment = CenterVertically,
-                    modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
+                    modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
                 ) {
                     ZapRaiserRequest(
                         stringRes(id = R.string.zapraiser),

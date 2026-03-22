@@ -99,7 +99,7 @@ fun ExpirationDatePicker(model: IExpiration) {
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 10.dp),
+                    .padding(bottom = 5.dp),
         ) {
             Icon(
                 imageVector = Icons.Outlined.Timer,

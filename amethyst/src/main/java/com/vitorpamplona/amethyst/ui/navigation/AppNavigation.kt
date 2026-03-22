@@ -79,6 +79,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessGameScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessLobbyScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.CommunityScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.DiscoverScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip23LongForm.LongFormPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip99Classifieds.NewProductScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.drafts.DraftListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.DvmContentDiscoveryScreen
@@ -88,7 +89,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.GeoHashScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.HashtagPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.HashtagScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.HomeScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.MarkdownPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ShortNotePostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.VoiceReplyScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.keyBackup.AccountBackupScreen
@@ -311,8 +311,8 @@ fun AppNavigation(
                 )
             }
 
-            composableFromBottomArgs<Route.NewMarkdownPost> {
-                MarkdownPostScreen(
+            composableFromBottomArgs<Route.NewLongFormPost> {
+                LongFormPostScreen(
                     draft = it.draft?.let { hex -> accountViewModel.getNoteIfExists(hex) },
                     version = it.version?.let { hex -> accountViewModel.getNoteIfExists(hex) },
                     accountViewModel = accountViewModel,

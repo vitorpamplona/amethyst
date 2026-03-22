@@ -59,7 +59,7 @@ fun ContentSensitivityExplainer(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 10.dp),
+                    .padding(bottom = 5.dp),
         ) {
             Box(
                 Modifier

@@ -104,7 +104,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
-import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightPage
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
@@ -293,7 +292,7 @@ private fun NewPostScreenBody(
                 if (postViewModel.wantsPoll) {
                     Row(
                         verticalAlignment = CenterVertically,
-                        modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
+                        modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
                     ) {
                         PollOptionsField(postViewModel)
                     }
@@ -304,7 +303,7 @@ private fun NewPostScreenBody(
                 if (postViewModel.wantsToMarkAsSensitive) {
                     Row(
                         verticalAlignment = CenterVertically,
-                        modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
+                        modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
                     ) {
                         ContentSensitivityExplainer(
                             description = postViewModel.contentWarningDescription,
@@ -316,7 +315,7 @@ private fun NewPostScreenBody(
                 if (postViewModel.wantsExpirationDate) {
                     Row(
                         verticalAlignment = CenterVertically,
-                        modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
+                        modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
                     ) {
                         ExpirationDatePicker(postViewModel)
                     }
@@ -325,7 +324,7 @@ private fun NewPostScreenBody(
                 if (postViewModel.wantsToAddGeoHash) {
                     Row(
                         verticalAlignment = CenterVertically,
-                        modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
+                        modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
                     ) {
                         LocationAsHash(postViewModel) {
                             SettingsRow(
@@ -341,7 +340,7 @@ private fun NewPostScreenBody(
                 if (postViewModel.wantsForwardZapTo) {
                     Row(
                         verticalAlignment = CenterVertically,
-                        modifier = Modifier.padding(top = Size5dp, bottom = Size5dp, start = Size10dp),
+                        modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
                     ) {
                         ForwardZapTo(postViewModel, accountViewModel)
                     }
@@ -350,7 +349,7 @@ private fun NewPostScreenBody(
                 postViewModel.multiOrchestrator?.let {
                     Row(
                         verticalAlignment = CenterVertically,
-                        modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
+                        modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
                     ) {
                         val context = LocalContext.current
                         ImageVideoDescription(
@@ -378,7 +377,7 @@ private fun NewPostScreenBody(
                         modifier =
                             Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = Size5dp, horizontal = Size10dp),
+                                .padding(vertical = Size10dp, horizontal = Size10dp),
                     ) {
                         // Display voice preview or uploading progress
                         postViewModel.voiceOrchestrator?.let { orchestrator ->
@@ -416,25 +415,30 @@ private fun NewPostScreenBody(
 
                 if (postViewModel.wantsInvoice) {
                     postViewModel.lnAddress()?.let { lud16 ->
-                        InvoiceRequest(
-                            lud16,
-                            accountViewModel.account.userProfile(),
-                            accountViewModel,
-                            stringRes(id = R.string.lightning_invoice),
-                            stringRes(id = R.string.lightning_create_and_add_invoice),
-                            onNewInvoice = {
-                                postViewModel.insertAtCursor(it)
-                                postViewModel.wantsInvoice = false
-                            },
-                            onError = { title, message -> accountViewModel.toastManager.toast(title, message) },
-                        )
+                        Row(
+                            verticalAlignment = CenterVertically,
+                            modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
+                        ) {
+                            InvoiceRequest(
+                                lud16,
+                                accountViewModel.account.userProfile(),
+                                accountViewModel,
+                                stringRes(id = R.string.lightning_invoice),
+                                stringRes(id = R.string.lightning_create_and_add_invoice),
+                                onNewInvoice = {
+                                    postViewModel.insertAtCursor(it)
+                                    postViewModel.wantsInvoice = false
+                                },
+                                onError = { title, message -> accountViewModel.toastManager.toast(title, message) },
+                            )
+                        }
                     }
                 }
 
                 if (postViewModel.wantsSecretEmoji) {
                     Row(
                         verticalAlignment = CenterVertically,
-                        modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
+                        modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
                     ) {
                         Column(Modifier.fillMaxWidth()) {
                             SecretEmojiRequest {
@@ -448,7 +452,7 @@ private fun NewPostScreenBody(
                 if (postViewModel.wantsZapRaiser && postViewModel.hasLnAddress()) {
                     Row(
                         verticalAlignment = CenterVertically,
-                        modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
+                        modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
                     ) {
                         ZapRaiserRequest(
                             stringRes(id = R.string.zapraiser),

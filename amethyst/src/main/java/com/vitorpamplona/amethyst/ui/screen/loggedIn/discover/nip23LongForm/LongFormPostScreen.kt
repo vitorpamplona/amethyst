@@ -18,14 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.nip22Comments
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip23LongForm
 
-import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -33,30 +31,44 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromFiles
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
-import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakePictureButton
-import com.vitorpamplona.amethyst.ui.actions.uploads.TakeVideoButton
+import com.vitorpamplona.amethyst.ui.components.markdown.RenderContentAsMarkdown
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.PostingTopBar
-import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
-import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.creators.contentWarning.ContentSensitivityExplainer
 import com.vitorpamplona.amethyst.ui.note.creators.contentWarning.MarkAsSensitiveButton
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.ShowEmojiSuggestionList
@@ -67,9 +79,6 @@ import com.vitorpamplona.amethyst.ui.note.creators.invoice.AddLnInvoiceButton
 import com.vitorpamplona.amethyst.ui.note.creators.invoice.InvoiceRequest
 import com.vitorpamplona.amethyst.ui.note.creators.location.AddGeoHashButton
 import com.vitorpamplona.amethyst.ui.note.creators.location.LocationAsHash
-import com.vitorpamplona.amethyst.ui.note.creators.messagefield.MessageField
-import com.vitorpamplona.amethyst.ui.note.creators.notify.Notifying
-import com.vitorpamplona.amethyst.ui.note.creators.previews.DisplayPreviews
 import com.vitorpamplona.amethyst.ui.note.creators.secretEmoji.AddSecretEmojiButton
 import com.vitorpamplona.amethyst.ui.note.creators.secretEmoji.SecretEmojiRequest
 import com.vitorpamplona.amethyst.ui.note.creators.uploads.ImageVideoDescription
@@ -78,65 +87,30 @@ import com.vitorpamplona.amethyst.ui.note.creators.zapraiser.AddZapraiserButton
 import com.vitorpamplona.amethyst.ui.note.creators.zapraiser.ZapRaiserRequest
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapTo
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapToButton
-import com.vitorpamplona.amethyst.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ObserveInboxRelayListAndDisplayIfNotFound
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
-import com.vitorpamplona.amethyst.ui.theme.Size35dp
-import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightPage
-import com.vitorpamplona.amethyst.ui.theme.replyModifier
-import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-
-@Composable
-fun ReplyCommentPostScreen(
-    reply: Note? = null,
-    message: String? = null,
-    attachment: Uri? = null,
-    quote: Note? = null,
-    draft: Note? = null,
-    accountViewModel: AccountViewModel,
-    nav: Nav,
-) {
-    val postViewModel: CommentPostViewModel = viewModel()
-    postViewModel.init(accountViewModel)
-
-    val context = LocalContext.current
-
-    LaunchedEffect(postViewModel, accountViewModel) {
-        reply?.let {
-            postViewModel.reply(it)
-        }
-        draft?.let {
-            postViewModel.editFromDraft(it)
-        }
-        quote?.let {
-            postViewModel.quote(it)
-        }
-        message?.ifBlank { null }?.let {
-            postViewModel.updateMessage(TextFieldValue(it))
-        }
-        attachment?.let {
-            withContext(Dispatchers.IO) {
-                val mediaType = context.contentResolver.getType(it)
-                postViewModel.selectImage(persistentListOf(SelectedMedia(it, mediaType)))
-            }
-        }
-    }
-
-    GenericCommentPostScreen(postViewModel, accountViewModel, nav)
-}
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GenericCommentPostScreen(
-    postViewModel: CommentPostViewModel,
+fun LongFormPostScreen(
+    draft: Note? = null,
+    version: Note? = null,
     accountViewModel: AccountViewModel,
     nav: Nav,
 ) {
+    val postViewModel: LongFormPostViewModel = viewModel()
+    postViewModel.init(accountViewModel)
+
+    LaunchedEffect(postViewModel, accountViewModel) {
+        postViewModel.load(draft, version)
+    }
+
     WatchAndLoadMyEmojiList(accountViewModel)
 
     BackHandler {
@@ -150,23 +124,20 @@ fun GenericCommentPostScreen(
     Scaffold(
         topBar = {
             PostingTopBar(
+                titleRes = R.string.new_long_form_post,
                 isActive = postViewModel::canPost,
+                onPost = {
+                    accountViewModel.launchSigner {
+                        postViewModel.sendPostSync()
+                        nav.popBack()
+                    }
+                },
                 onCancel = {
-                    // uses the accountViewModel scope to avoid cancelling this
-                    // function when the postViewModel is released
                     accountViewModel.launchSigner {
                         postViewModel.sendDraftSync()
                         postViewModel.cancel()
                     }
                     nav.popBack()
-                },
-                onPost = {
-                    // uses the accountViewModel scope to avoid cancelling this
-                    // function when the postViewModel is released
-                    accountViewModel.launchSigner {
-                        postViewModel.sendPostSync()
-                        nav.popBack()
-                    }
                 },
             )
         },
@@ -178,24 +149,24 @@ fun GenericCommentPostScreen(
                     .consumeWindowInsets(pad)
                     .imePadding(),
         ) {
-            GenericCommentPostBody(
-                postViewModel,
-                accountViewModel,
-                nav,
-            )
+            MarkdownPostScreenBody(postViewModel, accountViewModel, nav)
         }
     }
 }
 
 @Composable
-private fun GenericCommentPostBody(
-    postViewModel: CommentPostViewModel,
+private fun MarkdownPostScreenBody(
+    postViewModel: LongFormPostViewModel,
     accountViewModel: AccountViewModel,
     nav: Nav,
 ) {
     val scrollState = rememberScrollState()
+    Column(
+        modifier =
+            Modifier.fillMaxSize(),
+    ) {
+        ObserveInboxRelayListAndDisplayIfNotFound(accountViewModel, nav)
 
-    Column(Modifier.fillMaxSize()) {
         Row(
             modifier =
                 Modifier
@@ -205,52 +176,143 @@ private fun GenericCommentPostBody(
                         end = Size10dp,
                     ).weight(1f),
         ) {
-            Column(Modifier.fillMaxWidth().verticalScroll(scrollState, reverseScrolling = true)) {
-                postViewModel.externalIdentity?.let {
-                    Row {
-                        DisplayExternalId(it, accountViewModel, nav)
-                        Spacer(modifier = StdVertSpacer)
-                    }
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(scrollState, reverseScrolling = true),
+            ) {
+                // Title field
+                OutlinedTextField(
+                    value = postViewModel.title,
+                    onValueChange = {
+                        postViewModel.title = it
+                        postViewModel.draftTag.newVersion()
+                    },
+                    label = { Text(stringRes(R.string.article_title)) },
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = Size10dp, vertical = Size5dp),
+                    textStyle =
+                        LocalTextStyle.current.copy(
+                            fontSize = 20.sp,
+                            textDirection = TextDirection.Content,
+                        ),
+                    singleLine = true,
+                    keyboardOptions =
+                        KeyboardOptions.Default.copy(
+                            capitalization = KeyboardCapitalization.Words,
+                        ),
+                )
+
+                // Summary field
+                OutlinedTextField(
+                    value = postViewModel.summary,
+                    onValueChange = {
+                        postViewModel.summary = it
+                        postViewModel.draftTag.newVersion()
+                    },
+                    label = { Text(stringRes(R.string.article_summary)) },
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = Size10dp, vertical = Size5dp),
+                    textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
+                    maxLines = 3,
+                    keyboardOptions =
+                        KeyboardOptions.Default.copy(
+                            capitalization = KeyboardCapitalization.Sentences,
+                        ),
+                )
+
+                // Cover image URL field
+                OutlinedTextField(
+                    value = postViewModel.coverImageUrl,
+                    onValueChange = {
+                        postViewModel.coverImageUrl = it
+                        postViewModel.draftTag.newVersion()
+                    },
+                    label = { Text(stringRes(R.string.article_cover_image_url)) },
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = Size10dp, vertical = Size5dp),
+                    singleLine = true,
+                )
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = Size5dp))
+
+                // Edit / Preview tabs
+                TabRow(
+                    selectedTabIndex = if (postViewModel.showPreview) 1 else 0,
+                ) {
+                    Tab(
+                        selected = !postViewModel.showPreview,
+                        onClick = { postViewModel.showPreview = false },
+                        text = { Text(stringRes(R.string.markdown_edit)) },
+                    )
+                    Tab(
+                        selected = postViewModel.showPreview,
+                        onClick = { postViewModel.showPreview = true },
+                        text = { Text(stringRes(R.string.markdown_preview)) },
+                    )
                 }
 
-                postViewModel.replyingTo?.let {
-                    Row {
-                        NoteCompose(
-                            baseNote = it,
-                            modifier = MaterialTheme.colorScheme.replyModifier,
-                            isQuotedNote = true,
-                            unPackReply = ReplyRenderType.NONE,
-                            makeItShort = true,
+                if (postViewModel.showPreview) {
+                    // Markdown preview (scrollable)
+                    val backgroundColor = remember { mutableStateOf(Color.Transparent) }
+                    Column(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(Size10dp),
+                    ) {
+                        RenderContentAsMarkdown(
+                            content = postViewModel.message.text,
+                            tags = EmptyTagList,
+                            canPreview = true,
                             quotesLeft = 1,
+                            backgroundColor = backgroundColor,
                             accountViewModel = accountViewModel,
                             nav = nav,
                         )
-                        Spacer(modifier = StdVertSpacer)
                     }
-                }
-
-                Row {
-                    Notifying(postViewModel.notifying?.toImmutableList(), accountViewModel) {
-                        postViewModel.removeFromReplyList(it)
-                    }
-                }
-
-                Row(
-                    modifier = Modifier.padding(vertical = Size10dp),
-                ) {
-                    BaseUserPicture(
-                        accountViewModel.userProfile(),
-                        Size35dp,
-                        accountViewModel = accountViewModel,
+                } else {
+                    // Markdown editor
+                    OutlinedTextField(
+                        value = postViewModel.message,
+                        onValueChange = postViewModel::updateMessage,
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = Size10dp, vertical = Size5dp),
+                        placeholder = {
+                            Text(
+                                text = stringRes(R.string.write_your_article_in_markdown),
+                                color = MaterialTheme.colorScheme.placeholderText,
+                            )
+                        },
+                        textStyle =
+                            LocalTextStyle.current.copy(
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 14.sp,
+                                textDirection = TextDirection.Content,
+                            ),
+                        colors =
+                            OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Color.Transparent,
+                                unfocusedBorderColor = Color.Transparent,
+                            ),
+                        visualTransformation = UrlUserTagTransformation(MaterialTheme.colorScheme.primary),
+                        keyboardOptions =
+                            KeyboardOptions.Default.copy(
+                                capitalization = KeyboardCapitalization.Sentences,
+                            ),
                     )
-                    MessageField(
-                        R.string.what_s_on_your_mind,
-                        postViewModel,
-                    )
                 }
 
-                DisplayPreviews(postViewModel.urlPreviews, accountViewModel, nav)
-
+                // Content warning section
                 if (postViewModel.wantsToMarkAsSensitive) {
                     Row(
                         verticalAlignment = CenterVertically,
@@ -277,10 +339,18 @@ private fun GenericCommentPostBody(
                         verticalAlignment = CenterVertically,
                         modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
                     ) {
-                        LocationAsHash(postViewModel)
+                        LocationAsHash(postViewModel) {
+                            SettingsRow(
+                                R.string.geohash_exclusive,
+                                R.string.geohash_exclusive_explainer,
+                            ) {
+                                Switch(postViewModel.wantsExclusiveGeoPost, onCheckedChange = { postViewModel.wantsExclusiveGeoPost = it })
+                            }
+                        }
                     }
                 }
 
+                // Forward zap section
                 if (postViewModel.wantsForwardZapTo) {
                     Row(
                         verticalAlignment = CenterVertically,
@@ -290,6 +360,7 @@ private fun GenericCommentPostBody(
                     }
                 }
 
+                // Image upload section
                 postViewModel.multiOrchestrator?.let {
                     Row(
                         verticalAlignment = CenterVertically,
@@ -299,8 +370,8 @@ private fun GenericCommentPostBody(
                         ImageVideoDescription(
                             it,
                             accountViewModel.account.settings.defaultFileServer,
-                            onAdd = { alt, server, sensitiveContent, mediaQuality, _ ->
-                                postViewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, server, accountViewModel.toastManager::toast, context)
+                            onAdd = { alt, server, sensitiveContent, mediaQuality, useH265 ->
+                                postViewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, server, accountViewModel.toastManager::toast, context, useH265)
                                 accountViewModel.account.settings.changeDefaultFileServer(server)
                             },
                             onDelete = postViewModel::deleteMediaToUpload,
@@ -346,7 +417,8 @@ private fun GenericCommentPostBody(
                     }
                 }
 
-                if (postViewModel.wantsZapraiser && postViewModel.hasLnAddress()) {
+                // Zap raiser section
+                if (postViewModel.wantsZapRaiser && postViewModel.hasLnAddress()) {
                     Row(
                         verticalAlignment = CenterVertically,
                         modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
@@ -360,6 +432,7 @@ private fun GenericCommentPostBody(
             }
         }
 
+        // User suggestions
         postViewModel.userSuggestions?.let {
             ShowUserSuggestionList(
                 it,
@@ -369,6 +442,7 @@ private fun GenericCommentPostBody(
             )
         }
 
+        // Emoji suggestions
         postViewModel.emojiSuggestions?.let {
             ShowEmojiSuggestionList(
                 it,
@@ -378,12 +452,13 @@ private fun GenericCommentPostBody(
             )
         }
 
-        BottomRowActions(postViewModel)
+        // Bottom action bar
+        MarkdownBottomRowActions(postViewModel)
     }
 }
 
 @Composable
-private fun BottomRowActions(postViewModel: CommentPostViewModel) {
+private fun MarkdownBottomRowActions(postViewModel: LongFormPostViewModel) {
     val scrollState = rememberScrollState()
     Row(
         modifier =
@@ -415,19 +490,13 @@ private fun BottomRowActions(postViewModel: CommentPostViewModel) {
             },
         )
 
-        TakeVideoButton(
-            onVideoTaken = {
-                postViewModel.selectImage(it)
-            },
-        )
-
         ForwardZapToButton(postViewModel.wantsForwardZapTo) {
             postViewModel.wantsForwardZapTo = !postViewModel.wantsForwardZapTo
         }
 
         if (postViewModel.canAddZapRaiser) {
-            AddZapraiserButton(postViewModel.wantsZapraiser) {
-                postViewModel.wantsZapraiser = !postViewModel.wantsZapraiser
+            AddZapraiserButton(postViewModel.wantsZapRaiser) {
+                postViewModel.wantsZapRaiser = !postViewModel.wantsZapRaiser
             }
         }
 

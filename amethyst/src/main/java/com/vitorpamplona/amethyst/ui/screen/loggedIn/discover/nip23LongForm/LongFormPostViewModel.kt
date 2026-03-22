@@ -18,11 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.home
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip23LongForm
 
 import android.content.Context
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.input.TextFieldValue
@@ -35,8 +36,10 @@ import com.vitorpamplona.amethyst.commons.compose.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.compose.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState.EmojiMedia
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
@@ -46,6 +49,8 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.ui.note.creators.draftTags.DraftTagState
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.EmojiSuggestionState
+import com.vitorpamplona.amethyst.ui.note.creators.expiration.IExpiration
+import com.vitorpamplona.amethyst.ui.note.creators.location.ILocationGrabber
 import com.vitorpamplona.amethyst.ui.note.creators.messagefield.IMessageField
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.ui.note.creators.zapraiser.IZapRaiser
@@ -54,23 +59,33 @@ import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.SplitBuilder
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.toZapSplitSetup
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.IMetaAttachments
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.UserSuggestionAnchor
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
+import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
+import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.references.references
 import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
 import com.vitorpamplona.quartz.nip10Notes.content.findNostrUris
 import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
+import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarningReason
+import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitive
+import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
+import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplits
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiser
+import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTagBuilder
 import com.vitorpamplona.quartz.nip92IMeta.imetas
 import com.vitorpamplona.quartz.nip94FileMetadata.alt
@@ -83,18 +98,23 @@ import com.vitorpamplona.quartz.nip94FileMetadata.originalHash
 import com.vitorpamplona.quartz.nip94FileMetadata.sensitiveContent
 import com.vitorpamplona.quartz.nip94FileMetadata.size
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlin.uuid.ExperimentalUuidApi
 
 @Stable
-class MarkdownPostViewModel :
+class LongFormPostViewModel :
     ViewModel(),
+    ILocationGrabber,
     IMessageField,
     IZapField,
-    IZapRaiser {
+    IZapRaiser,
+    IExpiration {
     val draftTag = DraftTagState()
 
     lateinit var accountViewModel: AccountViewModel
@@ -103,6 +123,7 @@ class MarkdownPostViewModel :
     init {
         viewModelScope.launch(Dispatchers.IO) {
             draftTag.versions.collectLatest {
+                // don't save the first
                 if (it > 0) {
                     accountViewModel.launchSigner {
                         sendDraftSync()
@@ -115,6 +136,7 @@ class MarkdownPostViewModel :
     var title by mutableStateOf(TextFieldValue(""))
     var summary by mutableStateOf(TextFieldValue(""))
     var coverImageUrl by mutableStateOf("")
+    var publishedAt by mutableLongStateOf(TimeUtils.now())
 
     override var message by mutableStateOf(TextFieldValue(""))
 
@@ -127,21 +149,41 @@ class MarkdownPostViewModel :
 
     var userSuggestions: UserSuggestionState? = null
     var userSuggestionsMainMessage: UserSuggestionAnchor? = null
+
     var emojiSuggestions: EmojiSuggestionState? = null
 
-    // NSFW, Sensitive
-    var wantsToMarkAsSensitive by mutableStateOf(false)
-    var contentWarningDescription by mutableStateOf("")
+    // Invoices
+    var canAddInvoice by mutableStateOf(false)
+    var wantsInvoice by mutableStateOf(false)
+
+    var wantsSecretEmoji by mutableStateOf(false)
 
     // Forward Zap to
     var wantsForwardZapTo by mutableStateOf(false)
     override var forwardZapTo = mutableStateOf<SplitBuilder<User>>(SplitBuilder())
     override var forwardZapToEditting = mutableStateOf(TextFieldValue(""))
 
+    // NSFW, Sensitive
+    var wantsToMarkAsSensitive by mutableStateOf(false)
+    var contentWarningDescription by mutableStateOf("")
+
+    // Expiration Date (NIP-40)
+    var wantsExpirationDate by mutableStateOf(false)
+    override var expirationDate by mutableLongStateOf(TimeUtils.oneDayAhead())
+
+    // GeoHash
+    var wantsToAddGeoHash by mutableStateOf(false)
+    var location: StateFlow<LocationState.LocationResult>? = null
+    var wantsExclusiveGeoPost by mutableStateOf(false)
+
     // ZapRaiser
     var canAddZapRaiser by mutableStateOf(false)
     var wantsZapRaiser by mutableStateOf(false)
     override val zapRaiserAmount = mutableStateOf<Long?>(null)
+
+    fun lnAddress(): String? = account.userProfile().lnAddress()
+
+    fun hasLnAddress(): Boolean = account.userProfile().lnAddress() != null
 
     // Editing existing article
     var editingNote: Note? by mutableStateOf(null)
@@ -150,7 +192,8 @@ class MarkdownPostViewModel :
     fun init(accountVM: AccountViewModel) {
         this.accountViewModel = accountVM
         this.account = accountVM.account
-        this.canAddZapRaiser = accountVM.userProfile().lnAddress() != null
+        this.canAddInvoice = hasLnAddress()
+        this.canAddZapRaiser = hasLnAddress()
 
         this.userSuggestions?.reset()
         this.userSuggestions = UserSuggestionState(accountVM.account, accountVM.nip05Client)
@@ -163,16 +206,89 @@ class MarkdownPostViewModel :
         draft: Note?,
         version: Note?,
     ) {
-        val noteEvent = version?.event ?: draft?.event
+        val noteEvent = draft?.event
+        val noteAuthor = draft?.author
 
-        if (noteEvent is LongTextNoteEvent) {
-            title = TextFieldValue(noteEvent.title() ?: "")
-            summary = TextFieldValue(noteEvent.summary() ?: "")
-            coverImageUrl = noteEvent.image() ?: ""
-            message = TextFieldValue(noteEvent.content)
-            existingDTag = noteEvent.dTag()
-            editingNote = version ?: draft
+        if (draft != null && noteEvent is DraftWrapEvent && noteAuthor != null) {
+            viewModelScope.launch(Dispatchers.IO) {
+                accountViewModel.createTempDraftNote(noteEvent)?.let { innerNote ->
+                    val oldTag = (draft.event as? AddressableEvent)?.dTag()
+                    if (oldTag != null) {
+                        draftTag.set(oldTag)
+                    }
+                    loadFromDraft(innerNote)
+                }
+            }
+        } else {
+            val noteEvent = version?.event
+
+            if (noteEvent is LongTextNoteEvent) {
+                title = TextFieldValue(noteEvent.title() ?: "")
+                summary = TextFieldValue(noteEvent.summary() ?: "")
+                publishedAt = noteEvent.publishedAt() ?: noteEvent.createdAt
+                coverImageUrl = noteEvent.image() ?: ""
+                message = TextFieldValue(noteEvent.content)
+                existingDTag = noteEvent.dTag()
+                editingNote = version
+            }
+
+            val user = account.userProfile()
+
+            canAddInvoice = user.lnAddress() != null
+            canAddZapRaiser = user.lnAddress() != null
+            multiOrchestrator = null
         }
+    }
+
+    private fun loadFromDraft(draft: Note) {
+        val draftEvent = draft.event ?: return
+        if (draftEvent is LongTextNoteEvent) {
+            loadFromDraft(draftEvent)
+        }
+    }
+
+    private fun loadFromDraft(draftEvent: LongTextNoteEvent) {
+        canAddInvoice = accountViewModel.userProfile().lnAddress() != null
+        canAddZapRaiser = accountViewModel.userProfile().lnAddress() != null
+        multiOrchestrator = null
+
+        val localForwardZapTo = draftEvent.tags.filter { it.size > 1 && it[0] == "zap" }
+        forwardZapTo.value = SplitBuilder()
+        localForwardZapTo.forEach {
+            val user = LocalCache.getOrCreateUser(it[1])
+            val value = it.last().toFloatOrNull() ?: 0f
+            forwardZapTo.value.addItem(user, value)
+        }
+        forwardZapToEditting.value = TextFieldValue("")
+        wantsForwardZapTo = localForwardZapTo.isNotEmpty()
+
+        wantsToMarkAsSensitive = draftEvent.isSensitive()
+        contentWarningDescription = draftEvent.contentWarningReason() ?: ""
+
+        val draftExpiration = draftEvent.tags.expiration()
+        wantsExpirationDate = draftExpiration != null
+        expirationDate = draftExpiration ?: TimeUtils.oneDayAhead()
+
+        val geohash = draftEvent.getGeoHash()
+        wantsToAddGeoHash = geohash != null
+        if (geohash != null) {
+            wantsExclusiveGeoPost = draftEvent.kind == CommentEvent.KIND
+        }
+
+        val zapRaiser = draftEvent.zapraiserAmount()
+        wantsZapRaiser = zapRaiser != null
+        zapRaiserAmount.value = null
+        if (zapRaiser != null) {
+            zapRaiserAmount.value = zapRaiser
+        }
+
+        if (forwardZapTo.value.items.isNotEmpty()) {
+            wantsForwardZapTo = true
+        }
+
+        message = TextFieldValue(draftEvent.content)
+
+        iMetaAttachments.addAll(draftEvent.imetas())
     }
 
     suspend fun sendPostSync() {
@@ -209,7 +325,7 @@ class MarkdownPostViewModel :
         }
     }
 
-    @OptIn(kotlin.uuid.ExperimentalUuidApi::class)
+    @OptIn(ExperimentalUuidApi::class)
     private suspend fun createTemplate(): EventTemplate<out Event>? {
         if (title.text.isBlank()) return null
 
@@ -223,28 +339,34 @@ class MarkdownPostViewModel :
         tagger.run()
 
         val zapReceiver = if (wantsForwardZapTo) forwardZapTo.value.toZapSplitSetup() else null
+
+        val geoHash = if (wantsToAddGeoHash) (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString() else null
         val localZapRaiserAmount = if (wantsZapRaiser) zapRaiserAmount.value else null
-        val contentWarningReason = if (wantsToMarkAsSensitive) contentWarningDescription else null
 
         val emojis = findEmoji(tagger.message, account.emoji.myEmojis.value)
         val urls = findURLs(tagger.message)
         val usedAttachments = iMetaAttachments.filterIsIn(urls.toSet())
+
+        val contentWarningReason = if (wantsToMarkAsSensitive) contentWarningDescription else null
+        val localExpirationDate = if (wantsExpirationDate) expirationDate else null
 
         return LongTextNoteEvent.build(
             description = tagger.message,
             title = title.text.trim(),
             summary = summary.text.trim().ifBlank { null },
             image = coverImageUrl.trim().ifBlank { null },
-            publishedAt = TimeUtils.now(),
-            dTag = existingDTag ?: kotlin.uuid.Uuid.random().toString(),
+            publishedAt = publishedAt,
+            dTag = existingDTag ?: RandomInstance.randomChars(16),
         ) {
             hashtags(findHashtags(tagger.message))
             references(findURLs(tagger.message))
             quotes(findNostrUris(tagger.message))
 
+            geoHash?.let { geohash(it) }
             localZapRaiserAmount?.let { zapraiser(it) }
             zapReceiver?.let { zapSplits(it) }
             contentWarningReason?.let { contentWarning(it) }
+            localExpirationDate?.let { expiration(it) }
 
             emojis(emojis)
             imetas(usedAttachments)
@@ -311,9 +433,12 @@ class MarkdownPostViewModel :
                                 .apply {
                                     hash(state.result.fileHeader.hash)
                                     size(state.result.fileHeader.size)
-                                    state.result.fileHeader.mimeType?.let { mimeType(it) }
-                                    state.result.fileHeader.dim?.let { dims(it) }
-                                    state.result.fileHeader.blurHash?.let { blurhash(it.blurhash) }
+                                    state.result.fileHeader.mimeType
+                                        ?.let { mimeType(it) }
+                                    state.result.fileHeader.dim
+                                        ?.let { dims(it) }
+                                    state.result.fileHeader.blurHash
+                                        ?.let { blurhash(it.blurhash) }
                                     state.result.magnet?.let { magnet(it) }
                                     state.result.uploadedHash?.let { originalHash(it) }
                                     alt?.let { alt(it) }
@@ -344,6 +469,7 @@ class MarkdownPostViewModel :
         summary = TextFieldValue("")
         coverImageUrl = ""
         message = TextFieldValue("")
+        publishedAt = TimeUtils.now()
         showPreview = false
 
         editingNote = null
@@ -352,11 +478,16 @@ class MarkdownPostViewModel :
         multiOrchestrator = null
         isUploadingImage = false
 
+        wantsInvoice = false
+        wantsZapRaiser = false
+        zapRaiserAmount.value = null
+
         wantsForwardZapTo = false
         wantsToMarkAsSensitive = false
         contentWarningDescription = ""
-        wantsZapRaiser = false
-        zapRaiserAmount.value = null
+        wantsToAddGeoHash = false
+        wantsExclusiveGeoPost = false
+        wantsSecretEmoji = false
 
         forwardZapTo.value = SplitBuilder()
         forwardZapToEditting.value = TextFieldValue("")
@@ -442,6 +573,7 @@ class MarkdownPostViewModel :
         title.text.isNotBlank() &&
             message.text.isNotBlank() &&
             !isUploadingImage &&
+            !wantsInvoice &&
             (!wantsZapRaiser || zapRaiserAmount.value != null) &&
             multiOrchestrator == null
 
@@ -453,5 +585,56 @@ class MarkdownPostViewModel :
         multiOrchestrator = MultiOrchestrator(uris)
     }
 
-    fun hasLnAddress(): Boolean = account.userProfile().lnAddress() != null
+    override fun locationFlow(): StateFlow<LocationState.LocationResult> {
+        if (location == null) {
+            location = locationManager().geohashStateFlow
+        }
+
+        return location!!
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        Log.d("Init", "OnCleared: ${this.javaClass.simpleName}")
+    }
+
+    override fun updateZapPercentage(
+        index: Int,
+        sliderValue: Float,
+    ) {
+        forwardZapTo.value.updatePercentage(index, sliderValue)
+    }
+
+    override fun updateZapFromText() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val tagger =
+                NewMessageTagger(message.text, emptyList(), emptyList(), accountViewModel)
+            tagger.run()
+            tagger.pTags?.forEach { taggedUser ->
+                if (!forwardZapTo.value.items.any { it.key == taggedUser }) {
+                    forwardZapTo.value.addItem(taggedUser)
+                }
+            }
+        }
+    }
+
+    override fun updateZapRaiserAmount(newAmount: Long?) {
+        zapRaiserAmount.value = newAmount
+        draftTag.newVersion()
+    }
+
+    fun toggleMarkAsSensitive() {
+        wantsToMarkAsSensitive = !wantsToMarkAsSensitive
+        draftTag.newVersion()
+    }
+
+    fun toggleExpirationDate() {
+        wantsExpirationDate = !wantsExpirationDate
+        if (wantsExpirationDate) {
+            expirationDate = TimeUtils.oneDayAhead()
+        }
+        draftTag.newVersion()
+    }
+
+    override fun locationManager(): LocationState = Amethyst.instance.locationManager
 }

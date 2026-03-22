@@ -279,7 +279,7 @@ sealed class Route {
     ) : Route()
 
     @Serializable
-    data class NewMarkdownPost(
+    data class NewLongFormPost(
         val draft: String? = null,
         val version: String? = null,
     ) : Route()
