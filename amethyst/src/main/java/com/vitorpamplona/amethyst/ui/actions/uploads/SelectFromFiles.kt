@@ -48,6 +48,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 @Composable
 fun SelectFromFiles(
     isUploading: Boolean,
+    enabled: Boolean = true,
     tint: Color,
     modifier: Modifier,
     onFilesChosen: (ImmutableList<SelectedMedia>) -> Unit,
@@ -64,19 +65,20 @@ fun SelectFromFiles(
         )
     }
 
-    FileSelectButton(isUploading, tint, modifier) { showFileSelect = true }
+    FileSelectButton(isUploading, enabled, tint, modifier) { showFileSelect = true }
 }
 
 @Composable
 private fun FileSelectButton(
     isUploading: Boolean,
+    enabled: Boolean,
     tint: Color,
     modifier: Modifier,
     onClick: () -> Unit,
 ) {
     IconButton(
         modifier = modifier,
-        enabled = !isUploading,
+        enabled = enabled && !isUploading,
         onClick = { onClick() },
     ) {
         if (!isUploading) {

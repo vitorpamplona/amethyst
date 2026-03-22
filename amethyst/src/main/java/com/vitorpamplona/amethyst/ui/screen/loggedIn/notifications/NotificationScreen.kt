@@ -30,7 +30,10 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.ui.components.SelectNotificationProvider
+import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
+import com.vitorpamplona.amethyst.ui.feeds.WatchScrollToTop
+import com.vitorpamplona.amethyst.ui.feeds.rememberForeverLazyListState
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -45,6 +48,7 @@ fun NotificationScreen(
     NotificationScreen(
         notifFeedContentState = accountViewModel.feedStates.notifications,
         notifSummaryState = accountViewModel.feedStates.notificationSummary,
+        notifPolls = accountViewModel.feedStates.notificationsOpenPolls,
         sharedPrefs = accountViewModel.settings.uiSettingsFlow,
         accountViewModel = accountViewModel,
         nav = nav,
@@ -55,6 +59,7 @@ fun NotificationScreen(
 fun NotificationScreen(
     notifFeedContentState: CardFeedContentState,
     notifSummaryState: NotificationSummaryState,
+    notifPolls: OpenPollsState,
     sharedPrefs: UiSettingsFlow,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -88,13 +93,13 @@ fun NotificationScreen(
             modifier = Modifier.padding(it).consumeWindowInsets(it),
         ) {
             ObserveInboxRelayListAndDisplayIfNotFound(accountViewModel, nav)
-            RefreshableCardView(
-                feedContent = notifFeedContentState,
-                accountViewModel = accountViewModel,
-                nav = nav,
-                routeForLastRead = "Notification",
-                scrollStateKey = ScrollStateKeys.NOTIFICATION_SCREEN,
-            )
+            RefresheableBox(notifFeedContentState, true) {
+                val listState = rememberForeverLazyListState(ScrollStateKeys.NOTIFICATION_SCREEN)
+
+                WatchScrollToTop(notifFeedContentState, listState)
+
+                RenderCardFeed(notifFeedContentState, notifPolls, accountViewModel, listState, nav, "Notification")
+            }
         }
     }
 }

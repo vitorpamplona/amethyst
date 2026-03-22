@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
+import com.vitorpamplona.amethyst.service.uploads.SuspendableConfirmation
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
@@ -59,11 +60,17 @@ open class NewMediaModel : ViewModel() {
     var multiOrchestrator by mutableStateOf<MultiOrchestrator?>(null)
     var onceUploaded: () -> Unit = {}
 
+    // Stripping failure dialog
+    val strippingFailureConfirmation = SuspendableConfirmation()
+
     // 0 = Low, 1 = Medium, 2 = High, 3=UNCOMPRESSED
     var mediaQualitySlider by mutableIntStateOf(1)
 
     // Codec selection: false = H264, true = H265
     var useH265Codec by mutableStateOf(false)
+
+    // Strip location and sensitive metadata from files before upload
+    var stripMetadata by mutableStateOf(true)
 
     open fun load(
         account: Account,
@@ -73,6 +80,7 @@ open class NewMediaModel : ViewModel() {
         this.account = account
         this.multiOrchestrator = MultiOrchestrator(uris)
         this.selectedServer = defaultServer()
+        this.stripMetadata = account.settings.stripLocationOnUpload
     }
 
     fun isImage(
@@ -115,6 +123,8 @@ open class NewMediaModel : ViewModel() {
                     myAccount,
                     context,
                     useH265Codec,
+                    stripMetadata,
+                    onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
                 )
 
             if (results.allGood) {

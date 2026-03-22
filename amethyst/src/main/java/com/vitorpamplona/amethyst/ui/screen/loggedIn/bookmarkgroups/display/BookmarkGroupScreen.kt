@@ -30,11 +30,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.CellTower
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
@@ -57,6 +57,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
+import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
+import com.vitorpamplona.amethyst.ui.components.M3ActionRow
+import com.vitorpamplona.amethyst.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
@@ -65,7 +68,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.BookmarkType
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import kotlinx.coroutines.launch
@@ -304,6 +306,31 @@ fun BookmarkGroupActionsMenuButton(
 ) {
     val isActionListOpen = remember { mutableStateOf(false) }
 
+    if (isActionListOpen.value) {
+        M3ActionDialog(
+            title = stringRes(R.string.list_actions_dialog_title),
+            onDismiss = { isActionListOpen.value = false },
+        ) {
+            M3ActionSection {
+                M3ActionRow(
+                    icon = Icons.Outlined.CellTower,
+                    text = stringRes(R.string.bookmark_list_broadcast_btn_label),
+                ) {
+                    onBroadcastList()
+                    isActionListOpen.value = false
+                }
+                M3ActionRow(
+                    icon = Icons.Outlined.Delete,
+                    text = stringRes(R.string.bookmark_list_delete_btn_label),
+                    isDestructive = true,
+                ) {
+                    onDeleteList()
+                    isActionListOpen.value = false
+                }
+            }
+        }
+    }
+
     ClickableBox(
         modifier =
             StdPadding
@@ -319,44 +346,5 @@ fun BookmarkGroupActionsMenuButton(
         onClick = { isActionListOpen.value = true },
     ) {
         VerticalDotsIcon()
-        BookmarkGroupActionsMenu(
-            onCloseMenu = { isActionListOpen.value = false },
-            isOpen = isActionListOpen.value,
-            onBroadcastList = onBroadcastList,
-            onDeleteList = onDeleteList,
-        )
-    }
-}
-
-@Composable
-fun BookmarkGroupActionsMenu(
-    onCloseMenu: () -> Unit,
-    isOpen: Boolean,
-    onBroadcastList: () -> Unit,
-    onDeleteList: () -> Unit,
-) {
-    DropdownMenu(
-        expanded = isOpen,
-        onDismissRequest = onCloseMenu,
-    ) {
-        DropdownMenuItem(
-            text = {
-                Text(stringRes(R.string.bookmark_list_broadcast_btn_label))
-            },
-            onClick = {
-                onBroadcastList()
-                onCloseMenu()
-            },
-        )
-        HorizontalDivider(thickness = DividerThickness)
-        DropdownMenuItem(
-            text = {
-                Text(stringRes(R.string.bookmark_list_delete_btn_label))
-            },
-            onClick = {
-                onDeleteList()
-                onCloseMenu()
-            },
-        )
     }
 }

@@ -29,10 +29,14 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthors
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
+import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
+import com.vitorpamplona.quartz.experimental.attestations.proficiency.AttestorProficiencyEvent
+import com.vitorpamplona.quartz.experimental.attestations.recommendation.AttestorRecommendationEvent
+import com.vitorpamplona.quartz.experimental.attestations.request.AttestationRequestEvent
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
-import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
+import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
@@ -60,6 +64,7 @@ class HomeNewThreadFeedFilter(
                 LongTextNoteEvent.KIND,
                 LiveChessGameChallengeEvent.KIND,
                 LiveChessGameEndEvent.KIND,
+                AttestationEvent.KIND,
             )
     }
 
@@ -116,7 +121,7 @@ class HomeNewThreadFeedFilter(
                 noteEvent is GenericRepostEvent ||
                 (noteEvent is LongTextNoteEvent && noteEvent.content.isNotEmpty()) ||
                 (noteEvent is WikiNoteEvent && noteEvent.content.isNotEmpty()) ||
-                noteEvent is PollNoteEvent ||
+                noteEvent is ZapPollEvent ||
                 noteEvent is PollEvent ||
                 noteEvent is HighlightEvent ||
                 noteEvent is InteractiveStoryPrologueEvent ||
@@ -126,7 +131,11 @@ class HomeNewThreadFeedFilter(
                 noteEvent is AudioHeaderEvent ||
                 noteEvent is ChessGameEvent ||
                 noteEvent is LiveChessGameChallengeEvent ||
-                noteEvent is LiveChessGameEndEvent
+                noteEvent is LiveChessGameEndEvent ||
+                noteEvent is AttestationEvent ||
+                noteEvent is AttestationRequestEvent ||
+                noteEvent is AttestorRecommendationEvent ||
+                noteEvent is AttestorProficiencyEvent
         ) &&
             filterParams.match(noteEvent, it.relays) &&
             it.isNewThread()

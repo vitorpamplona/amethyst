@@ -46,6 +46,7 @@ data class SubscriptionConfig(
     val relays: Set<NormalizedRelayUrl>,
     val onEvent: (Event, Boolean, NormalizedRelayUrl, List<Filter>?) -> Unit,
     val onEose: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
+    val onClosed: (NormalizedRelayUrl, String, List<Filter>?) -> Unit = { _, _, _ -> },
 )
 
 /**
@@ -94,6 +95,14 @@ fun rememberSubscription(
                                 forFilters: List<Filter>?,
                             ) {
                                 cfg.onEose(relay, forFilters)
+                            }
+
+                            override fun onClosed(
+                                message: String,
+                                relay: NormalizedRelayUrl,
+                                forFilters: List<Filter>?,
+                            ) {
+                                cfg.onClosed(relay, message, forFilters)
                             }
                         },
                 )

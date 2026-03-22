@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.jetbrainsKotlinJvm)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.jetbrainsComposeCompiler)
+    id("ir.mahozad.vlc-setup") version "0.1.0"
 }
 
 sourceSets {
@@ -23,9 +24,9 @@ kotlin {
 
 dependencies {
     implementation(compose.desktop.currentOs)
-    implementation(compose.material3)
-    implementation(compose.materialIconsExtended)
-    implementation(compose.components.resources)
+    implementation(libs.jetbrains.compose.material3)
+    implementation(libs.jetbrains.compose.material.icons.extended)
+    implementation(libs.jetbrains.compose.components.resources)
 
     // Quartz Nostr library (will use JVM target)
     implementation(project(":quartz"))
@@ -46,8 +47,20 @@ dependencies {
     // JSON
     implementation(libs.jackson.module.kotlin)
 
+    // Image loading (Coil3 — explicit because commons uses implementation, not api)
+    implementation(libs.coil.compose)
+    implementation(libs.coil.okhttp)
+    implementation(libs.coil.svg)
+
+    // Video playback
+    implementation(libs.vlcj)
+
+    // EXIF stripping (lossless)
+    implementation(libs.commons.imaging)
+
     // Collections
     implementation(libs.kotlinx.collections.immutable)
+    implementation(libs.androidx.collection)
 
     // SLF4J no-op — silence "No SLF4J providers" warnings from transitive deps
     implementation("org.slf4j:slf4j-nop:2.0.16")
@@ -65,8 +78,10 @@ dependencies {
 compose.desktop {
     application {
         mainClass = "com.vitorpamplona.amethyst.desktop.MainKt"
+        jvmArgs += "--add-opens=java.base/java.nio=ALL-UNNAMED"
 
         nativeDistributions {
+            appResourcesRootDir.set(project.layout.projectDirectory.dir("src/jvmMain/appResources"))
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
 
             packageName = "Amethyst"
@@ -90,4 +105,13 @@ compose.desktop {
             }
         }
     }
+}
+
+vlcSetup {
+    vlcVersion.set("3.0.21")
+    shouldCompressVlcFiles.set(true)
+    shouldIncludeAllVlcFiles.set(true)
+    pathToCopyVlcLinuxFilesTo.set(file("src/jvmMain/appResources/linux/vlc"))
+    pathToCopyVlcMacosFilesTo.set(file("src/jvmMain/appResources/macos/vlc"))
+    pathToCopyVlcWindowsFilesTo.set(file("src/jvmMain/appResources/windows/vlc"))
 }

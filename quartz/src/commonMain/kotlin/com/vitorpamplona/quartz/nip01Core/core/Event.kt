@@ -21,11 +21,14 @@
 package com.vitorpamplona.quartz.nip01Core.core
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.EventKSerializer
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.serialization.Serializable
 
 @Immutable
+@Serializable(with = EventKSerializer::class)
 open class Event(
     val id: HexKey,
     val pubKey: HexKey,

@@ -217,9 +217,12 @@ object ChessStateReconstructor {
             return fen1 == fen2 // Fallback to exact match
         }
 
-        return parts1[0] == parts2[0] && // Board position
-            parts1[1] == parts2[1] && // Active color
-            parts1[2] == parts2[2] && // Castling rights
+        return parts1[0] == parts2[0] &&
+            // Board position
+            parts1[1] == parts2[1] &&
+            // Active color
+            parts1[2] == parts2[2] &&
+            // Castling rights
             parts1[3] == parts2[3] // En passant
     }
 

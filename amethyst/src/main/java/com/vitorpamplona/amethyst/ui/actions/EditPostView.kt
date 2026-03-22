@@ -125,6 +125,8 @@ fun EditPostView(
         postViewModel.load(edit, versionLookingAt)
     }
 
+    StrippingFailureDialog(postViewModel.strippingFailureConfirmation)
+
     Dialog(
         onDismissRequest = { onClose() },
         properties =
@@ -264,8 +266,9 @@ fun EditPostView(
                                         ImageVideoDescription(
                                             it,
                                             accountViewModel.account.settings.defaultFileServer,
-                                            onAdd = { alt, server, sensitiveContent, mediaQuality, _ ->
-                                                postViewModel.upload(alt, sensitiveContent, mediaQuality, false, server, accountViewModel.toastManager::toast, context)
+                                            isUploading = postViewModel.mediaUploadTracker.isUploading,
+                                            onAdd = { alt, server, sensitiveContent, mediaQuality, _, stripMetadata ->
+                                                postViewModel.upload(alt, sensitiveContent, mediaQuality, false, server, accountViewModel.toastManager::toast, context, stripMetadata)
                                                 accountViewModel.account.settings.changeDefaultFileServer(server)
                                             },
                                             onDelete = postViewModel::deleteMediaToUpload,
@@ -372,6 +375,7 @@ private fun BottomRowActions(postViewModel: EditPostViewModel) {
     ) {
         SelectFromGallery(
             isUploading = postViewModel.isUploadingImage,
+            enabled = !postViewModel.isUploadingFile,
             tint = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier,
         ) {
@@ -379,7 +383,8 @@ private fun BottomRowActions(postViewModel: EditPostViewModel) {
         }
 
         SelectFromFiles(
-            isUploading = postViewModel.isUploadingImage,
+            isUploading = postViewModel.isUploadingFile,
+            enabled = !postViewModel.isUploadingImage,
             tint = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier,
         ) {

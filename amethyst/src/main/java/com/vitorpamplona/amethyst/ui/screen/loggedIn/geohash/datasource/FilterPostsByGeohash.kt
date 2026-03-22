@@ -24,7 +24,7 @@ import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip22Comments.CommentKinds
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
-import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
+import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -43,7 +43,7 @@ val PostsByGeohashKinds =
         ChannelMessageEvent.KIND,
         LongTextNoteEvent.KIND,
         PollEvent.KIND,
-        PollNoteEvent.KIND,
+        ZapPollEvent.KIND,
         ClassifiedsEvent.KIND,
         HighlightEvent.KIND,
         AudioTrackEvent.KIND,

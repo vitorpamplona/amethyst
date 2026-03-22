@@ -29,10 +29,10 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector.Builder
 import androidx.compose.ui.graphics.vector.PathData
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.robohash.Black
 import com.vitorpamplona.amethyst.commons.robohash.roboBuilder
-import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @Preview
 @Composable

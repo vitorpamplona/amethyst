@@ -35,10 +35,12 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.rememberExtendedNav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoDialog
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayCountResult
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayUrlEditField
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 @Composable
 fun IndexerRelayList(
@@ -65,12 +67,14 @@ fun LazyListScope.renderIndexerItems(
     postViewModel: IndexerRelayListViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
+    countResults: Map<NormalizedRelayUrl, RelayCountResult> = emptyMap(),
 ) {
     itemsIndexed(feedState, key = { _, item -> "Indexer" + item.relay.url }) { index, item ->
         BasicRelaySetupInfoDialog(
             item,
             onDelete = { postViewModel.deleteRelay(item) },
             nip11CachedRetriever = Amethyst.instance.nip11Cache,
+            countResult = countResults[item.relay],
             accountViewModel = accountViewModel,
             nav = nav,
         )

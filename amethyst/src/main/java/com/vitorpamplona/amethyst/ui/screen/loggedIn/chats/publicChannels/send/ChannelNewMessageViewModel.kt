@@ -46,6 +46,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
+import com.vitorpamplona.amethyst.service.uploads.SuspendableConfirmation
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
@@ -129,12 +130,17 @@ open class ChannelNewMessageViewModel :
     val replyTo = mutableStateOf<Note?>(null)
 
     var uploadState by mutableStateOf<ChatFileUploadState?>(null)
+
+    // Stripping failure dialog
+    val strippingFailureConfirmation = SuspendableConfirmation()
+
     val iMetaAttachments = IMetaAttachments()
     var nip95attachments by mutableStateOf<List<Pair<FileStorageEvent, FileStorageHeaderEvent>>>(emptyList())
 
     var message by mutableStateOf(TextFieldValue(""))
     var urlPreview by mutableStateOf<String?>(null)
-    var isUploadingImage by mutableStateOf(false)
+    val isUploadingImage: Boolean get() = uploadState?.isUploadingImage ?: false
+    val isUploadingFile: Boolean get() = uploadState?.isUploadingFile ?: false
 
     var userSuggestions: UserSuggestionState? = null
     var userSuggestionsMainMessage: UserSuggestionAnchor? = null
@@ -185,7 +191,7 @@ open class ChannelNewMessageViewModel :
         this.emojiSuggestions?.reset()
         this.emojiSuggestions = EmojiSuggestionState(accountVM.account)
 
-        this.uploadState = ChatFileUploadState(account.settings.defaultFileServer)
+        this.uploadState = ChatFileUploadState(account.settings.defaultFileServer, account.settings.stripLocationOnUpload)
     }
 
     open fun load(channel: Channel) {
@@ -337,7 +343,7 @@ open class ChannelNewMessageViewModel :
 
             val myMultiOrchestrator = uploadState.multiOrchestrator ?: return@launch
 
-            isUploadingImage = true
+            uploadState.mediaUploadTracker.startUpload(myMultiOrchestrator.hasNonMedia())
 
             val results =
                 myMultiOrchestrator.upload(
@@ -347,6 +353,8 @@ open class ChannelNewMessageViewModel :
                     uploadState.selectedServer,
                     account,
                     context,
+                    stripMetadata = uploadState.stripMetadata,
+                    onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
                 )
 
             if (results.allGood) {
@@ -378,7 +386,7 @@ open class ChannelNewMessageViewModel :
                 onError(stringRes(context, R.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
             }
 
-            isUploadingImage = false
+            uploadState.mediaUploadTracker.finishUpload()
         }
     }
 
@@ -546,6 +554,8 @@ open class ChannelNewMessageViewModel :
         userSuggestions?.reset()
         userSuggestionsMainMessage = null
 
+        uploadState?.reset()
+
         iMetaAttachments.reset()
 
         emojiSuggestions?.reset()
@@ -632,7 +642,7 @@ open class ChannelNewMessageViewModel :
 
     fun canPost(): Boolean =
         message.text.isNotBlank() &&
-            uploadState?.isUploadingImage != true &&
+            uploadState?.mediaUploadTracker?.isUploading != true &&
             !wantsInvoice &&
             (!wantsZapraiser || zapRaiserAmount != null) &&
             uploadState?.multiOrchestrator == null

@@ -60,6 +60,7 @@ import androidx.core.util.Consumer
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.FileServerSelectionRow
 import com.vitorpamplona.amethyst.ui.actions.uploads.MAX_VOICE_RECORD_SECONDS
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordVoiceButton
@@ -94,15 +95,18 @@ import com.vitorpamplona.amethyst.ui.note.creators.secretEmoji.AddSecretEmojiBut
 import com.vitorpamplona.amethyst.ui.note.creators.secretEmoji.SecretEmojiRequest
 import com.vitorpamplona.amethyst.ui.note.creators.uploads.ImageVideoDescription
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
+import com.vitorpamplona.amethyst.ui.note.creators.zappolls.ZapPollField
 import com.vitorpamplona.amethyst.ui.note.creators.zapraiser.AddZapraiserButton
 import com.vitorpamplona.amethyst.ui.note.creators.zapraiser.ZapRaiserRequest
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapTo
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapToButton
 import com.vitorpamplona.amethyst.ui.note.types.ReplyRenderType
+import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
+import com.vitorpamplona.amethyst.ui.theme.Size19Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightPage
@@ -177,6 +181,8 @@ private fun NewPostScreenInner(
     nav: Nav,
 ) {
     WatchAndLoadMyEmojiList(accountViewModel)
+
+    StrippingFailureDialog(postViewModel.strippingFailureConfirmation)
 
     BackHandler {
         accountViewModel.launchSigner {
@@ -298,6 +304,15 @@ private fun NewPostScreenBody(
                     }
                 }
 
+                if (postViewModel.wantsZapPoll) {
+                    Row(
+                        verticalAlignment = CenterVertically,
+                        modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
+                    ) {
+                        ZapPollField(postViewModel)
+                    }
+                }
+
                 DisplayPreviews(postViewModel.urlPreviews, accountViewModel, nav)
 
                 if (postViewModel.wantsToMarkAsSensitive) {
@@ -355,8 +370,9 @@ private fun NewPostScreenBody(
                         ImageVideoDescription(
                             it,
                             accountViewModel.account.settings.defaultFileServer,
-                            onAdd = { alt, server, sensitiveContent, mediaQuality, useH265 ->
-                                postViewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, server, accountViewModel.toastManager::toast, context, useH265)
+                            isUploading = postViewModel.mediaUploadTracker.isUploading,
+                            onAdd = { alt, server, sensitiveContent, mediaQuality, useH265, stripMetadata ->
+                                postViewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, server, accountViewModel.toastManager::toast, context, useH265, stripMetadata)
                                 accountViewModel.account.settings.changeDefaultFileServer(server)
                             },
                             onDelete = postViewModel::deleteMediaToUpload,
@@ -498,6 +514,7 @@ private fun BottomRowActions(postViewModel: ShortNotePostViewModel) {
     ) {
         SelectFromGallery(
             isUploading = postViewModel.isUploadingImage,
+            enabled = !postViewModel.isUploadingFile,
             tint = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier,
         ) {
@@ -505,7 +522,8 @@ private fun BottomRowActions(postViewModel: ShortNotePostViewModel) {
         }
 
         SelectFromFiles(
-            isUploading = postViewModel.isUploadingImage,
+            isUploading = postViewModel.isUploadingFile,
+            enabled = !postViewModel.isUploadingImage,
             tint = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier,
         ) {
@@ -532,11 +550,24 @@ private fun BottomRowActions(postViewModel: ShortNotePostViewModel) {
         )
 
         if (postViewModel.canUsePoll) {
-            // These should be hashtag recommendations the user selects in the future.
-            // val hashtag = stringRes(R.string.poll_hashtag)
-            // postViewModel.includePollHashtagInMessage(postViewModel.wantsPoll, hashtag)
             AddPollButton(postViewModel.wantsPoll) {
                 postViewModel.wantsPoll = !postViewModel.wantsPoll
+                if (postViewModel.wantsPoll) {
+                    if (postViewModel.wantsZapPoll) {
+                        postViewModel.wantsZapPoll = false
+                    }
+                }
+            }
+        }
+
+        if (postViewModel.canUseZapPoll) {
+            AddZapPollButton(postViewModel.wantsZapPoll) {
+                postViewModel.wantsZapPoll = !postViewModel.wantsZapPoll
+                if (postViewModel.wantsZapPoll) {
+                    if (postViewModel.wantsPoll) {
+                        postViewModel.wantsPoll = false
+                    }
+                }
             }
         }
 
@@ -582,6 +613,32 @@ private fun BottomRowActionsPreview() {
     model.canUsePoll = true
     ThemeComparisonColumn {
         BottomRowActions(model)
+    }
+}
+
+@Composable
+private fun AddZapPollButton(
+    isPollActive: Boolean,
+    onClick: () -> Unit,
+) {
+    IconButton(
+        onClick = { onClick() },
+    ) {
+        if (!isPollActive) {
+            Icon(
+                painter = painterRes(R.drawable.ic_poll, 1),
+                contentDescription = stringRes(id = R.string.poll),
+                modifier = Size19Modifier,
+                tint = MaterialTheme.colorScheme.onBackground,
+            )
+        } else {
+            Icon(
+                painter = painterRes(R.drawable.ic_poll, 1),
+                contentDescription = stringRes(id = R.string.disable_poll),
+                modifier = Size19Modifier,
+                tint = MaterialTheme.colorScheme.primary,
+            )
+        }
     }
 }
 

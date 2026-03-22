@@ -29,8 +29,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.FolderZip
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -53,6 +53,9 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.DefaultDMRelayList
 import com.vitorpamplona.amethyst.model.DefaultIndexerRelayList
 import com.vitorpamplona.amethyst.model.DefaultSearchRelayList
+import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
+import com.vitorpamplona.amethyst.ui.components.M3ActionRow
+import com.vitorpamplona.amethyst.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -188,6 +191,14 @@ fun MappedAllRelayListView(
     val proxyRelays by proxyViewModel.relays.collectAsStateWithLifecycle()
     val relayFeedsFeedState by relayFeedsViewModel.relays.collectAsStateWithLifecycle()
 
+    val outboxCounts by nip65ViewModel.homeCountResults.collectAsStateWithLifecycle()
+    val inboxCounts by nip65ViewModel.notifCountResults.collectAsStateWithLifecycle()
+    val dmCounts by dmViewModel.countResults.collectAsStateWithLifecycle()
+    val privateHomeCounts by privateOutboxViewModel.countResults.collectAsStateWithLifecycle()
+    val proxyCounts by proxyViewModel.countResults.collectAsStateWithLifecycle()
+    val indexerCounts by indexerViewModel.countResults.collectAsStateWithLifecycle()
+    val searchCounts by searchViewModel.countResults.collectAsStateWithLifecycle()
+
     Scaffold(
         topBar = {
             SavingTopBar(
@@ -261,7 +272,7 @@ fun MappedAllRelayListView(
                     SettingsCategoryFirstModifier,
                 )
             }
-            renderNip65HomeItems(homeFeedState, nip65ViewModel, accountViewModel, nav)
+            renderNip65HomeItems(homeFeedState, nip65ViewModel, accountViewModel, nav, outboxCounts)
 
             item {
                 SettingsCategory(
@@ -270,7 +281,7 @@ fun MappedAllRelayListView(
                     SettingsCategorySpacingModifier,
                 )
             }
-            renderNip65NotifItems(notifFeedState, nip65ViewModel, accountViewModel, nav)
+            renderNip65NotifItems(notifFeedState, nip65ViewModel, accountViewModel, nav, inboxCounts)
 
             item {
                 SettingsCategoryWithButton(
@@ -282,7 +293,7 @@ fun MappedAllRelayListView(
                     },
                 )
             }
-            renderDMItems(dmFeedState, dmViewModel, accountViewModel, nav)
+            renderDMItems(dmFeedState, dmViewModel, accountViewModel, nav, dmCounts)
 
             item {
                 SettingsCategory(
@@ -291,7 +302,7 @@ fun MappedAllRelayListView(
                     SettingsCategorySpacingModifier,
                 )
             }
-            renderPrivateOutboxItems(privateOutboxFeedState, privateOutboxViewModel, accountViewModel, nav)
+            renderPrivateOutboxItems(privateOutboxFeedState, privateOutboxViewModel, accountViewModel, nav, privateHomeCounts)
 
             item {
                 SettingsCategory(
@@ -300,7 +311,7 @@ fun MappedAllRelayListView(
                     SettingsCategorySpacingModifier,
                 )
             }
-            renderProxyItems(proxyRelays, proxyViewModel, accountViewModel, nav)
+            renderProxyItems(proxyRelays, proxyViewModel, accountViewModel, nav, proxyCounts)
 
             item {
                 SettingsCategory(
@@ -320,7 +331,7 @@ fun MappedAllRelayListView(
                     ResetIndexerRelays(indexerViewModel)
                 }
             }
-            renderIndexerItems(indexerRelays, indexerViewModel, accountViewModel, nav)
+            renderIndexerItems(indexerRelays, indexerViewModel, accountViewModel, nav, indexerCounts)
 
             item {
                 SettingsCategoryWithButton(
@@ -331,7 +342,7 @@ fun MappedAllRelayListView(
                     ResetSearchRelays(searchViewModel)
                 }
             }
-            renderSearchItems(searchFeedState, searchViewModel, accountViewModel, nav)
+            renderSearchItems(searchFeedState, searchViewModel, accountViewModel, nav, searchCounts)
 
             item {
                 SettingsCategory(
@@ -482,6 +493,7 @@ fun SettingsCategoryWithButton(
 @Composable
 fun ExportDropdownMenu(collection: () -> RelayListCollection) {
     var expanded by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     IconButton(onClick = { expanded = true }) {
         Icon(
@@ -490,24 +502,27 @@ fun ExportDropdownMenu(collection: () -> RelayListCollection) {
         )
     }
 
-    DropdownMenu(
-        expanded = expanded,
-        onDismissRequest = { expanded = false },
-    ) {
-        val context = LocalContext.current
-        DropdownMenuItem(
-            text = { Text(stringRes(R.string.export_as_text)) },
-            onClick = {
-                expanded = false
-                RelayExporter(context).export(collection())
-            },
-        )
-        DropdownMenuItem(
-            text = { Text(stringRes(R.string.export_as_zip)) },
-            onClick = {
-                expanded = false
-                RelayZipExporter(context).export(collection())
-            },
-        )
+    if (expanded) {
+        M3ActionDialog(
+            title = stringRes(R.string.export_actions_dialog_title),
+            onDismiss = { expanded = false },
+        ) {
+            M3ActionSection {
+                M3ActionRow(
+                    icon = Icons.Outlined.Description,
+                    text = stringRes(R.string.export_as_text),
+                ) {
+                    expanded = false
+                    RelayExporter(context).export(collection())
+                }
+                M3ActionRow(
+                    icon = Icons.Outlined.FolderZip,
+                    text = stringRes(R.string.export_as_zip),
+                ) {
+                    expanded = false
+                    RelayZipExporter(context).export(collection())
+                }
+            }
+        }
     }
 }

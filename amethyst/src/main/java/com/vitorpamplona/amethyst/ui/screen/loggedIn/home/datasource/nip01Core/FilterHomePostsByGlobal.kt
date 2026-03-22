@@ -23,7 +23,8 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip01Core
 import com.vitorpamplona.amethyst.model.topNavFeeds.global.GlobalTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip65Follows.HomePostsConversationKinds
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip65Follows.HomePostsNewThreadKinds
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip65Follows.HomePostsNewThreadKinds1
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip65Follows.HomePostsNewThreadKinds2
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 
@@ -43,8 +44,17 @@ fun filterHomePostsByGlobal(
                 relay = relayUrl,
                 filter =
                     Filter(
-                        kinds = HomePostsNewThreadKinds,
+                        kinds = HomePostsNewThreadKinds1,
                         limit = 50,
+                        since = since ?: newThreadSince,
+                    ),
+            ),
+            RelayBasedFilter(
+                relay = relayUrl,
+                filter =
+                    Filter(
+                        kinds = HomePostsNewThreadKinds2,
+                        limit = 5,
                         since = since ?: newThreadSince,
                     ),
             ),

@@ -26,35 +26,37 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 
 class PoolEventOutboxState(
     val event: Event,
-    var relays: Set<NormalizedRelayUrl>,
+    var relaysRemaining: Set<NormalizedRelayUrl>,
 ) {
-    private var tries = mapOf<NormalizedRelayUrl, Tries>()
+    private var failures = mapOf<NormalizedRelayUrl, Tries>()
 
     fun updateRelays(newRelays: Set<NormalizedRelayUrl>) {
-        relays = newRelays
+        relaysRemaining = newRelays
     }
 
-    fun isDone(url: NormalizedRelayUrl) = tries[url]?.isDone() ?: false
+    fun isDone() = relaysRemaining.isEmpty()
 
-    fun isDone() = relays.all { isDone(it) }
+    fun relaysLeft(): Set<NormalizedRelayUrl> = relaysRemaining
 
-    fun relaysLeft(): Set<NormalizedRelayUrl> = relays.filterTo(mutableSetOf()) { !isDone(it) }
-
-    fun isSupposedToGo(url: NormalizedRelayUrl) = url in relays && !isDone(url)
+    fun isSupposedToGo(url: NormalizedRelayUrl) = url in relaysRemaining
 
     fun forEachUnsentEvent(
         url: NormalizedRelayUrl,
         run: (url: Event) -> Unit,
     ) = if (isSupposedToGo(url)) run(event) else null
 
-    fun remainingRelays() = relays.filterTo(mutableSetOf(), ::isSupposedToGo)
+    fun remainingRelays() = relaysRemaining
 
     fun newTry(url: NormalizedRelayUrl) {
-        val currentTries = tries[url]
+        val currentTries = failures[url]
         if (currentTries != null) {
             currentTries.addTriedTime(TimeUtils.now())
+            if (currentTries.isDone()) {
+                relaysRemaining = relaysRemaining - url
+                failures = failures - url
+            }
         } else {
-            tries = tries + (url to Tries(listOf(TimeUtils.now())))
+            failures = failures + (url to Tries(listOf(TimeUtils.now())))
         }
     }
 
@@ -63,38 +65,44 @@ class PoolEventOutboxState(
         success: Boolean,
         message: String,
     ) {
-        val currentTries = tries[url]
-        if (currentTries != null) {
-            currentTries.addResponse(Response(success, message))
+        val currentTries = failures[url]
+        if (success || message.shouldDiscard()) {
+            relaysRemaining = relaysRemaining - url
+            failures = failures - url
         } else {
-            tries = tries + (
-                url to
-                    Tries(
-                        listOf(TimeUtils.now() - 1),
-                        listOf(Response(success, message)),
-                    )
-            )
+            if (currentTries != null) {
+                currentTries.addResponse(message)
+            } else {
+                failures = failures + (
+                    url to
+                        Tries(
+                            listOf(TimeUtils.now() - 1),
+                            listOf(message),
+                        )
+                )
+            }
         }
     }
+
+    fun String.shouldDiscard() =
+        this.startsWith("replaced:") ||
+            this.startsWith("pow:") ||
+            this.startsWith("deleted:") ||
+            this.startsWith("invalid:")
 
     // Tries 3 times
     class Tries(
         var tries: List<Long> = listOf(),
-        var responses: List<Response> = listOf(),
+        var responses: List<String> = listOf(),
     ) {
-        fun isDone() = responses.any { it.success } || responses.size > 2 || tries.size > 3
+        fun isDone() = responses.size > 2 || tries.size > 3
 
-        fun addResponse(r: Response) {
-            responses += r
+        fun addResponse(msg: String) {
+            responses += msg
         }
 
         fun addTriedTime(tried: Long) {
             tries += tried
         }
     }
-
-    class Response(
-        val success: Boolean,
-        val message: String,
-    )
 }

@@ -78,7 +78,8 @@ import kotlinx.collections.immutable.toImmutableList
 fun ImageVideoDescription(
     uris: MultiOrchestrator,
     defaultServer: ServerName,
-    onAdd: (String, ServerName, Boolean, Int, Boolean) -> Unit,
+    isUploading: Boolean,
+    onAdd: (String, ServerName, Boolean, Int, Boolean, Boolean) -> Unit,
     onDelete: (SelectedMediaProcessing) -> Unit,
     onCancel: () -> Unit,
     accountViewModel: AccountViewModel,
@@ -106,6 +107,8 @@ fun ImageVideoDescription(
 
     // Codec selection: false = H264, true = H265
     var useH265Codec by remember { mutableStateOf(false) }
+
+    var stripMetadata by remember { mutableStateOf(accountViewModel.account.settings.stripLocationOnUpload) }
 
     Column(
         modifier =
@@ -247,36 +250,52 @@ fun ImageVideoDescription(
                 )
             }
 
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp))
-                        .padding(vertical = 8.dp),
-            ) {
-                Column(
-                    modifier = Modifier.weight(1.0f),
-                    verticalArrangement = Arrangement.spacedBy(Size5dp),
-                ) {
-                    Text(
-                        text = stringRes(R.string.media_compression_quality_label),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Text(
-                        text = stringRes(R.string.media_compression_quality_explainer),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray,
-                        maxLines = 5,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
+            // Hide privacy toggle when video compression is selected (compression already strips metadata)
+            val isVideoWithCompression =
+                uris.first().media.isVideo() == true && mediaQualitySlider != 3
+
+            if (!isVideoWithCompression) {
+                SettingSwitchItem(
+                    title = R.string.strip_metadata_label,
+                    description = R.string.strip_metadata_description,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp),
+                    checked = stripMetadata,
+                    onCheckedChange = { stripMetadata = it },
+                )
             }
 
             val firstMedia = uris.first().media
 
-            if (firstMedia.isVideo() == true || firstMedia.isImage() == true || firstMedia.isAudio() == true) {
+            if (firstMedia.isVideo() == true || firstMedia.isImage() == true) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp))
+                            .padding(vertical = 8.dp),
+                ) {
+                    Column(
+                        modifier = Modifier.weight(1.0f),
+                        verticalArrangement = Arrangement.spacedBy(Size5dp),
+                    ) {
+                        Text(
+                            text = stringRes(R.string.media_compression_quality_label),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Text(
+                            text = stringRes(R.string.media_compression_quality_explainer),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.Gray,
+                            maxLines = 5,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Box(modifier = Modifier.fillMaxWidth()) {
                         Text(
@@ -301,7 +320,7 @@ fun ImageVideoDescription(
                 }
             }
 
-            if (uris.first().media.isVideo() == true) {
+            if (uris.first().media.isVideo() == true && mediaQualitySlider != 3) {
                 SettingSwitchItem(
                     title = R.string.video_codec_h265_label,
                     description = R.string.video_codec_h265_description,
@@ -319,7 +338,11 @@ fun ImageVideoDescription(
                     Modifier
                         .fillMaxWidth()
                         .padding(vertical = 10.dp),
-                onClick = { onAdd(message, selectedServer, sensitiveContent, mediaQualitySlider, useH265Codec) },
+                enabled = !isUploading,
+                onClick = {
+                    val effectiveStripMetadata = if (isVideoWithCompression) false else stripMetadata
+                    onAdd(message, selectedServer, sensitiveContent, mediaQualitySlider, useH265Codec, effectiveStripMetadata)
+                },
                 shape = QuoteBorder,
                 colors =
                     ButtonDefaults.buttonColors(

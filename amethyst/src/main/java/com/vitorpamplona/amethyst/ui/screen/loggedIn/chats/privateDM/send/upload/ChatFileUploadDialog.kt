@@ -28,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.NonClickableUserPictures
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -46,7 +47,8 @@ fun RoomChatFileUploadDialog(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val room = channelScreenModel.room ?: return
+    val roomState = channelScreenModel.room.collectAsStateWithLifecycle()
+    val room = roomState.value ?: return
     val context = LocalContext.current
 
     ChatFileUploadDialog(
@@ -70,9 +72,11 @@ fun RoomChatFileUploadDialog(
             )
 
             accountViewModel.account.settings.changeDefaultFileServer(state.selectedServer)
+            accountViewModel.account.settings.changeStripLocationOnUpload(state.stripMetadata)
         },
         onCancel,
         accountViewModel,
         nav,
+        isNip17 = true,
     )
 }

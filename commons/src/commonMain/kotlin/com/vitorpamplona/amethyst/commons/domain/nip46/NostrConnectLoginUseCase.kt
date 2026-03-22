@@ -213,6 +213,6 @@ object NostrConnectLoginUseCase {
     private fun generateSecret(): String {
         val bytes = ByteArray(32)
         SecureRandom().nextBytes(bytes)
-        return bytes.joinToString("") { "%02x".format(it) }
+        return bytes.toHexKey()
     }
 }

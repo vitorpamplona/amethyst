@@ -72,8 +72,8 @@ class MessageSerializer : StdSerializer<Message>(Message::class.java) {
                 countSerializer.serialize(msg.result, gen, provider)
             }
 
-            else -> {
-                null
+            is EoseMessage -> {
+                gen.writeString(msg.subId)
             }
         }
 

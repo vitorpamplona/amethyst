@@ -41,6 +41,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
@@ -77,10 +78,14 @@ import kotlinx.coroutines.launch
  */
 class NostrClient(
     private val websocketBuilder: WebsocketBuilder,
-    private val scope: CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
+    private val parentScope: CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
 ) : INostrClient,
-    IRelayClientListener {
+    IRelayClientListener,
+    AutoCloseable {
     private val relayPool: RelayPool = RelayPool(websocketBuilder, this)
+
+    /** Scope for all subscriptions. */
+    private val scope = CoroutineScope(parentScope.coroutineContext + SupervisorJob())
 
     private val activeRequests: PoolRequests = PoolRequests()
     private val activeCounts: PoolCounts = PoolCounts()
@@ -326,4 +331,13 @@ class NostrClient(
     override fun connectedRelaysFlow() = relayPool.connectedRelays
 
     override fun availableRelaysFlow() = relayPool.availableRelays
+
+    override fun close() {
+        disconnect()
+        listeners = emptySet()
+        activeCounts.destroy()
+        activeRequests.destroy()
+        eventOutbox.destroy()
+        scope.cancel()
+    }
 }

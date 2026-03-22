@@ -609,7 +609,7 @@ SQLite-based storage with full NIP support (NIP-09, NIP-40, NIP-45, NIP-50, NIP-
 import com.vitorpamplona.quartz.nip01Core.store.EventStore
 import android.content.Context
 
-val store = EventStore(context)
+val store = EventStore()
 
 // Insert
 store.insert(event)

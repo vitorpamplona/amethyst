@@ -63,7 +63,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.serialization.Serializable
-import java.util.Locale
 
 val DefaultChannels =
     listOf(
@@ -161,6 +160,7 @@ class AccountSettings(
     var externalSignerPackageName: String? = null,
     var localRelayServers: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
     var defaultFileServer: ServerName = DEFAULT_MEDIA_SERVERS[0],
+    var stripLocationOnUpload: Boolean = true,
     val defaultHomeFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.AllFollows),
     val defaultStoriesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultNotificationFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
@@ -266,6 +266,13 @@ class AccountSettings(
         }
     }
 
+    fun changeStripLocationOnUpload(strip: Boolean) {
+        if (stripLocationOnUpload != strip) {
+            stripLocationOnUpload = strip
+            saveAccountSettings()
+        }
+    }
+
     // ---
     // list names
     // ---
@@ -332,11 +339,11 @@ class AccountSettings(
         saveAccountSettings()
     }
 
-    fun translateToContains(languageCode: Locale) =
+    fun translateToContains(languageCode: String) =
         syncedSettings.languages.translateTo.value
-            .contains(languageCode.language)
+            .contains(languageCode)
 
-    fun updateTranslateTo(languageCode: Locale): Boolean {
+    fun updateTranslateTo(languageCode: String): Boolean {
         if (syncedSettings.languages.updateTranslateTo(languageCode)) {
             saveAccountSettings()
             return true

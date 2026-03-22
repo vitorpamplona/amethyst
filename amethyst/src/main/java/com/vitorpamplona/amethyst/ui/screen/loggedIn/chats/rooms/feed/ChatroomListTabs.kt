@@ -28,8 +28,9 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material.icons.outlined.DoneAll
+import androidx.compose.material.icons.outlined.Groups
+import androidx.compose.material.icons.outlined.MoveToInbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -48,6 +49,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
+import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
+import com.vitorpamplona.amethyst.ui.components.M3ActionRow
+import com.vitorpamplona.amethyst.ui.components.M3ActionSection
+import com.vitorpamplona.amethyst.ui.components.zonedDrawerSwipe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -102,12 +107,13 @@ fun MessagesTabHeader(
                 contentDescription = stringRes(id = R.string.more_options),
                 tint = MaterialTheme.colorScheme.placeholderText,
             )
+        }
 
-            MessagesTabMenu(
-                moreActionsExpanded,
-                { moreActionsExpanded = false },
-                onMarkKnownAsRead,
-                onMarkNewAsRead,
+        if (moreActionsExpanded) {
+            MessagesMarkAsReadDialog(
+                onDismiss = { moreActionsExpanded = false },
+                onMarkKnownAsRead = onMarkKnownAsRead,
+                onMarkNewAsRead = onMarkNewAsRead,
             )
         }
     }
@@ -124,7 +130,12 @@ fun MessagesPager(
     HorizontalPager(
         contentPadding = paddingValues,
         state = pagerState,
-        userScrollEnabled = false,
+        userScrollEnabled = true,
+        modifier =
+            Modifier.zonedDrawerSwipe(
+                pagerState = pagerState,
+                openDrawer = nav::openDrawer,
+            ),
     ) { page ->
         ChatroomListFeedView(
             feedContentState = tabs[page].feedContentState,
@@ -136,34 +147,38 @@ fun MessagesPager(
 }
 
 @Composable
-fun MessagesTabMenu(
-    expanded: Boolean,
+fun MessagesMarkAsReadDialog(
     onDismiss: () -> Unit,
     onMarkKnownAsRead: () -> Unit,
     onMarkNewAsRead: () -> Unit,
 ) {
-    DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
-        DropdownMenuItem(
-            text = { Text(stringRes(R.string.mark_all_known_as_read)) },
-            onClick = {
+    M3ActionDialog(
+        title = stringRes(R.string.mark_as_read_dialog_title),
+        onDismiss = onDismiss,
+    ) {
+        M3ActionSection {
+            M3ActionRow(
+                icon = Icons.Outlined.Groups,
+                text = stringRes(R.string.mark_all_known_as_read),
+            ) {
                 onMarkKnownAsRead()
                 onDismiss()
-            },
-        )
-        DropdownMenuItem(
-            text = { Text(stringRes(R.string.mark_all_new_as_read)) },
-            onClick = {
+            }
+            M3ActionRow(
+                icon = Icons.Outlined.MoveToInbox,
+                text = stringRes(R.string.mark_all_new_as_read),
+            ) {
                 onMarkNewAsRead()
                 onDismiss()
-            },
-        )
-        DropdownMenuItem(
-            text = { Text(stringRes(R.string.mark_all_as_read)) },
-            onClick = {
+            }
+            M3ActionRow(
+                icon = Icons.Outlined.DoneAll,
+                text = stringRes(R.string.mark_all_as_read),
+            ) {
                 onMarkKnownAsRead()
                 onMarkNewAsRead()
                 onDismiss()
-            },
-        )
+            }
+        }
     }
 }

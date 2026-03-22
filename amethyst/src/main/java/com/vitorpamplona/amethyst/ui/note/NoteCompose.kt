@@ -102,6 +102,10 @@ import com.vitorpamplona.amethyst.ui.note.types.FileHeaderDisplay
 import com.vitorpamplona.amethyst.ui.note.types.FileStorageHeaderDisplay
 import com.vitorpamplona.amethyst.ui.note.types.PictureDisplay
 import com.vitorpamplona.amethyst.ui.note.types.RenderAppDefinition
+import com.vitorpamplona.amethyst.ui.note.types.RenderAttestation
+import com.vitorpamplona.amethyst.ui.note.types.RenderAttestationRequest
+import com.vitorpamplona.amethyst.ui.note.types.RenderAttestorProficiency
+import com.vitorpamplona.amethyst.ui.note.types.RenderAttestorRecommendation
 import com.vitorpamplona.amethyst.ui.note.types.RenderAudioHeader
 import com.vitorpamplona.amethyst.ui.note.types.RenderAudioTrack
 import com.vitorpamplona.amethyst.ui.note.types.RenderBadgeAward
@@ -174,6 +178,10 @@ import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 import com.vitorpamplona.amethyst.ui.theme.normalWithTopMarginNoteModifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
+import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
+import com.vitorpamplona.quartz.experimental.attestations.proficiency.AttestorProficiencyEvent
+import com.vitorpamplona.quartz.experimental.attestations.recommendation.AttestorRecommendationEvent
+import com.vitorpamplona.quartz.experimental.attestations.request.AttestationRequestEvent
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.bounties.bountyBaseReward
@@ -184,7 +192,7 @@ import com.vitorpamplona.quartz.experimental.medical.FhirResourceEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.publicMessages.PublicMessageEvent
-import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
+import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geoHashOrScope
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
@@ -767,6 +775,22 @@ private fun RenderNoteRow(
             RenderAppDefinition(baseNote, accountViewModel, nav)
         }
 
+        is AttestationEvent -> {
+            RenderAttestation(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        }
+
+        is AttestationRequestEvent -> {
+            RenderAttestationRequest(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        }
+
+        is AttestorRecommendationEvent -> {
+            RenderAttestorRecommendation(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        }
+
+        is AttestorProficiencyEvent -> {
+            RenderAttestorProficiency(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        }
+
         is AudioTrackEvent -> {
             RenderAudioTrack(baseNote, ContentScale.FillWidth, accountViewModel, nav)
         }
@@ -1039,7 +1063,7 @@ private fun RenderNoteRow(
             )
         }
 
-        is PollNoteEvent -> {
+        is ZapPollEvent -> {
             RenderZapPoll(
                 baseNote,
                 makeItShort,

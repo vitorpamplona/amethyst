@@ -22,8 +22,9 @@ package com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.watchers
 
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
-import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
+import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
@@ -53,6 +54,7 @@ val RepliesAndReactionsKinds =
         OtsEvent.KIND,
         TextNoteModificationEvent.KIND,
         CommentEvent.KIND,
+        AttestationEvent.KIND,
     )
 
 val RepliesAndReactionsKinds2 =
@@ -63,7 +65,7 @@ val RepliesAndReactionsKinds2 =
         TorrentCommentEvent.KIND,
         GitReplyEvent.KIND,
         PollResponseEvent.KIND,
-        PollNoteEvent.KIND,
+        ZapPollEvent.KIND,
     )
 
 fun filterRepliesAndReactionsToNotes(

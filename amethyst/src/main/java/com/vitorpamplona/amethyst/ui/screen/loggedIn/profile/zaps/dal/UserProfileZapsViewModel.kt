@@ -112,6 +112,7 @@ class UserProfileZapsViewModel(
         return results.map { (user, amount) -> ZapAmount(user, amount) }.sortedWith(sortingModel)
     }
 
+    @OptIn(kotlinx.coroutines.FlowPreview::class)
     val receivedZapAmountsByUser: StateFlow<List<ZapAmount>> =
         account.cache
             .observeEvents(zapsToUser)

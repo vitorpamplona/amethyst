@@ -48,10 +48,10 @@ import com.vitorpamplona.quartz.nip28PublicChat.base.IsInPublicChatChannel
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
-import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentRequestEvent
-import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentResponseEvent
-import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceMethod
-import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentRequestEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceSuccessResponse
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
@@ -1027,7 +1027,7 @@ public inline fun <T> Iterable<Note>.filterEvents(predicate: (T) -> Boolean): Li
     return dest
 }
 
-public inline fun <T> Iterable<Note>.filterAuthoredEvents(pubkey: HexKey): List<T> {
+public fun <T> Iterable<Note>.filterAuthoredEvents(pubkey: HexKey): List<T> {
     if (this is Collection && isEmpty()) return emptyList()
 
     val dest = ArrayList<T>()

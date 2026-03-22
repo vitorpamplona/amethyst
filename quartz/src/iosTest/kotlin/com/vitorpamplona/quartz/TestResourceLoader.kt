@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz
 
+import com.vitorpamplona.quartz.utils.GZip
 import dev.whyoleg.cryptography.CryptographyProviderApi
 import dev.whyoleg.cryptography.providers.base.toByteArray
 import kotlinx.cinterop.ExperimentalForeignApi
@@ -33,6 +34,11 @@ import platform.Foundation.stringWithContentsOfFile
 import platform.posix.getenv
 
 actual class TestResourceLoader {
+    actual fun loadDecompressString(file: String): String {
+        val data = loadFileData(file)
+        return GZip.decompress(data)
+    }
+
     @OptIn(ExperimentalForeignApi::class)
     actual fun loadString(file: String): String {
         val resourceDir = getenv("TEST_RESOURCES_ROOT")?.toKString()

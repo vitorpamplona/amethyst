@@ -25,94 +25,25 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.note.QuickActionAlertDialog
 import com.vitorpamplona.amethyst.ui.painterRes
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.IncognitoIconButtonModifier
-import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import kotlinx.coroutines.launch
 
 @Composable
-fun ToggleNip17Button(
-    channelScreenModel: ChatNewMessageViewModel,
-    accountViewModel: AccountViewModel,
-) {
-    var wantsToActivateNIP17 by remember { mutableStateOf(false) }
-
-    if (wantsToActivateNIP17) {
-        NewFeatureNIP17AlertDialog(
-            accountViewModel = accountViewModel,
-            onConfirm = { channelScreenModel.toggleNIP04And24() },
-            onDismiss = { wantsToActivateNIP17 = false },
-        )
-    }
-
+fun Nip17Indicator(channelScreenModel: ChatNewMessageViewModel) {
     IconButton(
         modifier = Modifier.width(30.dp),
-        onClick = {
-            if (
-                !accountViewModel.account.settings.hideNIP17WarningDialog &&
-                !channelScreenModel.nip17 &&
-                !channelScreenModel.requiresNIP17
-            ) {
-                wantsToActivateNIP17 = true
-            } else {
-                channelScreenModel.toggleNIP04And24()
-            }
-        },
+        onClick = { },
+        enabled = false,
     ) {
-        if (channelScreenModel.nip17) {
-            Icon(
-                painter = painterRes(R.drawable.incognito, 2),
-                contentDescription = stringRes(id = R.string.accessibility_turn_off_sealed_message),
-                modifier = IncognitoIconButtonModifier,
-                tint = MaterialTheme.colorScheme.primary,
-            )
-        } else {
-            Icon(
-                painter = painterRes(R.drawable.incognito_off, 2),
-                contentDescription = stringRes(id = R.string.accessibility_turn_on_sealed_message),
-                modifier = IncognitoIconButtonModifier,
-                tint = MaterialTheme.colorScheme.placeholderText,
-            )
-        }
+        Icon(
+            painter = painterRes(R.drawable.incognito, 2),
+            contentDescription = stringRes(id = R.string.accessibility_turn_off_sealed_message),
+            modifier = IncognitoIconButtonModifier,
+            tint = MaterialTheme.colorScheme.primary,
+        )
     }
-}
-
-@Composable
-fun NewFeatureNIP17AlertDialog(
-    accountViewModel: AccountViewModel,
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit,
-) {
-    val scope = rememberCoroutineScope()
-
-    QuickActionAlertDialog(
-        title = stringRes(R.string.new_feature_nip17_might_not_be_available_title),
-        textContent = stringRes(R.string.new_feature_nip17_might_not_be_available_description),
-        buttonIconResource = R.drawable.incognito,
-        buttonIconReference = 3,
-        buttonText = stringRes(R.string.new_feature_nip17_activate),
-        onClickDoOnce = {
-            scope.launch { onConfirm() }
-            onDismiss()
-        },
-        onClickDontShowAgain = {
-            scope.launch {
-                onConfirm()
-                accountViewModel.account.settings.setHideNIP17WarningDialog()
-            }
-            onDismiss()
-        },
-        onDismiss = onDismiss,
-    )
 }

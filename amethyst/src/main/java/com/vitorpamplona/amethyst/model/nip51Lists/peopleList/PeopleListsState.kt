@@ -38,7 +38,7 @@ import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.description
 import com.vitorpamplona.quartz.nip51Lists.peopleList.image
-import com.vitorpamplona.quartz.nip51Lists.peopleList.name
+import com.vitorpamplona.quartz.nip51Lists.peopleList.title
 import com.vitorpamplona.quartz.utils.flattenToSet
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -226,7 +226,7 @@ class PeopleListsState(
 
         val template =
             listEvent.update {
-                if (listName != null) name(listName)
+                if (listName != null) title(listName)
                 if (listDescription != null) description(listDescription)
                 if (listImage != null) image(listImage)
             }

@@ -21,7 +21,10 @@
 package com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay
 
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedSerializable
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.CommandKSerializer
+import kotlinx.serialization.Serializable
 
+@Serializable(with = CommandKSerializer::class)
 interface Command : OptimizedSerializable {
     fun label(): String
 

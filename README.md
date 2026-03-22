@@ -218,6 +218,13 @@ Build and run the Desktop app (requires Java 21+):
 ```bash
 ./gradlew :desktopApp:run
 ```
+Full build (including tests)
+```bash
+./gradlew build
+```
+Requirements:
+- Xcode and iOS simulator
+- libsodium installed (e.g. via brew: `brew install libsodium`
 
 ## Testing
 ```bash

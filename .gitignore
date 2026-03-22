@@ -22,6 +22,7 @@
 /.idea/AndroidProjectSystem.xml
 /.idea/deviceManager.xml
 /.idea/inspectionProfiles/
+/.idea/migrations.xml
 /commons/.idea/gradle.xml
 /commons/.idea/misc.xml
 /commons/.idea/workspace.xml
@@ -32,6 +33,10 @@
 /captures
 .cxx
 
+# superpowers skill
+.superpowers
+docs/brainstorms
+docs/superpowers
 
 # Built application files
 *.apk
@@ -149,3 +154,11 @@ lint/tmp/
 
 # Local task tracking
 TASKS.md
+
+# Claude Code local settings
+.claude/settings.local.json
+
+# Downloaded VLC binaries (vlc-setup plugin)
+desktopApp/src/jvmMain/appResources/linux/
+desktopApp/src/jvmMain/appResources/macos/
+desktopApp/src/jvmMain/appResources/windows/

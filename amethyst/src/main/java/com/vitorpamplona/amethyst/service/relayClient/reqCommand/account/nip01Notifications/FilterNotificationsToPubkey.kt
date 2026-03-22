@@ -20,11 +20,13 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip01Notifications
 
+import com.vitorpamplona.quartz.experimental.attestations.recommendation.AttestorRecommendationEvent
+import com.vitorpamplona.quartz.experimental.attestations.request.AttestationRequestEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStorySceneEvent
 import com.vitorpamplona.quartz.experimental.publicMessages.PublicMessageEvent
-import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
+import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -38,7 +40,7 @@ import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.reply.GitReplyEvent
-import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentResponseEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
@@ -65,7 +67,7 @@ val NotificationsPerKeyKinds =
         ChannelMessageEvent.KIND,
         EphemeralChatEvent.KIND,
         BadgeAwardEvent.KIND,
-        PollNoteEvent.KIND,
+        ZapPollEvent.KIND,
         PollEvent.KIND,
         PollResponseEvent.KIND,
         PublicMessageEvent.KIND,
@@ -83,6 +85,12 @@ val NotificationsPerKeyKinds2 =
         CalendarRSVPEvent.KIND,
         InteractiveStoryPrologueEvent.KIND,
         InteractiveStorySceneEvent.KIND,
+    )
+
+val NotificationsPerKeyKinds3 =
+    listOf(
+        AttestationRequestEvent.KIND,
+        AttestorRecommendationEvent.KIND,
     )
 
 fun filterSummaryNotificationsToPubkey(
@@ -130,7 +138,17 @@ fun filterNotificationsToPubkey(
                 Filter(
                     kinds = NotificationsPerKeyKinds2,
                     tags = mapOf("p" to listOf(pubkey)),
-                    limit = 500,
+                    limit = 200,
+                    since = since,
+                ),
+        ),
+        RelayBasedFilter(
+            relay = relay,
+            filter =
+                Filter(
+                    kinds = NotificationsPerKeyKinds3,
+                    tags = mapOf("p" to listOf(pubkey)),
+                    limit = 10,
                     since = since,
                 ),
         ),
@@ -171,7 +189,17 @@ fun filterJustTheLatestNotificationsToPubkeyFromRandomRelays(
                 Filter(
                     kinds = NotificationsPerKeyKinds2,
                     tags = mapOf("p" to listOf(pubkey)),
-                    limit = 20,
+                    limit = 10,
+                    since = since,
+                ),
+        ),
+        RelayBasedFilter(
+            relay = relay,
+            filter =
+                Filter(
+                    kinds = NotificationsPerKeyKinds3,
+                    tags = mapOf("p" to listOf(pubkey)),
+                    limit = 2,
                     since = since,
                 ),
         ),

@@ -73,9 +73,14 @@ actual object GZip {
             val written =
                 input.usePinned { pinIn ->
                     output.usePinned { pinOut ->
-                        stream.next_in = pinIn.addressOf(0).reinterpret()
+                        if (input.isNotEmpty()) {
+                            stream.next_in = pinIn.addressOf(0).reinterpret()
+                        }
                         stream.avail_in = input.size.toUInt()
-                        stream.next_out = pinOut.addressOf(0).reinterpret()
+
+                        if (output.isNotEmpty()) {
+                            stream.next_out = pinOut.addressOf(0).reinterpret()
+                        }
                         stream.avail_out = maxSize.toUInt()
 
                         deflate(stream.ptr, Z_FINISH)
@@ -97,6 +102,8 @@ actual object GZip {
      * Output is collected in fixed-size chunks to handle arbitrary output size.
      */
     actual fun decompress(content: ByteArray): String {
+        if (content.isEmpty()) return ""
+
         val chunks = ArrayList<ByteArray>()
         val chunkSize = maxOf(content.size * 4, 4096)
 
@@ -108,7 +115,9 @@ actual object GZip {
                 .let { check(it == Z_OK) { "inflateInit2 failed: $it" } }
 
             content.usePinned { pinIn ->
-                stream.next_in = pinIn.addressOf(0).reinterpret()
+                if (content.isNotEmpty()) {
+                    stream.next_in = pinIn.addressOf(0).reinterpret()
+                }
                 stream.avail_in = content.size.toUInt()
 
                 var status: Int = Z_OK

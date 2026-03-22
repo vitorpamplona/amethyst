@@ -35,6 +35,7 @@ import coil3.asDrawable
 import coil3.imageLoader
 import coil3.request.ImageRequest
 import com.vitorpamplona.amethyst.AccountInfo
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.compose.GenericBaseCache
@@ -79,6 +80,7 @@ import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.note.showAmountInteger
 import com.vitorpamplona.amethyst.ui.screen.UiSettingsState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CombinedZap
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync.EventSync
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
 import com.vitorpamplona.amethyst.ui.tor.TorType
@@ -93,8 +95,10 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.relay.client.EmptyNostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.EmptyIAuthStatus
+import com.vitorpamplona.quartz.nip01Core.relay.client.auth.RelayAuthenticator
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
@@ -123,7 +127,7 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
 import com.vitorpamplona.quartz.nip28PublicChat.base.IsInPublicChatChannel
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
-import com.vitorpamplona.quartz.nip47WalletConnect.Response
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
@@ -144,8 +148,10 @@ import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -158,7 +164,6 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.util.Locale
 
 @Stable
 class AccountViewModel(
@@ -175,6 +180,66 @@ class AccountViewModel(
     val toastManager = ToastManager()
     val broadcastTracker = BroadcastTracker()
     val feedStates = AccountFeedContentStates(account, viewModelScope)
+
+    val eventSync =
+        EventSync(
+            accountPubKey = account.signer.pubKey,
+            relayDb = {
+                val stats = Amethyst.instance.relayStats.snapshot()
+
+                val relays =
+                    account.cache.relayHints.relayDB
+                        .keys()
+                        .filter { url ->
+                            val relayStat = stats[url]
+                            // has connected at least once OR never tried.
+                            if (relayStat != null) {
+                                relayStat.connectionCompleted > 0 || relayStat.connectionTentatives == 0
+                            } else {
+                                true
+                            }
+                        }
+
+                val sortMap = relays.associateWith { stats.get(it)?.receivedBytes }
+
+                relays.sortedByDescending { sortMap[it] }
+            },
+            outboxTargets = { account.nip65RelayList.outboxFlow.value },
+            inboxTargets = { account.nip65RelayList.inboxFlow.value },
+            dmTargets = { account.dmRelayList.flow.value },
+            clientBuilder = {
+                // creates a new client to make sure these events don't end up polluting the local cache.
+
+                // Create a new scope that inherits the ViewModel's lifecycle
+                // but uses a SupervisorJob so child failures are independent.
+                val customScope = CoroutineScope(viewModelScope.coroutineContext + SupervisorJob())
+
+                // Provides a relay pool
+                val newClient = NostrClient(Amethyst.instance.websocketBuilder, customScope)
+
+                // Authenticates with relays.
+                val auth =
+                    RelayAuthenticator(
+                        newClient,
+                        customScope,
+                        signWithAllLoggedInUsers = { authTemplate ->
+                            if (account.signer.isWriteable()) {
+                                try {
+                                    listOf(account.signer.sign(authTemplate))
+                                } catch (e: Exception) {
+                                    Log.e("AuthCoordinator", "Failed trying to authenticate a writeable account", e)
+                                    emptyList()
+                                }
+                            } else {
+                                emptyList()
+                            }
+                        },
+                    )
+
+                newClient
+            },
+            scope = viewModelScope,
+        )
 
     val tempManualPaymentCache = LruCache<String, List<ZapPaymentHandler.Payable>>(5)
 
@@ -1009,7 +1074,7 @@ class AccountViewModel(
 
     fun removeDontTranslateFrom(languageCode: String) = launchSigner { account.removeDontTranslateFrom(languageCode) }
 
-    fun updateTranslateTo(languageCode: Locale) = launchSigner { account.updateTranslateTo(languageCode) }
+    fun updateTranslateTo(languageCode: String) = launchSigner { account.updateTranslateTo(languageCode) }
 
     fun prefer(
         source: String,

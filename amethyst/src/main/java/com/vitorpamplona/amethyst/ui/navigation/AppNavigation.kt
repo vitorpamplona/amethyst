@@ -37,8 +37,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.net.toUri
 import androidx.core.util.Consumer
+import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.crashreports.DisplayCrashMessages
@@ -109,6 +111,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.redirect.LoadRedirectScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relay.RelayFeedScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.AllRelayListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.RelayInformationScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync.EventSyncScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.search.SearchScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.AllSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.NIP47SetupScreen
@@ -121,6 +124,10 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.UpdateZapAmountScr
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.UserSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.ThreadScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.VideoScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletReceiveScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletSendScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletTransactionsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.AddAccountDialog
 import com.vitorpamplona.amethyst.ui.uriToRoute
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
@@ -139,7 +146,17 @@ fun AppNavigation(
 ) {
     val nav = rememberNav()
 
-    AccountSwitcherAndLeftDrawerLayout(accountViewModel, accountSessionManager, nav) {
+    val navBackStackEntry by nav.controller.currentBackStackEntryAsState()
+    val isTabPagerRoute =
+        navBackStackEntry?.destination?.let { dest ->
+            dest.hasRoute<Route.Home>() || dest.hasRoute<Route.Message>()
+        } ?: false
+    val drawerGesturesEnabled =
+        !isTabPagerRoute ||
+            nav.drawerState.isOpen ||
+            nav.drawerState.targetValue != nav.drawerState.currentValue
+
+    AccountSwitcherAndLeftDrawerLayout(accountViewModel, accountSessionManager, nav, drawerGesturesEnabled) {
         NavHost(
             navController = nav.controller,
             startDestination = Route.Home,
@@ -152,6 +169,11 @@ fun AppNavigation(
             composable<Route.Discover> { DiscoverScreen(accountViewModel, nav) }
             composable<Route.Notification> { NotificationScreen(accountViewModel, nav) }
             composable<Route.Chess> { ChessLobbyScreen(accountViewModel, nav) }
+
+            composableFromEnd<Route.Wallet> { WalletScreen(accountViewModel, nav) }
+            composableFromEnd<Route.WalletSend> { WalletSendScreen(accountViewModel, nav) }
+            composableFromEnd<Route.WalletReceive> { WalletReceiveScreen(accountViewModel, nav) }
+            composableFromEnd<Route.WalletTransactions> { WalletTransactionsScreen(accountViewModel, nav) }
 
             composableFromEnd<Route.Lists> { ListOfPeopleListsScreen(accountViewModel, nav) }
             composableFromEndArgs<Route.MyPeopleListView> { PeopleListScreen(it.dTag, accountViewModel, nav) }
@@ -197,6 +219,7 @@ fun AppNavigation(
             composableFromEndArgs<Route.Nip47NWCSetup> { NIP47SetupScreen(accountViewModel, nav, it.nip47) }
             composableFromEndArgs<Route.UpdateZapAmount> { UpdateZapAmountScreen(accountViewModel, nav, it.nip47) }
             composableFromEndArgs<Route.EditRelays> { AllRelayListScreen(accountViewModel, nav) }
+            composableFromEnd<Route.EventSync> { EventSyncScreen(accountViewModel, nav) }
             composableFromEndArgs<Route.EditMediaServers> { AllMediaServersScreen(accountViewModel, nav) }
             composableFromEndArgs<Route.UpdateReactionType> { UpdateReactionTypeScreen(accountViewModel, nav) }
 
@@ -415,7 +438,9 @@ private fun NavigateIfIntentRequested(
                     actionableNextPage?.let { nextRoute ->
                         val npub = runCatching { URI(intentNextPage.removePrefix("nostr:")).findParameterValue("account") }.getOrNull()
                         if (npub != null && accountSessionManager.currentAccountNPub() != npub) {
-                            accountSessionManager.checkAndSwitchUserSync(npub, nextRoute)
+                            accountSessionManager.checkAndSwitchUserSync(npub) { account ->
+                                uriToRoute(intentNextPage, account)
+                            }
                         } else {
                             val currentRoute = getRouteWithArguments(nextRoute::class, nav.controller)
                             if (!isSameRoute(currentRoute, nextRoute)) {
@@ -471,7 +496,9 @@ private fun NavigateIfIntentRequested(
                                 scope.launch {
                                     val npub = runCatching { URI(uri.removePrefix("nostr:")).findParameterValue("account") }.getOrNull()
                                     if (npub != null && accountSessionManager.currentAccountNPub() != npub) {
-                                        accountSessionManager.checkAndSwitchUserSync(npub, newPage)
+                                        accountSessionManager.checkAndSwitchUserSync(npub) { newAccount ->
+                                            uriToRoute(uri, newAccount)
+                                        }
                                     } else {
                                         val currentRoute = getRouteWithArguments(newPage::class, nav.controller)
                                         if (!isSameRoute(currentRoute, newPage)) {

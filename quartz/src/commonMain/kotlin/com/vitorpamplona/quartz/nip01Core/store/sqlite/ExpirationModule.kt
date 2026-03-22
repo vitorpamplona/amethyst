@@ -1,0 +1,95 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.quartz.nip01Core.store.sqlite
+
+import androidx.sqlite.SQLiteConnection
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip40Expiration.expiration
+
+class ExpirationModule : IModule {
+    override fun create(db: SQLiteConnection) {
+        db.execSQL(
+            """
+            CREATE TABLE event_expirations (
+                event_header_row_id INTEGER PRIMARY KEY NOT NULL,
+                expiration INTEGER NOT NULL,
+                FOREIGN KEY (event_header_row_id) REFERENCES event_headers(row_id) ON DELETE CASCADE
+            )
+            """.trimIndent(),
+        )
+
+        // Rejects old addressables
+        db.execSQL(
+            """
+            CREATE TRIGGER reject_expired_events
+            BEFORE INSERT ON event_expirations
+            FOR EACH ROW
+            BEGIN
+                -- Check for existing newer record
+                SELECT RAISE(ABORT, 'blocked: this event is expired')
+                WHERE NEW.expiration <= unixepoch();
+            END;
+            """.trimIndent(),
+        )
+    }
+
+    override fun drop(db: SQLiteConnection) {
+        db.execSQL("DROP TABLE IF EXISTS event_expirations")
+    }
+
+    val insertExpiration =
+        """
+        INSERT OR ROLLBACK INTO event_expirations (event_header_row_id, expiration)
+        VALUES (?, ?)
+        """.trimIndent()
+
+    fun insert(
+        event: Event,
+        headerId: Long,
+        db: SQLiteConnection,
+    ) {
+        val exp = event.expiration()
+        if (exp != null && exp > 0) {
+            db.prepare(insertExpiration).use { stmt ->
+                stmt.bindLong(1, headerId)
+                stmt.bindLong(2, exp)
+                stmt.step()
+            }
+        }
+    }
+
+    val deleteExpiredEventsSQL =
+        """
+        DELETE FROM event_headers
+        WHERE row_id IN (
+            SELECT event_expirations.event_header_row_id FROM event_expirations
+            WHERE event_expirations.expiration < unixepoch()
+        );
+        """.trimIndent()
+
+    fun deleteExpiredEvents(db: SQLiteConnection) {
+        db.prepare(deleteExpiredEventsSQL).use { it.step() }
+    }
+
+    override fun deleteAll(db: SQLiteConnection) {
+        db.execSQL("DELETE FROM event_expirations")
+    }
+}

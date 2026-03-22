@@ -9,14 +9,14 @@
           }
         ]
       }
-    ]
+    ],
     "Stop": [
       {
         "matcher": "",
         "hooks": [
           {
             "type": "command",
-            "command": "./gradlew spotlessApply",
+            "command": "./gradlew spotlessApply 2>/dev/null || spotless-apply",
             "timeout": 120
           }
         ]

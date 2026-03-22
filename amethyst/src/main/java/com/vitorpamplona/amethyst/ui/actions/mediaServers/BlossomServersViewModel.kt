@@ -53,7 +53,7 @@ class BlossomServersViewModel : ViewModel() {
     fun refresh() {
         isModified = false
         _fileServers.update {
-            val obtainedFileServers = obtainFileServers() ?: emptyList()
+            val obtainedFileServers = obtainFileServers()
             obtainedFileServers.mapNotNull { serverUrl ->
                 try {
                     ServerName(
