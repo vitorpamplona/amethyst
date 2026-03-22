@@ -232,14 +232,20 @@ fun NoteDropDownMenu(
                     nav.nav { routeEditDraftTo(note, accountViewModel.account) }
                 }
             }
-            if (note.event is TextNoteEvent && !note.isDraft()) {
-                if (state.isLoggedUser) {
-                    M3ActionRow(icon = Icons.Outlined.Edit, text = stringRes(R.string.edit_post)) {
-                        wantsToEditPost.value = true
+            if (!note.isDraft()) {
+                if (note.event is TextNoteEvent) {
+                    if (state.isLoggedUser) {
+                        M3ActionRow(icon = Icons.Outlined.Edit, text = stringRes(R.string.edit_post)) {
+                            wantsToEditPost.value = true
+                        }
+                    } else {
+                        M3ActionRow(icon = Icons.Outlined.Edit, text = stringRes(R.string.propose_an_edit)) {
+                            wantsToEditPost.value = true
+                        }
                     }
-                } else {
-                    M3ActionRow(icon = Icons.Outlined.Edit, text = stringRes(R.string.propose_an_edit)) {
-                        wantsToEditPost.value = true
+                } else if (note.event is LongTextNoteEvent && state.isLoggedUser) {
+                    M3ActionRow(icon = Icons.Outlined.Edit, text = stringRes(R.string.edit_article)) {
+                        nav.nav { Route.NewLongFormPost(version = note.idHex) }
                     }
                 }
             }

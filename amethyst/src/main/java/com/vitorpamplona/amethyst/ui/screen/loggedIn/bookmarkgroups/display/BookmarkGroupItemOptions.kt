@@ -55,6 +55,7 @@ import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeEditDraftTo
 import com.vitorpamplona.amethyst.ui.note.VerticalDotsIcon
 import com.vitorpamplona.amethyst.ui.note.elements.DropDownParams
@@ -66,6 +67,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.report.ReportNoteDialog
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size24Modifier
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -248,14 +250,20 @@ fun BookmarkGroupItemOptionsMenu(
                     }
                 }
             }
-            if (note.event is TextNoteEvent && !note.isDraft()) {
-                if (state.isLoggedUser) {
-                    M3ActionRow(icon = Icons.Outlined.Edit, text = stringRes(R.string.edit_post)) {
-                        wantsToEditPost.value = true
+            if (!note.isDraft()) {
+                if (note.event is TextNoteEvent) {
+                    if (state.isLoggedUser) {
+                        M3ActionRow(icon = Icons.Outlined.Edit, text = stringRes(R.string.edit_post)) {
+                            wantsToEditPost.value = true
+                        }
+                    } else {
+                        M3ActionRow(icon = Icons.Outlined.Edit, text = stringRes(R.string.propose_an_edit)) {
+                            wantsToEditPost.value = true
+                        }
                     }
-                } else {
-                    M3ActionRow(icon = Icons.Outlined.Edit, text = stringRes(R.string.propose_an_edit)) {
-                        wantsToEditPost.value = true
+                } else if (note.event is LongTextNoteEvent && state.isLoggedUser) {
+                    M3ActionRow(icon = Icons.Outlined.Edit, text = stringRes(R.string.edit_article)) {
+                        nav.nav { Route.NewLongFormPost(version = note.idHex) }
                     }
                 }
             }
