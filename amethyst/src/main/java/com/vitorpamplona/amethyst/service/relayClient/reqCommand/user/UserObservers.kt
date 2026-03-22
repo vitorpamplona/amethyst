@@ -502,9 +502,12 @@ fun observeUserStatuses(
 
     val flow =
         remember(user) {
-            user.statusState().statuses.onStart {
-                user.statusState().removeExpired()
-            }
+            user
+                .statusState()
+                .statuses
+                .onStart {
+                    user.statusState().removeExpired()
+                }.flowOn(Dispatchers.IO)
         }
 
     @SuppressLint("StateFlowValueCalledInComposition")
