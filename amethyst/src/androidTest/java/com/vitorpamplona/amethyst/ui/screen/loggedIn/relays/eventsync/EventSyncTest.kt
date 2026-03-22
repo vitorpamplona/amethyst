@@ -23,9 +23,13 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.amethyst.model.Constants
 import com.vitorpamplona.amethyst.service.okhttp.DefaultContentTypeInterceptor
+import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayLogger
+import com.vitorpamplona.quartz.nip01Core.relay.client.auth.RelayAuthenticator
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -38,6 +42,7 @@ import org.junit.runner.RunWith
 class EventSyncTest {
     companion object {
         val vitor = "wss://vitor.nostr1.com".normalizeRelayUrl()
+        val fiatjaf = "wss://pyramid.fiatjaf.com".normalizeRelayUrl()
         val appScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
         val rootClient =
@@ -64,6 +69,40 @@ class EventSyncTest {
                     dmTargets = { setOf(vitor) },
                     clientBuilder = {
                         NostrClient(socketBuilder, appScope)
+                    },
+                    scope = appScope,
+                )
+
+            sync.runSync()
+        }
+
+    @Test
+    fun testFiatjafSync() =
+        runBlocking {
+            val sync =
+                EventSync(
+                    accountPubKey = "460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c",
+                    relayDb = { listOf(fiatjaf) },
+                    outboxTargets = { setOf(vitor) },
+                    inboxTargets = { setOf(vitor) },
+                    dmTargets = { setOf(vitor) },
+                    clientBuilder = {
+                        val newClient = NostrClient(socketBuilder, appScope)
+                        val logger = RelayLogger(newClient, debugSending = true, debugReceiving = false)
+
+                        val signer = NostrSignerInternal(KeyPair())
+
+                        // Authenticates with relays.
+                        val auth =
+                            RelayAuthenticator(
+                                newClient,
+                                appScope,
+                                signWithAllLoggedInUsers = { authTemplate ->
+                                    listOf(signer.sign(authTemplate))
+                                },
+                            )
+
+                        newClient
                     },
                     scope = appScope,
                 )

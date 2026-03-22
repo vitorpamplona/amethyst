@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -43,10 +44,12 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.RangeSlider
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -54,6 +57,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -70,6 +75,9 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun EventSyncScreen(
@@ -94,6 +102,8 @@ fun EventSyncScreen(
                 syncState = syncState,
                 liveActivity = liveActivity,
                 isMobileOrMetered = isMobileOrMetered,
+                onSinceChanged = { syncViewModel.sinceSecs.value = it },
+                onUntilChanged = { syncViewModel.untilSecs.value = it },
                 onStart = syncViewModel::start,
                 onCancel = syncViewModel::cancel,
             )
@@ -106,6 +116,8 @@ fun EventScreenBody(
     syncState: EventSync.SyncState,
     liveActivity: EventSync.LiveSyncActivity,
     isMobileOrMetered: Boolean = false,
+    onSinceChanged: (Long?) -> Unit = {},
+    onUntilChanged: (Long?) -> Unit = {},
     onStart: () -> Unit = {},
     onCancel: () -> Unit = {},
 ) {
@@ -119,10 +131,10 @@ fun EventScreenBody(
         item {
             // ---- Progress / Status area ----
             when (syncState) {
-                is EventSync.SyncState.Idle -> ExplanationCard(isMobileOrMetered, onStart)
+                is EventSync.SyncState.Idle -> ExplanationCard(isMobileOrMetered, onSinceChanged, onUntilChanged, onStart)
                 is EventSync.SyncState.Running -> SyncProgressCard(state = syncState, onCancel)
-                is EventSync.SyncState.Done -> DoneCard(state = syncState, isMobileOrMetered, onStart)
-                is EventSync.SyncState.Error -> ErrorCard(syncState.message, isMobileOrMetered, onStart)
+                is EventSync.SyncState.Done -> DoneCard(state = syncState, isMobileOrMetered, onSinceChanged, onUntilChanged, onStart)
+                is EventSync.SyncState.Error -> ErrorCard(syncState, isMobileOrMetered, onSinceChanged, onUntilChanged, onStart)
             }
         }
 
@@ -231,7 +243,9 @@ private fun StartSyncButton(
 @Composable
 private fun ExplanationCard(
     isMobileOrMetered: Boolean,
-    onStart: () -> Unit,
+    onSinceChanged: (Long?) -> Unit = {},
+    onUntilChanged: (Long?) -> Unit = {},
+    onStart: () -> Unit = {},
 ) {
     // ---- Explanation card ----
     Card(
@@ -256,6 +270,7 @@ private fun ExplanationCard(
             Spacer(Modifier.height(4.dp))
             StepRow(number = "3", text = stringRes(R.string.event_sync_step3))
             Spacer(Modifier.height(10.dp))
+
             // ---- WiFi warning ----
             if (isMobileOrMetered) {
                 Card(
@@ -274,6 +289,12 @@ private fun ExplanationCard(
                 }
                 Spacer(Modifier.height(10.dp))
             }
+            DateRangeFilterCard(
+                backgroundColor = MaterialTheme.colorScheme.surfaceVariant,
+                onSinceChanged = onSinceChanged,
+                onUntilChanged = onUntilChanged,
+            )
+            Spacer(Modifier.height(14.dp))
             StartSyncButton(isMobileOrMetered = isMobileOrMetered, onStart)
         }
     }
@@ -352,6 +373,8 @@ private fun RelayStatement(state: EventSync.SyncState.Running) {
 private fun DoneCard(
     state: EventSync.SyncState.Done,
     isMobileOrMetered: Boolean = false,
+    onSinceChanged: (Long?) -> Unit = {},
+    onUntilChanged: (Long?) -> Unit = {},
     onStart: () -> Unit = { },
 ) {
     Card(
@@ -387,6 +410,16 @@ private fun DoneCard(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
             )
+            Spacer(Modifier.height(14.dp))
+
+            DateRangeFilterCard(
+                backgroundColor = MaterialTheme.colorScheme.primaryContainer,
+                onSinceStartValue = state.sinceFilter,
+                onUntilStartValue = state.untilFilter,
+                onSinceChanged = onSinceChanged,
+                onUntilChanged = onUntilChanged,
+            )
+
             Spacer(Modifier.height(10.dp))
             StartSyncButton(isMobileOrMetered, onStart)
         }
@@ -395,8 +428,10 @@ private fun DoneCard(
 
 @Composable
 private fun ErrorCard(
-    message: String,
+    state: EventSync.SyncState.Error,
     isMobileOrMetered: Boolean = false,
+    onSinceChanged: (Long?) -> Unit = {},
+    onUntilChanged: (Long?) -> Unit = {},
     onStart: () -> Unit = {},
 ) {
     Card(
@@ -415,9 +450,18 @@ private fun ErrorCard(
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                text = message,
+                text = state.message,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onErrorContainer,
+            )
+            Spacer(Modifier.height(14.dp))
+
+            DateRangeFilterCard(
+                backgroundColor = MaterialTheme.colorScheme.errorContainer,
+                onSinceStartValue = state.sinceFilter,
+                onUntilStartValue = state.untilFilter,
+                onSinceChanged = onSinceChanged,
+                onUntilChanged = onUntilChanged,
             )
             Spacer(Modifier.height(10.dp))
             StartSyncButton(isMobileOrMetered, onStart)
@@ -660,6 +704,117 @@ private fun ActivityLogRow(info: EventSync.LiveSyncActivity.SourceRelayInfo) {
     }
 }
 
+/** Oldest possible "since" — roughly 2020-01-01 in epoch seconds. */
+private const val EPOCH_2023 = 1_672_549_201L
+
+@Composable
+private fun DateRangeFilterCard(
+    backgroundColor: Color,
+    onSinceStartValue: Long? = null,
+    onUntilStartValue: Long? = null,
+    onSinceChanged: (Long?) -> Unit = {},
+    onUntilChanged: (Long?) -> Unit = {},
+) {
+    val now = remember { System.currentTimeMillis() / 1000 }
+
+    // Slider range: 0f = EPOCH_2020, 1f = now
+    val range = (now - EPOCH_2023).toFloat()
+
+    // Initialise from lastSyncTimestamp when available, otherwise full range
+    var sliderValues by remember(onSinceStartValue, onUntilStartValue) {
+        val initialSince =
+            if (onSinceStartValue != null) {
+                ((onSinceStartValue - EPOCH_2023) / range).coerceIn(0f, 1f)
+            } else {
+                0f
+            }
+
+        val finalSince =
+            if (onUntilStartValue != null) {
+                ((onUntilStartValue - EPOCH_2023) / range).coerceIn(0f, 1f)
+            } else {
+                1f
+            }
+        mutableStateOf(initialSince..finalSince)
+    }
+
+    // Derive actual timestamps
+    val sinceEpoch = (EPOCH_2023 + (sliderValues.start * range).toLong())
+    val untilEpoch = (EPOCH_2023 + (sliderValues.endInclusive * range).toLong())
+
+    // Fire callbacks
+    val effectiveSince = if (sliderValues.start <= 0.001f) null else sinceEpoch
+    val effectiveUntil = if (sliderValues.endInclusive >= 0.999f) null else untilEpoch
+
+    // Notify parent on each change
+    LaunchedEffect(effectiveSince) { onSinceChanged(effectiveSince) }
+    LaunchedEffect(effectiveUntil) { onUntilChanged(effectiveUntil) }
+
+    Card(
+        modifier =
+            Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = backgroundColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = stringRes(R.string.event_sync_date_filter_title),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            // Labels for current selection
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text =
+                        if (effectiveSince == null) {
+                            stringRes(R.string.event_sync_date_filter_all_time)
+                        } else {
+                            stringRes(R.string.event_sync_date_filter_since) + " " + formatEpochDate(sinceEpoch)
+                        },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    text =
+                        if (effectiveUntil == null) {
+                            stringRes(R.string.event_sync_date_filter_now)
+                        } else {
+                            stringRes(R.string.event_sync_date_filter_until) + " " + formatEpochDate(untilEpoch)
+                        },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+
+            Box(
+                // block left drawer and back gestures when sliding
+                Modifier.pointerInput(Unit) {
+                    detectDragGestures { change, _ ->
+                        change.consume()
+                    }
+                },
+            ) {
+                RangeSlider(
+                    value = sliderValues,
+                    onValueChange = { sliderValues = it },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        }
+    }
+}
+
+private fun formatEpochDate(epochSecs: Long): String {
+    val sdf = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
+    return sdf.format(Date(epochSecs * 1000))
+}
+
 // -------------------------------------------------------------------------
 // Helpers
 // -------------------------------------------------------------------------
@@ -747,7 +902,7 @@ private val previewActivity =
 @Preview
 fun IdleCardWifiPreview() {
     ThemeComparisonColumn {
-        ExplanationCard(false, {})
+        ExplanationCard(false)
     }
 }
 
@@ -755,7 +910,7 @@ fun IdleCardWifiPreview() {
 @Preview
 fun IdleCardMobilePreview() {
     ThemeComparisonColumn {
-        ExplanationCard(true, {})
+        ExplanationCard(true)
     }
 }
 
@@ -797,7 +952,7 @@ fun DoneCardPreview() {
 @Preview
 fun ErrorCardPreview() {
     ThemeComparisonColumn {
-        ErrorCard(message = "No outbox, inbox, or DM relays configured.")
+        ErrorCard(state = EventSync.SyncState.Error("No outbox, inbox, or DM relays configured."))
     }
 }
 

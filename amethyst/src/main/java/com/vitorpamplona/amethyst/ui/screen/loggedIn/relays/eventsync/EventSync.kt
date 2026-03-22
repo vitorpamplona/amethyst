@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync.EventSync.Companion.MAX_ACTIVITY_LOG
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync.EventSync.Companion.MAX_CONCURRENT_RELAYS
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync.EventSync.Companion.RELAY_TIMEOUT_MS
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync.EventSync.LiveSyncActivity.SourceRelayInfo
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -106,14 +107,18 @@ class EventSync(
             val eventsSent: MutableStateFlow<Int>,
             val eventsReceived: MutableStateFlow<Int>,
             val eventsAccepted: MutableStateFlow<Int>,
+            val sinceFilter: Long? = null,
+            val untilFilter: Long? = null,
         ) : SyncState() {
-            constructor(relaysCompleted: Int, totalRelays: Int, eventsSent: Int, eventsReceived: Int, eventsAccepted: Int) :
+            constructor(relaysCompleted: Int, totalRelays: Int, eventsSent: Int, eventsReceived: Int, eventsAccepted: Int, sinceFilter: Long? = null, untilFilter: Long? = null) :
                 this(
                     relaysCompleted = MutableStateFlow(relaysCompleted),
                     totalRelays = MutableStateFlow(totalRelays),
                     eventsSent = MutableStateFlow(eventsSent),
                     eventsReceived = MutableStateFlow(eventsReceived),
                     eventsAccepted = MutableStateFlow(eventsAccepted),
+                    sinceFilter = sinceFilter,
+                    untilFilter = untilFilter,
                 )
         }
 
@@ -122,10 +127,14 @@ class EventSync(
             val totalEventsSent: Int,
             val totalEventsAccepted: Int,
             val durationMs: Long,
+            val sinceFilter: Long? = null,
+            val untilFilter: Long? = null,
         ) : SyncState()
 
         data class Error(
             val message: String,
+            val sinceFilter: Long? = null,
+            val untilFilter: Long? = null,
         ) : SyncState()
     }
 
@@ -282,14 +291,20 @@ class EventSync(
     // Control functions
     // -------------------------------------------------------------------------
 
+    /** User-selected date range for the sync filter (epoch seconds). */
+    val sinceSecs = MutableStateFlow<Long?>(null)
+    val untilSecs = MutableStateFlow<Long?>(null)
+
     private var syncJob: Job? = null
 
     fun start() {
         if (_syncState.value is SyncState.Running) return
         _liveActivity.value = LiveSyncActivity()
+        val capturedSince = sinceSecs.value
+        val capturedUntil = untilSecs.value
         syncJob =
             scope.launch(Dispatchers.IO) {
-                runSync()
+                runSync(capturedSince, capturedUntil)
             }
     }
 
@@ -300,7 +315,10 @@ class EventSync(
     // -------------------------------------------------------------------------
     // Sync logic
     // -------------------------------------------------------------------------
-    suspend fun runSync() {
+    suspend fun runSync(
+        filterSince: Long? = null,
+        filterUntil: Long? = null,
+    ) {
         val startTime = System.currentTimeMillis()
 
         _liveActivity.value = LiveSyncActivity()
@@ -311,7 +329,7 @@ class EventSync(
 
         if (relaysToProcess.isEmpty()) {
             _syncState.value =
-                SyncState.Error("No known relays found. Browse some content first to discover relays.")
+                SyncState.Error("No known relays found. Browse some content first to discover relays.", filterSince, filterUntil)
             return
         }
 
@@ -323,14 +341,14 @@ class EventSync(
 
         val defaultFilters =
             buildList {
-                if (outboxTargets.isNotEmpty()) add(Filter(authors = listOf(myPubKey)))
+                if (outboxTargets.isNotEmpty()) add(Filter(authors = listOf(myPubKey), since = filterSince, until = filterUntil))
                 if (inboxTargets.isNotEmpty() || dmTargets.isNotEmpty()) {
-                    add(Filter(tags = mapOf("p" to listOf(myPubKey))))
+                    add(Filter(tags = mapOf("p" to listOf(myPubKey)), since = filterSince, until = filterUntil))
                 }
             }
 
         if (defaultFilters.isEmpty()) {
-            _syncState.value = SyncState.Error("No outbox, inbox, or DM relays configured.")
+            _syncState.value = SyncState.Error("No outbox, inbox, or DM relays configured.", filterSince, filterUntil)
             return
         }
 
@@ -342,9 +360,9 @@ class EventSync(
                     defaultFilters
                 } else {
                     buildList {
-                        if (it !in outboxTargets) add(Filter(authors = listOf(myPubKey)))
+                        if (it !in outboxTargets) add(Filter(authors = listOf(myPubKey), since = filterSince, until = filterUntil))
                         if (it !in inboxTargets && it !in dmTargets) {
-                            add(Filter(tags = mapOf("p" to listOf(myPubKey))))
+                            add(Filter(tags = mapOf("p" to listOf(myPubKey)), since = filterSince, until = filterUntil))
                         }
                     }
                 }
@@ -373,6 +391,8 @@ class EventSync(
                 eventsSent = 0,
                 eventsReceived = 0,
                 eventsAccepted = 0,
+                sinceFilter = filterSince,
+                untilFilter = filterUntil,
             )
 
         val okListener =
@@ -563,6 +583,8 @@ class EventSync(
                         totalEventsSent = runningState.eventsSent.value,
                         totalEventsAccepted = runningState.eventsAccepted.value,
                         durationMs = System.currentTimeMillis() - startTime,
+                        sinceFilter = filterSince,
+                        untilFilter = filterUntil,
                     )
             } catch (e: Exception) {
                 _syncState.value =
@@ -571,10 +593,12 @@ class EventSync(
                         totalEventsSent = runningState.eventsSent.value,
                         totalEventsAccepted = runningState.eventsAccepted.value,
                         durationMs = System.currentTimeMillis() - startTime,
+                        sinceFilter = filterSince,
+                        untilFilter = filterUntil,
                     )
 
                 if (e is CancellationException) throw e
-                _syncState.value = SyncState.Error(e.message ?: "Unknown error")
+                _syncState.value = SyncState.Error(e.message ?: "Unknown error", filterSince, filterUntil)
             } finally {
                 client.unsubscribe(okListener)
             }
