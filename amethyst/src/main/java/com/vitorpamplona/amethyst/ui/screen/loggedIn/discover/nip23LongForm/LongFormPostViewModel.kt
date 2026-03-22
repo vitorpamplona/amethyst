@@ -43,12 +43,14 @@ import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
+import com.vitorpamplona.amethyst.service.uploads.SuspendableConfirmation
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
 import com.vitorpamplona.amethyst.service.uploads.nip96.Nip96Uploader
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
+import com.vitorpamplona.amethyst.ui.actions.uploads.MediaUploadTracker
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.ui.note.creators.draftTags.DraftTagState
@@ -151,8 +153,14 @@ class LongFormPostViewModel :
 
     val iMetaAttachments = IMetaAttachments()
 
-    var isUploadingImage by mutableStateOf(false)
+    val mediaUploadTracker = MediaUploadTracker()
+    val isUploadingImage: Boolean get() = mediaUploadTracker.isUploadingImage
+    val isUploadingFile: Boolean get() = mediaUploadTracker.isUploadingFile
+
     var multiOrchestrator by mutableStateOf<MultiOrchestrator?>(null)
+
+    // Stripping failure dialog
+    val strippingFailureConfirmation = SuspendableConfirmation()
 
     var userSuggestions: UserSuggestionState? = null
     var userSuggestionsMainMessage: UserSuggestionAnchor? = null
@@ -467,8 +475,9 @@ class LongFormPostViewModel :
         onError: (title: String, message: String) -> Unit,
         context: Context,
         useH265: Boolean,
+        stripMetadata: Boolean = true,
     ) = try {
-        uploadUnsafe(alt, contentWarningReason, mediaQuality, server, onError, context, useH265)
+        uploadUnsafe(alt, contentWarningReason, mediaQuality, server, onError, context, useH265, stripMetadata)
     } catch (_: SignerExceptions.ReadOnlyException) {
         onError(
             stringRes(context, R.string.read_only_user),
@@ -484,11 +493,12 @@ class LongFormPostViewModel :
         onError: (title: String, message: String) -> Unit,
         context: Context,
         useH265: Boolean,
+        stripMetadata: Boolean = true,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             val myMultiOrchestrator = multiOrchestrator ?: return@launch
 
-            isUploadingImage = true
+            mediaUploadTracker.startUpload(myMultiOrchestrator.hasNonMedia())
 
             val results =
                 myMultiOrchestrator.upload(
@@ -499,6 +509,8 @@ class LongFormPostViewModel :
                     account,
                     context,
                     useH265,
+                    stripMetadata,
+                    onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
                 )
 
             if (results.allGood) {
@@ -534,7 +546,7 @@ class LongFormPostViewModel :
                 onError(stringRes(context, R.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
             }
 
-            isUploadingImage = false
+            mediaUploadTracker.finishUpload()
         }
     }
 
@@ -552,7 +564,7 @@ class LongFormPostViewModel :
         existingDTag = null
 
         multiOrchestrator = null
-        isUploadingImage = false
+        mediaUploadTracker.finishUpload()
 
         wantsInvoice = false
         wantsZapRaiser = false
@@ -568,10 +580,11 @@ class LongFormPostViewModel :
         forwardZapTo.value = SplitBuilder()
         forwardZapToEditting.value = TextFieldValue("")
 
-        iMetaAttachments.reset()
-
         userSuggestions?.reset()
         userSuggestionsMainMessage = null
+
+        iMetaAttachments.reset()
+
         emojiSuggestions?.reset()
     }
 

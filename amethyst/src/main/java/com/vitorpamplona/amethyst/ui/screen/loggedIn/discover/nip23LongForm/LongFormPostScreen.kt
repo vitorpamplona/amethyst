@@ -62,11 +62,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromFiles
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectSingleFromGallery
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakePictureButton
+import com.vitorpamplona.amethyst.ui.actions.uploads.TakeVideoButton
 import com.vitorpamplona.amethyst.ui.components.markdown.RenderContentAsMarkdown
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.PostingTopBar
@@ -113,6 +115,8 @@ fun LongFormPostScreen(
     }
 
     WatchAndLoadMyEmojiList(accountViewModel)
+
+    StrippingFailureDialog(postViewModel.strippingFailureConfirmation)
 
     BackHandler {
         accountViewModel.launchSigner {
@@ -388,8 +392,9 @@ private fun MarkdownPostScreenBody(
                         ImageVideoDescription(
                             it,
                             accountViewModel.account.settings.defaultFileServer,
-                            onAdd = { alt, server, sensitiveContent, mediaQuality, useH265 ->
-                                postViewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, server, accountViewModel.toastManager::toast, context, useH265)
+                            isUploading = postViewModel.mediaUploadTracker.isUploading,
+                            onAdd = { alt, server, sensitiveContent, mediaQuality, useH265, stripMetadata ->
+                                postViewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, server, accountViewModel.toastManager::toast, context, useH265, stripMetadata)
                                 accountViewModel.account.settings.changeDefaultFileServer(server)
                             },
                             onDelete = postViewModel::deleteMediaToUpload,
@@ -488,6 +493,7 @@ private fun MarkdownBottomRowActions(postViewModel: LongFormPostViewModel) {
     ) {
         SelectFromGallery(
             isUploading = postViewModel.isUploadingImage,
+            enabled = !postViewModel.isUploadingFile,
             tint = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier,
         ) {
@@ -495,7 +501,8 @@ private fun MarkdownBottomRowActions(postViewModel: LongFormPostViewModel) {
         }
 
         SelectFromFiles(
-            isUploading = postViewModel.isUploadingImage,
+            isUploading = postViewModel.isUploadingFile,
+            enabled = !postViewModel.isUploadingImage,
             tint = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier,
         ) {
@@ -504,6 +511,12 @@ private fun MarkdownBottomRowActions(postViewModel: LongFormPostViewModel) {
 
         TakePictureButton(
             onPictureTaken = {
+                postViewModel.selectImage(it)
+            },
+        )
+
+        TakeVideoButton(
+            onVideoTaken = {
                 postViewModel.selectImage(it)
             },
         )
