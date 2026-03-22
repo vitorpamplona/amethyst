@@ -1791,7 +1791,7 @@ fun mockAccountViewModel(): AccountViewModel {
             forceReplacePubkey = false,
         )
 
-    val client = EmptyNostrClient
+    val client = EmptyNostrClient()
     val authenticator = EmptyIAuthStatus
 
     val nwcFilters = NWCPaymentFilterAssembler(client)
@@ -1842,7 +1842,7 @@ fun mockVitorAccountViewModel(): AccountViewModel {
             pubKey = Hex.decode("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c"),
         )
 
-    val client = EmptyNostrClient
+    val client = EmptyNostrClient()
     val authenticator = EmptyIAuthStatus
 
     val nwcFilters = NWCPaymentFilterAssembler(client)
@@ -1856,7 +1856,7 @@ fun mockVitorAccountViewModel(): AccountViewModel {
             nwcFilterAssembler = nwcFilters,
             otsResolverBuilder = EmptyOtsResolverBuilder,
             cache = LocalCache,
-            client = EmptyNostrClient,
+            client = EmptyNostrClient(),
             scope = scope,
         )
 

@@ -25,7 +25,7 @@ Write tests that **reproduce the three NIP-46 bugs** before they're fixed, then 
 ### Existing
 - Framework: `kotlin.test` + `kotlinx-coroutines-test` + `mockk`
 - Location: `desktopApp/src/jvmTest/kotlin/.../desktop/account/`
-- Mocks: `EmptyNostrClient` (no-op), `mockk<SecureKeyStorage>(relaxed = true)`, temp dirs
+- Mocks: `EmptyNostrClient()` (no-op), `mockk<SecureKeyStorage>(relaxed = true)`, temp dirs
 - Pattern: `@BeforeTest` setup → `runTest {}` → `@AfterTest` cleanup
 
 ### Needed
@@ -40,9 +40,9 @@ Three tests pass `client` param to `loadSavedAccount()` which no longer accepts 
 
 | Test | Fix |
 |------|-----|
-| `loadSavedAccountBunkerNoEphemeralReturnsFailure` (line 114) | Remove `client = EmptyNostrClient` arg |
+| `loadSavedAccountBunkerNoEphemeralReturnsFailure` (line 114) | Remove `client = EmptyNostrClient()` arg |
 | `loadSavedAccountBunkerNoClientFallsBackToInternal` (line 119-136) | **Delete entirely** — concept no longer exists (AccountManager always creates its own NIP-46 client) |
-| `loadSavedAccountBunkerSuccess` (line 155-158) | Remove `client = EmptyNostrClient` arg |
+| `loadSavedAccountBunkerSuccess` (line 155-158) | Remove `client = EmptyNostrClient()` arg |
 
 ## Phase 1: Relay Isolation Tests (Bug 2 + 3)
 

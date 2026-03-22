@@ -87,7 +87,7 @@ interface INostrClient : AutoCloseable {
     fun activeOutboxCache(url: NormalizedRelayUrl): Set<HexKey>
 }
 
-object EmptyNostrClient : INostrClient {
+class EmptyNostrClient : INostrClient {
     override fun connectedRelaysFlow() = MutableStateFlow(emptySet<NormalizedRelayUrl>())
 
     override fun availableRelaysFlow() = MutableStateFlow(emptySet<NormalizedRelayUrl>())

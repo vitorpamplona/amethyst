@@ -61,7 +61,7 @@ class AccountManagerHeartbeatTest {
                 NostrSignerRemote.fromBunkerUri(
                     "bunker://$validHex?relay=wss://r.com",
                     ephemeral,
-                    EmptyNostrClient,
+                    EmptyNostrClient(),
                 ),
             )
     }
