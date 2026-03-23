@@ -491,6 +491,29 @@ class DesktopLocalCache : ICacheProvider {
         eventStream.emitDeletedNotes(notes)
     }
 
+    // ----- Profile count cache -----
+
+    private val followerCounts = ConcurrentHashMap<HexKey, Int>()
+    private val followingCounts = ConcurrentHashMap<HexKey, Int>()
+
+    fun getCachedFollowerCount(pubkey: HexKey): Int = followerCounts[pubkey] ?: 0
+
+    fun getCachedFollowingCount(pubkey: HexKey): Int = followingCounts[pubkey] ?: 0
+
+    fun cacheFollowerCount(
+        pubkey: HexKey,
+        count: Int,
+    ) {
+        followerCounts[pubkey] = count
+    }
+
+    fun cacheFollowingCount(
+        pubkey: HexKey,
+        count: Int,
+    ) {
+        followingCounts[pubkey] = count
+    }
+
     // ----- Stats -----
 
     fun userCount(): Int = users.size()
@@ -503,6 +526,8 @@ class DesktopLocalCache : ICacheProvider {
         addressableNotes.clear()
         deletedEvents.clear()
         _followedUsers.value = emptySet()
+        followerCounts.clear()
+        followingCounts.clear()
     }
 }
 

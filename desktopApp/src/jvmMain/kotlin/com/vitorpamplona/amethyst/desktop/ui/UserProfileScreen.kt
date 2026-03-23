@@ -124,12 +124,22 @@ fun UserProfileScreen(
     val relayStatuses by relayManager.relayStatuses.collectAsState()
     val connectedRelays = remember(relayStatuses) { relayStatuses.keys }
 
-    // User metadata
-    var displayName by remember { mutableStateOf<String?>(null) }
-    var about by remember { mutableStateOf<String?>(null) }
-    var picture by remember { mutableStateOf<String?>(null) }
-    var followersCount by remember { mutableStateOf(0) }
-    var followingCount by remember { mutableStateOf(0) }
+    // User metadata — seed from cache so returning to profile is instant
+    val cachedUser = remember(pubKeyHex) { localCache.getUserIfExists(pubKeyHex) }
+    val cachedMetadata = remember(pubKeyHex) { cachedUser?.metadataOrNull() }
+    var displayName by remember { mutableStateOf(cachedMetadata?.bestName()) }
+    var about by remember {
+        mutableStateOf(
+            cachedMetadata
+                ?.flow
+                ?.value
+                ?.info
+                ?.about,
+        )
+    }
+    var picture by remember { mutableStateOf(cachedMetadata?.profilePicture()) }
+    var followersCount by remember { mutableStateOf(localCache.getCachedFollowerCount(pubKeyHex)) }
+    var followingCount by remember { mutableStateOf(localCache.getCachedFollowingCount(pubKeyHex)) }
 
     // Profile editing state (only for own profile)
     val isOwnProfile = account != null && pubKeyHex == account.pubKeyHex
@@ -274,8 +284,9 @@ fun UserProfileScreen(
                 pubKeyHex = pubKeyHex,
                 onEvent = { event, _, _, _ ->
                     if (event is ContactListEvent) {
-                        // Count the number of people this user follows
-                        followingCount = event.verifiedFollowKeySet().size
+                        val count = event.verifiedFollowKeySet().size
+                        followingCount = count
+                        localCache.cacheFollowingCount(pubKeyHex, count)
                     }
                 },
                 onEose = { _, _ -> },
@@ -309,7 +320,9 @@ fun UserProfileScreen(
                 onEvent = { event, _, _, _ ->
                     // Count unique authors who follow this user
                     if (followerAuthors.add(event.pubKey)) {
-                        followersCount = followerAuthors.size
+                        val count = followerAuthors.size
+                        followersCount = count
+                        localCache.cacheFollowerCount(pubKeyHex, count)
                     }
                 },
                 onEose = { _, _ -> },
