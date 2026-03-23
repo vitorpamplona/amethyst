@@ -18,10 +18,11 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.desktop.service.namecoin
+package com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumxServer
+import kotlinx.serialization.Serializable
 
 /**
  * Immutable data class representing the current Namecoin resolution config.
@@ -30,6 +31,7 @@ import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumxServer
  * hardcoded defaults are ignored. This gives privacy-conscious users full
  * control over which ElectrumX servers observe their name lookups.
  */
+@Serializable
 @Stable
 data class NamecoinSettings(
     /** Whether Namecoin resolution is enabled at all. */
