@@ -1659,4 +1659,20 @@
     <string name="attestor_proficiency_for_kinds">Odborník na ověřování druhů: %1$s</string>
     <string name="attestation_attests_to">Potvrzuje</string>
     <string name="attestation_requests_attestation_to">Žádosti o atestaci pro</string>
+
+    <string name="article_cover_image_url">URL obrázku obálky (volitelné)</string>
+    <string name="article_summary">Shrnutí (volitelné)</string>
+    <string name="article_title">Název</string>
+    <string name="edit_article">Upravit článek</string>
+    <string name="event_sync_date_filter_all_time">Vždy</string>
+    <string name="event_sync_date_filter_last_sync">Poslední synchronizace: %1$s</string>
+    <string name="event_sync_date_filter_now">Nyní</string>
+    <string name="event_sync_date_filter_since">Od</string>
+    <string name="event_sync_date_filter_since_last_sync">Od poslední synchronizace</string>
+    <string name="event_sync_date_filter_title">Časové rozmezí</string>
+    <string name="event_sync_date_filter_until">Do</string>
+    <string name="markdown_edit">Upravit</string>
+    <string name="markdown_preview">Náhled</string>
+    <string name="new_long_form_post">Nový článek</string>
+    <string name="write_your_article_in_markdown">Napište svůj článek v markdownu…</string>
 </resources>

@@ -1658,4 +1658,20 @@
     <string name="attestor_proficiency_for_kinds">Kompetent att verifiera typer: %1$s</string>
     <string name="attestation_attests_to">Intygar</string>
     <string name="attestation_requests_attestation_to">Begär attestering till</string>
+
+    <string name="article_cover_image_url">URL för omslagsbild (valfritt)</string>
+    <string name="article_summary">Sammanfattning (valfritt)</string>
+    <string name="article_title">Titel</string>
+    <string name="edit_article">Redigera artikel</string>
+    <string name="event_sync_date_filter_all_time">All tid</string>
+    <string name="event_sync_date_filter_last_sync">Senaste synkronisering: %1$s</string>
+    <string name="event_sync_date_filter_now">Nu</string>
+    <string name="event_sync_date_filter_since">Från</string>
+    <string name="event_sync_date_filter_since_last_sync">Sedan senaste synkronisering</string>
+    <string name="event_sync_date_filter_title">Datumintervall</string>
+    <string name="event_sync_date_filter_until">Till</string>
+    <string name="markdown_edit">Redigera</string>
+    <string name="markdown_preview">Förhandsgranskning</string>
+    <string name="new_long_form_post">Ny artikel</string>
+    <string name="write_your_article_in_markdown">Skriv din artikel i markdown…</string>
 </resources>

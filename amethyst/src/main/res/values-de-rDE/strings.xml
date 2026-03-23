@@ -1664,4 +1664,20 @@ anz der Bedingungen ist erforderlich</string>
     <string name="attestor_proficiency_for_kinds">Kompetent für die Verifizierung von Arten: %1$s</string>
     <string name="attestation_attests_to">Bestätigt</string>
     <string name="attestation_requests_attestation_to">Beantragt Attestierung für</string>
+
+    <string name="article_cover_image_url">Cover-Bild-URL (optional)</string>
+    <string name="article_summary">Zusammenfassung (optional)</string>
+    <string name="article_title">Titel</string>
+    <string name="edit_article">Artikel bearbeiten</string>
+    <string name="event_sync_date_filter_all_time">Gesamter Zeitraum</string>
+    <string name="event_sync_date_filter_last_sync">Letzte Synchronisierung: %1$s</string>
+    <string name="event_sync_date_filter_now">Jetzt</string>
+    <string name="event_sync_date_filter_since">Von</string>
+    <string name="event_sync_date_filter_since_last_sync">Seit letzter Synchronisierung</string>
+    <string name="event_sync_date_filter_title">Zeitraum</string>
+    <string name="event_sync_date_filter_until">Bis</string>
+    <string name="markdown_edit">Bearbeiten</string>
+    <string name="markdown_preview">Vorschau</string>
+    <string name="new_long_form_post">Neuer Artikel</string>
+    <string name="write_your_article_in_markdown">Schreib deinen Artikel in Markdown…</string>
 </resources>
