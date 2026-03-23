@@ -330,7 +330,11 @@ fun RenderThreadFeed(
         contentPadding = FeedPadding,
         state = listState,
     ) {
-        itemsIndexed(items.list, key = { _, item -> item.idHex }) { index, item ->
+        itemsIndexed(
+            items.list,
+            key = { _, item -> item.idHex },
+            contentType = { index, _ -> if (index == 0) "master" else "reply" },
+        ) { index, item ->
             val level = viewModel.levelFlowForItem(item).collectAsStateWithLifecycle(0)
 
             val modifier =
