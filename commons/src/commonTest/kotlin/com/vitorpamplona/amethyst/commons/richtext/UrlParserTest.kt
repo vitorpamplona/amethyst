@@ -281,6 +281,18 @@ class UrlParserTest {
             Urls(withScheme = emptySet()),
         )
 
+    /**
+     * Regression test for PR #1907: parsing a note whose content is only the Japanese phrase
+     * "今北産業" (a common internet abbreviation) must not throw a StringIndexOutOfBoundsException
+     * from Url.getPart() and must produce no detected URLs.
+     */
+    @Test
+    fun testImakitaSangyo() =
+        test(
+            "今北産業",
+            Urls(),
+        )
+
     @Test
     fun testHour() =
         test(
