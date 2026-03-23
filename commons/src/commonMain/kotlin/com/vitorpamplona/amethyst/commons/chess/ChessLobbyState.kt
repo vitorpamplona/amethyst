@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.chess
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip64Chess.Color
+import com.vitorpamplona.quartz.nip64Chess.GameStatus
 import com.vitorpamplona.quartz.nip64Chess.LiveChessGameState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -495,6 +496,14 @@ class ChessLobbyState(
         if (AcceptedGamesRegistry.wasAccepted(gameId)) {
             // Add to active games instead
             _activeGames.update { it + (gameId to state) }
+            return
+        }
+        // Don't add own games to spectating list
+        if (state.playerPubkey == userPubkey || state.opponentPubkey == userPubkey) {
+            return
+        }
+        // Don't add finished games to spectating list
+        if (state.gameStatus.value is GameStatus.Finished) {
             return
         }
         _spectatingGames.update { it + (gameId to state) }
