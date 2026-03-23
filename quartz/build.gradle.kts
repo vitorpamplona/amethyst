@@ -144,6 +144,7 @@ kotlin {
         }
         binaries.framework {
             baseName = xcfName
+            //isStatic = true
             binaryOption("bundleId", "com.vitorpamplona.quartz")
         }
     }
@@ -154,6 +155,7 @@ kotlin {
         }
         binaries.framework {
             baseName = xcfName
+            //isStatic = true
             binaryOption("bundleId", "com.vitorpamplona.quartz")
         }
     }
@@ -329,6 +331,7 @@ kotlin {
                 implementation(libs.dev.whyoleg.cryptography.provider.apple.optimal)
                 implementation("io.github.andreypfau:kotlinx-crypto-hmac:0.0.4")
                 implementation("io.github.andreypfau:kotlinx-crypto-sha2:0.0.4")
+                implementation("io.github.kotlingeekdev:uri-reference-kmp:1.0")
             }
         }
 
