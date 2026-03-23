@@ -1,7 +1,7 @@
 [versions]
 accompanistAdaptive = "0.37.3"
 cachemapVersion = "0.2.4"
-composeMultiplatform = "1.10.2"
+composeMultiplatform = "1.10.3"
 activityCompose = "1.13.0"
 agp = "9.1.0"
 android-compileSdk = "36"
@@ -20,7 +20,7 @@ coreKtx = "1.18.0"
 datastore = "1.2.1"
 devWhyolegCryptography = "0.5.0"
 espressoCore = "3.7.0"
-firebaseBom = "34.10.0"
+firebaseBom = "34.11.0"
 fragmentKtx = "1.8.9"
 gms = "4.4.4"
 jacksonModuleKotlin = "2.21.1"
@@ -29,7 +29,7 @@ jna = "5.18.1"
 jtorctl = "0.4.5.7"
 junit = "4.13.2"
 kchesslib = "1.0.5"
-kotlin = "2.3.10"
+kotlin = "2.3.20"
 kotlinxCollectionsImmutable = "0.4.0"
 kotlinxCoroutinesCore = "1.10.2"
 kotlinxSerialization = "1.10.0"
@@ -41,7 +41,7 @@ lightcompressor-enhanced = "1.6.0"
 markdown = "f92ef49c9d"
 material3 = "1.9.0"
 materialIconsExtended = "1.7.3"
-media3 = "1.9.2"
+media3 = "1.9.3"
 mockk = "1.14.9"
 kotlinx-coroutines-test = "1.10.2"
 netUrlencoderLibVersion = "1.6.0"
@@ -49,30 +49,30 @@ navigationCompose = "2.9.7"
 okhttp = "5.3.2"
 runner = "1.7.0"
 rfc3986 = "0.1.2"
-secp256k1KmpJniAndroid = "0.22.0"
+secp256k1KmpJniAndroid = "0.23.0"
 securityCryptoKtx = "1.1.0"
-spotless = "8.3.0"
+slf4j = "2.0.17"
+spotless = "8.4.0"
 tarsosdsp = "2.5"
 torAndroid = "0.4.9.5.1"
 translate = "17.0.3"
-jetbrainsCompose = "1.10.2"
+jetbrainsCompose = "1.10.3"
 unifiedpush = "3.0.10"
 vico-charts-compose = "3.0.3"
 zelory = "3.0.1"
 zoomable = "2.11.1"
 vlcj = "4.8.3"
-commonsImaging = "1.0.0-alpha5"
+commonsImaging = "1.0.0-alpha6"
 zxing = "3.5.4"
 zxingAndroidEmbedded = "4.3.0"
 windowCoreAndroid = "1.5.1"
 androidxCamera = "1.5.3"
 androidxCollection = "1.6.0"
-androidxExifinterface = "1.4.1"
+androidxExifinterface = "1.4.2"
 kotlinTest = "2.3.0"
 core = "1.7.0"
 mavenPublish = "0.36.0"
-spmForKmpVersion = "1.4.10"
-stabilityAnalyser = "0.7.0"
+spmForKmpVersion = "1.6.1"
 sqlite = "2.6.2"
 
 [libraries]
@@ -127,6 +127,7 @@ coil-svg = { group = "io.coil-kt.coil3", name = "coil-svg", version.ref = "coil"
 coil-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
 coil-video = { group = "io.coil-kt.coil3", name = "coil-video", version.ref = "coil" }
 commons-imaging = { group = "org.apache.commons", name = "commons-imaging", version.ref = "commonsImaging" }
+slf4j-nop = { module = "org.slf4j:slf4j-nop", version.ref = "slf4j" }
 vlcj = { group = "uk.co.caprica", name = "vlcj", version.ref = "vlcj" }
 dev-whyoleg-cryptography-provider-apple-optimal = { module = "dev.whyoleg.cryptography:cryptography-provider-optimal", version.ref = "devWhyolegCryptography" }
 drfonfon-geohash = { group = "com.github.drfonfon", name = "android-kotlin-geohash", version.ref = "androidKotlinGeohash" }
@@ -173,7 +174,6 @@ tor-android = { module = "info.guardianproject:tor-android", version.ref = "torA
 unifiedpush = { group = "com.github.UnifiedPush", name = "android-connector", version.ref = "unifiedpush" }
 vico-charts-compose = { group = "com.patrykandpatrick.vico", name = "compose", version.ref = "vico-charts-compose" }
 vico-charts-m3 = { group = "com.patrykandpatrick.vico", name = "compose-m3", version.ref = "vico-charts-compose" }
-vico-charts-views = { group = "com.patrykandpatrick.vico", name = "views", version.ref = "vico-charts-compose" }
 zelory-image-compressor = { group = "id.zelory", name = "compressor", version.ref = "zelory" }
 zoomable = { group = "net.engawapg.lib", name = "zoomable", version.ref = "zoomable" }
 zxing = { group = "com.google.zxing", name = "core", version.ref = "zxing" }
@@ -198,6 +198,5 @@ serialization = { id = 'org.jetbrains.kotlin.plugin.serialization', version.ref 
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 androidKotlinMultiplatformLibrary = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
 vanniktech-mavenPublish = { id = "com.vanniktech.maven.publish", version.ref = "mavenPublish" }
-stability-analyzer = { id = "com.github.skydoves.compose.stability.analyzer", version.ref = "stabilityAnalyser" }
 composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }
 frankois944-spmForKmp = { id = "io.github.frankois944.spmForKmp", version.ref = "spmForKmpVersion" }
