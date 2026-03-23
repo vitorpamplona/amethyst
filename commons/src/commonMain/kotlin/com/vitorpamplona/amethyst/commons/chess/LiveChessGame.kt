@@ -210,8 +210,9 @@ fun LiveChessGameScreen(
     // Use override if provided, otherwise fall back to gameState flag
     val isSpectator = isSpectatorOverride ?: gameState.isSpectator
 
-    // Pending challenges and spectators cannot make moves
-    val canMakeMoves = !isSpectator && !gameState.isPendingChallenge
+    // Spectators cannot make moves; pending challenges still allow board interaction
+    // (matches Desktop behavior where board is always interactive for participants)
+    val canMakeMoves = !isSpectator
 
     // Track if game end overlay was dismissed
     var gameEndDismissed by remember { mutableStateOf(false) }
