@@ -33,11 +33,15 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.taggedAddresses
+import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
+import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentRequestEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.utils.DualCase
@@ -45,7 +49,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
 
@@ -63,6 +70,10 @@ class DesktopLocalCache : ICacheProvider {
 
     val eventStream = DesktopCacheEventStream()
 
+    /** Cached follow set for the logged-in user. Thread-safe + Compose-observable. */
+    private val _followedUsers = MutableStateFlow<Set<HexKey>>(emptySet())
+    val followedUsers: StateFlow<Set<HexKey>> = _followedUsers.asStateFlow()
+
     companion object {
         const val MAX_NOTES = 50_000
         const val MAX_USERS = 25_000
@@ -70,6 +81,25 @@ class DesktopLocalCache : ICacheProvider {
     }
 
     val paymentTracker = NwcPaymentTracker()
+
+    // ----- Kind-based event consumer registry -----
+
+    private val consumers = HashMap<Int, (Event, NormalizedRelayUrl?) -> Boolean>()
+
+    init {
+        consumers[MetadataEvent.KIND] = { e, _ ->
+            consumeMetadata(e as MetadataEvent)
+            true
+        }
+        consumers[TextNoteEvent.KIND] = { e, r -> consumeTextNote(e as TextNoteEvent, r) }
+        consumers[ReactionEvent.KIND] = { e, r -> consumeReaction(e as ReactionEvent, r) }
+        consumers[LnZapRequestEvent.KIND] = { e, r -> consumeZapRequest(e as LnZapRequestEvent, r) }
+        consumers[LnZapEvent.KIND] = { e, r -> consumeZap(e as LnZapEvent, r) }
+        consumers[RepostEvent.KIND] = { e, r -> consumeRepost(e as RepostEvent, r) }
+        consumers[ContactListEvent.KIND] = { e, _ -> consumeContactList(e as ContactListEvent) }
+        consumers[LongTextNoteEvent.KIND] = { e, r -> consumeLongTextNote(e as LongTextNoteEvent, r) }
+        consumers[BookmarkListEvent.KIND] = { e, _ -> consumeBookmarkList(e as BookmarkListEvent) }
+    }
 
     // ----- User operations -----
 
@@ -140,42 +170,16 @@ class DesktopLocalCache : ICacheProvider {
         }
     }
 
-    // ----- Event consumption (mirrors Android LocalCache pattern) -----
+    // ----- Event consumption (kind-based registry) -----
 
     /**
-     * Routes an event to the appropriate consume method.
-     * Returns true if the event was consumed (new), false if already seen.
+     * Routes an event to the appropriate consume method via kind-based registry.
+     * O(1) dispatch. Returns true if the event was consumed (new), false if already seen.
      */
     fun consume(
         event: Event,
         relay: NormalizedRelayUrl?,
-    ): Boolean =
-        when (event) {
-            is MetadataEvent -> {
-                consumeMetadata(event)
-                true
-            }
-
-            is TextNoteEvent -> {
-                consumeTextNote(event, relay)
-            }
-
-            is ReactionEvent -> {
-                consumeReaction(event, relay)
-            }
-
-            is LnZapRequestEvent -> {
-                consumeZapRequest(event, relay)
-            }
-
-            is LnZapEvent -> {
-                consumeZap(event, relay)
-            }
-
-            else -> {
-                false
-            }
-        }
+    ): Boolean = consumers[event.kind]?.invoke(event, relay) ?: false
 
     /**
      * Consumes a kind 1 text note event.
@@ -265,6 +269,71 @@ class DesktopLocalCache : ICacheProvider {
             zappedNotes.forEach { it.addZap(zapRequestNote, note) }
         }
 
+        return true
+    }
+
+    /**
+     * Consumes a kind 6 repost event.
+     * Links repost to target note via e-tag.
+     */
+    private fun consumeRepost(
+        event: RepostEvent,
+        relay: NormalizedRelayUrl?,
+    ): Boolean {
+        val note = getOrCreateNote(event.id)
+        if (note.event != null) return false
+        val author = getOrCreateUser(event.pubKey)
+        val boostedNote = event.boostedEventId()?.let { getNoteIfExists(it) }
+        val repliesTo = listOfNotNull(boostedNote)
+        note.loadEvent(event, author, repliesTo)
+        relay?.let { note.addRelay(it) }
+        boostedNote?.addBoost(note)
+        return true
+    }
+
+    /**
+     * Consumes a kind 3 contact list event (replaceable).
+     * Updates the cached followedUsers set.
+     */
+    private fun consumeContactList(event: ContactListEvent): Boolean {
+        val currentFollows = _followedUsers.value
+        val newFollows = event.verifiedFollowKeySet()
+        if (newFollows != currentFollows) {
+            _followedUsers.value = newFollows
+        }
+        return true
+    }
+
+    /**
+     * Consumes a kind 30023 long-form text note event.
+     * Creates Note in cache like TextNoteEvent.
+     */
+    private fun consumeLongTextNote(
+        event: LongTextNoteEvent,
+        relay: NormalizedRelayUrl?,
+    ): Boolean {
+        val note = getOrCreateNote(event.id)
+        if (note.event != null) return false
+        val author = getOrCreateUser(event.pubKey)
+        note.loadEvent(event, author, emptyList())
+        relay?.let { note.addRelay(it) }
+        return true
+    }
+
+    /**
+     * Consumes a kind 30001 bookmark list event (addressable/replaceable).
+     * Stores in addressableNotes cache.
+     */
+    private fun consumeBookmarkList(event: BookmarkListEvent): Boolean {
+        val address = event.address()
+        val addressableNote = getOrCreateAddressableNote(address)
+        val author = getOrCreateUser(event.pubKey)
+
+        // Only update if newer
+        val existingEvent = addressableNote.event
+        if (existingEvent != null && existingEvent.createdAt >= event.createdAt) return false
+
+        addressableNote.loadEvent(event, author, emptyList())
         return true
     }
 
@@ -409,6 +478,7 @@ class DesktopLocalCache : ICacheProvider {
         notes.clear()
         addressableNotes.clear()
         deletedEvents.clear()
+        _followedUsers.value = emptySet()
     }
 }
 
