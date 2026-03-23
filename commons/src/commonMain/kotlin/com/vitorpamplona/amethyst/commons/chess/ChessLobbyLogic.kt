@@ -756,6 +756,9 @@ class ChessLobbyLogic(
                     if (!result.liveState.isSpectator) {
                         state.addActiveGame(startEventId, result.liveState)
                         pollingDelegate.addGameId(startEventId)
+                    } else {
+                        state.addSpectatingGame(startEventId, result.liveState)
+                        pollingDelegate.addGameId(startEventId)
                     }
                 }
 

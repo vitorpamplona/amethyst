@@ -50,12 +50,13 @@ actual class ChessEngine {
 
     actual fun makeMove(san: String): MoveResult =
         try {
-            if (board.doMove(san)) {
-                // Input is already SAN from Nostr events, store directly
-                sanHistory.add(san)
+            val normalized = normalizeSan(san)
+            if (board.doMove(normalized)) {
+                // Store the normalized SAN, not the original
+                sanHistory.add(normalized)
                 MoveResult(
                     success = true,
-                    san = san,
+                    san = normalized,
                     position = boardToPosition(),
                 )
             } else {
@@ -70,6 +71,31 @@ actual class ChessEngine {
                 error = e.message ?: "Unknown error making move $san",
             )
         }
+
+    /**
+     * Normalize SAN notation for interoperability with different chess clients.
+     *
+     * Handles:
+     * - Castling with zeros: 0-0 → O-O, 0-0-0 → O-O-O (preserving +/# suffix)
+     * - Annotation symbols: strips trailing !, ?, !!, ??, !?, ?!
+     */
+    private fun normalizeSan(san: String): String {
+        var s = san.trim()
+
+        // Strip trailing annotation characters (!, ?, and combinations)
+        while (s.isNotEmpty() && (s.last() == '!' || s.last() == '?')) {
+            s = s.dropLast(1)
+        }
+
+        // Normalize castling with zeros to letters
+        // Handle 0-0-0 before 0-0 to avoid partial match
+        s =
+            s
+                .replace("0-0-0", "O-O-O")
+                .replace("0-0", "O-O")
+
+        return s
+    }
 
     actual fun makeMove(
         from: String,
