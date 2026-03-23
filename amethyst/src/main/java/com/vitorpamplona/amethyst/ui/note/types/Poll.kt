@@ -180,7 +180,7 @@ fun InnerRenderPoll(
                     },
                 )
             },
-        ) { code, label, closed ->
+        ) { code, label ->
             TranslatableRichTextViewer(
                 content = label,
                 canPreview = canPreview,
@@ -227,7 +227,7 @@ fun RenderPollCard(
     pollState: PollResponsesCache,
     accountViewModel: AccountViewModel,
     galleryUser: @Composable RowScope.(user: User) -> Unit,
-    labelContent: @Composable ColumnScope.(code: String, label: String, closed: Boolean) -> Unit,
+    labelContent: @Composable ColumnScope.(code: String, label: String) -> Unit,
 ) {
     val card =
         remember(event) {
@@ -280,7 +280,7 @@ fun RenderPollCard(
     card: PollCard,
     onRespond: (Set<String>) -> Unit,
     resultContent: @Composable RowScope.(user: User) -> Unit,
-    labelContent: @Composable ColumnScope.(code: String, label: String, closed: Boolean) -> Unit,
+    labelContent: @Composable ColumnScope.(code: String, label: String) -> Unit,
 ) {
     Column(
         verticalArrangement = SpacedBy5dp,
@@ -312,7 +312,7 @@ fun RenderPollCard(
 @Composable
 private fun ColumnScope.RenderSingleChoiceOptions(
     card: PollCard,
-    labelContent: @Composable (ColumnScope.(String, String, closed: Boolean) -> Unit),
+    labelContent: @Composable (ColumnScope.(String, String) -> Unit),
     onRespond: (Set<String>) -> Unit,
 ) {
     card.options.forEach {
@@ -334,12 +334,15 @@ private fun ColumnScope.RenderSingleChoiceOptions(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                val hasSpaceToClick =
+                    remember {
+                        it.label.contains(' ') || it.label.contains('\n')
+                    }
+
                 Column(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth(),
+                    modifier = if (hasSpaceToClick) Modifier.fillMaxWidth() else Modifier.fillMaxWidth(0.9f),
                 ) {
-                    labelContent(it.code, it.label, false)
+                    labelContent(it.code, it.label)
                 }
             }
         }
@@ -349,7 +352,7 @@ private fun ColumnScope.RenderSingleChoiceOptions(
 @Composable
 private fun ColumnScope.RenderMultiChoiceOptions(
     card: PollCard,
-    labelContent: @Composable (ColumnScope.(String, String, closed: Boolean) -> Unit),
+    labelContent: @Composable (ColumnScope.(String, String) -> Unit),
     onRespond: (Set<String>) -> Unit,
 ) {
     var multichoice by
@@ -386,7 +389,7 @@ private fun ColumnScope.RenderMultiChoiceOptions(
                 Column(
                     modifier = Modifier.weight(1f),
                 ) {
-                    labelContent(option.code, option.label, false)
+                    labelContent(option.code, option.label)
                 }
             }
         }
@@ -407,11 +410,11 @@ private fun ColumnScope.RenderMultiChoiceOptions(
 private fun RenderResults(
     card: PollCard,
     resultContent: @Composable RowScope.(user: User) -> Unit,
-    labelContent: @Composable (ColumnScope.(code: String, label: String, closed: Boolean) -> Unit),
+    labelContent: @Composable (ColumnScope.(code: String, label: String) -> Unit),
 ) {
     card.options.forEach { pollItem ->
         RenderClosedItem(pollItem, resultContent) {
-            labelContent(pollItem.code, pollItem.label, true)
+            labelContent(pollItem.code, pollItem.label)
         }
     }
 }
@@ -516,7 +519,7 @@ fun measure100PercentWidthModifier(textStyle: TextStyle): Modifier {
     val density = LocalDensity.current
     val layoutDirection = LocalLayoutDirection.current
 
-    return remember(fontFamilyResolver, density, layoutDirection, textStyle) {
+    return remember(fontFamilyResolver, density, textStyle) {
         val widthPx =
             TextMeasurer(fontFamilyResolver, density, layoutDirection, 1)
                 .measure("100%", style = textStyle.copy(fontWeight = FontWeight.Bold))
@@ -603,7 +606,7 @@ fun RenderPollManualPreview() {
 
     ThemeComparisonColumn {
         Column(Modifier.padding(10.dp)) {
-            RenderPollCard(poll, {}, {}) { _, label, closed ->
+            RenderPollCard(poll, {}, {}) { _, label ->
                 Text(
                     text = label,
                 )
@@ -651,7 +654,7 @@ fun RenderPollManualLongPreview() {
 
     ThemeComparisonColumn {
         Column(Modifier.padding(10.dp)) {
-            RenderPollCard(poll, {}, {}) { _, label, closed ->
+            RenderPollCard(poll, {}, {}) { _, label ->
                 Text(
                     text = label,
                 )
