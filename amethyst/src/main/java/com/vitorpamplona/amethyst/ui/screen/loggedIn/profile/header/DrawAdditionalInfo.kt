@@ -309,7 +309,7 @@ fun DisplayLastSeen(
     lastSeen?.let { timestamp ->
         val context = LocalContext.current
         Text(
-            text = stringRes(R.string.last_seen, timeAgo(timestamp, context)),
+            text = stringRes(R.string.last_seen, timeAgo(timestamp, context, prefix = "", seconds = R.string.seconds)),
             color = MaterialTheme.colorScheme.placeholderText,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
