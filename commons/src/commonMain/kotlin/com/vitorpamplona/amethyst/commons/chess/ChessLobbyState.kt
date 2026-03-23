@@ -480,7 +480,9 @@ class ChessLobbyState(
                 result = result,
                 termination = termination,
                 moveCount = liveState.moveHistory.value.size,
-                completedAt = TimeUtils.now(),
+                completedAt =
+                    com.vitorpamplona.quartz.utils.TimeUtils
+                        .now(),
             )
 
         _completedGames.update { current ->
