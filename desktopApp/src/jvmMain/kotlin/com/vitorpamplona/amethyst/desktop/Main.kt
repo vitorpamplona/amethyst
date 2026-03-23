@@ -100,6 +100,7 @@ import com.vitorpamplona.amethyst.desktop.service.namecoin.DesktopNamecoinNameSe
 import com.vitorpamplona.amethyst.desktop.service.namecoin.DesktopNamecoinPreferences
 import com.vitorpamplona.amethyst.desktop.service.namecoin.LocalNamecoinPreferences
 import com.vitorpamplona.amethyst.desktop.service.namecoin.LocalNamecoinService
+import com.vitorpamplona.amethyst.desktop.ui.ImportFollowListDialog
 import com.vitorpamplona.amethyst.desktop.ui.relay.RelayStatusCard
 import com.vitorpamplona.amethyst.desktop.ui.settings.MediaServerSettings
 import com.vitorpamplona.amethyst.desktop.ui.settings.NamecoinSettingsSection
@@ -176,6 +177,7 @@ fun main() {
         val accountManager = remember { AccountManager.create() }
         val accountState by accountManager.accountState.collectAsState()
         var showAddColumnDialog by remember { mutableStateOf(false) }
+        var showImportFollowListDialog by remember { mutableStateOf(false) }
         var layoutMode by remember {
             mutableStateOf(
                 try {
@@ -219,6 +221,18 @@ fun main() {
                                 deckState.addColumn(DeckColumnType.Settings)
                             }
                         },
+                    )
+                    Separator()
+                    Item(
+                        "Import Follow List…",
+                        shortcut =
+                            if (isMacOS) {
+                                KeyShortcut(Key.I, meta = true, shift = true)
+                            } else {
+                                KeyShortcut(Key.I, ctrl = true, shift = true)
+                            },
+                        onClick = { showImportFollowListDialog = true },
+                        enabled = accountState is AccountState.LoggedIn,
                     )
                     Separator()
                     Item(
@@ -411,6 +425,8 @@ fun main() {
                     onDismissAddColumnDialog = { showAddColumnDialog = false },
                     onShowAddColumnDialog = { showAddColumnDialog = true },
                     replyToNote = replyToNote,
+                    showImportFollowListDialog = showImportFollowListDialog,
+                    onDismissImportFollowListDialog = { showImportFollowListDialog = false },
                 )
             }
         }
@@ -430,6 +446,8 @@ fun App(
     onDismissAddColumnDialog: () -> Unit,
     onShowAddColumnDialog: () -> Unit,
     replyToNote: com.vitorpamplona.quartz.nip01Core.core.Event?,
+    showImportFollowListDialog: Boolean = false,
+    onDismissImportFollowListDialog: () -> Unit = {},
 ) {
     val relayManager = remember { DesktopRelayConnectionManager() }
     val localCache = remember { DesktopLocalCache() }
@@ -562,6 +580,17 @@ fun App(
                             onAdd = { type ->
                                 deckState.addColumn(type)
                                 onDismissAddColumnDialog()
+                            },
+                        )
+                    }
+
+                    // Import Follow List dialog
+                    if (showImportFollowListDialog) {
+                        ImportFollowListDialog(
+                            onDismiss = onDismissImportFollowListDialog,
+                            onImport = { pubkeys ->
+                                // TODO: wire into relay subscription to publish kind 3
+                                onDismissImportFollowListDialog()
                             },
                         )
                     }
