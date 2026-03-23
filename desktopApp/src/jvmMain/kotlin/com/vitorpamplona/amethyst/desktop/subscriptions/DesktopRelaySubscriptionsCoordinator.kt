@@ -36,7 +36,12 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Desktop-specific relay subscriptions coordinator.
@@ -62,6 +67,11 @@ import kotlinx.coroutines.launch
  * }
  * ```
  */
+data class SubscriptionHealth(
+    val lastEventReceivedAt: Long? = null,
+    val eoseReceived: Boolean = false,
+)
+
 class DesktopRelaySubscriptionsCoordinator(
     private val client: INostrClient,
     private val scope: CoroutineScope,
@@ -98,23 +108,130 @@ class DesktopRelaySubscriptionsCoordinator(
             scope = scope,
         )
 
+    // Screen-triggered subscription Jobs — keyed by subId for proper cancellation
+    private val screenSubscriptions = ConcurrentHashMap<String, Job>()
+
+    // Subscription health tracking
+    private val _subscriptionHealth = MutableStateFlow<Map<String, SubscriptionHealth>>(emptyMap())
+    val subscriptionHealth: StateFlow<Map<String, SubscriptionHealth>> = _subscriptionHealth.asStateFlow()
+
+    private fun updateHealth(
+        subId: String,
+        lastEventReceivedAt: Long? = null,
+        eoseReceived: Boolean? = null,
+    ) {
+        _subscriptionHealth.value =
+            _subscriptionHealth.value.toMutableMap().apply {
+                val current = this[subId] ?: SubscriptionHealth()
+                this[subId] =
+                    current.copy(
+                        lastEventReceivedAt = lastEventReceivedAt ?: current.lastEventReceivedAt,
+                        eoseReceived = eoseReceived ?: current.eoseReceived,
+                    )
+            }
+    }
+
     /**
      * Central event router — consumes an event into the cache and emits to event stream.
      * Called from relay onEvent callbacks. Non-blocking (launches on IO dispatcher).
+     * Try-catch per event ensures one bad event doesn't kill the pipeline.
      */
     fun consumeEvent(
         event: Event,
         relay: NormalizedRelayUrl?,
     ) {
         scope.launch(Dispatchers.IO) {
-            val consumed = localCache.consume(event, relay)
-            if (consumed) {
-                val note = localCache.getNoteIfExists(event.id) as? Note ?: return@launch
-                eventBundler.invalidateList(note) { batch ->
-                    localCache.eventStream.emitNewNotes(batch)
+            try {
+                val consumed = localCache.consume(event, relay)
+                if (consumed) {
+                    val note = localCache.getNoteIfExists(event.id) ?: return@launch
+                    eventBundler.invalidateList(note) { batch ->
+                        localCache.eventStream.emitNewNotes(batch)
+                    }
                 }
+            } catch (e: Exception) {
+                println("Coordinator: failed to consume kind ${event.kind}: ${e.message}")
             }
         }
+    }
+
+    /**
+     * Request a consolidated interaction subscription for the given note IDs.
+     * Subscribes to kinds 7 (reactions), 9735 (zaps), 6 (reposts), and 1 (replies)
+     * targeting these notes. Returns a subId for cleanup via [releaseInteractions].
+     */
+    fun requestInteractions(
+        noteIds: List<String>,
+        relays: Set<NormalizedRelayUrl>,
+    ): String {
+        val subId = generateSubId("interactions-${noteIds.hashCode()}")
+
+        // Cancel any existing subscription with this ID
+        screenSubscriptions.remove(subId)?.cancel()
+        client.close(subId)
+
+        if (noteIds.isEmpty() || relays.isEmpty()) return subId
+
+        val filters =
+            listOf(
+                // Reactions (kind 7) targeting these notes
+                Filter(
+                    kinds = listOf(com.vitorpamplona.quartz.nip25Reactions.ReactionEvent.KIND),
+                    tags = mapOf("e" to noteIds),
+                ),
+                // Zap receipts (kind 9735) targeting these notes
+                Filter(
+                    kinds = listOf(com.vitorpamplona.quartz.nip57Zaps.LnZapEvent.KIND),
+                    tags = mapOf("e" to noteIds),
+                ),
+                // Reposts (kind 6) targeting these notes
+                Filter(
+                    kinds = listOf(com.vitorpamplona.quartz.nip18Reposts.RepostEvent.KIND),
+                    tags = mapOf("e" to noteIds),
+                ),
+            )
+
+        val listener =
+            object : IRequestListener {
+                override fun onEvent(
+                    event: Event,
+                    isLive: Boolean,
+                    relay: NormalizedRelayUrl,
+                    forFilters: List<Filter>?,
+                ) {
+                    consumeEvent(event, relay)
+                    updateHealth(subId, lastEventReceivedAt = System.currentTimeMillis())
+                }
+
+                override fun onEose(
+                    relay: NormalizedRelayUrl,
+                    forFilters: List<Filter>?,
+                ) {
+                    updateHealth(subId, eoseReceived = true)
+                }
+            }
+
+        val job =
+            scope.launch {
+                client.openReqSubscription(
+                    subId = subId,
+                    filters = relays.associateWith { filters },
+                    listener = listener,
+                )
+            }
+        screenSubscriptions[subId] = job
+
+        return subId
+    }
+
+    /**
+     * Release a screen-triggered interaction subscription.
+     */
+    fun releaseInteractions(subId: String) {
+        screenSubscriptions.remove(subId)?.cancel()
+        client.close(subId)
+        _subscriptionHealth.value =
+            _subscriptionHealth.value.toMutableMap().apply { remove(subId) }
     }
 
     /**
@@ -265,6 +382,14 @@ class DesktopRelaySubscriptionsCoordinator(
      * Call when switching accounts or during cleanup.
      */
     fun clear() {
+        // Clean up screen-triggered subscriptions
+        screenSubscriptions.forEach { (subId, job) ->
+            job.cancel()
+            client.close(subId)
+        }
+        screenSubscriptions.clear()
+        _subscriptionHealth.value = emptyMap()
+
         unsubscribeFromDms()
         feedMetadata.clear()
         rateLimiter.reset()
