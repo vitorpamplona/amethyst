@@ -71,7 +71,6 @@ import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.service.namecoin.LocalNamecoinService
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
-import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -79,7 +78,6 @@ import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip02FollowList.tags.ContactTag
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
-import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -193,6 +191,15 @@ fun ImportFollowListDialog(
             activeSubscriptions.add(subId)
             var receivedContactList = false
 
+            // Use connected relays only — available relays may include disconnected ones
+            val relays = relayManager.connectedRelays.value
+            println("[ImportFollows] Subscribing for kind 3 of $pubkey on ${relays.size} connected relays: $relays")
+
+            if (relays.isEmpty()) {
+                importState = ImportState.Error("No relays connected. Check your relay settings.")
+                return@LaunchedEffect
+            }
+
             relayManager.subscribe(
                 subId = subId,
                 filters = listOf(
@@ -202,6 +209,7 @@ fun ImportFollowListDialog(
                         limit = 1,
                     ),
                 ),
+                relays = relays,
                 listener = object : IRequestListener {
                     override fun onEvent(
                         event: Event,
@@ -209,6 +217,7 @@ fun ImportFollowListDialog(
                         relay: NormalizedRelayUrl,
                         forFilters: List<Filter>?,
                     ) {
+                        println("[ImportFollows] Received event kind=${event.kind} from $relay id=${event.id.take(12)}")
                         if (event.kind == ContactListEvent.KIND && !receivedContactList) {
                             receivedContactList = true
                             val contactList = ContactListEvent(
@@ -220,11 +229,16 @@ fun ImportFollowListDialog(
                                 event.sig,
                             )
                             val follows = contactList.unverifiedFollowKeySet()
-                            followEntries.clear()
-                            followEntries.addAll(
-                                follows.map { FollowEntry(pubkey = it, selected = true) },
-                            )
-                            importState = ImportState.FollowListLoaded(sourcePubkey = pubkey)
+
+                            // Dispatch state updates to main thread (relay callbacks
+                            // run on arbitrary threads; Compose state is not thread-safe)
+                            scope.launch(Dispatchers.Main) {
+                                followEntries.clear()
+                                followEntries.addAll(
+                                    follows.map { FollowEntry(pubkey = it, selected = true) },
+                                )
+                                importState = ImportState.FollowListLoaded(sourcePubkey = pubkey)
+                            }
 
                             // Clean up the contact list subscription
                             try {
@@ -253,16 +267,20 @@ fun ImportFollowListDialog(
                                             forFilters: List<Filter>?,
                                         ) {
                                             if (event.kind == MetadataEvent.KIND) {
-                                                val metadata = try {
-                                                    JsonMapper.fromJson<UserMetadata>(event.content)
+                                                val bestName = try {
+                                                    val metaJson = jacksonObjectMapper().readTree(event.content)
+                                                    metaJson.get("display_name")?.asText()?.takeIf { it.isNotBlank() }
+                                                        ?: metaJson.get("name")?.asText()?.takeIf { it.isNotBlank() }
                                                 } catch (_: Exception) {
                                                     null
                                                 }
-                                                val bestName = metadata?.bestName()
                                                 if (bestName != null) {
-                                                    val idx = followEntries.indexOfFirst { it.pubkey == event.pubKey }
-                                                    if (idx >= 0) {
-                                                        followEntries[idx] = followEntries[idx].copy(displayName = bestName)
+                                                    // Dispatch to main thread
+                                                    scope.launch(Dispatchers.Main) {
+                                                        val idx = followEntries.indexOfFirst { it.pubkey == event.pubKey }
+                                                        if (idx >= 0) {
+                                                            followEntries[idx] = followEntries[idx].copy(displayName = bestName)
+                                                        }
                                                     }
                                                 }
                                             }
@@ -296,13 +314,12 @@ fun ImportFollowListDialog(
                         relay: NormalizedRelayUrl,
                         forFilters: List<Filter>?,
                     ) {
-                        // If we got EOSE from all relays without a contact list,
-                        // the timeout below will handle showing the error
+                        println("[ImportFollows] EOSE from $relay receivedContactList=$receivedContactList")
                     }
                 },
             )
 
-            // Timeout: if no contact list received after 15s, show error or empty result
+            // Timeout: if no contact list received after 15s, show error
             scope.launch {
                 delay(15_000)
                 if (importState is ImportState.FetchingFollowList) {
@@ -338,38 +355,52 @@ fun ImportFollowListDialog(
 
         scope.launch {
             try {
-                // Try bech32 (npub/nprofile) first
-                val bech32Result = decodePublicKeyAsHexOrNull(trimmed)
-                if (bech32Result != null) {
-                    importState = ImportState.IdentifierResolved(bech32Result)
-                    return@launch
-                }
-
-                // Try raw hex pubkey
-                if (trimmed.matches(Regex("^[0-9a-fA-F]{64}$"))) {
+                // Try raw hex pubkey first (exact 64-char hex)
+                if (trimmed.length == 64 && trimmed.matches(Regex("^[0-9a-fA-F]{64}$"))) {
+                    println("[ImportFollows] Resolved raw hex: ${trimmed.take(16)}...")
                     importState = ImportState.IdentifierResolved(trimmed.lowercase())
                     return@launch
                 }
 
-                // Try Namecoin
+                // Try bech32 (npub/nprofile) — only accept if it starts with known prefixes
+                if (trimmed.startsWith("npub1") || trimmed.startsWith("nprofile1") || trimmed.startsWith("nsec1")) {
+                    val bech32Result = decodePublicKeyAsHexOrNull(trimmed)
+                    if (bech32Result != null && bech32Result.length == 64) {
+                        println("[ImportFollows] Resolved bech32 to ${bech32Result.take(16)}...")
+                        importState = ImportState.IdentifierResolved(bech32Result)
+                        return@launch
+                    }
+                    importState = ImportState.Error("Invalid npub/nprofile — could not decode")
+                    return@launch
+                }
+
+                // Try Namecoin (.bit, d/, id/)
                 if (NamecoinNameResolver.isNamecoinIdentifier(trimmed) && namecoinService != null) {
+                    println("[ImportFollows] Resolving Namecoin identifier: $trimmed")
                     val result = namecoinService.resolvePubkey(trimmed)
-                    if (result != null) {
+                    if (result != null && result.length == 64) {
+                        println("[ImportFollows] Namecoin resolved to ${result.take(16)}...")
                         importState = ImportState.IdentifierResolved(result)
                         return@launch
                     }
+                    importState = ImportState.Error("Namecoin name not found or has no Nostr pubkey")
+                    return@launch
                 }
 
                 // Try NIP-05 HTTP (user@domain)
                 if (trimmed.contains("@")) {
+                    println("[ImportFollows] Resolving NIP-05 HTTP: $trimmed")
                     val result = resolveNip05Http(trimmed)
-                    if (result != null) {
+                    if (result != null && result.length == 64) {
+                        println("[ImportFollows] NIP-05 resolved to ${result.take(16)}...")
                         importState = ImportState.IdentifierResolved(result)
                         return@launch
                     }
+                    importState = ImportState.Error("NIP-05 lookup failed — user not found at that domain")
+                    return@launch
                 }
 
-                importState = ImportState.Error("Could not resolve identifier")
+                importState = ImportState.Error("Unrecognized identifier format. Use npub1..., hex pubkey, user@domain, or .bit/d//id/")
             } catch (e: Exception) {
                 importState = ImportState.Error(e.message ?: "Resolution failed")
             }
