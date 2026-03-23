@@ -505,6 +505,11 @@ class ChessLobbyLogic(
     // Spectator mode
     // ========================================
 
+    fun stopSpectating(gameId: String) {
+        state.removeSpectatingGame(gameId)
+        pollingDelegate.removeGameId(gameId)
+    }
+
     fun loadGameAsSpectator(startEventId: String) {
         scope.launch(Dispatchers.Default) {
             state.setBroadcastStatus(ChessBroadcastStatus.Syncing(0f))

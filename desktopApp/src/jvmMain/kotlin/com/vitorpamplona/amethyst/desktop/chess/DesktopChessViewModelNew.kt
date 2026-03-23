@@ -172,7 +172,7 @@ class DesktopChessViewModelNew(
 
     fun loadGameAsSpectator(gameId: String) = logic.loadGameAsSpectator(gameId)
 
-    fun stopSpectating(gameId: String) = logic.state.removeSpectatingGame(gameId)
+    fun stopSpectating(gameId: String) = logic.stopSpectating(gameId)
 
     // ============================================
     // Utility

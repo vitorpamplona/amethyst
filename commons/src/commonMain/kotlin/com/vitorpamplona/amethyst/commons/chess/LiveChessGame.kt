@@ -201,6 +201,7 @@ fun LiveChessGameScreen(
     onResign: () -> Unit,
     isSpectatorOverride: Boolean? = null,
     onGameEndDismiss: (() -> Unit)? = null,
+    onLeaveSpectating: (() -> Unit)? = null,
     whiteName: String = "White",
     whiteHex: String = "",
     whiteAvatarUrl: String? = null,
@@ -299,7 +300,7 @@ fun LiveChessGameScreen(
                     }
 
                     isSpectator -> {
-                        SpectatorInfo()
+                        SpectatorInfo(onLeaveSpectating = onLeaveSpectating)
                     }
 
                     else -> {
@@ -547,22 +548,33 @@ private fun GameInfoHeader(
  * Info banner shown when spectating a game
  */
 @Composable
-private fun SpectatorInfo() {
-    Box(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .background(
-                    MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f),
-                    RoundedCornerShape(8.dp),
-                ).padding(12.dp),
-        contentAlignment = Alignment.Center,
+private fun SpectatorInfo(onLeaveSpectating: (() -> Unit)? = null) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text(
-            text = "Watching game - spectator mode",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onTertiaryContainer,
-        )
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .background(
+                        MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f),
+                        RoundedCornerShape(8.dp),
+                    ).padding(12.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = "Watching game - spectator mode",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onTertiaryContainer,
+            )
+        }
+        onLeaveSpectating?.let { onLeave ->
+            OutlinedButton(onClick = onLeave) {
+                Text("Leave Game")
+            }
+        }
     }
 }
 

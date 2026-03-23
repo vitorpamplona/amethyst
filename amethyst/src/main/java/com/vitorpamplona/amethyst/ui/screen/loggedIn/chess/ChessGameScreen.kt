@@ -350,6 +350,15 @@ fun ChessGameScreen(
                     onResign = { chessViewModel.resign(gameId) },
                     isSpectatorOverride = isSpectating,
                     onGameEndDismiss = { chessViewModel.dismissGame(gameId) },
+                    onLeaveSpectating =
+                        if (isSpectating) {
+                            {
+                                chessViewModel.stopSpectating(gameId)
+                                nav.popBack()
+                            }
+                        } else {
+                            null
+                        },
                     whiteName = whiteDisplayName,
                     whiteHex = whitePubkey,
                     whiteAvatarUrl = whiteAvatarUrl,

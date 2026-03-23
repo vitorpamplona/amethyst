@@ -281,6 +281,15 @@ fun ChessScreen(
                     },
                     onResign = { viewModel.resign(gameState.startEventId) },
                     isSpectatorOverride = isSpectating,
+                    onLeaveSpectating =
+                        if (isSpectating) {
+                            {
+                                viewModel.stopSpectating(gameState.startEventId)
+                                viewModel.selectGame(null)
+                            }
+                        } else {
+                            null
+                        },
                     compactMode = compactMode,
                     whiteName = viewModel.userMetadataCache.getDisplayName(whitePubkey),
                     whiteHex = whitePubkey,
@@ -614,6 +623,7 @@ private fun DesktopChessGameLayout(
     onMoveMade: (from: String, to: String, san: String) -> Unit,
     onResign: () -> Unit,
     isSpectatorOverride: Boolean? = null,
+    onLeaveSpectating: (() -> Unit)? = null,
     compactMode: Boolean = false,
     whiteName: String = "White",
     whiteHex: String = "",
@@ -860,16 +870,28 @@ private fun DesktopChessGameLayout(
                                     containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f),
                                 ),
                         ) {
-                            Row(
+                            Column(
                                 modifier = Modifier.padding(16.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
-                                Icon(Icons.Default.Visibility, contentDescription = null)
-                                Text(
-                                    "Watching game - spectator mode",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
+                                    Icon(Icons.Default.Visibility, contentDescription = null)
+                                    Text(
+                                        "Watching game - spectator mode",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                    )
+                                }
+                                onLeaveSpectating?.let { onLeave ->
+                                    OutlinedButton(
+                                        onClick = onLeave,
+                                        modifier = Modifier.fillMaxWidth(),
+                                    ) {
+                                        Text("Leave Game")
+                                    }
+                                }
                             }
                         }
                     }
