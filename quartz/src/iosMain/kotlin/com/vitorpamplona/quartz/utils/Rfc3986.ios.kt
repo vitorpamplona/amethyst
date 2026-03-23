@@ -23,13 +23,12 @@ package com.vitorpamplona.quartz.utils
 import io.kotlingeekdev.urireference.URIReference
 
 actual object Rfc3986 {
+    actual fun normalize(uri: String): String = URIReference.parse(uri).normalize().toString()
 
-    actual fun normalize(uri: String): String =
-        URIReference.parse(uri).normalize().toString()
-
-    actual fun isValidUrl(url: String): Boolean = runCatching {
-        URIReference.parse(url)
-    }.isSuccess
+    actual fun isValidUrl(url: String): Boolean =
+        runCatching {
+            URIReference.parse(url)
+        }.isSuccess
 
     actual fun normalizeAndRemoveFragment(url: String): String =
         URIReference
@@ -38,7 +37,12 @@ actual object Rfc3986 {
             .toStringNoFragment()
             .internIfPossible()
 
-    actual fun host(url: String): String = URIReference.parse(url).host?.value.toString()
+    actual fun host(url: String): String =
+        URIReference
+            .parse(url)
+            .host
+            ?.value
+            .toString()
 }
 
 fun URIReference.toStringNoFragment(): String {

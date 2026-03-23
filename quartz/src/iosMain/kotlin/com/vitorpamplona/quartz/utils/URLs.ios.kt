@@ -22,5 +22,4 @@ package com.vitorpamplona.quartz.utils
 
 import com.vitorpamplona.quartz.utils.urldetector.detection.UrlDetector
 
-
 actual fun fastFindURLs(text: String): List<String> = UrlDetector(text).detect().map { it.originalUrl }
