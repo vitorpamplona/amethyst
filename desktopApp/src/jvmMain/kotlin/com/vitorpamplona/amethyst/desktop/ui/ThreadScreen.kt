@@ -155,15 +155,18 @@ fun ThreadScreen(
         }
     }
 
-    // Request interaction data (zaps, reactions, reposts) for visible thread notes
-    DisposableEffect(threadNotes, subscriptionsCoordinator) {
+    // Request interaction data — keyed on noteId (stable), not threadNotes (changes on every bundle)
+    DisposableEffect(noteId, subscriptionsCoordinator) {
         val coordinator = subscriptionsCoordinator ?: return@DisposableEffect onDispose {}
         val noteIds = threadNotes.mapNotNull { it.event?.id }
-        if (noteIds.isEmpty()) return@DisposableEffect onDispose {}
-
         val relays = relayManager.relayStatuses.value.keys
-        val subId = coordinator.requestInteractions(noteIds, relays)
-        onDispose { coordinator.releaseInteractions(subId) }
+        val subId =
+            if (noteIds.isNotEmpty()) {
+                coordinator.requestInteractions(noteIds, relays)
+            } else {
+                null
+            }
+        onDispose { subId?.let { coordinator.releaseInteractions(it) } }
     }
 
     // Load metadata for thread authors via coordinator

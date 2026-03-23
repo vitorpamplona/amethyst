@@ -204,17 +204,19 @@ fun FeedScreen(
         }
     }
 
-    // Request interaction subscriptions (zaps, reactions, reposts) for visible notes
-    DisposableEffect(feedState, subscriptionsCoordinator) {
+    // Request interaction subscriptions — keyed on feedMode (stable), not feedState (changes every 250ms)
+    DisposableEffect(feedMode, subscriptionsCoordinator) {
         val coordinator = subscriptionsCoordinator ?: return@DisposableEffect onDispose {}
-        val notes = viewModel.feedState.visibleNotes()
-        val noteIds = notes.mapNotNull { it.event?.id }
-        if (noteIds.isEmpty()) return@DisposableEffect onDispose {}
-
-        val relays =
-            relayManager.relayStatuses.value.keys
-        val subId = coordinator.requestInteractions(noteIds, relays)
-        onDispose { coordinator.releaseInteractions(subId) }
+        val relays = relayManager.relayStatuses.value.keys
+        // Initial subscription with whatever notes are visible now
+        val noteIds = viewModel.feedState.visibleNotes().mapNotNull { it.event?.id }
+        val subId =
+            if (noteIds.isNotEmpty()) {
+                coordinator.requestInteractions(noteIds, relays)
+            } else {
+                null
+            }
+        onDispose { subId?.let { coordinator.releaseInteractions(it) } }
     }
 
     @OptIn(ExperimentalLayoutApi::class)
