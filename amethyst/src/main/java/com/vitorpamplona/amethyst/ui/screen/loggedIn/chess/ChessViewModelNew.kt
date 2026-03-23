@@ -166,6 +166,8 @@ class ChessViewModelNew(
 
     fun claimAbandonmentVictory(gameId: String) = logic.claimAbandonmentVictory(gameId)
 
+    fun dismissGame(gameId: String) = logic.dismissGame(gameId)
+
     // ============================================
     // Spectator operations
     // ============================================

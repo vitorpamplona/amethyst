@@ -319,6 +319,7 @@ fun ChessGameScreen(
                     },
                     onResign = { chessViewModel.resign(gameId) },
                     isSpectatorOverride = isSpectating,
+                    onGameEndDismiss = { chessViewModel.dismissGame(gameId) },
                 )
             }
         }

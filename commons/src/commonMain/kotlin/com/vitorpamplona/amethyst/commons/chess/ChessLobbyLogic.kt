@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.commons.chess
 import com.vitorpamplona.quartz.nip64Chess.ChessGameEnd
 import com.vitorpamplona.quartz.nip64Chess.ChessMoveEvent
 import com.vitorpamplona.quartz.nip64Chess.Color
+import com.vitorpamplona.quartz.nip64Chess.GameResult
+import com.vitorpamplona.quartz.nip64Chess.GameStatus
 import com.vitorpamplona.quartz.nip64Chess.PieceType
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterEvent
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterGameEvents
@@ -236,9 +238,9 @@ class ChessLobbyLogic(
         if (result != null) {
             val gameResult =
                 when (result) {
-                    "1-0" -> com.vitorpamplona.quartz.nip64Chess.GameResult.WHITE_WINS
-                    "0-1" -> com.vitorpamplona.quartz.nip64Chess.GameResult.BLACK_WINS
-                    "1/2-1/2" -> com.vitorpamplona.quartz.nip64Chess.GameResult.DRAW
+                    "1-0" -> GameResult.WHITE_WINS
+                    "0-1" -> GameResult.BLACK_WINS
+                    "1/2-1/2" -> GameResult.DRAW
                     else -> null
                 }
             if (gameResult != null) {
@@ -583,7 +585,14 @@ class ChessLobbyLogic(
 
         when (result) {
             is LoadGameResult.Success -> {
-                state.replaceGameState(startEventId, result.liveState)
+                // Check status FIRST to avoid briefly emitting a finished game through activeGames
+                val gameStatus = result.liveState.gameStatus.value
+                if (gameStatus is GameStatus.Finished) {
+                    state.moveToCompleted(startEventId, gameStatus.result.notation, null)
+                    pollingDelegate.removeGameId(startEventId)
+                } else {
+                    state.replaceGameState(startEventId, result.liveState)
+                }
             }
 
             is LoadGameResult.Error -> {
@@ -747,13 +756,26 @@ class ChessLobbyLogic(
 
         val newGameIds = discoveredGameIds - currentActiveIds - currentSpectatingIds
 
+        // Also check completed games to avoid re-adding them
+        val completedGameIds =
+            state.completedGames.value
+                .map { it.gameId }
+                .toSet()
+
         for (startEventId in newGameIds) {
+            if (startEventId in completedGameIds) continue
+
             val events = fetcher.fetchGameEvents(startEventId)
             val result = ChessGameLoader.loadGame(events, userPubkey)
 
             when (result) {
                 is LoadGameResult.Success -> {
-                    if (!result.liveState.isSpectator) {
+                    // If the discovered game is already finished, send it straight to completed
+                    val gameStatus = result.liveState.gameStatus.value
+                    if (gameStatus is GameStatus.Finished) {
+                        // Use the direct helper to avoid the addActiveGame → moveToCompleted flicker
+                        state.addCompletedGameDirectly(startEventId, result.liveState, gameStatus.result.notation, null)
+                    } else if (!result.liveState.isSpectator) {
                         state.addActiveGame(startEventId, result.liveState)
                         pollingDelegate.addGameId(startEventId)
                     } else {
@@ -813,6 +835,20 @@ class ChessLobbyLogic(
             }
         }
         return null
+    }
+
+    /**
+     * Dismiss a finished game from the active/spectating list and move it to completed.
+     * Called when the user clicks "Continue" on the game end overlay, or automatically
+     * when a finished game is detected during polling refresh.
+     */
+    fun dismissGame(gameId: String) {
+        val gameState = state.getGameState(gameId) ?: return
+        val status = gameState.gameStatus.value
+        if (status is GameStatus.Finished) {
+            state.moveToCompleted(gameId, status.result.notation, null)
+            pollingDelegate.removeGameId(gameId)
+        }
     }
 
     fun clearError() {

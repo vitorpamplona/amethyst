@@ -453,6 +453,40 @@ class ChessLobbyState(
         }
     }
 
+    /**
+     * Build and record a CompletedGame directly from a LiveChessGameState without requiring the
+     * game to be inserted into activeGames first. Use this when a newly discovered game is already
+     * finished so we avoid the intermediate addActiveGame → moveToCompleted flicker.
+     */
+    fun addCompletedGameDirectly(
+        gameId: String,
+        liveState: LiveChessGameState,
+        result: String,
+        termination: String?,
+    ) {
+        val whitePubkey =
+            if (liveState.playerColor == Color.WHITE) liveState.playerPubkey else liveState.opponentPubkey
+        val blackPubkey =
+            if (liveState.playerColor == Color.BLACK) liveState.playerPubkey else liveState.opponentPubkey
+
+        val completed =
+            CompletedGame(
+                gameId = gameId,
+                whitePubkey = whitePubkey,
+                whiteDisplayName = null,
+                blackPubkey = blackPubkey,
+                blackDisplayName = null,
+                result = result,
+                termination = termination,
+                moveCount = liveState.moveHistory.value.size,
+                completedAt = TimeUtils.now(),
+            )
+
+        _completedGames.update { current ->
+            if (current.any { it.gameId == gameId }) current else listOf(completed) + current
+        }
+    }
+
     fun addSpectatingGame(
         gameId: String,
         state: LiveChessGameState,
