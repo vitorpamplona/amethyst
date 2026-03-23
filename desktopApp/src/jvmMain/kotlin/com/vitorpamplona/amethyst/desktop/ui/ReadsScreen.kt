@@ -46,6 +46,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -206,6 +207,18 @@ fun ReadsScreen(
     var followedUsers by remember { mutableStateOf<Set<String>>(emptySet()) }
     var eoseReceivedCount by remember { mutableStateOf(0) }
     val initialLoadComplete = eoseReceivedCount > 0
+
+    // Seed from cache — long-form notes already consumed are in cache
+    LaunchedEffect(Unit) {
+        val cached =
+            localCache.notes.filterIntoSet { _, note ->
+                note.event is LongTextNoteEvent
+            }
+        cached.forEach { note ->
+            (note.event as? LongTextNoteEvent)?.let { eventState.addItem(it) }
+        }
+        if (cached.isNotEmpty()) eoseReceivedCount++
+    }
 
     // Load followed users for Following feed mode
     rememberSubscription(connectedRelays, account, feedMode, relayManager = relayManager) {

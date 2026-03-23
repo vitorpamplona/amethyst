@@ -121,6 +121,27 @@ fun BookmarksScreen(
         }
     }
 
+    // Seed from cache — bookmark list event may already be in addressableNotes
+    LaunchedEffect(account.pubKeyHex) {
+        val address = BookmarkListEvent.createBookmarkAddress(account.pubKeyHex)
+        val cachedNote = localCache.getOrCreateAddressableNote(address)
+        val cachedEvent = cachedNote.event as? BookmarkListEvent
+        if (cachedEvent != null) {
+            bookmarkList = cachedEvent
+            publicBookmarkIds =
+                cachedEvent
+                    .publicBookmarks()
+                    .filterIsInstance<EventBookmark>()
+                    .map { it.eventId }
+            // Seed public events from cache
+            publicBookmarkIds.forEach { id ->
+                val note = localCache.getNoteIfExists(id)
+                val event = note?.event
+                if (event != null) publicEventState.addItem(event)
+            }
+        }
+    }
+
     // Subscribe to user's bookmark list (kind 30001)
     rememberSubscription(connectedRelays, account.pubKeyHex, relayManager = relayManager) {
         if (connectedRelays.isNotEmpty()) {
