@@ -25,7 +25,6 @@ fragmentKtx = "1.8.9"
 gms = "4.4.4"
 jacksonModuleKotlin = "2.21.1"
 javaKeyring = "1.0.4"
-jna = "5.18.1"
 jtorctl = "0.4.5.7"
 junit = "4.13.2"
 kchesslib = "1.0.5"
@@ -34,8 +33,6 @@ kotlinxCollectionsImmutable = "0.4.0"
 kotlinxCoroutinesCore = "1.10.2"
 kotlinxSerialization = "1.10.0"
 languageId = "17.0.6"
-lazysodiumAndroid = "5.2.0"
-lazysodiumJava = "5.2.0"
 lifecycleRuntimeKtx = "2.10.0"
 lightcompressor-enhanced = "1.6.0"
 markdown = "f92ef49c9d"
@@ -144,7 +141,6 @@ google-mlkit-language-id = { group = "com.google.mlkit", name = "language-id", v
 google-mlkit-translate = { group = "com.google.mlkit", name = "translate", version.ref = "translate" }
 jackson-module-kotlin = { group = "com.fasterxml.jackson.module", name = "jackson-module-kotlin", version.ref = "jacksonModuleKotlin" }
 java-keyring = { group = "com.github.javakeyring", name = "java-keyring", version.ref = "javaKeyring" }
-jna = { group = "net.java.dev.jna", name = "jna", version.ref = "jna" }
 jtorctl = { module = "info.guardianproject:jtorctl", version.ref = "jtorctl" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 kchesslib = { module = "io.github.cvb941:kchesslib", version.ref = "kchesslib" }
@@ -153,8 +149,6 @@ kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-c
 kotlinx-coroutines-swing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-swing", version.ref = "kotlinxCoroutinesCore" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 kotlinx-serialization-cbor = { module = "org.jetbrains.kotlinx:kotlinx-serialization-cbor", version.ref = "kotlinxSerialization" }
-lazysodium-java = { group = "com.goterl", name = "lazysodium-java", version.ref = "lazysodiumJava" }
-lazysodium-android = { group = "com.goterl", name = "lazysodium-android", version.ref = "lazysodiumAndroid" }
 markdown-commonmark = { group = "com.github.vitorpamplona.compose-richtext", name = "richtext-commonmark", version.ref = "markdown" }
 markdown-ui = { group = "com.github.vitorpamplona.compose-richtext", name = "richtext-ui", version.ref = "markdown" }
 markdown-ui-material3 = { group = "com.github.vitorpamplona.compose-richtext", name = "richtext-ui-material3", version.ref = "markdown" }

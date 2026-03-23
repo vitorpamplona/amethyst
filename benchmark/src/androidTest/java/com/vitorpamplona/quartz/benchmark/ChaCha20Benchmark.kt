@@ -52,36 +52,16 @@ class ChaCha20Benchmark {
     }
 
     @Test
-    fun encryptLibSodium() {
+    fun encrypt() {
         benchmarkRule.measureRepeated {
-            chaCha.encryptLibSodium(padded, messageKeys.chachaNonce, messageKeys.chachaKey)
+            chaCha.encrypt(padded, messageKeys.chachaNonce, messageKeys.chachaKey)
         }
     }
 
-    /*
-        Removed in the conversion to KMP
     @Test
-    fun encryptNative() {
+    fun decrypt() {
         benchmarkRule.measureRepeated {
-            chaCha.encryptNative(padded, messageKeys.chachaNonce, messageKeys.chachaKey)
+            chaCha.decrypt(padded, messageKeys.chachaNonce, messageKeys.chachaKey)
         }
     }
-     */
-
-    @Test
-    fun decryptLibSodium() {
-        benchmarkRule.measureRepeated {
-            chaCha.decryptLibSodium(padded, messageKeys.chachaNonce, messageKeys.chachaKey)
-        }
-    }
-
-    /*
-    Removed in the conversion to KMP
-    @Test
-    fun decryptNative() {
-        benchmarkRule.measureRepeated {
-            chaCha.decryptNative(padded, messageKeys.chachaNonce, messageKeys.chachaKey)
-        }
-    }
-     */
 }

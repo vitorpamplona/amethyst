@@ -63,65 +63,11 @@ kotlin {
     // project can be found here:
     // https://developer.android.com/kotlin/multiplatform/migrate
     val xcfName = "quartz-kmpKit"
-    val libsodiumPath = project.file("src/nativeInterop/libsodium")
-    val libsodiumHeaderFilesPath = project.file("$libsodiumPath/include/sodium")
-
-    // Generate target-specific Libsodium definition files for creating native bindings.
-    // Device (iosArm64) uses libsodium.a, simulator targets use libsodium-simulator.a.
-    val libsodiumDeviceDefFile =
-        project.layout.buildDirectory
-            .file("cinterop/Clibsodium-device.def")
-            .get()
-            .asFile
-    val libsodiumSimulatorDefFile =
-        project.layout.buildDirectory
-            .file("cinterop/Clibsodium-simulator.def")
-            .get()
-            .asFile
-
-    // This generates the Libsodium definition file, necessary for creating native bindings(a Kotlin API) for libsodium(for iOS).
-    val libsodiumDefFileGeneration =
-        tasks.register("GenerateSodiumCinteropFile") {
-            outputs.files(libsodiumDeviceDefFile, libsodiumSimulatorDefFile)
-            doLast {
-                libsodiumDeviceDefFile.parentFile.mkdirs()
-                libsodiumDeviceDefFile.writeText(
-                    "package = Clibsodium\n" +
-                        "staticLibraries = libsodium.a\n" +
-                        "libraryPaths = ${libsodiumPath.absolutePath}/ios/lib\n",
-                )
-                libsodiumSimulatorDefFile.writeText(
-                    "package = Clibsodium\n" +
-                        "staticLibraries = libsodium-simulator.a\n" +
-                        "libraryPaths = ${libsodiumPath.absolutePath}/ios-simulators/lib\n",
-                )
-            }
-        }
 
     listOf(
         iosArm64(),
         iosSimulatorArm64(),
     ).forEach { target ->
-        val isSimulator = target.name != "iosArm64"
-        val defFile = if (isSimulator) libsodiumSimulatorDefFile else libsodiumDeviceDefFile
-
-        target.compilations.getByName("main") {
-            val clibsodium by cinterops.creating {
-                definitionFile = defFile
-                packageName = "Clibsodium"
-
-                headers(
-                    "$libsodiumHeaderFilesPath/crypto_aead_xchacha20poly1305.h",
-                    "$libsodiumHeaderFilesPath/crypto_core_hchacha20.h",
-                    "$libsodiumHeaderFilesPath/crypto_stream_chacha20.h",
-                )
-            }
-
-            tasks.named(cinterops.getByName("clibsodium").interopProcessingTaskName).configure {
-                dependsOn(libsodiumDefFileGeneration)
-            }
-        }
-
         target.swiftPackageConfig(cinteropName = "swiftbridge") {
             minIos = "17"
             minMacos = "14"
@@ -139,9 +85,6 @@ kotlin {
     }
 
     iosArm64 {
-        binaries.all {
-            linkerOpts("-L${libsodiumPath.absolutePath}/ios/lib", "-lsodium")
-        }
         binaries.framework {
             baseName = xcfName
             binaryOption("bundleId", "com.vitorpamplona.quartz")
@@ -149,9 +92,6 @@ kotlin {
     }
 
     iosSimulatorArm64 {
-        binaries.all {
-            linkerOpts("-L${libsodiumPath.absolutePath}/ios-simulators/lib", "-lsodium-simulator")
-        }
         binaries.framework {
             baseName = xcfName
             binaryOption("bundleId", "com.vitorpamplona.quartz")
@@ -254,9 +194,6 @@ kotlin {
                 // Bitcoin secp256k1 bindings
                 implementation(libs.secp256k1.kmp.jni.jvm)
 
-                // LibSodium for ChaCha encryption (NIP-44)
-                implementation(libs.lazysodium.java)
-                implementation(libs.jna)
             }
         }
 
@@ -279,9 +216,6 @@ kotlin {
                 // Bitcoin secp256k1 bindings to Android
                 api(libs.secp256k1.kmp.jni.android)
 
-                // LibSodium for ChaCha encryption (NIP-44)
-                implementation("com.goterl:lazysodium-android:5.2.0@aar")
-                implementation("net.java.dev.jna:jna:5.18.1@aar")
             }
         }
 
@@ -293,9 +227,6 @@ kotlin {
                 // Bitcoin secp256k1 bindings
                 implementation(libs.secp256k1.kmp.jni.jvm)
 
-                // LibSodium for ChaCha encryption (NIP-44) - Needed for host tests
-                implementation(libs.lazysodium.java)
-                implementation(libs.jna)
 
                 // SQLite bundled driver for Host tests
                 implementation(libs.androidx.sqlite.bundled.jvm)
@@ -315,9 +246,6 @@ kotlin {
                 // Bitcoin secp256k1 bindings to Android
                 api(libs.secp256k1.kmp.jni.android)
 
-                // LibSodium for ChaCha encryption (NIP-44)
-                implementation("com.goterl:lazysodium-android:5.2.0@aar")
-                implementation("net.java.dev.jna:jna:5.18.1@aar")
             }
         }
 
