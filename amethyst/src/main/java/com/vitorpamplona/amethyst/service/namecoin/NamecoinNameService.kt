@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.namecoin
 
+import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin.NamecoinResolveState
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.DEFAULT_ELECTRUMX_SERVERS
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumXClient
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumxServer
@@ -150,21 +151,4 @@ class NamecoinNameService(
      * Clear the resolution cache.
      */
     suspend fun clearCache() = cache.clear()
-}
-
-/**
- * Observable state for a Namecoin resolution in progress.
- */
-sealed class NamecoinResolveState {
-    data object Loading : NamecoinResolveState()
-
-    data class Resolved(
-        val result: NamecoinNostrResult,
-    ) : NamecoinResolveState()
-
-    data object NotFound : NamecoinResolveState()
-
-    data class Error(
-        val message: String,
-    ) : NamecoinResolveState()
 }

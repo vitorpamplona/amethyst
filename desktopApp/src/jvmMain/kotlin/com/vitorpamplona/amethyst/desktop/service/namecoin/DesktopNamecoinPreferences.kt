@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.desktop.service.namecoin
 
+import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin.NamecoinSettings
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumxServer
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
