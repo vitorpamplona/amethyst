@@ -307,9 +307,8 @@ fun UserProfileScreen(
     // Subscribe to followers (contact lists that tag this user)
     rememberSubscription(connectedRelays, pubKeyHex, retryTrigger, relayManager = relayManager) {
         if (connectedRelays.isNotEmpty()) {
-            // Clear previous followers when subscription restarts
+            // Clear dedup set but keep cached followersCount visible until new data arrives
             followerAuthors.clear()
-            followersCount = 0
 
             SubscriptionConfig(
                 subId = "followers-${pubKeyHex.take(8)}-${System.currentTimeMillis()}",
