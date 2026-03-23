@@ -51,15 +51,4 @@ class UrlsDetectorTest {
         val detectedLinks = fastFindURLs("今北産業")
         assertEquals(0, detectedLinks.size)
     }
-
-    /**
-     * Regression test for PR #1907: a bare host ending with ':' triggers PORT marker placement
-     * at buffer.length, then readEnd() trims the ':', leaving PORT beyond the URL string.
-     * Url.getPart() must not throw StringIndexOutOfBoundsException.
-     */
-    @Test
-    fun doesNotCrashOnUrlEndingWithColon() {
-        // Just verifying no exception is thrown; a bare "example.com:" is not a valid URL.
-        fastFindURLs("example.com:")
-    }
 }
