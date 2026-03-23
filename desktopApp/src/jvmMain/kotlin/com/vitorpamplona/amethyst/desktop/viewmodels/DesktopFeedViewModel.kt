@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedFilter
 import com.vitorpamplona.amethyst.commons.viewmodels.FeedViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 /**
@@ -44,5 +45,13 @@ class DesktopFeedViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             feedState.refreshSuspended()
         }
+    }
+
+    /**
+     * Cancel viewModelScope. ViewModel.clear() is internal in lifecycle KMP,
+     * so Desktop composables use this for cleanup via DisposableEffect.
+     */
+    fun destroy() {
+        viewModelScope.cancel()
     }
 }

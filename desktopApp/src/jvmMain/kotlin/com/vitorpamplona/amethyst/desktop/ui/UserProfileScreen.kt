@@ -715,25 +715,29 @@ fun UserProfileScreen(
 
                             else -> {
                                 items(events.distinctBy { it.id }, key = { it.id }) { event ->
-                                    FeedNoteCard(
-                                        event = event,
-                                        relayManager = relayManager,
-                                        localCache = localCache,
-                                        account = account,
-                                        nwcConnection = nwcConnection,
-                                        onReply = onCompose,
-                                        onZapFeedback = onZapFeedback,
-                                        onNavigateToProfile = onNavigateToProfile,
-                                        onImageClick = { urls, index ->
-                                            lightboxState = LightboxState(urls, index)
-                                        },
-                                        onMediaClick = { urls, index, seekPos ->
-                                            com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
-                                                .playVideo(urls[index], seekPos)
-                                            com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
-                                                .toggleFullscreen()
-                                        },
-                                    )
+                                    // Look up Note from cache for the new FeedNoteCard API
+                                    val note = localCache.getNoteIfExists(event.id)
+                                    if (note != null) {
+                                        FeedNoteCard(
+                                            note = note,
+                                            relayManager = relayManager,
+                                            localCache = localCache,
+                                            account = account,
+                                            nwcConnection = nwcConnection,
+                                            onReply = onCompose,
+                                            onZapFeedback = onZapFeedback,
+                                            onNavigateToProfile = onNavigateToProfile,
+                                            onImageClick = { urls, index ->
+                                                lightboxState = LightboxState(urls, index)
+                                            },
+                                            onMediaClick = { urls, index, seekPos ->
+                                                com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
+                                                    .playVideo(urls[index], seekPos)
+                                                com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
+                                                    .toggleFullscreen()
+                                            },
+                                        )
+                                    }
                                 }
                             }
                         }
