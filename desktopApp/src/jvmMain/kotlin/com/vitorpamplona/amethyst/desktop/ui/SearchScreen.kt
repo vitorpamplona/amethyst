@@ -111,7 +111,7 @@ import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinResolveOutcome
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
-import kotlinx.coroutines.flow.mapLatest
+
 
 @Composable
 fun SearchScreen(
@@ -168,22 +168,29 @@ fun SearchScreen(
 
     var namecoinState by remember { mutableStateOf<NamecoinResolveState?>(null) }
 
-    // Resolve Namecoin identifiers with cancellation of stale lookups
+    // Resolve Namecoin identifiers with cancellation of stale lookups.
+    // Uses resolveDetailed() which returns typed outcomes instead of throwing,
+    // so we get proper NotFound/Expired/ServersUnreachable states.
     LaunchedEffect(displayText, namecoinEnabled) {
         if (!namecoinEnabled || !isNamecoinQuery || namecoinService == null) {
             namecoinState = null
             return@LaunchedEffect
         }
         namecoinState = NamecoinResolveState.Loading
-        try {
-            val result = namecoinService.resolve(displayText.trim())
-            namecoinState = if (result != null) {
-                NamecoinResolveState.Resolved(result)
-            } else {
+        val outcome = namecoinService.resolveDetailed(displayText.trim())
+        namecoinState = when (outcome) {
+            is NamecoinResolveOutcome.Success ->
+                NamecoinResolveState.Resolved(outcome.result)
+            is NamecoinResolveOutcome.NameNotFound ->
                 NamecoinResolveState.NotFound
-            }
-        } catch (e: Exception) {
-            namecoinState = NamecoinResolveState.Error(e.message ?: "Resolution failed")
+            is NamecoinResolveOutcome.NoNostrField ->
+                NamecoinResolveState.Error("Name exists but has no Nostr pubkey")
+            is NamecoinResolveOutcome.ServersUnreachable ->
+                NamecoinResolveState.Error("ElectrumX servers unreachable — check your connection or try again")
+            is NamecoinResolveOutcome.InvalidIdentifier ->
+                NamecoinResolveState.Error("Invalid Namecoin identifier")
+            is NamecoinResolveOutcome.Timeout ->
+                NamecoinResolveState.Error("Resolution timed out — servers may be slow, try again")
         }
     }
 
