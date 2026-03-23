@@ -124,7 +124,8 @@ fun UserProfileScreen(
     onNavigateToArticle: (String) -> Unit = {},
     onZapFeedback: (ZapFeedback) -> Unit = {},
 ) {
-    val connectedRelays by relayManager.connectedRelays.collectAsState()
+    val relayStatuses by relayManager.relayStatuses.collectAsState()
+    val connectedRelays = remember(relayStatuses) { relayStatuses.keys }
 
     // User metadata
     var displayName by remember { mutableStateOf<String?>(null) }

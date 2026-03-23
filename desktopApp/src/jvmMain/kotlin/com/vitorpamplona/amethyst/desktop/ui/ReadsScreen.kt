@@ -187,7 +187,8 @@ fun ReadsScreen(
     onNavigateToThread: (String) -> Unit = {},
     onZapFeedback: (ZapFeedback) -> Unit = {},
 ) {
-    val connectedRelays by relayManager.connectedRelays.collectAsState()
+    val relayStatuses by relayManager.relayStatuses.collectAsState()
+    val connectedRelays = remember(relayStatuses) { relayStatuses.keys }
     val scope = rememberCoroutineScope()
 
     val eventState =
