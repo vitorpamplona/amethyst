@@ -588,10 +588,9 @@ fun App(
                     if (showImportFollowListDialog) {
                         ImportFollowListDialog(
                             onDismiss = onDismissImportFollowListDialog,
-                            onImport = { pubkeys ->
-                                // TODO: wire into relay subscription to publish kind 3
-                                onDismissImportFollowListDialog()
-                            },
+                            relayManager = relayManager,
+                            account = account,
+                            localCache = localCache,
                         )
                     }
                 }

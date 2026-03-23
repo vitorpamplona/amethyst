@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
@@ -43,7 +44,10 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -60,61 +64,290 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import com.vitorpamplona.amethyst.desktop.service.namecoin.DesktopNamecoinNameService
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.vitorpamplona.amethyst.desktop.account.AccountState
+import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
+import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.service.namecoin.LocalNamecoinService
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
+import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
+import com.vitorpamplona.quartz.nip02FollowList.tags.ContactTag
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
+import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import java.net.URLEncoder
+import java.util.concurrent.TimeUnit
+
+/**
+ * State machine for the import follow list flow.
+ */
+private sealed class ImportState {
+    data object Idle : ImportState()
+    data object ResolvingIdentifier : ImportState()
+    data class IdentifierResolved(val pubkey: String) : ImportState()
+    data object FetchingFollowList : ImportState()
+    data class FollowListLoaded(val sourcePubkey: String) : ImportState()
+    data class Error(val message: String) : ImportState()
+    data object Publishing : ImportState()
+    data object Done : ImportState()
+}
+
+/**
+ * A follow entry with mutable selection state.
+ */
+data class FollowEntry(
+    val pubkey: String,
+    val displayName: String? = null,
+    val selected: Boolean = true,
+)
+
+/**
+ * Resolves a NIP-05 identifier (user@domain.com) to a hex pubkey via HTTP.
+ */
+private suspend fun resolveNip05Http(identifier: String): String? {
+    if (!identifier.contains("@") || identifier.endsWith(".bit")) return null
+    val parts = identifier.split("@", limit = 2)
+    if (parts.size != 2) return null
+    val (name, domain) = parts
+    if (name.isBlank() || domain.isBlank()) return null
+    val encodedName = URLEncoder.encode(name, "UTF-8")
+    val url = "https://$domain/.well-known/nostr.json?name=$encodedName"
+    return withContext(Dispatchers.IO) {
+        try {
+            val client = OkHttpClient.Builder()
+                .connectTimeout(10, TimeUnit.SECONDS)
+                .readTimeout(10, TimeUnit.SECONDS)
+                .build()
+            val request = Request.Builder().url(url).build()
+            val response = client.newCall(request).execute()
+            response.use { resp ->
+                if (!resp.isSuccessful) return@withContext null
+                val body = resp.body.string()
+                val json = jacksonObjectMapper().readTree(body)
+                json.get("names")?.get(name)?.asText()
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+}
 
 /**
  * Import Follow List dialog for Desktop.
  *
- * Lets users enter an identifier (npub, hex, NIP-05, or Namecoin),
- * resolves it to a pubkey. The actual follow list fetching from relays
- * is a placeholder — full implementation requires relay subscription
- * infrastructure integration.
+ * Lets users enter an identifier (npub, hex, NIP-05 HTTP, or Namecoin),
+ * resolves it to a pubkey, fetches their kind 3 (ContactListEvent) from
+ * relays, displays the follow list with select/deselect toggles, and
+ * publishes a new kind 3 with the selected follows.
  */
 @Composable
 fun ImportFollowListDialog(
     onDismiss: () -> Unit,
-    onImport: (List<String>) -> Unit,
+    relayManager: DesktopRelayConnectionManager,
+    account: AccountState.LoggedIn,
+    localCache: DesktopLocalCache,
 ) {
     val namecoinService = LocalNamecoinService.current
     val scope = rememberCoroutineScope()
 
     var input by remember { mutableStateOf("") }
-    var resolvedPubkey by remember { mutableStateOf<String?>(null) }
-    var isResolving by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf<String?>(null) }
-    var followList = remember { mutableStateListOf<FollowEntry>() }
-    var isFetching by remember { mutableStateOf(false) }
+    var importState by remember { mutableStateOf<ImportState>(ImportState.Idle) }
+    val followEntries = remember { mutableStateListOf<FollowEntry>() }
+
+    // Track active subscription IDs for cleanup
+    val activeSubscriptions = remember { mutableStateListOf<String>() }
+
+    // Clean up all subscriptions when the dialog is dismissed
+    DisposableEffect(Unit) {
+        onDispose {
+            activeSubscriptions.forEach { subId ->
+                try {
+                    relayManager.unsubscribe(subId)
+                } catch (_: Exception) {
+                    // Ignore cleanup errors
+                }
+            }
+        }
+    }
+
+    // When identifier is resolved, auto-start fetching the follow list
+    LaunchedEffect(importState) {
+        val state = importState
+        if (state is ImportState.IdentifierResolved) {
+            importState = ImportState.FetchingFollowList
+            val pubkey = state.pubkey
+            followEntries.clear()
+
+            val subId = "import-follows-${System.currentTimeMillis()}"
+            activeSubscriptions.add(subId)
+            var receivedContactList = false
+
+            relayManager.subscribe(
+                subId = subId,
+                filters = listOf(
+                    Filter(
+                        kinds = listOf(ContactListEvent.KIND),
+                        authors = listOf(pubkey),
+                        limit = 1,
+                    ),
+                ),
+                listener = object : IRequestListener {
+                    override fun onEvent(
+                        event: Event,
+                        isLive: Boolean,
+                        relay: NormalizedRelayUrl,
+                        forFilters: List<Filter>?,
+                    ) {
+                        if (event.kind == ContactListEvent.KIND && !receivedContactList) {
+                            receivedContactList = true
+                            val contactList = ContactListEvent(
+                                event.id,
+                                event.pubKey,
+                                event.createdAt,
+                                event.tags,
+                                event.content,
+                                event.sig,
+                            )
+                            val follows = contactList.unverifiedFollowKeySet()
+                            followEntries.clear()
+                            followEntries.addAll(
+                                follows.map { FollowEntry(pubkey = it, selected = true) },
+                            )
+                            importState = ImportState.FollowListLoaded(sourcePubkey = pubkey)
+
+                            // Clean up the contact list subscription
+                            try {
+                                relayManager.unsubscribe(subId)
+                            } catch (_: Exception) {}
+                            activeSubscriptions.remove(subId)
+
+                            // Start fetching metadata for display names
+                            if (follows.isNotEmpty()) {
+                                val metaSubId = "import-meta-${System.currentTimeMillis()}"
+                                activeSubscriptions.add(metaSubId)
+                                relayManager.subscribe(
+                                    subId = metaSubId,
+                                    filters = listOf(
+                                        Filter(
+                                            kinds = listOf(MetadataEvent.KIND),
+                                            authors = follows,
+                                            limit = follows.size,
+                                        ),
+                                    ),
+                                    listener = object : IRequestListener {
+                                        override fun onEvent(
+                                            event: Event,
+                                            isLive: Boolean,
+                                            relay: NormalizedRelayUrl,
+                                            forFilters: List<Filter>?,
+                                        ) {
+                                            if (event.kind == MetadataEvent.KIND) {
+                                                val metadata = try {
+                                                    JsonMapper.fromJson<UserMetadata>(event.content)
+                                                } catch (_: Exception) {
+                                                    null
+                                                }
+                                                val bestName = metadata?.bestName()
+                                                if (bestName != null) {
+                                                    val idx = followEntries.indexOfFirst { it.pubkey == event.pubKey }
+                                                    if (idx >= 0) {
+                                                        followEntries[idx] = followEntries[idx].copy(displayName = bestName)
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        override fun onEose(
+                                            relay: NormalizedRelayUrl,
+                                            forFilters: List<Filter>?,
+                                        ) {
+                                            // Metadata is best-effort; don't close early
+                                            // as multiple relays may have different metadata
+                                        }
+                                    },
+                                )
+
+                                // Clean up metadata subscription after 20s
+                                scope.launch {
+                                    delay(20_000)
+                                    if (metaSubId in activeSubscriptions) {
+                                        try {
+                                            relayManager.unsubscribe(metaSubId)
+                                        } catch (_: Exception) {}
+                                        activeSubscriptions.remove(metaSubId)
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    override fun onEose(
+                        relay: NormalizedRelayUrl,
+                        forFilters: List<Filter>?,
+                    ) {
+                        // If we got EOSE from all relays without a contact list,
+                        // the timeout below will handle showing the error
+                    }
+                },
+            )
+
+            // Timeout: if no contact list received after 15s, show error or empty result
+            scope.launch {
+                delay(15_000)
+                if (importState is ImportState.FetchingFollowList) {
+                    try {
+                        relayManager.unsubscribe(subId)
+                    } catch (_: Exception) {}
+                    activeSubscriptions.remove(subId)
+                    if (followEntries.isEmpty()) {
+                        importState = ImportState.Error("No follow list found for this user. They may not have published a contact list.")
+                    }
+                }
+            }
+        }
+    }
+
+    // Auto-dismiss after Done
+    LaunchedEffect(importState) {
+        if (importState is ImportState.Done) {
+            delay(1500)
+            onDismiss()
+        }
+    }
 
     fun resolveIdentifier() {
         val trimmed = input.trim()
         if (trimmed.isBlank()) {
-            error = "Enter an identifier"
+            importState = ImportState.Error("Enter an identifier")
             return
         }
 
-        error = null
-        isResolving = true
-        resolvedPubkey = null
-        followList.clear()
+        importState = ImportState.ResolvingIdentifier
+        followEntries.clear()
 
         scope.launch {
             try {
-                // Try bech32 first
+                // Try bech32 (npub/nprofile) first
                 val bech32Result = decodePublicKeyAsHexOrNull(trimmed)
                 if (bech32Result != null) {
-                    resolvedPubkey = bech32Result
-                    isResolving = false
+                    importState = ImportState.IdentifierResolved(bech32Result)
                     return@launch
                 }
 
-                // Try hex pubkey
+                // Try raw hex pubkey
                 if (trimmed.matches(Regex("^[0-9a-fA-F]{64}$"))) {
-                    resolvedPubkey = trimmed.lowercase()
-                    isResolving = false
+                    importState = ImportState.IdentifierResolved(trimmed.lowercase())
                     return@launch
                 }
 
@@ -122,20 +355,62 @@ fun ImportFollowListDialog(
                 if (NamecoinNameResolver.isNamecoinIdentifier(trimmed) && namecoinService != null) {
                     val result = namecoinService.resolvePubkey(trimmed)
                     if (result != null) {
-                        resolvedPubkey = result
-                        isResolving = false
+                        importState = ImportState.IdentifierResolved(result)
                         return@launch
                     }
                 }
 
-                error = "Could not resolve identifier"
-                isResolving = false
+                // Try NIP-05 HTTP (user@domain)
+                if (trimmed.contains("@")) {
+                    val result = resolveNip05Http(trimmed)
+                    if (result != null) {
+                        importState = ImportState.IdentifierResolved(result)
+                        return@launch
+                    }
+                }
+
+                importState = ImportState.Error("Could not resolve identifier")
             } catch (e: Exception) {
-                error = e.message ?: "Resolution failed"
-                isResolving = false
+                importState = ImportState.Error(e.message ?: "Resolution failed")
             }
         }
     }
+
+    fun toggleAll(selected: Boolean) {
+        val updated = followEntries.map { it.copy(selected = selected) }
+        followEntries.clear()
+        followEntries.addAll(updated)
+    }
+
+    fun toggleEntry(index: Int) {
+        if (index in followEntries.indices) {
+            followEntries[index] = followEntries[index].copy(selected = !followEntries[index].selected)
+        }
+    }
+
+    fun publishFollows() {
+        val selected = followEntries.filter { it.selected }
+        if (selected.isEmpty()) return
+
+        importState = ImportState.Publishing
+        scope.launch {
+            try {
+                val contactTags = selected.map { ContactTag(it.pubkey) }
+                val newContactList = ContactListEvent.createFromScratch(
+                    followUsers = contactTags,
+                    relayUse = null,
+                    signer = account.signer,
+                )
+                relayManager.broadcastToAll(newContactList)
+                importState = ImportState.Done
+            } catch (e: Exception) {
+                importState = ImportState.Error("Failed to publish: ${e.message}")
+            }
+        }
+    }
+
+    val selectedCount = followEntries.count { it.selected }
+    val totalCount = followEntries.size
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -152,115 +427,189 @@ fun ImportFollowListDialog(
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    "Enter an npub, hex pubkey, NIP-05, or Namecoin identifier (.bit, d/, id/) " +
-                        "to import their follow list.",
+                    "Enter an npub, hex pubkey, NIP-05 (user@domain), or Namecoin identifier " +
+                        "(.bit, d/, id/) to import their follow list.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(Modifier.height(16.dp))
 
-                // Input field
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    OutlinedTextField(
-                        value = input,
-                        onValueChange = {
-                            input = it
-                            error = null
-                        },
-                        label = { Text("Identifier") },
-                        placeholder = { Text("npub1..., alice@example.bit, d/example") },
-                        singleLine = true,
-                        isError = error != null,
-                        supportingText = error?.let { err ->
-                            { Text(err, color = MaterialTheme.colorScheme.error) }
-                        },
-                        modifier = Modifier.weight(1f).onPreviewKeyEvent { event ->
-                            if (event.type == KeyEventType.KeyDown && event.key == Key.Enter) {
-                                resolveIdentifier()
-                                true
-                            } else {
-                                false
-                            }
-                        },
-                    )
-                    Button(
-                        onClick = { resolveIdentifier() },
-                        enabled = input.isNotBlank() && !isResolving,
+                // Input field + Resolve button (shown in Idle and Error states)
+                val showInput = importState is ImportState.Idle ||
+                    importState is ImportState.Error ||
+                    importState is ImportState.ResolvingIdentifier
+                if (showInput) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        if (isResolving) {
-                            CircularProgressIndicator(modifier = Modifier.size(16.dp))
-                        } else {
-                            Text("Resolve")
+                        OutlinedTextField(
+                            value = input,
+                            onValueChange = {
+                                input = it
+                                if (importState is ImportState.Error) {
+                                    importState = ImportState.Idle
+                                }
+                            },
+                            label = { Text("Identifier") },
+                            placeholder = { Text("npub1..., alice@example.com, d/alice") },
+                            singleLine = true,
+                            isError = importState is ImportState.Error,
+                            supportingText = (importState as? ImportState.Error)?.let { err ->
+                                { Text(err.message, color = MaterialTheme.colorScheme.error) }
+                            },
+                            modifier = Modifier.weight(1f).onPreviewKeyEvent { event ->
+                                if (event.type == KeyEventType.KeyDown && event.key == Key.Enter) {
+                                    resolveIdentifier()
+                                    true
+                                } else {
+                                    false
+                                }
+                            },
+                        )
+                        Button(
+                            onClick = { resolveIdentifier() },
+                            enabled = input.isNotBlank() && importState !is ImportState.ResolvingIdentifier,
+                        ) {
+                            if (importState is ImportState.ResolvingIdentifier) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp,
+                                )
+                            } else {
+                                Text("Resolve")
+                            }
                         }
                     }
                 }
 
-                // Resolved pubkey display
-                if (resolvedPubkey != null) {
+                // Fetching follow list state
+                if (importState is ImportState.FetchingFollowList) {
+                    Spacer(Modifier.height(16.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        Text(
+                            "Fetching follow list from relays…",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                }
+
+                // Follow list loaded — show entries with checkboxes
+                if (importState is ImportState.FollowListLoaded && followEntries.isNotEmpty()) {
                     Spacer(Modifier.height(12.dp))
+
+                    // Header with count and select/deselect controls
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            "$totalCount follows found",
+                            style = MaterialTheme.typography.labelLarge,
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            TextButton(onClick = { toggleAll(true) }) {
+                                Text("Select All", style = MaterialTheme.typography.labelSmall)
+                            }
+                            TextButton(onClick = { toggleAll(false) }) {
+                                Text("Deselect All", style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
+                    }
+
+                    Spacer(Modifier.height(4.dp))
+
+                    // Scrollable follow list
+                    LazyColumn(
+                        modifier = Modifier.height(300.dp).fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                    ) {
+                        items(followEntries.size) { index ->
+                            val entry = followEntries[index]
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                            ) {
+                                Checkbox(
+                                    checked = entry.selected,
+                                    onCheckedChange = { toggleEntry(index) },
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Icon(
+                                    Icons.Default.Person,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                Spacer(Modifier.width(6.dp))
+                                Column {
+                                    if (entry.displayName != null) {
+                                        Text(
+                                            entry.displayName,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                        )
+                                    }
+                                    Text(
+                                        "${entry.pubkey.take(12)}…${entry.pubkey.takeLast(8)}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontFamily = FontFamily.Monospace,
+                                        color = if (entry.displayName != null) {
+                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurface
+                                        },
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Publishing state
+                if (importState is ImportState.Publishing) {
+                    Spacer(Modifier.height(16.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        Text(
+                            "Publishing contact list…",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                }
+
+                // Done state
+                if (importState is ImportState.Done) {
+                    Spacer(Modifier.height(16.dp))
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         Icon(
-                            Icons.Default.Person,
+                            Icons.Default.CheckCircle,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp),
+                            modifier = Modifier.size(24.dp),
                         )
                         Text(
-                            "Resolved: ${resolvedPubkey!!.take(16)}...${resolvedPubkey!!.takeLast(8)}",
-                            style = MaterialTheme.typography.bodySmall,
-                            fontFamily = FontFamily.Monospace,
+                            "Successfully published! Following $selectedCount accounts.",
+                            style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.primary,
                         )
                     }
-
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        "Follow list fetching requires relay subscriptions. " +
-                            "The resolved pubkey can be used to follow this user directly.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
                 }
 
                 Spacer(Modifier.height(16.dp))
-
-                // Follow list preview (placeholder for when relay fetching is implemented)
-                if (followList.isNotEmpty()) {
-                    Text(
-                        "Follow List (${followList.size} users)",
-                        style = MaterialTheme.typography.labelMedium,
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    LazyColumn(
-                        modifier = Modifier.height(300.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        items(followList) { entry ->
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.fillMaxWidth().padding(4.dp),
-                            ) {
-                                Checkbox(
-                                    checked = entry.selected,
-                                    onCheckedChange = { entry.selected = it },
-                                )
-                                Spacer(Modifier.width(8.dp))
-                                Text(
-                                    entry.pubkey.take(16) + "...",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    fontFamily = FontFamily.Monospace,
-                                )
-                            }
-                        }
-                    }
-                }
 
                 // Action buttons
                 Row(
@@ -268,19 +617,26 @@ fun ImportFollowListDialog(
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    OutlinedButton(onClick = onDismiss) {
-                        Text("Cancel")
+                    if (importState !is ImportState.Done) {
+                        OutlinedButton(onClick = onDismiss) {
+                            Text("Cancel")
+                        }
                     }
-                    if (resolvedPubkey != null) {
+                    if (importState is ImportState.FollowListLoaded && selectedCount > 0) {
                         Spacer(Modifier.width(8.dp))
                         Button(
-                            onClick = {
-                                resolvedPubkey?.let { pk ->
-                                    onImport(listOf(pk))
-                                }
-                            },
+                            onClick = { publishFollows() },
                         ) {
-                            Text("Follow User")
+                            Text("Follow $selectedCount account${if (selectedCount != 1) "s" else ""}")
+                        }
+                    }
+                    if (importState is ImportState.Error) {
+                        Spacer(Modifier.width(8.dp))
+                        Button(onClick = {
+                            importState = ImportState.Idle
+                            followEntries.clear()
+                        }) {
+                            Text("Try Again")
                         }
                     }
                 }
@@ -288,8 +644,3 @@ fun ImportFollowListDialog(
         }
     }
 }
-
-data class FollowEntry(
-    val pubkey: String,
-    var selected: Boolean = true,
-)
