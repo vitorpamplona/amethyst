@@ -114,6 +114,7 @@ import com.vitorpamplona.amethyst.desktop.service.namecoin.DesktopNamecoinNameSe
 import com.vitorpamplona.amethyst.desktop.service.namecoin.DesktopNamecoinPreferences
 import com.vitorpamplona.amethyst.desktop.service.namecoin.LocalNamecoinPreferences
 import com.vitorpamplona.amethyst.desktop.service.namecoin.LocalNamecoinService
+import com.vitorpamplona.amethyst.desktop.ui.ImportFollowListDialog
 import com.vitorpamplona.amethyst.desktop.ui.profile.ProfileInfoCard
 import com.vitorpamplona.amethyst.desktop.ui.relay.LocalRelayCategories
 import com.vitorpamplona.amethyst.desktop.ui.relay.RelayStatusCard
@@ -258,6 +259,8 @@ fun main() {
         val accountManager = remember { AccountManager.create() }
         val accountState by accountManager.accountState.collectAsState()
         var showAppDrawer by remember { mutableStateOf(false) }
+        var showAddColumnDialog by remember { mutableStateOf(false) }
+        var showImportFollowListDialog by remember { mutableStateOf(false) }
 
         // Tor state at Window level — survives key() app rebuild
         var torSettings by remember {
@@ -380,6 +383,18 @@ fun main() {
                                 deckState.addColumn(DeckColumnType.Settings)
                             }
                         },
+                    )
+                    Separator()
+                    Item(
+                        "Import Follow List…",
+                        shortcut =
+                            if (isMacOS) {
+                                KeyShortcut(Key.I, meta = true, shift = true)
+                            } else {
+                                KeyShortcut(Key.I, ctrl = true, shift = true)
+                            },
+                        onClick = { showImportFollowListDialog = true },
+                        enabled = accountState is AccountState.LoggedIn,
                     )
                     Separator()
                     Item(
@@ -612,6 +627,8 @@ fun main() {
                         onDismissAppDrawer = { showAppDrawer = false },
                         onShowAppDrawer = { showAppDrawer = true },
                         replyToNote = replyToNote,
+                        showImportFollowListDialog = showImportFollowListDialog,
+                        onDismissImportFollowListDialog = { showImportFollowListDialog = false },
                         onRestartApp = { appRestartKey++ },
                         torManager = torManager,
                         torTypeFlow = torTypeFlow,
@@ -640,6 +657,8 @@ fun App(
     onDismissAppDrawer: () -> Unit,
     onShowAppDrawer: () -> Unit,
     replyToNote: com.vitorpamplona.quartz.nip01Core.core.Event?,
+    showImportFollowListDialog: Boolean = false,
+    onDismissImportFollowListDialog: () -> Unit = {},
     onRestartApp: () -> Unit = {},
     torManager: com.vitorpamplona.amethyst.desktop.tor.DesktopTorManager,
     torTypeFlow: kotlinx.coroutines.flow.MutableStateFlow<com.vitorpamplona.amethyst.commons.tor.TorType>,
