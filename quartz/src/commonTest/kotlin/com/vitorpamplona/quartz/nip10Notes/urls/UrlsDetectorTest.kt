@@ -41,4 +41,14 @@ class UrlsDetectorTest {
         assertContains(detectedLinks, "https://mysite.xyz")
         assertContains(detectedLinks, "https://myblog.xyz")
     }
+
+    /**
+     * Regression test for PR #1907: the Japanese phrase "今北産業" must not crash the URL
+     * detector with a StringIndexOutOfBoundsException and must return no URLs.
+     */
+    @Test
+    fun doesNotCrashOnJapaneseText() {
+        val detectedLinks = fastFindURLs("今北産業")
+        assertEquals(0, detectedLinks.size)
+    }
 }
