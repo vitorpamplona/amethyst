@@ -176,7 +176,8 @@ fun ReadsScreen(
     onNavigateToProfile: (String) -> Unit = {},
     onNavigateToArticle: (String) -> Unit = {},
 ) {
-    val connectedRelays by relayManager.connectedRelays.collectAsState()
+    val relayStatuses by relayManager.relayStatuses.collectAsState()
+    val connectedRelays = remember(relayStatuses) { relayStatuses.keys }
     val scope = rememberCoroutineScope()
 
     val eventState =

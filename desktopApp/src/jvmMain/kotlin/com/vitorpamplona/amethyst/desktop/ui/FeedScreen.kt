@@ -166,18 +166,22 @@ fun FeedScreen(
     onNavigateToThread: (String) -> Unit = {},
     onZapFeedback: (ZapFeedback) -> Unit = {},
 ) {
+    val relayStatuses by relayManager.relayStatuses.collectAsState()
     val connectedRelays by relayManager.connectedRelays.collectAsState()
     val followedUsers by localCache.followedUsers.collectAsState()
+
+    // Available relay URLs — openReqSubscription triggers connection on-demand
+    val allRelayUrls = remember(relayStatuses) { relayStatuses.keys }
 
     var replyToEvent by remember { mutableStateOf<Event?>(null) }
     var lightboxState by remember { mutableStateOf<LightboxState?>(null) }
     var feedMode by remember { mutableStateOf(initialFeedMode ?: DesktopPreferences.feedMode) }
 
     // Subscribe to contact list (kind 3) — populates localCache.followedUsers
-    rememberSubscription(connectedRelays, account, relayManager = relayManager) {
-        if (connectedRelays.isNotEmpty() && account != null) {
+    rememberSubscription(allRelayUrls, account, relayManager = relayManager) {
+        if (allRelayUrls.isNotEmpty() && account != null) {
             createContactListSubscription(
-                relays = connectedRelays,
+                relays = allRelayUrls,
                 pubKeyHex = account.pubKeyHex,
                 onEvent = { event, _, relay, _ ->
                     subscriptionsCoordinator?.consumeEvent(event, relay)
@@ -189,13 +193,13 @@ fun FeedScreen(
     }
 
     // Subscribe to feed events (kind 1) — populates cache via coordinator
-    rememberSubscription(connectedRelays, feedMode, followedUsers, relayManager = relayManager) {
-        if (connectedRelays.isEmpty()) return@rememberSubscription null
+    rememberSubscription(allRelayUrls, feedMode, followedUsers, relayManager = relayManager) {
+        if (allRelayUrls.isEmpty()) return@rememberSubscription null
 
         when (feedMode) {
             FeedMode.GLOBAL -> {
                 createGlobalFeedSubscription(
-                    relays = connectedRelays,
+                    relays = allRelayUrls,
                     onEvent = { event, _, relay, _ ->
                         subscriptionsCoordinator?.consumeEvent(event, relay)
                     },
@@ -206,7 +210,7 @@ fun FeedScreen(
                 val follows = followedUsers.toList()
                 if (follows.isNotEmpty()) {
                     createFollowingFeedSubscription(
-                        relays = connectedRelays,
+                        relays = allRelayUrls,
                         followedUsers = follows,
                         onEvent = { event, _, relay, _ ->
                             subscriptionsCoordinator?.consumeEvent(event, relay)

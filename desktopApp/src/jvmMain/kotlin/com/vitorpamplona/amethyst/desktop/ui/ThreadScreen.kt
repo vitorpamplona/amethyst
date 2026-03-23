@@ -89,7 +89,8 @@ fun ThreadScreen(
     onZapFeedback: (ZapFeedback) -> Unit = {},
     onReply: (Event) -> Unit = {},
 ) {
-    val connectedRelays by relayManager.connectedRelays.collectAsState()
+    val relayStatuses by relayManager.relayStatuses.collectAsState()
+    val connectedRelays = remember(relayStatuses) { relayStatuses.keys }
 
     // Lightbox state
     var lightboxState by remember { mutableStateOf<LightboxState?>(null) }
