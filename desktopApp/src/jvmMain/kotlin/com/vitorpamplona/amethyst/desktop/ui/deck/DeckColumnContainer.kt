@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.desktop.DesktopScreen
 import com.vitorpamplona.amethyst.desktop.RelaySettingsScreen
 import com.vitorpamplona.amethyst.desktop.account.AccountManager
+import com.vitorpamplona.amethyst.desktop.service.namecoin.LocalNamecoinPreferences
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.chess.ChessScreen
@@ -312,7 +313,12 @@ internal fun RootContent(
         }
 
         DeckColumnType.Settings -> {
-            RelaySettingsScreen(relayManager, account, accountManager)
+            RelaySettingsScreen(
+                relayManager = relayManager,
+                account = account,
+                accountManager = accountManager,
+                namecoinPreferences = LocalNamecoinPreferences.current,
+            )
         }
 
         is DeckColumnType.Profile -> {

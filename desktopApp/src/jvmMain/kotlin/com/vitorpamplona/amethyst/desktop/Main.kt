@@ -97,8 +97,13 @@ import com.vitorpamplona.amethyst.desktop.ui.media.LocalAwtWindow
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalIsImmersiveFullscreen
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalWindowState
 import com.vitorpamplona.amethyst.desktop.ui.profile.ProfileInfoCard
+import com.vitorpamplona.amethyst.desktop.service.namecoin.DesktopNamecoinNameService
+import com.vitorpamplona.amethyst.desktop.service.namecoin.DesktopNamecoinPreferences
+import com.vitorpamplona.amethyst.desktop.service.namecoin.LocalNamecoinPreferences
+import com.vitorpamplona.amethyst.desktop.service.namecoin.LocalNamecoinService
 import com.vitorpamplona.amethyst.desktop.ui.relay.RelayStatusCard
 import com.vitorpamplona.amethyst.desktop.ui.settings.MediaServerSettings
+import com.vitorpamplona.amethyst.desktop.ui.settings.NamecoinSettingsSection
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.utils.Log
@@ -444,6 +449,10 @@ fun App(
 ) {
     val relayManager = remember { DesktopRelayConnectionManager() }
     val localCache = remember { DesktopLocalCache() }
+    val namecoinPreferences = remember { DesktopNamecoinPreferences() }
+    val namecoinService = remember {
+        DesktopNamecoinNameService(preferencesProvider = { namecoinPreferences.current })
+    }
     val accountState by accountManager.accountState.collectAsState()
     val scope = remember { CoroutineScope(SupervisorJob() + Dispatchers.Main) }
 
@@ -506,6 +515,10 @@ fun App(
     MaterialTheme(
         colorScheme = darkColorScheme(),
     ) {
+        CompositionLocalProvider(
+            LocalNamecoinPreferences provides namecoinPreferences,
+            LocalNamecoinService provides namecoinService,
+        ) {
         Surface(
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background,
@@ -588,6 +601,7 @@ fun App(
                 )
             }
         }
+        } // end CompositionLocalProvider
     }
 }
 
@@ -857,6 +871,7 @@ fun RelaySettingsScreen(
     relayManager: DesktopRelayConnectionManager,
     account: AccountState.LoggedIn,
     accountManager: AccountManager,
+    namecoinPreferences: DesktopNamecoinPreferences? = null,
 ) {
     val relayStatuses by relayManager.relayStatuses.collectAsState()
     val connectedRelays by relayManager.connectedRelays.collectAsState()
@@ -971,6 +986,32 @@ fun RelaySettingsScreen(
         Spacer(Modifier.height(24.dp))
         HorizontalDivider()
         Spacer(Modifier.height(24.dp))
+
+        // Namecoin Resolution Settings
+        if (namecoinPreferences != null) {
+            val namecoinSettings by namecoinPreferences.settings.collectAsState()
+            val namecoinScope = rememberCoroutineScope()
+
+            NamecoinSettingsSection(
+                settings = namecoinSettings,
+                onToggleEnabled = { enabled ->
+                    namecoinScope.launch { namecoinPreferences.setEnabled(enabled) }
+                },
+                onAddServer = { server ->
+                    namecoinScope.launch { namecoinPreferences.addServer(server) }
+                },
+                onRemoveServer = { server ->
+                    namecoinScope.launch { namecoinPreferences.removeServer(server) }
+                },
+                onReset = {
+                    namecoinScope.launch { namecoinPreferences.reset() }
+                },
+            )
+
+            Spacer(Modifier.height(24.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(24.dp))
+        }
 
         // Developer Settings Section (only in debug mode)
         if (DebugConfig.isDebugMode) {
