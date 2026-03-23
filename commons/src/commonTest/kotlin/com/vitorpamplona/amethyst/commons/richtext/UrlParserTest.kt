@@ -281,6 +281,30 @@ class UrlParserTest {
             Urls(withScheme = emptySet()),
         )
 
+    /**
+     * Regression test for PR #1907: parsing a note whose content is only the Japanese phrase
+     * "今北産業" (a common internet abbreviation) must not throw a StringIndexOutOfBoundsException
+     * from Url.getPart() and must produce no detected URLs.
+     */
+    @Test
+    fun testImakitaSangyo() =
+        test(
+            "今北産業",
+            Urls(),
+        )
+
+    /**
+     * Regression test for PR #1907: a URL that ends with ':' causes readEnd() to trim it,
+     * but the PORT marker index was already set to buffer.length (one past the trimmed URL).
+     * Accessing host/port must not throw StringIndexOutOfBoundsException.
+     */
+    @Test
+    fun testUrlEndingWithColon() =
+        test(
+            "example.com:",
+            Urls(),
+        )
+
     @Test
     fun testHour() =
         test(

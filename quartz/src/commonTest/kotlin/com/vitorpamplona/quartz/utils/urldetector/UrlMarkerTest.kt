@@ -318,4 +318,68 @@ class UrlMarkerTest {
             "#?@Sdsf",
             intArrayOf(0, 8, 18, 33, 35, 36, 53),
         )
+
+    /**
+     * Regression test for PR #1907: StringIndexOutOfBoundsException in Url.getPart() when a URL
+     * ending with a character in CANNOT_END_URLS_WITH (e.g. ':') is trimmed by readEnd(), but the
+     * urlMarker PORT index was set to buffer.length (one past the last valid index).
+     *
+     * After trimming, PORT index == originalUrl.length, so getPart(PORT) must return null
+     * and getPart(HOST) must clamp endIndex to originalUrl.length via minOf.
+     *
+     * Simulates what happens when "example.com:" is detected: the ':' is trimmed to produce
+     * "example.com" but PORT marker remains at index 11 (= trimmed string length).
+     */
+    @Test
+    fun testPortIndexAtStringLength() =
+        testUrlMarker(
+            "example.com", // 11 chars – simulates "example.com:" after trailing ':' is trimmed
+            "https",
+            "",
+            "",
+            "example.com", // host must not throw; endIndex clamped by minOf
+            -1, // PORT at index 11 == length → getPart returns null → falls back to scheme default → 443, but no scheme → -1
+            "/",
+            "",
+            "",
+            intArrayOf(-1, -1, 0, 11, -1, -1, -1), // HOST=0, PORT=11 (= string length)
+        )
+
+    /**
+     * Regression test for PR #1907: PORT index beyond the end of the trimmed URL.
+     * Simulates a marker that points one position past the string length.
+     */
+    @Test
+    fun testPortIndexBeyondStringLength() =
+        testUrlMarker(
+            "example.com", // 11 chars
+            "https",
+            "",
+            "",
+            "example.com", // host must not throw
+            -1, // PORT at 12 > length → getPart(PORT) returns null → -1
+            "/",
+            "",
+            "",
+            intArrayOf(-1, -1, 0, 12, -1, -1, -1), // PORT=12 > string length 11
+        )
+
+    /**
+     * Regression test for PR #1907: QUERY index at string length (simulates "example.com/path?"
+     * after trailing '?' is trimmed, leaving urlMarker QUERY at the trimmed string's length).
+     */
+    @Test
+    fun testQueryIndexAtStringLength() =
+        testUrlMarker(
+            "example.com/path", // 16 chars – simulates "example.com/path?" after '?' trimmed
+            "https",
+            "",
+            "",
+            "example.com",
+            443,
+            "/path", // path must not throw; endIndex clamped by minOf
+            "", // QUERY at 16 == length → getPart(QUERY) returns null
+            "",
+            intArrayOf(-1, -1, 0, -1, 11, 16, -1), // HOST=0, PATH=11, QUERY=16 (= string length)
+        )
 }
