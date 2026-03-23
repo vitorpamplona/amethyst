@@ -48,6 +48,7 @@ import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import com.vitorpamplona.quartz.nip64Chess.baseEvent.BaseChessEvent
 import com.vitorpamplona.quartz.nip64Chess.challenge.accept.LiveChessGameAcceptEvent
 import com.vitorpamplona.quartz.nip64Chess.move.LiveChessMoveEvent
 import com.vitorpamplona.quartz.utils.Log
@@ -107,12 +108,29 @@ class EventNotificationConsumer(
                 Log.d(TAG, "Unwrapped consume ${innerEvent.javaClass.simpleName}")
 
                 when (innerEvent) {
-                    is PrivateDmEvent -> notify(innerEvent, account)
-                    is LnZapEvent -> notify(innerEvent, account)
-                    is ChatMessageEvent -> notify(innerEvent, account)
-                    is ChatMessageEncryptedFileHeaderEvent -> notify(innerEvent, account)
-                    is LiveChessGameAcceptEvent -> notify(innerEvent, account)
-                    is LiveChessMoveEvent -> notify(innerEvent, account)
+                    is PrivateDmEvent -> {
+                        notify(innerEvent, account)
+                    }
+
+                    is LnZapEvent -> {
+                        notify(innerEvent, account)
+                    }
+
+                    is ChatMessageEvent -> {
+                        notify(innerEvent, account)
+                    }
+
+                    is ChatMessageEncryptedFileHeaderEvent -> {
+                        notify(innerEvent, account)
+                    }
+
+                    is LiveChessGameAcceptEvent -> {
+                        notifyChessEvent(innerEvent, account, R.string.app_notification_chess_challenge_accepted)
+                    }
+
+                    is LiveChessMoveEvent -> {
+                        notifyChessEvent(innerEvent, account, R.string.app_notification_chess_your_turn)
+                    }
                 }
             }
         }
@@ -486,11 +504,11 @@ class EventNotificationConsumer(
         }
     }
 
-    private suspend fun notify(
-        event: LiveChessGameAcceptEvent,
+    private suspend fun notifyChessEvent(
+        event: BaseChessEvent,
         account: Account,
+        contentStringRes: Int,
     ) {
-        Log.d(TAG, "New Chess Challenge Accept to Notify")
         if (
             event.createdAt > TimeUtils.fifteenMinutesAgo() &&
             event.pubKey != account.signer.pubKey
@@ -499,40 +517,7 @@ class EventNotificationConsumer(
             val user = author.toBestDisplayName()
             val userPicture = author.profilePicture()
             val title = stringRes(applicationContext, R.string.app_notification_chess_channel_name)
-            val content = stringRes(applicationContext, R.string.app_notification_chess_challenge_accepted, user)
-            val noteUri =
-                "notifications$ACCOUNT_QUERY_PARAM" +
-                    account.signer.pubKey
-                        .hexToByteArray()
-                        .toNpub()
-
-            notificationManager()
-                .sendChessNotification(
-                    event.id,
-                    content,
-                    title,
-                    event.createdAt,
-                    userPicture,
-                    noteUri,
-                    applicationContext,
-                )
-        }
-    }
-
-    private suspend fun notify(
-        event: LiveChessMoveEvent,
-        account: Account,
-    ) {
-        Log.d(TAG, "New Chess Move to Notify")
-        if (
-            event.createdAt > TimeUtils.fifteenMinutesAgo() &&
-            event.pubKey != account.signer.pubKey
-        ) {
-            val author = LocalCache.getOrCreateUser(event.pubKey)
-            val user = author.toBestDisplayName()
-            val userPicture = author.profilePicture()
-            val title = stringRes(applicationContext, R.string.app_notification_chess_channel_name)
-            val content = stringRes(applicationContext, R.string.app_notification_chess_your_turn, user)
+            val content = stringRes(applicationContext, contentStringRes, user)
             val noteUri =
                 "notifications$ACCOUNT_QUERY_PARAM" +
                     account.signer.pubKey

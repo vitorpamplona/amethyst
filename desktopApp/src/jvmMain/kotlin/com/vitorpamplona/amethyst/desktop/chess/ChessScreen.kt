@@ -43,7 +43,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.Button
@@ -67,14 +66,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.min
+import com.vitorpamplona.amethyst.commons.chess.ActiveGameCard
+import com.vitorpamplona.amethyst.commons.chess.ChallengeCard
 import com.vitorpamplona.amethyst.commons.chess.ChessBroadcastBanner
 import com.vitorpamplona.amethyst.commons.chess.ChessChallenge
 import com.vitorpamplona.amethyst.commons.chess.ChessConfig
+import com.vitorpamplona.amethyst.commons.chess.ChessPlayerVsHeader
 import com.vitorpamplona.amethyst.commons.chess.ChessSyncBanner
 import com.vitorpamplona.amethyst.commons.chess.CompletedGame
+import com.vitorpamplona.amethyst.commons.chess.CompletedGameCard
 import com.vitorpamplona.amethyst.commons.chess.InteractiveChessBoard
 import com.vitorpamplona.amethyst.commons.chess.NewChessGameDialog
+import com.vitorpamplona.amethyst.commons.chess.OutgoingChallengeCard
+import com.vitorpamplona.amethyst.commons.chess.OverlappingAvatars
 import com.vitorpamplona.amethyst.commons.chess.PublicGame
+import com.vitorpamplona.amethyst.commons.chess.PublicGameCard
+import com.vitorpamplona.amethyst.commons.chess.SpectatingGameCard
 import com.vitorpamplona.amethyst.commons.data.UserMetadataCache
 import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
 import com.vitorpamplona.amethyst.desktop.account.AccountState
@@ -415,13 +422,13 @@ private fun ChessLobby(
             }
 
             items(activeGames.entries.toList(), key = { "active-${it.key}" }) { (gameId, state) ->
-                com.vitorpamplona.amethyst.commons.chess.ActiveGameCard(
+                ActiveGameCard(
                     gameId = gameId,
                     opponentName = metadataCache.getDisplayName(state.opponentPubkey),
                     isYourTurn = state.isPlayerTurn(),
                     onClick = { onSelectGame(gameId) },
                     avatar = {
-                        com.vitorpamplona.amethyst.commons.chess.OverlappingAvatars(
+                        OverlappingAvatars(
                             avatar1Hex = state.playerPubkey,
                             avatar2Hex = state.opponentPubkey,
                             avatar1Url = metadataCache.getPictureUrl(state.playerPubkey),
@@ -446,14 +453,14 @@ private fun ChessLobby(
             }
 
             items(outgoingChallenges, key = { "outgoing-${it.eventId}" }) { challenge ->
-                com.vitorpamplona.amethyst.commons.chess.OutgoingChallengeCard(
+                OutgoingChallengeCard(
                     opponentName = challenge.opponentPubkey?.let { metadataCache.getDisplayName(it) },
                     userPlaysWhite = challenge.challengerColor == ChessColor.WHITE,
                     onClick = { onOpenOwnChallenge(challenge) },
                     avatar =
                         challenge.opponentPubkey?.let { pubkey ->
                             {
-                                com.vitorpamplona.amethyst.commons.chess.OverlappingAvatars(
+                                OverlappingAvatars(
                                     avatar1Hex = userPubkey,
                                     avatar2Hex = pubkey,
                                     avatar1Url = metadataCache.getPictureUrl(userPubkey),
@@ -479,7 +486,7 @@ private fun ChessLobby(
 
             items(spectatingGames.entries.toList(), key = { "spectating-${it.key}" }) { (gameId, state) ->
                 val moveCount by state.moveHistory.collectAsState()
-                com.vitorpamplona.amethyst.commons.chess.SpectatingGameCard(
+                SpectatingGameCard(
                     moveCount = moveCount.size,
                     onClick = { onSelectGame(gameId) },
                 )
@@ -500,13 +507,13 @@ private fun ChessLobby(
             }
 
             items(incomingChallenges, key = { "incoming-${it.eventId}" }) { challenge ->
-                com.vitorpamplona.amethyst.commons.chess.ChallengeCard(
+                ChallengeCard(
                     challengerName = challenge.challengerDisplayName ?: metadataCache.getDisplayName(challenge.challengerPubkey),
                     challengerPlaysWhite = challenge.challengerColor == ChessColor.WHITE,
                     isIncoming = true,
                     onAccept = { onAcceptChallenge(challenge) },
                     avatar = {
-                        com.vitorpamplona.amethyst.commons.chess.OverlappingAvatars(
+                        OverlappingAvatars(
                             avatar1Hex = challenge.challengerPubkey,
                             avatar2Hex = userPubkey,
                             avatar1Url = challenge.challengerAvatarUrl ?: metadataCache.getPictureUrl(challenge.challengerPubkey),
@@ -531,13 +538,13 @@ private fun ChessLobby(
             }
 
             items(openChallenges, key = { "open-${it.eventId}" }) { challenge ->
-                com.vitorpamplona.amethyst.commons.chess.ChallengeCard(
+                ChallengeCard(
                     challengerName = challenge.challengerDisplayName ?: metadataCache.getDisplayName(challenge.challengerPubkey),
                     challengerPlaysWhite = challenge.challengerColor == ChessColor.WHITE,
                     isIncoming = false,
                     onAccept = { onAcceptChallenge(challenge) },
                     avatar = {
-                        com.vitorpamplona.amethyst.commons.chess.OverlappingAvatars(
+                        OverlappingAvatars(
                             avatar1Hex = challenge.challengerPubkey,
                             avatar2Hex = userPubkey,
                             avatar1Url = challenge.challengerAvatarUrl ?: metadataCache.getPictureUrl(challenge.challengerPubkey),
@@ -561,7 +568,7 @@ private fun ChessLobby(
             }
 
             items(publicGames, key = { "public-${it.gameId}" }) { game ->
-                com.vitorpamplona.amethyst.commons.chess.PublicGameCard(
+                PublicGameCard(
                     whiteName = game.whiteDisplayName ?: metadataCache.getDisplayName(game.whitePubkey),
                     blackName = game.blackDisplayName ?: metadataCache.getDisplayName(game.blackPubkey),
                     moveCount = game.moveCount,
@@ -583,13 +590,13 @@ private fun ChessLobby(
             }
 
             items(
-                completedGames.distinctBy { it.gameId }.take(10),
+                completedGames.take(10),
                 key = { "completed-${it.gameId}-${it.completedAt}" },
             ) { game ->
                 // Derive opponent pubkey based on who the user is
                 val opponentPubkey =
                     if (game.whitePubkey == userPubkey) game.blackPubkey else game.whitePubkey
-                com.vitorpamplona.amethyst.commons.chess.CompletedGameCard(
+                CompletedGameCard(
                     opponentName = game.blackDisplayName ?: game.whiteDisplayName ?: metadataCache.getDisplayName(opponentPubkey),
                     result = game.result,
                     didUserWin = game.didUserWin(userPubkey),
@@ -674,7 +681,7 @@ private fun DesktopChessGameLayout(
                 ) {
                     // Player vs Player header above board
                     if (whiteHex.isNotEmpty() || blackHex.isNotEmpty()) {
-                        com.vitorpamplona.amethyst.commons.chess.ChessPlayerVsHeader(
+                        ChessPlayerVsHeader(
                             whiteName = whiteName,
                             whiteHex = whiteHex,
                             whiteAvatarUrl = whiteAvatarUrl,

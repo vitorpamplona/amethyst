@@ -298,6 +298,10 @@ fun ChessLobbyContent(
     val challenges by chessViewModel.challenges.collectAsState()
     val completedGames by chessViewModel.completedGames.collectAsState()
     val userPubkey = accountViewModel.account.userProfile().pubkeyHex
+    val currentUser =
+        remember(userPubkey) {
+            accountViewModel.checkGetOrCreateUser(userPubkey)
+        }
 
     val hasContent =
         activeGames.isNotEmpty() ||
@@ -368,10 +372,6 @@ fun ChessLobbyContent(
                         accountViewModel.checkGetOrCreateUser(state.opponentPubkey)
                     }
                 val displayName = opponent?.toBestDisplayName() ?: state.opponentPubkey.take(8)
-                val playerUser =
-                    remember(state.playerPubkey) {
-                        accountViewModel.checkGetOrCreateUser(state.playerPubkey)
-                    }
                 ActiveGameCard(
                     gameId = gameId,
                     opponentName = displayName,
@@ -381,7 +381,7 @@ fun ChessLobbyContent(
                         OverlappingAvatars(
                             avatar1Hex = state.playerPubkey,
                             avatar2Hex = state.opponentPubkey,
-                            avatar1Url = playerUser?.profilePicture(),
+                            avatar1Url = currentUser?.profilePicture(),
                             avatar2Url = opponent?.profilePicture(),
                         )
                     },
@@ -410,10 +410,6 @@ fun ChessLobbyContent(
                 val opponentName =
                     opponentUser?.toBestDisplayName()
                         ?: challenge.opponentPubkey?.take(8)
-                val currentUser =
-                    remember(userPubkey) {
-                        accountViewModel.checkGetOrCreateUser(userPubkey)
-                    }
                 OutgoingChallengeCard(
                     opponentName = opponentName,
                     userPlaysWhite = challenge.challengerColor == ChessColor.WHITE,
@@ -477,10 +473,6 @@ fun ChessLobbyContent(
                             ?: accountViewModel.checkGetOrCreateUser(challenge.challengerPubkey)?.toBestDisplayName()
                             ?: challenge.challengerPubkey.take(8)
                     }
-                val currentUser =
-                    remember(userPubkey) {
-                        accountViewModel.checkGetOrCreateUser(userPubkey)
-                    }
                 ChallengeCard(
                     challengerName = displayName,
                     challengerPlaysWhite = challenge.challengerColor == ChessColor.WHITE,
@@ -517,10 +509,6 @@ fun ChessLobbyContent(
                         challenge.challengerDisplayName
                             ?: accountViewModel.checkGetOrCreateUser(challenge.challengerPubkey)?.toBestDisplayName()
                             ?: challenge.challengerPubkey.take(8)
-                    }
-                val currentUser =
-                    remember(userPubkey) {
-                        accountViewModel.checkGetOrCreateUser(userPubkey)
                     }
                 ChallengeCard(
                     challengerName = displayName,
@@ -576,7 +564,7 @@ fun ChessLobbyContent(
             }
 
             items(
-                completedGames.distinctBy { it.gameId }.take(10),
+                completedGames.take(10),
                 key = { "completed-${it.gameId}-${it.completedAt}" },
             ) { game ->
                 val opponentPubkey =
@@ -601,10 +589,7 @@ fun ChessLobbyContent(
                         OverlappingAvatars(
                             avatar1Hex = userPubkey,
                             avatar2Hex = opponentPubkey,
-                            avatar1Url =
-                                remember(userPubkey) {
-                                    accountViewModel.checkGetOrCreateUser(userPubkey)
-                                }?.profilePicture(),
+                            avatar1Url = currentUser?.profilePicture(),
                             avatar2Url = opponentUser?.profilePicture(),
                         )
                     },

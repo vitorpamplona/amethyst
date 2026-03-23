@@ -394,93 +394,35 @@ class ChessLobbyState(
     }
 
     /**
-     * Move a game from active/spectating to completed.
-     * Display names are optional; UI can look them up later if needed.
+     * Move a game to completed. Looks up the game from active/spectating maps,
+     * or uses the provided [liveState] if the game isn't in either map yet
+     * (e.g. a newly discovered game that is already finished).
      */
     fun moveToCompleted(
         gameId: String,
         result: String,
         termination: String?,
+        liveState: LiveChessGameState? = null,
         whiteDisplayName: String? = null,
         blackDisplayName: String? = null,
     ) {
-        val existingState = _activeGames.value[gameId] ?: _spectatingGames.value[gameId]
-        existingState?.let { gameState ->
-            // Derive white/black pubkeys from player color
-            val whitePubkey =
-                if (gameState.playerColor == Color.WHITE) {
-                    gameState.playerPubkey
-                } else {
-                    gameState.opponentPubkey
-                }
-            val blackPubkey =
-                if (gameState.playerColor == Color.BLACK) {
-                    gameState.playerPubkey
-                } else {
-                    gameState.opponentPubkey
-                }
+        val gameState = _activeGames.value[gameId] ?: _spectatingGames.value[gameId] ?: liveState ?: return
 
-            val completed =
-                CompletedGame(
-                    gameId = gameId,
-                    whitePubkey = whitePubkey,
-                    whiteDisplayName = whiteDisplayName,
-                    blackPubkey = blackPubkey,
-                    blackDisplayName = blackDisplayName,
-                    result = result,
-                    termination = termination,
-                    moveCount = gameState.moveHistory.value.size,
-                    completedAt =
-                        com.vitorpamplona.quartz.utils.TimeUtils
-                            .now(),
-                )
-
-            _completedGames.update { current ->
-                // Avoid duplicates
-                if (current.any { it.gameId == gameId }) {
-                    current
-                } else {
-                    listOf(completed) + current
-                }
-            }
-
-            // Remove from active/spectating
-            _activeGames.update { it - gameId }
-            _spectatingGames.update { it - gameId }
-
-            // Clear selection if this game was selected
-            if (_selectedGameId.value == gameId) {
-                _selectedGameId.value = null
-            }
-        }
-    }
-
-    /**
-     * Build and record a CompletedGame directly from a LiveChessGameState without requiring the
-     * game to be inserted into activeGames first. Use this when a newly discovered game is already
-     * finished so we avoid the intermediate addActiveGame → moveToCompleted flicker.
-     */
-    fun addCompletedGameDirectly(
-        gameId: String,
-        liveState: LiveChessGameState,
-        result: String,
-        termination: String?,
-    ) {
         val whitePubkey =
-            if (liveState.playerColor == Color.WHITE) liveState.playerPubkey else liveState.opponentPubkey
+            if (gameState.playerColor == Color.WHITE) gameState.playerPubkey else gameState.opponentPubkey
         val blackPubkey =
-            if (liveState.playerColor == Color.BLACK) liveState.playerPubkey else liveState.opponentPubkey
+            if (gameState.playerColor == Color.BLACK) gameState.playerPubkey else gameState.opponentPubkey
 
         val completed =
             CompletedGame(
                 gameId = gameId,
                 whitePubkey = whitePubkey,
-                whiteDisplayName = null,
+                whiteDisplayName = whiteDisplayName,
                 blackPubkey = blackPubkey,
-                blackDisplayName = null,
+                blackDisplayName = blackDisplayName,
                 result = result,
                 termination = termination,
-                moveCount = liveState.moveHistory.value.size,
+                moveCount = gameState.moveHistory.value.size,
                 completedAt =
                     com.vitorpamplona.quartz.utils.TimeUtils
                         .now(),
@@ -488,6 +430,15 @@ class ChessLobbyState(
 
         _completedGames.update { current ->
             if (current.any { it.gameId == gameId }) current else listOf(completed) + current
+        }
+
+        // Remove from active/spectating
+        _activeGames.update { it - gameId }
+        _spectatingGames.update { it - gameId }
+
+        // Clear selection if this game was selected
+        if (_selectedGameId.value == gameId) {
+            _selectedGameId.value = null
         }
     }
 

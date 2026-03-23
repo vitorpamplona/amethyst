@@ -778,8 +778,7 @@ class ChessLobbyLogic(
                     // If the discovered game is already finished, send it straight to completed
                     val gameStatus = result.liveState.gameStatus.value
                     if (gameStatus is GameStatus.Finished) {
-                        // Use the direct helper to avoid the addActiveGame → moveToCompleted flicker
-                        state.addCompletedGameDirectly(startEventId, result.liveState, gameStatus.result.notation, null)
+                        state.moveToCompleted(startEventId, gameStatus.result.notation, null, liveState = result.liveState)
                     } else if (!result.liveState.isSpectator) {
                         state.addActiveGame(startEventId, result.liveState)
                         pollingDelegate.addGameId(startEventId)
