@@ -160,6 +160,29 @@ fun UserProfileScreen(
         }
     var retryTrigger by remember { mutableStateOf(0) }
 
+    // Subscribe to profile user's text notes (kind 1) — populates cache for DesktopFeedViewModel
+    rememberSubscription(connectedRelays, pubKeyHex, retryTrigger, relayManager = relayManager) {
+        if (connectedRelays.isNotEmpty()) {
+            SubscriptionConfig(
+                subId = generateSubId("profile-notes-${pubKeyHex.take(8)}"),
+                filters =
+                    listOf(
+                        FilterBuilders.textNotesFromAuthors(
+                            authors = listOf(pubKeyHex),
+                            limit = 200,
+                        ),
+                    ),
+                relays = connectedRelays,
+                onEvent = { event, _, relay, _ ->
+                    subscriptionsCoordinator?.consumeEvent(event, relay)
+                },
+                onEose = { _, _ -> },
+            )
+        } else {
+            null
+        }
+    }
+
     // Tab and gallery state
     var selectedTab by remember { mutableStateOf(0) }
     var lightboxState by remember { mutableStateOf<LightboxState?>(null) }

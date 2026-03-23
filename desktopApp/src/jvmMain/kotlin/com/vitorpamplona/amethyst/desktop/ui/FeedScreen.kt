@@ -67,6 +67,10 @@ import com.vitorpamplona.amethyst.desktop.feeds.DesktopGlobalFeedFilter
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.desktop.subscriptions.FeedMode
+import com.vitorpamplona.amethyst.desktop.subscriptions.createContactListSubscription
+import com.vitorpamplona.amethyst.desktop.subscriptions.createFollowingFeedSubscription
+import com.vitorpamplona.amethyst.desktop.subscriptions.createGlobalFeedSubscription
+import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
 import com.vitorpamplona.amethyst.desktop.ui.media.LightboxOverlay
 import com.vitorpamplona.amethyst.desktop.ui.note.NoteCard
 import com.vitorpamplona.amethyst.desktop.viewmodels.DesktopFeedViewModel
@@ -168,6 +172,52 @@ fun FeedScreen(
     var replyToEvent by remember { mutableStateOf<Event?>(null) }
     var lightboxState by remember { mutableStateOf<LightboxState?>(null) }
     var feedMode by remember { mutableStateOf(initialFeedMode ?: DesktopPreferences.feedMode) }
+
+    // Subscribe to contact list (kind 3) — populates localCache.followedUsers
+    rememberSubscription(connectedRelays, account, relayManager = relayManager) {
+        if (connectedRelays.isNotEmpty() && account != null) {
+            createContactListSubscription(
+                relays = connectedRelays,
+                pubKeyHex = account.pubKeyHex,
+                onEvent = { event, _, relay, _ ->
+                    subscriptionsCoordinator?.consumeEvent(event, relay)
+                },
+            )
+        } else {
+            null
+        }
+    }
+
+    // Subscribe to feed events (kind 1) — populates cache via coordinator
+    rememberSubscription(connectedRelays, feedMode, followedUsers, relayManager = relayManager) {
+        if (connectedRelays.isEmpty()) return@rememberSubscription null
+
+        when (feedMode) {
+            FeedMode.GLOBAL -> {
+                createGlobalFeedSubscription(
+                    relays = connectedRelays,
+                    onEvent = { event, _, relay, _ ->
+                        subscriptionsCoordinator?.consumeEvent(event, relay)
+                    },
+                )
+            }
+
+            FeedMode.FOLLOWING -> {
+                val follows = followedUsers.toList()
+                if (follows.isNotEmpty()) {
+                    createFollowingFeedSubscription(
+                        relays = connectedRelays,
+                        followedUsers = follows,
+                        onEvent = { event, _, relay, _ ->
+                            subscriptionsCoordinator?.consumeEvent(event, relay)
+                        },
+                    )
+                } else {
+                    null
+                }
+            }
+        }
+    }
 
     // DesktopFeedViewModel keyed on feedMode — recreated on mode switch
     val viewModel =
