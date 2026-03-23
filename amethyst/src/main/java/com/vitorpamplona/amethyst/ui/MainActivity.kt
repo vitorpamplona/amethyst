@@ -193,11 +193,15 @@ fun uriToRoute(
     }
 
     if (isWalletConnectRoute(uri)) {
-        val url = UriParser(uri)
-        val nip47Uri = url.getQueryParameter("value")
-        if (nip47Uri != null) {
-            Nip47WalletConnect.parse(nip47Uri)
-            return Route.Nip47NWCSetup(nip47Uri)
+        try {
+            val url = UriParser(uri)
+            val nip47Uri = url.getQueryParameter("value")
+            if (nip47Uri != null) {
+                Nip47WalletConnect.parse(nip47Uri)
+                return Route.Nip47NWCSetup(nip47Uri)
+            }
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
         }
     }
 
