@@ -59,6 +59,7 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -74,24 +75,24 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.nip02FollowList.FollowAction
 import com.vitorpamplona.amethyst.commons.profile.ProfileBroadcastBanner
 import com.vitorpamplona.amethyst.commons.profile.ProfileBroadcastStatus
-import com.vitorpamplona.amethyst.commons.state.EventCollectionState
 import com.vitorpamplona.amethyst.commons.state.FollowState
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
 import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
+import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
+import com.vitorpamplona.amethyst.desktop.feeds.DesktopProfileFeedFilter
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.desktop.subscriptions.FilterBuilders
 import com.vitorpamplona.amethyst.desktop.subscriptions.SubscriptionConfig
 import com.vitorpamplona.amethyst.desktop.subscriptions.createContactListSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.createMetadataSubscription
-import com.vitorpamplona.amethyst.desktop.subscriptions.createUserPostsSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.generateSubId
 import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
 import com.vitorpamplona.amethyst.desktop.ui.media.LightboxOverlay
 import com.vitorpamplona.amethyst.desktop.ui.profile.GalleryTab
-import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.amethyst.desktop.viewmodels.DesktopFeedViewModel
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArrayOrNull
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
@@ -138,19 +139,25 @@ fun UserProfileScreen(
 
     val scope = rememberCoroutineScope()
 
-    // User's posts
-    val eventState =
-        remember {
-            EventCollectionState<Event>(
-                getId = { it.id },
-                sortComparator = compareByDescending { it.createdAt },
-                maxSize = 200,
-                scope = scope,
+    // User's posts — cache-backed via DesktopFeedViewModel
+    val profileViewModel =
+        remember(pubKeyHex) {
+            DesktopFeedViewModel(
+                DesktopProfileFeedFilter(pubKeyHex, localCache),
+                localCache,
             )
         }
-    val events by eventState.items.collectAsState()
-    var postsLoading by remember { mutableStateOf(true) }
-    var postsError by remember { mutableStateOf<String?>(null) }
+    DisposableEffect(profileViewModel) {
+        onDispose { profileViewModel.destroy() }
+    }
+    val profileFeedState by profileViewModel.feedState.feedContent.collectAsState()
+    val profileLoadedNotes =
+        if (profileFeedState is FeedState.Loaded) {
+            val loaded by (profileFeedState as FeedState.Loaded).feed.collectAsState()
+            loaded.list
+        } else {
+            kotlinx.collections.immutable.persistentListOf()
+        }
     var retryTrigger by remember { mutableStateOf(0) }
 
     // Tab and gallery state
@@ -198,26 +205,6 @@ fun UserProfileScreen(
             )
         } else {
             null
-        }
-    }
-
-    // Clear posts when profile changes, then hydrate from cache
-    remember(pubKeyHex, retryTrigger) {
-        eventState.clear()
-        postsLoading = true
-        postsError = null
-    }
-
-    // Hydrate from cache — show previously loaded posts instantly
-    LaunchedEffect(pubKeyHex) {
-        val cachedNotes =
-            localCache.notes.filterIntoSet { _, note ->
-                note.event?.kind == 1 && note.author?.pubkeyHex == pubKeyHex
-            }
-        if (cachedNotes.isNotEmpty()) {
-            val events = cachedNotes.mapNotNull { it.event }
-            eventState.addItems(events)
-            postsLoading = false
         }
     }
 
@@ -304,29 +291,6 @@ fun UserProfileScreen(
                 onEose = { _, _ -> },
             )
         } else {
-            null
-        }
-    }
-
-    // Subscribe to user posts
-    rememberSubscription(connectedRelays, pubKeyHex, retryTrigger, relayManager = relayManager) {
-        if (connectedRelays.isNotEmpty()) {
-            postsLoading = true
-            postsError = null
-            createUserPostsSubscription(
-                relays = connectedRelays,
-                pubKeyHex = pubKeyHex,
-                onEvent = { event, _, relay, _ ->
-                    subscriptionsCoordinator?.consumeEvent(event, relay)
-                    eventState.addItem(event)
-                },
-                onEose = { _, _ ->
-                    postsLoading = false
-                },
-            )
-        } else {
-            postsLoading = false
-            postsError = "No relays configured"
             null
         }
     }
@@ -651,35 +615,8 @@ fun UserProfileScreen(
                 // Tab content
                 when (selectedTab) {
                     0 -> {
-                        when {
-                            postsError != null -> {
-                                item(key = "error") {
-                                    Box(
-                                        modifier = Modifier.fillMaxWidth().padding(32.dp),
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                            Text(
-                                                "Failed to load posts",
-                                                style = MaterialTheme.typography.titleMedium,
-                                                color = MaterialTheme.colorScheme.error,
-                                            )
-                                            Spacer(Modifier.height(8.dp))
-                                            Text(
-                                                postsError!!,
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            )
-                                            Spacer(Modifier.height(16.dp))
-                                            OutlinedButton(onClick = { retryTrigger++ }) {
-                                                Text("Retry")
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
-                            postsLoading -> {
+                        when (profileFeedState) {
+                            is FeedState.Loading -> {
                                 item(key = "loading") {
                                     Box(
                                         modifier = Modifier.fillMaxWidth().padding(32.dp),
@@ -698,7 +635,7 @@ fun UserProfileScreen(
                                 }
                             }
 
-                            events.isEmpty() -> {
+                            is FeedState.Empty -> {
                                 item(key = "empty") {
                                     Box(
                                         modifier = Modifier.fillMaxWidth().padding(32.dp),
@@ -713,31 +650,55 @@ fun UserProfileScreen(
                                 }
                             }
 
-                            else -> {
-                                items(events.distinctBy { it.id }, key = { it.id }) { event ->
-                                    // Look up Note from cache for the new FeedNoteCard API
-                                    val note = localCache.getNoteIfExists(event.id)
-                                    if (note != null) {
-                                        FeedNoteCard(
-                                            note = note,
-                                            relayManager = relayManager,
-                                            localCache = localCache,
-                                            account = account,
-                                            nwcConnection = nwcConnection,
-                                            onReply = onCompose,
-                                            onZapFeedback = onZapFeedback,
-                                            onNavigateToProfile = onNavigateToProfile,
-                                            onImageClick = { urls, index ->
-                                                lightboxState = LightboxState(urls, index)
-                                            },
-                                            onMediaClick = { urls, index, seekPos ->
-                                                com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
-                                                    .playVideo(urls[index], seekPos)
-                                                com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
-                                                    .toggleFullscreen()
-                                            },
-                                        )
+                            is FeedState.FeedError -> {
+                                item(key = "error") {
+                                    Box(
+                                        modifier = Modifier.fillMaxWidth().padding(32.dp),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                            Text(
+                                                "Failed to load posts",
+                                                style = MaterialTheme.typography.titleMedium,
+                                                color = MaterialTheme.colorScheme.error,
+                                            )
+                                            Spacer(Modifier.height(8.dp))
+                                            Text(
+                                                (profileFeedState as FeedState.FeedError).errorMessage,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                            Spacer(Modifier.height(16.dp))
+                                            OutlinedButton(onClick = { retryTrigger++ }) {
+                                                Text("Retry")
+                                            }
+                                        }
                                     }
+                                }
+                            }
+
+                            is FeedState.Loaded -> {
+                                // loadedNotes collected outside LazyColumn in profileLoadedNotes
+                                items(profileLoadedNotes, key = { it.idHex }) { note ->
+                                    FeedNoteCard(
+                                        note = note,
+                                        relayManager = relayManager,
+                                        localCache = localCache,
+                                        account = account,
+                                        nwcConnection = nwcConnection,
+                                        onReply = onCompose,
+                                        onZapFeedback = onZapFeedback,
+                                        onNavigateToProfile = onNavigateToProfile,
+                                        onImageClick = { urls, index ->
+                                            lightboxState = LightboxState(urls, index)
+                                        },
+                                        onMediaClick = { urls, index, seekPos ->
+                                            com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
+                                                .playVideo(urls[index], seekPos)
+                                            com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
+                                                .toggleFullscreen()
+                                        },
+                                    )
                                 }
                             }
                         }
