@@ -48,10 +48,14 @@ object ChaCha20Core {
         c: Int,
         d: Int,
     ) {
-        state[a] += state[b]; state[d] = (state[d] xor state[a]).rotateLeft(16)
-        state[c] += state[d]; state[b] = (state[b] xor state[c]).rotateLeft(12)
-        state[a] += state[b]; state[d] = (state[d] xor state[a]).rotateLeft(8)
-        state[c] += state[d]; state[b] = (state[b] xor state[c]).rotateLeft(7)
+        state[a] += state[b]
+        state[d] = (state[d] xor state[a]).rotateLeft(16)
+        state[c] += state[d]
+        state[b] = (state[b] xor state[c]).rotateLeft(12)
+        state[a] += state[b]
+        state[d] = (state[d] xor state[a]).rotateLeft(8)
+        state[c] += state[d]
+        state[b] = (state[b] xor state[c]).rotateLeft(7)
     }
 
     /**

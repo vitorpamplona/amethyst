@@ -31,7 +31,11 @@ import kotlin.test.assertFailsWith
  */
 class ChaCha20CoreTest {
     private fun hex(s: String): ByteArray =
-        s.replace(" ", "").chunked(2).map { it.toInt(16).toByte() }.toByteArray()
+        s
+            .replace(" ", "")
+            .chunked(2)
+            .map { it.toInt(16).toByte() }
+            .toByteArray()
 
     private fun ByteArray.toHex(): String = joinToString("") { "%02x".format(it) }
 

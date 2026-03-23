@@ -84,12 +84,24 @@ object Poly1305 {
 
             // Partial reduction mod 2^130 - 5
             var c: Long
-            c = d0 ushr 26; h0 = d0 and 0x3ffffff; h1 = d1 + c
-            c = h1 ushr 26; h1 = h1 and 0x3ffffff; h2 = d2 + c
-            c = h2 ushr 26; h2 = h2 and 0x3ffffff; h3 = d3 + c
-            c = h3 ushr 26; h3 = h3 and 0x3ffffff; h4 = d4 + c
-            c = h4 ushr 26; h4 = h4 and 0x3ffffff; h0 += c * 5
-            c = h0 ushr 26; h0 = h0 and 0x3ffffff; h1 += c
+            c = d0 ushr 26
+            h0 = d0 and 0x3ffffff
+            h1 = d1 + c
+            c = h1 ushr 26
+            h1 = h1 and 0x3ffffff
+            h2 = d2 + c
+            c = h2 ushr 26
+            h2 = h2 and 0x3ffffff
+            h3 = d3 + c
+            c = h3 ushr 26
+            h3 = h3 and 0x3ffffff
+            h4 = d4 + c
+            c = h4 ushr 26
+            h4 = h4 and 0x3ffffff
+            h0 += c * 5
+            c = h0 ushr 26
+            h0 = h0 and 0x3ffffff
+            h1 += c
         }
 
         // Process remaining bytes (if any)
@@ -111,27 +123,57 @@ object Poly1305 {
             val d4 = h0 * r4 + h1 * r3 + h2 * r2 + h3 * r1 + h4 * r0
 
             var c: Long
-            c = d0 ushr 26; h0 = d0 and 0x3ffffff; h1 = d1 + c
-            c = h1 ushr 26; h1 = h1 and 0x3ffffff; h2 = d2 + c
-            c = h2 ushr 26; h2 = h2 and 0x3ffffff; h3 = d3 + c
-            c = h3 ushr 26; h3 = h3 and 0x3ffffff; h4 = d4 + c
-            c = h4 ushr 26; h4 = h4 and 0x3ffffff; h0 += c * 5
-            c = h0 ushr 26; h0 = h0 and 0x3ffffff; h1 += c
+            c = d0 ushr 26
+            h0 = d0 and 0x3ffffff
+            h1 = d1 + c
+            c = h1 ushr 26
+            h1 = h1 and 0x3ffffff
+            h2 = d2 + c
+            c = h2 ushr 26
+            h2 = h2 and 0x3ffffff
+            h3 = d3 + c
+            c = h3 ushr 26
+            h3 = h3 and 0x3ffffff
+            h4 = d4 + c
+            c = h4 ushr 26
+            h4 = h4 and 0x3ffffff
+            h0 += c * 5
+            c = h0 ushr 26
+            h0 = h0 and 0x3ffffff
+            h1 += c
         }
 
         // Final reduction: fully carry and reduce mod 2^130 - 5
         var c: Long
-        c = h1 ushr 26; h1 = h1 and 0x3ffffff; h2 += c
-        c = h2 ushr 26; h2 = h2 and 0x3ffffff; h3 += c
-        c = h3 ushr 26; h3 = h3 and 0x3ffffff; h4 += c
-        c = h4 ushr 26; h4 = h4 and 0x3ffffff; h0 += c * 5
-        c = h0 ushr 26; h0 = h0 and 0x3ffffff; h1 += c
+        c = h1 ushr 26
+        h1 = h1 and 0x3ffffff
+        h2 += c
+        c = h2 ushr 26
+        h2 = h2 and 0x3ffffff
+        h3 += c
+        c = h3 ushr 26
+        h3 = h3 and 0x3ffffff
+        h4 += c
+        c = h4 ushr 26
+        h4 = h4 and 0x3ffffff
+        h0 += c * 5
+        c = h0 ushr 26
+        h0 = h0 and 0x3ffffff
+        h1 += c
 
         // Compute h + -(2^130 - 5) = h - 2^130 + 5
-        var g0 = h0 + 5; c = g0 ushr 26; g0 = g0 and 0x3ffffff
-        var g1 = h1 + c; c = g1 ushr 26; g1 = g1 and 0x3ffffff
-        var g2 = h2 + c; c = g2 ushr 26; g2 = g2 and 0x3ffffff
-        var g3 = h3 + c; c = g3 ushr 26; g3 = g3 and 0x3ffffff
+        var g0 = h0 + 5
+        c = g0 ushr 26
+        g0 = g0 and 0x3ffffff
+        var g1 = h1 + c
+        c = g1 ushr 26
+        g1 = g1 and 0x3ffffff
+        var g2 = h2 + c
+        c = g2 ushr 26
+        g2 = g2 and 0x3ffffff
+        var g3 = h3 + c
+        c = g3 ushr 26
+        g3 = g3 and 0x3ffffff
         var g4 = h4 + c - (1L shl 26)
 
         // Select h if g4 is negative (bit 63 set), else select g
@@ -160,9 +202,12 @@ object Poly1305 {
         val s2Long = key.leToUInt(24)
         val s3Long = key.leToUInt(28)
 
-        f0 += s0; c = f0 ushr 32
-        f1 += s1Long + c; c = f1 ushr 32
-        f2 += s2Long + c; c = f2 ushr 32
+        f0 += s0
+        c = f0 ushr 32
+        f1 += s1Long + c
+        c = f1 ushr 32
+        f2 += s2Long + c
+        c = f2 ushr 32
         f3 += s3Long + c
 
         // Output as little-endian bytes
