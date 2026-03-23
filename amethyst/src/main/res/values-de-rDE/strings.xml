@@ -1104,6 +1104,13 @@ anz der Bedingungen ist erforderlich</string>
     <string name="new_community_note">Neue Community-Notiz</string>
     <string name="new_product">Neues Produkt</string>
     <string name="new_exclusive_geo_note">Neuer Geo-Exklusiver Beitrag</string>
+    <string name="new_long_form_post">Neuer Artikel</string>
+    <string name="article_title">Titel</string>
+    <string name="article_summary">Zusammenfassung (optional)</string>
+    <string name="article_cover_image_url">Cover-Bild-URL (optional)</string>
+    <string name="write_your_article_in_markdown">Schreib deinen Artikel in Markdown…</string>
+    <string name="markdown_preview">Vorschau</string>
+    <string name="markdown_edit">Bearbeiten</string>
     <string name="open_all_reactions_to_this_post">Alle Reaktionen auf diesen Beitrag öffnen</string>
     <string name="close_all_reactions_to_this_post">Alle Reaktionen auf diesen Beitrag schließen</string>
     <string name="reply_description">Antworten</string>
@@ -1241,6 +1248,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="existed_since">OTS: %1$s</string>
     <string name="ots_info_title">Zeitstempel Beweis</string>
     <string name="ots_info_description">Es gibt einen Beweis, dass dieser Beitrag irgendwann vor %1$s signiert wurde. Der Beweis wurde zu diesem Datum und Uhrzeit in der Bitcoin-Blockchain gestempelt.</string>
+    <string name="edit_article">Artikel bearbeiten</string>
     <string name="edit_post">Beitrag bearbeiten</string>
     <string name="proposal_to_edit">Vorschlag zur Verbesserung Ihres Beitrags</string>
     <string name="message_to_author">Zusammenfassung der Änderungen</string>
@@ -1664,4 +1672,11 @@ anz der Bedingungen ist erforderlich</string>
     <string name="attestor_proficiency_for_kinds">Kompetent für die Verifizierung von Arten: %1$s</string>
     <string name="attestation_attests_to">Bestätigt</string>
     <string name="attestation_requests_attestation_to">Beantragt Attestierung für</string>
+    <string name="event_sync_date_filter_title">Zeitraum</string>
+    <string name="event_sync_date_filter_since">Von</string>
+    <string name="event_sync_date_filter_until">Bis</string>
+    <string name="event_sync_date_filter_now">Jetzt</string>
+    <string name="event_sync_date_filter_all_time">Gesamter Zeitraum</string>
+    <string name="event_sync_date_filter_last_sync">Letzte Synchronisierung: %1$s</string>
+    <string name="event_sync_date_filter_since_last_sync">Seit letzter Synchronisierung</string>
 </resources>

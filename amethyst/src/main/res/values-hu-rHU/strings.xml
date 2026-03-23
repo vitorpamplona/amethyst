@@ -1104,6 +1104,13 @@
     <string name="new_community_note">Új közösségi bejegyzés</string>
     <string name="new_product">Új termék</string>
     <string name="new_exclusive_geo_note">Új hely-exkluzív bejegyzés </string>
+    <string name="new_long_form_post">Új cikk</string>
+    <string name="article_title">Cím</string>
+    <string name="article_summary">Összefoglalás (nem kötelező)</string>
+    <string name="article_cover_image_url">Borítókép webcíme (nem kötelező)</string>
+    <string name="write_your_article_in_markdown">Cikk írása markdownban…</string>
+    <string name="markdown_preview">Előnézet</string>
+    <string name="markdown_edit">Szerkesztés</string>
     <string name="open_all_reactions_to_this_post">A bejegyzésre adott összes reakció kibontása</string>
     <string name="close_all_reactions_to_this_post">A bejegyzésre adott összes reakció összecsukása</string>
     <string name="reply_description">Válasz</string>
@@ -1241,6 +1248,7 @@
     <string name="existed_since">OTS: %1$s</string>
     <string name="ots_info_title">Időbélyeg-igazolás</string>
     <string name="ots_info_description">Bizonyíték van arra, hogy ezt a bejegyzést valamikor %1$s előtt írták alá. A bizonyítékot ezen a napon és időpontban bélyegezték a Bitcoin blokkláncába.</string>
+    <string name="edit_article">Cikk szerkesztése</string>
     <string name="edit_post">Bejegyzés szerkesztése</string>
     <string name="proposal_to_edit">Javaslat egy bejegyzés javítására</string>
     <string name="message_to_author">Változások összefoglalása</string>
@@ -1664,4 +1672,11 @@
     <string name="attestor_proficiency_for_kinds">Jártas a következő típusok igazolásában: %1$s</string>
     <string name="attestation_attests_to">Tanúsítás ehhez:</string>
     <string name="attestation_requests_attestation_to">Tanúsítás kérése ehhez:</string>
+    <string name="event_sync_date_filter_title">Időszak</string>
+    <string name="event_sync_date_filter_since">Ekkortól</string>
+    <string name="event_sync_date_filter_until">Eddig</string>
+    <string name="event_sync_date_filter_now">Most</string>
+    <string name="event_sync_date_filter_all_time">Összes</string>
+    <string name="event_sync_date_filter_last_sync">Utoljára szinkronizálva: %1$s</string>
+    <string name="event_sync_date_filter_since_last_sync">Utolsó szinkronizálás óta</string>
 </resources>

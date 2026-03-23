@@ -1099,6 +1099,13 @@
     <string name="new_community_note">Nova Nota da Comunidade</string>
     <string name="new_product">Produto Novo</string>
     <string name="new_exclusive_geo_note">Nova Postagem Geo-Exclusiva</string>
+    <string name="new_long_form_post">Novo artigo</string>
+    <string name="article_title">Título</string>
+    <string name="article_summary">Resumo (opcional)</string>
+    <string name="article_cover_image_url">URL da imagem de capa (opcional)</string>
+    <string name="write_your_article_in_markdown">Escreva seu artigo em markdown…</string>
+    <string name="markdown_preview">Pré-visualização</string>
+    <string name="markdown_edit">Editar</string>
     <string name="open_all_reactions_to_this_post">Abrir todas as reações a esta postagem</string>
     <string name="close_all_reactions_to_this_post">Fechar todas as reações a esta postagem</string>
     <string name="reply_description">Responder</string>
@@ -1236,6 +1243,7 @@
     <string name="existed_since">OTS: %1$s</string>
     <string name="ots_info_title">Prova de Carimbo de data/hora</string>
     <string name="ots_info_description">Há prova de que esta postagem foi assinada antes de %1$s. A prova foi carimbada no blockchain do Bitcoin naquela data e hora.</string>
+    <string name="edit_article">Editar artigo</string>
     <string name="edit_post">Editar postagem</string>
     <string name="proposal_to_edit">Proposta para melhorar sua postagem</string>
     <string name="message_to_author">Resumo das alterações</string>
@@ -1659,4 +1667,11 @@
     <string name="attestor_proficiency_for_kinds">Competente na verificação de tipos: %1$s</string>
     <string name="attestation_attests_to">Atesta</string>
     <string name="attestation_requests_attestation_to">Solicita atestação para</string>
+    <string name="event_sync_date_filter_title">Intervalo de datas</string>
+    <string name="event_sync_date_filter_since">De</string>
+    <string name="event_sync_date_filter_until">Até</string>
+    <string name="event_sync_date_filter_now">Agora</string>
+    <string name="event_sync_date_filter_all_time">Todo o período</string>
+    <string name="event_sync_date_filter_last_sync">Última sincronização: %1$s</string>
+    <string name="event_sync_date_filter_since_last_sync">Desde a última sincronização</string>
 </resources>

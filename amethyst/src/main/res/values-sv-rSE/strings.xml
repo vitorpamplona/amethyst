@@ -1098,6 +1098,13 @@
     <string name="new_community_note">Nytt Community-meddelande</string>
     <string name="new_product">Ny produkt</string>
     <string name="new_exclusive_geo_note">Nytt Geo-Exklusivt inlägg</string>
+    <string name="new_long_form_post">Ny artikel</string>
+    <string name="article_title">Titel</string>
+    <string name="article_summary">Sammanfattning (valfritt)</string>
+    <string name="article_cover_image_url">URL för omslagsbild (valfritt)</string>
+    <string name="write_your_article_in_markdown">Skriv din artikel i markdown…</string>
+    <string name="markdown_preview">Förhandsgranskning</string>
+    <string name="markdown_edit">Redigera</string>
     <string name="open_all_reactions_to_this_post">Öppna alla reaktioner på detta inlägg</string>
     <string name="close_all_reactions_to_this_post">Stäng alla reaktioner på detta inlägg</string>
     <string name="reply_description">Svara</string>
@@ -1235,6 +1242,7 @@
     <string name="existed_since">OTS: %1$s</string>
     <string name="ots_info_title">Tidsstämpel Bevis</string>
     <string name="ots_info_description">Det finns bevis på att detta inlägg signerades någon gång före %1$s. Beviset stämplades i Bitcoin-blockchainen vid det datumet och den tiden.</string>
+    <string name="edit_article">Redigera artikel</string>
     <string name="edit_post">Redigera inlägg</string>
     <string name="proposal_to_edit">Förslag till att förbättra ditt inlägg</string>
     <string name="message_to_author">Sammanfattning av ändringar</string>
@@ -1658,4 +1666,11 @@
     <string name="attestor_proficiency_for_kinds">Kompetent att verifiera typer: %1$s</string>
     <string name="attestation_attests_to">Intygar</string>
     <string name="attestation_requests_attestation_to">Begär attestering till</string>
+    <string name="event_sync_date_filter_title">Datumintervall</string>
+    <string name="event_sync_date_filter_since">Från</string>
+    <string name="event_sync_date_filter_until">Till</string>
+    <string name="event_sync_date_filter_now">Nu</string>
+    <string name="event_sync_date_filter_all_time">All tid</string>
+    <string name="event_sync_date_filter_last_sync">Senaste synkronisering: %1$s</string>
+    <string name="event_sync_date_filter_since_last_sync">Sedan senaste synkronisering</string>
 </resources>
