@@ -115,3 +115,7 @@ vlcSetup {
     pathToCopyVlcMacosFilesTo.set(file("src/jvmMain/appResources/macos/vlc"))
     pathToCopyVlcWindowsFilesTo.set(file("src/jvmMain/appResources/windows/vlc"))
 }
+
+tasks.named("spotlessKotlin") {
+    inputs.files(tasks.named("vlcSetup"))
+}
