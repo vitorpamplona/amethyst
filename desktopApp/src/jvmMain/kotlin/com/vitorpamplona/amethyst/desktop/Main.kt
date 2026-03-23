@@ -736,6 +736,7 @@ fun MainContent(
             Row(Modifier.fillMaxSize().weight(1f)) {
                 when (layoutMode) {
                     LayoutMode.SINGLE_PANE -> {
+                        val healthMap by subscriptionsCoordinator.subscriptionHealth.collectAsState()
                         SinglePaneLayout(
                             relayManager = relayManager,
                             localCache = localCache,
@@ -752,6 +753,7 @@ fun MainContent(
                             onZapFeedback = onZapFeedback,
                             signerConnectionState = signerConnectionState,
                             lastPingTimeSec = lastPingTimeSec,
+                            subscriptionHealth = healthMap,
                             modifier = Modifier.weight(1f),
                         )
                     }
