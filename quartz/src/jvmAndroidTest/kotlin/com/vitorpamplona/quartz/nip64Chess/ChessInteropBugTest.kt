@@ -568,6 +568,52 @@ class ChessInteropBugTest {
         )
     }
 
+    // ==========================================================================
+    // CATEGORY 5: JESTER CONTENT SERIALIZATION
+    // ==========================================================================
+
+    @Test
+    fun `serialized start content includes version fen and history fields`() {
+        // Jester's isStartGameEvent checks arrayEquals(json.history, [])
+        // which fails if history field is absent from JSON
+        val content =
+            com.vitorpamplona.quartz.nip64Chess.jester.JesterContent(
+                kind = 0,
+                nonce = "test1234",
+                playerColor = "white",
+            )
+        val json =
+            com.vitorpamplona.quartz.nip01Core.core.JsonMapper
+                .toJson(content)
+
+        assertTrue(json.contains("\"version\""), "JSON must include version field: $json")
+        assertTrue(json.contains("\"fen\""), "JSON must include fen field: $json")
+        assertTrue(json.contains("\"history\""), "JSON must include history field: $json")
+        assertTrue(json.contains("\"history\":[]"), "history must be empty array: $json")
+    }
+
+    @Test
+    fun `serialized move content includes version fen and history fields`() {
+        val content =
+            com.vitorpamplona.quartz.nip64Chess.jester.JesterContent(
+                kind = 1,
+                fen = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+                move = "e4",
+                history = listOf("e4"),
+            )
+        val json =
+            com.vitorpamplona.quartz.nip01Core.core.JsonMapper
+                .toJson(content)
+
+        assertTrue(json.contains("\"version\""), "JSON must include version field: $json")
+        assertTrue(json.contains("\"fen\""), "JSON must include fen field: $json")
+        assertTrue(json.contains("\"history\""), "JSON must include history field: $json")
+    }
+
+    // ==========================================================================
+    // HELPERS
+    // ==========================================================================
+
     private fun createMoveEvent(
         id: String,
         pubKey: String,

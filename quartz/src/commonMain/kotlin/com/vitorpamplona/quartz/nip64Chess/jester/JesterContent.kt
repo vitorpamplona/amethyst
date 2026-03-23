@@ -20,18 +20,26 @@
  */
 package com.vitorpamplona.quartz.nip64Chess.jester
 
+import kotlinx.serialization.EncodeDefault
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 
 /**
- * JSON content structure for Jester events
+ * JSON content structure for Jester events.
+ *
+ * Fields marked @EncodeDefault are always serialized even when they match
+ * the default value. This is required for jester.nyo.dev compatibility —
+ * jester's isStartGameEvent checks arrayEquals(json.history, []) which
+ * fails if the field is absent.
  */
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
 data class JesterContent(
-    val version: String = "0",
+    @EncodeDefault val version: String = "0",
     val kind: Int,
-    val fen: String = JesterProtocol.FEN_START,
+    @EncodeDefault val fen: String = JesterProtocol.FEN_START,
     val move: String? = null,
-    val history: List<String> = emptyList(),
+    @EncodeDefault val history: List<String> = emptyList(),
     val nonce: String? = null,
     // Extended fields for Amethyst (backward compatible - jesterui ignores unknown fields)
     val playerColor: String? = null, // "white" or "black" - challenger's color choice
