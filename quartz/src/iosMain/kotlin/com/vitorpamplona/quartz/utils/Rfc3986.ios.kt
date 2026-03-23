@@ -21,9 +21,7 @@
 package com.vitorpamplona.quartz.utils
 
 import io.kotlingeekdev.urireference.URIReference
-import kotlinx.cinterop.ExperimentalForeignApi
 
-@OptIn(ExperimentalForeignApi::class)
 actual object Rfc3986 {
 
     actual fun normalize(uri: String): String =

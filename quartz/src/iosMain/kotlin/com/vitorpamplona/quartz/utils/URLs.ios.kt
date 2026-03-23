@@ -20,12 +20,7 @@
  */
 package com.vitorpamplona.quartz.utils
 
-import kotlinx.cinterop.ExperimentalForeignApi
-import swiftbridge.UrlDetector
+import com.vitorpamplona.quartz.utils.urldetector.detection.UrlDetector
 
-@Suppress("UNCHECKED_CAST")
-@OptIn(ExperimentalForeignApi::class)
-actual fun fastFindURLs(text: String): List<String> {
-    val detectorInstance = UrlDetector()
-    return detectorInstance.findURLsWithText(text) as List<String>
-}
+
+actual fun fastFindURLs(text: String): List<String> = UrlDetector(text).detect().map { it.originalUrl }
