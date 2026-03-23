@@ -110,10 +110,15 @@ import com.vitorpamplona.amethyst.desktop.ui.deck.param
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalAwtWindow
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalIsImmersiveFullscreen
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalWindowState
+import com.vitorpamplona.amethyst.desktop.service.namecoin.DesktopNamecoinNameService
+import com.vitorpamplona.amethyst.desktop.service.namecoin.DesktopNamecoinPreferences
+import com.vitorpamplona.amethyst.desktop.service.namecoin.LocalNamecoinPreferences
+import com.vitorpamplona.amethyst.desktop.service.namecoin.LocalNamecoinService
 import com.vitorpamplona.amethyst.desktop.ui.profile.ProfileInfoCard
 import com.vitorpamplona.amethyst.desktop.ui.relay.LocalRelayCategories
 import com.vitorpamplona.amethyst.desktop.ui.relay.RelayStatusCard
 import com.vitorpamplona.amethyst.desktop.ui.settings.MediaServerSettings
+import com.vitorpamplona.amethyst.desktop.ui.settings.NamecoinSettingsSection
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -695,6 +700,10 @@ fun App(
     }
 
     val localCache = remember { DesktopLocalCache() }
+    val namecoinPreferences = remember { DesktopNamecoinPreferences() }
+    val namecoinService = remember {
+        DesktopNamecoinNameService(preferencesProvider = { namecoinPreferences.current })
+    }
     val accountState by accountManager.accountState.collectAsState()
     val scope = remember { CoroutineScope(SupervisorJob() + Dispatchers.Main) }
 
@@ -872,6 +881,10 @@ fun App(
         ProvideMaterialSymbols(
             weight = com.vitorpamplona.amethyst.desktop.platform.PlatformIconWeight.current,
         ) {
+            CompositionLocalProvider(
+                LocalNamecoinPreferences provides namecoinPreferences,
+                LocalNamecoinService provides namecoinService,
+            ) {
             Surface(
                 modifier = Modifier.fillMaxSize(),
                 color = MaterialTheme.colorScheme.background,
@@ -1036,6 +1049,7 @@ fun App(
                 }
             }
         }
+        } // end CompositionLocalProvider
     }
 }
 
@@ -1425,6 +1439,7 @@ fun RelaySettingsScreen(
         com.vitorpamplona.amethyst.commons.tor
             .TorSettings(torType = com.vitorpamplona.amethyst.commons.tor.TorType.OFF),
     onTorSettingsChanged: (com.vitorpamplona.amethyst.commons.tor.TorSettings) -> Unit = {},
+    namecoinPreferences: DesktopNamecoinPreferences? = null,
 ) {
     val relayStatuses by relayManager.relayStatuses.collectAsState()
     val connectedRelays by relayManager.connectedRelays.collectAsState()
@@ -1634,6 +1649,7 @@ fun RelaySettingsScreen(
 
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.weight(1f),
                 modifier = Modifier.weight(1f),
             ) {
                 items(relayStatuses.values.toList(), key = { it.url.url }) { status ->

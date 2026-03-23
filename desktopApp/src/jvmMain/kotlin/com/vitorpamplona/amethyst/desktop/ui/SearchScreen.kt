@@ -102,8 +102,15 @@ import com.vitorpamplona.amethyst.desktop.ui.relay.SearchRelayEditor
 import com.vitorpamplona.amethyst.desktop.ui.search.AdvancedSearchPanel
 import com.vitorpamplona.amethyst.desktop.ui.search.SearchResultsList
 import com.vitorpamplona.amethyst.desktop.ui.search.SearchSyncBanner
+import com.vitorpamplona.amethyst.desktop.service.namecoin.DesktopNamecoinNameService
+import com.vitorpamplona.amethyst.desktop.service.namecoin.LocalNamecoinPreferences
+import com.vitorpamplona.amethyst.desktop.service.namecoin.LocalNamecoinService
+import com.vitorpamplona.amethyst.desktop.service.namecoin.NamecoinResolveState
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinResolveOutcome
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.launch
 
 @Composable
@@ -155,6 +162,35 @@ fun SearchScreen(
 
     // Bech32 parsing (immediate, no debounce)
     val bech32Results = remember(displayText) { parseSearchInput(displayText) }
+
+    // Namecoin resolution
+    val namecoinService = LocalNamecoinService.current
+    val namecoinPrefs = LocalNamecoinPreferences.current
+    val namecoinEnabled = namecoinPrefs?.settings?.collectAsState()?.value?.enabled ?: false
+    val isNamecoinQuery = remember(displayText) {
+        displayText.isNotBlank() && NamecoinNameResolver.isNamecoinIdentifier(displayText.trim())
+    }
+
+    var namecoinState by remember { mutableStateOf<NamecoinResolveState?>(null) }
+
+    // Resolve Namecoin identifiers with cancellation of stale lookups
+    LaunchedEffect(displayText, namecoinEnabled) {
+        if (!namecoinEnabled || !isNamecoinQuery || namecoinService == null) {
+            namecoinState = null
+            return@LaunchedEffect
+        }
+        namecoinState = NamecoinResolveState.Loading
+        try {
+            val result = namecoinService.resolve(displayText.trim())
+            namecoinState = if (result != null) {
+                NamecoinResolveState.Resolved(result)
+            } else {
+                NamecoinResolveState.NotFound
+            }
+        } catch (e: Exception) {
+            namecoinState = NamecoinResolveState.Error(e.message ?: "Resolution failed")
+        }
+    }
 
     // Skip people search when query specifies kinds that don't include profile (kind 0)
     val shouldSearchPeople =
