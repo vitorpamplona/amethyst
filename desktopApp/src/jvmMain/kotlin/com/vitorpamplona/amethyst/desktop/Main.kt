@@ -736,7 +736,7 @@ fun MainContent(
             Row(Modifier.fillMaxSize().weight(1f)) {
                 when (layoutMode) {
                     LayoutMode.SINGLE_PANE -> {
-                        val healthMap by subscriptionsCoordinator.subscriptionHealth.collectAsState()
+                        val lastRelayEvent by subscriptionsCoordinator.lastEventAt.collectAsState()
                         SinglePaneLayout(
                             relayManager = relayManager,
                             localCache = localCache,
@@ -753,7 +753,7 @@ fun MainContent(
                             onZapFeedback = onZapFeedback,
                             signerConnectionState = signerConnectionState,
                             lastPingTimeSec = lastPingTimeSec,
-                            subscriptionHealth = healthMap,
+                            lastRelayEventAt = lastRelayEvent,
                             modifier = Modifier.weight(1f),
                         )
                     }

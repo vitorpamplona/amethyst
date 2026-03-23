@@ -82,25 +82,6 @@ class DesktopLocalCache : ICacheProvider {
 
     val paymentTracker = NwcPaymentTracker()
 
-    // ----- Kind-based event consumer registry -----
-
-    private val consumers = HashMap<Int, (Event, NormalizedRelayUrl?) -> Boolean>()
-
-    init {
-        consumers[MetadataEvent.KIND] = { e, _ ->
-            consumeMetadata(e as MetadataEvent)
-            true
-        }
-        consumers[TextNoteEvent.KIND] = { e, r -> consumeTextNote(e as TextNoteEvent, r) }
-        consumers[ReactionEvent.KIND] = { e, r -> consumeReaction(e as ReactionEvent, r) }
-        consumers[LnZapRequestEvent.KIND] = { e, r -> consumeZapRequest(e as LnZapRequestEvent, r) }
-        consumers[LnZapEvent.KIND] = { e, r -> consumeZap(e as LnZapEvent, r) }
-        consumers[RepostEvent.KIND] = { e, r -> consumeRepost(e as RepostEvent, r) }
-        consumers[ContactListEvent.KIND] = { e, _ -> consumeContactList(e as ContactListEvent) }
-        consumers[LongTextNoteEvent.KIND] = { e, r -> consumeLongTextNote(e as LongTextNoteEvent, r) }
-        consumers[BookmarkListEvent.KIND] = { e, _ -> consumeBookmarkList(e as BookmarkListEvent) }
-    }
-
     // ----- User operations -----
 
     override fun getUserIfExists(pubkey: HexKey): User? = users.get(pubkey)
@@ -170,16 +151,58 @@ class DesktopLocalCache : ICacheProvider {
         }
     }
 
-    // ----- Event consumption (kind-based registry) -----
+    // ----- Event consumption -----
 
     /**
-     * Routes an event to the appropriate consume method via kind-based registry.
-     * O(1) dispatch. Returns true if the event was consumed (new), false if already seen.
+     * Routes an event to the appropriate consume method.
+     * Returns true if the event was consumed (new), false if already seen.
      */
     fun consume(
         event: Event,
         relay: NormalizedRelayUrl?,
-    ): Boolean = consumers[event.kind]?.invoke(event, relay) ?: false
+    ): Boolean =
+        when (event) {
+            is MetadataEvent -> {
+                consumeMetadata(event)
+                true
+            }
+
+            is TextNoteEvent -> {
+                consumeTextNote(event, relay)
+            }
+
+            is ReactionEvent -> {
+                consumeReaction(event, relay)
+            }
+
+            is LnZapRequestEvent -> {
+                consumeZapRequest(event, relay)
+            }
+
+            is LnZapEvent -> {
+                consumeZap(event, relay)
+            }
+
+            is RepostEvent -> {
+                consumeRepost(event, relay)
+            }
+
+            is ContactListEvent -> {
+                consumeContactList(event)
+            }
+
+            is LongTextNoteEvent -> {
+                consumeLongTextNote(event, relay)
+            }
+
+            is BookmarkListEvent -> {
+                consumeBookmarkList(event)
+            }
+
+            else -> {
+                false
+            }
+        }
 
     /**
      * Consumes a kind 1 text note event.

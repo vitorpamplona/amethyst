@@ -40,7 +40,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
 
@@ -68,11 +67,6 @@ import java.util.concurrent.ConcurrentHashMap
  * }
  * ```
  */
-data class SubscriptionHealth(
-    val lastEventReceivedAt: Long? = null,
-    val eoseReceived: Boolean = false,
-)
-
 class DesktopRelaySubscriptionsCoordinator(
     private val client: INostrClient,
     private val scope: CoroutineScope,
@@ -112,26 +106,9 @@ class DesktopRelaySubscriptionsCoordinator(
     // Screen-triggered subscription Jobs — keyed by subId for proper cancellation
     private val screenSubscriptions = ConcurrentHashMap<String, Job>()
 
-    // Subscription health tracking
-    private val _subscriptionHealth = MutableStateFlow<Map<String, SubscriptionHealth>>(emptyMap())
-    val subscriptionHealth: StateFlow<Map<String, SubscriptionHealth>> = _subscriptionHealth.asStateFlow()
-
-    private fun updateHealth(
-        subId: String,
-        lastEventReceivedAt: Long? = null,
-        eoseReceived: Boolean? = null,
-    ) {
-        _subscriptionHealth.update { current ->
-            current.toMutableMap().apply {
-                val existing = this[subId] ?: SubscriptionHealth()
-                this[subId] =
-                    existing.copy(
-                        lastEventReceivedAt = lastEventReceivedAt ?: existing.lastEventReceivedAt,
-                        eoseReceived = eoseReceived ?: existing.eoseReceived,
-                    )
-            }
-        }
-    }
+    // Last event received from any subscription — drives RelayHealthIndicator
+    private val _lastEventAt = MutableStateFlow<Long?>(null)
+    val lastEventAt: StateFlow<Long?> = _lastEventAt.asStateFlow()
 
     /**
      * Central event router — consumes an event into the cache and emits to event stream.
@@ -146,6 +123,7 @@ class DesktopRelaySubscriptionsCoordinator(
             try {
                 val consumed = localCache.consume(event, relay)
                 if (consumed) {
+                    _lastEventAt.value = System.currentTimeMillis()
                     val note = localCache.getNoteIfExists(event.id) ?: return@launch
                     eventBundler.invalidateList(note) { batch ->
                         localCache.eventStream.emitNewNotes(batch)
@@ -202,14 +180,6 @@ class DesktopRelaySubscriptionsCoordinator(
                     forFilters: List<Filter>?,
                 ) {
                     consumeEvent(event, relay)
-                    updateHealth(subId, lastEventReceivedAt = System.currentTimeMillis())
-                }
-
-                override fun onEose(
-                    relay: NormalizedRelayUrl,
-                    forFilters: List<Filter>?,
-                ) {
-                    updateHealth(subId, eoseReceived = true)
                 }
             }
 
@@ -232,7 +202,6 @@ class DesktopRelaySubscriptionsCoordinator(
     fun releaseInteractions(subId: String) {
         screenSubscriptions.remove(subId)?.cancel()
         client.close(subId)
-        _subscriptionHealth.update { it - subId }
     }
 
     /**
@@ -274,13 +243,6 @@ class DesktopRelaySubscriptionsCoordinator(
      */
     fun loadMetadataForPubkeys(pubkeys: List<HexKey>) {
         feedMetadata.loadMetadataForPubkeys(pubkeys)
-    }
-
-    /**
-     * Load reactions for specific notes.
-     */
-    fun loadReactionsForNotes(noteIds: List<HexKey>) {
-        feedMetadata.loadReactionsForNotes(noteIds)
     }
 
     // -- DM Subscription Support --
@@ -389,7 +351,7 @@ class DesktopRelaySubscriptionsCoordinator(
             client.close(subId)
         }
         screenSubscriptions.clear()
-        _subscriptionHealth.value = emptyMap()
+        _lastEventAt.value = null
 
         unsubscribeFromDms()
         feedMetadata.clear()
