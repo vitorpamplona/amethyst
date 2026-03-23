@@ -568,4 +568,69 @@ class DesktopCachePipelineTest {
         assertEquals(1, filtered.size, "applyFilter should only include followed users")
         assertEquals(followedPubKey, filtered.first().author?.pubkeyHex)
     }
+
+    // -----------------------------------------------------------------------
+    // 10. Profile count caching
+    // -----------------------------------------------------------------------
+
+    @Test
+    fun `profile follower count is cached and survives clear of note cache`() {
+        val cache = DesktopLocalCache()
+
+        assertEquals(0, cache.getCachedFollowerCount(userPubKey))
+
+        cache.cacheFollowerCount(userPubKey, 42)
+        assertEquals(42, cache.getCachedFollowerCount(userPubKey))
+
+        // Updating again overwrites
+        cache.cacheFollowerCount(userPubKey, 100)
+        assertEquals(100, cache.getCachedFollowerCount(userPubKey))
+    }
+
+    @Test
+    fun `profile following count is cached`() {
+        val cache = DesktopLocalCache()
+
+        cache.cacheFollowingCount(userPubKey, 150)
+        assertEquals(150, cache.getCachedFollowingCount(userPubKey))
+    }
+
+    @Test
+    fun `clear resets profile count caches`() {
+        val cache = DesktopLocalCache()
+        cache.cacheFollowerCount(userPubKey, 42)
+        cache.cacheFollowingCount(userPubKey, 150)
+
+        cache.clear()
+
+        assertEquals(0, cache.getCachedFollowerCount(userPubKey))
+        assertEquals(0, cache.getCachedFollowingCount(userPubKey))
+    }
+
+    @Test
+    fun `metadata is available from cache after consumption`() {
+        val cache = DesktopLocalCache()
+        val metadata =
+            com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent(
+                id = "meta1".padEnd(64, '0'),
+                pubKey = userPubKey,
+                createdAt = System.currentTimeMillis() / 1000,
+                tags = emptyArray(),
+                content = """{"name":"TestUser","display_name":"Test User","about":"A test user"}""",
+                sig = dummySig,
+            )
+
+        cache.consume(metadata, relayUrl)
+
+        val user = cache.getUserIfExists(userPubKey)!!
+        val cached = user.metadataOrNull()
+        assertTrue(cached != null, "Metadata should be cached after consumption")
+        assertEquals("Test User", cached.bestName())
+        assertEquals(
+            "A test user",
+            cached.flow.value
+                ?.info
+                ?.about,
+        )
+    }
 }
