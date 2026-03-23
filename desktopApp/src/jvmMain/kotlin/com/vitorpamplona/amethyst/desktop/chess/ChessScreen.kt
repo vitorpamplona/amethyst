@@ -268,6 +268,10 @@ fun ChessScreen(
                 val wasAccepted = viewModel.wasAccepted(selectedGameId!!)
                 val isSpectating = !wasAccepted && spectatingGames.containsKey(selectedGameId)
 
+                val isPlayerWhite = gameState.playerColor == ChessColor.WHITE
+                val whitePubkey = if (isPlayerWhite) gameState.playerPubkey else gameState.opponentPubkey
+                val blackPubkey = if (isPlayerWhite) gameState.opponentPubkey else gameState.playerPubkey
+
                 DesktopChessGameLayout(
                     gameState = gameState,
                     opponentName = viewModel.userMetadataCache.getDisplayName(gameState.opponentPubkey),
@@ -278,6 +282,12 @@ fun ChessScreen(
                     onResign = { viewModel.resign(gameState.startEventId) },
                     isSpectatorOverride = isSpectating,
                     compactMode = compactMode,
+                    whiteName = viewModel.userMetadataCache.getDisplayName(whitePubkey),
+                    whiteHex = whitePubkey,
+                    whiteAvatarUrl = viewModel.userMetadataCache.getPictureUrl(whitePubkey),
+                    blackName = viewModel.userMetadataCache.getDisplayName(blackPubkey),
+                    blackHex = blackPubkey,
+                    blackAvatarUrl = viewModel.userMetadataCache.getPictureUrl(blackPubkey),
                 )
             }
         } else {
@@ -398,10 +408,11 @@ private fun ChessLobby(
                     isYourTurn = state.isPlayerTurn(),
                     onClick = { onSelectGame(gameId) },
                     avatar = {
-                        UserAvatar(
-                            userHex = state.opponentPubkey,
-                            pictureUrl = metadataCache.getPictureUrl(state.opponentPubkey),
-                            size = 40.dp,
+                        com.vitorpamplona.amethyst.commons.chess.OverlappingAvatars(
+                            avatar1Hex = state.playerPubkey,
+                            avatar2Hex = state.opponentPubkey,
+                            avatar1Url = metadataCache.getPictureUrl(state.playerPubkey),
+                            avatar2Url = metadataCache.getPictureUrl(state.opponentPubkey),
                         )
                     },
                 )
@@ -429,10 +440,11 @@ private fun ChessLobby(
                     avatar =
                         challenge.opponentPubkey?.let { pubkey ->
                             {
-                                UserAvatar(
-                                    userHex = pubkey,
-                                    pictureUrl = metadataCache.getPictureUrl(pubkey),
-                                    size = 40.dp,
+                                com.vitorpamplona.amethyst.commons.chess.OverlappingAvatars(
+                                    avatar1Hex = userPubkey,
+                                    avatar2Hex = pubkey,
+                                    avatar1Url = metadataCache.getPictureUrl(userPubkey),
+                                    avatar2Url = metadataCache.getPictureUrl(pubkey),
                                 )
                             }
                         },
@@ -481,10 +493,11 @@ private fun ChessLobby(
                     isIncoming = true,
                     onAccept = { onAcceptChallenge(challenge) },
                     avatar = {
-                        UserAvatar(
-                            userHex = challenge.challengerPubkey,
-                            pictureUrl = challenge.challengerAvatarUrl ?: metadataCache.getPictureUrl(challenge.challengerPubkey),
-                            size = 40.dp,
+                        com.vitorpamplona.amethyst.commons.chess.OverlappingAvatars(
+                            avatar1Hex = challenge.challengerPubkey,
+                            avatar2Hex = userPubkey,
+                            avatar1Url = challenge.challengerAvatarUrl ?: metadataCache.getPictureUrl(challenge.challengerPubkey),
+                            avatar2Url = metadataCache.getPictureUrl(userPubkey),
                         )
                     },
                 )
@@ -511,10 +524,11 @@ private fun ChessLobby(
                     isIncoming = false,
                     onAccept = { onAcceptChallenge(challenge) },
                     avatar = {
-                        UserAvatar(
-                            userHex = challenge.challengerPubkey,
-                            pictureUrl = challenge.challengerAvatarUrl ?: metadataCache.getPictureUrl(challenge.challengerPubkey),
-                            size = 40.dp,
+                        com.vitorpamplona.amethyst.commons.chess.OverlappingAvatars(
+                            avatar1Hex = challenge.challengerPubkey,
+                            avatar2Hex = userPubkey,
+                            avatar1Url = challenge.challengerAvatarUrl ?: metadataCache.getPictureUrl(challenge.challengerPubkey),
+                            avatar2Url = metadataCache.getPictureUrl(userPubkey),
                         )
                     },
                 )
@@ -601,6 +615,12 @@ private fun DesktopChessGameLayout(
     onResign: () -> Unit,
     isSpectatorOverride: Boolean? = null,
     compactMode: Boolean = false,
+    whiteName: String = "White",
+    whiteHex: String = "",
+    whiteAvatarUrl: String? = null,
+    blackName: String = "Black",
+    blackHex: String = "",
+    blackAvatarUrl: String? = null,
 ) {
     // Collect state flows to trigger recomposition on changes
     val currentPosition by gameState.currentPosition.collectAsState()
@@ -628,20 +648,39 @@ private fun DesktopChessGameLayout(
             modifier = Modifier.fillMaxSize(),
             horizontalArrangement = Arrangement.spacedBy(if (showInfoPanel) 24.dp else 0.dp),
         ) {
-            // Left side: Chess board + toggle
+            // Left side: Chess board + toggle + vs header
             Box(
                 modifier = Modifier.weight(1f).fillMaxHeight(),
                 contentAlignment = Alignment.Center,
             ) {
-                InteractiveChessBoard(
-                    engine = engine,
-                    boardSize = boardSize,
-                    flipped = if (isSpectator) false else playerColor == com.vitorpamplona.quartz.nip64Chess.Color.BLACK,
-                    playerColor = playerColor,
-                    isSpectator = isSpectator,
-                    positionVersion = moveHistory.size,
-                    onMoveMade = onMoveMade,
-                )
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    // Player vs Player header above board
+                    if (whiteHex.isNotEmpty() || blackHex.isNotEmpty()) {
+                        com.vitorpamplona.amethyst.commons.chess.ChessPlayerVsHeader(
+                            whiteName = whiteName,
+                            whiteHex = whiteHex,
+                            whiteAvatarUrl = whiteAvatarUrl,
+                            blackName = blackName,
+                            blackHex = blackHex,
+                            blackAvatarUrl = blackAvatarUrl,
+                            isWhiteTurn = currentPosition.activeColor == ChessColor.WHITE,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+
+                    InteractiveChessBoard(
+                        engine = engine,
+                        boardSize = boardSize,
+                        flipped = if (isSpectator) false else playerColor == com.vitorpamplona.quartz.nip64Chess.Color.BLACK,
+                        playerColor = playerColor,
+                        isSpectator = isSpectator,
+                        positionVersion = moveHistory.size,
+                        onMoveMade = onMoveMade,
+                    )
+                }
 
                 // Toggle button anchored to top-end of board area
                 IconButton(

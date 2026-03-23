@@ -295,12 +295,42 @@ fun ChessGameScreen(
             }
 
             else -> {
-                // Resolve opponent display name
+                // Resolve opponent display name and avatar
+                val opponentUser =
+                    remember(gameState.opponentPubkey) {
+                        accountViewModel.checkGetOrCreateUser(gameState.opponentPubkey)
+                    }
                 val opponentDisplayName =
                     remember(gameState.opponentPubkey) {
-                        accountViewModel.checkGetOrCreateUser(gameState.opponentPubkey)?.toBestDisplayName()
-                            ?: gameState.opponentPubkey.take(8)
+                        opponentUser?.toBestDisplayName() ?: gameState.opponentPubkey.take(8)
                     }
+                val opponentAvatarUrl =
+                    remember(gameState.opponentPubkey) {
+                        opponentUser?.profilePicture()
+                    }
+
+                // Resolve player display name and avatar
+                val playerUser =
+                    remember(gameState.playerPubkey) {
+                        accountViewModel.checkGetOrCreateUser(gameState.playerPubkey)
+                    }
+                val playerDisplayName =
+                    remember(gameState.playerPubkey) {
+                        playerUser?.toBestDisplayName() ?: gameState.playerPubkey.take(8)
+                    }
+                val playerAvatarUrl =
+                    remember(gameState.playerPubkey) {
+                        playerUser?.profilePicture()
+                    }
+
+                // Determine white/black pubkeys, names and avatars based on player color
+                val isPlayerWhite = gameState.playerColor == com.vitorpamplona.quartz.nip64Chess.Color.WHITE
+                val whitePubkey = if (isPlayerWhite) gameState.playerPubkey else gameState.opponentPubkey
+                val blackPubkey = if (isPlayerWhite) gameState.opponentPubkey else gameState.playerPubkey
+                val whiteDisplayName = if (isPlayerWhite) playerDisplayName else opponentDisplayName
+                val blackDisplayName = if (isPlayerWhite) opponentDisplayName else playerDisplayName
+                val whiteAvatarUrl = if (isPlayerWhite) playerAvatarUrl else opponentAvatarUrl
+                val blackAvatarUrl = if (isPlayerWhite) opponentAvatarUrl else playerAvatarUrl
 
                 // Determine spectator status:
                 // 1. If game was accepted locally, user is definitely NOT a spectator
@@ -320,6 +350,12 @@ fun ChessGameScreen(
                     onResign = { chessViewModel.resign(gameId) },
                     isSpectatorOverride = isSpectating,
                     onGameEndDismiss = { chessViewModel.dismissGame(gameId) },
+                    whiteName = whiteDisplayName,
+                    whiteHex = whitePubkey,
+                    whiteAvatarUrl = whiteAvatarUrl,
+                    blackName = blackDisplayName,
+                    blackHex = blackPubkey,
+                    blackAvatarUrl = blackAvatarUrl,
                 )
             }
         }

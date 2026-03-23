@@ -201,6 +201,12 @@ fun LiveChessGameScreen(
     onResign: () -> Unit,
     isSpectatorOverride: Boolean? = null,
     onGameEndDismiss: (() -> Unit)? = null,
+    whiteName: String = "White",
+    whiteHex: String = "",
+    whiteAvatarUrl: String? = null,
+    blackName: String = "Black",
+    blackHex: String = "",
+    blackAvatarUrl: String? = null,
 ) {
     // Observe state flows for automatic recomposition on updates
     val currentPosition by gameState.currentPosition.collectAsState()
@@ -236,6 +242,20 @@ fun LiveChessGameScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
+                // Player vs Player avatar header
+                if (whiteHex.isNotEmpty() || blackHex.isNotEmpty()) {
+                    ChessPlayerVsHeader(
+                        whiteName = whiteName,
+                        whiteHex = whiteHex,
+                        whiteAvatarUrl = whiteAvatarUrl,
+                        blackName = blackName,
+                        blackHex = blackHex,
+                        blackAvatarUrl = blackAvatarUrl,
+                        isWhiteTurn = currentPosition.activeColor == Color.WHITE,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+
                 // Game info - use currentPosition.activeColor for turn display
                 GameInfoHeader(
                     gameId = gameState.startEventId,

@@ -69,6 +69,7 @@ import com.vitorpamplona.amethyst.commons.chess.ChessChallenge
 import com.vitorpamplona.amethyst.commons.chess.ChessSyncBanner
 import com.vitorpamplona.amethyst.commons.chess.NewChessGameDialog
 import com.vitorpamplona.amethyst.commons.chess.OutgoingChallengeCard
+import com.vitorpamplona.amethyst.commons.chess.OverlappingAvatars
 import com.vitorpamplona.amethyst.commons.chess.PublicGameCard
 import com.vitorpamplona.amethyst.commons.chess.SpectatingGameCard
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
@@ -359,15 +360,28 @@ fun ChessLobbyContent(
             }
 
             items(activeGames.entries.toList(), key = { "active-${it.key}" }) { (gameId, state) ->
-                val displayName =
+                val opponent =
                     remember(state.opponentPubkey) {
-                        accountViewModel.checkGetOrCreateUser(state.opponentPubkey)?.toBestDisplayName() ?: state.opponentPubkey.take(8)
+                        accountViewModel.checkGetOrCreateUser(state.opponentPubkey)
+                    }
+                val displayName = opponent?.toBestDisplayName() ?: state.opponentPubkey.take(8)
+                val playerUser =
+                    remember(state.playerPubkey) {
+                        accountViewModel.checkGetOrCreateUser(state.playerPubkey)
                     }
                 ActiveGameCard(
                     gameId = gameId,
                     opponentName = displayName,
                     isYourTurn = state.isPlayerTurn(),
                     onClick = { onSelectGame(gameId) },
+                    avatar = {
+                        OverlappingAvatars(
+                            avatar1Hex = state.playerPubkey,
+                            avatar2Hex = state.opponentPubkey,
+                            avatar1Url = playerUser?.profilePicture(),
+                            avatar2Url = opponent?.profilePicture(),
+                        )
+                    },
                 )
             }
         }
@@ -386,14 +400,32 @@ fun ChessLobbyContent(
             }
 
             items(outgoingChallenges, key = { "outgoing-${it.eventId}" }) { challenge ->
+                val opponentUser =
+                    remember(challenge.opponentPubkey) {
+                        challenge.opponentPubkey?.let { accountViewModel.checkGetOrCreateUser(it) }
+                    }
                 val opponentName =
-                    challenge.opponentPubkey?.let { pubkey ->
-                        accountViewModel.checkGetOrCreateUser(pubkey)?.toBestDisplayName() ?: pubkey.take(8)
+                    opponentUser?.toBestDisplayName()
+                        ?: challenge.opponentPubkey?.take(8)
+                val currentUser =
+                    remember(userPubkey) {
+                        accountViewModel.checkGetOrCreateUser(userPubkey)
                     }
                 OutgoingChallengeCard(
                     opponentName = opponentName,
                     userPlaysWhite = challenge.challengerColor == ChessColor.WHITE,
                     onClick = { onOpenOwnChallenge(challenge) },
+                    avatar =
+                        challenge.opponentPubkey?.let { opPubkey ->
+                            {
+                                OverlappingAvatars(
+                                    avatar1Hex = userPubkey,
+                                    avatar2Hex = opPubkey,
+                                    avatar1Url = currentUser?.profilePicture(),
+                                    avatar2Url = opponentUser?.profilePicture(),
+                                )
+                            }
+                        },
                 )
             }
         }
@@ -442,11 +474,23 @@ fun ChessLobbyContent(
                             ?: accountViewModel.checkGetOrCreateUser(challenge.challengerPubkey)?.toBestDisplayName()
                             ?: challenge.challengerPubkey.take(8)
                     }
+                val currentUser =
+                    remember(userPubkey) {
+                        accountViewModel.checkGetOrCreateUser(userPubkey)
+                    }
                 ChallengeCard(
                     challengerName = displayName,
                     challengerPlaysWhite = challenge.challengerColor == ChessColor.WHITE,
                     isIncoming = true,
                     onAccept = { onAcceptChallenge(challenge) },
+                    avatar = {
+                        OverlappingAvatars(
+                            avatar1Hex = challenge.challengerPubkey,
+                            avatar2Hex = userPubkey,
+                            avatar1Url = challenge.challengerAvatarUrl,
+                            avatar2Url = currentUser?.profilePicture(),
+                        )
+                    },
                 )
             }
         }
@@ -471,11 +515,23 @@ fun ChessLobbyContent(
                             ?: accountViewModel.checkGetOrCreateUser(challenge.challengerPubkey)?.toBestDisplayName()
                             ?: challenge.challengerPubkey.take(8)
                     }
+                val currentUser =
+                    remember(userPubkey) {
+                        accountViewModel.checkGetOrCreateUser(userPubkey)
+                    }
                 ChallengeCard(
                     challengerName = displayName,
                     challengerPlaysWhite = challenge.challengerColor == ChessColor.WHITE,
                     isIncoming = false,
                     onAccept = { onAcceptChallenge(challenge) },
+                    avatar = {
+                        OverlappingAvatars(
+                            avatar1Hex = challenge.challengerPubkey,
+                            avatar2Hex = userPubkey,
+                            avatar1Url = challenge.challengerAvatarUrl,
+                            avatar2Url = currentUser?.profilePicture(),
+                        )
+                    },
                 )
             }
         }
