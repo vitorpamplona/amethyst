@@ -313,7 +313,7 @@ fun FeedLoaded(
                 Spacer(StdVertSpacer)
             }
         }
-        itemsIndexed(items.list, key = { _, item -> item.idHex }) { _, item ->
+        itemsIndexed(items.list, key = { _, item -> item.idHex }, contentType = { _, item -> item.event?.kind ?: -1 }) { _, item ->
             Row(
                 Modifier
                     .fillMaxWidth()
