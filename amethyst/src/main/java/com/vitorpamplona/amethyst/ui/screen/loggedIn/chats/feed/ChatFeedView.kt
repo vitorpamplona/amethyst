@@ -137,7 +137,7 @@ fun ChatFeedLoaded(
         reverseLayout = true,
         state = listState,
     ) {
-        itemsIndexed(items.list, key = { _, item -> item.idHex }) { index, item ->
+        itemsIndexed(items.list, key = { _, item -> item.idHex }, contentType = { _, item -> item.event?.kind ?: -1 }) { index, item ->
             val noteEvent = item.event
             if (avoidDraft == null || noteEvent !is DraftWrapEvent || noteEvent.dTag() !in avoidDraft.usedDraftTags) {
                 ChatroomMessageCompose(
