@@ -1,9 +1,5 @@
-@file:OptIn(ExperimentalSpmForKmpFeature::class)
-
 import com.vanniktech.maven.publish.KotlinMultiplatform
 import com.vanniktech.maven.publish.SourcesJar
-import io.github.frankois944.spmForKmp.swiftPackageConfig
-import io.github.frankois944.spmForKmp.utils.ExperimentalSpmForKmpFeature
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeTest
 
@@ -13,7 +9,6 @@ plugins {
     alias(libs.plugins.androidKotlinMultiplatformLibrary)
     alias(libs.plugins.serialization)
     alias(libs.plugins.vanniktech.mavenPublish)
-    alias(libs.plugins.frankois944.spmForKmp)
 }
 
 kotlin {
@@ -119,21 +114,6 @@ kotlin {
 
             tasks.named(cinterops.getByName("clibsodium").interopProcessingTaskName).configure {
                 dependsOn(libsodiumDefFileGeneration)
-            }
-        }
-
-        target.swiftPackageConfig(cinteropName = "swiftbridge") {
-            minIos = "17"
-            minMacos = "14"
-            dependency {
-                remotePackageVersion(
-                    url = uri("https://github.com/swift-standards/swift-rfc-3986.git"),
-                    packageName = "swift-rfc-3986",
-                    products = {
-                        add("RFC 3986")
-                    },
-                    version = "0.1.0",
-                )
             }
         }
     }
@@ -331,7 +311,7 @@ kotlin {
                 implementation(libs.dev.whyoleg.cryptography.provider.apple.optimal)
                 implementation("io.github.andreypfau:kotlinx-crypto-hmac:0.0.4")
                 implementation("io.github.andreypfau:kotlinx-crypto-sha2:0.0.4")
-                implementation("io.github.kotlingeekdev:uri-reference-kmp:1.0")
+                implementation(libs.uri.reference.kmp)
             }
         }
 
