@@ -166,8 +166,6 @@ fun main() {
             crashLogFile.appendText("\n")
         } catch (_: Exception) {}
     }
-    println("[Amethyst Desktop] Starting... crash log: ${crashLogFile.absolutePath}")
-
     DesktopImageLoaderSetup.setup()
     Runtime.getRuntime().addShutdownHook(
         Thread {

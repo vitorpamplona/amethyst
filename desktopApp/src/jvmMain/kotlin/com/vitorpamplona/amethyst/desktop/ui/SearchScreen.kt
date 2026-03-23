@@ -107,7 +107,7 @@ import com.vitorpamplona.amethyst.desktop.ui.search.SearchSyncBanner
 import com.vitorpamplona.amethyst.desktop.service.namecoin.DesktopNamecoinNameService
 import com.vitorpamplona.amethyst.desktop.service.namecoin.LocalNamecoinPreferences
 import com.vitorpamplona.amethyst.desktop.service.namecoin.LocalNamecoinService
-import com.vitorpamplona.amethyst.desktop.service.namecoin.NamecoinResolveState
+import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin.NamecoinResolveState
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinResolveOutcome

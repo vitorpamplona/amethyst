@@ -193,7 +193,6 @@ fun ImportFollowListDialog(
 
             // Use connected relays only — available relays may include disconnected ones
             val relays = relayManager.connectedRelays.value
-            println("[ImportFollows] Subscribing for kind 3 of $pubkey on ${relays.size} connected relays: $relays")
 
             if (relays.isEmpty()) {
                 importState = ImportState.Error("No relays connected. Check your relay settings.")
@@ -217,7 +216,6 @@ fun ImportFollowListDialog(
                         relay: NormalizedRelayUrl,
                         forFilters: List<Filter>?,
                     ) {
-                        println("[ImportFollows] Received event kind=${event.kind} from $relay id=${event.id.take(12)}")
                         if (event.kind == ContactListEvent.KIND && !receivedContactList) {
                             receivedContactList = true
                             val contactList = ContactListEvent(
@@ -314,7 +312,6 @@ fun ImportFollowListDialog(
                         relay: NormalizedRelayUrl,
                         forFilters: List<Filter>?,
                     ) {
-                        println("[ImportFollows] EOSE from $relay receivedContactList=$receivedContactList")
                     }
                 },
             )
@@ -357,7 +354,6 @@ fun ImportFollowListDialog(
             try {
                 // Try raw hex pubkey first (exact 64-char hex)
                 if (trimmed.length == 64 && trimmed.matches(Regex("^[0-9a-fA-F]{64}$"))) {
-                    println("[ImportFollows] Resolved raw hex: ${trimmed.take(16)}...")
                     importState = ImportState.IdentifierResolved(trimmed.lowercase())
                     return@launch
                 }
@@ -366,7 +362,6 @@ fun ImportFollowListDialog(
                 if (trimmed.startsWith("npub1") || trimmed.startsWith("nprofile1") || trimmed.startsWith("nsec1")) {
                     val bech32Result = decodePublicKeyAsHexOrNull(trimmed)
                     if (bech32Result != null && bech32Result.length == 64) {
-                        println("[ImportFollows] Resolved bech32 to ${bech32Result.take(16)}...")
                         importState = ImportState.IdentifierResolved(bech32Result)
                         return@launch
                     }
@@ -376,10 +371,8 @@ fun ImportFollowListDialog(
 
                 // Try Namecoin (.bit, d/, id/)
                 if (NamecoinNameResolver.isNamecoinIdentifier(trimmed) && namecoinService != null) {
-                    println("[ImportFollows] Resolving Namecoin identifier: $trimmed")
                     val result = namecoinService.resolvePubkey(trimmed)
                     if (result != null && result.length == 64) {
-                        println("[ImportFollows] Namecoin resolved to ${result.take(16)}...")
                         importState = ImportState.IdentifierResolved(result)
                         return@launch
                     }
@@ -389,10 +382,8 @@ fun ImportFollowListDialog(
 
                 // Try NIP-05 HTTP (user@domain)
                 if (trimmed.contains("@")) {
-                    println("[ImportFollows] Resolving NIP-05 HTTP: $trimmed")
                     val result = resolveNip05Http(trimmed)
                     if (result != null && result.length == 64) {
-                        println("[ImportFollows] NIP-05 resolved to ${result.take(16)}...")
                         importState = ImportState.IdentifierResolved(result)
                         return@launch
                     }
