@@ -153,6 +153,21 @@ sealed class DesktopScreen {
 }
 
 fun main() {
+    // Global crash monitoring — log uncaught exceptions to file and stderr
+    val crashLogFile = java.io.File(System.getProperty("user.home"), ".amethyst-desktop-crash.log")
+    Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+        val timestamp = java.time.LocalDateTime.now()
+        val message = "[$timestamp] CRASH on thread ${thread.name}: ${throwable.message}\n"
+        System.err.print(message)
+        throwable.printStackTrace(System.err)
+        try {
+            crashLogFile.appendText(message)
+            java.io.PrintWriter(java.io.FileWriter(crashLogFile, true)).use { throwable.printStackTrace(it) }
+            crashLogFile.appendText("\n")
+        } catch (_: Exception) {}
+    }
+    println("[Amethyst Desktop] Starting... crash log: ${crashLogFile.absolutePath}")
+
     DesktopImageLoaderSetup.setup()
     Runtime.getRuntime().addShutdownHook(
         Thread {
