@@ -70,6 +70,7 @@ import com.vitorpamplona.amethyst.commons.chess.ChessBroadcastStatus
 import com.vitorpamplona.amethyst.commons.chess.ChessSyncBanner
 import com.vitorpamplona.amethyst.commons.chess.LiveChessGameScreen
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.datasource.ChessSubscription
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -283,7 +284,10 @@ fun ChessGameScreen(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    Button(onClick = { nav.popBack() }) {
+                    Button(onClick = {
+                        chessViewModel.removeGame(gameId)
+                        nav.popBack()
+                    }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringRes(R.string.back),
@@ -365,6 +369,7 @@ fun ChessGameScreen(
                     blackName = blackDisplayName,
                     blackHex = blackPubkey,
                     blackAvatarUrl = blackAvatarUrl,
+                    onPlayerClick = { pubkeyHex -> nav.nav(Route.Profile(pubkeyHex)) },
                 )
             }
         }

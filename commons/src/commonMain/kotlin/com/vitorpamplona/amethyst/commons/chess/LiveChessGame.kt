@@ -208,6 +208,7 @@ fun LiveChessGameScreen(
     blackName: String = "Black",
     blackHex: String = "",
     blackAvatarUrl: String? = null,
+    onPlayerClick: ((pubkeyHex: String) -> Unit)? = null,
 ) {
     // Observe state flows for automatic recomposition on updates
     val currentPosition by gameState.currentPosition.collectAsState()
@@ -253,6 +254,8 @@ fun LiveChessGameScreen(
                         blackHex = blackHex,
                         blackAvatarUrl = blackAvatarUrl,
                         isWhiteTurn = currentPosition.activeColor == Color.WHITE,
+                        onWhiteClick = onPlayerClick?.let { { it(whiteHex) } },
+                        onBlackClick = onPlayerClick?.let { { it(blackHex) } },
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }

@@ -856,6 +856,16 @@ class ChessLobbyLogic(
         }
     }
 
+    /**
+     * Remove a game from all lobby lists (active, spectating) and stop polling.
+     * Used when a game fails to load ("Game not found") so the user can dismiss the stale entry.
+     */
+    fun removeGame(gameId: String) {
+        state.removeActiveGame(gameId)
+        state.removeSpectatingGame(gameId)
+        pollingDelegate.removeGameId(gameId)
+    }
+
     fun clearError() {
         state.setError(null)
     }

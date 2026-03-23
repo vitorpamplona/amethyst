@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.chess
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -64,6 +65,7 @@ fun ChessPlayerChip(
     avatarUrl: String?,
     isActive: Boolean = false,
     mirrored: Boolean = false,
+    onClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val avatar =
@@ -102,7 +104,10 @@ fun ChessPlayerChip(
         }
 
     Row(
-        modifier = modifier.alpha(if (isActive) 1f else 0.6f),
+        modifier =
+            modifier
+                .alpha(if (isActive) 1f else 0.6f)
+                .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
@@ -146,6 +151,8 @@ fun ChessPlayerVsHeader(
     blackHex: String,
     blackAvatarUrl: String?,
     isWhiteTurn: Boolean,
+    onWhiteClick: (() -> Unit)? = null,
+    onBlackClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -163,6 +170,7 @@ fun ChessPlayerVsHeader(
                 userHex = whiteHex,
                 avatarUrl = whiteAvatarUrl,
                 isActive = isWhiteTurn,
+                onClick = onWhiteClick,
             )
             Text(
                 text = "White",
@@ -188,6 +196,7 @@ fun ChessPlayerVsHeader(
                 avatarUrl = blackAvatarUrl,
                 isActive = !isWhiteTurn,
                 mirrored = true,
+                onClick = onBlackClick,
             )
             Text(
                 text = "Black",

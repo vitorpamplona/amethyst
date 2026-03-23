@@ -252,8 +252,12 @@ fun ChessScreen(
         // Main content
         if (selectedGameId != null) {
             // Set focused game mode - only poll this game, not others
+            // If game isn't in active/spectating maps (e.g. completed game), load from relays
             LaunchedEffect(selectedGameId) {
                 viewModel.setFocusedGame(selectedGameId!!)
+                if (viewModel.getGameState(selectedGameId!!) == null) {
+                    viewModel.loadGame(selectedGameId!!)
+                }
             }
 
             // Use stateVersion to ensure recomposition when game state changes
@@ -591,6 +595,7 @@ private fun ChessLobby(
                     didUserWin = game.didUserWin(userPubkey),
                     isDraw = game.isDraw,
                     moveCount = game.moveCount,
+                    onClick = { onSelectGame(game.gameId) },
                     avatar = {
                         UserAvatar(
                             userHex = opponentPubkey,

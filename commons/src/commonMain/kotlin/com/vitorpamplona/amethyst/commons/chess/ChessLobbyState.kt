@@ -297,7 +297,8 @@ class ChessLobbyState(
     }
 
     fun updatePublicGames(games: List<PublicGame>) {
-        _publicGames.value = games
+        // Filter out games where the user is a participant
+        _publicGames.value = games.filter { it.whitePubkey != userPubkey && it.blackPubkey != userPubkey }
     }
 
     fun addActiveGame(
@@ -501,7 +502,9 @@ class ChessLobbyState(
             return
         }
         // Don't add own games to spectating list
-        if (state.playerPubkey == userPubkey || state.opponentPubkey == userPubkey) {
+        // Note: LiveChessGameState.playerPubkey is always viewerPubkey regardless of role,
+        // so we check isSpectator instead to determine if the user is actually a participant
+        if (!state.isSpectator) {
             return
         }
         // Don't add finished games to spectating list

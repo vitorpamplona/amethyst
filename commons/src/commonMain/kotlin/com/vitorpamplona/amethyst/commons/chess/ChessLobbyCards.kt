@@ -288,6 +288,7 @@ fun CompletedGameCard(
     didUserWin: Boolean,
     isDraw: Boolean,
     moveCount: Int,
+    onClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     avatar: @Composable (() -> Unit)? = null,
 ) {
@@ -309,6 +310,8 @@ fun CompletedGameCard(
         }
 
     Card(
+        onClick = onClick ?: {},
+        enabled = onClick != null,
         modifier = modifier.fillMaxWidth(),
     ) {
         Row(

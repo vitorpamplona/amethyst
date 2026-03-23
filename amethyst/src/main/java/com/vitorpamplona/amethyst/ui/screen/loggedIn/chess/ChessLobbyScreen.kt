@@ -596,6 +596,7 @@ fun ChessLobbyContent(
                     didUserWin = game.didUserWin(userPubkey),
                     isDraw = game.isDraw,
                     moveCount = game.moveCount,
+                    onClick = { onSelectGame(game.gameId) },
                     avatar = {
                         OverlappingAvatars(
                             avatar1Hex = userPubkey,

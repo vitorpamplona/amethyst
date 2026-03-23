@@ -178,6 +178,8 @@ class ChessViewModelNew(
 
     fun stopSpectating(gameId: String) = logic.stopSpectating(gameId)
 
+    fun removeGame(gameId: String) = logic.removeGame(gameId)
+
     // ============================================
     // Utility
     // ============================================
