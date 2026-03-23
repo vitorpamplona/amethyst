@@ -67,6 +67,7 @@ import com.vitorpamplona.amethyst.commons.chess.ActiveGameCard
 import com.vitorpamplona.amethyst.commons.chess.ChallengeCard
 import com.vitorpamplona.amethyst.commons.chess.ChessChallenge
 import com.vitorpamplona.amethyst.commons.chess.ChessSyncBanner
+import com.vitorpamplona.amethyst.commons.chess.CompletedGameCard
 import com.vitorpamplona.amethyst.commons.chess.NewChessGameDialog
 import com.vitorpamplona.amethyst.commons.chess.OutgoingChallengeCard
 import com.vitorpamplona.amethyst.commons.chess.OverlappingAvatars
@@ -295,13 +296,15 @@ fun ChessLobbyContent(
     val spectatingGames by chessViewModel.spectatingGames.collectAsState()
     val publicGames by chessViewModel.publicGames.collectAsState()
     val challenges by chessViewModel.challenges.collectAsState()
+    val completedGames by chessViewModel.completedGames.collectAsState()
     val userPubkey = accountViewModel.account.userProfile().pubkeyHex
 
     val hasContent =
         activeGames.isNotEmpty() ||
             spectatingGames.isNotEmpty() ||
             publicGames.isNotEmpty() ||
-            challenges.isNotEmpty()
+            challenges.isNotEmpty() ||
+            completedGames.isNotEmpty()
 
     if (!hasContent) {
         // Empty state - use LazyColumn so pull-to-refresh works
@@ -556,6 +559,54 @@ fun ChessLobbyContent(
                     blackName = blackName,
                     moveCount = game.moveCount,
                     onWatch = { onWatchGame(game.gameId) },
+                )
+            }
+        }
+
+        // Finished games section
+        if (completedGames.isNotEmpty()) {
+            item {
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    "Finished Games",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(vertical = 8.dp),
+                )
+            }
+
+            items(
+                completedGames.distinctBy { it.gameId }.take(10),
+                key = { "completed-${it.gameId}-${it.completedAt}" },
+            ) { game ->
+                val opponentPubkey =
+                    if (game.whitePubkey == userPubkey) game.blackPubkey else game.whitePubkey
+                val opponentUser =
+                    remember(opponentPubkey) {
+                        accountViewModel.checkGetOrCreateUser(opponentPubkey)
+                    }
+                val opponentName =
+                    opponentUser?.toBestDisplayName()
+                        ?: game.blackDisplayName
+                        ?: game.whiteDisplayName
+                        ?: opponentPubkey.take(8)
+                CompletedGameCard(
+                    opponentName = opponentName,
+                    result = game.result,
+                    didUserWin = game.didUserWin(userPubkey),
+                    isDraw = game.isDraw,
+                    moveCount = game.moveCount,
+                    avatar = {
+                        OverlappingAvatars(
+                            avatar1Hex = userPubkey,
+                            avatar2Hex = opponentPubkey,
+                            avatar1Url =
+                                remember(userPubkey) {
+                                    accountViewModel.checkGetOrCreateUser(userPubkey)
+                                }?.profilePicture(),
+                            avatar2Url = opponentUser?.profilePicture(),
+                        )
+                    },
                 )
             }
         }
