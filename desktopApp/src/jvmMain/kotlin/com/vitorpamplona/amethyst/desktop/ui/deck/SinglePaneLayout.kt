@@ -64,7 +64,6 @@ import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
-import com.vitorpamplona.amethyst.desktop.subscriptions.SubscriptionHealth
 import com.vitorpamplona.amethyst.desktop.ui.ZapFeedback
 import com.vitorpamplona.amethyst.desktop.ui.components.RelayHealthIndicator
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalIsImmersiveFullscreen
@@ -105,7 +104,7 @@ fun SinglePaneLayout(
     onZapFeedback: (ZapFeedback) -> Unit,
     signerConnectionState: SignerConnectionState,
     lastPingTimeSec: Long?,
-    subscriptionHealth: Map<String, SubscriptionHealth> = emptyMap(),
+    lastRelayEventAt: Long? = null,
     modifier: Modifier = Modifier,
 ) {
     var currentColumnType by remember { mutableStateOf<DeckColumnType>(DeckColumnType.HomeFeed) }
@@ -149,12 +148,8 @@ fun SinglePaneLayout(
                 Spacer(Modifier.weight(1f))
 
                 // Relay health — shows elapsed time since last event (hidden when <30s)
-                val latestEvent =
-                    subscriptionHealth.values
-                        .mapNotNull { it.lastEventReceivedAt }
-                        .maxOrNull()
                 RelayHealthIndicator(
-                    lastEventReceivedAt = latestEvent,
+                    lastEventReceivedAt = lastRelayEventAt,
                     modifier = Modifier.padding(bottom = 4.dp),
                 )
 

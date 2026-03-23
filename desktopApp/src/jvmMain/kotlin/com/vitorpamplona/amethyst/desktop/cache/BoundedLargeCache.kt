@@ -72,11 +72,7 @@ class BoundedLargeCache<K : Comparable<K>, V>(
         return removed
     }
 
-    fun containsKey(key: K): Boolean = inner.containsKey(key)
-
     fun size(): Int = sizeCounter.get()
-
-    fun isEmpty(): Boolean = sizeCounter.get() == 0
 
     fun clear() {
         inner.clear()
@@ -88,10 +84,6 @@ class BoundedLargeCache<K : Comparable<K>, V>(
     fun values(): Iterable<V> = inner.values()
 
     fun filterIntoSet(consumer: CacheCollectors.BiFilter<K, V>): Set<V> = inner.filterIntoSet(consumer)
-
-    fun <R> mapNotNull(consumer: CacheCollectors.BiMapper<K, V, R?>): List<R> = inner.mapNotNull(consumer)
-
-    fun forEach(consumer: java.util.function.BiConsumer<K, V>) = inner.forEach(consumer)
 
     fun count(consumer: CacheCollectors.BiFilter<K, V>): Int = inner.count(consumer)
 
