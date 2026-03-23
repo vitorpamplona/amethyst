@@ -40,6 +40,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
 
@@ -120,15 +121,16 @@ class DesktopRelaySubscriptionsCoordinator(
         lastEventReceivedAt: Long? = null,
         eoseReceived: Boolean? = null,
     ) {
-        _subscriptionHealth.value =
-            _subscriptionHealth.value.toMutableMap().apply {
-                val current = this[subId] ?: SubscriptionHealth()
+        _subscriptionHealth.update { current ->
+            current.toMutableMap().apply {
+                val existing = this[subId] ?: SubscriptionHealth()
                 this[subId] =
-                    current.copy(
-                        lastEventReceivedAt = lastEventReceivedAt ?: current.lastEventReceivedAt,
-                        eoseReceived = eoseReceived ?: current.eoseReceived,
+                    existing.copy(
+                        lastEventReceivedAt = lastEventReceivedAt ?: existing.lastEventReceivedAt,
+                        eoseReceived = eoseReceived ?: existing.eoseReceived,
                     )
             }
+        }
     }
 
     /**
@@ -150,7 +152,7 @@ class DesktopRelaySubscriptionsCoordinator(
                     }
                 }
             } catch (e: Exception) {
-                println("Coordinator: failed to consume kind ${event.kind}: ${e.message}")
+                println("Coordinator: failed to consume kind=${event.kind} id=${event.id} relay=$relay: ${e.message}")
             }
         }
     }
@@ -230,8 +232,7 @@ class DesktopRelaySubscriptionsCoordinator(
     fun releaseInteractions(subId: String) {
         screenSubscriptions.remove(subId)?.cancel()
         client.close(subId)
-        _subscriptionHealth.value =
-            _subscriptionHealth.value.toMutableMap().apply { remove(subId) }
+        _subscriptionHealth.update { it - subId }
     }
 
     /**

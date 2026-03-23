@@ -22,24 +22,22 @@ package com.vitorpamplona.amethyst.desktop.cache
 
 import com.vitorpamplona.quartz.utils.cache.CacheCollectors
 import com.vitorpamplona.quartz.utils.cache.LargeCache
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * A bounded wrapper around [LargeCache] that enforces a maximum size.
  *
- * When the cache exceeds [maxSize], the oldest entries (by key order) are evicted.
- * Uses [LargeCache] (ConcurrentSkipListMap) for lock-free reads and rich query APIs
- * (filterIntoSet, mapNotNull, etc.) matching Android's LocalCache patterns.
+ * When the cache exceeds [maxSize], entries are evicted by key order.
+ * Uses [LargeCache] (ConcurrentSkipListMap) for lock-free reads and rich query APIs.
  *
- * Chosen over LruCache because:
- * - Lock-free reads via ConcurrentSkipListMap (vs synchronized on every get())
- * - Rich query API matching Android's filter patterns
- * - No snapshot copy overhead for iteration
+ * Size tracking uses AtomicInteger (O(1)) instead of ConcurrentSkipListMap.size() (O(n)).
  */
 class BoundedLargeCache<K : Comparable<K>, V>(
     private val maxSize: Int,
     private val evictPercent: Float = 0.1f,
 ) {
     private val inner = LargeCache<K, V>()
+    private val sizeCounter = AtomicInteger(0)
 
     fun get(key: K): V? = inner.get(key)
 
@@ -47,7 +45,9 @@ class BoundedLargeCache<K : Comparable<K>, V>(
         key: K,
         value: V,
     ) {
+        val existing = inner.get(key)
         inner.put(key, value)
+        if (existing == null) sizeCounter.incrementAndGet()
         enforceSize()
     }
 
@@ -55,20 +55,33 @@ class BoundedLargeCache<K : Comparable<K>, V>(
         key: K,
         builder: (K) -> V,
     ): V {
+        val existing = inner.get(key)
+        if (existing != null) return existing
         val result = inner.getOrCreate(key, builder)
+        // Increment if we were the ones who created it (not a concurrent insert)
+        if (inner.get(key) === result) {
+            sizeCounter.incrementAndGet()
+        }
         enforceSize()
         return result
     }
 
-    fun remove(key: K): V? = inner.remove(key)
+    fun remove(key: K): V? {
+        val removed = inner.remove(key)
+        if (removed != null) sizeCounter.decrementAndGet()
+        return removed
+    }
 
     fun containsKey(key: K): Boolean = inner.containsKey(key)
 
-    fun size(): Int = inner.size()
+    fun size(): Int = sizeCounter.get()
 
-    fun isEmpty(): Boolean = inner.isEmpty()
+    fun isEmpty(): Boolean = sizeCounter.get() == 0
 
-    fun clear() = inner.clear()
+    fun clear() {
+        inner.clear()
+        sizeCounter.set(0)
+    }
 
     fun keys(): Set<K> = inner.keys()
 
@@ -83,11 +96,15 @@ class BoundedLargeCache<K : Comparable<K>, V>(
     fun count(consumer: CacheCollectors.BiFilter<K, V>): Int = inner.count(consumer)
 
     private fun enforceSize() {
-        val currentSize = inner.size()
+        val currentSize = sizeCounter.get()
         if (currentSize > maxSize) {
             val toRemove = (maxSize * evictPercent).toInt().coerceAtLeast(1)
             val keys = inner.keys().take(toRemove)
-            keys.forEach { inner.remove(it) }
+            keys.forEach {
+                if (inner.remove(it) != null) {
+                    sizeCounter.decrementAndGet()
+                }
+            }
         }
     }
 }

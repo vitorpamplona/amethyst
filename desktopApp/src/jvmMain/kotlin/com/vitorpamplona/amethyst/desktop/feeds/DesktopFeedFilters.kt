@@ -94,19 +94,20 @@ class DesktopThreadFilter(
 
     override fun feed(): List<Note> {
         val root = cache.getNoteIfExists(noteId) ?: return emptyList()
-        val result = mutableListOf(root)
-        collectReplies(root, result)
-        return result.sortedWith(compareBy { it.createdAt() ?: 0 })
+        // Use LinkedHashSet for O(1) containment checks (was O(R) with MutableList)
+        val seen = LinkedHashSet<Note>()
+        seen.add(root)
+        collectReplies(root, seen)
+        return seen.sortedWith(compareBy { it.createdAt() ?: 0 })
     }
 
     private fun collectReplies(
         note: Note,
-        result: MutableList<Note>,
+        seen: LinkedHashSet<Note>,
     ) {
         for (reply in note.replies) {
-            if (reply !in result) {
-                result.add(reply)
-                collectReplies(reply, result)
+            if (seen.add(reply)) {
+                collectReplies(reply, seen)
             }
         }
     }

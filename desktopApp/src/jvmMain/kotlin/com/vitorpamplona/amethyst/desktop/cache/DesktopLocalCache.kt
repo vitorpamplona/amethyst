@@ -295,12 +295,13 @@ class DesktopLocalCache : ICacheProvider {
      * Consumes a kind 3 contact list event (replaceable).
      * Updates the cached followedUsers set.
      */
+    private var lastContactListCreatedAt = 0L
+
     private fun consumeContactList(event: ContactListEvent): Boolean {
-        val currentFollows = _followedUsers.value
-        val newFollows = event.verifiedFollowKeySet()
-        if (newFollows != currentFollows) {
-            _followedUsers.value = newFollows
-        }
+        // Replaceable event — only accept newer contact lists
+        if (event.createdAt <= lastContactListCreatedAt) return false
+        lastContactListCreatedAt = event.createdAt
+        _followedUsers.value = event.verifiedFollowKeySet()
         return true
     }
 
