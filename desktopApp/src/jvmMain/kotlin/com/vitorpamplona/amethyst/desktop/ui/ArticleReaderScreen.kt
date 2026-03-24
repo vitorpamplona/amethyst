@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui
 
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -51,6 +52,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isMetaPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.compose.article.ArticleHeader
 import com.vitorpamplona.amethyst.commons.compose.article.TableOfContents
@@ -65,8 +73,17 @@ import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.desktop.subscriptions.FilterBuilders
 import com.vitorpamplona.amethyst.desktop.subscriptions.SubscriptionConfig
+import com.vitorpamplona.amethyst.desktop.subscriptions.createReactionsSubscription
+import com.vitorpamplona.amethyst.desktop.subscriptions.createRepliesSubscription
+import com.vitorpamplona.amethyst.desktop.subscriptions.createRepostsSubscription
+import com.vitorpamplona.amethyst.desktop.subscriptions.createZapsSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
+import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
+import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -96,9 +113,12 @@ fun ArticleReaderScreen(
     relayManager: DesktopRelayConnectionManager,
     localCache: DesktopLocalCache,
     account: AccountState.LoggedIn?,
+    nwcConnection: Nip47WalletConnect.Nip47URINorm? = null,
     subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator? = null,
     onBack: () -> Unit,
     onNavigateToProfile: (String) -> Unit = {},
+    onNavigateToThread: (String) -> Unit = {},
+    onZapFeedback: (ZapFeedback) -> Unit = {},
 ) {
     val connectedRelays by relayManager.connectedRelays.collectAsState()
     val relayStatuses by relayManager.relayStatuses.collectAsState()
@@ -112,6 +132,14 @@ fun ArticleReaderScreen(
     // Article state
     var article by remember(addressTag) { mutableStateOf<LongTextNoteEvent?>(null) }
     var eoseReceived by remember(addressTag) { mutableStateOf(false) }
+
+    // Zoom level for article text
+    var zoomLevel by remember { mutableStateOf(1.0f) }
+    val focusRequester =
+        remember {
+            androidx.compose.ui.focus
+                .FocusRequester()
+        }
 
     // Active ToC entry tracking (placeholder — no scroll-position-based tracking yet)
     var activeTocIndex by remember { mutableStateOf<Int?>(null) }
@@ -165,6 +193,120 @@ fun ArticleReaderScreen(
         )
     }
 
+    // Interaction state
+    val articleEventId = article?.id
+    val eventIds = listOfNotNull(articleEventId)
+
+    var zapReceipts by remember { mutableStateOf<List<ZapReceipt>>(emptyList()) }
+    var reactionCount by remember { mutableStateOf(0) }
+    var replyCount by remember { mutableStateOf(0) }
+    var repostCount by remember { mutableStateOf(0) }
+    var bookmarkList by remember { mutableStateOf<BookmarkListEvent?>(null) }
+    var bookmarkedEventIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+
+    // Subscribe to zaps
+    rememberSubscription(relayStatuses, eventIds, relayManager = relayManager) {
+        val configuredRelays = relayStatuses.keys
+        if (configuredRelays.isEmpty() || eventIds.isEmpty()) return@rememberSubscription null
+
+        createZapsSubscription(
+            relays = configuredRelays,
+            eventIds = eventIds,
+            onEvent = { event, _, _, _ ->
+                if (event is LnZapEvent) {
+                    val receipt = event.toZapReceipt(localCache) ?: return@createZapsSubscription
+                    if (zapReceipts.none { it.createdAt == receipt.createdAt && it.senderPubKey == receipt.senderPubKey }) {
+                        zapReceipts = zapReceipts + receipt
+                    }
+                }
+            },
+        )
+    }
+
+    // Subscribe to reactions
+    rememberSubscription(relayStatuses, eventIds, relayManager = relayManager) {
+        val configuredRelays = relayStatuses.keys
+        if (configuredRelays.isEmpty() || eventIds.isEmpty()) return@rememberSubscription null
+
+        val reactionIds = mutableSetOf<String>()
+        createReactionsSubscription(
+            relays = configuredRelays,
+            eventIds = eventIds,
+            onEvent = { event, _, _, _ ->
+                if (event is ReactionEvent && reactionIds.add(event.id)) {
+                    reactionCount = reactionIds.size
+                }
+            },
+        )
+    }
+
+    // Subscribe to replies
+    rememberSubscription(relayStatuses, eventIds, relayManager = relayManager) {
+        val configuredRelays = relayStatuses.keys
+        if (configuredRelays.isEmpty() || eventIds.isEmpty()) return@rememberSubscription null
+
+        val replyIds = mutableSetOf<String>()
+        createRepliesSubscription(
+            relays = configuredRelays,
+            eventIds = eventIds,
+            onEvent = { event, _, _, _ ->
+                if (replyIds.add(event.id)) {
+                    replyCount = replyIds.size
+                }
+            },
+        )
+    }
+
+    // Subscribe to reposts
+    rememberSubscription(relayStatuses, eventIds, relayManager = relayManager) {
+        val configuredRelays = relayStatuses.keys
+        if (configuredRelays.isEmpty() || eventIds.isEmpty()) return@rememberSubscription null
+
+        val repostIds = mutableSetOf<String>()
+        createRepostsSubscription(
+            relays = configuredRelays,
+            eventIds = eventIds,
+            onEvent = { event, _, _, _ ->
+                if (event is RepostEvent && repostIds.add(event.id)) {
+                    repostCount = repostIds.size
+                }
+            },
+        )
+    }
+
+    // Subscribe to bookmark list
+    rememberSubscription(relayStatuses, account, relayManager = relayManager) {
+        val configuredRelays = relayStatuses.keys
+        if (configuredRelays.isNotEmpty() && account != null) {
+            SubscriptionConfig(
+                subId = "article-bookmarks-${account.pubKeyHex.take(8)}",
+                filters =
+                    listOf(
+                        FilterBuilders.byAuthors(
+                            authors = listOf(account.pubKeyHex),
+                            kinds = listOf(BookmarkListEvent.KIND),
+                            limit = 1,
+                        ),
+                    ),
+                relays = configuredRelays,
+                onEvent = { event, _, _, _ ->
+                    if (event is BookmarkListEvent) {
+                        bookmarkList = event
+                        bookmarkedEventIds =
+                            event
+                                .publicBookmarks()
+                                .filterIsInstance<com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark>()
+                                .map { it.eventId }
+                                .toSet()
+                    }
+                },
+                onEose = { _, _ -> },
+            )
+        } else {
+            null
+        }
+    }
+
     // Derived data from article
     val title = article?.title() ?: "Untitled"
     val content = article?.content ?: ""
@@ -189,7 +331,43 @@ fun ArticleReaderScreen(
     val authorName = authorUser?.toBestDisplayName()
     val authorPicture = authorUser?.profilePicture()
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
+
+    Column(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .focusRequester(focusRequester)
+                .focusable()
+                .onPreviewKeyEvent { event ->
+                    if (event.type == KeyEventType.KeyDown && event.isMetaPressed) {
+                        when (event.key) {
+                            Key.Equals -> {
+                                zoomLevel = (zoomLevel + 0.1f).coerceAtMost(2.0f)
+                                true
+                            }
+
+                            Key.Minus -> {
+                                zoomLevel = (zoomLevel - 0.1f).coerceAtLeast(0.5f)
+                                true
+                            }
+
+                            Key.Zero -> {
+                                zoomLevel = 1.0f
+                                true
+                            }
+
+                            else -> {
+                                false
+                            }
+                        }
+                    } else {
+                        false
+                    }
+                },
+    ) {
         // Top bar: back + bookmark placeholder
         Row(
             modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
@@ -210,6 +388,14 @@ fun ArticleReaderScreen(
                     style = MaterialTheme.typography.headlineMedium,
                     color = MaterialTheme.colorScheme.onBackground,
                 )
+                if (zoomLevel != 1.0f) {
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "${(zoomLevel * 100).toInt()}%",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
         }
 
@@ -298,6 +484,7 @@ fun ArticleReaderScreen(
                                 RenderMarkdown(
                                     content = content,
                                     onLinkClick = onLinkClick,
+                                    fontScale = zoomLevel,
                                 )
 
                                 Spacer(Modifier.height(32.dp))
@@ -320,6 +507,39 @@ fun ArticleReaderScreen(
                                 }
 
                                 HorizontalDivider(thickness = 1.dp)
+
+                                // Reaction actions
+                                val art = article
+                                if (art != null && account != null) {
+                                    Spacer(Modifier.height(16.dp))
+                                    NoteActionsRow(
+                                        event = art,
+                                        relayManager = relayManager,
+                                        localCache = localCache,
+                                        account = account,
+                                        onReplyClick = { onNavigateToThread(art.id) },
+                                        onZapFeedback = onZapFeedback,
+                                        zapCount = zapReceipts.size,
+                                        zapAmountSats = zapReceipts.sumOf { it.amountSats },
+                                        zapReceipts = zapReceipts,
+                                        reactionCount = reactionCount,
+                                        replyCount = replyCount,
+                                        repostCount = repostCount,
+                                        nwcConnection = nwcConnection,
+                                        isBookmarked = articleEventId in bookmarkedEventIds,
+                                        bookmarkList = bookmarkList,
+                                        onBookmarkChanged = { newList ->
+                                            bookmarkList = newList
+                                            bookmarkedEventIds =
+                                                newList
+                                                    .publicBookmarks()
+                                                    .filterIsInstance<com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark>()
+                                                    .map { it.eventId }
+                                                    .toSet()
+                                        },
+                                        modifier = Modifier.fillMaxWidth(),
+                                    )
+                                }
 
                                 Spacer(Modifier.height(48.dp))
                             }

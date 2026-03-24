@@ -44,9 +44,9 @@ import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.chess.ChessScreen
 import com.vitorpamplona.amethyst.desktop.model.DesktopIAccount
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
+import com.vitorpamplona.amethyst.desktop.service.drafts.DesktopDraftStore
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.desktop.subscriptions.FeedMode
-import com.vitorpamplona.amethyst.desktop.service.drafts.DesktopDraftStore
 import com.vitorpamplona.amethyst.desktop.ui.ArticleEditorScreen
 import com.vitorpamplona.amethyst.desktop.ui.ArticleReaderScreen
 import com.vitorpamplona.amethyst.desktop.ui.BookmarksScreen
@@ -237,8 +237,11 @@ internal fun RootContent(
                 relayManager = relayManager,
                 localCache = localCache,
                 account = account,
+                nwcConnection = nwcConnection,
                 onNavigateToProfile = onNavigateToProfile,
                 onNavigateToArticle = onNavigateToArticle,
+                onNavigateToThread = onNavigateToThread,
+                onZapFeedback = onZapFeedback,
             )
         }
 

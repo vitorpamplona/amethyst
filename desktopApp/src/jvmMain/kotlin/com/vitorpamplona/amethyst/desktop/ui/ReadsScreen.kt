@@ -40,6 +40,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -68,6 +69,7 @@ import com.vitorpamplona.amethyst.desktop.subscriptions.createLongFormFeedSubscr
 import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -177,8 +179,11 @@ fun ReadsScreen(
     relayManager: DesktopRelayConnectionManager,
     localCache: DesktopLocalCache,
     account: AccountState.LoggedIn? = null,
+    nwcConnection: Nip47WalletConnect.Nip47URINorm? = null,
     onNavigateToProfile: (String) -> Unit = {},
     onNavigateToArticle: (String) -> Unit = {},
+    onNavigateToThread: (String) -> Unit = {},
+    onZapFeedback: (ZapFeedback) -> Unit = {},
 ) {
     val connectedRelays by relayManager.connectedRelays.collectAsState()
     val scope = rememberCoroutineScope()
@@ -363,12 +368,27 @@ fun ReadsScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     items(events, key = { it.id }) { event ->
-                        LongFormCard(
-                            event = event,
-                            localCache = localCache,
-                            onAuthorClick = onNavigateToProfile,
-                            onClick = { onNavigateToArticle(event.addressTag()) },
-                        )
+                        Column {
+                            LongFormCard(
+                                event = event,
+                                localCache = localCache,
+                                onAuthorClick = onNavigateToProfile,
+                                onClick = { onNavigateToArticle(event.addressTag()) },
+                            )
+                            if (account != null) {
+                                NoteActionsRow(
+                                    event = event,
+                                    relayManager = relayManager,
+                                    localCache = localCache,
+                                    account = account,
+                                    nwcConnection = nwcConnection,
+                                    onReplyClick = { onNavigateToThread(event.id) },
+                                    onZapFeedback = onZapFeedback,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                                )
+                            }
+                        }
+                        HorizontalDivider(thickness = 1.dp)
                     }
                 }
             }

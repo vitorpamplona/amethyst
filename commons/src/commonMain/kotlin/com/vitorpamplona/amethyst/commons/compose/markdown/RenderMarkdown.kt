@@ -24,8 +24,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
+import androidx.compose.ui.unit.Density
 import com.halilibo.richtext.commonmark.CommonMarkdownParseOptions
 import com.halilibo.richtext.commonmark.CommonmarkAstNodeParser
 import com.halilibo.richtext.markdown.BasicMarkdown
@@ -39,6 +41,7 @@ fun RenderMarkdown(
     content: String,
     onLinkClick: (String) -> Unit,
     modifier: Modifier = Modifier,
+    fontScale: Float = 1.0f,
 ) {
     val astNode =
         remember(content) {
@@ -57,7 +60,23 @@ fun RenderMarkdown(
             }
         }
 
-    CompositionLocalProvider(LocalUriHandler provides uriHandler) {
+    val currentDensity = LocalDensity.current
+    val scaledDensity =
+        remember(fontScale, currentDensity) {
+            if (fontScale == 1.0f) {
+                currentDensity
+            } else {
+                Density(
+                    density = currentDensity.density * fontScale,
+                    fontScale = currentDensity.fontScale,
+                )
+            }
+        }
+
+    CompositionLocalProvider(
+        LocalUriHandler provides uriHandler,
+        LocalDensity provides scaledDensity,
+    ) {
         RichText(
             modifier = modifier,
             style = RichTextStyle(),

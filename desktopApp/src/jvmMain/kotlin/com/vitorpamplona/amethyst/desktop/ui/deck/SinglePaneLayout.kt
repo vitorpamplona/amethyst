@@ -79,6 +79,7 @@ private val navItems =
     listOf(
         NavItem(DeckColumnType.HomeFeed, Icons.Default.Home, "Home"),
         NavItem(DeckColumnType.Reads, Icons.AutoMirrored.Filled.Article, "Reads"),
+        NavItem(DeckColumnType.Drafts, Icons.AutoMirrored.Filled.Article, "Drafts"),
         NavItem(DeckColumnType.Search, Icons.Default.Search, "Search"),
         NavItem(DeckColumnType.Bookmarks, Icons.Default.Bookmark, "Bookmarks"),
         NavItem(DeckColumnType.Messages, Icons.Default.Email, "Messages"),
@@ -177,6 +178,7 @@ fun SinglePaneLayout(
                     onZapFeedback = onZapFeedback,
                     onNavigateToProfile = { navState.push(DesktopScreen.UserProfile(it)) },
                     onNavigateToThread = { navState.push(DesktopScreen.Thread(it)) },
+                    onNavigateToArticle = { navState.push(DesktopScreen.Article(it)) },
                 )
                 if (currentOverlay != null) {
                     Surface(
