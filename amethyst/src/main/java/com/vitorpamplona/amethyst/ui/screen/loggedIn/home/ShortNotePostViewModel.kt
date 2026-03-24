@@ -285,6 +285,9 @@ open class ShortNotePostViewModel :
     var wantsZapRaiser by mutableStateOf(false)
     override val zapRaiserAmount = mutableStateOf<Long?>(null)
 
+    // Anonymous Reply
+    var wantsAnonymousPost by mutableStateOf(false)
+
     fun lnAddress(): String? = account.userProfile().lnAddress()
 
     fun hasLnAddress(): Boolean = account.userProfile().lnAddress() != null
@@ -716,9 +719,12 @@ open class ShortNotePostViewModel :
         }
 
         val version = draftTag.current
+        val anonymous = wantsAnonymousPost
         cancel()
 
-        if (accountViewModel.settings.isCompleteUIMode()) {
+        if (anonymous) {
+            accountViewModel.account.signAnonymouslyAndBroadcast(template, extraNotesToBroadcast)
+        } else if (accountViewModel.settings.isCompleteUIMode()) {
             // Tracked broadcasting with progress feedback (non-blocking)
             val (event, relays, extras) = accountViewModel.account.createPostEvent(template, extraNotesToBroadcast)
 
@@ -1078,6 +1084,7 @@ open class ShortNotePostViewModel :
         wantsToAddGeoHash = false
         wantsExclusiveGeoPost = false
         wantsSecretEmoji = false
+        wantsAnonymousPost = false
 
         forwardZapTo.value = SplitBuilder()
         forwardZapToEditting.value = TextFieldValue("")

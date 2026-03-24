@@ -25,7 +25,10 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Parcelable
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -46,6 +49,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -106,6 +110,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size19Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size35Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightPage
@@ -283,16 +288,53 @@ private fun NewPostScreenBody(
                     }
                 }
 
+                if (postViewModel.wantsAnonymousPost) {
+                    Row(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .background(MaterialTheme.colorScheme.errorContainer)
+                                .padding(horizontal = Size10dp, vertical = 8.dp),
+                        verticalAlignment = CenterVertically,
+                    ) {
+                        Text(
+                            text = stringRes(R.string.anonymous_reply_warning),
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                }
+
                 // Only show text input if no voice message is being posted
                 if (postViewModel.voiceMetadata == null && postViewModel.voiceRecording == null) {
                     Row(
                         modifier = Modifier.padding(vertical = Size10dp),
                     ) {
-                        BaseUserPicture(
-                            accountViewModel.userProfile(),
-                            Size35dp,
-                            accountViewModel = accountViewModel,
-                        )
+                        if (postViewModel.wantsAnonymousPost) {
+                            IconButton(
+                                onClick = { postViewModel.wantsAnonymousPost = false },
+                            ) {
+                                Icon(
+                                    painter = painterRes(resourceId = R.drawable.incognito, 1),
+                                    contentDescription = stringRes(R.string.post_anonymously),
+                                    modifier = Size35Modifier,
+                                    tint = MaterialTheme.colorScheme.onBackground,
+                                )
+                            }
+                        } else {
+                            Box(
+                                modifier =
+                                    Modifier.clickable {
+                                        postViewModel.wantsAnonymousPost = true
+                                    },
+                            ) {
+                                BaseUserPicture(
+                                    accountViewModel.userProfile(),
+                                    Size35dp,
+                                    accountViewModel = accountViewModel,
+                                )
+                            }
+                        }
                         MessageField(
                             R.string.what_s_on_your_mind,
                             postViewModel,

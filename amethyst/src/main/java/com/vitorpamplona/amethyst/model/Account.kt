@@ -139,6 +139,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 import com.vitorpamplona.quartz.nip01Core.tags.references.references
@@ -1287,6 +1288,21 @@ class Account(
 
         client.send(event, relayList)
 
+        broadcast.forEach { client.send(it, relayList) }
+
+        return event
+    }
+
+    suspend fun <T : Event> signAnonymouslyAndBroadcast(
+        template: EventTemplate<T>,
+        broadcast: List<Event> = emptyList(),
+    ): T {
+        val anonymousSigner = NostrSignerInternal(KeyPair())
+        val event = anonymousSigner.sign(template)
+
+        val relayList = nip65RelayList.outboxFlow.value.toSet()
+
+        client.send(event, relayList)
         broadcast.forEach { client.send(it, relayList) }
 
         return event

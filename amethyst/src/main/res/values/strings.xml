@@ -541,6 +541,10 @@
     <string name="zap_type_nonzap_explainer">No trace in Nostr, only in Lightning</string>
 
 
+    <string name="post_anonymously">Anonymous</string>
+    <string name="post_anonymously_explainer">Post as a new throwaway identity. Your account will not be linked to this reply.</string>
+    <string name="anonymous_reply_warning">This reply will be posted from a new anonymous identity</string>
+
     <string name="file_server">File Server</string>
     <string name="file_server_description">Choose a server to upload this file to</string>
 
