@@ -268,6 +268,9 @@ kotlin {
 
                 // SQLite bundled driver for JVM tests
                 implementation(libs.androidx.sqlite.bundled.jvm)
+
+                // Nostr JSON Schema validation (schemata)
+                implementation("com.github.nostrability:schemata-validator-kt:v0.1.0")
             }
         }
 
