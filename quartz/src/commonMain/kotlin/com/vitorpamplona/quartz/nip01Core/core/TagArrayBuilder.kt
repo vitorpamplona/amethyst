@@ -91,6 +91,16 @@ class TagArrayBuilder<T : IEvent> {
         return this
     }
 
+    fun addAllUnique(tag: Array<Array<String>>): TagArrayBuilder<T> {
+        tag.forEach(::addUnique)
+        return this
+    }
+
+    fun addAllUniqueValueIfNew(tag: List<Array<String>>): TagArrayBuilder<T> {
+        tag.forEach(::addUniqueValueIfNew)
+        return this
+    }
+
     fun toTypedArray() = tagList.flatMap { it.value }.toTypedArray()
 
     fun build() = toTypedArray()
