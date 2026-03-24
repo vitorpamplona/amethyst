@@ -58,6 +58,7 @@ import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip23LongContent.DraftLongTextNoteEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
@@ -272,6 +273,7 @@ class EventFactory {
                 LnZapPrivateEvent.KIND -> LnZapPrivateEvent(id, pubKey, createdAt, tags, content, sig)
                 LnZapRequestEvent.KIND -> LnZapRequestEvent(id, pubKey, createdAt, tags, content, sig)
                 LongTextNoteEvent.KIND -> LongTextNoteEvent(id, pubKey, createdAt, tags, content, sig)
+                DraftLongTextNoteEvent.KIND -> DraftLongTextNoteEvent(id, pubKey, createdAt, tags, content, sig)
                 MeetingRoomEvent.KIND -> MeetingRoomEvent(id, pubKey, createdAt, tags, content, sig)
                 MeetingRoomPresenceEvent.KIND -> MeetingRoomPresenceEvent(id, pubKey, createdAt, tags, content, sig)
                 MeetingSpaceEvent.KIND -> MeetingSpaceEvent(id, pubKey, createdAt, tags, content, sig)
