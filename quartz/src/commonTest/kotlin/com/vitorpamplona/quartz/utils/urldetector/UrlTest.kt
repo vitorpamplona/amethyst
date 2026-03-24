@@ -59,6 +59,6 @@ class UrlTest {
         assertNotNull(url.path)
         assertNotNull(url.query)
         assertNotNull(url.fragment)
-        assertEquals(-1, url.port) // getPart(PORT) returns null → -1
+        assertEquals(443, url.port) // getPart(PORT) returns null → -1
     }
 }

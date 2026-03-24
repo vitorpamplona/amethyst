@@ -298,11 +298,22 @@ class DomainNameReader(
             topLevelLength = currentLabelLength
         }
 
-        var lastWasAscii: Boolean? = null
+        var lastWasAscii: Boolean? =
+            if (current.isNullOrEmpty()) {
+                null
+            } else {
+                val last = current.last()
+                if (isDot(last)) {
+                    null
+                } else {
+                    last.code < INTERNATIONAL_CHAR_START
+                }
+            }
         var isAscii = false
 
         while (!done && !reader.eof()) {
             val curr: Char = reader.read()
+
             isAscii = curr.code < INTERNATIONAL_CHAR_START
             if (lastWasAscii == null) {
                 lastWasAscii = isAscii
@@ -765,7 +776,7 @@ class DomainNameReader(
          * The start of the utf character code table which indicates that this character is an international character.
          * Everything below this value is either a-z,A-Z,0-9 or symbols that are not included in domain name.
          */
-        private const val INTERNATIONAL_CHAR_START = 192
+        const val INTERNATIONAL_CHAR_START = 192
 
         /**
          * The maximum length of each label in the domain name.
