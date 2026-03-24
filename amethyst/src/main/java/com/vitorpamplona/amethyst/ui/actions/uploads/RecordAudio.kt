@@ -79,7 +79,8 @@ fun RecordAudioBox(
     }
 
     fun stopRecording() {
-        val result = mediaRecorder.value?.stop()
+        val recorder = mediaRecorder.value ?: return
+        val result = recorder.stop()
         mediaRecorder.value = null
         if (result != null) {
             onRecordTaken(result)
@@ -138,9 +139,7 @@ fun RecordAudioBox(
         },
         content = { active ->
             content(active, elapsedSeconds) {
-                if (isRecording) {
-                    stopRecording()
-                }
+                stopRecording()
             }
         },
     )

@@ -50,7 +50,7 @@ fun RecordVoiceButton(
 ) {
     var isRecording by remember { mutableStateOf(false) }
     var elapsedSeconds by remember { mutableIntStateOf(0) }
-    var onStopRecording by remember { mutableStateOf({}) }
+    var onStopRecording: (() -> Unit)? by remember { mutableStateOf(null) }
 
     Column(
         verticalArrangement = Arrangement.Center,
@@ -73,12 +73,8 @@ fun RecordVoiceButton(
             maxDurationSeconds = maxDurationSeconds,
         ) { recordingState, elapsed, onStop ->
             SideEffect {
-                if (isRecording != recordingState) {
-                    isRecording = recordingState
-                }
-                if (elapsedSeconds != elapsed) {
-                    elapsedSeconds = elapsed
-                }
+                isRecording = recordingState
+                elapsedSeconds = elapsed
                 onStopRecording = onStop
             }
 
