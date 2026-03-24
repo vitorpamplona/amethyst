@@ -72,6 +72,15 @@ class TagArrayBuilder<T : IEvent> {
         return this
     }
 
+    fun addUniqueValueIfNew(tag: Array<String>): TagArrayBuilder<T> {
+        if (tag.has(1) || tag[0].isEmpty() || tag[1].isEmpty()) return this
+        val list = tagList.getOrPut(tag[0], ::mutableListOf)
+        if (list.none { it.valueOrNull() == tag[1] }) {
+            list.add(tag)
+        }
+        return this
+    }
+
     fun addAll(tag: List<Array<String>>): TagArrayBuilder<T> {
         tag.forEach(::add)
         return this

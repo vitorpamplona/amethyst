@@ -37,12 +37,12 @@ fun <T : Event> TagArrayBuilder<T>.quotes(tag: List<QTag>) = addAll(tag.map { it
 
 fun <T : Event> TagArrayBuilder<T>.quote(entity: Entity) =
     when (entity) {
-        is NNote -> add(entity.toQuoteTagArray())
-        is NEvent -> add(entity.toQuoteTagArray())
-        is NAddress -> add(entity.toQuoteTagArray())
-        is NEmbed -> add(entity.toQuoteTagArray())
-        is NPub -> add(entity.toQuoteTagArray())
-        is NProfile -> add(entity.toQuoteTagArray())
+        is NNote -> addUniqueValueIfNew(entity.toQuoteTagArray())
+        is NEvent -> addUniqueValueIfNew(entity.toQuoteTagArray())
+        is NAddress -> addUniqueValueIfNew(entity.toQuoteTagArray())
+        is NEmbed -> addUniqueValueIfNew(entity.toQuoteTagArray())
+        is NPub -> addUniqueValueIfNew(entity.toQuoteTagArray())
+        is NProfile -> addUniqueValueIfNew(entity.toQuoteTagArray())
         else -> this
     }
 
