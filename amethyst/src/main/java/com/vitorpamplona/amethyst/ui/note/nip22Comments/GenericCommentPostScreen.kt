@@ -47,7 +47,6 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromFiles
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
@@ -87,6 +86,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightPage
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
@@ -94,11 +94,11 @@ import kotlinx.coroutines.withContext
 
 @Composable
 fun ReplyCommentPostScreen(
-    reply: Note? = null,
+    replyId: HexKey? = null,
     message: String? = null,
     attachment: Uri? = null,
-    quote: Note? = null,
-    draft: Note? = null,
+    quoteId: HexKey? = null,
+    draftId: HexKey? = null,
     accountViewModel: AccountViewModel,
     nav: Nav,
 ) {
@@ -108,13 +108,13 @@ fun ReplyCommentPostScreen(
     val context = LocalContext.current
 
     LaunchedEffect(postViewModel, accountViewModel) {
-        reply?.let {
+        replyId?.let { accountViewModel.getNoteIfExists(it) }?.let {
             postViewModel.reply(it)
         }
-        draft?.let {
+        draftId?.let { accountViewModel.getNoteIfExists(it) }?.let {
             postViewModel.editFromDraft(it)
         }
-        quote?.let {
+        quoteId?.let { accountViewModel.getNoteIfExists(it) }?.let {
             postViewModel.quote(it)
         }
         message?.ifBlank { null }?.let {

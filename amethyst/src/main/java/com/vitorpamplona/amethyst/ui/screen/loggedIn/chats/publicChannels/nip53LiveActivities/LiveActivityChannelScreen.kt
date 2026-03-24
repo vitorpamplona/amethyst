@@ -24,8 +24,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -33,16 +33,20 @@ import com.vitorpamplona.amethyst.ui.note.LoadLiveActivityChannel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.header.LiveActivityTopBar
 import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 @Composable
 fun LiveActivityChannelScreen(
     channelId: Address?,
-    draft: Note? = null,
-    replyTo: Note? = null,
+    draftId: HexKey? = null,
+    replyToId: HexKey? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     if (channelId == null) return
+
+    val draft = remember(draftId) { draftId?.let { accountViewModel.getNoteIfExists(it) } }
+    val replyTo = remember(replyToId) { replyToId?.let { accountViewModel.checkGetOrCreateNote(it) } }
 
     DisappearingScaffold(
         isInvertedLayout = true,

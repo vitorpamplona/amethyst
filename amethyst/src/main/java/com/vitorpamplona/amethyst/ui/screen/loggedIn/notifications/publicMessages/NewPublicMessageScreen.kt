@@ -55,7 +55,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromFiles
@@ -108,8 +107,8 @@ import kotlinx.coroutines.withContext
 @Composable
 fun NewPublicMessageScreen(
     to: Set<HexKey>? = null,
-    reply: Note? = null,
-    draft: Note? = null,
+    replyId: HexKey? = null,
+    draftId: HexKey? = null,
     accountViewModel: AccountViewModel,
     nav: Nav,
 ) {
@@ -121,10 +120,10 @@ fun NewPublicMessageScreen(
             to?.let {
                 postViewModel.load(it)
             }
-            reply?.let {
+            replyId?.let { accountViewModel.getNoteIfExists(it) }?.let {
                 postViewModel.reply(it)
             }
-            draft?.let {
+            draftId?.let { accountViewModel.getNoteIfExists(it) }?.let {
                 postViewModel.editFromDraft(it)
             }
         }
