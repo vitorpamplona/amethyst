@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.note.nip22Comments.CommentPostViewModel
 import com.vitorpamplona.amethyst.ui.note.nip22Comments.GenericCommentPostScreen
+import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
 import kotlinx.collections.immutable.persistentListOf
@@ -46,6 +47,7 @@ fun GeoHashPostScreen(
     quote: Note? = null,
     draft: Note? = null,
     accountViewModel: AccountViewModel,
+    accountSessionManager: AccountSessionManager,
     nav: Nav,
 ) {
     val postViewModel: CommentPostViewModel = viewModel()
@@ -77,5 +79,5 @@ fun GeoHashPostScreen(
         }
     }
 
-    GenericCommentPostScreen(postViewModel, accountViewModel, nav)
+    GenericCommentPostScreen(postViewModel, accountViewModel, accountSessionManager, nav)
 }

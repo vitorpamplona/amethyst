@@ -75,8 +75,8 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceMessagePreview
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.PostingTopBar
-import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
+import com.vitorpamplona.amethyst.ui.note.SwipeToSwitchAccountPicture
 import com.vitorpamplona.amethyst.ui.note.creators.contentWarning.ContentSensitivityExplainer
 import com.vitorpamplona.amethyst.ui.note.creators.contentWarning.MarkAsSensitiveButton
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.ShowEmojiSuggestionList
@@ -102,6 +102,7 @@ import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapTo
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapToButton
 import com.vitorpamplona.amethyst.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.ui.painterRes
+import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -129,6 +130,7 @@ fun ShortNotePostScreen(
     version: Note? = null,
     draft: Note? = null,
     accountViewModel: AccountViewModel,
+    accountSessionManager: AccountSessionManager,
     nav: Nav,
 ) {
     val postViewModel: ShortNotePostViewModel = viewModel()
@@ -170,7 +172,7 @@ fun ShortNotePostScreen(
         onDispose { activity.removeOnNewIntentListener(consumer) }
     }
 
-    NewPostScreenInner(postViewModel, accountViewModel, nav)
+    NewPostScreenInner(postViewModel, accountViewModel, accountSessionManager, nav)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -178,6 +180,7 @@ fun ShortNotePostScreen(
 private fun NewPostScreenInner(
     postViewModel: ShortNotePostViewModel,
     accountViewModel: AccountViewModel,
+    accountSessionManager: AccountSessionManager,
     nav: Nav,
 ) {
     WatchAndLoadMyEmojiList(accountViewModel)
@@ -223,7 +226,7 @@ private fun NewPostScreenInner(
                     .consumeWindowInsets(pad)
                     .imePadding(),
         ) {
-            NewPostScreenBody(postViewModel, accountViewModel, nav)
+            NewPostScreenBody(postViewModel, accountViewModel, accountSessionManager, nav)
         }
     }
 }
@@ -232,6 +235,7 @@ private fun NewPostScreenInner(
 private fun NewPostScreenBody(
     postViewModel: ShortNotePostViewModel,
     accountViewModel: AccountViewModel,
+    accountSessionManager: AccountSessionManager,
     nav: Nav,
 ) {
     val scrollState = rememberScrollState()
@@ -283,10 +287,10 @@ private fun NewPostScreenBody(
                     Row(
                         modifier = Modifier.padding(vertical = Size10dp),
                     ) {
-                        BaseUserPicture(
-                            accountViewModel.userProfile(),
+                        SwipeToSwitchAccountPicture(
                             Size35dp,
                             accountViewModel = accountViewModel,
+                            accountSessionManager = accountSessionManager,
                         )
                         MessageField(
                             R.string.what_s_on_your_mind,

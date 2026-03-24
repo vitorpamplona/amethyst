@@ -284,6 +284,7 @@ fun AppNavigation(
                     quote = it.quote?.let { hex -> accountViewModel.getNoteIfExists(hex) },
                     draft = it.draft?.let { hex -> accountViewModel.getNoteIfExists(hex) },
                     accountViewModel,
+                    accountSessionManager,
                     nav,
                 )
             }
@@ -307,6 +308,7 @@ fun AppNavigation(
                     quote = it.quote?.let { hex -> accountViewModel.getNoteIfExists(hex) },
                     draft = it.draft?.let { hex -> accountViewModel.getNoteIfExists(hex) },
                     accountViewModel,
+                    accountSessionManager,
                     nav,
                 )
             }
@@ -319,6 +321,7 @@ fun AppNavigation(
                     quote = it.quote?.let { hex -> accountViewModel.getNoteIfExists(hex) },
                     draft = it.draft?.let { hex -> accountViewModel.getNoteIfExists(hex) },
                     accountViewModel,
+                    accountSessionManager,
                     nav,
                 )
             }
@@ -353,6 +356,7 @@ fun AppNavigation(
                     version = it.version?.let { hex -> accountViewModel.getNoteIfExists(hex) },
                     draft = it.draft?.let { hex -> accountViewModel.getNoteIfExists(hex) },
                     accountViewModel = accountViewModel,
+                    accountSessionManager = accountSessionManager,
                     nav = nav,
                 )
             }

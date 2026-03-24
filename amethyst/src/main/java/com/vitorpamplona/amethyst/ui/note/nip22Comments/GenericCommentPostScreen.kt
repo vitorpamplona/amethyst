@@ -56,8 +56,8 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.TakePictureButton
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakeVideoButton
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.PostingTopBar
-import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
+import com.vitorpamplona.amethyst.ui.note.SwipeToSwitchAccountPicture
 import com.vitorpamplona.amethyst.ui.note.creators.contentWarning.ContentSensitivityExplainer
 import com.vitorpamplona.amethyst.ui.note.creators.contentWarning.MarkAsSensitiveButton
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.ShowEmojiSuggestionList
@@ -80,6 +80,7 @@ import com.vitorpamplona.amethyst.ui.note.creators.zapraiser.ZapRaiserRequest
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapTo
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapToButton
 import com.vitorpamplona.amethyst.ui.note.types.ReplyRenderType
+import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
@@ -100,6 +101,7 @@ fun ReplyCommentPostScreen(
     quote: Note? = null,
     draft: Note? = null,
     accountViewModel: AccountViewModel,
+    accountSessionManager: AccountSessionManager,
     nav: Nav,
 ) {
     val postViewModel: CommentPostViewModel = viewModel()
@@ -128,7 +130,7 @@ fun ReplyCommentPostScreen(
         }
     }
 
-    GenericCommentPostScreen(postViewModel, accountViewModel, nav)
+    GenericCommentPostScreen(postViewModel, accountViewModel, accountSessionManager, nav)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -136,6 +138,7 @@ fun ReplyCommentPostScreen(
 fun GenericCommentPostScreen(
     postViewModel: CommentPostViewModel,
     accountViewModel: AccountViewModel,
+    accountSessionManager: AccountSessionManager,
     nav: Nav,
 ) {
     WatchAndLoadMyEmojiList(accountViewModel)
@@ -184,6 +187,7 @@ fun GenericCommentPostScreen(
             GenericCommentPostBody(
                 postViewModel,
                 accountViewModel,
+                accountSessionManager,
                 nav,
             )
         }
@@ -194,6 +198,7 @@ fun GenericCommentPostScreen(
 private fun GenericCommentPostBody(
     postViewModel: CommentPostViewModel,
     accountViewModel: AccountViewModel,
+    accountSessionManager: AccountSessionManager,
     nav: Nav,
 ) {
     val scrollState = rememberScrollState()
@@ -241,10 +246,10 @@ private fun GenericCommentPostBody(
                 Row(
                     modifier = Modifier.padding(vertical = Size10dp),
                 ) {
-                    BaseUserPicture(
-                        accountViewModel.userProfile(),
+                    SwipeToSwitchAccountPicture(
                         Size35dp,
                         accountViewModel = accountViewModel,
+                        accountSessionManager = accountSessionManager,
                     )
                     MessageField(
                         R.string.what_s_on_your_mind,
