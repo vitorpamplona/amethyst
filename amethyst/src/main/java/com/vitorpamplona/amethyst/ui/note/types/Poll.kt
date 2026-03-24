@@ -412,8 +412,15 @@ private fun RenderResults(
     resultContent: @Composable RowScope.(user: User) -> Unit,
     labelContent: @Composable (ColumnScope.(code: String, label: String) -> Unit),
 ) {
+    val showGallery =
+        remember {
+            card.options.all {
+                it.label.length < 50
+            }
+        }
+
     card.options.forEach { pollItem ->
-        RenderClosedItem(pollItem, resultContent) {
+        RenderClosedItem(pollItem, showGallery, resultContent) {
             labelContent(pollItem.code, pollItem.label)
         }
     }
@@ -422,18 +429,20 @@ private fun RenderResults(
 @Composable
 private fun RenderClosedItem(
     item: PollItemCard,
+    showGallery: Boolean,
     resultContent: @Composable RowScope.(user: User) -> Unit,
     labelContent: @Composable ColumnScope.() -> Unit,
 ) {
     val tally by item.results.collectAsStateWithLifecycle(item.currentResults())
 
-    RenderClosedItem(tally, item.label, resultContent, labelContent)
+    RenderClosedItem(tally, item.label, showGallery, resultContent, labelContent)
 }
 
 @Composable
 private fun RenderClosedItem(
     tally: TallyResults,
     label: String,
+    showGallery: Boolean,
     resultContent: @Composable RowScope.(user: User) -> Unit,
     labelContent: @Composable ColumnScope.() -> Unit,
 ) {
@@ -496,7 +505,7 @@ private fun RenderClosedItem(
             Row(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                if (label.length < 30) {
+                if (showGallery) {
                     UserGallery(tally, resultContent)
                 }
 

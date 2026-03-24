@@ -483,6 +483,8 @@
     <string name="poll_zap_value_max">Zap maximum</string>
     <string name="poll_consensus_threshold">Consensus</string>
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
+    <string name="poll_single_choice">Single choice</string>
+    <string name="poll_multiple_choice">Multiple choice</string>
     <string name="poll_closing_date_time">Poll Closing Date &amp; Time</string>
     <string name="poll_closing_in">Poll closes in %1$s</string>
     <string name="poll_closing_time">Close after</string>

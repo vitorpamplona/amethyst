@@ -125,6 +125,7 @@ fun DisplayFollowList(
     val contactsState by observeNoteEventAndMap<ContactListEvent, ImmutableList<User>?>(contactListNote, accountViewModel) { contactList ->
         contactList
             ?.unverifiedFollowKeySet()
+            ?.toSet()
             ?.mapNotNull {
                 accountViewModel.checkGetOrCreateUser(it)
             }?.toPersistentList()
