@@ -153,6 +153,7 @@ sealed class DesktopScreen {
     ) : DesktopScreen()
 
     data object Drafts : DesktopScreen()
+
     data object Settings : DesktopScreen()
 }
 

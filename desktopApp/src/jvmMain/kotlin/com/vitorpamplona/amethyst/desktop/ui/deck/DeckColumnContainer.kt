@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.desktop.chess.ChessScreen
 import com.vitorpamplona.amethyst.desktop.model.DesktopIAccount
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.service.drafts.DesktopDraftStore
+import com.vitorpamplona.amethyst.desktop.service.highlights.DesktopHighlightStore
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.desktop.subscriptions.FeedMode
 import com.vitorpamplona.amethyst.desktop.ui.ArticleEditorScreen
@@ -96,6 +97,8 @@ fun DeckColumnContainer(
     iAccount: DesktopIAccount,
     nwcConnection: Nip47URINorm?,
     subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator,
+    highlightStore: DesktopHighlightStore,
+    draftStore: DesktopDraftStore,
     appScope: CoroutineScope,
     onShowComposeDialog: () -> Unit,
     onShowReplyDialog: (com.vitorpamplona.quartz.nip01Core.core.Event) -> Unit,
@@ -136,6 +139,8 @@ fun DeckColumnContainer(
                 iAccount = iAccount,
                 nwcConnection = nwcConnection,
                 subscriptionsCoordinator = subscriptionsCoordinator,
+                highlightStore = highlightStore,
+                draftStore = draftStore,
                 appScope = appScope,
                 compactMode = true,
                 onShowComposeDialog = onShowComposeDialog,
@@ -144,6 +149,7 @@ fun DeckColumnContainer(
                 onNavigateToProfile = { navState.push(DesktopScreen.UserProfile(it)) },
                 onNavigateToThread = { navState.push(DesktopScreen.Thread(it)) },
                 onNavigateToArticle = { navState.push(DesktopScreen.Article(it)) },
+                onNavigateToEditor = { navState.push(DesktopScreen.Editor(it)) },
             )
             if (currentOverlay != null) {
                 Surface(
@@ -157,11 +163,14 @@ fun DeckColumnContainer(
                         account = account,
                         nwcConnection = nwcConnection,
                         subscriptionsCoordinator = subscriptionsCoordinator,
+                        highlightStore = highlightStore,
+                        draftStore = draftStore,
                         onShowComposeDialog = onShowComposeDialog,
                         onShowReplyDialog = onShowReplyDialog,
                         onZapFeedback = onZapFeedback,
                         onNavigateToProfile = { navState.push(DesktopScreen.UserProfile(it)) },
                         onNavigateToThread = { navState.push(DesktopScreen.Thread(it)) },
+                        onNavigateToArticle = { navState.push(DesktopScreen.Article(it)) },
                         onBack = { navState.pop() },
                     )
                 }
@@ -180,6 +189,8 @@ internal fun RootContent(
     iAccount: DesktopIAccount,
     nwcConnection: Nip47URINorm?,
     subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator,
+    highlightStore: DesktopHighlightStore? = null,
+    draftStore: DesktopDraftStore? = null,
     appScope: CoroutineScope,
     compactMode: Boolean = false,
     onShowComposeDialog: () -> Unit,
@@ -188,6 +199,7 @@ internal fun RootContent(
     onNavigateToProfile: (String) -> Unit,
     onNavigateToThread: (String) -> Unit,
     onNavigateToArticle: (String) -> Unit = {},
+    onNavigateToEditor: (String?) -> Unit = {},
 ) {
     val scope = rememberCoroutineScope()
 
@@ -237,8 +249,11 @@ internal fun RootContent(
                 relayManager = relayManager,
                 localCache = localCache,
                 account = account,
+                nwcConnection = nwcConnection,
                 onNavigateToProfile = onNavigateToProfile,
                 onNavigateToArticle = onNavigateToArticle,
+                onNavigateToThread = onNavigateToThread,
+                onZapFeedback = onZapFeedback,
             )
         }
 
@@ -281,6 +296,7 @@ internal fun RootContent(
                 onBack = {},
                 onCompose = onShowComposeDialog,
                 onNavigateToProfile = onNavigateToProfile,
+                onNavigateToArticle = onNavigateToArticle,
                 onZapFeedback = onZapFeedback,
             )
         }
@@ -336,16 +352,16 @@ internal fun RootContent(
                 localCache = localCache,
                 account = account,
                 subscriptionsCoordinator = subscriptionsCoordinator,
+                highlightStore = highlightStore,
                 onBack = {},
                 onNavigateToProfile = onNavigateToProfile,
             )
         }
 
-        DeckColumnType.Editor -> {
-            val draftStore = remember { DesktopDraftStore(scope) }
+        is DeckColumnType.Editor -> {
             ArticleEditorScreen(
-                draftSlug = null,
-                draftStore = draftStore,
+                draftSlug = columnType.draftSlug,
+                draftStore = draftStore ?: remember { DesktopDraftStore(scope) },
                 account = account,
                 relayManager = relayManager,
                 onBack = {},
@@ -354,10 +370,16 @@ internal fun RootContent(
         }
 
         DeckColumnType.Drafts -> {
-            val draftStore = remember { DesktopDraftStore(scope) }
             DraftsScreen(
-                draftStore = draftStore,
-                onOpenEditor = {},
+                draftStore = draftStore ?: remember { DesktopDraftStore(scope) },
+                onOpenEditor = { slug -> onNavigateToEditor(slug) },
+            )
+        }
+
+        DeckColumnType.MyHighlights -> {
+            com.vitorpamplona.amethyst.desktop.ui.highlights.MyHighlightsScreen(
+                highlightStore = highlightStore ?: remember { DesktopHighlightStore(scope) },
+                onNavigateToArticle = onNavigateToArticle,
             )
         }
 
@@ -382,11 +404,14 @@ internal fun OverlayContent(
     account: AccountState.LoggedIn,
     nwcConnection: Nip47URINorm?,
     subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator,
+    highlightStore: DesktopHighlightStore? = null,
+    draftStore: DesktopDraftStore? = null,
     onShowComposeDialog: () -> Unit,
     onShowReplyDialog: (com.vitorpamplona.quartz.nip01Core.core.Event) -> Unit,
     onZapFeedback: (ZapFeedback) -> Unit,
     onNavigateToProfile: (String) -> Unit,
     onNavigateToThread: (String) -> Unit,
+    onNavigateToArticle: (String) -> Unit = {},
     onBack: () -> Unit,
 ) {
     when (screen) {
@@ -401,6 +426,7 @@ internal fun OverlayContent(
                 onBack = onBack,
                 onCompose = onShowComposeDialog,
                 onNavigateToProfile = onNavigateToProfile,
+                onNavigateToArticle = onNavigateToArticle,
                 onZapFeedback = onZapFeedback,
             )
         }
@@ -428,8 +454,21 @@ internal fun OverlayContent(
                 localCache = localCache,
                 account = account,
                 subscriptionsCoordinator = subscriptionsCoordinator,
+                highlightStore = highlightStore,
                 onBack = onBack,
                 onNavigateToProfile = onNavigateToProfile,
+            )
+        }
+
+        is DesktopScreen.Editor -> {
+            val overlayScope = androidx.compose.runtime.rememberCoroutineScope()
+            ArticleEditorScreen(
+                draftSlug = screen.draftSlug,
+                draftStore = draftStore ?: remember { DesktopDraftStore(overlayScope) },
+                account = account,
+                relayManager = relayManager,
+                onBack = onBack,
+                onPublished = onBack,
             )
         }
 

@@ -79,6 +79,8 @@ class CoordinatorPipelineTest {
 
         override fun disconnect() {}
 
+        override fun close() {}
+
         override fun reconnect(
             onlyIfChanged: Boolean,
             ignoreRetryDelays: Boolean,
