@@ -7,7 +7,7 @@ description: Integration guide for using the Quartz Nostr KMP library in externa
 
 Reference for integrating `com.vitorpamplona.quartz:quartz` into external Nostr KMP projects.
 
-**Published artifact**: `com.vitorpamplona.quartz:quartz:1.06.1` (Maven Central)
+**Published artifact**: `com.vitorpamplona.quartz:quartz:1.06.2` (Maven Central)
 **Targets**: JVM 21+, Android (minSdk 21+), iOS (XCFramework `quartz-kmpKit`)
 **License**: MIT
 
@@ -19,7 +19,7 @@ Reference for integrating `com.vitorpamplona.quartz:quartz` into external Nostr 
 
 ```toml
 [versions]
-quartz = "1.06.1"
+quartz = "1.06.2"
 
 [libraries]
 quartz = { module = "com.vitorpamplona.quartz:quartz", version.ref = "quartz" }
@@ -41,7 +41,7 @@ kotlin {
 
 ```kotlin
 dependencies {
-    implementation("com.vitorpamplona.quartz:quartz:1.06.1")
+    implementation("com.vitorpamplona.quartz:quartz:1.06.2")
 }
 ```
 

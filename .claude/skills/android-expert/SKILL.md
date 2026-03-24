@@ -746,7 +746,7 @@ android {
         minSdk = 26          // Android 8.0 (Oreo)
         targetSdk = 36       // Android 15
         versionCode = 434
-        versionName = "1.06.1"
+        versionName = "1.06.2"
 
         vectorDrawables {
             useSupportLibrary = true
