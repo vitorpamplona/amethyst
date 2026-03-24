@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.service.playback.composable.controls
 import androidx.annotation.OptIn
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -30,7 +31,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -103,21 +106,43 @@ private fun HorizontalLinearProgressIndicator(
     scrubberColor: Color = playedColor,
     rectHeightDp: Dp = 4.dp,
 ) {
+    var isDragging by remember { mutableStateOf(false) }
+    var dragProgress by remember { mutableFloatStateOf(0f) }
+
     Canvas(
         Modifier
             .fillMaxWidth()
             .padding(horizontal = rectHeightDp * 2.5f)
             .pointerInput(Unit) {
                 detectTapGestures { offset ->
-                    // Capture the exact position
                     onSeek(offset.x / this.size.width.toFloat())
                 }
+            }.pointerInput(Unit) {
+                detectDragGestures(
+                    onDragStart = { offset ->
+                        isDragging = true
+                        dragProgress = (offset.x / this.size.width.toFloat()).coerceIn(0f, 1f)
+                    },
+                    onDrag = { change, _ ->
+                        change.consume()
+                        dragProgress = (change.position.x / this.size.width.toFloat()).coerceIn(0f, 1f)
+                    },
+                    onDragEnd = {
+                        onSeek(dragProgress)
+                        isDragging = false
+                    },
+                    onDragCancel = {
+                        isDragging = false
+                    },
+                )
             }.padding(vertical = rectHeightDp * 2)
             .height(rectHeightDp)
             .onSizeChanged { (w, _) -> onLayoutWidthChanged(w) },
     ) {
-        val positionX = (currentPositionProgress() * size.width).coerceAtLeast(0f)
+        val displayProgress = if (isDragging) dragProgress else currentPositionProgress()
+        val positionX = (displayProgress * size.width).coerceAtLeast(0f)
         val bufferX = (bufferedPositionProgress() * size.width).coerceAtLeast(0f)
+        val scrubberRadius = if (isDragging) size.height * 3f else size.height * 2f
 
         drawRect(unplayedColor, size = Size(size.width, size.height))
         drawRect(bufferedColor, size = Size(bufferX, size.height))
@@ -125,7 +150,7 @@ private fun HorizontalLinearProgressIndicator(
 
         drawCircle(
             color = scrubberColor,
-            radius = size.height * 2f,
+            radius = scrubberRadius,
             center = Offset(x = positionX, y = size.height / 2.0f),
         )
     }
