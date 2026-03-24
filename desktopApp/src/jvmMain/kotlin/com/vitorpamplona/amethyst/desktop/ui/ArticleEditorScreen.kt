@@ -62,18 +62,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.compose.editor.MarkdownToolbar
 import com.vitorpamplona.amethyst.commons.compose.editor.MetadataPanel
-import com.vitorpamplona.amethyst.commons.compose.markdown.ArticleMediaRenderer
 import com.vitorpamplona.amethyst.commons.compose.markdown.RenderMarkdown
 import com.vitorpamplona.amethyst.commons.model.nip23LongContent.LongFormPublishAction
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.service.drafts.DesktopDraftStore
 import com.vitorpamplona.amethyst.desktop.service.drafts.DraftMetadata
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.awt.Desktop
 import java.net.URI
 
-private val isMacOS = System.getProperty("os.name").lowercase().contains("mac")
+private val ALLOWED_SCHEMES = setOf("https", "http", "nostr", "lightning")
 
 @Composable
 fun ArticleEditorScreen(
@@ -94,6 +94,12 @@ fun ArticleEditorScreen(
     var contentField by remember { mutableStateOf(TextFieldValue("")) }
     var publishing by remember { mutableStateOf(false) }
     var saveMessage by remember { mutableStateOf<String?>(null) }
+    var debouncedContent by remember { mutableStateOf("") }
+
+    LaunchedEffect(contentField.text) {
+        delay(300)
+        debouncedContent = contentField.text
+    }
 
     // Load existing draft
     LaunchedEffect(draftSlug) {
@@ -120,23 +126,11 @@ fun ArticleEditorScreen(
         }
     }
 
-    val mediaRenderer =
+    val onLinkClick: (String) -> Unit =
         remember {
-            object : ArticleMediaRenderer {
-                @Composable
-                override fun renderImage(
-                    url: String,
-                    alt: String?,
-                ) {
-                    // Simple text placeholder for editor preview
-                    Text(
-                        "[Image: ${alt ?: url}]",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-
-                override fun onLinkClick(url: String) {
+            { url: String ->
+                val scheme = url.substringBefore(":").lowercase()
+                if (scheme in ALLOWED_SCHEMES) {
                     try {
                         Desktop.getDesktop().browse(URI(url))
                     } catch (_: Exception) {
@@ -179,6 +173,8 @@ fun ArticleEditorScreen(
                         dTag = slug.ifBlank { draftStore.slugFromTitle(title) },
                         signer = account.signer,
                     )
+                // TODO: send() is fire-and-forget; markPublished runs before relay ack.
+                //  Consider waiting for relay OK response before marking as published.
                 relayManager.send(event)
                 draftStore.markPublished(slug)
                 onPublished()
@@ -198,7 +194,7 @@ fun ArticleEditorScreen(
                     // Ctrl/Cmd+S to save
                     if (event.type == KeyEventType.KeyDown &&
                         event.key == Key.S &&
-                        (if (isMacOS) event.isMetaPressed else event.isMetaPressed)
+                        event.isMetaPressed
                     ) {
                         saveDraft()
                         true
@@ -316,10 +312,10 @@ fun ArticleEditorScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Column(modifier = Modifier.widthIn(max = 680.dp)) {
-                        if (contentField.text.isNotBlank()) {
+                        if (debouncedContent.isNotBlank()) {
                             RenderMarkdown(
-                                content = contentField.text,
-                                mediaRenderer = mediaRenderer,
+                                content = debouncedContent,
+                                onLinkClick = onLinkClick,
                             )
                         } else {
                             Text(

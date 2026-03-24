@@ -68,13 +68,19 @@ import com.vitorpamplona.amethyst.desktop.subscriptions.createLongFormFeedSubscr
 import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
-import java.text.SimpleDateFormat
-import java.util.Date
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-private val dateFormat = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
+private val dateFormat = DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.getDefault())
 
-private fun formatDate(timestamp: Long): String = dateFormat.format(Date(timestamp * 1000))
+private fun formatDate(timestamp: Long): String =
+    Instant
+        .ofEpochSecond(timestamp)
+        .atZone(ZoneId.systemDefault())
+        .toLocalDate()
+        .format(dateFormat)
 
 /**
  * Card displaying long-form content (NIP-23) with title, summary, and image.

@@ -74,18 +74,20 @@ fun MetadataPanel(
     ) {
         OutlinedTextField(
             value = title,
-            onValueChange = onTitleChange,
+            onValueChange = { if (it.length <= 256) onTitleChange(it) },
             label = { Text("Title") },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
+            supportingText = { Text("${title.length}/256") },
         )
 
         OutlinedTextField(
             value = summary,
-            onValueChange = onSummaryChange,
+            onValueChange = { if (it.length <= 1024) onSummaryChange(it) },
             label = { Text("Summary") },
             maxLines = 3,
             modifier = Modifier.fillMaxWidth(),
+            supportingText = { Text("${summary.length}/1024") },
         )
 
         OutlinedTextField(

@@ -61,6 +61,7 @@ class DesktopDraftStore(
 ) {
     private val mapper = jacksonObjectMapper()
     private val mutex = Mutex()
+    private var cachedIndex: MutableMap<String, DraftMetadata>? = null
 
     private val _drafts = MutableStateFlow<List<DraftEntry>>(emptyList())
     val drafts: StateFlow<List<DraftEntry>> = _drafts.asStateFlow()
@@ -77,7 +78,10 @@ class DesktopDraftStore(
     private val indexFile: File get() = File(draftsDir, "index.json")
 
     init {
-        scope.launch(Dispatchers.IO) { loadIndex() }
+        scope.launch(Dispatchers.IO) {
+            cachedIndex = null
+            loadIndex()
+        }
     }
 
     /**
@@ -86,7 +90,6 @@ class DesktopDraftStore(
     private fun sanitizeSlug(slug: String): String {
         val sanitized =
             slug
-                .replace("..", "")
                 .replace("/", "")
                 .replace("\\", "")
                 .replace("\u0000", "")
@@ -133,9 +136,10 @@ class DesktopDraftStore(
             atomicWrite(contentFile, content)
 
             // Update index
-            val index = loadIndexMap().toMutableMap()
+            val index = loadIndexMap()
             index[safeSlug] = metadata.copy(updatedAt = Instant.now().toString())
             atomicWriteIndex(index)
+            cachedIndex = index
 
             // Refresh state
             _drafts.value =
@@ -172,9 +176,10 @@ class DesktopDraftStore(
         mutex.withLock {
             File(draftsDir, "$safeSlug.md").delete()
 
-            val index = loadIndexMap().toMutableMap()
+            val index = loadIndexMap()
             index.remove(safeSlug)
             atomicWriteIndex(index)
+            cachedIndex = index
 
             _drafts.value =
                 index.entries
@@ -189,10 +194,11 @@ class DesktopDraftStore(
     suspend fun markPublished(slug: String) {
         val safeSlug = sanitizeSlug(slug)
         mutex.withLock {
-            val index = loadIndexMap().toMutableMap()
+            val index = loadIndexMap()
             val existing = index[safeSlug] ?: return
             index[safeSlug] = existing.copy(published = true, updatedAt = Instant.now().toString())
             atomicWriteIndex(index)
+            cachedIndex = index
 
             _drafts.value =
                 index.entries
@@ -201,14 +207,21 @@ class DesktopDraftStore(
         }
     }
 
-    private fun loadIndexMap(): Map<String, DraftMetadata> {
-        if (!indexFile.exists()) return emptyMap()
-        return try {
-            mapper.readValue(indexFile)
-        } catch (e: Exception) {
-            System.err.println("Failed to read drafts index: ${e.message}")
-            emptyMap()
-        }
+    private fun loadIndexMap(): MutableMap<String, DraftMetadata> {
+        cachedIndex?.let { return it }
+        val loaded: MutableMap<String, DraftMetadata> =
+            if (!indexFile.exists()) {
+                mutableMapOf()
+            } else {
+                try {
+                    mapper.readValue<MutableMap<String, DraftMetadata>>(indexFile)
+                } catch (e: Exception) {
+                    System.err.println("Failed to read drafts index: ${e.message}")
+                    mutableMapOf()
+                }
+            }
+        cachedIndex = loaded
+        return loaded
     }
 
     private suspend fun loadIndex() {

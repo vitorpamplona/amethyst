@@ -37,6 +37,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+private val HEADING_REGEX = Regex("^(#{1,6})\\s+(.+)")
+private val TRAILING_HASHES_REGEX = Regex("#+$")
+
 data class TocEntry(
     val level: Int,
     val text: String,
@@ -60,13 +63,13 @@ fun extractTableOfContents(markdown: String): List<TocEntry> {
         }
         if (inCodeBlock) return@forEach
 
-        val match = Regex("^(#{1,6})\\s+(.+)").find(trimmed)
+        val match = HEADING_REGEX.find(trimmed)
         if (match != null) {
             val level = match.groupValues[1].length
             val text =
                 match.groupValues[2]
                     .trim()
-                    .replace(Regex("#+$"), "")
+                    .replace(TRAILING_HASHES_REGEX, "")
                     .trim()
             if (text.isNotEmpty() && level <= 3) {
                 entries.add(TocEntry(level = level, text = text, index = headingIndex))

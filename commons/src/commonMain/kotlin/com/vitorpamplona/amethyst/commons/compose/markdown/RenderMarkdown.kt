@@ -37,7 +37,7 @@ private val ALLOWED_SCHEMES = setOf("https", "http", "nostr", "lightning")
 @Composable
 fun RenderMarkdown(
     content: String,
-    mediaRenderer: ArticleMediaRenderer,
+    onLinkClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val astNode =
@@ -46,12 +46,12 @@ fun RenderMarkdown(
         }
 
     val uriHandler =
-        remember(mediaRenderer) {
+        remember(onLinkClick) {
             object : UriHandler {
                 override fun openUri(uri: String) {
                     val scheme = uri.substringBefore(":").lowercase()
                     if (scheme in ALLOWED_SCHEMES) {
-                        mediaRenderer.onLinkClick(uri)
+                        onLinkClick(uri)
                     }
                 }
             }

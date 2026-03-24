@@ -51,6 +51,16 @@ sealed class DeckColumnType {
         val noteId: String,
     ) : DeckColumnType()
 
+    data class Article(
+        val addressTag: String,
+    ) : DeckColumnType()
+
+    data class Editor(
+        val draftSlug: String? = null,
+    ) : DeckColumnType()
+
+    object Drafts : DeckColumnType()
+
     data class Hashtag(
         val tag: String,
     ) : DeckColumnType()
@@ -67,6 +77,9 @@ sealed class DeckColumnType {
             MyProfile -> "Profile"
             Chess -> "Chess"
             Settings -> "Settings"
+            is Article -> "Article"
+            is Editor -> "New Article"
+            Drafts -> "Drafts"
             is Profile -> "Profile"
             is Thread -> "Thread"
             is Hashtag -> "#$tag"
@@ -84,6 +97,9 @@ sealed class DeckColumnType {
             MyProfile -> "my_profile"
             Chess -> "chess"
             Settings -> "settings"
+            is Article -> "article"
+            is Editor -> "editor"
+            Drafts -> "drafts"
             is Profile -> "profile"
             is Thread -> "thread"
             is Hashtag -> "hashtag"

@@ -53,7 +53,9 @@ fun ArticleHeader(
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         // Banner image
-        if (!bannerUrl.isNullOrBlank()) {
+        if (!bannerUrl.isNullOrBlank() &&
+            (bannerUrl.startsWith("https://") || bannerUrl.startsWith("http://"))
+        ) {
             AsyncImage(
                 model = bannerUrl,
                 contentDescription = "Article banner",
@@ -79,7 +81,9 @@ fun ArticleHeader(
 
         // Author + metadata row
         Row(verticalAlignment = Alignment.CenterVertically) {
-            if (!authorPicture.isNullOrBlank()) {
+            if (!authorPicture.isNullOrBlank() &&
+                (authorPicture.startsWith("https://") || authorPicture.startsWith("http://"))
+            ) {
                 AsyncImage(
                     model = authorPicture,
                     contentDescription = "Author",

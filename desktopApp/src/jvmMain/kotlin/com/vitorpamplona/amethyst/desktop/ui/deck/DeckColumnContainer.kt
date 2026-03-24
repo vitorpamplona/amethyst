@@ -46,7 +46,11 @@ import com.vitorpamplona.amethyst.desktop.model.DesktopIAccount
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.desktop.subscriptions.FeedMode
+import com.vitorpamplona.amethyst.desktop.service.drafts.DesktopDraftStore
+import com.vitorpamplona.amethyst.desktop.ui.ArticleEditorScreen
+import com.vitorpamplona.amethyst.desktop.ui.ArticleReaderScreen
 import com.vitorpamplona.amethyst.desktop.ui.BookmarksScreen
+import com.vitorpamplona.amethyst.desktop.ui.DraftsScreen
 import com.vitorpamplona.amethyst.desktop.ui.FeedScreen
 import com.vitorpamplona.amethyst.desktop.ui.NotificationsScreen
 import com.vitorpamplona.amethyst.desktop.ui.ReadsScreen
@@ -139,6 +143,7 @@ fun DeckColumnContainer(
                 onZapFeedback = onZapFeedback,
                 onNavigateToProfile = { navState.push(DesktopScreen.UserProfile(it)) },
                 onNavigateToThread = { navState.push(DesktopScreen.Thread(it)) },
+                onNavigateToArticle = { navState.push(DesktopScreen.Article(it)) },
             )
             if (currentOverlay != null) {
                 Surface(
@@ -182,6 +187,7 @@ internal fun RootContent(
     onZapFeedback: (ZapFeedback) -> Unit,
     onNavigateToProfile: (String) -> Unit,
     onNavigateToThread: (String) -> Unit,
+    onNavigateToArticle: (String) -> Unit = {},
 ) {
     val scope = rememberCoroutineScope()
 
@@ -232,7 +238,7 @@ internal fun RootContent(
                 localCache = localCache,
                 account = account,
                 onNavigateToProfile = onNavigateToProfile,
-                onNavigateToArticle = onNavigateToThread,
+                onNavigateToArticle = onNavigateToArticle,
             )
         }
 
@@ -323,6 +329,38 @@ internal fun RootContent(
             )
         }
 
+        is DeckColumnType.Article -> {
+            ArticleReaderScreen(
+                addressTag = columnType.addressTag,
+                relayManager = relayManager,
+                localCache = localCache,
+                account = account,
+                subscriptionsCoordinator = subscriptionsCoordinator,
+                onBack = {},
+                onNavigateToProfile = onNavigateToProfile,
+            )
+        }
+
+        is DeckColumnType.Editor -> {
+            val draftStore = remember { DesktopDraftStore(scope) }
+            ArticleEditorScreen(
+                draftSlug = columnType.draftSlug,
+                draftStore = draftStore,
+                account = account,
+                relayManager = relayManager,
+                onBack = {},
+                onPublished = {},
+            )
+        }
+
+        DeckColumnType.Drafts -> {
+            val draftStore = remember { DesktopDraftStore(scope) }
+            DraftsScreen(
+                draftStore = draftStore,
+                onOpenEditor = {},
+            )
+        }
+
         is DeckColumnType.Hashtag -> {
             SearchScreen(
                 localCache = localCache,
@@ -380,6 +418,18 @@ internal fun OverlayContent(
                 onNavigateToThread = onNavigateToThread,
                 onZapFeedback = onZapFeedback,
                 onReply = onShowReplyDialog,
+            )
+        }
+
+        is DesktopScreen.Article -> {
+            ArticleReaderScreen(
+                addressTag = screen.addressTag,
+                relayManager = relayManager,
+                localCache = localCache,
+                account = account,
+                subscriptionsCoordinator = subscriptionsCoordinator,
+                onBack = onBack,
+                onNavigateToProfile = onNavigateToProfile,
             )
         }
 

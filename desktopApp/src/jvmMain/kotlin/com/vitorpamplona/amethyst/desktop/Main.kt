@@ -147,6 +147,12 @@ sealed class DesktopScreen {
         val addressTag: String,
     ) : DesktopScreen()
 
+    data class Editor(
+        val draftSlug: String? = null,
+    ) : DesktopScreen()
+
+    data object Drafts : DesktopScreen()
+
     data object Settings : DesktopScreen()
 }
 

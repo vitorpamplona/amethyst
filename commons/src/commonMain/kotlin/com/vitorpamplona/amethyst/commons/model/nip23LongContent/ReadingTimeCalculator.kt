@@ -32,6 +32,14 @@ object ReadingTimeCalculator {
     private const val PROSE_WPM = 238.0
     private const val CODE_WPM = 80.0
 
+    private val WHITESPACE_REGEX = "\\s+".toRegex()
+    private val IMAGE_REGEX = Regex("!\\[.*?]\\(.*?\\)")
+    private val IMAGE_STRIP_REGEX = Regex("!\\[.*?]\\(.*?\\)")
+    private val LINK_REGEX = Regex("\\[([^]]*)]\\([^)]*\\)")
+    private val FORMATTING_REGEX = Regex("[*_~`#>]")
+    private val LIST_MARKER_REGEX = Regex("^-\\s+|^\\d+\\.\\s+")
+    private val HORIZONTAL_RULE_REGEX = Regex("^---+$|^\\*\\*\\*+$")
+
     fun calculate(markdownContent: String): Int {
         var proseWords = 0
         var codeWords = 0
@@ -47,24 +55,24 @@ object ReadingTimeCalculator {
             }
 
             if (inCodeBlock) {
-                codeWords += trimmed.split("\\s+".toRegex()).count { it.isNotBlank() }
+                codeWords += trimmed.split(WHITESPACE_REGEX).count { it.isNotBlank() }
                 return@forEach
             }
 
             // Count images
-            val imageMatches = Regex("!\\[.*?]\\(.*?\\)").findAll(trimmed)
+            val imageMatches = IMAGE_REGEX.findAll(trimmed)
             imageCount += imageMatches.count()
 
             // Strip markdown syntax for word counting
             val stripped =
                 trimmed
-                    .replace(Regex("!\\[.*?]\\(.*?\\)"), "") // images
-                    .replace(Regex("\\[([^]]*)]\\([^)]*\\)"), "$1") // links -> text only
-                    .replace(Regex("[*_~`#>]"), "") // formatting
-                    .replace(Regex("^-\\s+|^\\d+\\.\\s+"), "") // list markers
-                    .replace(Regex("^---+$|^\\*\\*\\*+$"), "") // horizontal rules
+                    .replace(IMAGE_STRIP_REGEX, "") // images
+                    .replace(LINK_REGEX, "$1") // links -> text only
+                    .replace(FORMATTING_REGEX, "") // formatting
+                    .replace(LIST_MARKER_REGEX, "") // list markers
+                    .replace(HORIZONTAL_RULE_REGEX, "") // horizontal rules
 
-            proseWords += stripped.split("\\s+".toRegex()).count { it.isNotBlank() }
+            proseWords += stripped.split(WHITESPACE_REGEX).count { it.isNotBlank() }
         }
 
         // Medium's image time decay: 12 sec first, -1 each, min 3

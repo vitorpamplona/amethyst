@@ -30,6 +30,8 @@ import com.vitorpamplona.quartz.utils.TimeUtils
  * Handles title, summary, image, tags, and d-tag for addressable events.
  */
 object LongFormPublishAction {
+    private const val MAX_CONTENT_BYTES = 100_000
+
     /**
      * Publishes a long-form text note (NIP-23 kind 30023).
      *
@@ -54,6 +56,10 @@ object LongFormPublishAction {
     ): LongTextNoteEvent {
         if (!signer.isWriteable()) {
             throw IllegalStateException("Cannot publish: signer is not writeable")
+        }
+
+        if (content.toByteArray().size > MAX_CONTENT_BYTES) {
+            throw IllegalArgumentException("Content exceeds maximum size of $MAX_CONTENT_BYTES bytes")
         }
 
         val template =

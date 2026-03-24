@@ -36,7 +36,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -56,7 +55,6 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.compose.article.ArticleHeader
 import com.vitorpamplona.amethyst.commons.compose.article.TableOfContents
 import com.vitorpamplona.amethyst.commons.compose.article.extractTableOfContents
-import com.vitorpamplona.amethyst.commons.compose.markdown.ArticleMediaRenderer
 import com.vitorpamplona.amethyst.commons.compose.markdown.RenderMarkdown
 import com.vitorpamplona.amethyst.commons.model.nip23LongContent.ReadingTimeCalculator
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
@@ -65,15 +63,16 @@ import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
+import com.vitorpamplona.amethyst.desktop.subscriptions.FilterBuilders
 import com.vitorpamplona.amethyst.desktop.subscriptions.SubscriptionConfig
 import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
-import java.text.SimpleDateFormat
-import java.util.Date
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-private val articleDateFormat = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
+private val articleDateFormat = DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.getDefault())
 
 /**
  * Parses a NIP-23 address tag in the format "30023:pubkey:d-tag".
@@ -100,7 +99,6 @@ fun ArticleReaderScreen(
     subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator? = null,
     onBack: () -> Unit,
     onNavigateToProfile: (String) -> Unit = {},
-    onNavigateToThread: (String) -> Unit = {},
 ) {
     val connectedRelays by relayManager.connectedRelays.collectAsState()
     val relayStatuses by relayManager.relayStatuses.collectAsState()
@@ -118,32 +116,18 @@ fun ArticleReaderScreen(
     // Active ToC entry tracking (placeholder — no scroll-position-based tracking yet)
     var activeTocIndex by remember { mutableStateOf<Int?>(null) }
 
-    // Media renderer for markdown
-    val mediaRenderer =
+    // Link click handler for markdown
+    val onLinkClick: (String) -> Unit =
         remember {
-            object : ArticleMediaRenderer {
-                @Composable
-                override fun renderImage(
-                    url: String,
-                    alt: String?,
-                ) {
-                    // TODO: Replace with image loading library (coil3 not available on desktop)
-                    Text(
-                        text = "[Image: ${alt ?: url}]",
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                    )
-                }
-
-                override fun onLinkClick(url: String) {
-                    if (url.startsWith("nostr:")) {
-                        // TODO: Parse nostr: URI and navigate
-                    } else {
-                        try {
-                            java.awt.Desktop
-                                .getDesktop()
-                                .browse(java.net.URI(url))
-                        } catch (_: Exception) {
-                        }
+            { url: String ->
+                if (url.startsWith("nostr:")) {
+                    // TODO: Parse nostr: URI and navigate
+                } else {
+                    try {
+                        java.awt.Desktop
+                            .getDesktop()
+                            .browse(java.net.URI(url))
+                    } catch (_: Exception) {
                     }
                 }
             }
@@ -163,16 +147,8 @@ fun ArticleReaderScreen(
         }
 
         SubscriptionConfig(
-            subId = "article-${addressTag.hashCode()}-${System.currentTimeMillis()}",
-            filters =
-                listOf(
-                    Filter(
-                        kinds = listOf(LongTextNoteEvent.KIND),
-                        authors = listOf(pubkey),
-                        tags = mapOf("d" to listOf(dTag)),
-                        limit = 1,
-                    ),
-                ),
+            subId = "article-${addressTag.hashCode()}",
+            filters = listOf(FilterBuilders.longFormByAddress(pubkey, dTag)),
             relays = configuredRelays,
             onEvent = { event, _, _, _ ->
                 if (event is LongTextNoteEvent) {
@@ -201,7 +177,11 @@ fun ArticleReaderScreen(
     val publishedAt =
         article?.let { art ->
             val ts = art.publishedAt() ?: art.createdAt
-            articleDateFormat.format(Date(ts * 1000))
+            Instant
+                .ofEpochSecond(ts)
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate()
+                .format(articleDateFormat)
         }
 
     // Author info from local cache
@@ -229,15 +209,6 @@ fun ArticleReaderScreen(
                     "Article",
                     style = MaterialTheme.typography.headlineMedium,
                     color = MaterialTheme.colorScheme.onBackground,
-                )
-            }
-
-            // Bookmark placeholder
-            IconButton(onClick = { /* TODO: bookmark */ }) {
-                Icon(
-                    Icons.Default.BookmarkBorder,
-                    contentDescription = "Bookmark",
-                    modifier = Modifier.size(24.dp),
                 )
             }
         }
@@ -326,7 +297,7 @@ fun ArticleReaderScreen(
                                 // Markdown body
                                 RenderMarkdown(
                                     content = content,
-                                    mediaRenderer = mediaRenderer,
+                                    onLinkClick = onLinkClick,
                                 )
 
                                 Spacer(Modifier.height(32.dp))
@@ -349,21 +320,6 @@ fun ArticleReaderScreen(
                                 }
 
                                 HorizontalDivider(thickness = 1.dp)
-
-                                // Reactions placeholder row
-                                Row(
-                                    modifier =
-                                        Modifier
-                                            .fillMaxWidth()
-                                            .padding(vertical = 16.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(24.dp),
-                                ) {
-                                    Text(
-                                        "Reactions coming soon",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
 
                                 Spacer(Modifier.height(48.dp))
                             }

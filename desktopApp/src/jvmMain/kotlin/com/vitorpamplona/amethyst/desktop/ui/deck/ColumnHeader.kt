@@ -132,6 +132,9 @@ fun DeckColumnType.icon(): ImageVector =
         DeckColumnType.MyProfile -> Icons.Default.Person
         DeckColumnType.Chess -> Icons.Default.Extension
         DeckColumnType.Settings -> Icons.Default.Settings
+        is DeckColumnType.Article -> Icons.AutoMirrored.Filled.Article
+        is DeckColumnType.Editor -> Icons.AutoMirrored.Filled.Article
+        DeckColumnType.Drafts -> Icons.AutoMirrored.Filled.Article
         is DeckColumnType.Profile -> Icons.Default.Person
         is DeckColumnType.Thread -> Icons.AutoMirrored.Filled.Article
         is DeckColumnType.Hashtag -> Icons.Default.Tag
