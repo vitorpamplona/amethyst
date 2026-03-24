@@ -50,15 +50,17 @@ fun RecordVoiceButton(
 ) {
     var isRecording by remember { mutableStateOf(false) }
     var elapsedSeconds by remember { mutableIntStateOf(0) }
+    var onStopRecording by remember { mutableStateOf({}) }
 
     Column(
         verticalArrangement = Arrangement.Center,
     ) {
-        // Floating recording indicator at the top
+        // Floating recording indicator at the top (outside ToggleableBox to avoid scale/circle)
         FloatingRecordingIndicator(
             modifier = Modifier.height(50.dp),
             isRecording = isRecording,
             elapsedSeconds = elapsedSeconds,
+            onClick = onStopRecording,
         )
 
         RecordAudioBox(
@@ -69,8 +71,7 @@ fun RecordVoiceButton(
                 onVoiceTaken(recording)
             },
             maxDurationSeconds = maxDurationSeconds,
-        ) { recordingState, elapsed ->
-            // Update parent state after composition completes
+        ) { recordingState, elapsed, onStop ->
             SideEffect {
                 if (isRecording != recordingState) {
                     isRecording = recordingState
@@ -78,6 +79,7 @@ fun RecordVoiceButton(
                 if (elapsedSeconds != elapsed) {
                     elapsedSeconds = elapsed
                 }
+                onStopRecording = onStop
             }
 
             Box(
