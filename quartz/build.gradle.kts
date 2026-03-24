@@ -124,7 +124,7 @@ kotlin {
         }
         binaries.framework {
             baseName = xcfName
-            //isStatic = true
+            isStatic = true
             binaryOption("bundleId", "com.vitorpamplona.quartz")
         }
     }
@@ -135,7 +135,7 @@ kotlin {
         }
         binaries.framework {
             baseName = xcfName
-            //isStatic = true
+            isStatic = true
             binaryOption("bundleId", "com.vitorpamplona.quartz")
         }
     }
@@ -183,6 +183,9 @@ kotlin {
                 // SQLite KMP driver for event store
                 api(libs.androidx.sqlite)
                 implementation(libs.androidx.sqlite.bundled)
+
+                // RFC3986 library(normalizes URLs)
+                api(libs.uri.reference.kmp)
             }
         }
 
@@ -203,9 +206,6 @@ kotlin {
                 dependsOn(commonMain.get())
 
                 dependencies {
-                    // Normalizes URLs
-                    api(libs.rfc3986.normalizer)
-
                     // Performant Parser of JSONs into Events
                     api(libs.jackson.module.kotlin)
 
@@ -311,7 +311,6 @@ kotlin {
                 implementation(libs.dev.whyoleg.cryptography.provider.apple.optimal)
                 implementation("io.github.andreypfau:kotlinx-crypto-hmac:0.0.4")
                 implementation("io.github.andreypfau:kotlinx-crypto-sha2:0.0.4")
-                implementation(libs.uri.reference.kmp)
             }
         }
 
