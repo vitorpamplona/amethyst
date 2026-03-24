@@ -336,6 +336,7 @@ open class ShortNotePostViewModel :
                         val currentMentions =
                             (replyNote.event as? TextNoteEvent)
                                 ?.mentions()
+                                ?.toSet()
                                 ?.map { LocalCache.getOrCreateUser(it.pubKey) }
                                 ?: emptyList()
 
@@ -490,8 +491,8 @@ open class ShortNotePostViewModel :
             }
 
         pTags =
-            draftEvent.tags.filter { it.size > 1 && it[0] == "p" }.map {
-                LocalCache.getOrCreateUser(it[1])
+            draftEvent.tags.filter { it.size > 1 && it[0] == "p" }.mapNotNull {
+                LocalCache.checkGetOrCreateUser(it[1])
             }
 
         draftEvent.tags.filter { it.size > 3 && (it[0] == "e" || it[0] == "a") && it[3] == "fork" }.forEach {
@@ -576,8 +577,8 @@ open class ShortNotePostViewModel :
             }
 
         pTags =
-            draftEvent.tags.filter { it.size > 1 && it[0] == "p" }.map {
-                LocalCache.getOrCreateUser(it[1])
+            draftEvent.tags.filter { it.size > 1 && it[0] == "p" }.mapNotNull {
+                LocalCache.checkGetOrCreateUser(it[1])
             }
 
         canUsePoll = originalNote == null
@@ -647,8 +648,8 @@ open class ShortNotePostViewModel :
             }
 
         pTags =
-            draftEvent.tags.filter { it.size > 1 && it[0] == "p" }.map {
-                LocalCache.getOrCreateUser(it[1])
+            draftEvent.tags.filter { it.size > 1 && it[0] == "p" }.mapNotNull {
+                LocalCache.checkGetOrCreateUser(it[1])
             }
 
         canUsePoll = originalNote == null
