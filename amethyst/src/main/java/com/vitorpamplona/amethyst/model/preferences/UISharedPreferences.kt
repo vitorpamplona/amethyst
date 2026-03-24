@@ -34,6 +34,7 @@ import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.FeatureSetType
+import com.vitorpamplona.amethyst.model.NoteLayoutType
 import com.vitorpamplona.amethyst.model.ProfileGalleryType
 import com.vitorpamplona.amethyst.model.ThemeType
 import com.vitorpamplona.amethyst.model.UiSettings
@@ -72,6 +73,7 @@ class UiSharedPreferences(
         val UI_DONT_ASK_FOR_NOTIFICATION_PERMISSIONS = booleanPreferencesKey("ui.dont_ask_for_notification_permissions")
         val UI_FEATURE_SET = stringPreferencesKey("ui.feature_set")
         val UI_GALLERY_SET = stringPreferencesKey("ui.gallery_set")
+        val UI_NOTE_LAYOUT = stringPreferencesKey("ui.note_layout")
     }
 
     // UI Preferences. Makes sure to wait for it to avoid blinking themes and language preferences
@@ -123,6 +125,7 @@ class UiSharedPreferences(
                 dontAskForNotificationPermissions = preferences[UI_DONT_ASK_FOR_NOTIFICATION_PERMISSIONS] ?: false,
                 featureSet = preferences[UI_FEATURE_SET]?.let { FeatureSetType.valueOf(it) } ?: FeatureSetType.SIMPLIFIED,
                 gallerySet = preferences[UI_GALLERY_SET]?.let { ProfileGalleryType.valueOf(it) } ?: ProfileGalleryType.CLASSIC,
+                noteLayout = preferences[UI_NOTE_LAYOUT]?.let { NoteLayoutType.valueOf(it) } ?: NoteLayoutType.CLASSIC,
             )
         } catch (e: Exception) {
             if (e is CancellationException) throw e
@@ -155,6 +158,7 @@ class UiSharedPreferences(
                 preferences[UI_DONT_ASK_FOR_NOTIFICATION_PERMISSIONS] = sharedSettings.dontAskForNotificationPermissions
                 preferences[UI_FEATURE_SET] = sharedSettings.featureSet.name
                 preferences[UI_GALLERY_SET] = sharedSettings.gallerySet.name
+                preferences[UI_NOTE_LAYOUT] = sharedSettings.noteLayout.name
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e

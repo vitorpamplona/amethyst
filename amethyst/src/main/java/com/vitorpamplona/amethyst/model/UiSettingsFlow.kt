@@ -38,6 +38,7 @@ class UiSettingsFlow(
     val dontAskForNotificationPermissions: MutableStateFlow<Boolean> = MutableStateFlow(false),
     val featureSet: MutableStateFlow<FeatureSetType> = MutableStateFlow(FeatureSetType.SIMPLIFIED),
     val gallerySet: MutableStateFlow<ProfileGalleryType> = MutableStateFlow(ProfileGalleryType.CLASSIC),
+    val noteLayout: MutableStateFlow<NoteLayoutType> = MutableStateFlow(NoteLayoutType.CLASSIC),
 ) {
     val listOfFlows: List<Flow<Any?>> =
         listOf<Flow<Any?>>(
@@ -52,6 +53,7 @@ class UiSettingsFlow(
             dontAskForNotificationPermissions,
             featureSet,
             gallerySet,
+            noteLayout,
         )
 
     // emits at every change in any of the propertyes.
@@ -69,6 +71,7 @@ class UiSettingsFlow(
                 flows[8] as Boolean,
                 flows[9] as FeatureSetType,
                 flows[10] as ProfileGalleryType,
+                flows[11] as NoteLayoutType,
             )
         }
 
@@ -85,6 +88,7 @@ class UiSettingsFlow(
             dontAskForNotificationPermissions.value,
             featureSet.value,
             gallerySet.value,
+            noteLayout.value,
         )
 
     fun update(torSettings: UiSettings): Boolean {
@@ -134,6 +138,10 @@ class UiSettingsFlow(
             gallerySet.tryEmit(torSettings.gallerySet)
             any = true
         }
+        if (noteLayout.value != torSettings.noteLayout) {
+            noteLayout.tryEmit(torSettings.noteLayout)
+            any = true
+        }
 
         return any
     }
@@ -164,6 +172,7 @@ class UiSettingsFlow(
                 MutableStateFlow(torSettings.dontAskForNotificationPermissions),
                 MutableStateFlow(torSettings.featureSet),
                 MutableStateFlow(torSettings.gallerySet),
+                MutableStateFlow(torSettings.noteLayout),
             )
     }
 }

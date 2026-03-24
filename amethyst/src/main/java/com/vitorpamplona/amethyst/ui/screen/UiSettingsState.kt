@@ -24,6 +24,7 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.FeatureSetType
+import com.vitorpamplona.amethyst.model.NoteLayoutType
 import com.vitorpamplona.amethyst.model.ProfileGalleryType
 import com.vitorpamplona.amethyst.model.UiSettingsFlow
 import kotlinx.coroutines.CoroutineScope
@@ -139,4 +140,6 @@ class UiSettingsState(
     fun startVideoPlayback() = startVideoPlayback.value
 
     fun showImages() = showImages.value
+
+    fun isFullWidthNoteLayout() = uiSettingsFlow.noteLayout.value == NoteLayoutType.FULL_WIDTH
 }

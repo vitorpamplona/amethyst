@@ -589,6 +589,7 @@ fun InnerNoteWithReactions(
 ) {
     val notBoostedNorQuote = !isBoostedNote && !isQuotedNote
     val editState = observeEdits(baseNote = baseNote, accountViewModel = accountViewModel)
+    val isFullWidth = notBoostedNorQuote && accountViewModel.settings.isFullWidthNoteLayout()
 
     Row(
         modifier =
@@ -599,7 +600,7 @@ fun InnerNoteWithReactions(
             },
         horizontalArrangement = RowColSpacing10dp,
     ) {
-        if (notBoostedNorQuote) {
+        if (notBoostedNorQuote && !isFullWidth) {
             Column(WidthAuthorPictureModifier, verticalArrangement = RowColSpacing5dp) {
                 // Draws the boosted picture outside the boosted card.
                 Box(modifier = Size55Modifier, contentAlignment = Alignment.BottomEnd) {
@@ -619,7 +620,7 @@ fun InnerNoteWithReactions(
                     accountViewModel.settings.isCompleteUIMode()
             NoteBody(
                 baseNote = baseNote,
-                showAuthorPicture = isQuotedNote,
+                showAuthorPicture = isQuotedNote || isFullWidth,
                 unPackReply = unPackReply,
                 makeItShort = makeItShort,
                 canPreview = canPreview,

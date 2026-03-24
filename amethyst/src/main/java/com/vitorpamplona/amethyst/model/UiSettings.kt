@@ -38,6 +38,7 @@ data class UiSettings(
     val dontAskForNotificationPermissions: Boolean = false,
     val featureSet: FeatureSetType = FeatureSetType.SIMPLIFIED,
     val gallerySet: ProfileGalleryType = ProfileGalleryType.CLASSIC,
+    val noteLayout: NoteLayoutType = NoteLayoutType.CLASSIC,
 )
 
 enum class ThemeType(
@@ -106,6 +107,21 @@ fun parseFeatureSetType(screenCode: Int): FeatureSetType =
         FeatureSetType.SIMPLIFIED.screenCode -> FeatureSetType.SIMPLIFIED
         FeatureSetType.PERFORMANCE.screenCode -> FeatureSetType.PERFORMANCE
         else -> FeatureSetType.COMPLETE
+    }
+
+enum class NoteLayoutType(
+    val screenCode: Int,
+    val resourceId: Int,
+) {
+    CLASSIC(0, R.string.note_layout_type_classic),
+    FULL_WIDTH(1, R.string.note_layout_type_full_width),
+}
+
+fun parseNoteLayoutType(screenCode: Int): NoteLayoutType =
+    when (screenCode) {
+        NoteLayoutType.CLASSIC.screenCode -> NoteLayoutType.CLASSIC
+        NoteLayoutType.FULL_WIDTH.screenCode -> NoteLayoutType.FULL_WIDTH
+        else -> NoteLayoutType.CLASSIC
     }
 
 fun parseGalleryType(screenCode: Int): ProfileGalleryType =

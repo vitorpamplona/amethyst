@@ -916,6 +916,11 @@
     <string name="gallery_type_classic">Classic</string>
     <string name="gallery_type_modern">Modern</string>
 
+    <string name="note_layout_type_classic">Classic</string>
+    <string name="note_layout_type_full_width">Full Width</string>
+    <string name="note_layout_style">Note Layout</string>
+    <string name="note_layout_style_description">Choose the note layout style</string>
+
     <string name="system">System</string>
     <string name="light">Light</string>
     <string name="dark">Dark</string>

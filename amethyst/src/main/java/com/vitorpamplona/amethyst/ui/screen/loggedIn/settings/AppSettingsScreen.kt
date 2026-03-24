@@ -50,6 +50,7 @@ import androidx.core.os.LocaleListCompat
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.FeatureSetType
+import com.vitorpamplona.amethyst.model.NoteLayoutType
 import com.vitorpamplona.amethyst.model.ProfileGalleryType
 import com.vitorpamplona.amethyst.model.ThemeType
 import com.vitorpamplona.amethyst.model.UiSettingsFlow
@@ -57,6 +58,7 @@ import com.vitorpamplona.amethyst.model.parseBooleanType
 import com.vitorpamplona.amethyst.model.parseConnectivityType
 import com.vitorpamplona.amethyst.model.parseFeatureSetType
 import com.vitorpamplona.amethyst.model.parseGalleryType
+import com.vitorpamplona.amethyst.model.parseNoteLayoutType
 import com.vitorpamplona.amethyst.model.parseThemeType
 import com.vitorpamplona.amethyst.ui.components.PushNotificationSettingsRow
 import com.vitorpamplona.amethyst.ui.components.TextSpinner
@@ -120,6 +122,7 @@ fun SettingsScreen(sharedPrefs: UiSettingsFlow) {
         ShowProfilePictureChoice(sharedPrefs)
         ImmersiveScrollingChoice(sharedPrefs)
         FeatureSetChoice(sharedPrefs)
+        NoteLayoutChoice(sharedPrefs)
         GalleryChoice(sharedPrefs)
         PushNotificationSettingsRow(sharedPrefs)
     }
@@ -343,6 +346,26 @@ fun FeatureSetChoice(sharedPrefs: UiSettingsFlow) {
         featureSetIndex.screenCode,
     ) {
         sharedPrefs.featureSet.tryEmit(parseFeatureSetType(it))
+    }
+}
+
+@Composable
+fun NoteLayoutChoice(sharedPrefs: UiSettingsFlow) {
+    val noteLayoutItems =
+        persistentListOf(
+            TitleExplainer(stringRes(NoteLayoutType.CLASSIC.resourceId)),
+            TitleExplainer(stringRes(NoteLayoutType.FULL_WIDTH.resourceId)),
+        )
+
+    val noteLayoutIndex by sharedPrefs.noteLayout.collectAsState()
+
+    SettingsRow(
+        R.string.note_layout_style,
+        R.string.note_layout_style_description,
+        noteLayoutItems,
+        noteLayoutIndex.screenCode,
+    ) {
+        sharedPrefs.noteLayout.tryEmit(parseNoteLayoutType(it))
     }
 }
 
