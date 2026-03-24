@@ -540,7 +540,7 @@
     <string name="follow_set_create_btn_label">Nowa</string>
     <string name="follow_set_add_author_from_note_action">Dodaj autora do listy obserwowanych</string>
     <string name="follow_set_profile_actions_menu_description">Dodaj lub usuń użytkownika z list, lub utwórz nową listę z tym użytkownikiem.</string>
-    <string name="follow_set_icon_description">Ikona dla listy %1$s</string>
+    <string name="follow_set_icon_description">Ikona dla listy</string>
     <string name="follow_set_public_presence_indicator">%1$s jest uczestnikiem publicznym</string>
     <string name="follow_set_private_presence_indicator">%1$s jest uczestnikiem prywatnym</string>
     <string name="follow_set_public_member_add_label">Dodaj jako uczestnika publicznego</string>
@@ -1408,7 +1408,7 @@
     <string name="share_of">%1$d/%2$d</string>
     <string name="broadcasting">Przekaz</string>
     <string name="broadcasting_name">Przekaz %1$s</string>
-    <string name="broadcasting_number_events">Liczba przekazów: %1$d...</string>
+    <string name="broadcasting_number_events">Liczba przekazów: %1$d…</string>
     <string name="sent_number_events">Wysłanych przekazów: %1$d</string>
     <string name="bradcasting_result_partial">Niektóre akcje nie powiodły się</string>
     <string name="bradcasting_result_success">Wszystkie akcje udane</string>
