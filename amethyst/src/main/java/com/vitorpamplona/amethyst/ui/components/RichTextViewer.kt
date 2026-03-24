@@ -80,6 +80,7 @@ import com.vitorpamplona.amethyst.commons.richtext.ImageGalleryParagraph
 import com.vitorpamplona.amethyst.commons.richtext.ImageSegment
 import com.vitorpamplona.amethyst.commons.richtext.InvoiceSegment
 import com.vitorpamplona.amethyst.commons.richtext.LinkSegment
+import com.vitorpamplona.amethyst.commons.richtext.NamecoinSegment
 import com.vitorpamplona.amethyst.commons.richtext.ParagraphState
 import com.vitorpamplona.amethyst.commons.richtext.PhoneSegment
 import com.vitorpamplona.amethyst.commons.richtext.RegularTextSegment
@@ -506,6 +507,8 @@ private fun RenderWordWithoutPreview(
 
         is HashIndexEventSegment -> TagLink(word, false, 0, backgroundColor, accountViewModel, nav)
 
+        is NamecoinSegment -> NamecoinIdentifierLink(word.segmentText, accountViewModel, nav)
+
         is RegularTextSegment -> Text(word.segmentText)
 
         is RelayUrlSegment -> ClickableRelayUrl(word.segmentText, nav)
@@ -541,6 +544,7 @@ private fun RenderWordWithPreview(
         is HashTagSegment -> HashTag(word, nav)
         is HashIndexUserSegment -> TagLink(word, accountViewModel, nav)
         is HashIndexEventSegment -> TagLink(word, true, quotesLeft, backgroundColor, accountViewModel, nav)
+        is NamecoinSegment -> NamecoinIdentifierLink(word.segmentText, accountViewModel, nav)
         is RegularTextSegment -> Text(word.segmentText)
         is Base64Segment -> ZoomableContentView(word.segmentText, state, accountViewModel)
         is RelayUrlSegment -> ClickableRelayUrl(word.segmentText, nav)

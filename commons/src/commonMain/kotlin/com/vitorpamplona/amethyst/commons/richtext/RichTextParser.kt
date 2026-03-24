@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.richtext.mimeTypeMap
 import com.vitorpamplona.quartz.experimental.inlineMetadata.Nip54InlineMetadata
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip36SensitiveContent.ContentWarningTag
@@ -288,6 +289,21 @@ class RichTextParser {
                 VideoSegment(word)
             }
         }
+
+        // Namecoin identifiers (d/name, id/name, bare .bit domains) must be
+        // checked BEFORE schemeless URLs, because .bit domains look like URLs
+        // to the URL parser but should resolve via the Namecoin blockchain.
+        //
+        // However, explicit URLs with a scheme (https://example.bit,
+        // http://www.example.bit) SHOULD open the browser — .bit domains
+        // are real DNS names resolvable via ncdns/Namecoin DNS bridges,
+        // and browsers with Namecoin support (Chromium+ncdns, Tor Browser,
+        // Fingertip) can access them as websites.
+        val trimmedWord = word.trimEnd('.', ',', '!', '?', ')', ']')
+        val hasScheme =
+            trimmedWord.startsWith("https://", ignoreCase = true) ||
+                trimmedWord.startsWith("http://", ignoreCase = true)
+        if (!hasScheme && NamecoinNameResolver.isNamecoinIdentifier(trimmedWord)) return NamecoinSegment(word)
 
         if (urls.withoutScheme.contains(word)) return SchemelessUrlSegment(word)
 
