@@ -290,6 +290,12 @@ class RichTextParser {
             }
         }
 
+        // Namecoin identifiers must be checked BEFORE schemeless URLs,
+        // because .bit domains look like URLs to the URL parser but should
+        // resolve via the Namecoin blockchain, not open a browser.
+        val trimmedWord = word.trimEnd('.', ',', '!', '?', ')', ']')
+        if (NamecoinNameResolver.isNamecoinIdentifier(trimmedWord)) return NamecoinSegment(word)
+
         if (urls.withoutScheme.contains(word)) return SchemelessUrlSegment(word)
 
         if (urls.withScheme.contains(word)) return LinkSegment(word)
@@ -319,10 +325,6 @@ class RichTextParser {
         if (isPotentialPhoneNumber(word) && !isDate(word)) {
             if (Patterns.PHONE.matches(word)) return PhoneSegment(word)
         }
-
-        // Namecoin identifiers: d/name, id/name, name@domain.bit, @domain.bit
-        val trimmedWord = word.trimEnd('.', ',', '!', '?', ')', ']')
-        if (NamecoinNameResolver.isNamecoinIdentifier(trimmedWord)) return NamecoinSegment(word)
 
         return RegularTextSegment(word)
     }
