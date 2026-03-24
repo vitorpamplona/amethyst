@@ -128,6 +128,15 @@ class ChessLobbyLogic(
 ) {
     val state = ChessLobbyState(userPubkey, scope)
 
+    // Track when games were last loaded to prevent duplicate fetches
+    // (e.g., discoverUserGames loads a game, then polling immediately re-fetches it)
+    private val recentlyLoadedGames = java.util.concurrent.ConcurrentHashMap<String, Long>()
+
+    // Dedup incoming events (same event delivered by multiple relays)
+    // Bounded LRU: evict oldest when exceeding capacity
+    private val seenEventIds = java.util.Collections.synchronizedSet(LinkedHashSet<String>())
+    private val seenEventIdsMax = 500
+
     private val pollingDelegate =
         ChessPollingDelegate(
             config = pollingConfig,
@@ -188,6 +197,20 @@ class ChessLobbyLogic(
      * Called by platform subscription callbacks for real-time updates.
      */
     fun handleIncomingEvent(event: JesterEvent) {
+        // Skip non-chess events (kind 30 but not start or move)
+        if (!event.isStartEvent() && !event.isMoveEvent()) return
+
+        // Dedup: skip if we already processed this event ID (multiple relays deliver same event)
+        synchronized(seenEventIds) {
+            if (!seenEventIds.add(event.id)) return
+            if (seenEventIds.size > seenEventIdsMax) {
+                seenEventIds.iterator().let {
+                    it.next()
+                    it.remove()
+                }
+            }
+        }
+
         Log.d("chessdebug", "[Lobby] handleIncomingEvent: id=${event.id.take(8)}, pubkey=${event.pubKey.take(8)}, isStart=${event.isStartEvent()}, isMove=${event.isMoveEvent()}, createdAt=${event.createdAt}")
         when {
             event.isStartEvent() -> handleStartEvent(event)
@@ -408,6 +431,15 @@ class ChessLobbyLogic(
      * When we detect our challenge was accepted (opponent made first move), load game from relays.
      */
     fun handleGameAccepted(startEventId: String) {
+        // Skip if already loaded or in-flight (multiple move events from same game trigger this)
+        val lastLoaded = recentlyLoadedGames[startEventId]
+        if (lastLoaded != null && (TimeUtils.now() - lastLoaded) < 10) {
+            Log.d("chessdebug", "[Lobby] handleGameAccepted: SKIPPED game ${startEventId.take(8)} - loaded ${TimeUtils.now() - lastLoaded}s ago")
+            return
+        }
+        // Mark immediately to prevent concurrent launches
+        recentlyLoadedGames[startEventId] = TimeUtils.now()
+
         Log.d("chessdebug", "[Lobby] handleGameAccepted: game ${startEventId.take(8)} - fetching from relays")
         scope.launch(Dispatchers.Default) {
             state.setBroadcastStatus(ChessBroadcastStatus.Syncing(0f))
@@ -418,6 +450,7 @@ class ChessLobbyLogic(
 
             when (result) {
                 is LoadGameResult.Success -> {
+                    recentlyLoadedGames[startEventId] = TimeUtils.now()
                     Log.d("chessdebug", "[Lobby] handleGameAccepted SUCCESS: game ${startEventId.take(8)}, role=${result.reconstructedState.viewerRole}")
                     state.addActiveGame(startEventId, result.liveState)
                     pollingDelegate.addGameId(startEventId)
@@ -569,6 +602,7 @@ class ChessLobbyLogic(
 
             when (result) {
                 is LoadGameResult.Success -> {
+                    recentlyLoadedGames[startEventId] = TimeUtils.now()
                     state.addSpectatingGame(startEventId, result.liveState)
                     pollingDelegate.addGameId(startEventId)
                     state.setBroadcastStatus(ChessBroadcastStatus.Idle)
@@ -601,6 +635,7 @@ class ChessLobbyLogic(
 
             when (result) {
                 is LoadGameResult.Success -> {
+                    recentlyLoadedGames[startEventId] = TimeUtils.now()
                     if (result.liveState.isSpectator) {
                         state.addSpectatingGame(startEventId, result.liveState)
                     } else {
@@ -636,6 +671,13 @@ class ChessLobbyLogic(
     }
 
     private suspend fun refreshGame(startEventId: String) {
+        // Skip if this game was just loaded (prevents duplicate fetch after discoverUserGames)
+        val lastLoaded = recentlyLoadedGames[startEventId]
+        if (lastLoaded != null && (TimeUtils.now() - lastLoaded) < 10) {
+            Log.d("chessdebug", "[Lobby] refreshGame: SKIPPED game ${startEventId.take(8)} - loaded ${TimeUtils.now() - lastLoaded}s ago")
+            return
+        }
+
         Log.d("chessdebug", "[Lobby] refreshGame: fetching game ${startEventId.take(8)} from relays")
         val events = fetcher.fetchGameEvents(startEventId)
 
@@ -831,6 +873,7 @@ class ChessLobbyLogic(
 
             when (result) {
                 is LoadGameResult.Success -> {
+                    recentlyLoadedGames[startEventId] = TimeUtils.now()
                     // If the discovered game is already finished, send it straight to completed
                     val gameStatus = result.liveState.gameStatus.value
                     if (gameStatus is GameStatus.Finished) {

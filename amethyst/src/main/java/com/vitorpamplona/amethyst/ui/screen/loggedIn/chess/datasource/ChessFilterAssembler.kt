@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.datasource
 
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 
 /**
@@ -29,10 +30,13 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 class ChessFilterAssembler(
     client: INostrClient,
 ) : ComposeSubscriptionManager<ChessQueryState>() {
-    val group =
-        listOf(
-            ChessFeedFilterSubAssembler(client, ::allKeys),
-        )
+    private val subAssembler = ChessFeedFilterSubAssembler(client, ::allKeys)
+
+    val group = listOf(subAssembler)
+
+    fun setOnChessEvent(callback: ((Event) -> Unit)?) {
+        subAssembler.onChessEvent = callback
+    }
 
     override fun invalidateKeys() = invalidateFilters()
 
