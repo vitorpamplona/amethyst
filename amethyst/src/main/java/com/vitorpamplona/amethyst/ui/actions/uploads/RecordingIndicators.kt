@@ -27,6 +27,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -176,6 +177,7 @@ fun FloatingRecordingIndicator(
     isRecording: Boolean,
     elapsedSeconds: Int,
     isCompact: Boolean = false,
+    onClick: (() -> Unit)? = null,
 ) {
     if (!isRecording) return
 
@@ -199,6 +201,12 @@ fun FloatingRecordingIndicator(
                 .background(
                     color = MaterialTheme.colorScheme.primary,
                     shape = RoundedCornerShape(12.dp),
+                ).then(
+                    if (onClick != null) {
+                        Modifier.clickable(onClick = onClick)
+                    } else {
+                        Modifier
+                    },
                 ),
         contentAlignment = Alignment.Center,
     ) {

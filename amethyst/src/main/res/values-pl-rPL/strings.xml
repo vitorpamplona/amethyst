@@ -71,7 +71,7 @@
     <string name="quote">Zacytuj</string>
     <string name="fork">Sklonuj</string>
     <string name="propose_an_edit">Zaproponuj zmianę</string>
-    <string name="new_amount_in_sats">Nowa kwota w Satsach</string>
+    <string name="new_amount_in_sats">Nowa kwota w satoszach</string>
     <string name="add">Dodaj</string>
     <string name="replying_to">"odpowiadając do "</string>
     <string name="and">" i "</string>
@@ -92,7 +92,7 @@
     <string name="lightning_tips">Lightning transfer</string>
     <string name="note_to_receiver">Wiadomość dla odbiorcy</string>
     <string name="thank_you_so_much">Dziękuję bardzo!</string>
-    <string name="amount_in_sats">Kwota w Satsach</string>
+    <string name="amount_in_sats">Kwota w satoszach</string>
     <string name="send_sats">Wyślij</string>
     <string name="secret_emoji_maker">Kreator tajnych emoji</string>
     <string name="secret_emoji_maker_explainer">Dodaj emoji z ukrytą wiadomością do wpisu</string>
@@ -1101,6 +1101,13 @@
     <string name="new_community_note">Nowy wpis w społeczności</string>
     <string name="new_product">Nowy produkt</string>
     <string name="new_exclusive_geo_note">Nowy GEO-ekskluzywny Wpis</string>
+    <string name="new_long_form_post">Nowy artykuł</string>
+    <string name="article_title">Tytuł</string>
+    <string name="article_summary">Podsumowanie (opcjonalnie)</string>
+    <string name="article_cover_image_url">Adres URL miniaturki (opcjonalnie)</string>
+    <string name="write_your_article_in_markdown">Napisz artykuł w formacie markdown…</string>
+    <string name="markdown_preview">Podgląd</string>
+    <string name="markdown_edit">Edytuj</string>
     <string name="open_all_reactions_to_this_post">Otwórz wszystkie odzewy na ten post</string>
     <string name="close_all_reactions_to_this_post">Zamknij wszystkie odzewy na ten post</string>
     <string name="reply_description">Odpowiedź</string>
@@ -1238,6 +1245,7 @@
     <string name="existed_since">OTS: %1$s</string>
     <string name="ots_info_title">Potwierdzenie znacznika czasu</string>
     <string name="ots_info_description">Istnieje dowód na to, że ten post został podpisany przed %1$s. Dowód został opatrzony pieczęcią w łańcuchu bloków Bitcoin w tym dniu i czasie.</string>
+    <string name="edit_article">Redaguj artykuł</string>
     <string name="edit_post">Edytuj wpis</string>
     <string name="proposal_to_edit">Propozycja ulepszenia wpisu</string>
     <string name="message_to_author">Podsumowanie zmian</string>
@@ -1560,6 +1568,7 @@
     <string name="name_search_npub1_alice_example_com">wyszukaj, npub1…, alicja@domena.pl</string>
     <string name="supports_npub_nip_05_hex_and_namecoin_bit_d_id">Obsługuje npub, nprofile, NIP-05, hex, i namecoin (.bit, d/, id/)</string>
     <string name="look_up_follow_list">Sprawdź listę obserwowanych</string>
+    <string name="tip">Porada</string>
     <string name="accounts_found">Znaleziono %1$d kont(a)</string>
     <string name="num_selected">Wybrano: %1$d</string>
     <string name="resolved_via_namecoin">Rozwiązane przez Namecoin</string>
@@ -1659,4 +1668,11 @@
     <string name="attestor_proficiency_for_kinds">Biegłość w sprawdzaniu typów: %1$s</string>
     <string name="attestation_attests_to">Certyfikat dla</string>
     <string name="attestation_requests_attestation_to">Żądanie certyfikatu do</string>
+    <string name="event_sync_date_filter_title">Przedział czasu</string>
+    <string name="event_sync_date_filter_since">Od</string>
+    <string name="event_sync_date_filter_until">Do</string>
+    <string name="event_sync_date_filter_now">Teraz</string>
+    <string name="event_sync_date_filter_all_time">Cały czas</string>
+    <string name="event_sync_date_filter_last_sync">Ostatnia synchronizacja %1$s</string>
+    <string name="event_sync_date_filter_since_last_sync">Od ostatniej synchronizacji</string>
 </resources>
