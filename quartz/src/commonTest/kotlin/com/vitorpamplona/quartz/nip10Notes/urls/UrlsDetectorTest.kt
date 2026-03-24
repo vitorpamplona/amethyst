@@ -21,7 +21,6 @@
 package com.vitorpamplona.quartz.nip10Notes.urls
 
 import com.vitorpamplona.quartz.nip10Notes.content.findURLs
-import com.vitorpamplona.quartz.utils.fastFindURLs
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -31,7 +30,7 @@ class UrlsDetectorTest {
 
     @Test
     fun detectUrlNumber() {
-        val detectedLinks = fastFindURLs(testSentence)
+        val detectedLinks = findURLs(testSentence)
         assertEquals(2, detectedLinks.size)
     }
 
@@ -48,7 +47,7 @@ class UrlsDetectorTest {
      */
     @Test
     fun doesNotCrashOnJapaneseText() {
-        val detectedLinks = fastFindURLs("今北産業")
+        val detectedLinks = findURLs("今北産業")
         assertEquals(0, detectedLinks.size)
     }
 }
