@@ -127,15 +127,10 @@ object ChaCha20Core {
         val working = initial.copyOf()
         chaCha20Rounds(working)
 
-        // Add initial state to working state
-        for (i in 0..15) {
-            working[i] += initial[i]
-        }
-
-        // Serialize to little-endian bytes
+        // Add initial state to working state and serialize
         val output = ByteArray(64)
         for (i in 0..15) {
-            working[i].intToLittleEndian(output, i * 4)
+            (working[i] + initial[i]).intToLittleEndian(output, i * 4)
         }
         return output
     }
@@ -143,6 +138,9 @@ object ChaCha20Core {
     /**
      * ChaCha20 IETF stream cipher XOR (RFC 8439 §2.4).
      * XORs the message with the ChaCha20 keystream.
+     *
+     * Optimized to parse key/nonce once and reuse state across blocks.
+     * Full 64-byte blocks use word-level XOR (4 bytes at a time).
      *
      * @param message plaintext or ciphertext
      * @param key 32-byte key
@@ -157,22 +155,55 @@ object ChaCha20Core {
         counter: Int = 0,
     ): ByteArray {
         val output = ByteArray(message.size)
+        if (message.isEmpty()) return output
+
         val fullBlocks = message.size / 64
         val remainder = message.size % 64
 
+        // Parse key and nonce once into the initial state template
+        val initial = initState(key, counter, nonce)
+        val working = IntArray(16)
+
         for (i in 0 until fullBlocks) {
-            val block = chaCha20Block(key, counter + i, nonce)
-            val offset = i * 64
-            for (j in 0..63) {
-                output[offset + j] = (message[offset + j].toInt() xor block[j].toInt()).toByte()
+            initial[12] = counter + i
+            initial.copyInto(working)
+            chaCha20Rounds(working)
+
+            // XOR at word level: read 4 message bytes as Int, XOR with keystream word, write 4 bytes
+            val off = i * 64
+            for (j in 0..15) {
+                val ks = working[j] + initial[j]
+                val mw = message.littleEndianToInt(off + j * 4)
+                (ks xor mw).intToLittleEndian(output, off + j * 4)
             }
         }
 
         if (remainder > 0) {
-            val block = chaCha20Block(key, counter + fullBlocks, nonce)
-            val offset = fullBlocks * 64
-            for (j in 0 until remainder) {
-                output[offset + j] = (message[offset + j].toInt() xor block[j].toInt()).toByte()
+            initial[12] = counter + fullBlocks
+            initial.copyInto(working)
+            chaCha20Rounds(working)
+
+            val off = fullBlocks * 64
+            // Process full words within the remainder
+            val fullWords = remainder / 4
+            for (j in 0 until fullWords) {
+                val ks = working[j] + initial[j]
+                val mw = message.littleEndianToInt(off + j * 4)
+                (ks xor mw).intToLittleEndian(output, off + j * 4)
+            }
+            // Process remaining bytes (0-3 bytes)
+            val tailStart = fullWords * 4
+            if (tailStart < remainder) {
+                // Serialize just this one keystream word
+                val ks = working[fullWords] + initial[fullWords]
+                val ksByte0 = (ks and 0xFF)
+                val ksByte1 = (ks ushr 8 and 0xFF)
+                val ksByte2 = (ks ushr 16 and 0xFF)
+                val ksByte3 = (ks ushr 24 and 0xFF)
+                val ksBytes = intArrayOf(ksByte0, ksByte1, ksByte2, ksByte3)
+                for (b in tailStart until remainder) {
+                    output[off + b] = (message[off + b].toInt() xor ksBytes[b - tailStart]).toByte()
+                }
             }
         }
 
@@ -226,6 +257,68 @@ object ChaCha20Core {
     }
 
     /**
+     * HChaCha20 variant that avoids allocating a 16-byte input copy.
+     * Reads the first 16 bytes of the nonce directly.
+     *
+     * @param key 32-byte key
+     * @param nonce 24-byte nonce (only first 16 bytes are used)
+     */
+    internal fun hChaCha20FromNonce24(
+        key: ByteArray,
+        nonce: ByteArray,
+    ): ByteArray {
+        val state = IntArray(16)
+        state[0] = SIGMA0
+        state[1] = SIGMA1
+        state[2] = SIGMA2
+        state[3] = SIGMA3
+        state[4] = key.littleEndianToInt(0)
+        state[5] = key.littleEndianToInt(4)
+        state[6] = key.littleEndianToInt(8)
+        state[7] = key.littleEndianToInt(12)
+        state[8] = key.littleEndianToInt(16)
+        state[9] = key.littleEndianToInt(20)
+        state[10] = key.littleEndianToInt(24)
+        state[11] = key.littleEndianToInt(28)
+        state[12] = nonce.littleEndianToInt(0)
+        state[13] = nonce.littleEndianToInt(4)
+        state[14] = nonce.littleEndianToInt(8)
+        state[15] = nonce.littleEndianToInt(12)
+
+        chaCha20Rounds(state)
+
+        val output = ByteArray(32)
+        state[0].intToLittleEndian(output, 0)
+        state[1].intToLittleEndian(output, 4)
+        state[2].intToLittleEndian(output, 8)
+        state[3].intToLittleEndian(output, 12)
+        state[12].intToLittleEndian(output, 16)
+        state[13].intToLittleEndian(output, 20)
+        state[14].intToLittleEndian(output, 24)
+        state[15].intToLittleEndian(output, 28)
+        return output
+    }
+
+    /**
+     * Generates the first 32 bytes of keystream block 0 (used as Poly1305 one-time key).
+     * Avoids allocating a full 64-byte block.
+     */
+    internal fun chaCha20PolyKey(
+        key: ByteArray,
+        nonce: ByteArray,
+    ): ByteArray {
+        val initial = initState(key, 0, nonce)
+        val working = initial.copyOf()
+        chaCha20Rounds(working)
+
+        val polyKey = ByteArray(32)
+        for (i in 0..7) {
+            (working[i] + initial[i]).intToLittleEndian(polyKey, i * 4)
+        }
+        return polyKey
+    }
+
+    /**
      * XChaCha20 stream cipher XOR (draft-irtf-cfrg-xchacha §2.3).
      * Uses HChaCha20 to derive a subkey, then applies ChaCha20 with the remaining nonce bytes.
      *
@@ -239,8 +332,8 @@ object ChaCha20Core {
         nonce: ByteArray,
         key: ByteArray,
     ): ByteArray {
-        // Step 1: Derive subkey using first 16 bytes of nonce
-        val subKey = hChaCha20(key, nonce.copyOfRange(0, 16))
+        // Step 1: Derive subkey using first 16 bytes of nonce (no copyOfRange)
+        val subKey = hChaCha20FromNonce24(key, nonce)
 
         // Step 2: Build 12-byte subnonce: 4 zero bytes + last 8 bytes of nonce
         val subNonce = ByteArray(12)
@@ -253,13 +346,13 @@ object ChaCha20Core {
 
 // --- Little-endian conversion helpers ---
 
-private fun ByteArray.littleEndianToInt(offset: Int): Int =
+internal fun ByteArray.littleEndianToInt(offset: Int): Int =
     (this[offset].toInt() and 0xFF) or
         ((this[offset + 1].toInt() and 0xFF) shl 8) or
         ((this[offset + 2].toInt() and 0xFF) shl 16) or
         ((this[offset + 3].toInt() and 0xFF) shl 24)
 
-private fun Int.intToLittleEndian(
+internal fun Int.intToLittleEndian(
     output: ByteArray,
     offset: Int,
 ) {

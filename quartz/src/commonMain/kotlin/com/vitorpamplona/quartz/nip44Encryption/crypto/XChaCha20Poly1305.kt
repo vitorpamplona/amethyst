@@ -50,13 +50,13 @@ object XChaCha20Poly1305 {
         nonce: ByteArray,
         key: ByteArray,
     ): ByteArray {
-        // Step 1-2: Derive subkey and subnonce
-        val subKey = ChaCha20Core.hChaCha20(key, nonce.copyOfRange(0, 16))
+        // Step 1-2: Derive subkey and subnonce (no copyOfRange for nonce)
+        val subKey = ChaCha20Core.hChaCha20FromNonce24(key, nonce)
         val subNonce = ByteArray(12)
         nonce.copyInto(subNonce, destinationOffset = 4, startIndex = 16, endIndex = 24)
 
-        // Step 3: Generate Poly1305 one-time key from block 0
-        val polyKey = ChaCha20Core.chaCha20Block(subKey, 0, subNonce).copyOfRange(0, 32)
+        // Step 3: Generate Poly1305 one-time key (only 32 bytes, not full 64-byte block)
+        val polyKey = ChaCha20Core.chaCha20PolyKey(subKey, subNonce)
 
         // Step 4: Encrypt plaintext with counter starting at 1
         val ciphertext = ChaCha20Core.chaCha20Xor(plaintext, subKey, subNonce, counter = 1)
@@ -64,8 +64,11 @@ object XChaCha20Poly1305 {
         // Step 5: Compute tag
         val tag = computeTag(polyKey, ad, ciphertext)
 
-        // Step 6: Return ciphertext || tag
-        return ciphertext + tag
+        // Step 6: Return ciphertext || tag (single allocation)
+        val result = ByteArray(ciphertext.size + TAG_SIZE)
+        ciphertext.copyInto(result)
+        tag.copyInto(result, ciphertext.size)
+        return result
     }
 
     /**
@@ -89,13 +92,13 @@ object XChaCha20Poly1305 {
         val ciphertext = ciphertextWithTag.copyOfRange(0, ctLen)
         val receivedTag = ciphertextWithTag.copyOfRange(ctLen, ciphertextWithTag.size)
 
-        // Step 1-2: Derive subkey and subnonce
-        val subKey = ChaCha20Core.hChaCha20(key, nonce.copyOfRange(0, 16))
+        // Step 1-2: Derive subkey and subnonce (no copyOfRange for nonce)
+        val subKey = ChaCha20Core.hChaCha20FromNonce24(key, nonce)
         val subNonce = ByteArray(12)
         nonce.copyInto(subNonce, destinationOffset = 4, startIndex = 16, endIndex = 24)
 
-        // Step 3: Generate Poly1305 one-time key
-        val polyKey = ChaCha20Core.chaCha20Block(subKey, 0, subNonce).copyOfRange(0, 32)
+        // Step 3: Generate Poly1305 one-time key (only 32 bytes, not full 64-byte block)
+        val polyKey = ChaCha20Core.chaCha20PolyKey(subKey, subNonce)
 
         // Step 4: Verify tag
         val expectedTag = computeTag(polyKey, ad, ciphertext)
