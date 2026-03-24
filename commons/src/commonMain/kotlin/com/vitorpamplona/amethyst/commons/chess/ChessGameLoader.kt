@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip64Chess.ReconstructedGameState
 import com.vitorpamplona.quartz.nip64Chess.ReconstructionResult
 import com.vitorpamplona.quartz.nip64Chess.ViewerRole
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterGameEvents
+import com.vitorpamplona.quartz.utils.Log
 
 /**
  * Converts a ReconstructedGameState (from ChessStateReconstructor) into a
@@ -63,7 +64,10 @@ object ChessGameLoader {
         result: ReconstructionResult,
         viewerPubkey: String,
     ): LiveChessGameState? {
-        if (result !is ReconstructionResult.Success) return null
+        if (result !is ReconstructionResult.Success) {
+            Log.d("chessdebug", "[GameLoader] toLiveGameState: reconstruction was not successful")
+            return null
+        }
 
         val state = result.state
         val engine = result.engine
@@ -74,6 +78,8 @@ object ChessGameLoader {
                 ViewerRole.BLACK_PLAYER -> viewerPubkey to (state.whitePubkey ?: "")
                 ViewerRole.SPECTATOR -> viewerPubkey to (state.blackPubkey ?: "")
             }
+
+        Log.d("chessdebug", "[GameLoader] toLiveGameState: game=${state.startEventId.take(8)}, role=${state.viewerRole}, color=${state.playerColor}, isSpectator=${state.viewerRole == ViewerRole.SPECTATOR}, isPending=${state.isPendingChallenge}, moves=${state.moveHistory.size}")
 
         return LiveChessGameState(
             startEventId = state.startEventId,
@@ -91,9 +97,9 @@ object ChessGameLoader {
 
             // Mark finished if the game has ended
             if (state.isFinished() && state.gameStatus is com.vitorpamplona.quartz.nip64Chess.GameStatus.Finished) {
-                gameState.markAsFinished(
-                    (state.gameStatus as com.vitorpamplona.quartz.nip64Chess.GameStatus.Finished).result,
-                )
+                val gameResult = (state.gameStatus as com.vitorpamplona.quartz.nip64Chess.GameStatus.Finished).result
+                Log.d("chessdebug", "[GameLoader] Marking game ${state.startEventId.take(8)} as finished: $gameResult")
+                gameState.markAsFinished(gameResult)
             }
 
             // Handle pending draw offer
@@ -115,19 +121,23 @@ object ChessGameLoader {
         events: JesterGameEvents,
         viewerPubkey: String,
     ): LoadGameResult {
+        Log.d("chessdebug", "[GameLoader] loadGame: startEvent=${events.startEvent?.id?.take(8)}, moves=${events.moves.size}, viewer=${viewerPubkey.take(8)}")
         val result = ChessStateReconstructor.reconstruct(events, viewerPubkey)
 
         return when (result) {
             is ReconstructionResult.Success -> {
                 val liveState = toLiveGameState(result, viewerPubkey)
                 if (liveState != null) {
+                    Log.d("chessdebug", "[GameLoader] loadGame SUCCESS: game=${result.state.startEventId.take(8)}, status=${result.state.gameStatus}")
                     LoadGameResult.Success(liveState, result.state)
                 } else {
+                    Log.d("chessdebug", "[GameLoader] loadGame FAILED: could not convert to live state")
                     LoadGameResult.Error("Failed to convert reconstructed state to live state")
                 }
             }
 
             is ReconstructionResult.Error -> {
+                Log.d("chessdebug", "[GameLoader] loadGame ERROR: ${result.message}")
                 LoadGameResult.Error(result.message)
             }
         }
@@ -149,6 +159,7 @@ object ChessGameLoader {
         playerColor: Color,
         isPendingChallenge: Boolean = false,
     ): LiveChessGameState {
+        Log.d("chessdebug", "[GameLoader] createNewGame: game=${startEventId.take(8)}, player=${playerPubkey.take(8)}, opponent=${opponentPubkey.take(8)}, color=$playerColor, isPending=$isPendingChallenge")
         val engine = ChessEngine()
         engine.reset()
 

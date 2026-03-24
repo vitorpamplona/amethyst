@@ -36,6 +36,7 @@ import com.vitorpamplona.quartz.nip64Chess.Color
 import com.vitorpamplona.quartz.nip64Chess.LiveChessGameState
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterProtocol
 import com.vitorpamplona.quartz.nip64Chess.jester.toJesterEvent
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -94,6 +95,7 @@ class ChessViewModelNew(
     // ============================================
 
     init {
+        Log.d("chessdebug", "[AndroidVM] init: instanceId=$instanceId, userPubkey=${account.userProfile().pubkeyHex.take(8)}")
         logic.startPolling()
     }
 
@@ -132,7 +134,12 @@ class ChessViewModelNew(
 
     fun handleIncomingEvent(event: Event) {
         if (event.kind != JesterProtocol.KIND) return
-        val jesterEvent = event.toJesterEvent() ?: return
+        val jesterEvent =
+            event.toJesterEvent() ?: run {
+                Log.d("chessdebug", "[AndroidVM] handleIncomingEvent: failed to parse kind ${event.kind} event ${event.id.take(8)} as JesterEvent")
+                return
+            }
+        Log.d("chessdebug", "[AndroidVM] handleIncomingEvent: id=${event.id.take(8)}, pubkey=${event.pubKey.take(8)}, isStart=${jesterEvent.isStartEvent()}, isMove=${jesterEvent.isMoveEvent()}")
         logic.handleIncomingEvent(jesterEvent)
     }
 

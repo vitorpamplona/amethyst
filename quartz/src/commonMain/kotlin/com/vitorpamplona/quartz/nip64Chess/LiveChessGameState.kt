@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip64Chess
 
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -125,12 +126,15 @@ class LiveChessGameState(
         to: String,
         promotion: PieceType? = null,
     ): ChessMoveEvent? {
+        Log.d("chessdebug", "[LiveGame] makeMove: game=${startEventId.take(8)}, from=$from, to=$to, promotion=$promotion, isPlayerTurn=${isPlayerTurn()}, status=${_gameStatus.value}")
         if (!isPlayerTurn()) {
+            Log.d("chessdebug", "[LiveGame] makeMove REJECTED: not player's turn (sideToMove=${engine.getSideToMove()}, playerColor=$playerColor)")
             _lastError.value = "Not your turn"
             return null
         }
 
         if (_gameStatus.value != GameStatus.InProgress) {
+            Log.d("chessdebug", "[LiveGame] makeMove REJECTED: game not in progress (${_gameStatus.value})")
             _lastError.value = "Game is not in progress"
             return null
         }
@@ -171,6 +175,7 @@ class LiveChessGameState(
      * @param newHeadEventId The ID of the newly published move event
      */
     fun updateHeadEventId(newHeadEventId: String) {
+        Log.d("chessdebug", "[LiveGame] updateHeadEventId: game=${startEventId.take(8)}, old=${_headEventId.value.take(8)}, new=${newHeadEventId.take(8)}")
         _headEventId.value = newHeadEventId
     }
 
@@ -204,8 +209,10 @@ class LiveChessGameState(
         fen: String,
         moveNumber: Int? = null,
     ): Boolean {
+        Log.d("chessdebug", "[LiveGame] applyOpponentMove: game=${startEventId.take(8)}, san=$san, moveNumber=$moveNumber, expectedMove=${_moveHistory.value.size + 1}")
         // Check for duplicate move
         if (moveNumber != null && receivedMoveNumbers.contains(moveNumber)) {
+            Log.d("chessdebug", "[LiveGame] applyOpponentMove: DUPLICATE move #$moveNumber, ignoring")
             // Already processed this move, ignore
             return true
         }
@@ -213,12 +220,14 @@ class LiveChessGameState(
         // Check for out-of-order move
         val expectedMoveNumber = _moveHistory.value.size + 1
         if (moveNumber != null && moveNumber > expectedMoveNumber) {
+            Log.d("chessdebug", "[LiveGame] applyOpponentMove: OUT-OF-ORDER move #$moveNumber (expected #$expectedMoveNumber), queuing")
             // Store for later processing
             pendingMoves[moveNumber] = san to fen
             return true
         }
 
         if (isPlayerTurn()) {
+            Log.d("chessdebug", "[LiveGame] applyOpponentMove: REJECTED - it's player's turn, not opponent's")
             _lastError.value = "Received move but it's not opponent's turn"
             return false
         }
@@ -237,11 +246,13 @@ class LiveChessGameState(
             if (currentFen != fen) {
                 // Positions don't match - desync detected
                 _isDesynced.value = true
+                Log.d("chessdebug", "[LiveGame] applyOpponentMove: FEN MISMATCH after $san - current=$currentFen, expected=$fen")
                 _lastError.value = "Position mismatch - syncing to opponent's position"
                 // Load the opponent's FEN to stay in sync
                 engine.loadFen(fen)
             } else {
                 _isDesynced.value = false
+                Log.d("chessdebug", "[LiveGame] applyOpponentMove: SUCCESS - $san applied, totalMoves=${_moveHistory.value.size + 1}")
             }
 
             _currentPosition.value = engine.getPosition()
@@ -260,6 +271,7 @@ class LiveChessGameState(
 
             return true
         } else {
+            Log.d("chessdebug", "[LiveGame] applyOpponentMove: INVALID move $san - ${result.error}")
             _lastError.value = "Invalid opponent move: $san"
             return false
         }
@@ -512,6 +524,7 @@ class LiveChessGameState(
      * Used when loading a game from cache that already has an end event.
      */
     fun markAsFinished(result: GameResult) {
+        Log.d("chessdebug", "[LiveGame] markAsFinished: game=${startEventId.take(8)}, result=$result")
         _gameStatus.value = GameStatus.Finished(result)
     }
 

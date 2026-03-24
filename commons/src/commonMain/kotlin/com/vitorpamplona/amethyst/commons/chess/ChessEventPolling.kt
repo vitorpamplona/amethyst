@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.chess
 
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -167,8 +168,10 @@ class ChessPollingDelegate(
      */
     fun start() {
         if (_isPolling.value) {
+            Log.d("chessdebug", "[Polling] start: already polling, skipping")
             return
         }
+        Log.d("chessdebug", "[Polling] start: gameInterval=${config.activeGamePollInterval}ms, challengeInterval=${config.challengePollInterval}ms")
         _isPolling.value = true
 
         // Poll for active games
@@ -177,10 +180,11 @@ class ChessPollingDelegate(
                 while (isActive) {
                     val gameIds = getEffectiveGameIds()
                     if (gameIds.isNotEmpty()) {
+                        Log.d("chessdebug", "[Polling] polling ${gameIds.size} games: ${gameIds.map { it.take(8) }}, focused=${_focusedGameId.value?.take(8)}")
                         try {
                             onRefreshGames(gameIds)
-                        } catch (_: Exception) {
-                            // Error during refresh - continue polling
+                        } catch (e: Exception) {
+                            Log.d("chessdebug", "[Polling] ERROR during game refresh: ${e.message}")
                         }
                     }
                     delay(config.activeGamePollInterval)
