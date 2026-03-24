@@ -198,6 +198,10 @@ kotlin {
                 // immutable collections to avoid recomposition
                 implementation(libs.kotlinx.collections.immutable)
 
+                // Ktor KMP HTTP & WebSocket client
+                implementation(libs.ktor.client.core)
+                implementation(libs.ktor.client.websockets)
+
                 // SQLite KMP driver for event store
                 api(libs.androidx.sqlite)
                 implementation(libs.androidx.sqlite.bundled)
@@ -230,6 +234,9 @@ kotlin {
                     // Websockets API
                     implementation(libs.okhttp)
                     implementation(libs.okhttpCoroutines)
+
+                    // Ktor engine for JVM/Android (uses OkHttp under the hood)
+                    implementation(libs.ktor.client.okhttp)
 
                     // Chess engine for move validation and legal move generation
                     // NOTE: 1.0.4+ uses Java 21's removeLast() which crashes on Android API < 34
@@ -324,6 +331,9 @@ kotlin {
         iosMain {
             dependsOn(commonMain.get())
             dependencies {
+                // Ktor engine for iOS (uses URLSession under the hood)
+                implementation(libs.ktor.client.darwin)
+
                 implementation(libs.charlietap.cachemap)
                 implementation(libs.net.thauvin.erik.urlencoder.lib)
                 implementation(libs.dev.whyoleg.cryptography.provider.apple.optimal)
