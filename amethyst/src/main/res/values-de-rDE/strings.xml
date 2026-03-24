@@ -294,6 +294,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="nip_05">Nostr-Adresse</string>
     <string name="never">nie</string>
     <string name="now">jetzt</string>
+    <string name="seconds">Sekunden</string>
     <string name="h">s</string>
     <string name="m">m</string>
     <string name="d">t</string>
@@ -1679,5 +1680,4 @@ anz der Bedingungen ist erforderlich</string>
     <string name="event_sync_date_filter_all_time">Gesamter Zeitraum</string>
     <string name="event_sync_date_filter_last_sync">Letzte Synchronisierung: %1$s</string>
     <string name="event_sync_date_filter_since_last_sync">Seit letzter Synchronisierung</string>
-    <string name="seconds">Sekunden</string>
 </resources>
