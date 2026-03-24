@@ -21,14 +21,25 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.reports
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
+import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.reports.dal.UserProfileReportFeedViewModel
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 
 @Composable
 fun TabReports(
@@ -37,15 +48,36 @@ fun TabReports(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    WatchReportsAndUpdateFeed(baseUser, feedViewModel, accountViewModel)
-
     Column(Modifier.fillMaxHeight()) {
-        RefresheableFeedView(
-            feedViewModel,
-            null,
-            enablePullRefresh = false,
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
+        val items by feedViewModel.followersFlow.collectAsStateWithLifecycle()
+
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = FeedPadding,
+            state = rememberLazyListState(),
+        ) {
+            itemsIndexed(
+                items,
+                key = { _, item -> item.idHex },
+                contentType = { _, item -> item.event?.kind ?: -1 },
+            ) { _, item ->
+                Row(Modifier.fillMaxWidth().animateItem()) {
+                    NoteCompose(
+                        item,
+                        modifier = Modifier.fillMaxWidth(),
+                        routeForLastRead = null,
+                        isBoostedNote = false,
+                        isHiddenFeed = false,
+                        quotesLeft = 3,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                }
+
+                HorizontalDivider(
+                    thickness = DividerThickness,
+                )
+            }
+        }
     }
 }
