@@ -1679,4 +1679,5 @@ anz der Bedingungen ist erforderlich</string>
     <string name="event_sync_date_filter_all_time">Gesamter Zeitraum</string>
     <string name="event_sync_date_filter_last_sync">Letzte Synchronisierung: %1$s</string>
     <string name="event_sync_date_filter_since_last_sync">Seit letzter Synchronisierung</string>
+    <string name="seconds">Sekunden</string>
 </resources>
