@@ -48,6 +48,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
@@ -455,30 +456,31 @@ fun calculateBackgroundColor(
 ): MutableState<Color> {
     val defaultBackgroundColor = MaterialTheme.colorScheme.background
     val newItemColor = MaterialTheme.colorScheme.newItemBackgroundColor
+    val defaultColor = parentBackgroundColor?.value ?: defaultBackgroundColor.copy(alpha = 0f)
+    val isNew =
+        remember(createdAt) {
+            routeForLastRead != null && accountViewModel.loadAndMarkAsRead(routeForLastRead, createdAt)
+        }
     val bgColor =
         remember(createdAt) {
             mutableStateOf(
-                if (routeForLastRead != null) {
-                    val isNew = accountViewModel.loadAndMarkAsRead(routeForLastRead, createdAt)
-
-                    if (isNew) {
-                        if (parentBackgroundColor != null) {
-                            newItemColor.compositeOver(parentBackgroundColor.value)
-                        } else {
-                            newItemColor.compositeOver(defaultBackgroundColor)
-                        }
+                if (isNew) {
+                    if (parentBackgroundColor != null) {
+                        newItemColor.compositeOver(parentBackgroundColor.value)
                     } else {
-                        parentBackgroundColor?.value ?: defaultBackgroundColor.copy(alpha = 0f)
+                        newItemColor.compositeOver(defaultBackgroundColor)
                     }
                 } else {
-                    parentBackgroundColor?.value ?: defaultBackgroundColor.copy(alpha = 0f)
+                    defaultColor
                 },
             )
         }
 
-    LaunchedEffect(createdAt) {
-        delay(5000)
-        bgColor.value = parentBackgroundColor?.value ?: defaultBackgroundColor.copy(alpha = 0f)
+    if (isNew) {
+        LaunchedEffect(createdAt) {
+            delay(5000)
+            bgColor.value = defaultColor
+        }
     }
 
     return bgColor
@@ -570,7 +572,12 @@ fun ClickableNote(
                 )
         }
 
-    Column(modifier = updatedModifier.background(backgroundColor.value)) { content() }
+    Column(
+        modifier =
+            updatedModifier.drawBehind {
+                drawRect(backgroundColor.value)
+            },
+    ) { content() }
 }
 
 @Composable
@@ -588,7 +595,9 @@ fun InnerNoteWithReactions(
     moreOptions: (@Composable () -> Unit)? = null,
 ) {
     val notBoostedNorQuote = !isBoostedNote && !isQuotedNote
+    val noteEvent = baseNote.event
     val editState = observeEdits(baseNote = baseNote, accountViewModel = accountViewModel)
+    val isRepost = noteEvent is RepostEvent || noteEvent is GenericRepostEvent
 
     Row(
         modifier =
@@ -612,8 +621,7 @@ fun InnerNoteWithReactions(
 
         Column(Modifier.fillMaxWidth()) {
             val showSecondRow =
-                baseNote.event !is RepostEvent &&
-                    baseNote.event !is GenericRepostEvent &&
+                !isRepost &&
                     !isBoostedNote &&
                     !isQuotedNote &&
                     accountViewModel.settings.isCompleteUIMode()
@@ -636,7 +644,7 @@ fun InnerNoteWithReactions(
         }
     }
 
-    val isNotRepost = baseNote.event !is RepostEvent && baseNote.event !is GenericRepostEvent && baseNote.event !is DraftWrapEvent
+    val isNotRepost = !isRepost && noteEvent !is DraftWrapEvent
 
     if (isNotRepost) {
         if (makeItShort) {
@@ -652,7 +660,7 @@ fun InnerNoteWithReactions(
             )
         }
     } else {
-        if (baseNote.event is DraftWrapEvent) {
+        if (noteEvent is DraftWrapEvent) {
             Spacer(modifier = DoubleVertSpacer)
         }
     }
@@ -732,7 +740,8 @@ fun NoteBody(
         )
     }
 
-    if (baseNote.event !is RepostEvent && baseNote.event !is GenericRepostEvent) {
+    val noteEvent = baseNote.event
+    if (noteEvent !is RepostEvent && noteEvent !is GenericRepostEvent) {
         Spacer(modifier = Height4dpModifier)
     }
 
@@ -749,7 +758,6 @@ fun NoteBody(
     )
 
     if (!makeItShort) {
-        val noteEvent = baseNote.event
         val zapSplits = remember(noteEvent) { noteEvent?.hasZapSplitSetup() ?: false }
         if (zapSplits && noteEvent != null) {
             Spacer(modifier = HalfDoubleVertSpacer)
@@ -1444,7 +1452,8 @@ fun FirstUserInfoRow(
     moreOptions: (@Composable () -> Unit)? = null,
 ) {
     Row(verticalAlignment = CenterVertically, modifier = UserNameRowHeight) {
-        val isRepost = baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent
+        val noteEvent = baseNote.event
+        val isRepost = noteEvent is RepostEvent || noteEvent is GenericRepostEvent
         val isDraft = baseNote.isDraft()
         val textColor = if (isRepost) MaterialTheme.colorScheme.grayText else Color.Unspecified
 

@@ -29,6 +29,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
@@ -48,6 +49,7 @@ fun FeedLoaded(
     nav: INav,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
+    val fillMaxWidthModifier = remember { Modifier.fillMaxWidth() }
 
     LazyColumn(
         contentPadding = FeedPadding,
@@ -58,10 +60,10 @@ fun FeedLoaded(
             key = { _, item -> item.idHex },
             contentType = { _, item -> item.event?.kind ?: -1 },
         ) { _, item ->
-            Row(Modifier.fillMaxWidth().animateItem()) {
+            Row(fillMaxWidthModifier.animateItem()) {
                 NoteCompose(
                     item,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = fillMaxWidthModifier,
                     routeForLastRead = routeForLastRead,
                     isBoostedNote = false,
                     isHiddenFeed = items.showHidden,
