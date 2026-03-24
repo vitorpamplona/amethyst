@@ -442,6 +442,16 @@ class ChessLobbyState(
         }
     }
 
+    fun removeCompletedGame(gameId: String) {
+        _completedGames.update { current ->
+            current.filter { it.gameId != gameId }
+        }
+    }
+
+    fun clearCompletedGames() {
+        _completedGames.value = emptyList()
+    }
+
     fun addSpectatingGame(
         gameId: String,
         state: LiveChessGameState,

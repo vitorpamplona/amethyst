@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.desktop.chess
 
 import com.vitorpamplona.amethyst.commons.chess.ChessBroadcastStatus
 import com.vitorpamplona.amethyst.commons.chess.ChessChallenge
+import com.vitorpamplona.amethyst.commons.chess.ChessDismissedGamesStorage
 import com.vitorpamplona.amethyst.commons.chess.ChessLobbyLogic
 import com.vitorpamplona.amethyst.commons.chess.ChessPollingDefaults
 import com.vitorpamplona.amethyst.commons.chess.ChessSyncStatus
@@ -59,6 +60,7 @@ class DesktopChessViewModelNew(
     private val publisher = DesktopChessPublisher(account, relayManager)
     private val fetcher = DesktopRelayFetcher(relayManager, account.pubKeyHex)
     private val metadataProvider = DesktopMetadataProvider(userMetadataCache)
+    private val dismissedStorage = ChessDismissedGamesStorage.create()
 
     // Shared business logic (creates its own ChessLobbyState internally)
     private val logic =
@@ -69,6 +71,7 @@ class DesktopChessViewModelNew(
             metadataProvider = metadataProvider,
             scope = scope,
             pollingConfig = ChessPollingDefaults.desktop,
+            dismissedStorage = dismissedStorage,
         )
 
     // ============================================
@@ -163,6 +166,10 @@ class DesktopChessViewModelNew(
     fun claimAbandonmentVictory(gameId: String) = logic.claimAbandonmentVictory(gameId)
 
     fun dismissGame(gameId: String) = logic.dismissGame(gameId)
+
+    fun dismissCompletedGame(gameId: String) = logic.dismissCompletedGame(gameId)
+
+    fun dismissAllCompletedGames() = logic.dismissAllCompletedGames()
 
     // ============================================
     // Spectator operations

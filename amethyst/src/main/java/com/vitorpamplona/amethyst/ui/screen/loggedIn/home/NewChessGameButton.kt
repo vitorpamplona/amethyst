@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.home
 
+import androidx.activity.compose.LocalActivity
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.FloatingActionButton
@@ -47,11 +48,12 @@ fun NewChessGameButton(
     nav: INav,
 ) {
     var showDialog by remember { mutableStateOf(false) }
+    val activity = LocalActivity.current as androidx.fragment.app.FragmentActivity
 
     val chessViewModel: ChessViewModelNew =
         viewModel(
             key = "ChessViewModelNew-${accountViewModel.account.userProfile().pubkeyHex}",
-            factory = ChessViewModelFactory(accountViewModel.account),
+            factory = ChessViewModelFactory(accountViewModel.account, activity.application),
         )
 
     FloatingActionButton(

@@ -45,6 +45,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -96,7 +97,7 @@ fun ChessLobbyScreen(
         viewModel(
             viewModelStoreOwner = activity,
             key = "ChessViewModelNew-${accountViewModel.account.userProfile().pubkeyHex}",
-            factory = ChessViewModelFactory(accountViewModel.account),
+            factory = ChessViewModelFactory(accountViewModel.account, activity.application),
         )
 
     // Subscribe to chess events when screen is visible
@@ -555,12 +556,22 @@ fun ChessLobbyContent(
         if (completedGames.isNotEmpty()) {
             item {
                 Spacer(Modifier.height(16.dp))
-                Text(
-                    "Finished Games",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(vertical = 8.dp),
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        "Finished Games",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    if (completedGames.size >= 2) {
+                        TextButton(onClick = { chessViewModel.dismissAllCompletedGames() }) {
+                            Text("Clear all")
+                        }
+                    }
+                }
             }
 
             items(
@@ -585,6 +596,7 @@ fun ChessLobbyContent(
                     isDraw = game.isDraw,
                     moveCount = game.moveCount,
                     onClick = { onSelectGame(game.gameId) },
+                    onDismiss = { chessViewModel.dismissCompletedGame(game.gameId) },
                     avatar = {
                         OverlappingAvatars(
                             avatar1Hex = userPubkey,

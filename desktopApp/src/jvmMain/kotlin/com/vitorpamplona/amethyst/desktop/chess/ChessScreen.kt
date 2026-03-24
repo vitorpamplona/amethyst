@@ -53,6 +53,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -339,6 +340,8 @@ fun ChessScreen(
                 onOpenOwnChallenge = { viewModel.openOwnChallenge(it) },
                 onWatchGame = { viewModel.loadGameAsSpectator(it) },
                 onSelectGame = { viewModel.selectGame(it) },
+                onDismissGame = { viewModel.dismissCompletedGame(it) },
+                onDismissAllGames = { viewModel.dismissAllCompletedGames() },
                 listState = listState,
             )
         }
@@ -372,6 +375,8 @@ private fun ChessLobby(
     onOpenOwnChallenge: (ChessChallenge) -> Unit,
     onWatchGame: (String) -> Unit,
     onSelectGame: (String) -> Unit,
+    onDismissGame: (String) -> Unit,
+    onDismissAllGames: () -> Unit,
     listState: LazyListState = rememberLazyListState(),
 ) {
     val hasContent =
@@ -581,12 +586,22 @@ private fun ChessLobby(
         if (completedGames.isNotEmpty()) {
             item {
                 Spacer(Modifier.height(16.dp))
-                Text(
-                    "Recent Games",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(vertical = 8.dp),
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        "Recent Games",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    if (completedGames.size >= 2) {
+                        TextButton(onClick = onDismissAllGames) {
+                            Text("Clear all")
+                        }
+                    }
+                }
             }
 
             items(
@@ -603,6 +618,7 @@ private fun ChessLobby(
                     isDraw = game.isDraw,
                     moveCount = game.moveCount,
                     onClick = { onSelectGame(game.gameId) },
+                    onDismiss = { onDismissGame(game.gameId) },
                     avatar = {
                         UserAvatar(
                             userHex = opponentPubkey,

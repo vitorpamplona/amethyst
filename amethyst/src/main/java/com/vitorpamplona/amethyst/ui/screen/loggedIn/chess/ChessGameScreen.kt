@@ -102,6 +102,7 @@ fun ChessGameScreen(
             factory =
                 ChessViewModelFactory(
                     accountViewModel.account,
+                    activity.application,
                 ),
         )
 

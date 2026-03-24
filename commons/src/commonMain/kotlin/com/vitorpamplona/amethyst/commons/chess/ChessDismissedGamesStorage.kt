@@ -18,25 +18,21 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chess
-
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
-import com.vitorpamplona.amethyst.model.Account
+package com.vitorpamplona.amethyst.commons.chess
 
 /**
- * Factory for creating ChessViewModelNew instances.
- * Uses the slim ViewModel that delegates to shared ChessLobbyLogic.
+ * Persists dismissed chess game IDs locally per user.
+ * Uses expect/actual for platform-specific storage.
  */
-class ChessViewModelFactory(
-    private val account: Account,
-    private val application: android.app.Application,
-) : ViewModelProvider.Factory {
-    @Suppress("UNCHECKED_CAST")
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(ChessViewModelNew::class.java)) {
-            return ChessViewModelNew(account, application) as T
-        }
-        throw IllegalArgumentException("Unknown ViewModel class")
+expect class ChessDismissedGamesStorage private constructor() {
+    companion object {
+        fun create(context: Any? = null): ChessDismissedGamesStorage
     }
+
+    fun load(userPubkey: String): Set<String>
+
+    fun save(
+        userPubkey: String,
+        ids: Set<String>,
+    )
 }

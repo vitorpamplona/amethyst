@@ -18,25 +18,34 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chess
+package com.vitorpamplona.amethyst.commons.chess
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
-import com.vitorpamplona.amethyst.model.Account
+import java.util.prefs.Preferences
 
-/**
- * Factory for creating ChessViewModelNew instances.
- * Uses the slim ViewModel that delegates to shared ChessLobbyLogic.
- */
-class ChessViewModelFactory(
-    private val account: Account,
-    private val application: android.app.Application,
-) : ViewModelProvider.Factory {
-    @Suppress("UNCHECKED_CAST")
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(ChessViewModelNew::class.java)) {
-            return ChessViewModelNew(account, application) as T
+actual class ChessDismissedGamesStorage private actual constructor() {
+    private val prefs: Preferences = Preferences.userNodeForPackage(ChessDismissedGamesStorage::class.java)
+
+    actual companion object {
+        private const val NODE_PREFIX = "chess_dismissed_"
+        private const val DELIMITER = ","
+
+        actual fun create(context: Any?): ChessDismissedGamesStorage = ChessDismissedGamesStorage()
+    }
+
+    actual fun load(userPubkey: String): Set<String> {
+        val raw = prefs.get("$NODE_PREFIX$userPubkey", "")
+        if (raw.isEmpty()) return emptySet()
+        return raw.split(DELIMITER).toSet()
+    }
+
+    actual fun save(
+        userPubkey: String,
+        ids: Set<String>,
+    ) {
+        if (ids.isEmpty()) {
+            prefs.remove("$NODE_PREFIX$userPubkey")
+        } else {
+            prefs.put("$NODE_PREFIX$userPubkey", ids.joinToString(DELIMITER))
         }
-        throw IllegalArgumentException("Unknown ViewModel class")
     }
 }

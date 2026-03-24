@@ -125,8 +125,14 @@ class ChessLobbyLogic(
     private val metadataProvider: IUserMetadataProvider,
     private val scope: CoroutineScope,
     pollingConfig: ChessPollingConfig = ChessPollingDefaults.android,
+    private val dismissedStorage: ChessDismissedGamesStorage? = null,
 ) {
     val state = ChessLobbyState(userPubkey, scope)
+
+    private val dismissedGameIds: MutableSet<String> =
+        java.util.Collections.synchronizedSet(
+            dismissedStorage?.load(userPubkey)?.toMutableSet() ?: mutableSetOf(),
+        )
 
     // Track when games were last loaded to prevent duplicate fetches
     // (e.g., discoverUserGames loads a game, then polling immediately re-fetches it)
@@ -869,6 +875,7 @@ class ChessLobbyLogic(
 
         for (startEventId in newGameIds) {
             if (startEventId in completedGameIds) continue
+            if (startEventId in dismissedGameIds) continue
 
             val events = fetcher.fetchGameEvents(startEventId)
             val result = ChessGameLoader.loadGame(events, userPubkey)
@@ -940,6 +947,19 @@ class ChessLobbyLogic(
             }
         }
         return null
+    }
+
+    fun dismissCompletedGame(gameId: String) {
+        state.removeCompletedGame(gameId)
+        dismissedGameIds.add(gameId)
+        dismissedStorage?.save(userPubkey, HashSet(dismissedGameIds))
+    }
+
+    fun dismissAllCompletedGames() {
+        val allIds = state.completedGames.value.map { it.gameId }
+        state.clearCompletedGames()
+        dismissedGameIds.addAll(allIds)
+        dismissedStorage?.save(userPubkey, HashSet(dismissedGameIds))
     }
 
     /**
