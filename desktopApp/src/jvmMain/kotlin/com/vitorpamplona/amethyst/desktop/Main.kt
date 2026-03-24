@@ -153,7 +153,6 @@ sealed class DesktopScreen {
     ) : DesktopScreen()
 
     data object Drafts : DesktopScreen()
-
     data object Settings : DesktopScreen()
 }
 
@@ -457,7 +456,7 @@ fun App(
                             RelayUrlNormalizer.normalizeOrNull(it)
                         }.toSet(),
                 localCache = localCache,
-            )
+            ).also { it.startCleanupLoop() }
         }
 
     // Clear cache and subscriptions on logout

@@ -515,6 +515,14 @@ class DesktopLocalCache : ICacheProvider {
         followingCounts[pubkey] = count
     }
 
+    // ----- Memory Cleanup -----
+
+    fun cleanMemory() {
+        notes.cleanUp()
+        addressableNotes.cleanUp()
+        users.cleanUp()
+    }
+
     // ----- Stats -----
 
     fun userCount(): Int = users.size()

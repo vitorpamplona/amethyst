@@ -37,11 +37,16 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import java.lang.management.ManagementFactory
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * Desktop-specific relay subscriptions coordinator.
@@ -356,5 +361,57 @@ class DesktopRelaySubscriptionsCoordinator(
         unsubscribeFromDms()
         feedMetadata.clear()
         rateLimiter.reset()
+        cleanupJob?.cancel()
+    }
+
+    // ----- Memory Cleanup -----
+
+    private val memoryBean = ManagementFactory.getMemoryMXBean()
+    private var lastCleanupTime = 0L
+    private var cleanupJob: Job? = null
+
+    /**
+     * Starts a periodic memory cleanup coroutine.
+     * Checks heap usage every 30s, runs cleanup at >75% heap or every 5 minutes.
+     */
+    fun startCleanupLoop() {
+        cleanupJob =
+            scope.launch(Dispatchers.Default) {
+                delay(2.minutes)
+                while (isActive) {
+                    delay(30.seconds)
+                    val heapPct = heapUsagePercent()
+                    val elapsed = System.currentTimeMillis() - lastCleanupTime
+                    if (heapPct > 0.75 || elapsed > 5.minutes.inWholeMilliseconds) {
+                        runCleanup()
+                    }
+                }
+            }
+    }
+
+    private suspend fun runCleanup() {
+        val ops =
+            listOf<Pair<String, suspend () -> Unit>>(
+                "cleanMemory" to { localCache.cleanMemory() },
+                "cleanObservers" to { cleanObservers() },
+            )
+        ops.forEach { (name, op) ->
+            try {
+                op()
+            } catch (e: Exception) {
+                println("Cleanup $name failed: ${e.message}")
+            }
+        }
+        lastCleanupTime = System.currentTimeMillis()
+    }
+
+    private fun cleanObservers() {
+        localCache.notes.forEach { _, note -> note.clearFlow() }
+        localCache.addressableNotes.forEach { _, note -> note.clearFlow() }
+    }
+
+    private fun heapUsagePercent(): Double {
+        val heap = memoryBean.heapMemoryUsage
+        return heap.used.toDouble() / heap.max.toDouble()
     }
 }
