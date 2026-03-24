@@ -26,7 +26,9 @@ import android.net.Uri
 import android.os.Parcelable
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -79,7 +81,6 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
-import com.vitorpamplona.amethyst.ui.note.creators.anonymous.AnonymousPostButton
 import com.vitorpamplona.amethyst.ui.note.creators.contentWarning.ContentSensitivityExplainer
 import com.vitorpamplona.amethyst.ui.note.creators.contentWarning.MarkAsSensitiveButton
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.ShowEmojiSuggestionList
@@ -110,6 +111,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size19Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size35Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightPage
@@ -303,12 +305,30 @@ private fun NewPostScreenBody(
                     Row(
                         modifier = Modifier.padding(vertical = Size10dp),
                     ) {
-                        if (!postViewModel.wantsAnonymousPost) {
-                            BaseUserPicture(
-                                accountViewModel.userProfile(),
-                                Size35dp,
-                                accountViewModel = accountViewModel,
-                            )
+                        if (postViewModel.wantsAnonymousPost) {
+                            IconButton(
+                                onClick = { postViewModel.wantsAnonymousPost = false },
+                            ) {
+                                Icon(
+                                    painter = painterRes(resourceId = R.drawable.incognito, 1),
+                                    contentDescription = stringRes(R.string.post_anonymously),
+                                    modifier = Size35Modifier,
+                                    tint = MaterialTheme.colorScheme.onBackground,
+                                )
+                            }
+                        } else {
+                            Box(
+                                modifier =
+                                    Modifier.clickable {
+                                        postViewModel.wantsAnonymousPost = true
+                                    },
+                            ) {
+                                BaseUserPicture(
+                                    accountViewModel.userProfile(),
+                                    Size35dp,
+                                    accountViewModel = accountViewModel,
+                                )
+                            }
                         }
                         MessageField(
                             R.string.what_s_on_your_mind,
@@ -623,10 +643,6 @@ private fun BottomRowActions(postViewModel: ShortNotePostViewModel) {
             AddLnInvoiceButton(postViewModel.wantsInvoice) {
                 postViewModel.wantsInvoice = !postViewModel.wantsInvoice
             }
-        }
-
-        AnonymousPostButton(postViewModel.wantsAnonymousPost) {
-            postViewModel.wantsAnonymousPost = !postViewModel.wantsAnonymousPost
         }
     }
 }
