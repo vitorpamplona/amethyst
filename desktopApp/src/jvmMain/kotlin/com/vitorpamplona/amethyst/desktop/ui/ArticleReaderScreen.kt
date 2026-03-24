@@ -34,6 +34,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -49,6 +50,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,9 +58,11 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.isMetaPressed
+import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.compose.article.ArticleHeader
 import com.vitorpamplona.amethyst.commons.compose.article.TableOfContents
@@ -70,6 +74,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
+import com.vitorpamplona.amethyst.desktop.service.highlights.DesktopHighlightStore
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.desktop.subscriptions.FilterBuilders
 import com.vitorpamplona.amethyst.desktop.subscriptions.SubscriptionConfig
@@ -78,12 +83,14 @@ import com.vitorpamplona.amethyst.desktop.subscriptions.createRepliesSubscriptio
 import com.vitorpamplona.amethyst.desktop.subscriptions.createRepostsSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.createZapsSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
+import com.vitorpamplona.amethyst.desktop.ui.highlights.HighlightAnnotationDialog
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -115,6 +122,7 @@ fun ArticleReaderScreen(
     account: AccountState.LoggedIn?,
     nwcConnection: Nip47WalletConnect.Nip47URINorm? = null,
     subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator? = null,
+    highlightStore: DesktopHighlightStore? = null,
     onBack: () -> Unit,
     onNavigateToProfile: (String) -> Unit = {},
     onNavigateToThread: (String) -> Unit = {},
@@ -135,6 +143,18 @@ fun ArticleReaderScreen(
 
     // Zoom level for article text
     var zoomLevel by remember { mutableStateOf(1.0f) }
+
+    // Coroutine scope for highlight operations
+    val scope = rememberCoroutineScope()
+
+    // Highlight state
+    val articleHighlights =
+        highlightStore?.let { store ->
+            val allHighlights by store.highlights.collectAsState()
+            allHighlights[addressTag] ?: emptyList()
+        } ?: emptyList()
+
+    var showAnnotationDialog by remember { mutableStateOf<String?>(null) }
     val focusRequester =
         remember {
             androidx.compose.ui.focus
@@ -331,6 +351,8 @@ fun ArticleReaderScreen(
     val authorName = authorUser?.toBestDisplayName()
     val authorPicture = authorUser?.profilePicture()
 
+    val clipboardManager = LocalClipboardManager.current
+
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
     }
@@ -357,6 +379,27 @@ fun ArticleReaderScreen(
                             Key.Zero -> {
                                 zoomLevel = 1.0f
                                 true
+                            }
+
+                            Key.H -> {
+                                val selectedText = clipboardManager.getText()?.text
+                                if (!selectedText.isNullOrBlank() && highlightStore != null) {
+                                    if (event.isShiftPressed) {
+                                        showAnnotationDialog = selectedText
+                                    } else {
+                                        scope.launch {
+                                            highlightStore.addHighlight(
+                                                articleAddressTag = addressTag,
+                                                text = selectedText,
+                                                note = null,
+                                                articleTitle = title,
+                                            )
+                                        }
+                                    }
+                                    true
+                                } else {
+                                    false
+                                }
                             }
 
                             else -> {
@@ -480,12 +523,15 @@ fun ArticleReaderScreen(
                                     thickness = 1.dp,
                                 )
 
-                                // Markdown body
-                                RenderMarkdown(
-                                    content = content,
-                                    onLinkClick = onLinkClick,
-                                    fontScale = zoomLevel,
-                                )
+                                // Markdown body with selectable text
+                                SelectionContainer {
+                                    RenderMarkdown(
+                                        content = content,
+                                        onLinkClick = onLinkClick,
+                                        fontScale = zoomLevel,
+                                        highlightedTexts = articleHighlights.map { it.text },
+                                    )
+                                }
 
                                 Spacer(Modifier.height(32.dp))
 
@@ -548,5 +594,23 @@ fun ArticleReaderScreen(
                 }
             }
         }
+    }
+
+    showAnnotationDialog?.let { selectedText ->
+        HighlightAnnotationDialog(
+            selectedText = selectedText,
+            onConfirm = { note ->
+                scope.launch {
+                    highlightStore?.addHighlight(
+                        articleAddressTag = addressTag,
+                        text = selectedText,
+                        note = note,
+                        articleTitle = title,
+                    )
+                }
+                showAnnotationDialog = null
+            },
+            onDismiss = { showAnnotationDialog = null },
+        )
     }
 }

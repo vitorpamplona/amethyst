@@ -54,6 +54,7 @@ private val COLUMN_OPTIONS =
         DeckColumnType.Search,
         DeckColumnType.Reads,
         DeckColumnType.Drafts,
+        DeckColumnType.MyHighlights,
         DeckColumnType.Bookmarks,
         DeckColumnType.GlobalFeed,
         DeckColumnType.MyProfile,

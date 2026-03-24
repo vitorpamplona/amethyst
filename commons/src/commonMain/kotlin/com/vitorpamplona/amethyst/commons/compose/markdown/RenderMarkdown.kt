@@ -42,10 +42,27 @@ fun RenderMarkdown(
     onLinkClick: (String) -> Unit,
     modifier: Modifier = Modifier,
     fontScale: Float = 1.0f,
+    highlightedTexts: List<String> = emptyList(),
 ) {
+    val processedContent =
+        remember(content, highlightedTexts) {
+            if (highlightedTexts.isEmpty()) {
+                content
+            } else {
+                var result = content
+                highlightedTexts.sortedByDescending { it.length }.forEach { text ->
+                    val idx = result.indexOf(text)
+                    if (idx >= 0) {
+                        result = result.replaceFirst(text, "***$text***")
+                    }
+                }
+                result
+            }
+        }
+
     val astNode =
-        remember(content) {
-            CommonmarkAstNodeParser(CommonMarkdownParseOptions.MarkdownWithLinks).parse(content)
+        remember(processedContent) {
+            CommonmarkAstNodeParser(CommonMarkdownParseOptions.MarkdownWithLinks).parse(processedContent)
         }
 
     val uriHandler =

@@ -380,6 +380,7 @@ fun main() {
                             Item("Search", onClick = { deckState.addColumn(DeckColumnType.Search) })
                             Item("Reads", onClick = { deckState.addColumn(DeckColumnType.Reads) })
                             Item("Drafts", onClick = { deckState.addColumn(DeckColumnType.Drafts) })
+                            Item("Highlights", onClick = { deckState.addColumn(DeckColumnType.MyHighlights) })
                             Item("Bookmarks", onClick = { deckState.addColumn(DeckColumnType.Bookmarks) })
                             Item("Global Feed", onClick = { deckState.addColumn(DeckColumnType.GlobalFeed) })
                             Item("Profile", onClick = { deckState.addColumn(DeckColumnType.MyProfile) })

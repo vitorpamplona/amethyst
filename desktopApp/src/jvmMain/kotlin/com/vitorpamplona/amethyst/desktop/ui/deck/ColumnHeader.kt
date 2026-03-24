@@ -135,6 +135,7 @@ fun DeckColumnType.icon(): ImageVector =
         is DeckColumnType.Article -> Icons.AutoMirrored.Filled.Article
         is DeckColumnType.Editor -> Icons.AutoMirrored.Filled.Article
         DeckColumnType.Drafts -> Icons.AutoMirrored.Filled.Article
+        DeckColumnType.MyHighlights -> Icons.AutoMirrored.Filled.Article
         is DeckColumnType.Profile -> Icons.Default.Person
         is DeckColumnType.Thread -> Icons.AutoMirrored.Filled.Article
         is DeckColumnType.Hashtag -> Icons.Default.Tag

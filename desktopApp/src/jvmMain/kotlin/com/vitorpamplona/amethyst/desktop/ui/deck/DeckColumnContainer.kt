@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.desktop.chess.ChessScreen
 import com.vitorpamplona.amethyst.desktop.model.DesktopIAccount
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.service.drafts.DesktopDraftStore
+import com.vitorpamplona.amethyst.desktop.service.highlights.DesktopHighlightStore
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.desktop.subscriptions.FeedMode
 import com.vitorpamplona.amethyst.desktop.ui.ArticleEditorScreen
@@ -105,6 +106,8 @@ fun DeckColumnContainer(
     val navState = remember(column.id) { ColumnNavigationState() }
     val navStack by navState.stack.collectAsState()
     val currentOverlay = navStack.lastOrNull()
+    val containerScope = rememberCoroutineScope()
+    val highlightStore = remember { DesktopHighlightStore(containerScope) }
 
     Column(
         modifier =
@@ -136,6 +139,7 @@ fun DeckColumnContainer(
                 iAccount = iAccount,
                 nwcConnection = nwcConnection,
                 subscriptionsCoordinator = subscriptionsCoordinator,
+                highlightStore = highlightStore,
                 appScope = appScope,
                 compactMode = true,
                 onShowComposeDialog = onShowComposeDialog,
@@ -157,6 +161,7 @@ fun DeckColumnContainer(
                         account = account,
                         nwcConnection = nwcConnection,
                         subscriptionsCoordinator = subscriptionsCoordinator,
+                        highlightStore = highlightStore,
                         onShowComposeDialog = onShowComposeDialog,
                         onShowReplyDialog = onShowReplyDialog,
                         onZapFeedback = onZapFeedback,
@@ -180,6 +185,7 @@ internal fun RootContent(
     iAccount: DesktopIAccount,
     nwcConnection: Nip47URINorm?,
     subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator,
+    highlightStore: DesktopHighlightStore? = null,
     appScope: CoroutineScope,
     compactMode: Boolean = false,
     onShowComposeDialog: () -> Unit,
@@ -339,6 +345,7 @@ internal fun RootContent(
                 localCache = localCache,
                 account = account,
                 subscriptionsCoordinator = subscriptionsCoordinator,
+                highlightStore = highlightStore,
                 onBack = {},
                 onNavigateToProfile = onNavigateToProfile,
             )
@@ -364,6 +371,13 @@ internal fun RootContent(
             )
         }
 
+        DeckColumnType.MyHighlights -> {
+            com.vitorpamplona.amethyst.desktop.ui.highlights.MyHighlightsScreen(
+                highlightStore = highlightStore ?: remember { DesktopHighlightStore(scope) },
+                onNavigateToArticle = onNavigateToArticle,
+            )
+        }
+
         is DeckColumnType.Hashtag -> {
             SearchScreen(
                 localCache = localCache,
@@ -385,6 +399,7 @@ internal fun OverlayContent(
     account: AccountState.LoggedIn,
     nwcConnection: Nip47URINorm?,
     subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator,
+    highlightStore: DesktopHighlightStore? = null,
     onShowComposeDialog: () -> Unit,
     onShowReplyDialog: (com.vitorpamplona.quartz.nip01Core.core.Event) -> Unit,
     onZapFeedback: (ZapFeedback) -> Unit,
@@ -431,6 +446,7 @@ internal fun OverlayContent(
                 localCache = localCache,
                 account = account,
                 subscriptionsCoordinator = subscriptionsCoordinator,
+                highlightStore = highlightStore,
                 onBack = onBack,
                 onNavigateToProfile = onNavigateToProfile,
             )

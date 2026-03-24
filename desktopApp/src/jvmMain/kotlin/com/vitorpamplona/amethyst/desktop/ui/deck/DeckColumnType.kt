@@ -61,6 +61,8 @@ sealed class DeckColumnType {
 
     object Drafts : DeckColumnType()
 
+    object MyHighlights : DeckColumnType()
+
     data class Hashtag(
         val tag: String,
     ) : DeckColumnType()
@@ -80,6 +82,7 @@ sealed class DeckColumnType {
             is Article -> "Article"
             is Editor -> "New Article"
             Drafts -> "Drafts"
+            MyHighlights -> "Highlights"
             is Profile -> "Profile"
             is Thread -> "Thread"
             is Hashtag -> "#$tag"
@@ -100,6 +103,7 @@ sealed class DeckColumnType {
             is Article -> "article"
             is Editor -> "editor"
             Drafts -> "drafts"
+            MyHighlights -> "highlights"
             is Profile -> "profile"
             is Thread -> "thread"
             is Hashtag -> "hashtag"

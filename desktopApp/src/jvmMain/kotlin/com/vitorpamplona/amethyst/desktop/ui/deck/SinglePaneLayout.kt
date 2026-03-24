@@ -80,6 +80,7 @@ private val navItems =
         NavItem(DeckColumnType.HomeFeed, Icons.Default.Home, "Home"),
         NavItem(DeckColumnType.Reads, Icons.AutoMirrored.Filled.Article, "Reads"),
         NavItem(DeckColumnType.Drafts, Icons.AutoMirrored.Filled.Article, "Drafts"),
+        NavItem(DeckColumnType.MyHighlights, Icons.AutoMirrored.Filled.Article, "Highlights"),
         NavItem(DeckColumnType.Search, Icons.Default.Search, "Search"),
         NavItem(DeckColumnType.Bookmarks, Icons.Default.Bookmark, "Bookmarks"),
         NavItem(DeckColumnType.Messages, Icons.Default.Email, "Messages"),
