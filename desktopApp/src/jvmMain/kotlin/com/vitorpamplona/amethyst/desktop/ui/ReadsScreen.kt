@@ -361,7 +361,7 @@ fun ReadsScreen(
                             event = event,
                             localCache = localCache,
                             onAuthorClick = onNavigateToProfile,
-                            onClick = { onNavigateToArticle(event.id) },
+                            onClick = { onNavigateToArticle(event.addressTag()) },
                         )
                     }
                 }

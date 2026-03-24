@@ -143,6 +143,10 @@ sealed class DesktopScreen {
         val noteId: String,
     ) : DesktopScreen()
 
+    data class Article(
+        val addressTag: String,
+    ) : DesktopScreen()
+
     data object Settings : DesktopScreen()
 }
 
