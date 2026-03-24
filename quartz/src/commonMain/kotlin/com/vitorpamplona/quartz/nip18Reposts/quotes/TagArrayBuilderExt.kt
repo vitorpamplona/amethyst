@@ -31,9 +31,9 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 
-fun <T : Event> TagArrayBuilder<T>.quote(tag: QTag) = add(tag.toTagArray())
+fun <T : Event> TagArrayBuilder<T>.quote(tag: QTag) = addUniqueValueIfNew(tag.toTagArray())
 
-fun <T : Event> TagArrayBuilder<T>.quotes(tag: List<QTag>) = addAll(tag.map { it.toTagArray() })
+fun <T : Event> TagArrayBuilder<T>.quotes(tag: List<QTag>) = addAllUniqueValueIfNew(tag.map { it.toTagArray() })
 
 fun <T : Event> TagArrayBuilder<T>.quote(entity: Entity) =
     when (entity) {
