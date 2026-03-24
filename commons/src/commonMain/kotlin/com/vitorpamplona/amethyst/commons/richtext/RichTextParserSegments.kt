@@ -154,6 +154,11 @@ class SchemelessUrlSegment(
 ) : Segment(segment)
 
 @Immutable
+class NamecoinSegment(
+    segment: String,
+) : Segment(segment)
+
+@Immutable
 class RegularTextSegment(
     segment: String,
 ) : Segment(segment)

@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.richtext.mimeTypeMap
 import com.vitorpamplona.quartz.experimental.inlineMetadata.Nip54InlineMetadata
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip36SensitiveContent.ContentWarningTag
@@ -318,6 +319,10 @@ class RichTextParser {
         if (isPotentialPhoneNumber(word) && !isDate(word)) {
             if (Patterns.PHONE.matches(word)) return PhoneSegment(word)
         }
+
+        // Namecoin identifiers: d/name, id/name, name@domain.bit, @domain.bit
+        val trimmedWord = word.trimEnd('.', ',', '!', '?', ')', ']')
+        if (NamecoinNameResolver.isNamecoinIdentifier(trimmedWord)) return NamecoinSegment(word)
 
         return RegularTextSegment(word)
     }

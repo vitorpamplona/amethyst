@@ -47,9 +47,11 @@ import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -331,13 +333,21 @@ fun DisplayNip05ProfileStatus(
 
                 val uri = LocalUriHandler.current
                 val color = MaterialTheme.colorScheme.primary
+                val isNamecoinDomain = nip05State.nip05.domain.endsWith(".bit")
 
                 Text(
                     text =
-                        remember(nip05State) {
+                        remember(nip05State, isNamecoinDomain) {
                             buildAnnotatedString {
-                                appendLink(nip05State.nip05.toValue(), color) {
-                                    runCatching { uri.openUri("https://${nip05State.nip05.domain}") }
+                                if (isNamecoinDomain) {
+                                    // .bit domains are Namecoin blockchain names — not HTTP URLs
+                                    withStyle(SpanStyle(color = color)) {
+                                        append(nip05State.nip05.toValue())
+                                    }
+                                } else {
+                                    appendLink(nip05State.nip05.toValue(), color) {
+                                        runCatching { uri.openUri("https://${nip05State.nip05.domain}") }
+                                    }
                                 }
                             }
                         },
