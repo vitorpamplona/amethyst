@@ -41,6 +41,18 @@ object QuerySerializer {
         query.authorNames.forEach { name ->
             parts.add("from:$name")
         }
+        query.recipients.forEach { hex ->
+            val npub =
+                try {
+                    NPub.create(hex)
+                } catch (_: Exception) {
+                    null
+                }
+            parts.add("to:${npub ?: hex}")
+        }
+        query.recipientNames.forEach { name ->
+            parts.add("to:$name")
+        }
         query.kinds.forEach { kind ->
             val name = KindRegistry.nameFor(kind)
             parts.add("kind:${name ?: kind}")

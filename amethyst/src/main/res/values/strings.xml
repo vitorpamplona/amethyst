@@ -1930,4 +1930,16 @@
     <string name="event_sync_date_filter_all_time">All time</string>
     <string name="event_sync_date_filter_last_sync">Last sync: %1$s</string>
     <string name="event_sync_date_filter_since_last_sync">Since Last Sync</string>
+
+    <string name="search_filter_from">From</string>
+    <string name="search_filter_to">To</string>
+    <string name="search_filter_since">Since</string>
+    <string name="search_filter_until">Until</string>
+    <string name="search_filter_kind">Kind</string>
+    <string name="search_filter_kinds">Kinds</string>
+    <string name="search_filter_pick_user">Pick User</string>
+    <string name="search_filter_username_or_npub">Username or npub</string>
+    <string name="search_filter_pick_date">Pick Date</string>
+    <string name="search_filter_pick_kinds">Pick Event Kinds</string>
+    <string name="search_filter_selected_count">%1$s selected</string>
 </resources>

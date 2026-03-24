@@ -30,6 +30,9 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.search.QueryParser
+import com.vitorpamplona.amethyst.commons.search.QuerySerializer
+import com.vitorpamplona.amethyst.commons.search.SearchQuery
 import com.vitorpamplona.amethyst.commons.ui.feeds.InvalidatableContent
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -67,7 +70,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 
 @Stable
-@OptIn(FlowPreview::class)
+@OptIn(FlowPreview::class, kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class SearchBarViewModel(
     val account: Account,
     val nip05Client: INip05Client,
@@ -85,6 +88,12 @@ class SearchBarViewModel(
             .distinctUntilChanged()
             .onEach(::updateDataSource)
             .stateIn(viewModelScope, SharingStarted.Eagerly, searchValue)
+
+    val parsedQuery =
+        searchValueFlow
+            .debounce(200)
+            .mapLatest { QueryParser.parse(it) }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, SearchQuery.EMPTY)
 
     val searchDataSourceState = SearchQueryState(MutableStateFlow(searchValue), account)
 
@@ -251,6 +260,12 @@ class SearchBarViewModel(
     }
 
     fun clear() = updateSearchValue("")
+
+    fun updateFromParsedQuery(transform: (SearchQuery) -> SearchQuery) {
+        val current = QueryParser.parse(searchValue)
+        val updated = transform(current)
+        updateSearchValue(QuerySerializer.serialize(updated))
+    }
 
     suspend fun updateDataSource(searchTerm: String) {
         if (searchTerm.isBlank()) {

@@ -29,6 +29,8 @@ data class SearchQuery(
     val text: String = "",
     val authors: ImmutableList<String> = persistentListOf(),
     val authorNames: ImmutableList<String> = persistentListOf(),
+    val recipients: ImmutableList<String> = persistentListOf(),
+    val recipientNames: ImmutableList<String> = persistentListOf(),
     val kinds: ImmutableList<Int> = persistentListOf(),
     val since: Long? = null,
     val until: Long? = null,
@@ -44,6 +46,8 @@ data class SearchQuery(
             text.isBlank() &&
                 authors.isEmpty() &&
                 authorNames.isEmpty() &&
+                recipients.isEmpty() &&
+                recipientNames.isEmpty() &&
                 kinds.isEmpty() &&
                 since == null &&
                 until == null &&

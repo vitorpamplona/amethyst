@@ -115,7 +115,10 @@ fun SearchScreen(
     DisappearingScaffold(
         isInvertedLayout = false,
         topBar = {
-            SearchBar(searchBarViewModel, accountViewModel, nav)
+            Column {
+                SearchBar(searchBarViewModel, accountViewModel, nav)
+                SearchFilterChipsRow(searchBarViewModel)
+            }
         },
         bottomBar = {
             AppBottomBar(Route.Search, accountViewModel) { route ->

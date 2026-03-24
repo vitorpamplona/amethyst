@@ -52,7 +52,7 @@ sealed interface Token {
 }
 
 object QueryParser {
-    private val KNOWN_OPERATORS = setOf("from", "kind", "since", "until", "lang", "domain")
+    private val KNOWN_OPERATORS = setOf("from", "to", "kind", "since", "until", "lang", "domain")
 
     fun parse(input: String): SearchQuery {
         if (input.isBlank()) return SearchQuery.EMPTY
@@ -156,6 +156,8 @@ object QueryParser {
     private fun buildQuery(tokens: List<Token>): SearchQuery {
         val authors = mutableListOf<String>()
         val authorNames = mutableListOf<String>()
+        val recipients = mutableListOf<String>()
+        val recipientNames = mutableListOf<String>()
         val kinds = mutableListOf<Int>()
         val hashtags = mutableListOf<String>()
         val excludeTerms = mutableListOf<String>()
@@ -179,6 +181,15 @@ object QueryParser {
                                 authors.add(hex)
                             } else {
                                 authorNames.add(token.value)
+                            }
+                        }
+
+                        "to" -> {
+                            val hex = decodePublicKeyAsHexOrNull(token.value)
+                            if (hex != null) {
+                                recipients.add(hex)
+                            } else {
+                                recipientNames.add(token.value)
                             }
                         }
 
@@ -268,6 +279,8 @@ object QueryParser {
             text = textParts.joinToString(" "),
             authors = authors.distinct().toImmutableList(),
             authorNames = authorNames.distinct().toImmutableList(),
+            recipients = recipients.distinct().toImmutableList(),
+            recipientNames = recipientNames.distinct().toImmutableList(),
             kinds = kinds.distinct().toImmutableList(),
             since = since,
             until = until,
