@@ -161,6 +161,10 @@ class ChessPollingDelegate(
      */
     fun removeGameId(gameId: String) {
         activeGameIdsFlow.value = activeGameIdsFlow.value - gameId
+        // If this was the focused game, clear focus to stop re-polling a finished game
+        if (_focusedGameId.value == gameId) {
+            _focusedGameId.value = null
+        }
     }
 
     /**

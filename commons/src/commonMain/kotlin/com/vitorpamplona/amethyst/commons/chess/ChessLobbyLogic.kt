@@ -677,6 +677,8 @@ class ChessLobbyLogic(
             Log.d("chessdebug", "[Lobby] refreshGame: SKIPPED game ${startEventId.take(8)} - loaded ${TimeUtils.now() - lastLoaded}s ago")
             return
         }
+        // Mark immediately to prevent concurrent fetches for the same game
+        recentlyLoadedGames[startEventId] = TimeUtils.now()
 
         Log.d("chessdebug", "[Lobby] refreshGame: fetching game ${startEventId.take(8)} from relays")
         val events = fetcher.fetchGameEvents(startEventId)
