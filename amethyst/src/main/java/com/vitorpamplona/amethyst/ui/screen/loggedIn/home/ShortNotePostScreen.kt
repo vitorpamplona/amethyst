@@ -25,6 +25,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Parcelable
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -46,6 +47,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -77,6 +79,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
+import com.vitorpamplona.amethyst.ui.note.creators.anonymous.AnonymousPostButton
 import com.vitorpamplona.amethyst.ui.note.creators.contentWarning.ContentSensitivityExplainer
 import com.vitorpamplona.amethyst.ui.note.creators.contentWarning.MarkAsSensitiveButton
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.ShowEmojiSuggestionList
@@ -278,16 +281,35 @@ private fun NewPostScreenBody(
                     }
                 }
 
+                if (postViewModel.wantsAnonymousPost) {
+                    Row(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .background(MaterialTheme.colorScheme.errorContainer)
+                                .padding(horizontal = Size10dp, vertical = 8.dp),
+                        verticalAlignment = CenterVertically,
+                    ) {
+                        Text(
+                            text = stringRes(R.string.anonymous_reply_warning),
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                }
+
                 // Only show text input if no voice message is being posted
                 if (postViewModel.voiceMetadata == null && postViewModel.voiceRecording == null) {
                     Row(
                         modifier = Modifier.padding(vertical = Size10dp),
                     ) {
-                        BaseUserPicture(
-                            accountViewModel.userProfile(),
-                            Size35dp,
-                            accountViewModel = accountViewModel,
-                        )
+                        if (!postViewModel.wantsAnonymousPost) {
+                            BaseUserPicture(
+                                accountViewModel.userProfile(),
+                                Size35dp,
+                                accountViewModel = accountViewModel,
+                            )
+                        }
                         MessageField(
                             R.string.what_s_on_your_mind,
                             postViewModel,
@@ -601,6 +623,10 @@ private fun BottomRowActions(postViewModel: ShortNotePostViewModel) {
             AddLnInvoiceButton(postViewModel.wantsInvoice) {
                 postViewModel.wantsInvoice = !postViewModel.wantsInvoice
             }
+        }
+
+        AnonymousPostButton(postViewModel.wantsAnonymousPost) {
+            postViewModel.wantsAnonymousPost = !postViewModel.wantsAnonymousPost
         }
     }
 }
