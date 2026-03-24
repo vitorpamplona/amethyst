@@ -290,6 +290,7 @@
     <string name="nip_05">Nostr-cím</string>
     <string name="never">soha</string>
     <string name="now">most</string>
+    <string name="seconds">másodperc</string>
     <string name="h">ó</string>
     <string name="m">p</string>
     <string name="d">n</string>
@@ -447,6 +448,8 @@
     <string name="poll_zap_value_max">Maximum Zap</string>
     <string name="poll_consensus_threshold">Együttműködés</string>
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
+    <string name="poll_single_choice">Egyetlen lehetőség</string>
+    <string name="poll_multiple_choice">Több lehetőség</string>
     <string name="poll_closing_date_time">Szavazás lezárásának dátuma és ideje</string>
     <string name="poll_closing_in">A szavazás lezárul %1$s múlva</string>
     <string name="poll_closing_time">Szavazás lezárása</string>
