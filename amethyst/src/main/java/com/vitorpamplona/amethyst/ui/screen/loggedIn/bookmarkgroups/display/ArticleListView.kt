@@ -106,7 +106,7 @@ fun ArticleList(
         contentPadding = FeedPadding,
         state = listState,
     ) {
-        itemsIndexed(articles, key = { _, item -> item.toNAddr() }) { _, item ->
+        itemsIndexed(articles, key = { _, item -> item.address }) { _, item ->
             NoteCompose(
                 baseNote = item,
                 modifier = Modifier.animateContentSize(),

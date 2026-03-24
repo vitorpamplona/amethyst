@@ -117,6 +117,7 @@ import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.tags.OptionTag
+import com.vitorpamplona.quartz.nip88Polls.poll.tags.PollType
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTagBuilder
 import com.vitorpamplona.quartz.nip92IMeta.imetas
 import com.vitorpamplona.quartz.nip94FileMetadata.alt
@@ -238,6 +239,7 @@ open class ShortNotePostViewModel :
     var canUsePoll by mutableStateOf(false)
     var wantsPoll by mutableStateOf(false)
     var pollOptions: SnapshotStateMap<Int, OptionTag> = newStateMapPollOptions()
+    var pollType by mutableStateOf(PollType.SINGLE_CHOICE)
     var closedAt by mutableLongStateOf(TimeUtils.oneDayAhead())
 
     // ZapPolls
@@ -336,6 +338,7 @@ open class ShortNotePostViewModel :
                         val currentMentions =
                             (replyNote.event as? TextNoteEvent)
                                 ?.mentions()
+                                ?.toSet()
                                 ?.map { LocalCache.getOrCreateUser(it.pubKey) }
                                 ?: emptyList()
 
@@ -490,8 +493,8 @@ open class ShortNotePostViewModel :
             }
 
         pTags =
-            draftEvent.tags.filter { it.size > 1 && it[0] == "p" }.map {
-                LocalCache.getOrCreateUser(it[1])
+            draftEvent.tags.filter { it.size > 1 && it[0] == "p" }.mapNotNull {
+                LocalCache.checkGetOrCreateUser(it[1])
             }
 
         draftEvent.tags.filter { it.size > 3 && (it[0] == "e" || it[0] == "a") && it[3] == "fork" }.forEach {
@@ -576,8 +579,8 @@ open class ShortNotePostViewModel :
             }
 
         pTags =
-            draftEvent.tags.filter { it.size > 1 && it[0] == "p" }.map {
-                LocalCache.getOrCreateUser(it[1])
+            draftEvent.tags.filter { it.size > 1 && it[0] == "p" }.mapNotNull {
+                LocalCache.checkGetOrCreateUser(it[1])
             }
 
         canUsePoll = originalNote == null
@@ -596,6 +599,7 @@ open class ShortNotePostViewModel :
             pollOptions[index] = tag
         }
 
+        pollType = draftEvent.pollType() ?: PollType.SINGLE_CHOICE
         closedAt = draftEvent.endsAt() ?: TimeUtils.oneDayAhead()
 
         message = TextFieldValue(draftEvent.content)
@@ -647,8 +651,8 @@ open class ShortNotePostViewModel :
             }
 
         pTags =
-            draftEvent.tags.filter { it.size > 1 && it[0] == "p" }.map {
-                LocalCache.getOrCreateUser(it[1])
+            draftEvent.tags.filter { it.size > 1 && it[0] == "p" }.mapNotNull {
+                LocalCache.checkGetOrCreateUser(it[1])
             }
 
         canUsePoll = originalNote == null
@@ -828,7 +832,7 @@ open class ShortNotePostViewModel :
                 accountViewModel.account.nip65RelayList.outboxFlow.value
                     .toList()
 
-            PollEvent.build(tagger.message, options, closedAt, relays) {
+            PollEvent.build(tagger.message, options, closedAt, relays, pollType) {
                 pTags(tagger.directMentionsUsers.map { it.toPTag() })
                 quotes(quotes)
                 hashtags(findHashtags(tagger.message))
@@ -1054,6 +1058,7 @@ open class ShortNotePostViewModel :
 
         wantsPoll = false
         pollOptions = newStateMapPollOptions()
+        pollType = PollType.SINGLE_CHOICE
         closedAt = TimeUtils.oneDayAhead()
 
         wantsZapPoll = false

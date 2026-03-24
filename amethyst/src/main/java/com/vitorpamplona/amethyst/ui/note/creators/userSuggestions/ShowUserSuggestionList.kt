@@ -30,23 +30,33 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.Nip05State
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.UserSearchDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.layouts.listItem.SlimListItem
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
+import com.vitorpamplona.amethyst.ui.note.ObserveAndRenderNIP05VerifiedSymbol
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.WatchAndDisplayNip05Row
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.ui.theme.Font14SP
+import com.vitorpamplona.amethyst.ui.theme.NIP05IconSize
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
+import com.vitorpamplona.amethyst.ui.theme.nip05
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -143,5 +153,53 @@ fun UserLine(
                 WatchAndDisplayNip05Row(baseUser, accountViewModel)
             }
         },
+    )
+}
+
+@Composable
+private fun WatchAndDisplayNip05Row(
+    user: User,
+    accountViewModel: AccountViewModel,
+) {
+    val nip05StateMetadata by user.nip05State().flow.collectAsStateWithLifecycle()
+
+    when (val nip05State = nip05StateMetadata) {
+        is Nip05State.Exists -> {
+            NonClickableObserveAndDisplayNIP05(nip05State, accountViewModel)
+        }
+
+        else -> {
+            Text(
+                text = user.pubkeyDisplayHex(),
+                fontSize = Font14SP,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+@Composable
+private fun NonClickableObserveAndDisplayNIP05(
+    nip05State: Nip05State.Exists,
+    accountViewModel: AccountViewModel,
+) {
+    if (nip05State.nip05.name != "_") {
+        Text(
+            text = remember(nip05State) { AnnotatedString(nip05State.nip05.name) },
+            fontSize = Font14SP,
+            color = MaterialTheme.colorScheme.nip05,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+
+    ObserveAndRenderNIP05VerifiedSymbol(nip05State, 1, NIP05IconSize, accountViewModel)
+
+    Text(
+        text = nip05State.nip05.domain,
+        style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.nip05, fontSize = Font14SP),
+        maxLines = 1,
+        overflow = TextOverflow.Visible,
     )
 }
