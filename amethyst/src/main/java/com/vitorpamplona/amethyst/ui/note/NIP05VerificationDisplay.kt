@@ -379,6 +379,7 @@ fun ObserveAndDisplayNIP05(
     accountViewModel: AccountViewModel,
 ) {
     val uri = LocalUriHandler.current
+    val isNamecoinDomain = nip05State.nip05.domain.endsWith(".bit")
 
     if (nip05State.nip05.name != "_") {
         Text(
@@ -392,13 +393,23 @@ fun ObserveAndDisplayNIP05(
 
     ObserveAndRenderNIP05VerifiedSymbol(nip05State, 1, NIP05IconSize, accountViewModel)
 
-    ClickableTextPrimary(
-        text = nip05State.nip05.domain,
-        onClick = { runCatching { uri.openUri("https://${nip05State.nip05.domain}") } },
-        style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.nip05, fontSize = Font14SP),
-        maxLines = 1,
-        overflow = TextOverflow.Visible,
-    )
+    if (isNamecoinDomain) {
+        // .bit domains are Namecoin blockchain names — not HTTP URLs
+        Text(
+            text = nip05State.nip05.domain,
+            style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.nip05, fontSize = Font14SP),
+            maxLines = 1,
+            overflow = TextOverflow.Visible,
+        )
+    } else {
+        ClickableTextPrimary(
+            text = nip05State.nip05.domain,
+            onClick = { runCatching { uri.openUri("https://${nip05State.nip05.domain}") } },
+            style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.nip05, fontSize = Font14SP),
+            maxLines = 1,
+            overflow = TextOverflow.Visible,
+        )
+    }
 }
 
 @Composable
@@ -408,6 +419,7 @@ fun DisplayNIP05(
     accountViewModel: AccountViewModel,
 ) {
     val uri = LocalUriHandler.current
+    val isNamecoinDomain = nip05State.nip05.domain.endsWith(".bit")
 
     if (nip05State.nip05.name != "_") {
         Text(
@@ -421,13 +433,23 @@ fun DisplayNIP05(
 
     RenderNIP05VerifiedSymbol(nip05VerifState, 1, NIP05IconSize, accountViewModel)
 
-    ClickableTextPrimary(
-        text = nip05State.nip05.domain,
-        onClick = { runCatching { uri.openUri("https://${nip05State.nip05.domain}") } },
-        style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.nip05, fontSize = Font14SP),
-        maxLines = 1,
-        overflow = TextOverflow.Visible,
-    )
+    if (isNamecoinDomain) {
+        // .bit domains are Namecoin blockchain names — not HTTP URLs
+        Text(
+            text = nip05State.nip05.domain,
+            style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.nip05, fontSize = Font14SP),
+            maxLines = 1,
+            overflow = TextOverflow.Visible,
+        )
+    } else {
+        ClickableTextPrimary(
+            text = nip05State.nip05.domain,
+            onClick = { runCatching { uri.openUri("https://${nip05State.nip05.domain}") } },
+            style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.nip05, fontSize = Font14SP),
+            maxLines = 1,
+            overflow = TextOverflow.Visible,
+        )
+    }
 }
 
 @Composable

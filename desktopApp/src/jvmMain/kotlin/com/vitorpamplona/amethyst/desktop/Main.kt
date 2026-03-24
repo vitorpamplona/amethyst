@@ -79,9 +79,14 @@ import com.vitorpamplona.amethyst.desktop.network.DefaultRelays
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.service.images.DesktopImageLoaderSetup
 import com.vitorpamplona.amethyst.desktop.service.media.VlcjPlayerPool
+import com.vitorpamplona.amethyst.desktop.service.namecoin.DesktopNamecoinNameService
+import com.vitorpamplona.amethyst.desktop.service.namecoin.DesktopNamecoinPreferences
+import com.vitorpamplona.amethyst.desktop.service.namecoin.LocalNamecoinPreferences
+import com.vitorpamplona.amethyst.desktop.service.namecoin.LocalNamecoinService
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.desktop.ui.ComposeNoteDialog
 import com.vitorpamplona.amethyst.desktop.ui.ConnectingRelaysScreen
+import com.vitorpamplona.amethyst.desktop.ui.ImportFollowListDialog
 import com.vitorpamplona.amethyst.desktop.ui.LoginScreen
 import com.vitorpamplona.amethyst.desktop.ui.ZapFeedback
 import com.vitorpamplona.amethyst.desktop.ui.auth.ForceLogoutDialog
@@ -96,11 +101,6 @@ import com.vitorpamplona.amethyst.desktop.ui.media.LocalAwtWindow
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalIsImmersiveFullscreen
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalWindowState
 import com.vitorpamplona.amethyst.desktop.ui.profile.ProfileInfoCard
-import com.vitorpamplona.amethyst.desktop.service.namecoin.DesktopNamecoinNameService
-import com.vitorpamplona.amethyst.desktop.service.namecoin.DesktopNamecoinPreferences
-import com.vitorpamplona.amethyst.desktop.service.namecoin.LocalNamecoinPreferences
-import com.vitorpamplona.amethyst.desktop.service.namecoin.LocalNamecoinService
-import com.vitorpamplona.amethyst.desktop.ui.ImportFollowListDialog
 import com.vitorpamplona.amethyst.desktop.ui.relay.RelayStatusCard
 import com.vitorpamplona.amethyst.desktop.ui.settings.MediaServerSettings
 import com.vitorpamplona.amethyst.desktop.ui.settings.NamecoinSettingsSection
@@ -164,7 +164,8 @@ fun main() {
             crashLogFile.appendText(message)
             java.io.PrintWriter(java.io.FileWriter(crashLogFile, true)).use { throwable.printStackTrace(it) }
             crashLogFile.appendText("\n")
-        } catch (_: Exception) {}
+        } catch (_: Exception) {
+        }
     }
     DesktopImageLoaderSetup.setup()
     Runtime.getRuntime().addShutdownHook(
@@ -465,9 +466,10 @@ fun App(
     val relayManager = remember { DesktopRelayConnectionManager() }
     val localCache = remember { DesktopLocalCache() }
     val namecoinPreferences = remember { DesktopNamecoinPreferences() }
-    val namecoinService = remember {
-        DesktopNamecoinNameService(preferencesProvider = { namecoinPreferences.current })
-    }
+    val namecoinService =
+        remember {
+            DesktopNamecoinNameService(preferencesProvider = { namecoinPreferences.current })
+        }
     val accountState by accountManager.accountState.collectAsState()
     val scope = remember { CoroutineScope(SupervisorJob() + Dispatchers.Main) }
 
@@ -526,98 +528,98 @@ fun App(
             LocalNamecoinPreferences provides namecoinPreferences,
             LocalNamecoinService provides namecoinService,
         ) {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.background,
-        ) {
-            when (accountState) {
-                is AccountState.LoggedOut -> {
-                    LoginScreen(
-                        accountManager = accountManager,
-                        onLoginSuccess = {
-                            // Start heartbeat if bunker account
-                            val current = accountManager.currentAccount()
-                            if (current?.signerType is com.vitorpamplona.amethyst.desktop.account.SignerType.Remote) {
-                                accountManager.startHeartbeat(scope)
-                            }
-                        },
-                    )
-                }
-
-                is AccountState.ConnectingRelays -> {
-                    val relays by relayManager.relayStatuses.collectAsState()
-                    ConnectingRelaysScreen(
-                        subtitle = "Restoring remote signer session",
-                        relayStatuses = relays,
-                    )
-                }
-
-                is AccountState.LoggedIn -> {
-                    val account = accountState as AccountState.LoggedIn
-                    val nwcConnection by accountManager.nwcConnection.collectAsState()
-
-                    // Load NWC connection on first composition
-                    LaunchedEffect(Unit) {
-                        accountManager.loadNwcConnection()
-                    }
-
-                    MainContent(
-                        layoutMode = layoutMode,
-                        deckState = deckState,
-                        relayManager = relayManager,
-                        localCache = localCache,
-                        accountManager = accountManager,
-                        account = account,
-                        nwcConnection = nwcConnection,
-                        subscriptionsCoordinator = subscriptionsCoordinator,
-                        appScope = scope,
-                        onShowComposeDialog = onShowComposeDialog,
-                        onShowReplyDialog = onShowReplyDialog,
-                        onShowAddColumnDialog = onShowAddColumnDialog,
-                    )
-
-                    // Compose dialog
-                    if (showComposeDialog) {
-                        ComposeNoteDialog(
-                            onDismiss = onDismissComposeDialog,
-                            relayManager = relayManager,
-                            account = account,
-                            replyTo = replyToNote,
-                        )
-                    }
-
-                    // Add column dialog
-                    if (showAddColumnDialog) {
-                        AddColumnDialog(
-                            onDismiss = onDismissAddColumnDialog,
-                            onAdd = { type ->
-                                deckState.addColumn(type)
-                                onDismissAddColumnDialog()
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = MaterialTheme.colorScheme.background,
+            ) {
+                when (accountState) {
+                    is AccountState.LoggedOut -> {
+                        LoginScreen(
+                            accountManager = accountManager,
+                            onLoginSuccess = {
+                                // Start heartbeat if bunker account
+                                val current = accountManager.currentAccount()
+                                if (current?.signerType is com.vitorpamplona.amethyst.desktop.account.SignerType.Remote) {
+                                    accountManager.startHeartbeat(scope)
+                                }
                             },
                         )
                     }
 
-                    // Import Follow List dialog
-                    if (showImportFollowListDialog) {
-                        ImportFollowListDialog(
-                            onDismiss = onDismissImportFollowListDialog,
-                            relayManager = relayManager,
-                            account = account,
-                            localCache = localCache,
+                    is AccountState.ConnectingRelays -> {
+                        val relays by relayManager.relayStatuses.collectAsState()
+                        ConnectingRelaysScreen(
+                            subtitle = "Restoring remote signer session",
+                            relayStatuses = relays,
                         )
                     }
+
+                    is AccountState.LoggedIn -> {
+                        val account = accountState as AccountState.LoggedIn
+                        val nwcConnection by accountManager.nwcConnection.collectAsState()
+
+                        // Load NWC connection on first composition
+                        LaunchedEffect(Unit) {
+                            accountManager.loadNwcConnection()
+                        }
+
+                        MainContent(
+                            layoutMode = layoutMode,
+                            deckState = deckState,
+                            relayManager = relayManager,
+                            localCache = localCache,
+                            accountManager = accountManager,
+                            account = account,
+                            nwcConnection = nwcConnection,
+                            subscriptionsCoordinator = subscriptionsCoordinator,
+                            appScope = scope,
+                            onShowComposeDialog = onShowComposeDialog,
+                            onShowReplyDialog = onShowReplyDialog,
+                            onShowAddColumnDialog = onShowAddColumnDialog,
+                        )
+
+                        // Compose dialog
+                        if (showComposeDialog) {
+                            ComposeNoteDialog(
+                                onDismiss = onDismissComposeDialog,
+                                relayManager = relayManager,
+                                account = account,
+                                replyTo = replyToNote,
+                            )
+                        }
+
+                        // Add column dialog
+                        if (showAddColumnDialog) {
+                            AddColumnDialog(
+                                onDismiss = onDismissAddColumnDialog,
+                                onAdd = { type ->
+                                    deckState.addColumn(type)
+                                    onDismissAddColumnDialog()
+                                },
+                            )
+                        }
+
+                        // Import Follow List dialog
+                        if (showImportFollowListDialog) {
+                            ImportFollowListDialog(
+                                onDismiss = onDismissImportFollowListDialog,
+                                relayManager = relayManager,
+                                account = account,
+                                localCache = localCache,
+                            )
+                        }
+                    }
+                }
+
+                // Force logout dialog overlay
+                val forceLogoutReason by accountManager.forceLogoutReason.collectAsState()
+                forceLogoutReason?.let { reason ->
+                    ForceLogoutDialog(
+                        reason = reason,
+                        onDismiss = { accountManager.clearForceLogoutReason() },
+                    )
                 }
             }
-
-            // Force logout dialog overlay
-            val forceLogoutReason by accountManager.forceLogoutReason.collectAsState()
-            forceLogoutReason?.let { reason ->
-                ForceLogoutDialog(
-                    reason = reason,
-                    onDismiss = { accountManager.clearForceLogoutReason() },
-                )
-            }
-        }
         } // end CompositionLocalProvider
     }
 }
