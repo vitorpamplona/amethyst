@@ -496,35 +496,7 @@ class DesktopCachePipelineTest {
     }
 
     // -----------------------------------------------------------------------
-    // 8. BoundedLargeCache eviction
-    // -----------------------------------------------------------------------
-
-    @Test
-    fun `BoundedLargeCache evicts when over capacity`() {
-        val cache = BoundedLargeCache<String, String>(10, evictPercent = 0.5f)
-
-        repeat(15) { i ->
-            cache.put("key_${i.toString().padStart(3, '0')}", "value_$i")
-        }
-
-        assertTrue(cache.size() <= 10, "Cache should not exceed max size, got ${cache.size()}")
-    }
-
-    @Test
-    fun `BoundedLargeCache get returns null for evicted entries`() {
-        val cache = BoundedLargeCache<String, String>(5, evictPercent = 0.5f)
-
-        repeat(10) { i ->
-            cache.put("key_${i.toString().padStart(3, '0')}", "value_$i")
-        }
-
-        // Some early entries should have been evicted
-        val size = cache.size()
-        assertTrue(size <= 5, "Cache should be at or below max size")
-    }
-
-    // -----------------------------------------------------------------------
-    // 9. Additive filter incremental updates
+    // 8. Additive filter incremental updates
     // -----------------------------------------------------------------------
 
     @Test

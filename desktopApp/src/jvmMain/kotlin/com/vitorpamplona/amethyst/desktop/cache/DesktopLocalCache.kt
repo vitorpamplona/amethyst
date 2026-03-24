@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheEventStream
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
+import com.vitorpamplona.amethyst.commons.model.cache.LargeSoftCache
 import com.vitorpamplona.amethyst.commons.services.nwc.NwcPaymentTracker
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -63,9 +64,9 @@ import java.util.concurrent.ConcurrentHashMap
  * Supports searching users by name prefix for the search functionality.
  */
 class DesktopLocalCache : ICacheProvider {
-    val users = BoundedLargeCache<HexKey, User>(MAX_USERS)
-    val notes = BoundedLargeCache<HexKey, Note>(MAX_NOTES)
-    val addressableNotes = BoundedLargeCache<String, AddressableNote>(MAX_ADDRESSABLE)
+    val users = LargeSoftCache<HexKey, User>()
+    val notes = LargeSoftCache<HexKey, Note>()
+    val addressableNotes = LargeSoftCache<String, AddressableNote>()
     private val deletedEvents = ConcurrentHashMap.newKeySet<HexKey>()
 
     val eventStream = DesktopCacheEventStream()
@@ -75,9 +76,6 @@ class DesktopLocalCache : ICacheProvider {
     val followedUsers: StateFlow<Set<HexKey>> = _followedUsers.asStateFlow()
 
     companion object {
-        const val MAX_NOTES = 50_000
-        const val MAX_USERS = 25_000
-        const val MAX_ADDRESSABLE = 10_000
     }
 
     val paymentTracker = NwcPaymentTracker()
@@ -114,10 +112,10 @@ class DesktopLocalCache : ICacheProvider {
             )
 
         // Search by name/displayName/nip05/lud16
-        return users
-            .values()
-            .filter { user ->
-                val metadata = user.metadataOrNull()
+        val results = mutableListOf<User>()
+        users.forEach { _, user ->
+            val metadata = user.metadataOrNull()
+            val matches =
                 if (metadata == null) {
                     user.pubkeyHex.startsWith(prefix, true) ||
                         user.pubkeyNpub().startsWith(prefix, true)
@@ -126,7 +124,10 @@ class DesktopLocalCache : ICacheProvider {
                         user.pubkeyHex.startsWith(prefix, true) ||
                         user.pubkeyNpub().startsWith(prefix, true)
                 }
-            }.sortedWith(
+            if (matches) results.add(user)
+        }
+        return results
+            .sortedWith(
                 compareBy(
                     { it.metadataOrNull()?.anyNameStartsWith(dualCase) == false },
                     { it.metadataOrNull()?.anyAddressStartsWith(dualCase) == false },
