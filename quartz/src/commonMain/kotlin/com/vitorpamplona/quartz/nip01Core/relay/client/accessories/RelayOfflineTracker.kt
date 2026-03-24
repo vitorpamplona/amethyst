@@ -36,7 +36,7 @@ class RelayOfflineTracker(
         const val TAG = "RelayOfflineTracker"
     }
 
-    val cannotConnectRelays = mutableSetOf<NormalizedRelayUrl>()
+    var cannotConnectRelays = setOf<NormalizedRelayUrl>()
 
     private val clientListener =
         object : IRelayClientListener {
@@ -45,14 +45,14 @@ class RelayOfflineTracker(
                 pingMillis: Int,
                 compressed: Boolean,
             ) {
-                cannotConnectRelays.remove(relay.url)
+                cannotConnectRelays -= relay.url
             }
 
             override fun onCannotConnect(
                 relay: IRelayClient,
                 errorMessage: String,
             ) {
-                cannotConnectRelays.add(relay.url)
+                cannotConnectRelays += relay.url
             }
         }
 

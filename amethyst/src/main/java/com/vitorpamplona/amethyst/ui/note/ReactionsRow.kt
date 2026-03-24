@@ -672,7 +672,7 @@ fun ReplyViaVoiceReaction(
             }
         },
         maxDurationSeconds = MAX_VOICE_RECORD_SECONDS,
-    ) { isRecording, elapsedSeconds ->
+    ) { isRecording, elapsedSeconds, onStop ->
         if (voiceRecordingState != null) {
             SideEffect {
                 if (voiceRecordingState.value != isRecording) {
@@ -689,6 +689,7 @@ fun ReplyViaVoiceReaction(
                 isRecording = true,
                 elapsedSeconds = elapsedSeconds,
                 isCompact = true,
+                onClick = onStop,
             )
         } else {
             VoiceReplyIcon(iconSizeModifier, grayTint)
