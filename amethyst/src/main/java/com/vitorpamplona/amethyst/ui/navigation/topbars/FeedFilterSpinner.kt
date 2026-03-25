@@ -328,6 +328,7 @@ private enum class FeedGroup(
     HASHTAGS(R.string.feed_group_hashtags),
     COMMUNITIES(R.string.feed_group_communities),
     LISTS(R.string.feed_group_lists),
+    RELAYS(R.string.feed_group_relays),
 }
 
 private fun groupFeedDefinitions(options: ImmutableList<FeedDefinition>): Map<FeedGroup, List<IndexedFeedDefinition>> {
@@ -337,6 +338,7 @@ private fun groupFeedDefinitions(options: ImmutableList<FeedDefinition>): Map<Fe
             is HashtagName -> FeedGroup.HASHTAGS
             is CommunityName -> FeedGroup.COMMUNITIES
             is PeopleListName -> FeedGroup.LISTS
+            is RelayName -> FeedGroup.RELAYS
             else -> FeedGroup.FEEDS
         }
     }
