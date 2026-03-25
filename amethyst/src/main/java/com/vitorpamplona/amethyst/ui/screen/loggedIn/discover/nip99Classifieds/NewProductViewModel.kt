@@ -172,6 +172,7 @@ open class NewProductViewModel :
     var wantsForwardZapTo by mutableStateOf(false)
     override var forwardZapTo = mutableStateOf<SplitBuilder<User>>(SplitBuilder())
     override var forwardZapToEditting = mutableStateOf(TextFieldValue(""))
+    override val forwardZapToEdittingState = TextFieldState()
 
     // NSFW, Sensitive
     var wantsToMarkAsSensitive by mutableStateOf(false)
