@@ -233,6 +233,7 @@ object VideoCompressionHelper {
 
                                     // Sanity check: compression not smaller than original
                                     if (originalSize > 0 && size >= originalSize) {
+                                        File(path).delete()
                                         applicationContext.notifyUser(
                                             "Compressed file larger than original. Using original.",
                                             Log.WARN,

@@ -338,7 +338,7 @@ class UploadOrchestrator {
         try {
             val path = tempUri.path ?: return
             val file = File(path)
-            if (file.exists() && file.delete()) {
+            if (file.delete()) {
                 Log.d("UploadOrchestrator", "Deleted temp file: $path")
             }
         } catch (e: Exception) {
@@ -363,7 +363,11 @@ class UploadOrchestrator {
 
         val finalUri =
             stripAfterCompression(uri, compressed, mimeType, compressionQuality, stripMetadata, onStrippingFailed, context)
-                ?: return error(R.string.upload_cancelled)
+                ?: return error(R.string.upload_cancelled).also {
+                    deleteTempUri(compressed.uri, uri)
+                }
+
+        if (compressed.uri != finalUri) deleteTempUri(compressed.uri, uri)
 
         try {
             return when (server.type) {
@@ -372,10 +376,7 @@ class UploadOrchestrator {
                 ServerType.Blossom -> uploadBlossom(finalUri, compressed.contentType, compressed.size, alt, contentWarningReason, server.baseUrl, null, null, account, context)
             }
         } finally {
-            // Clean up intermediate temp files created by stripping and compression.
-            // Delete stripped file first (if different from compressed), then compressed (if different from original).
-            deleteTempUri(finalUri, compressed.uri)
-            deleteTempUri(compressed.uri, uri)
+            deleteTempUri(finalUri, uri)
         }
     }
 
@@ -397,9 +398,14 @@ class UploadOrchestrator {
 
         val finalUri =
             stripAfterCompression(uri, compressed, mimeType, compressionQuality, stripMetadata, onStrippingFailed, context)
-                ?: return error(R.string.upload_cancelled)
+                ?: return error(R.string.upload_cancelled).also {
+                    deleteTempUri(compressed.uri, uri)
+                }
+
+        if (compressed.uri != finalUri) deleteTempUri(compressed.uri, uri)
 
         val encrypted = EncryptFiles().encryptFile(context, finalUri, encrypt)
+        deleteTempUri(finalUri, uri)
 
         try {
             return when (server.type) {
@@ -408,10 +414,7 @@ class UploadOrchestrator {
                 ServerType.Blossom -> uploadBlossom(encrypted.uri, encrypted.contentType, encrypted.size, alt, contentWarningReason, server.baseUrl, compressed.contentType, encrypted.originalHash, account, context)
             }
         } finally {
-            // Clean up all intermediate temp files: encrypted, stripped, and compressed.
-            deleteTempUri(encrypted.uri, finalUri)
-            deleteTempUri(finalUri, compressed.uri)
-            deleteTempUri(compressed.uri, uri)
+            deleteTempUri(encrypted.uri, uri)
         }
     }
 }
