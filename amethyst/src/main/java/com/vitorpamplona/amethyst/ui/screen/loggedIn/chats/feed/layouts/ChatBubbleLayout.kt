@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -36,7 +38,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -58,6 +62,7 @@ import com.vitorpamplona.amethyst.ui.theme.chatBackground
 import com.vitorpamplona.amethyst.ui.theme.chatDraftBackground
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.messageBubbleLimits
+import kotlinx.coroutines.delay
 
 private const val RELAYS_AND_ACTIONS_TEXT = "Relays and Actions"
 
@@ -71,6 +76,8 @@ fun ChatBubbleLayout(
     hasDetailsToShow: Boolean,
     drawAuthorInfo: Boolean,
     parentBackgroundColor: MutableState<Color>? = null,
+    shouldHighlight: Boolean = false,
+    onHighlightFinished: (() -> Unit)? = null,
     onClick: () -> Boolean,
     onAuthorClick: () -> Unit,
     actionMenu: @Composable (onDismiss: () -> Unit) -> Unit,
@@ -99,6 +106,24 @@ fun ChatBubbleLayout(
                 mutableStateOf(otherColors.compositeOver(parentBackgroundColor?.value ?: defaultBackground))
             }
         }
+
+    val highlightActive = remember { mutableStateOf(false) }
+
+    LaunchedEffect(shouldHighlight) {
+        if (shouldHighlight) {
+            highlightActive.value = true
+            delay(1500)
+            highlightActive.value = false
+            onHighlightFinished?.invoke()
+        }
+    }
+
+    val highlightColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f)
+    val animatedColor by animateColorAsState(
+        targetValue = if (highlightActive.value) highlightColor.compositeOver(bgColor.value) else bgColor.value,
+        animationSpec = tween(durationMillis = if (highlightActive.value) 300 else 800),
+        label = "highlightAnimation",
+    )
 
     Row(
         modifier = if (innerQuote) ChatPaddingInnerQuoteModifier else ChatPaddingModifier,
@@ -136,7 +161,7 @@ fun ChatBubbleLayout(
             modifier = if (innerQuote) Modifier else ChatBubbleMaxSizeModifier,
         ) {
             Surface(
-                color = bgColor.value,
+                color = animatedColor,
                 shape = if (isLoggedInUser) ChatBubbleShapeMe else ChatBubbleShapeThem,
                 modifier = clickableModifier,
             ) {

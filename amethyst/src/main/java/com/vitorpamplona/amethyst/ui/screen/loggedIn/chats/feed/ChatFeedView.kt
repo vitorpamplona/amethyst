@@ -28,6 +28,8 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -134,11 +136,13 @@ fun ChatFeedLoaded(
     }
 
     val scope = rememberCoroutineScope()
+    val highlightedNoteId = remember { mutableStateOf<String?>(null) }
     val onScrollToNote: (Note) -> Unit = { note ->
         val index = items.list.indexOfFirst { it.idHex == note.idHex }
         if (index >= 0) {
             scope.launch {
                 listState.animateScrollToItem(index)
+                highlightedNoteId.value = note.idHex
             }
         }
     }
@@ -160,6 +164,8 @@ fun ChatFeedLoaded(
                     onWantsToReply = onWantsToReply,
                     onWantsToEditDraft = onWantsToEditDraft,
                     onScrollToNote = onScrollToNote,
+                    shouldHighlight = highlightedNoteId.value == item.idHex,
+                    onHighlightFinished = { highlightedNoteId.value = null },
                 )
 
                 NewDateOrSubjectDivisor(items.list.getOrNull(index + 1), item)

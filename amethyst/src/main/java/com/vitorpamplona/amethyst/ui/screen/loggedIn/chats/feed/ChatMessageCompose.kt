@@ -96,6 +96,8 @@ fun ChatroomMessageCompose(
     onWantsToReply: (Note) -> Unit,
     onWantsToEditDraft: (Note) -> Unit,
     onScrollToNote: ((Note) -> Unit)? = null,
+    shouldHighlight: Boolean = false,
+    onHighlightFinished: (() -> Unit)? = null,
 ) {
     WatchNoteEvent(baseNote = baseNote, accountViewModel = accountViewModel, nav) {
         WatchBlockAndReport(
@@ -116,6 +118,8 @@ fun ChatroomMessageCompose(
                 onWantsToReply,
                 onWantsToEditDraft,
                 onScrollToNote,
+                shouldHighlight,
+                onHighlightFinished,
             )
         }
     }
@@ -133,6 +137,8 @@ fun NormalChatNote(
     onWantsToReply: (Note) -> Unit,
     onWantsToEditDraft: (Note) -> Unit,
     onScrollToNote: ((Note) -> Unit)? = null,
+    shouldHighlight: Boolean = false,
+    onHighlightFinished: (() -> Unit)? = null,
 ) {
     val isLoggedInUser =
         remember(note.author) {
@@ -170,6 +176,8 @@ fun NormalChatNote(
         hasDetailsToShow = note.zaps.isNotEmpty() || note.zapPayments.isNotEmpty() || note.reactions.isNotEmpty(),
         drawAuthorInfo = drawAuthorInfo,
         parentBackgroundColor = parentBackgroundColor,
+        shouldHighlight = shouldHighlight,
+        onHighlightFinished = onHighlightFinished,
         onClick = {
             if (note.event is ChannelCreateEvent) {
                 nav.nav(Route.PublicChatChannel(note.idHex))
