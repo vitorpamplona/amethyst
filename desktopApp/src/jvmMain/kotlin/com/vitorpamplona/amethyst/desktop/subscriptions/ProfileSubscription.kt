@@ -104,7 +104,11 @@ fun createUserPostsSubscription(
 ): SubscriptionConfig =
     SubscriptionConfig(
         subId = generateSubId("posts-${pubKeyHex.take(8)}"),
-        filters = listOf(FilterBuilders.textNotesFromAuthors(listOf(pubKeyHex), limit = limit)),
+        filters =
+            listOf(
+                FilterBuilders.textNotesFromAuthors(listOf(pubKeyHex), limit = limit),
+                FilterBuilders.longFormFromAuthors(listOf(pubKeyHex), limit = 50),
+            ),
         relays = relays,
         onEvent = onEvent,
         onEose = onEose,
