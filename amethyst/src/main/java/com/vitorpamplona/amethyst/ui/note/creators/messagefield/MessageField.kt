@@ -21,11 +21,6 @@
 package com.vitorpamplona.amethyst.ui.note.creators.messagefield
 
 import android.net.Uri
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.content.ReceiveContentListener
-import androidx.compose.foundation.content.TransferableContent
-import androidx.compose.foundation.content.consume
-import androidx.compose.foundation.content.contentReceiver
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.LocalTextStyle
@@ -52,7 +47,6 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MessageField(
     placeholder: Int,
@@ -60,75 +54,64 @@ fun MessageField(
     requestFocus: Boolean = true,
     onReceiveUri: ((Uri) -> Unit)? = null,
 ) {
-    val focusRequester = remember { FocusRequester() }
-    val keyboardController = LocalSoftwareKeyboardController.current
+    if (onReceiveUri != null) {
+        RichContentTextField(
+            value = viewModel.message,
+            onValueChange = viewModel::updateMessage,
+            onReceiveUri = onReceiveUri,
+            placeholder = stringRes(placeholder),
+        )
+    } else {
+        val focusRequester = remember { FocusRequester() }
+        val keyboardController = LocalSoftwareKeyboardController.current
 
-    if (requestFocus) {
-        LaunchedEffect(Unit) {
-            launch {
-                delay(200)
-                focusRequester.requestFocus()
-            }
-        }
-    }
-
-    val baseModifier =
-        Modifier
-            .fillMaxWidth()
-            .focusRequester(focusRequester)
-            .onFocusChanged {
-                if (it.isFocused) {
-                    keyboardController?.show()
+        if (requestFocus) {
+            LaunchedEffect(Unit) {
+                launch {
+                    delay(200)
+                    focusRequester.requestFocus()
                 }
             }
-
-    val modifier =
-        if (onReceiveUri != null) {
-            baseModifier.contentReceiver(
-                object : ReceiveContentListener {
-                    override fun onReceive(content: TransferableContent): TransferableContent? =
-                        content.consume { item ->
-                            val uri = item.uri
-                            if (uri != null) {
-                                onReceiveUri(uri)
-                                true
-                            } else {
-                                false
-                            }
-                        }
-                },
-            )
-        } else {
-            baseModifier
         }
 
-    ThinPaddingTextField(
-        value = viewModel.message,
-        onValueChange = viewModel::updateMessage,
-        keyboardOptions =
-            KeyboardOptions.Default.copy(
-                capitalization = KeyboardCapitalization.Sentences,
-            ),
-        modifier = modifier,
-        placeholder = {
-            Text(
-                text = stringRes(placeholder),
-                color = MaterialTheme.colorScheme.placeholderText,
-            )
-        },
-        colors =
-            OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Color.Transparent,
-                unfocusedBorderColor = Color.Transparent,
-            ),
-        visualTransformation = UrlUserTagTransformation(MaterialTheme.colorScheme.primary),
-        textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
-        contentPadding =
-            TextFieldDefaults.contentPaddingWithoutLabel(
-                start = 10.dp,
-                top = 5.dp,
-                end = 10.dp,
-                bottom = 5.dp,
-            ),
-    )
+        val modifier =
+            Modifier
+                .fillMaxWidth()
+                .focusRequester(focusRequester)
+                .onFocusChanged {
+                    if (it.isFocused) {
+                        keyboardController?.show()
+                    }
+                }
+
+        ThinPaddingTextField(
+            value = viewModel.message,
+            onValueChange = viewModel::updateMessage,
+            keyboardOptions =
+                KeyboardOptions.Default.copy(
+                    capitalization = KeyboardCapitalization.Sentences,
+                ),
+            modifier = modifier,
+            placeholder = {
+                Text(
+                    text = stringRes(placeholder),
+                    color = MaterialTheme.colorScheme.placeholderText,
+                )
+            },
+            colors =
+                OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color.Transparent,
+                    unfocusedBorderColor = Color.Transparent,
+                ),
+            visualTransformation = UrlUserTagTransformation(MaterialTheme.colorScheme.primary),
+            textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
+            contentPadding =
+                TextFieldDefaults.contentPaddingWithoutLabel(
+                    start = 10.dp,
+                    top = 5.dp,
+                    end = 10.dp,
+                    bottom = 5.dp,
+                ),
+        )
+    }
 }
