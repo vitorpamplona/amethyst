@@ -77,6 +77,7 @@ import com.vitorpamplona.amethyst.desktop.model.DesktopDmRelayState
 import com.vitorpamplona.amethyst.desktop.model.DesktopIAccount
 import com.vitorpamplona.amethyst.desktop.network.DefaultRelays
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
+import com.vitorpamplona.amethyst.desktop.service.highlights.DesktopHighlightStore
 import com.vitorpamplona.amethyst.desktop.service.images.DesktopImageLoaderSetup
 import com.vitorpamplona.amethyst.desktop.service.media.VlcjPlayerPool
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
@@ -609,6 +610,13 @@ fun MainContent(
             DesktopIAccount(account, localCache, relayManager, dmSendTracker, scope)
         }
 
+    val highlightStore = remember { DesktopHighlightStore(appScope) }
+    val draftStore =
+        remember {
+            com.vitorpamplona.amethyst.desktop.service.drafts
+                .DesktopDraftStore(appScope)
+        }
+
     // Subscribe to incoming DMs and process into chatroomList
     LaunchedEffect(account) {
         relayManager.connectedRelays.first { it.isNotEmpty() }
@@ -728,6 +736,8 @@ fun MainContent(
                             iAccount = iAccount,
                             nwcConnection = nwcConnection,
                             subscriptionsCoordinator = subscriptionsCoordinator,
+                            highlightStore = highlightStore,
+                            draftStore = draftStore,
                             appScope = appScope,
                             onShowComposeDialog = onShowComposeDialog,
                             onShowReplyDialog = onShowReplyDialog,
@@ -765,6 +775,8 @@ fun MainContent(
                             iAccount = iAccount,
                             nwcConnection = nwcConnection,
                             subscriptionsCoordinator = subscriptionsCoordinator,
+                            highlightStore = highlightStore,
+                            draftStore = draftStore,
                             appScope = appScope,
                             onShowComposeDialog = onShowComposeDialog,
                             onShowReplyDialog = onShowReplyDialog,

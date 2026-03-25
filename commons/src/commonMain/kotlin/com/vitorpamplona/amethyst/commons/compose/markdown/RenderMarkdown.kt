@@ -34,7 +34,18 @@ import com.halilibo.richtext.markdown.BasicMarkdown
 import com.halilibo.richtext.ui.RichTextStyle
 import com.halilibo.richtext.ui.material3.RichText
 
-private val ALLOWED_SCHEMES = setOf("https", "http", "nostr", "lightning")
+private val ALLOWED_SCHEMES = setOf("https", "http", "nostr", "lightning", "highlight")
+
+/**
+ * Escapes markdown special characters inside highlighted text so it doesn't
+ * break the markdown parser when wrapped in a link.
+ */
+private fun escapeMarkdownInLink(text: String): String =
+    text
+        .replace("[", "\\[")
+        .replace("]", "\\]")
+        .replace("(", "\\(")
+        .replace(")", "\\)")
 
 @Composable
 fun RenderMarkdown(
@@ -50,10 +61,11 @@ fun RenderMarkdown(
                 content
             } else {
                 var result = content
-                highlightedTexts.sortedByDescending { it.length }.forEach { text ->
+                highlightedTexts.sortedByDescending { it.length }.forEachIndexed { index, text ->
                     val idx = result.indexOf(text)
                     if (idx >= 0) {
-                        result = result.replaceFirst(text, "***$text***")
+                        val escaped = escapeMarkdownInLink(text)
+                        result = result.replaceFirst(text, "[$escaped](highlight://$index)")
                     }
                 }
                 result

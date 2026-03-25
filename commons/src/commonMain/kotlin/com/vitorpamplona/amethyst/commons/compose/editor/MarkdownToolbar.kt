@@ -22,67 +22,163 @@ package com.vitorpamplona.amethyst.commons.compose.editor
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Checklist
+import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.FormatBold
+import androidx.compose.material.icons.filled.FormatItalic
+import androidx.compose.material.icons.filled.FormatListBulleted
+import androidx.compose.material.icons.filled.FormatListNumbered
+import androidx.compose.material.icons.filled.FormatQuote
+import androidx.compose.material.icons.filled.FormatStrikethrough
+import androidx.compose.material.icons.filled.HorizontalRule
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /**
- * Toolbar for inserting markdown formatting at cursor position.
- * Each button calls [onInsert] with the prefix and suffix to wrap around selection.
+ * Markdown toolbar with Material icons, grouped formatting buttons, and active state.
+ * Uses [MarkdownEditorState] for selection-aware toggle behavior.
+ *
+ * Buttons use `focusProperties { canFocus = false }` to prevent stealing focus
+ * from the editor TextField, preserving the user's text selection.
  */
 @Composable
 fun MarkdownToolbar(
-    onInsert: (prefix: String, suffix: String) -> Unit,
+    state: MarkdownEditorState,
     modifier: Modifier = Modifier,
 ) {
     Row(
         modifier = modifier.padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        ToolbarButton(label = "B", fontWeight = FontWeight.Bold) {
-            onInsert("**", "**")
+        // --- Headings ---
+        ToolbarButton(label = "H1", active = state.headingLevel == 1) { state.setHeading(if (state.headingLevel == 1) null else 1) }
+        ToolbarButton(label = "H2", active = state.headingLevel == 2) { state.setHeading(if (state.headingLevel == 2) null else 2) }
+        ToolbarButton(label = "H3", active = state.headingLevel == 3) { state.setHeading(if (state.headingLevel == 3) null else 3) }
+
+        Separator()
+
+        // --- Inline formatting ---
+        ToolbarIconButton(Icons.Default.FormatBold, "Bold", state.isBold) { state.toggleBold() }
+        ToolbarIconButton(Icons.Default.FormatItalic, "Italic", state.isItalic) { state.toggleItalic() }
+        ToolbarIconButton(Icons.Default.FormatStrikethrough, "Strikethrough", state.isStrikethrough) { state.toggleStrikethrough() }
+        ToolbarIconButton(Icons.Default.Code, "Inline code", state.isInlineCode) { state.toggleInlineCode() }
+
+        Separator()
+
+        // --- Lists ---
+        ToolbarIconButton(Icons.Default.FormatListBulleted, "Bullet list", state.isUnorderedList) { state.toggleUnorderedList() }
+        ToolbarIconButton(Icons.Default.FormatListNumbered, "Numbered list", state.isOrderedList) { state.toggleOrderedList() }
+        ToolbarIconButton(Icons.Default.Checklist, "Task list", state.isTaskList) { state.toggleTaskList() }
+
+        Separator()
+
+        // --- Block elements ---
+        ToolbarIconButton(Icons.Default.FormatQuote, "Blockquote", state.isBlockquote) { state.toggleBlockquote() }
+        ToolbarButton(label = "```", active = false) { state.toggleCodeBlock() }
+        ToolbarIconButton(Icons.Default.HorizontalRule, "Horizontal rule", false) { state.insertHorizontalRule() }
+
+        Separator()
+
+        // --- Insert ---
+        ToolbarIconButton(Icons.Default.Link, "Link", false) { state.insertLink() }
+        ToolbarIconButton(Icons.Default.Image, "Image", false) { state.insertImage() }
+    }
+}
+
+@Composable
+private fun Separator() {
+    VerticalDivider(
+        modifier = Modifier.height(24.dp).padding(horizontal = 4.dp),
+        color = MaterialTheme.colorScheme.outlineVariant,
+    )
+}
+
+@Composable
+private fun ToolbarIconButton(
+    icon: ImageVector,
+    contentDescription: String,
+    active: Boolean,
+    onClick: () -> Unit,
+) {
+    val containerColor =
+        if (active) {
+            MaterialTheme.colorScheme.primary
+        } else {
+            MaterialTheme.colorScheme.surfaceVariant
         }
-        ToolbarButton(label = "I") {
-            onInsert("*", "*")
+    val contentColor =
+        if (active) {
+            MaterialTheme.colorScheme.onPrimary
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
         }
-        ToolbarButton(label = "H") {
-            onInsert("## ", "")
-        }
-        ToolbarButton(label = "[]") {
-            onInsert("[", "](url)")
-        }
-        ToolbarButton(label = "img") {
-            onInsert("![alt](", ")")
-        }
-        ToolbarButton(label = "<>") {
-            onInsert("```\n", "\n```")
-        }
-        ToolbarButton(label = ">") {
-            onInsert("> ", "")
-        }
+
+    SmallFloatingActionButton(
+        onClick = onClick,
+        containerColor = containerColor,
+        contentColor = contentColor,
+        modifier =
+            Modifier
+                .size(32.dp)
+                .focusProperties { canFocus = false },
+    ) {
+        Icon(
+            icon,
+            contentDescription = contentDescription,
+            modifier = Modifier.size(18.dp),
+        )
     }
 }
 
 @Composable
 private fun ToolbarButton(
     label: String,
-    fontWeight: FontWeight = FontWeight.Normal,
+    active: Boolean,
     onClick: () -> Unit,
 ) {
-    FilledTonalIconButton(onClick = onClick) {
+    val containerColor =
+        if (active) {
+            MaterialTheme.colorScheme.primary
+        } else {
+            MaterialTheme.colorScheme.surfaceVariant
+        }
+    val contentColor =
+        if (active) {
+            MaterialTheme.colorScheme.onPrimary
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        }
+
+    SmallFloatingActionButton(
+        onClick = onClick,
+        containerColor = containerColor,
+        contentColor = contentColor,
+        modifier =
+            Modifier
+                .size(32.dp)
+                .focusProperties { canFocus = false },
+    ) {
         Text(
             text = label,
-            fontWeight = fontWeight,
-            fontFamily = FontFamily.Monospace,
-            fontSize = 13.sp,
-            color = MaterialTheme.colorScheme.onSecondaryContainer,
+            fontSize = 11.sp,
+            color = contentColor,
         )
     }
 }

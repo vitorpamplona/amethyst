@@ -20,6 +20,11 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui
 
+import androidx.compose.foundation.ContextMenuItem
+import androidx.compose.foundation.ContextMenuRepresentation
+import androidx.compose.foundation.ContextMenuState
+import androidx.compose.foundation.LocalContextMenuRepresentation
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -38,6 +43,8 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -45,6 +52,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -58,7 +66,6 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.isMetaPressed
-import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
@@ -83,6 +90,7 @@ import com.vitorpamplona.amethyst.desktop.subscriptions.createRepliesSubscriptio
 import com.vitorpamplona.amethyst.desktop.subscriptions.createRepostsSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.createZapsSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
+import com.vitorpamplona.amethyst.desktop.ui.highlights.ArticleHighlightsPanel
 import com.vitorpamplona.amethyst.desktop.ui.highlights.HighlightAnnotationDialog
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
@@ -147,14 +155,13 @@ fun ArticleReaderScreen(
     // Coroutine scope for highlight operations
     val scope = rememberCoroutineScope()
 
-    // Highlight state
-    val articleHighlights =
-        highlightStore?.let { store ->
-            val allHighlights by store.highlights.collectAsState()
-            allHighlights[addressTag] ?: emptyList()
-        } ?: emptyList()
+    // Highlight state — collect outside let to ensure proper Compose subscription
+    val allHighlights by (highlightStore?.highlights ?: kotlinx.coroutines.flow.MutableStateFlow(emptyMap()))
+        .collectAsState()
+    val articleHighlights = allHighlights[addressTag] ?: emptyList()
 
     var showAnnotationDialog by remember { mutableStateOf<String?>(null) }
+    var showHighlightsPanel by remember { mutableStateOf(false) }
     val focusRequester =
         remember {
             androidx.compose.ui.focus
@@ -166,16 +173,24 @@ fun ArticleReaderScreen(
 
     // Link click handler for markdown
     val onLinkClick: (String) -> Unit =
-        remember {
+        remember(articleHighlights) {
             { url: String ->
-                if (url.startsWith("nostr:")) {
-                    // TODO: Parse nostr: URI and navigate
-                } else {
-                    try {
-                        java.awt.Desktop
-                            .getDesktop()
-                            .browse(java.net.URI(url))
-                    } catch (_: Exception) {
+                when {
+                    url.startsWith("highlight://") -> {
+                        showHighlightsPanel = true
+                    }
+
+                    url.startsWith("nostr:") -> {
+                        // TODO: Parse nostr: URI and navigate
+                    }
+
+                    else -> {
+                        try {
+                            java.awt.Desktop
+                                .getDesktop()
+                                .browse(java.net.URI(url))
+                        } catch (_: Exception) {
+                        }
                     }
                 }
             }
@@ -381,27 +396,6 @@ fun ArticleReaderScreen(
                                 true
                             }
 
-                            Key.H -> {
-                                val selectedText = clipboardManager.getText()?.text
-                                if (!selectedText.isNullOrBlank() && highlightStore != null) {
-                                    if (event.isShiftPressed) {
-                                        showAnnotationDialog = selectedText
-                                    } else {
-                                        scope.launch {
-                                            highlightStore.addHighlight(
-                                                articleAddressTag = addressTag,
-                                                text = selectedText,
-                                                note = null,
-                                                articleTitle = title,
-                                            )
-                                        }
-                                    }
-                                    true
-                                } else {
-                                    false
-                                }
-                            }
-
                             else -> {
                                 false
                             }
@@ -523,14 +517,90 @@ fun ArticleReaderScreen(
                                     thickness = 1.dp,
                                 )
 
-                                // Markdown body with selectable text
-                                SelectionContainer {
-                                    RenderMarkdown(
-                                        content = content,
-                                        onLinkClick = onLinkClick,
-                                        fontScale = zoomLevel,
-                                        highlightedTexts = articleHighlights.map { it.text },
-                                    )
+                                // Collapsible highlights section
+                                if (articleHighlights.isNotEmpty()) {
+                                    Row(
+                                        modifier =
+                                            Modifier
+                                                .fillMaxWidth()
+                                                .clickable {
+                                                    showHighlightsPanel = !showHighlightsPanel
+                                                }.padding(vertical = 4.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        Icon(
+                                            if (showHighlightsPanel) {
+                                                Icons.Default.KeyboardArrowDown
+                                            } else {
+                                                Icons.AutoMirrored.Filled.KeyboardArrowRight
+                                            },
+                                            contentDescription = "Toggle highlights",
+                                            modifier = Modifier.size(20.dp),
+                                            tint = MaterialTheme.colorScheme.primary,
+                                        )
+                                        Spacer(Modifier.width(4.dp))
+                                        Text(
+                                            text = "${articleHighlights.size} highlight${if (articleHighlights.size != 1) "s" else ""}",
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = MaterialTheme.colorScheme.primary,
+                                        )
+                                    }
+
+                                    if (showHighlightsPanel && highlightStore != null) {
+                                        ArticleHighlightsPanel(
+                                            highlights = articleHighlights,
+                                            highlightStore = highlightStore,
+                                            articleContent = content,
+                                            signer = account?.signer,
+                                            relayManager = relayManager,
+                                            modifier = Modifier.padding(bottom = 16.dp),
+                                        )
+                                        HorizontalDivider(
+                                            modifier = Modifier.padding(bottom = 16.dp),
+                                            thickness = 1.dp,
+                                        )
+                                    }
+                                }
+
+                                // Markdown body with right-click highlight via context menu
+                                val defaultRepresentation = LocalContextMenuRepresentation.current
+                                val highlightRepresentation =
+                                    remember(
+                                        defaultRepresentation,
+                                        highlightStore,
+                                        addressTag,
+                                        title,
+                                    ) {
+                                        HighlightContextMenuRepresentation(
+                                            delegate = defaultRepresentation,
+                                            clipboardManager = clipboardManager,
+                                            onHighlight = { text ->
+                                                scope.launch {
+                                                    highlightStore?.addHighlight(
+                                                        articleAddressTag = addressTag,
+                                                        text = text,
+                                                        note = null,
+                                                        articleTitle = title,
+                                                    )
+                                                }
+                                            },
+                                            onHighlightWithNote = { text ->
+                                                showAnnotationDialog = text
+                                            },
+                                        )
+                                    }
+
+                                CompositionLocalProvider(
+                                    LocalContextMenuRepresentation provides highlightRepresentation,
+                                ) {
+                                    SelectionContainer {
+                                        RenderMarkdown(
+                                            content = content,
+                                            onLinkClick = onLinkClick,
+                                            fontScale = zoomLevel,
+                                            highlightedTexts = articleHighlights.map { it.text },
+                                        )
+                                    }
                                 }
 
                                 Spacer(Modifier.height(32.dp))
@@ -612,5 +682,55 @@ fun ArticleReaderScreen(
             },
             onDismiss = { showAnnotationDialog = null },
         )
+    }
+}
+
+/**
+ * Custom context menu representation that adds "Highlight" and "Highlight with Note"
+ * items to the right-click menu inside a SelectionContainer.
+ *
+ * How it works: The SelectionContainer provides a "Copy" item that has access to the
+ * selected text. Our items piggyback on Copy's onClick — calling it first to put the
+ * selected text on the clipboard, then reading the clipboard to get the text.
+ */
+private class HighlightContextMenuRepresentation(
+    private val delegate: ContextMenuRepresentation,
+    private val clipboardManager: androidx.compose.ui.platform.ClipboardManager,
+    private val onHighlight: (String) -> Unit,
+    private val onHighlightWithNote: (String) -> Unit,
+) : ContextMenuRepresentation {
+    @Composable
+    override fun Representation(
+        state: ContextMenuState,
+        items: () -> List<ContextMenuItem>,
+    ) {
+        val extendedItems = {
+            val original = items()
+            val copyItem = original.find { it.label == "Copy" }
+
+            if (copyItem != null) {
+                original +
+                    listOf(
+                        ContextMenuItem("Highlight") {
+                            copyItem.onClick()
+                            val text = clipboardManager.getText()?.text
+                            if (!text.isNullOrBlank()) {
+                                onHighlight(text)
+                            }
+                        },
+                        ContextMenuItem("Highlight with Note") {
+                            copyItem.onClick()
+                            val text = clipboardManager.getText()?.text
+                            if (!text.isNullOrBlank()) {
+                                onHighlightWithNote(text)
+                            }
+                        },
+                    )
+            } else {
+                original
+            }
+        }
+
+        delegate.Representation(state, extendedItems)
     }
 }

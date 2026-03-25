@@ -57,9 +57,9 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.vitorpamplona.amethyst.commons.compose.editor.MarkdownEditorState
 import com.vitorpamplona.amethyst.commons.compose.editor.MarkdownToolbar
 import com.vitorpamplona.amethyst.commons.compose.editor.MetadataPanel
 import com.vitorpamplona.amethyst.commons.compose.markdown.RenderMarkdown
@@ -91,14 +91,14 @@ fun ArticleEditorScreen(
     var bannerUrl by remember { mutableStateOf("") }
     var tags by remember { mutableStateOf<List<String>>(emptyList()) }
     var slug by remember { mutableStateOf(draftSlug ?: "") }
-    var contentField by remember { mutableStateOf(TextFieldValue("")) }
+    val editorState = remember { MarkdownEditorState() }
     var publishing by remember { mutableStateOf(false) }
     var saveMessage by remember { mutableStateOf<String?>(null) }
     var debouncedContent by remember { mutableStateOf("") }
 
-    LaunchedEffect(contentField.text) {
+    LaunchedEffect(editorState.text) {
         delay(300)
-        debouncedContent = contentField.text
+        debouncedContent = editorState.text
     }
 
     // Load existing draft
@@ -114,7 +114,7 @@ fun ArticleEditorScreen(
                 slug = draftSlug
             }
             if (body != null) {
-                contentField = TextFieldValue(body)
+                editorState.loadContent(body)
             }
         }
     }
@@ -145,7 +145,7 @@ fun ArticleEditorScreen(
         scope.launch {
             draftStore.saveDraft(
                 slug = slug,
-                content = contentField.text,
+                content = editorState.text,
                 metadata =
                     DraftMetadata(
                         title = title,
@@ -166,7 +166,7 @@ fun ArticleEditorScreen(
                 val event =
                     LongFormPublishAction.publish(
                         title = title,
-                        content = contentField.text,
+                        content = editorState.text,
                         summary = summary.ifBlank { null },
                         image = bannerUrl.ifBlank { null },
                         tags = tags,
@@ -191,13 +191,37 @@ fun ArticleEditorScreen(
             Modifier
                 .fillMaxSize()
                 .onPreviewKeyEvent { event ->
-                    // Ctrl/Cmd+S to save
-                    if (event.type == KeyEventType.KeyDown &&
-                        event.key == Key.S &&
-                        event.isMetaPressed
-                    ) {
-                        saveDraft()
-                        true
+                    if (event.type == KeyEventType.KeyDown && event.isMetaPressed) {
+                        when (event.key) {
+                            Key.S -> {
+                                saveDraft()
+                                true
+                            }
+
+                            Key.B -> {
+                                editorState.toggleBold()
+                                true
+                            }
+
+                            Key.I -> {
+                                editorState.toggleItalic()
+                                true
+                            }
+
+                            Key.E -> {
+                                editorState.toggleInlineCode()
+                                true
+                            }
+
+                            Key.K -> {
+                                editorState.insertLink()
+                                true
+                            }
+
+                            else -> {
+                                false
+                            }
+                        }
                     } else {
                         false
                     }
@@ -226,7 +250,7 @@ fun ArticleEditorScreen(
                 }
                 Button(
                     onClick = { publishArticle() },
-                    enabled = !publishing && title.isNotBlank() && contentField.text.isNotBlank(),
+                    enabled = !publishing && title.isNotBlank() && editorState.text.isNotBlank(),
                 ) {
                     Text(if (publishing) "Publishing..." else "Publish")
                 }
@@ -249,27 +273,8 @@ fun ArticleEditorScreen(
 
         Spacer(Modifier.height(8.dp))
 
-        // Markdown toolbar
-        MarkdownToolbar(
-            onInsert = { prefix, suffix ->
-                val selection = contentField.selection
-                val text = contentField.text
-                val newText =
-                    text.substring(0, selection.start) +
-                        prefix +
-                        text.substring(selection.start, selection.end) +
-                        suffix +
-                        text.substring(selection.end)
-                val newCursorPos = selection.start + prefix.length + (selection.end - selection.start)
-                contentField =
-                    TextFieldValue(
-                        text = newText,
-                        selection =
-                            androidx.compose.ui.text
-                                .TextRange(newCursorPos),
-                    )
-            },
-        )
+        // Markdown toolbar — selection-aware toggle behavior
+        MarkdownToolbar(state = editorState)
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
@@ -279,9 +284,9 @@ fun ArticleEditorScreen(
         ) {
             // Source editor
             TextField(
-                value = contentField,
+                value = editorState.value,
                 onValueChange = {
-                    contentField = it
+                    editorState.onValueChange(it)
                     saveMessage = null
                 },
                 modifier =
