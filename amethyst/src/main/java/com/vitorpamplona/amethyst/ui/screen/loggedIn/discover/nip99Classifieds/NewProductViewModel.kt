@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip99Classifieds
 
 import android.content.Context
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
@@ -131,7 +132,8 @@ open class NewProductViewModel :
     var productImages by mutableStateOf<List<ProductImageMeta>>(emptyList())
     val iMetaDescription = IMetaAttachments()
 
-    override var message by mutableStateOf(TextFieldValue(""))
+    override val messageState = TextFieldState()
+    var message by mutableStateOf(TextFieldValue(""))
 
     val urlPreviews = PreviewState()
 
@@ -151,8 +153,11 @@ open class NewProductViewModel :
     val strippingFailureConfirmation = SuspendableConfirmation()
 
     // Classifieds
+    val titleState = TextFieldState()
     var title by mutableStateOf(TextFieldValue(""))
+    val priceState = TextFieldState()
     var price by mutableStateOf(TextFieldValue(""))
+    val locationTextState = TextFieldState()
     var locationText by mutableStateOf(TextFieldValue(""))
     var category by mutableStateOf(TextFieldValue(""))
     var condition by mutableStateOf(ConditionTag.CONDITION.USED_LIKE_NEW)
@@ -505,7 +510,7 @@ open class NewProductViewModel :
         this.multiOrchestrator?.remove(selected)
     }
 
-    override fun updateMessage(newMessage: TextFieldValue) {
+    fun updateMessage(newMessage: TextFieldValue) {
         message = newMessage
         urlPreviews.update(message)
 
