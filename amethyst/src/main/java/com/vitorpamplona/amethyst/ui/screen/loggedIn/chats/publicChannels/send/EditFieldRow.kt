@@ -114,8 +114,7 @@ fun EditFieldRow(
         }
 
         ThinPaddingTextField(
-            value = channelScreenModel.message,
-            onValueChange = { channelScreenModel.updateMessage(it) },
+            state = channelScreenModel.messageState,
             keyboardOptions =
                 KeyboardOptions.Default.copy(
                     capitalization = KeyboardCapitalization.Sentences,
@@ -132,7 +131,7 @@ fun EditFieldRow(
             trailingIcon = {
                 ThinSendButton(
                     isActive =
-                        channelScreenModel.message.text.isNotBlank() && !channelScreenModel.isUploadingImage,
+                        channelScreenModel.messageState.text.isNotBlank() && !channelScreenModel.isUploadingImage,
                     modifier = EditFieldTrailingIconModifier,
                 ) {
                     channelScreenModel.sendPost(onSendNewMessage)
@@ -151,7 +150,7 @@ fun EditFieldRow(
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent,
                 ),
-            visualTransformation = UrlUserTagTransformation(MaterialTheme.colorScheme.primary),
+            outputTransformation = UrlUserTagTransformation(MaterialTheme.colorScheme.primary),
         )
     }
 }
