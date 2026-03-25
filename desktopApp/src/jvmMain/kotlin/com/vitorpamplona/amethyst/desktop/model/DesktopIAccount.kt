@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.desktop.network.RelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.ui.chats.DmSendTracker
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.NostrSignerWithClientTag
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip17Dm.NIP17Factory
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
@@ -62,7 +63,7 @@ class DesktopIAccount(
     val dmSendTracker: DmSendTracker,
     private val scope: CoroutineScope,
 ) : IAccount {
-    override val signer: NostrSigner = accountState.signer
+    override val signer: NostrSigner = NostrSignerWithClientTag(accountState.signer, CLIENT_TAG_NAME)
 
     override val pubKey: String = accountState.pubKeyHex
 
@@ -220,5 +221,9 @@ class DesktopIAccount(
             note.loadEvent(event, author, emptyList())
         }
         chatroomList.addMessage(roomKey, note)
+    }
+
+    companion object {
+        const val CLIENT_TAG_NAME = "Amethyst"
     }
 }
