@@ -803,10 +803,14 @@ class ElectrumXClient(
          * on devices with strict TLS enforcement (e.g. Samsung One UI 7).
          *
          * To update: `echo | openssl s_client -connect HOST:PORT 2>/dev/null | openssl x509 -outform PEM`
+         * For .onion: `python3 -c "import socks,ssl,socket,base64; s=socks.socksocket(); s.set_proxy(socks.SOCKS5,'127.0.0.1',9050); s.connect(('HOST',PORT)); ctx=ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT); ctx.check_hostname=False; ctx.verify_mode=ssl.CERT_NONE; ss=ctx.wrap_socket(s); print(base64.encodebytes(ss.getpeercert(True)).decode())"`
          */
         private val PINNED_ELECTRUMX_CERTS =
             listOf(
                 // electrumx.testls.space:50002 — expires 2027-05-04
+                // Also covers the .onion hidden service (same operator, same cert):
+                // i665jpwsq46zlsdbnj4axgzd3s56uzey5uhotsnxzsknzbn36jaddsid.onion:50002
+                // SHA-256: 53:65:D5:BB:26:19:F5:40:1C:D8:8E:FC:AF:FB:A5:B2:A0:EA:7A:99:2D:F7:0F:05:7E:9B:CD:50:36:C7:79:9C
                 """
 -----BEGIN CERTIFICATE-----
 MIIDwzCCAqsCFGGKT5mjh7oN98aNyjOCiqafL8VyMA0GCSqGSIb3DQEBCwUAMIGd
