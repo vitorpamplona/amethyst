@@ -44,8 +44,14 @@ data class ElectrumxServer(
     val host: String,
     val port: Int,
     val useSsl: Boolean = true,
-    /** If true, accept any certificate (self-signed, expired, etc.) */
-    val trustAllCerts: Boolean = false,
+    /**
+     * If true, use the pinned trust store (hardcoded + TOFU-pinned certs
+     * plus system CAs) instead of the default system-only trust store.
+     *
+     * Required for ElectrumX servers that use self-signed certificates,
+     * which is the norm for the Namecoin ElectrumX ecosystem.
+     */
+    val usePinnedTrustStore: Boolean = false,
 )
 
 /**
@@ -90,9 +96,9 @@ data class ServerTestResult(
 /** Well-known public Namecoin ElectrumX servers (clearnet). */
 val DEFAULT_ELECTRUMX_SERVERS =
     listOf(
-        ElectrumxServer("electrumx.testls.space", 50002, useSsl = true, trustAllCerts = true),
-        ElectrumxServer("nmc2.bitcoins.sk", 57002, useSsl = true, trustAllCerts = true),
-        ElectrumxServer("46.229.238.187", 57002, useSsl = true, trustAllCerts = true),
+        ElectrumxServer("electrumx.testls.space", 50002, useSsl = true, usePinnedTrustStore = true),
+        ElectrumxServer("nmc2.bitcoins.sk", 57002, useSsl = true, usePinnedTrustStore = true),
+        ElectrumxServer("46.229.238.187", 57002, useSsl = true, usePinnedTrustStore = true),
     )
 
 /** Tor-preferred server list: onion primary, clearnet fallback. */
@@ -102,8 +108,8 @@ val TOR_ELECTRUMX_SERVERS =
             "i665jpwsq46zlsdbnj4axgzd3s56uzey5uhotsnxzsknzbn36jaddsid.onion",
             50002,
             useSsl = true,
-            trustAllCerts = true,
+            usePinnedTrustStore = true,
         ),
-        ElectrumxServer("electrumx.testls.space", 50002, useSsl = true, trustAllCerts = true),
-        ElectrumxServer("nmc2.bitcoins.sk", 57002, useSsl = true, trustAllCerts = true),
+        ElectrumxServer("electrumx.testls.space", 50002, useSsl = true, usePinnedTrustStore = true),
+        ElectrumxServer("nmc2.bitcoins.sk", 57002, useSsl = true, usePinnedTrustStore = true),
     )

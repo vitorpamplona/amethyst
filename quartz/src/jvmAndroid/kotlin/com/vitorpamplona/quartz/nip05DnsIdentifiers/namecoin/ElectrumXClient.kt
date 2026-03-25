@@ -601,14 +601,10 @@ class ElectrumXClient(
         if (!server.useSsl) return baseSocket
 
         // Upgrade to TLS over the already-connected (possibly proxied) socket.
-        // When the server uses a self-signed certificate (trustAllCerts flag),
-        // we use a pinned trust store that contains the known ElectrumX server
-        // certs. This is required because Samsung One UI 7 (Android 16) silently
-        // rejects connections that use a no-op "trust-all" X509TrustManager.
-        //
-        // Exception: .onion addresses bypass cert pinning entirely — the Tor
-        // hidden service protocol already provides end-to-end authentication
-        // via the onion address, making TLS cert verification redundant.
+        // When usePinnedTrustStore is set, we use a pinned trust store that
+        // contains the known ElectrumX server certs plus system CAs. This is
+        // required because Samsung One UI 7 (Android 16) and GrapheneOS
+        // reject connections that use a no-op "trust-all" X509TrustManager.
         val sslFactory =
             if (server.host.endsWith(".onion")) {
                 // .onion addresses: prefer the pinned factory (the .onion server's
@@ -618,7 +614,7 @@ class ElectrumXClient(
                 // blanket trust-all that hardened TLS stacks (GrapheneOS, Samsung
                 // Knox) may reject at the Conscrypt/BoringSSL layer.
                 cachedPinnedSslFactory()
-            } else if (server.trustAllCerts) {
+            } else if (server.usePinnedTrustStore) {
                 cachedPinnedSslFactory()
             } else {
                 SSLSocketFactory.getDefault() as SSLSocketFactory
