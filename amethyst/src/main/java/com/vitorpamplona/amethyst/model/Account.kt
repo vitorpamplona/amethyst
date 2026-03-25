@@ -1300,9 +1300,18 @@ class Account(
         val anonymousSigner = NostrSignerInternal(KeyPair())
         val event = anonymousSigner.sign(template)
 
-        val relayList = nip65RelayList.outboxFlow.value.toSet()
+        cache.justConsumeMyOwnEvent(event)
+        val note =
+            if (event is AddressableEvent) {
+                cache.getOrCreateAddressableNote(event.address())
+            } else {
+                cache.getOrCreateNote(event.id)
+            }
+
+        val relayList = computeRelayListToBroadcast(note)
 
         client.send(event, relayList)
+
         broadcast.forEach { client.send(it, relayList) }
 
         return event
