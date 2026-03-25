@@ -194,6 +194,8 @@ open class CommentPostViewModel :
     var wantsZapraiser by mutableStateOf(false)
     override val zapRaiserAmount = mutableStateOf<Long?>(null)
 
+    var wantsAnonymousPost by mutableStateOf(false)
+
     fun lnAddress(): String? = account.userProfile().lnAddress()
 
     fun hasLnAddress(): Boolean = account.userProfile().lnAddress() != null
@@ -342,10 +344,15 @@ open class CommentPostViewModel :
         }
 
         val version = draftTag.current
-
+        val anonymous = wantsAnonymousPost
         cancel()
 
-        accountViewModel.account.signAndComputeBroadcast(template, extraNotesToBroadcast)
+        if (anonymous) {
+            accountViewModel.account.signAnonymouslyAndBroadcast(template, extraNotesToBroadcast)
+        } else {
+            accountViewModel.account.signAndComputeBroadcast(template, extraNotesToBroadcast)
+        }
+
         accountViewModel.viewModelScope.launch(Dispatchers.IO) {
             accountViewModel.account.deleteDraftIgnoreErrors(version)
         }
@@ -588,6 +595,7 @@ open class CommentPostViewModel :
         contentWarningDescription = ""
         wantsToAddGeoHash = false
         wantsSecretEmoji = false
+        wantsAnonymousPost = false
 
         forwardZapTo.value = SplitBuilder()
         forwardZapToEditting.value = TextFieldValue("")

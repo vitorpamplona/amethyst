@@ -290,6 +290,7 @@
     <string name="nip_05">Nostr Adresa</string>
     <string name="never">nikdy</string>
     <string name="now">nyní</string>
+    <string name="seconds">sekundy</string>
     <string name="h">h</string>
     <string name="m">m</string>
     <string name="d">d</string>
@@ -536,7 +537,7 @@
     <string name="follow_set_create_btn_label">Nový</string>
     <string name="follow_set_add_author_from_note_action">Přidat autora do seznamu sledování</string>
     <string name="follow_set_profile_actions_menu_description">Přidat nebo odebrat uživatele ze seznamů, nebo vytvořit nový seznam s tímto uživatelem.</string>
-    <string name="follow_set_icon_description">Ikona pro seznam %1$s</string>
+    <string name="follow_set_icon_description">Ikona pro seznam</string>
     <string name="follow_set_public_presence_indicator">%1$s je veřejný člen</string>
     <string name="follow_set_private_presence_indicator">%1$s je soukromý člen</string>
     <string name="follow_set_public_member_add_label">Přidat jako veřejného člena</string>

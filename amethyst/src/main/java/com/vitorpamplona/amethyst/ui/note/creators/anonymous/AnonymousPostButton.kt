@@ -18,19 +18,41 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.reports
+package com.vitorpamplona.amethyst.ui.note.creators.anonymous
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PersonOff
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserReports
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.reports.dal.UserProfileReportFeedViewModel
+import androidx.compose.ui.graphics.Color
+import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.Size19Modifier
 
 @Composable
-fun WatchReportsAndUpdateFeed(
-    baseUser: User,
-    feedViewModel: UserProfileReportFeedViewModel,
-    accountViewModel: AccountViewModel,
+fun AnonymousPostButton(
+    isActive: Boolean,
+    onClick: () -> Unit,
 ) {
-    observeUserReports(baseUser, accountViewModel) { feedViewModel.invalidateData() }
+    IconButton(
+        onClick = { onClick() },
+    ) {
+        if (!isActive) {
+            Icon(
+                imageVector = Icons.Default.PersonOff,
+                contentDescription = stringRes(R.string.post_anonymously),
+                modifier = Size19Modifier,
+                tint = MaterialTheme.colorScheme.onBackground,
+            )
+        } else {
+            Icon(
+                imageVector = Icons.Default.PersonOff,
+                contentDescription = stringRes(R.string.post_anonymously),
+                modifier = Size19Modifier,
+                tint = Color.Red,
+            )
+        }
+    }
 }

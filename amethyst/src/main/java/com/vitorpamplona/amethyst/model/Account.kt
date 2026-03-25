@@ -139,6 +139,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 import com.vitorpamplona.quartz.nip01Core.tags.references.references
@@ -1275,6 +1276,30 @@ class Account(
         broadcast: List<Event> = emptyList(),
     ): T {
         val event = signer.sign(template)
+        cache.justConsumeMyOwnEvent(event)
+        val note =
+            if (event is AddressableEvent) {
+                cache.getOrCreateAddressableNote(event.address())
+            } else {
+                cache.getOrCreateNote(event.id)
+            }
+
+        val relayList = computeRelayListToBroadcast(note)
+
+        client.send(event, relayList)
+
+        broadcast.forEach { client.send(it, relayList) }
+
+        return event
+    }
+
+    suspend fun <T : Event> signAnonymouslyAndBroadcast(
+        template: EventTemplate<T>,
+        broadcast: List<Event> = emptyList(),
+    ): T {
+        val anonymousSigner = NostrSignerInternal(KeyPair())
+        val event = anonymousSigner.sign(template)
+
         cache.justConsumeMyOwnEvent(event)
         val note =
             if (event is AddressableEvent) {

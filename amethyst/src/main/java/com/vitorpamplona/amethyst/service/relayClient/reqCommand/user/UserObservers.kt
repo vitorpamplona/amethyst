@@ -45,7 +45,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.sample
 
@@ -424,41 +423,6 @@ fun observeUserIsFollowingChannel(
 
     @SuppressLint("StateFlowValueCalledInComposition")
     return flow.collectAsStateWithLifecycle(channel.roomId in account.ephemeralChatList.liveEphemeralChatList.value)
-}
-
-@Composable
-fun observeUserReports(
-    user: User,
-    accountViewModel: AccountViewModel,
-    onUpdate: () -> Unit,
-) {
-    // Subscribe in the relay for changes in the metadata of this user.
-    UserFinderFilterAssemblerSubscription(user, accountViewModel)
-
-    // Subscribe in the LocalCache for changes that arrive in the device
-    val flow =
-        remember(user, onUpdate) {
-            user
-                .reports()
-                .receivedReportsByAuthor
-                .onEach { onUpdate() }
-                .onStart { onUpdate() }
-        }.collectAsStateWithLifecycle(emptyMap())
-}
-
-@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
-@Composable
-fun observeUserReportCount(
-    user: User,
-    accountViewModel: AccountViewModel,
-): State<Int> {
-    // Subscribe in the relay for changes in the metadata of this user.
-    UserFinderFilterAssemblerSubscription(user, accountViewModel)
-
-    // Subscribe in the LocalCache for changes that arrive in the device
-    val flow = remember(user) { user.reports().countFlow() }
-
-    return flow.collectAsStateWithLifecycle(0)
 }
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)

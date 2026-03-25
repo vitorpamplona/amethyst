@@ -52,6 +52,12 @@ class ReferenceTag {
 
         fun assemble(url: String) = arrayOf(TAG_NAME, HttpUrlFormatter.normalize(url))
 
-        fun assemble(urls: List<String>): List<Array<String>> = urls.mapTo(HashSet()) { HttpUrlFormatter.normalize(it) }.map { arrayOf(TAG_NAME, it) }
+        fun assemble(urls: List<String>): List<Array<String>> =
+            urls
+                .mapTo(HashSet()) {
+                    HttpUrlFormatter.normalize(it)
+                }.map {
+                    arrayOf(TAG_NAME, it)
+                }
     }
 }

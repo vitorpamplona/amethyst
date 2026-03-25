@@ -47,7 +47,7 @@ fun VideoViewInner(
     authorName: String? = null,
     nostrUriCallback: String? = null,
     automaticallyStartPlayback: Boolean,
-    controllerVisible: MutableState<Boolean> = mutableStateOf(true),
+    controllerVisible: MutableState<Boolean> = mutableStateOf(false),
     onZoom: (() -> Unit)? = null,
     accountViewModel: AccountViewModel,
 ) {

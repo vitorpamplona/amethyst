@@ -290,6 +290,7 @@
     <string name="nip_05">Endereço Nostr</string>
     <string name="never">nunca</string>
     <string name="now">agora</string>
+    <string name="seconds">segundos</string>
     <string name="h">h</string>
     <string name="m">m</string>
     <string name="d">d</string>
@@ -536,7 +537,7 @@
     <string name="follow_set_create_btn_label">Novo</string>
     <string name="follow_set_add_author_from_note_action">Adicionar autor à lista de seguidores</string>
     <string name="follow_set_profile_actions_menu_description">Adicionar ou remover usuário de listas, ou criar uma nova lista com este usuário.</string>
-    <string name="follow_set_icon_description">Ícone da lista %1$s</string>
+    <string name="follow_set_icon_description">Ícone da lista</string>
     <string name="follow_set_public_presence_indicator">%1$s é um membro público</string>
     <string name="follow_set_private_presence_indicator">%1$s é um membro privado</string>
     <string name="follow_set_public_member_add_label">Adicionar como membro público</string>

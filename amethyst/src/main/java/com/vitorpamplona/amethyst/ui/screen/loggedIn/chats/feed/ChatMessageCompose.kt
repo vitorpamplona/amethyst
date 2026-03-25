@@ -95,6 +95,9 @@ fun ChatroomMessageCompose(
     nav: INav,
     onWantsToReply: (Note) -> Unit,
     onWantsToEditDraft: (Note) -> Unit,
+    onScrollToNote: ((Note) -> Unit)? = null,
+    shouldHighlight: Boolean = false,
+    onHighlightFinished: (() -> Unit)? = null,
 ) {
     WatchNoteEvent(baseNote = baseNote, accountViewModel = accountViewModel, nav) {
         WatchBlockAndReport(
@@ -114,6 +117,9 @@ fun ChatroomMessageCompose(
                 nav,
                 onWantsToReply,
                 onWantsToEditDraft,
+                onScrollToNote,
+                shouldHighlight,
+                onHighlightFinished,
             )
         }
     }
@@ -130,6 +136,9 @@ fun NormalChatNote(
     nav: INav,
     onWantsToReply: (Note) -> Unit,
     onWantsToEditDraft: (Note) -> Unit,
+    onScrollToNote: ((Note) -> Unit)? = null,
+    shouldHighlight: Boolean = false,
+    onHighlightFinished: (() -> Unit)? = null,
 ) {
     val isLoggedInUser =
         remember(note.author) {
@@ -167,9 +176,14 @@ fun NormalChatNote(
         hasDetailsToShow = note.zaps.isNotEmpty() || note.zapPayments.isNotEmpty() || note.reactions.isNotEmpty(),
         drawAuthorInfo = drawAuthorInfo,
         parentBackgroundColor = parentBackgroundColor,
+        shouldHighlight = shouldHighlight,
+        onHighlightFinished = onHighlightFinished,
         onClick = {
             if (note.event is ChannelCreateEvent) {
                 nav.nav(Route.PublicChatChannel(note.idHex))
+                true
+            } else if (innerQuote && onScrollToNote != null) {
+                onScrollToNote(note)
                 true
             } else {
                 false
@@ -253,6 +267,7 @@ fun NormalChatNote(
             canPreview,
             accountViewModel,
             nav,
+            onScrollToNote,
         )
     }
 }
@@ -288,6 +303,7 @@ private fun MessageBubbleLines(
     canPreview: Boolean,
     accountViewModel: AccountViewModel,
     nav: INav,
+    onScrollToNote: ((Note) -> Unit)? = null,
 ) {
     if (baseNote.event !is DraftWrapEvent) {
         RenderReplyRow(
@@ -298,6 +314,7 @@ private fun MessageBubbleLines(
             nav = nav,
             onWantsToReply = onWantsToReply,
             onWantsToEditDraft = onWantsToEditDraft,
+            onScrollToNote = onScrollToNote,
         )
     }
 
@@ -334,9 +351,10 @@ fun RenderReplyRow(
     nav: INav,
     onWantsToReply: (Note) -> Unit,
     onWantsToEditDraft: (Note) -> Unit,
+    onScrollToNote: ((Note) -> Unit)? = null,
 ) {
     if (!innerQuote && note.replyTo?.lastOrNull() != null) {
-        RenderReply(note, bgColor, accountViewModel, nav, onWantsToReply, onWantsToEditDraft)
+        RenderReply(note, bgColor, accountViewModel, nav, onWantsToReply, onWantsToEditDraft, onScrollToNote)
     }
 }
 
@@ -348,6 +366,7 @@ private fun RenderReply(
     nav: INav,
     onWantsToReply: (Note) -> Unit,
     onWantsToEditDraft: (Note) -> Unit,
+    onScrollToNote: ((Note) -> Unit)? = null,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         @Suppress("ProduceStateDoesNotAssignValue")
@@ -368,6 +387,7 @@ private fun RenderReply(
                 nav = nav,
                 onWantsToReply = onWantsToReply,
                 onWantsToEditDraft = onWantsToEditDraft,
+                onScrollToNote = onScrollToNote,
             )
         }
     }

@@ -25,7 +25,9 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Parcelable
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -59,7 +61,6 @@ import androidx.compose.ui.unit.dp
 import androidx.core.util.Consumer
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.FileServerSelectionRow
 import com.vitorpamplona.amethyst.ui.actions.uploads.MAX_VOICE_RECORD_SECONDS
@@ -107,11 +108,14 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size19Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size30Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size35Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightPage
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
@@ -123,11 +127,11 @@ import kotlinx.coroutines.withContext
 fun ShortNotePostScreen(
     message: String? = null,
     attachment: Uri? = null,
-    baseReplyTo: Note? = null,
-    quote: Note? = null,
-    fork: Note? = null,
-    version: Note? = null,
-    draft: Note? = null,
+    baseReplyToId: HexKey? = null,
+    quoteId: HexKey? = null,
+    forkId: HexKey? = null,
+    versionId: HexKey? = null,
+    draftId: HexKey? = null,
     accountViewModel: AccountViewModel,
     nav: Nav,
 ) {
@@ -138,6 +142,11 @@ fun ShortNotePostScreen(
     val activity = context.getActivity()
 
     LaunchedEffect(postViewModel, accountViewModel) {
+        val baseReplyTo = baseReplyToId?.let { accountViewModel.getNoteIfExists(it) }
+        val quote = quoteId?.let { accountViewModel.getNoteIfExists(it) }
+        val fork = forkId?.let { accountViewModel.getNoteIfExists(it) }
+        val version = versionId?.let { accountViewModel.getNoteIfExists(it) }
+        val draft = draftId?.let { accountViewModel.getNoteIfExists(it) }
         postViewModel.load(baseReplyTo, quote, fork, version, draft)
         message?.ifBlank { null }?.let {
             postViewModel.updateMessage(TextFieldValue(it))
@@ -283,11 +292,32 @@ private fun NewPostScreenBody(
                     Row(
                         modifier = Modifier.padding(vertical = Size10dp),
                     ) {
-                        BaseUserPicture(
-                            accountViewModel.userProfile(),
-                            Size35dp,
-                            accountViewModel = accountViewModel,
-                        )
+                        if (postViewModel.wantsAnonymousPost) {
+                            IconButton(
+                                modifier = Size35Modifier,
+                                onClick = { postViewModel.wantsAnonymousPost = false },
+                            ) {
+                                Icon(
+                                    painter = painterRes(resourceId = R.drawable.incognito, 1),
+                                    contentDescription = stringRes(R.string.post_anonymously),
+                                    modifier = Size30Modifier,
+                                    tint = MaterialTheme.colorScheme.onBackground,
+                                )
+                            }
+                        } else {
+                            Box(
+                                modifier =
+                                    Modifier.clickable {
+                                        postViewModel.wantsAnonymousPost = true
+                                    },
+                            ) {
+                                BaseUserPicture(
+                                    accountViewModel.userProfile(),
+                                    Size35dp,
+                                    accountViewModel = accountViewModel,
+                                )
+                            }
+                        }
                         MessageField(
                             R.string.what_s_on_your_mind,
                             postViewModel,

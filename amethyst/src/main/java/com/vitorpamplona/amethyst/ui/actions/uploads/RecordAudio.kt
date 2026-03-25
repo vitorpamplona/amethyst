@@ -50,7 +50,7 @@ fun RecordAudioBox(
     modifier: Modifier,
     onRecordTaken: (RecordingResult) -> Unit,
     maxDurationSeconds: Int? = null,
-    content: @Composable (Boolean, Int) -> Unit,
+    content: @Composable (Boolean, Int, () -> Unit) -> Unit,
 ) {
     val mediaRecorder = remember { mutableStateOf<VoiceMessageRecorder?>(null) }
     val context = LocalContext.current
@@ -79,7 +79,8 @@ fun RecordAudioBox(
     }
 
     fun stopRecording() {
-        val result = mediaRecorder.value?.stop()
+        val recorder = mediaRecorder.value ?: return
+        val result = recorder.stop()
         mediaRecorder.value = null
         if (result != null) {
             onRecordTaken(result)
@@ -136,6 +137,10 @@ fun RecordAudioBox(
                 }
             }
         },
-        content = { active -> content(active, elapsedSeconds) },
+        content = { active ->
+            content(active, elapsedSeconds) {
+                stopRecording()
+            }
+        },
     )
 }

@@ -290,6 +290,7 @@
     <string name="nip_05">Nostr-adress</string>
     <string name="never">aldrig</string>
     <string name="now">nu</string>
+    <string name="seconds">sekunder</string>
     <string name="h">t</string>
     <string name="m">m</string>
     <string name="d">d</string>
@@ -536,7 +537,7 @@
     <string name="follow_set_create_btn_label">Ny</string>
     <string name="follow_set_add_author_from_note_action">Lägg till författare i följelista</string>
     <string name="follow_set_profile_actions_menu_description">Lägg till eller ta bort användare från listor, eller skapa en ny lista med denna användare.</string>
-    <string name="follow_set_icon_description">Ikon för %1$s-lista</string>
+    <string name="follow_set_icon_description">Ikon för lista</string>
     <string name="follow_set_public_presence_indicator">%1$s är en offentlig medlem</string>
     <string name="follow_set_private_presence_indicator">%1$s är en privat medlem</string>
     <string name="follow_set_public_member_add_label">Lägg till som offentlig medlem</string>

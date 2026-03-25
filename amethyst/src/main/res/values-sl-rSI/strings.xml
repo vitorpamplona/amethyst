@@ -1419,7 +1419,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="share_of">%1$d/%2$d</string>
     <string name="broadcasting">Oddajam</string>
     <string name="broadcasting_name">Oddajam %1$s</string>
-    <string name="broadcasting_number_events">Oddajam %1$d dogodkov...</string>
+    <string name="broadcasting_number_events">Oddajam %1$d dogodkov…</string>
     <string name="sent_number_events">Poslano %1$d dogodkov</string>
     <string name="bradcasting_result_partial">Nekaterim dogodkom ni uspelo</string>
     <string name="bradcasting_result_success">Vsem dogodkom je uspelo</string>

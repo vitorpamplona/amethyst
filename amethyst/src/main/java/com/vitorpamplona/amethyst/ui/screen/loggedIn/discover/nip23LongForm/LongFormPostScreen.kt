@@ -61,7 +61,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromFiles
@@ -98,12 +97,13 @@ import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightPage
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LongFormPostScreen(
-    draft: Note? = null,
-    version: Note? = null,
+    draftId: HexKey? = null,
+    versionId: HexKey? = null,
     accountViewModel: AccountViewModel,
     nav: Nav,
 ) {
@@ -111,6 +111,8 @@ fun LongFormPostScreen(
     postViewModel.init(accountViewModel)
 
     LaunchedEffect(postViewModel, accountViewModel) {
+        val draft = draftId?.let { accountViewModel.getNoteIfExists(it) }
+        val version = versionId?.let { accountViewModel.getNoteIfExists(it) }
         postViewModel.load(draft, version)
     }
 

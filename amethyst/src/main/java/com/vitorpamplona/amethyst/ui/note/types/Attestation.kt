@@ -34,13 +34,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Approval
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.HourglassEmpty
 import androidx.compose.material.icons.filled.HourglassTop
 import androidx.compose.material.icons.filled.Recommend
+import androidx.compose.material.icons.filled.RemoveDone
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -591,13 +595,13 @@ private fun attestationColor(
     validity: Validity?,
 ): Color =
     when {
-        status == AttestationStatus.REVOKED -> Color(0xFFB71C1C)
-        status == AttestationStatus.REJECTED -> Color(0xFFB71C1C)
         validity == Validity.INVALID -> Color(0xFFB71C1C)
-        status == AttestationStatus.VERIFIED -> Color(0xFF2E7D32)
         validity == Validity.VALID -> Color(0xFF2E7D32)
-        status == AttestationStatus.VERIFYING -> Color(0xFFF57F17)
-        status == AttestationStatus.ACCEPTED -> Color(0xFF1565C0)
+        status == AttestationStatus.REVOKED -> Color(0xFFB21CB7)
+        status == AttestationStatus.REJECTED -> Color(0xFFB71C1C)
+        status == AttestationStatus.VERIFIED -> Color(0xFF2E7D32)
+        status == AttestationStatus.VERIFYING -> Color(0xFF173CF5)
+        status == AttestationStatus.ACCEPTED -> Color(0xFF15C0C0)
         else -> Color(0xFF757575)
     }
 
@@ -606,14 +610,14 @@ private fun attestationIcon(
     validity: Validity?,
 ): ImageVector =
     when {
-        status == AttestationStatus.REVOKED -> Icons.Default.Close
-        status == AttestationStatus.REJECTED -> Icons.Default.Close
         validity == Validity.INVALID -> Icons.Default.Close
-        status == AttestationStatus.VERIFIED -> Icons.Default.VerifiedUser
         validity == Validity.VALID -> Icons.Default.CheckCircle
+        status == AttestationStatus.REVOKED -> Icons.Default.RemoveDone
+        status == AttestationStatus.REJECTED -> Icons.Default.Delete
+        status == AttestationStatus.VERIFIED -> Icons.Default.Approval
         status == AttestationStatus.VERIFYING -> Icons.Default.HourglassTop
-        status == AttestationStatus.ACCEPTED -> Icons.Default.CheckCircle
-        else -> Icons.Default.VerifiedUser
+        status == AttestationStatus.ACCEPTED -> Icons.Default.HourglassEmpty
+        else -> Icons.Default.ErrorOutline
     }
 
 @Composable
@@ -622,11 +626,11 @@ private fun attestationStatusLabel(
     validity: Validity?,
 ): String =
     when {
+        validity == Validity.INVALID -> stringRes(R.string.attestation_invalid)
+        validity == Validity.VALID -> stringRes(R.string.attestation_valid)
         status == AttestationStatus.REVOKED -> stringRes(R.string.attestation_status_revoked)
         status == AttestationStatus.REJECTED -> stringRes(R.string.attestation_status_rejected)
-        validity == Validity.INVALID -> stringRes(R.string.attestation_invalid)
         status == AttestationStatus.VERIFIED -> stringRes(R.string.attestation_status_verified)
-        validity == Validity.VALID -> stringRes(R.string.attestation_valid)
         status == AttestationStatus.VERIFYING -> stringRes(R.string.attestation_status_verifying)
         status == AttestationStatus.ACCEPTED -> stringRes(R.string.attestation_status_accepted)
         else -> stringRes(R.string.attestation)

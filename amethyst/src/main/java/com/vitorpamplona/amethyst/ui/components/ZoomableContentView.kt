@@ -124,7 +124,6 @@ import okhttp3.coroutines.executeAsync
 import okio.sink
 import java.io.File
 import java.io.IOException
-import kotlin.time.Duration.Companion.seconds
 
 // Delay before cleaning up shared video temp files.
 // Allows time for receiving app to copy the file after user confirms share.
@@ -224,12 +223,7 @@ fun TwoSecondController(
     content: BaseMediaContent,
     inner: @Composable (controllerVisible: MutableState<Boolean>) -> Unit,
 ) {
-    val controllerVisible = remember(content) { mutableStateOf(true) }
-
-    LaunchedEffect(content) {
-        delay(2.seconds)
-        controllerVisible.value = false
-    }
+    val controllerVisible = remember(content) { mutableStateOf(false) }
 
     inner(controllerVisible)
 }

@@ -23,17 +23,59 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.reports.dal
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.screen.AndroidFeedViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.sample
+import kotlinx.coroutines.flow.stateIn
 
 @Stable
 class UserProfileReportFeedViewModel(
     val user: User,
-) : AndroidFeedViewModel(UserProfileReportsFeedFilter(user)) {
+    val account: Account,
+) : ViewModel() {
+    val sortingModel: Comparator<Note> =
+        compareBy(
+            { it.author?.let { !account.isFollowing(it) } },
+            { it.idHex },
+        )
+
+    @OptIn(kotlinx.coroutines.FlowPreview::class)
+    val followersFlow: StateFlow<List<Note>> =
+        user
+            .reports()
+            .receivedReportsByAuthor
+            .map {
+                it.values.flatten().sortedWith(sortingModel)
+            }.sample(500)
+            .flowOn(Dispatchers.IO)
+            .stateIn(
+                viewModelScope,
+                initialValue = emptyList(),
+                started = SharingStarted.Lazily,
+            )
+
+    val followerCount =
+        followersFlow
+            .map { it.size }
+            .flowOn(Dispatchers.IO)
+            .stateIn(
+                viewModelScope,
+                initialValue = 0,
+                started = SharingStarted.Lazily,
+            )
+
     class Factory(
         val user: User,
+        val account: Account,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = UserProfileReportFeedViewModel(user) as T
+        override fun <T : ViewModel> create(modelClass: Class<T>): T = UserProfileReportFeedViewModel(user, account) as T
     }
 }
