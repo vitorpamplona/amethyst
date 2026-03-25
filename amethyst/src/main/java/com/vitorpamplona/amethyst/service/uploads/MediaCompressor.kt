@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.utils.Log
 import id.zelory.compressor.Compressor
 import id.zelory.compressor.constraint.default
 import kotlinx.coroutines.CancellationException
+import java.io.File
 
 class MediaCompressorResult(
     val uri: Uri,
@@ -89,19 +90,23 @@ class MediaCompressor {
                 else -> 60
             }
 
+        var tempFile: File? = null
         return try {
             Log.d("MediaCompressor", "Using image compression $mediaQuality")
-            val tempFile = MediaCompressorFileUtils.from(uri, context)
+            tempFile = MediaCompressorFileUtils.from(uri, context)
             val compressedImageFile =
                 Compressor.compress(context, tempFile) {
                     default(width = 640, format = Bitmap.CompressFormat.JPEG, quality = imageQuality)
                 }
-            Log.d("MediaCompressor", "Image compression success. Original size [${tempFile.length()}], new size [${compressedImageFile.length()}]")
+            if (tempFile != compressedImageFile && !tempFile.delete()) {
+                Log.w("MediaCompressor", "Failed to delete temp file: ${tempFile.absolutePath}")
+            }
+            Log.d("MediaCompressor", "Image compression success. New size [${compressedImageFile.length()}]")
             MediaCompressorResult(compressedImageFile.toUri(), MimeTypes.IMAGE_JPEG, compressedImageFile.length())
         } catch (e: Exception) {
-            Log.d("MediaCompressor", "Image compression failed: ${e.message}")
             if (e is CancellationException) throw e
-            e.printStackTrace()
+            Log.d("MediaCompressor", "Image compression failed: ${e.message}")
+            tempFile?.delete()
             MediaCompressorResult(uri, contentType, null)
         }
     }
