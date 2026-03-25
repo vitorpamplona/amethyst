@@ -697,6 +697,8 @@ open class ShortNotePostViewModel :
             // Abort if upload failed - don't post without voice data
             if (voiceMetadata == null) {
                 Log.w("ShortNotePostViewModel", "Voice upload failed, aborting post")
+                deleteVoiceLocalFile()
+                voiceAnonymization.deleteDistortedFiles()
                 return
             }
             // Update default server if voice message was successfully uploaded
@@ -1274,8 +1276,7 @@ open class ShortNotePostViewModel :
     private fun deleteVoiceLocalFile() {
         voiceLocalFile?.let { file ->
             try {
-                if (file.exists()) {
-                    file.delete()
+                if (file.delete()) {
                     Log.d("ShortNotePostViewModel", "Deleted voice file: ${file.absolutePath}")
                 }
             } catch (e: Exception) {
