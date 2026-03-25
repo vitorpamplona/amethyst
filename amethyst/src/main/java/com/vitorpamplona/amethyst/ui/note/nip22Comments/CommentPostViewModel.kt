@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.note.nip22Comments
 
 import android.content.Context
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
@@ -147,7 +148,8 @@ open class CommentPostViewModel :
 
     var notifying by mutableStateOf<List<User>?>(null)
 
-    override var message by mutableStateOf(TextFieldValue(""))
+    override val messageState = TextFieldState()
+    var message by mutableStateOf(TextFieldValue(""))
 
     val urlPreviews = PreviewState()
 
@@ -176,6 +178,7 @@ open class CommentPostViewModel :
     var wantsForwardZapTo by mutableStateOf(false)
     override var forwardZapTo = mutableStateOf<SplitBuilder<User>>(SplitBuilder())
     override var forwardZapToEditting = mutableStateOf(TextFieldValue(""))
+    override val forwardZapToEdittingState = TextFieldState()
 
     // NSFW, Sensitive
     var wantsToMarkAsSensitive by mutableStateOf(false)
@@ -618,7 +621,7 @@ open class CommentPostViewModel :
         notifying = notifying?.filter { it != userToRemove }
     }
 
-    override fun updateMessage(newMessage: TextFieldValue) {
+    fun updateMessage(newMessage: TextFieldValue) {
         message = newMessage
         urlPreviews.update(message)
 
