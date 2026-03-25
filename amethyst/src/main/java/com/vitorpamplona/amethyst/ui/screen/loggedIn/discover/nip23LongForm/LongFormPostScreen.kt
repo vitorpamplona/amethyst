@@ -68,6 +68,7 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectSingleFromGallery
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakePictureButton
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakeVideoButton
+import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.components.markdown.RenderContentAsMarkdown
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.PostingTopBar
@@ -304,9 +305,8 @@ private fun MarkdownPostScreenBody(
                     }
                 } else {
                     // Markdown editor
-                    OutlinedTextField(
-                        value = postViewModel.message,
-                        onValueChange = postViewModel::updateMessage,
+                    ThinPaddingTextField(
+                        state = postViewModel.messageState,
                         modifier =
                             Modifier
                                 .fillMaxWidth()
@@ -328,7 +328,7 @@ private fun MarkdownPostScreenBody(
                                 focusedBorderColor = Color.Transparent,
                                 unfocusedBorderColor = Color.Transparent,
                             ),
-                        visualTransformation = UrlUserTagTransformation(MaterialTheme.colorScheme.primary),
+                        outputTransformation = UrlUserTagTransformation(MaterialTheme.colorScheme.primary),
                         keyboardOptions =
                             KeyboardOptions.Default.copy(
                                 capitalization = KeyboardCapitalization.Sentences,
