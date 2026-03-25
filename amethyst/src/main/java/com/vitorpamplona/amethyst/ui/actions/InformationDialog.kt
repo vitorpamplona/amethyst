@@ -45,6 +45,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.components.toasts.ThrowableToastMsg
+import com.vitorpamplona.amethyst.ui.components.toasts.ThrowableToastMsg2
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size16dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
@@ -58,6 +59,27 @@ fun InformationDialog(
     onDismiss: () -> Unit,
 ) {
     val str = obj.msg ?: obj.throwable.localizedMessage ?: obj.throwable.message ?: obj.throwable.javaClass.simpleName
+
+    val stack =
+        remember(obj) {
+            val writer = StringWriter()
+            writer.append("\n")
+
+            obj.throwable.printStackTrace(PrintWriter(writer))
+
+            writer.toString()
+        }
+
+    InformationDialog(title = stringRes(obj.titleResId), textContent = str, moreInfo = stack, buttonColors, onDismiss)
+}
+
+@Composable
+fun InformationDialog(
+    obj: ThrowableToastMsg2,
+    buttonColors: ButtonColors = ButtonDefaults.buttonColors(),
+    onDismiss: () -> Unit,
+) {
+    val str = stringRes(obj.description)
 
     val stack =
         remember(obj) {
