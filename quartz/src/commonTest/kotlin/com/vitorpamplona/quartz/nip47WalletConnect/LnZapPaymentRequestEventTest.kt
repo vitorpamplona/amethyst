@@ -24,6 +24,10 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentRequestEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetBalanceMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.MakeInvoiceMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceMethod
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -87,29 +91,6 @@ class LnZapPaymentRequestEventTest {
         }
 
     @Test
-    fun testCreateRequestWithNip44() =
-        runTest {
-            val clientKeyPair = KeyPair()
-            val walletKeyPair = KeyPair()
-            val clientSigner = NostrSignerInternal(clientKeyPair)
-            val walletServicePubkey: HexKey =
-                walletKeyPair.pubKey.toHexKey()
-
-            val request = GetBalanceMethod.create()
-            val event =
-                LnZapPaymentRequestEvent.createRequest(
-                    request = request,
-                    walletServicePubkey = walletServicePubkey,
-                    signer = clientSigner,
-                    createdAt = 1000L,
-                    useNip44 = true,
-                )
-
-            assertEquals(23194, event.kind)
-            assertEquals("nip44_v2", event.encryptionScheme())
-        }
-
-    @Test
     fun testDecryptPayInvoiceRequest() =
         runTest {
             val clientKeyPair = KeyPair()
@@ -154,32 +135,6 @@ class LnZapPaymentRequestEventTest {
             assertIs<MakeInvoiceMethod>(decrypted)
             assertEquals(5000L, decrypted.params?.amount)
             assertEquals("test payment", decrypted.params?.description)
-        }
-
-    @Test
-    fun testDecryptNip44Request() =
-        runTest {
-            val clientKeyPair = KeyPair()
-            val walletKeyPair = KeyPair()
-            val clientSigner = NostrSignerInternal(clientKeyPair)
-            val walletSigner = NostrSignerInternal(walletKeyPair)
-            val walletServicePubkey: HexKey =
-                walletKeyPair.pubKey.toHexKey()
-
-            val request = GetInfoMethod.create()
-            val event =
-                LnZapPaymentRequestEvent.createRequest(
-                    request = request,
-                    walletServicePubkey = walletServicePubkey,
-                    signer = clientSigner,
-                    useNip44 = true,
-                )
-
-            assertEquals("nip44_v2", event.encryptionScheme())
-
-            // Wallet service should be able to decrypt NIP-44 encrypted request
-            val decrypted = event.decryptRequest(walletSigner)
-            assertIs<GetInfoMethod>(decrypted)
         }
 
     @Test

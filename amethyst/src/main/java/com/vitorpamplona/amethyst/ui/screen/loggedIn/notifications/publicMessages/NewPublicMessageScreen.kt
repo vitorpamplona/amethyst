@@ -55,7 +55,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromFiles
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
@@ -107,8 +107,8 @@ import kotlinx.coroutines.withContext
 @Composable
 fun NewPublicMessageScreen(
     to: Set<HexKey>? = null,
-    reply: Note? = null,
-    draft: Note? = null,
+    replyId: HexKey? = null,
+    draftId: HexKey? = null,
     accountViewModel: AccountViewModel,
     nav: Nav,
 ) {
@@ -120,16 +120,18 @@ fun NewPublicMessageScreen(
             to?.let {
                 postViewModel.load(it)
             }
-            reply?.let {
+            replyId?.let { accountViewModel.getNoteIfExists(it) }?.let {
                 postViewModel.reply(it)
             }
-            draft?.let {
+            draftId?.let { accountViewModel.getNoteIfExists(it) }?.let {
                 postViewModel.editFromDraft(it)
             }
         }
     }
 
     WatchAndLoadMyEmojiList(accountViewModel)
+
+    StrippingFailureDialog(postViewModel.strippingFailureConfirmation)
 
     BackHandler {
         accountViewModel.launchSigner {
@@ -247,8 +249,8 @@ fun PublicMessageScreenContent(
                             it,
                             accountViewModel.account.settings.defaultFileServer,
                             isUploading = postViewModel.mediaUploadTracker.isUploading,
-                            onAdd = { alt, server, sensitiveContent, mediaQuality, _ ->
-                                postViewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, server, accountViewModel.toastManager::toast, context)
+                            onAdd = { alt, server, sensitiveContent, mediaQuality, _, stripMetadata ->
+                                postViewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, server, accountViewModel.toastManager::toast, context, stripMetadata)
                                 accountViewModel.account.settings.changeDefaultFileServer(server)
                             },
                             onDelete = postViewModel::deleteMediaToUpload,

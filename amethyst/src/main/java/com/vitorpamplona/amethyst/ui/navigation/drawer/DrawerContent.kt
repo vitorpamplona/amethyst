@@ -43,6 +43,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Delete
@@ -51,6 +52,7 @@ import androidx.compose.material.icons.outlined.CollectionsBookmark
 import androidx.compose.material.icons.outlined.Drafts
 import androidx.compose.material.icons.outlined.GroupAdd
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.Sync
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -71,7 +73,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
@@ -88,6 +89,7 @@ import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
+import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
@@ -442,7 +444,7 @@ fun ListContent(
 
         NavigationRow(
             title = R.string.my_lists,
-            icon = ImageVector.vectorResource(R.drawable.format_list_bulleted_type),
+            icon = Icons.AutoMirrored.Filled.FormatListBulleted,
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
             route = Route.Lists,
@@ -472,13 +474,23 @@ fun ListContent(
             route = Route.Wallet,
         )
 
+        if (isDebug) {
+            NavigationRow(
+                title = R.string.route_chess,
+                icon = R.drawable.ic_chess,
+                iconReference = 1,
+                tint = MaterialTheme.colorScheme.onBackground,
+                nav = nav,
+                route = Route.Chess,
+            )
+        }
+
         NavigationRow(
-            title = R.string.route_chess,
-            icon = R.drawable.ic_chess,
-            iconReference = 1,
+            title = R.string.event_sync_title,
+            icon = Icons.Outlined.Sync,
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
-            route = Route.Chess,
+            route = Route.EventSync,
         )
 
         NavigationRow(

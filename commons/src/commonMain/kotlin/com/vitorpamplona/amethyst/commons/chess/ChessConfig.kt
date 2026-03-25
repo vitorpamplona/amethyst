@@ -30,14 +30,16 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
  */
 object ChessConfig {
     /**
-     * The 3 main relays for chess events.
-     * These are used for both fetching and publishing chess events.
+     * Relays for chess events.
+     * Includes relays used by jester.nyo.dev (relay.damus.io, offchain.pub)
+     * and popular community relays for broader reach.
      */
     val CHESS_RELAYS =
         listOf(
             "wss://relay.damus.io",
             "wss://nos.lol",
             "wss://relay.primal.net",
+            "wss://offchain.pub",
         )
 
     /**
@@ -48,6 +50,7 @@ object ChessConfig {
             "relay.damus.io".normalizeRelayUrl(),
             "nos.lol".normalizeRelayUrl(),
             "relay.primal.net".normalizeRelayUrl(),
+            "offchain.pub".normalizeRelayUrl(),
         )
 
     /**

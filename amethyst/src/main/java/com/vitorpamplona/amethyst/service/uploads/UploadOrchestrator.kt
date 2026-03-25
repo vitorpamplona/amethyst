@@ -292,6 +292,38 @@ class UploadOrchestrator {
         MediaCompressorResult(uri, mimeType, null)
     }
 
+    private suspend fun stripAfterCompression(
+        originalUri: Uri,
+        compressed: MediaCompressorResult,
+        mimeType: String?,
+        compressionQuality: CompressorQuality,
+        stripMetadata: Boolean,
+        onStrippingFailed: suspend () -> Boolean,
+        context: Context,
+    ): Uri? {
+        if (!stripMetadata) return compressed.uri
+
+        val effectiveMimeType = compressed.contentType ?: mimeType
+        val isVideo = effectiveMimeType?.startsWith("video/", ignoreCase = true) == true
+        val compressionRequested = compressionQuality != CompressorQuality.UNCOMPRESSED
+        val compressionApplied = compressionRequested && compressed.uri != originalUri
+
+        val strippingResult =
+            if (isVideo && compressionApplied) {
+                // Compression was requested and actually applied to a video;
+                // assume it stripped metadata successfully.
+                StrippingResult(compressed.uri, true)
+            } else {
+                MetadataStripper.strip(compressed.uri, effectiveMimeType, context.applicationContext)
+            }
+
+        if (!strippingResult.stripped) {
+            if (!onStrippingFailed()) return null
+        }
+
+        return strippingResult.uri
+    }
+
     suspend fun upload(
         uri: Uri,
         mimeType: String?,
@@ -302,13 +334,19 @@ class UploadOrchestrator {
         account: Account,
         context: Context,
         useH265: Boolean = false,
+        stripMetadata: Boolean = true,
+        onStrippingFailed: suspend () -> Boolean = { true },
     ): UploadingFinalState {
         val compressed = compressIfNeeded(uri, mimeType, compressionQuality, context, useH265)
 
+        val finalUri =
+            stripAfterCompression(uri, compressed, mimeType, compressionQuality, stripMetadata, onStrippingFailed, context)
+                ?: return error(R.string.upload_cancelled)
+
         return when (server.type) {
-            ServerType.NIP95 -> uploadNIP95(compressed.uri, compressed.contentType, null, null, context)
-            ServerType.NIP96 -> uploadNIP96(compressed.uri, compressed.contentType, compressed.size, alt, contentWarningReason, server.baseUrl, null, null, account, context)
-            ServerType.Blossom -> uploadBlossom(compressed.uri, compressed.contentType, compressed.size, alt, contentWarningReason, server.baseUrl, null, null, account, context)
+            ServerType.NIP95 -> uploadNIP95(finalUri, compressed.contentType, null, null, context)
+            ServerType.NIP96 -> uploadNIP96(finalUri, compressed.contentType, compressed.size, alt, contentWarningReason, server.baseUrl, null, null, account, context)
+            ServerType.Blossom -> uploadBlossom(finalUri, compressed.contentType, compressed.size, alt, contentWarningReason, server.baseUrl, null, null, account, context)
         }
     }
 
@@ -323,9 +361,16 @@ class UploadOrchestrator {
         account: Account,
         context: Context,
         useH265: Boolean = false,
+        stripMetadata: Boolean = true,
+        onStrippingFailed: suspend () -> Boolean = { true },
     ): UploadingFinalState {
         val compressed = compressIfNeeded(uri, mimeType, compressionQuality, context, useH265)
-        val encrypted = EncryptFiles().encryptFile(context, compressed.uri, encrypt)
+
+        val finalUri =
+            stripAfterCompression(uri, compressed, mimeType, compressionQuality, stripMetadata, onStrippingFailed, context)
+                ?: return error(R.string.upload_cancelled)
+
+        val encrypted = EncryptFiles().encryptFile(context, finalUri, encrypt)
 
         return when (server.type) {
             ServerType.NIP95 -> uploadNIP95(encrypted.uri, encrypted.contentType, compressed.contentType, encrypted.originalHash, context)

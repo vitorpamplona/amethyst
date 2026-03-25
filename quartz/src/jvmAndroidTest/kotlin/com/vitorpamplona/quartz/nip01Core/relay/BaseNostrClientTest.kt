@@ -21,11 +21,34 @@
 package com.vitorpamplona.quartz.nip01Core.relay
 
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
+import okhttp3.Interceptor
 import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
+
+class DefaultContentTypeInterceptor(
+    private val userAgentHeader: String,
+) : Interceptor {
+    override fun intercept(chain: Interceptor.Chain): Response {
+        val originalRequest: Request = chain.request()
+        val requestWithUserAgent: Request =
+            originalRequest
+                .newBuilder()
+                .header("User-Agent", userAgentHeader)
+                .build()
+        return chain.proceed(requestWithUserAgent)
+    }
+}
 
 open class BaseNostrClientTest {
     companion object {
-        val rootClient = OkHttpClient.Builder().build()
+        val rootClient =
+            OkHttpClient
+                .Builder()
+                .followRedirects(true)
+                .followSslRedirects(true)
+                .addInterceptor(DefaultContentTypeInterceptor("Amethyst/v1.05"))
+                .build()
         val socketBuilder = BasicOkHttpWebSocket.Builder { url -> rootClient }
     }
 }

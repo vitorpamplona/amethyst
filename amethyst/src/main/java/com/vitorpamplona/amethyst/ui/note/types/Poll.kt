@@ -36,6 +36,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
@@ -56,7 +57,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFontFamilyResolver
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.text.TextMeasurer
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -82,11 +89,10 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BigPadding
+import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.SmallishBorder
-import com.vitorpamplona.amethyst.ui.theme.SpacedBy10dp
 import com.vitorpamplona.amethyst.ui.theme.SpacedBy5dp
-import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.allGoodColor
 import com.vitorpamplona.amethyst.ui.theme.grayText
@@ -178,7 +184,7 @@ fun InnerRenderPoll(
             TranslatableRichTextViewer(
                 content = label,
                 canPreview = canPreview,
-                quotesLeft = 1,
+                quotesLeft = if (quotesLeft > 0) 1 else 0,
                 modifier = Modifier.fillMaxWidth(),
                 tags = tags,
                 backgroundColor = backgroundColor,
@@ -328,10 +334,13 @@ private fun ColumnScope.RenderSingleChoiceOptions(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                val hasSpaceToClick =
+                    remember {
+                        it.label.contains(' ') || it.label.contains('\n')
+                    }
+
                 Column(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth(),
+                    modifier = if (hasSpaceToClick) Modifier.fillMaxWidth() else Modifier.fillMaxWidth(0.9f),
                 ) {
                     labelContent(it.code, it.label)
                 }
@@ -403,8 +412,15 @@ private fun RenderResults(
     resultContent: @Composable RowScope.(user: User) -> Unit,
     labelContent: @Composable (ColumnScope.(code: String, label: String) -> Unit),
 ) {
+    val showGallery =
+        remember {
+            card.options.all {
+                it.label.length < 50
+            }
+        }
+
     card.options.forEach { pollItem ->
-        RenderClosedItem(pollItem, resultContent) {
+        RenderClosedItem(pollItem, showGallery, resultContent) {
             labelContent(pollItem.code, pollItem.label)
         }
     }
@@ -413,17 +429,20 @@ private fun RenderResults(
 @Composable
 private fun RenderClosedItem(
     item: PollItemCard,
+    showGallery: Boolean,
     resultContent: @Composable RowScope.(user: User) -> Unit,
     labelContent: @Composable ColumnScope.() -> Unit,
 ) {
     val tally by item.results.collectAsStateWithLifecycle(item.currentResults())
 
-    RenderClosedItem(tally, resultContent, labelContent)
+    RenderClosedItem(tally, item.label, showGallery, resultContent, labelContent)
 }
 
 @Composable
 private fun RenderClosedItem(
     tally: TallyResults,
+    label: String,
+    showGallery: Boolean,
     resultContent: @Composable RowScope.(user: User) -> Unit,
     labelContent: @Composable ColumnScope.() -> Unit,
 ) {
@@ -481,21 +500,42 @@ private fun RenderClosedItem(
                 content = labelContent,
             )
 
-            Spacer(StdHorzSpacer)
+            Spacer(DoubleHorzSpacer)
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = SpacedBy10dp,
             ) {
-                UserGallery(tally, resultContent)
+                if (showGallery) {
+                    UserGallery(tally, resultContent)
+                }
 
                 Text(
                     text = "${(tally.percent * 100).toInt()}%",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.End,
+                    modifier = measure100PercentWidthModifier(MaterialTheme.typography.bodyMedium),
                     maxLines = 1,
                 )
             }
+        }
+    }
+}
+
+@Composable
+fun measure100PercentWidthModifier(textStyle: TextStyle): Modifier {
+    val fontFamilyResolver = LocalFontFamilyResolver.current
+    val density = LocalDensity.current
+    val layoutDirection = LocalLayoutDirection.current
+
+    return remember(fontFamilyResolver, density, textStyle) {
+        val widthPx =
+            TextMeasurer(fontFamilyResolver, density, layoutDirection, 1)
+                .measure("100%", style = textStyle.copy(fontWeight = FontWeight.Bold))
+                .size
+                .width
+        with(density) {
+            Modifier.width(widthPx.toDp())
         }
     }
 }
@@ -510,13 +550,13 @@ fun UserGallery(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy((-10).dp),
         ) {
-            tally.users.take(6).forEach {
+            tally.users.take(4).forEach {
                 key(it.pubkeyHex) {
                     galleryUser(it)
                 }
             }
 
-            if (tally.users.size > 6) {
+            if (tally.users.size > 4) {
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier =
@@ -526,7 +566,7 @@ fun UserGallery(
                             .background(MaterialTheme.colorScheme.secondaryContainer),
                 ) {
                     Text(
-                        text = "+" + showCount(tally.users.size - 6),
+                        text = "+" + showCount(tally.users.size - 4),
                         fontSize = 10.sp,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
@@ -561,6 +601,54 @@ fun RenderPollManualPreview() {
                         currentResults = {
                             TallyResults(
                                 percent = 0.1f,
+                                isWinning = false,
+                            )
+                        },
+                    ),
+                ),
+            type = PollType.SINGLE_CHOICE,
+            endsAt = null,
+            isMyPoll = true,
+            haveIVotedFlow = flow {},
+            haveIVoted = { true },
+        )
+
+    ThemeComparisonColumn {
+        Column(Modifier.padding(10.dp)) {
+            RenderPollCard(poll, {}, {}) { _, label ->
+                Text(
+                    text = label,
+                )
+            }
+        }
+    }
+}
+
+@Preview
+@Composable
+fun RenderPollManualLongPreview() {
+    val poll =
+        PollCard(
+            options =
+                listOf(
+                    PollItemCard(
+                        code = "1",
+                        label = "Yes".repeat(300),
+                        results = flow {},
+                        currentResults = {
+                            TallyResults(
+                                percent = 1.0f,
+                                isWinning = true,
+                            )
+                        },
+                    ),
+                    PollItemCard(
+                        code = "2",
+                        label = "No".repeat(300),
+                        results = flow {},
+                        currentResults = {
+                            TallyResults(
+                                percent = 0.0f,
                                 isWinning = false,
                             )
                         },

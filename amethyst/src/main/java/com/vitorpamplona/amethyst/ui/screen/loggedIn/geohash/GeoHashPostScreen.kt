@@ -26,12 +26,12 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.note.nip22Comments.CommentPostViewModel
 import com.vitorpamplona.amethyst.ui.note.nip22Comments.GenericCommentPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
@@ -42,9 +42,9 @@ fun GeoHashPostScreen(
     geohash: String? = null,
     message: String? = null,
     attachment: Uri? = null,
-    reply: Note? = null,
-    quote: Note? = null,
-    draft: Note? = null,
+    replyId: HexKey? = null,
+    quoteId: HexKey? = null,
+    draftId: HexKey? = null,
     accountViewModel: AccountViewModel,
     nav: Nav,
 ) {
@@ -57,13 +57,13 @@ fun GeoHashPostScreen(
         geohash?.let {
             postViewModel.newPostFor(GeohashId(it))
         }
-        reply?.let {
+        replyId?.let { accountViewModel.getNoteIfExists(it) }?.let {
             postViewModel.reply(it)
         }
-        draft?.let {
+        draftId?.let { accountViewModel.getNoteIfExists(it) }?.let {
             postViewModel.editFromDraft(it)
         }
-        quote?.let {
+        quoteId?.let { accountViewModel.getNoteIfExists(it) }?.let {
             postViewModel.quote(it)
         }
         message?.ifBlank { null }?.let {

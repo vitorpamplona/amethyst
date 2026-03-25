@@ -258,6 +258,7 @@
     <string name="error_loading_replies">"Error loading replies: "</string>
     <string name="try_again">Try again</string>
     <string name="notification_feed_is_empty">No notifications yet.</string>
+    <string name="open_poll">Open Poll</string>
     <string name="feed_is_empty">Feed is empty.</string>
     <string name="refresh">Refresh</string>
     <string name="created">created</string>
@@ -308,6 +309,7 @@
     <string name="lnurl" translatable="false">LNURL…</string>
     <string name="never">never</string>
     <string name="now">now</string>
+    <string name="seconds">seconds</string>
     <string name="h">h</string>
     <string name="m">m</string>
     <string name="d">d</string>
@@ -481,6 +483,8 @@
     <string name="poll_zap_value_max">Zap maximum</string>
     <string name="poll_consensus_threshold">Consensus</string>
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
+    <string name="poll_single_choice">Single choice</string>
+    <string name="poll_multiple_choice">Multiple choice</string>
     <string name="poll_closing_date_time">Poll Closing Date &amp; Time</string>
     <string name="poll_closing_in">Poll closes in %1$s</string>
     <string name="poll_closing_time">Close after</string>
@@ -536,6 +540,10 @@
     <string name="zap_type_nonzap">Non-Zap</string>
     <string name="zap_type_nonzap_explainer">No trace in Nostr, only in Lightning</string>
 
+
+    <string name="post_anonymously">Anonymous</string>
+    <string name="post_anonymously_explainer">Post as a new throwaway identity. Your account will not be linked to this reply.</string>
+    <string name="anonymous_reply_warning">This reply will be posted from a new anonymous identity</string>
 
     <string name="file_server">File Server</string>
     <string name="file_server_description">Choose a server to upload this file to</string>
@@ -731,6 +739,11 @@
     <string name="app_notification_zaps_channel_message">%1$s sats</string>
     <string name="app_notification_zaps_channel_message_from">From %1$s</string>
     <string name="app_notification_zaps_channel_message_for">for %1$s</string>
+
+    <string name="app_notification_reply_label">Reply</string>
+    <string name="app_notification_mark_read_label">Mark Read</string>
+    <string name="app_notification_dms_summary">New messages</string>
+    <string name="app_notification_zaps_summary">New zaps</string>
 
     <string name="reply_notify">Notify: </string>
 
@@ -1216,6 +1229,13 @@
     <string name="compression_cancelled">Compression Cancelled</string>
     <string name="compression_returned_null">Compression failed to return a file</string>
 
+    <string name="encrypt_files_label">Encrypt files</string>
+    <string name="encrypt_files_description">Encrypt files before uploading for privacy. Some servers may not accept encrypted files on free accounts.</string>
+    <string name="failed_to_upload_encrypted_media_title">Encrypted upload failed</string>
+    <string name="failed_to_upload_encrypted_media_message">Many servers do not accept encrypted files on free accounts. You can retry without encryption.</string>
+    <string name="retry_without_encryption">Retry without encryption</string>
+    <string name="upload_without_encryption_warning">Warning: Without encryption, anyone with the file link can see the content.</string>
+
     <string name="media_compression_quality_label">Media Quality</string>
     <string name="media_compression_quality_explainer">Select Low quality to compress your media to a smaller file with less quality, High quality to compress to a larger file with higher quality or Uncompressed to upload the media without compression.</string>
     <string name="media_compression_quality_low">Low</string>
@@ -1224,6 +1244,14 @@
     <string name="media_compression_quality_uncompressed">Uncompressed</string>
     <string name="video_codec_h265_label">Use H.265/HEVC Codec</string>
     <string name="video_codec_h265_description">Better quality at smaller file sizes but not all devices support H.265 playback.</string>
+    <string name="strip_metadata_label">Remove private metadata</string>
+    <string name="strip_metadata_description">Attempts to strip private metadata from supported media files before uploading</string>
+
+    <string name="metadata_strip_failed_title">Metadata could not be removed</string>
+    <string name="metadata_strip_failed_body">This file format does not support metadata stripping. Private information such as location and device info may be included. Upload anyway?</string>
+    <string name="metadata_strip_failed_upload">Upload anyway</string>
+    <string name="metadata_strip_failed_upload_cancelled">Failed to strip private metadata from media. Upload cancelled.</string>
+    <string name="upload_cancelled">Upload cancelled</string>
 
     <string name="edit_draft">Edit draft</string>
 
@@ -1260,6 +1288,9 @@
     <string name="wallet_incoming">Received</string>
     <string name="wallet_outgoing">Sent</string>
     <string name="wallet_refresh">Refresh</string>
+    <string name="wallet_filter_all">All</string>
+    <string name="wallet_filter_zaps">Zaps</string>
+    <string name="wallet_filter_non_zaps">Non-Zaps</string>
     <string name="route_security_filters">Security Filters</string>
     <string name="route_import_follows">Import Follows</string>
 
@@ -1268,6 +1299,14 @@
     <string name="new_community_note">New Community Note</string>
     <string name="new_product">New Product</string>
     <string name="new_exclusive_geo_note">New Geo-Exclusive Post</string>
+    <string name="new_long_form_post">New Article</string>
+
+    <string name="article_title">Title</string>
+    <string name="article_summary">Summary (optional)</string>
+    <string name="article_cover_image_url">Cover image URL (optional)</string>
+    <string name="write_your_article_in_markdown">Write your article in markdown…</string>
+    <string name="markdown_preview">Preview</string>
+    <string name="markdown_edit">Edit</string>
 
     <string name="open_all_reactions_to_this_post">Open all reactions to this post</string>
     <string name="close_all_reactions_to_this_post">Close all reactions to this post</string>
@@ -1341,6 +1380,7 @@
     <string name="dm_relays_not_found_examples2">Good options are:\n - auth.nostr1.com (free)\n - inbox.nostr.wine (paid)\n - relay.0xchat.com (free)</string>
     <string name="dm_relays_not_found_editing">Insert between 1–3 relays to serve as your private inbox. DM Inbox relays should accept any message from anyone, but only allow you to download them.</string>
     <string name="dm_relays_not_found_create_now">Set up now</string>
+    <string name="recipient_missing_dm_relays">DM inbox relays not found. Messages cannot be delivered until they configure their relay list.</string>
 
     <string name="search_relays_title">Search Relays</string>
     <string name="search_relays_not_found">Set up your Search relays</string>
@@ -1434,6 +1474,7 @@
     <string name="ots_info_title">Timestamp Proof</string>
     <string name="ots_info_description">There\'s proof this post was signed sometime before %1$s. The proof was stamped in the Bitcoin blockchain at that date and time.</string>
 
+    <string name="edit_article">Edit Article</string>
     <string name="edit_post">Edit Post</string>
     <string name="proposal_to_edit">Proposal to improve a post</string>
     <string name="message_to_author">Summary of changes</string>
@@ -1521,7 +1562,11 @@
     <string name="my_lists_and_sets">My Lists/Sets</string>
     <string name="my_lists">My Lists</string>
     <string name="people_list_label">Users</string>
-    <string name="select_list_to_filter">Select a list to filter the feed</string>
+    <string name="select_list_to_filter">Select an option to filter the feed</string>
+    <string name="feed_group_feeds">Feeds</string>
+    <string name="feed_group_hashtags">Hashtags</string>
+    <string name="feed_group_communities">Communities</string>
+    <string name="feed_group_lists">Lists</string>
 
     <string name="temporary_account">Log off on device lock</string>
     <string name="private_message">Private Message</string>
@@ -1801,9 +1846,94 @@
     <string name="select_all">Select All</string>
     <string name="uptime">%1$d%% uptime</string>
     <string name="namecoin_settings">Namecoin Settings</string>
+    <string name="event_sync_title">Relay Sync</string>
+    <string name="event_sync_section">Relay Sync</string>
+    <string name="event_sync_section_explainer">Re-publish your events across all known relays to keep your outbox, inbox, and DM relays up to date. Requires Wi-Fi — this may use a lot of data.</string>
+    <string name="event_sync_open_button">Open Relay Sync…</string>
+    <string name="event_sync_what_happens_title">What this does</string>
+    <string name="event_sync_what_happens_body">This tool scans every relay your app has seen and redistributes your events to the correct destinations: </string>
+    <string name="event_sync_step1">Download all events you authored and send them to your outbox relays.</string>
+    <string name="event_sync_step2">Download all events that mention you and send them to your inbox relays.</string>
+    <string name="event_sync_step3">Download all direct messages addressed to you and send them to your DM relays.</string>
+    <string name="event_sync_wifi_warning">⚠ You appear to be on a metered or mobile connection. This operation can transfer a very large amount of data. Connect to Wi-Fi before starting.</string>
+    <string name="event_sync_mobile_data_dialog_title">Use Mobile Data?</string>
+    <string name="event_sync_start">Start Sync</string>
+    <string name="event_sync_start_anyway">Start Anyway (mobile data)</string>
+    <string name="event_sync_pause">Pause</string>
+    <string name="event_sync_resume">Resume</string>
+    <string name="event_sync_start_over">Start Over</string>
+    <string name="event_sync_cancel">Cancel</string>
+    <string name="event_sync_relays_progress">Relays: %1$d / %2$d</string>
+    <string name="event_sync_events_sent">Events redistributed: %1$d new out of %2$d sent and %3$d received</string>
+    <string name="event_sync_paused_title">Sync Paused</string>
+    <string name="event_sync_paused_body">Completed %1$d of %2$d relays — %3$d events redistributed so far. Tap Resume to continue.</string>
+    <string name="event_sync_done_title">Sync complete</string>
+    <string name="event_sync_done_sent">Forwarded %1$d events to destination relays out of %2$d received.</string>
+    <string name="event_sync_done_accepted">%1$d events accepted as new by destination relays.</string>
+    <string name="event_sync_done_duration">Completed in %1$d seconds.</string>
+    <string name="event_sync_error_title">Sync error</string>
+    <string name="event_sync_sending_to">Sending To</string>
+    <string name="event_sync_outbox_relays">Outbox</string>
+    <string name="event_sync_inbox_relays">Inbox</string>
+    <string name="event_sync_dm_relays">DMs</string>
+    <string name="event_sync_activity_log">Currently Checking (%1$d relays)</string>
+    <string name="event_sync_activity_log_finished">Finished (%1$d relays)</string>
+    <string name="event_sync_log_sent">sent %1$s</string>
+    <string name="event_sync_log_recv">recv %1$s</string>
+    <string name="event_sync_log_new">new %1$s</string>
+    <string name="event_sync_no_events">no events</string>
     <string name="ots_explorer_settings">Bitcoin Explorer (OTS)</string>
     <string name="events">events</string>
     <string name="dms">DMs</string>
     <string name="profiles">profiles</string>
     <string name="relay_settings_lower">relay settings</string>
+    <string name="last_seen">Last seen %1$s ago</string>
+
+    <string name="event_sync_less_than_until">&lt;%1$s</string>
+    <string name="event_sync_status_connecting">Connecting</string>
+    <string name="event_sync_status_downloading">Downloading</string>
+    <string name="event_sync_status_error">Error</string>
+    <string name="event_sync_status_completed">Completed</string>
+
+    <!-- M3 Action Dialog titles -->
+    <string name="mark_as_read_dialog_title">Mark as Read</string>
+    <string name="note_actions_dialog_title">Note Actions</string>
+    <string name="profile_actions_dialog_title">Profile Actions</string>
+    <string name="media_actions_dialog_title">Media Actions</string>
+    <string name="playback_actions_dialog_title">Playback</string>
+    <string name="pack_actions_dialog_title">Pack Actions</string>
+    <string name="list_actions_dialog_title">List Actions</string>
+    <string name="bookmark_item_actions_dialog_title">Bookmark Actions</string>
+    <string name="group_actions_dialog_title">Group Actions</string>
+    <string name="add_bookmark_dialog_title">Add Bookmark</string>
+    <string name="add_member_dialog_title">Add Member</string>
+    <string name="list_management_dialog_title">List Management</string>
+    <string name="link_actions_dialog_title">Link Actions</string>
+    <string name="export_actions_dialog_title">Export</string>
+    <string name="attestation">Attestation</string>
+    <string name="attestation_valid">Valid</string>
+    <string name="attestation_invalid">Invalid</string>
+    <string name="attestation_status_accepted">Accepted</string>
+    <string name="attestation_status_rejected">Rejected</string>
+    <string name="attestation_status_verifying">Verifying</string>
+    <string name="attestation_status_verified">Verified</string>
+    <string name="attestation_status_revoked">Revoked</string>
+    <string name="attestation_valid_from">Valid from %1$s</string>
+    <string name="attestation_valid_to">Valid to %1$s</string>
+    <string name="attestation_request">Attestation Request</string>
+    <string name="attestation_request_description">Requesting attestation for an event</string>
+    <string name="attestor_recommendation">Attestor Recommendation</string>
+    <string name="attestor_recommendation_for_kinds">Recommended for kinds: </string>
+    <string name="attestor_proficiency">Attestor Proficiency</string>
+    <string name="attestor_proficiency_for_kinds">Proficient in verifying kinds: %1$s</string>
+    <string name="attestation_attests_to">Attests to</string>
+    <string name="attestation_requests_attestation_to">Requests attestation to</string>
+
+    <string name="event_sync_date_filter_title">Date Range</string>
+    <string name="event_sync_date_filter_since">Since</string>
+    <string name="event_sync_date_filter_until">Until</string>
+    <string name="event_sync_date_filter_now">Now</string>
+    <string name="event_sync_date_filter_all_time">All time</string>
+    <string name="event_sync_date_filter_last_sync">Last sync: %1$s</string>
+    <string name="event_sync_date_filter_since_last_sync">Since Last Sync</string>
 </resources>

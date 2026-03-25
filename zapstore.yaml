@@ -1,14 +1,51 @@
-name: Amethyst
-description: The all-in-one Nostr client
-license: MIT
-builder: npub142gywvjkq0dv6nupggyn2euhx4nduwc7yz5f24ah9rpmunr2s39se3xrj0
+# ═══════════════════════════════════════════════════════════════════
+# SOURCE CONFIGURATION
+# ═══════════════════════════════════════════════════════════════════
+
+# Source code repository URL or NIP-34 naddr (for display in app store)
 repository: https://github.com/vitorpamplona/amethyst
-homepage: https://amethyst.social/
-assets:
-  - amethyst-googleplay.*.apk
-remote_metadata:
-  - github
 
+# ═══════════════════════════════════════════════════════════════════
+# APP METADATA
+# ═══════════════════════════════════════════════════════════════════
 
+# App name (overrides APK label)
+name: Amethyst
 
+# Short one-line description
+summary: The all-in-one Nostr client
 
+# Full description (supports markdown)
+description: |
+  A privacy-focused Nostr client for Android. Built-in TOR support, the most configurable relay system,
+  encrypted messaging, zaps, marketplaces, live streams and complete data sovereignty.
+
+# Category tags
+tags:
+  - social-network
+  - nostr
+
+# SPDX license identifier
+license: MIT
+
+# App homepage
+website: https://amethyst.social/
+
+# ═══════════════════════════════════════════════════════════════════
+# MEDIA
+# ═══════════════════════════════════════════════════════════════════
+# Screenshots (local paths or URLs)
+images:
+  - ./docs/screenshots/home.png
+  - ./docs/screenshots/messages.png
+  - ./docs/screenshots/notifications.png
+  - ./docs/screenshots/replies.png
+
+# ═══════════════════════════════════════════════════════════════════
+# VARIANTS
+# ═══════════════════════════════════════════════════════════════════
+
+# APK variant patterns (for apps with multiple builds)
+variants:
+  fdroid: ".*-fdroid-.*\\.apk$"
+  google: ".*-googleplay-.*\\.apk$"

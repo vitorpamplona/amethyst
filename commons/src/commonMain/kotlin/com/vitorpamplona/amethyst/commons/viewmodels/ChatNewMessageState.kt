@@ -28,13 +28,11 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.references.references
-import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
 import com.vitorpamplona.quartz.nip10Notes.content.findNostrEventUris
 import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import com.vitorpamplona.quartz.nip17Dm.base.BaseDMGroupEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
-import com.vitorpamplona.quartz.nip17Dm.base.NIP17Group
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
@@ -62,9 +60,6 @@ class ChatNewMessageState(
     private val _message = MutableStateFlow(TextFieldValue(""))
     val message: StateFlow<TextFieldValue> = _message.asStateFlow()
 
-    private val _nip17 = MutableStateFlow(false)
-    val nip17: StateFlow<Boolean> = _nip17.asStateFlow()
-
     private val _replyTo = MutableStateFlow<Note?>(null)
     val replyTo: StateFlow<Note?> = _replyTo.asStateFlow()
 
@@ -74,38 +69,37 @@ class ChatNewMessageState(
     private val _room = MutableStateFlow<ChatroomKey?>(null)
     val room: StateFlow<ChatroomKey?> = _room.asStateFlow()
 
-    /** Whether NIP-17 is required (group chat with >1 recipient) */
-    private val _requiresNip17 = MutableStateFlow(false)
-    val requiresNip17: StateFlow<Boolean> = _requiresNip17.asStateFlow()
+    /** Whether any recipients are missing DM relay lists, preventing message delivery */
+    private val _recipientsMissingDmRelays = MutableStateFlow(false)
+    val recipientsMissingDmRelays: StateFlow<Boolean> = _recipientsMissingDmRelays.asStateFlow()
 
-    /** Whether a message can be sent (non-blank text + room set) */
+    /** Whether a message can be sent (non-blank text + room set + all recipients have DM relays) */
     val canSend: Boolean
-        get() = _message.value.text.isNotBlank() && _room.value != null
+        get() = _message.value.text.isNotBlank() && _room.value != null && !_recipientsMissingDmRelays.value
 
     /**
-     * Load a chatroom. Sets the room key, formats toUsers display,
-     * and auto-detects NIP-17 requirement (group chats require NIP-17).
+     * Load a chatroom. Sets the room key and checks recipient DM relay availability.
      */
     fun load(roomKey: ChatroomKey) {
         _room.value = roomKey
-        updateNip17FromRoom()
+        updateRecipientRelayStatus()
     }
 
     /**
-     * Auto-detect NIP-17 based on room:
-     * - Group chats (>1 recipient) always require NIP-17
-     * - Single recipient: NIP-17 off by default (can be toggled)
+     * Check if all recipients have DM relay lists.
+     * Messages can only be sent via NIP-17, so recipients must have
+     * either a DM inbox relay list (kind 10050) or NIP-65 inbox relays.
      */
-    fun updateNip17FromRoom() {
+    fun updateRecipientRelayStatus() {
         val currentRoom = _room.value
         if (currentRoom != null) {
-            _requiresNip17.value = currentRoom.users.size > 1
-            if (_requiresNip17.value) {
-                _nip17.value = true
-            }
+            _recipientsMissingDmRelays.value =
+                currentRoom.users.any { hexKey ->
+                    val user = cache.getOrCreateUser(hexKey) as? User
+                    user?.dmInboxRelays().isNullOrEmpty()
+                }
         } else {
-            _requiresNip17.value = false
-            _nip17.value = false
+            _recipientsMissingDmRelays.value = false
         }
     }
 
@@ -126,27 +120,7 @@ class ChatNewMessageState(
     }
 
     /**
-     * Toggle NIP-04/NIP-17 mode.
-     * If NIP-17 is required (group chat), stays on NIP-17.
-     */
-    fun toggleNip17() {
-        if (_requiresNip17.value) {
-            _nip17.value = true
-        } else {
-            _nip17.value = !_nip17.value
-        }
-    }
-
-    /**
-     * Enable NIP-17 (e.g., when recipient has DM relay list).
-     */
-    fun enableNip17() {
-        _nip17.value = true
-    }
-
-    /**
-     * Send the current message. Builds the appropriate event template
-     * (NIP-04 or NIP-17) and delegates to IAccount for signing/broadcasting.
+     * Send the current message as NIP-17. NIP-04 is deprecated for sending.
      *
      * @return true if send was initiated, false if preconditions not met
      */
@@ -154,12 +128,9 @@ class ChatNewMessageState(
         val currentRoom = _room.value ?: return false
         val messageText = _message.value.text
         if (messageText.isBlank()) return false
+        if (_recipientsMissingDmRelays.value) return false
 
-        if (_nip17.value || currentRoom.users.size > 1 || _replyTo.value?.event is NIP17Group) {
-            sendNip17(currentRoom, messageText)
-        } else {
-            sendNip04(currentRoom, messageText)
-        }
+        sendNip17(currentRoom, messageText)
 
         return true
     }
@@ -191,23 +162,6 @@ class ChatNewMessageState(
             }
 
         account.sendNip17PrivateMessage(template)
-    }
-
-    private suspend fun sendNip04(
-        room: ChatroomKey,
-        messageText: String,
-    ) {
-        val toUser = (cache.getOrCreateUser(room.users.first()) as? User)?.toPTag() ?: return
-
-        val template =
-            PrivateDmEvent.build(
-                toUser = toUser,
-                message = messageText,
-                replyingTo = _replyTo.value?.toEventHint<PrivateDmEvent>(),
-                signer = account.signer,
-            )
-
-        account.sendNip04PrivateMessage(template)
     }
 
     /**

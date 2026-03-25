@@ -197,7 +197,7 @@ fun NewGroupDMScreen(
                     // function when the postViewModel is released
                     accountViewModel.launchSigner {
                         postViewModel.sendPostSync()
-                        postViewModel.room?.let {
+                        postViewModel.room.value?.let {
                             nav.nav(routeToMessage(it, null, null, null, null, accountViewModel))
                         }
                     }
@@ -288,7 +288,7 @@ fun GroupDMScreenContent(
                             selectedFiles,
                             accountViewModel.account.settings.defaultFileServer,
                             isUploading = uploading.mediaUploadTracker.isUploading,
-                            onAdd = { alt, server, sensitiveContent, mediaQuality, _ ->
+                            onAdd = { alt, server, sensitiveContent, mediaQuality, _, _ ->
                                 postViewModel.uploadAndHold(
                                     accountViewModel.toastManager::toast,
                                     context,
@@ -301,6 +301,15 @@ fun GroupDMScreenContent(
                             accountViewModel = accountViewModel,
                         )
                     }
+                }
+
+                postViewModel.encryptedUploadErrorTitle?.let { title ->
+                    EncryptedUploadErrorDialog(
+                        title = title,
+                        message = postViewModel.encryptedUploadErrorMessage ?: "",
+                        onDismiss = postViewModel::dismissEncryptedUploadError,
+                        onRetryWithoutEncryption = postViewModel::retryWithoutEncryption,
+                    )
                 }
             }
         }
@@ -321,6 +330,11 @@ fun GroupDMScreenContent(
                 postViewModel::autocompleteWithEmojiUrl,
                 SuggestionListDefaultHeightPage,
             )
+        }
+
+        val missingRelays by postViewModel.recipientsMissingDmRelays.collectAsStateWithLifecycle()
+        if (missingRelays.isNotEmpty()) {
+            RecipientMissingRelaysWarning(missingRelays, accountViewModel, nav)
         }
 
         BottomRowActions(postViewModel, accountViewModel)
@@ -384,7 +398,9 @@ private fun BottomRowActions(
                 .height(50.dp),
         verticalAlignment = CenterVertically,
     ) {
-        if (postViewModel.room != null) {
+        val room by postViewModel.room.collectAsStateWithLifecycle()
+
+        if (room != null) {
             SelectFromGallery(
                 isUploading = postViewModel.isUploadingImage,
                 enabled = !postViewModel.isUploadingFile,
@@ -415,7 +431,7 @@ private fun BottomRowActions(
             }
         }
 
-        if (postViewModel.room != null) {
+        if (room != null) {
             TakePictureButton(
                 onPictureTaken = { postViewModel.pickedMedia(it) },
             )
@@ -434,7 +450,7 @@ private fun BottomRowActions(
             }
         }
 
-        if (postViewModel.room != null) {
+        if (room != null) {
             TakeVideoButton(
                 onVideoTaken = { postViewModel.pickedMedia(it) },
             )
@@ -541,8 +557,6 @@ fun SendDirectMessageTo(
                         focusedBorderColor = Color.Transparent,
                     ),
             )
-
-            ToggleNip17Button(postViewModel, accountViewModel)
         }
 
         HorizontalDivider(thickness = DividerThickness)

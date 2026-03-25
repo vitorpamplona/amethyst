@@ -59,13 +59,13 @@ fun SecretEmojiRequest(onSuccess: (String) -> Unit) {
     Column {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
+            modifier = Modifier.fillMaxWidth().padding(bottom = 5.dp),
         ) {
             Icon(
                 imageVector = Icons.Outlined.Assistant,
                 null,
                 modifier = Size20Modifier,
-                tint = Color.Unspecified,
+                tint = MaterialTheme.colorScheme.onBackground,
             )
 
             Text(

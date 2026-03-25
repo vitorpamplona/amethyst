@@ -213,4 +213,10 @@ class PoolCounts {
     ) {
         // mark as impossible to get count from this relay
     }
+
+    fun destroy() {
+        relayState.clear()
+        relays.tryEmit(emptySet())
+        queries.clear()
+    }
 }

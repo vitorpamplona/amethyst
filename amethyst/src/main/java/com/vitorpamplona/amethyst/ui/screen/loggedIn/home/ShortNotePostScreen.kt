@@ -25,7 +25,9 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Parcelable
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -59,7 +61,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.util.Consumer
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.FileServerSelectionRow
 import com.vitorpamplona.amethyst.ui.actions.uploads.MAX_VOICE_RECORD_SECONDS
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordVoiceButton
@@ -94,21 +96,26 @@ import com.vitorpamplona.amethyst.ui.note.creators.secretEmoji.AddSecretEmojiBut
 import com.vitorpamplona.amethyst.ui.note.creators.secretEmoji.SecretEmojiRequest
 import com.vitorpamplona.amethyst.ui.note.creators.uploads.ImageVideoDescription
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
+import com.vitorpamplona.amethyst.ui.note.creators.zappolls.ZapPollField
 import com.vitorpamplona.amethyst.ui.note.creators.zapraiser.AddZapraiserButton
 import com.vitorpamplona.amethyst.ui.note.creators.zapraiser.ZapRaiserRequest
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapTo
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapToButton
 import com.vitorpamplona.amethyst.ui.note.types.ReplyRenderType
+import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
+import com.vitorpamplona.amethyst.ui.theme.Size19Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size30Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size35Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
-import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightPage
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
@@ -120,11 +127,11 @@ import kotlinx.coroutines.withContext
 fun ShortNotePostScreen(
     message: String? = null,
     attachment: Uri? = null,
-    baseReplyTo: Note? = null,
-    quote: Note? = null,
-    fork: Note? = null,
-    version: Note? = null,
-    draft: Note? = null,
+    baseReplyToId: HexKey? = null,
+    quoteId: HexKey? = null,
+    forkId: HexKey? = null,
+    versionId: HexKey? = null,
+    draftId: HexKey? = null,
     accountViewModel: AccountViewModel,
     nav: Nav,
 ) {
@@ -135,6 +142,11 @@ fun ShortNotePostScreen(
     val activity = context.getActivity()
 
     LaunchedEffect(postViewModel, accountViewModel) {
+        val baseReplyTo = baseReplyToId?.let { accountViewModel.getNoteIfExists(it) }
+        val quote = quoteId?.let { accountViewModel.getNoteIfExists(it) }
+        val fork = forkId?.let { accountViewModel.getNoteIfExists(it) }
+        val version = versionId?.let { accountViewModel.getNoteIfExists(it) }
+        val draft = draftId?.let { accountViewModel.getNoteIfExists(it) }
         postViewModel.load(baseReplyTo, quote, fork, version, draft)
         message?.ifBlank { null }?.let {
             postViewModel.updateMessage(TextFieldValue(it))
@@ -178,6 +190,8 @@ private fun NewPostScreenInner(
     nav: Nav,
 ) {
     WatchAndLoadMyEmojiList(accountViewModel)
+
+    StrippingFailureDialog(postViewModel.strippingFailureConfirmation)
 
     BackHandler {
         accountViewModel.launchSigner {
@@ -278,11 +292,32 @@ private fun NewPostScreenBody(
                     Row(
                         modifier = Modifier.padding(vertical = Size10dp),
                     ) {
-                        BaseUserPicture(
-                            accountViewModel.userProfile(),
-                            Size35dp,
-                            accountViewModel = accountViewModel,
-                        )
+                        if (postViewModel.wantsAnonymousPost) {
+                            IconButton(
+                                modifier = Size35Modifier,
+                                onClick = { postViewModel.wantsAnonymousPost = false },
+                            ) {
+                                Icon(
+                                    painter = painterRes(resourceId = R.drawable.incognito, 1),
+                                    contentDescription = stringRes(R.string.post_anonymously),
+                                    modifier = Size30Modifier,
+                                    tint = MaterialTheme.colorScheme.onBackground,
+                                )
+                            }
+                        } else {
+                            Box(
+                                modifier =
+                                    Modifier.clickable {
+                                        postViewModel.wantsAnonymousPost = true
+                                    },
+                            ) {
+                                BaseUserPicture(
+                                    accountViewModel.userProfile(),
+                                    Size35dp,
+                                    accountViewModel = accountViewModel,
+                                )
+                            }
+                        }
                         MessageField(
                             R.string.what_s_on_your_mind,
                             postViewModel,
@@ -293,9 +328,18 @@ private fun NewPostScreenBody(
                 if (postViewModel.wantsPoll) {
                     Row(
                         verticalAlignment = CenterVertically,
-                        modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
+                        modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
                     ) {
                         PollOptionsField(postViewModel)
+                    }
+                }
+
+                if (postViewModel.wantsZapPoll) {
+                    Row(
+                        verticalAlignment = CenterVertically,
+                        modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
+                    ) {
+                        ZapPollField(postViewModel)
                     }
                 }
 
@@ -304,7 +348,7 @@ private fun NewPostScreenBody(
                 if (postViewModel.wantsToMarkAsSensitive) {
                     Row(
                         verticalAlignment = CenterVertically,
-                        modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
+                        modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
                     ) {
                         ContentSensitivityExplainer(
                             description = postViewModel.contentWarningDescription,
@@ -316,7 +360,7 @@ private fun NewPostScreenBody(
                 if (postViewModel.wantsExpirationDate) {
                     Row(
                         verticalAlignment = CenterVertically,
-                        modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
+                        modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
                     ) {
                         ExpirationDatePicker(postViewModel)
                     }
@@ -325,7 +369,7 @@ private fun NewPostScreenBody(
                 if (postViewModel.wantsToAddGeoHash) {
                     Row(
                         verticalAlignment = CenterVertically,
-                        modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
+                        modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
                     ) {
                         LocationAsHash(postViewModel) {
                             SettingsRow(
@@ -341,7 +385,7 @@ private fun NewPostScreenBody(
                 if (postViewModel.wantsForwardZapTo) {
                     Row(
                         verticalAlignment = CenterVertically,
-                        modifier = Modifier.padding(top = Size5dp, bottom = Size5dp, start = Size10dp),
+                        modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
                     ) {
                         ForwardZapTo(postViewModel, accountViewModel)
                     }
@@ -350,15 +394,15 @@ private fun NewPostScreenBody(
                 postViewModel.multiOrchestrator?.let {
                     Row(
                         verticalAlignment = CenterVertically,
-                        modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
+                        modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
                     ) {
                         val context = LocalContext.current
                         ImageVideoDescription(
                             it,
                             accountViewModel.account.settings.defaultFileServer,
                             isUploading = postViewModel.mediaUploadTracker.isUploading,
-                            onAdd = { alt, server, sensitiveContent, mediaQuality, useH265 ->
-                                postViewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, server, accountViewModel.toastManager::toast, context, useH265)
+                            onAdd = { alt, server, sensitiveContent, mediaQuality, useH265, stripMetadata ->
+                                postViewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, server, accountViewModel.toastManager::toast, context, useH265, stripMetadata)
                                 accountViewModel.account.settings.changeDefaultFileServer(server)
                             },
                             onDelete = postViewModel::deleteMediaToUpload,
@@ -379,7 +423,7 @@ private fun NewPostScreenBody(
                         modifier =
                             Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = Size5dp, horizontal = Size10dp),
+                                .padding(vertical = Size10dp, horizontal = Size10dp),
                     ) {
                         // Display voice preview or uploading progress
                         postViewModel.voiceOrchestrator?.let { orchestrator ->
@@ -417,25 +461,30 @@ private fun NewPostScreenBody(
 
                 if (postViewModel.wantsInvoice) {
                     postViewModel.lnAddress()?.let { lud16 ->
-                        InvoiceRequest(
-                            lud16,
-                            accountViewModel.account.userProfile(),
-                            accountViewModel,
-                            stringRes(id = R.string.lightning_invoice),
-                            stringRes(id = R.string.lightning_create_and_add_invoice),
-                            onNewInvoice = {
-                                postViewModel.insertAtCursor(it)
-                                postViewModel.wantsInvoice = false
-                            },
-                            onError = { title, message -> accountViewModel.toastManager.toast(title, message) },
-                        )
+                        Row(
+                            verticalAlignment = CenterVertically,
+                            modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
+                        ) {
+                            InvoiceRequest(
+                                lud16,
+                                accountViewModel.account.userProfile(),
+                                accountViewModel,
+                                stringRes(id = R.string.lightning_invoice),
+                                stringRes(id = R.string.lightning_create_and_add_invoice),
+                                onNewInvoice = {
+                                    postViewModel.insertAtCursor(it)
+                                    postViewModel.wantsInvoice = false
+                                },
+                                onError = { title, message -> accountViewModel.toastManager.toast(title, message) },
+                            )
+                        }
                     }
                 }
 
                 if (postViewModel.wantsSecretEmoji) {
                     Row(
                         verticalAlignment = CenterVertically,
-                        modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
+                        modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
                     ) {
                         Column(Modifier.fillMaxWidth()) {
                             SecretEmojiRequest {
@@ -449,7 +498,7 @@ private fun NewPostScreenBody(
                 if (postViewModel.wantsZapRaiser && postViewModel.hasLnAddress()) {
                     Row(
                         verticalAlignment = CenterVertically,
-                        modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
+                        modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
                     ) {
                         ZapRaiserRequest(
                             stringRes(id = R.string.zapraiser),
@@ -531,11 +580,24 @@ private fun BottomRowActions(postViewModel: ShortNotePostViewModel) {
         )
 
         if (postViewModel.canUsePoll) {
-            // These should be hashtag recommendations the user selects in the future.
-            // val hashtag = stringRes(R.string.poll_hashtag)
-            // postViewModel.includePollHashtagInMessage(postViewModel.wantsPoll, hashtag)
             AddPollButton(postViewModel.wantsPoll) {
                 postViewModel.wantsPoll = !postViewModel.wantsPoll
+                if (postViewModel.wantsPoll) {
+                    if (postViewModel.wantsZapPoll) {
+                        postViewModel.wantsZapPoll = false
+                    }
+                }
+            }
+        }
+
+        if (postViewModel.canUseZapPoll) {
+            AddZapPollButton(postViewModel.wantsZapPoll) {
+                postViewModel.wantsZapPoll = !postViewModel.wantsZapPoll
+                if (postViewModel.wantsZapPoll) {
+                    if (postViewModel.wantsPoll) {
+                        postViewModel.wantsPoll = false
+                    }
+                }
             }
         }
 
@@ -581,6 +643,32 @@ private fun BottomRowActionsPreview() {
     model.canUsePoll = true
     ThemeComparisonColumn {
         BottomRowActions(model)
+    }
+}
+
+@Composable
+private fun AddZapPollButton(
+    isPollActive: Boolean,
+    onClick: () -> Unit,
+) {
+    IconButton(
+        onClick = { onClick() },
+    ) {
+        if (!isPollActive) {
+            Icon(
+                painter = painterRes(R.drawable.ic_poll, 1),
+                contentDescription = stringRes(id = R.string.poll),
+                modifier = Size19Modifier,
+                tint = MaterialTheme.colorScheme.onBackground,
+            )
+        } else {
+            Icon(
+                painter = painterRes(R.drawable.ic_poll, 1),
+                contentDescription = stringRes(id = R.string.disable_poll),
+                modifier = Size19Modifier,
+                tint = MaterialTheme.colorScheme.primary,
+            )
+        }
     }
 }
 

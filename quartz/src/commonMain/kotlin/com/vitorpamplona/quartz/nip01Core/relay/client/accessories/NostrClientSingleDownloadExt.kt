@@ -67,7 +67,7 @@ suspend fun INostrClient.downloadFirstEvent(
     subscriptionId: String = newSubId(),
     filters: Map<NormalizedRelayUrl, List<Filter>>,
 ): Event? {
-    val resultChannel = Channel<Event>(UNLIMITED)
+    val resultChannel = Channel<Event?>(UNLIMITED)
 
     val listener =
         object : IRequestListener {
@@ -79,16 +79,41 @@ suspend fun INostrClient.downloadFirstEvent(
             ) {
                 resultChannel.trySend(event)
             }
-        }
 
-    openReqSubscription(subscriptionId, filters, listener)
+            override fun onCannotConnect(
+                relay: NormalizedRelayUrl,
+                message: String,
+                forFilters: List<Filter>?,
+            ) {
+                resultChannel.trySend(null)
+            }
+
+            override fun onClosed(
+                message: String,
+                relay: NormalizedRelayUrl,
+                forFilters: List<Filter>?,
+            ) {
+                resultChannel.trySend(null)
+            }
+
+            override fun onEose(
+                relay: NormalizedRelayUrl,
+                forFilters: List<Filter>?,
+            ) {
+                resultChannel.trySend(null)
+            }
+        }
 
     val result =
-        withTimeoutOrNull(30000) {
-            resultChannel.receive()
-        }
+        try {
+            openReqSubscription(subscriptionId, filters, listener)
 
-    close(subscriptionId)
+            withTimeoutOrNull(30000) {
+                resultChannel.receive()
+            }
+        } finally {
+            close(subscriptionId)
+        }
 
     resultChannel.close()
 

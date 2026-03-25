@@ -36,7 +36,7 @@ import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.BookmarkIdTag
 import com.vitorpamplona.quartz.nip51Lists.labeledBookmarkList.LabeledBookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.labeledBookmarkList.description
 import com.vitorpamplona.quartz.nip51Lists.labeledBookmarkList.image
-import com.vitorpamplona.quartz.nip51Lists.labeledBookmarkList.name
+import com.vitorpamplona.quartz.nip51Lists.labeledBookmarkList.title
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -181,7 +181,7 @@ class LabeledBookmarkListsState(
 
         val template =
             listEvent.update {
-                if (listName != null) name(listName)
+                if (listName != null) title(listName)
                 if (listDescription != null) description(listDescription)
                 if (listImage != null) image(listImage)
             }

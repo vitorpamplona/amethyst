@@ -24,9 +24,9 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 
-fun TagArrayBuilder<Event>.client(name: String) = addUnique(ClientTag.assemble(name))
+fun <T : Event> TagArrayBuilder<T>.client(name: String) = addUnique(ClientTag.assemble(name))
 
-fun TagArrayBuilder<Event>.client(
+fun <T : Event> TagArrayBuilder<T>.client(
     name: String,
     address: AddressHint,
 ) = addUnique(ClientTag.assemble(name, address.addressId, address.relay))

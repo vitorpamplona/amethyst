@@ -228,11 +228,17 @@ class Url(
             return null
         }
 
+        val startIndex = urlMarker.indexOf(part)
+        if (startIndex < 0 || startIndex >= originalUrl.length) {
+            return null
+        }
+
         val nextPart = nextExistingPart(part)
         return if (nextPart == null) {
-            originalUrl.substring(urlMarker.indexOf(part))
+            originalUrl.substring(startIndex)
         } else {
-            originalUrl.substring(urlMarker.indexOf(part), urlMarker.indexOf(nextPart))
+            val endIndex = urlMarker.indexOf(nextPart)
+            originalUrl.substring(startIndex, minOf(endIndex, originalUrl.length))
         }
     }
 

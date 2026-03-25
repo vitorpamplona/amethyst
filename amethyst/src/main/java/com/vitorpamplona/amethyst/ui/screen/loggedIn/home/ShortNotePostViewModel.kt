@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
+import com.vitorpamplona.amethyst.service.uploads.SuspendableConfirmation
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
@@ -71,6 +72,12 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.IMetaA
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
+import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
+import com.vitorpamplona.quartz.experimental.zapPolls.closedAt
+import com.vitorpamplona.quartz.experimental.zapPolls.consensusThreshold
+import com.vitorpamplona.quartz.experimental.zapPolls.maxAmount
+import com.vitorpamplona.quartz.experimental.zapPolls.minAmount
+import com.vitorpamplona.quartz.experimental.zapPolls.tags.PollOptionTag
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
@@ -110,6 +117,7 @@ import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.tags.OptionTag
+import com.vitorpamplona.quartz.nip88Polls.poll.tags.PollType
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTagBuilder
 import com.vitorpamplona.quartz.nip92IMeta.imetas
 import com.vitorpamplona.quartz.nip94FileMetadata.alt
@@ -191,6 +199,9 @@ open class ShortNotePostViewModel :
     // Images and Videos
     var multiOrchestrator by mutableStateOf<MultiOrchestrator?>(null)
 
+    // Stripping failure dialog
+    val strippingFailureConfirmation = SuspendableConfirmation()
+
     // Voice Messages
     var voiceRecording by mutableStateOf<RecordingResult?>(null)
     var voiceLocalFile by mutableStateOf<java.io.File?>(null)
@@ -228,7 +239,22 @@ open class ShortNotePostViewModel :
     var canUsePoll by mutableStateOf(false)
     var wantsPoll by mutableStateOf(false)
     var pollOptions: SnapshotStateMap<Int, OptionTag> = newStateMapPollOptions()
+    var pollType by mutableStateOf(PollType.SINGLE_CHOICE)
     var closedAt by mutableLongStateOf(TimeUtils.oneDayAhead())
+
+    // ZapPolls
+    var canUseZapPoll by mutableStateOf(false)
+    var wantsZapPoll by mutableStateOf(false)
+    var zapPollOptions: SnapshotStateMap<Int, String> = newStateMapZapPollOptions()
+    var zapPollValueMaximum by mutableStateOf<Long?>(null)
+    var zapPollValueMinimum by mutableStateOf<Long?>(null)
+    var zapPollConsensusThreshold: Int? = null
+    var zapPollClosedAt by mutableLongStateOf(TimeUtils.oneDayAhead())
+
+    var isValidValueMaximum = mutableStateOf(true)
+    var isValidValueMinimum = mutableStateOf(true)
+    var isValidConsensusThreshold = mutableStateOf(true)
+    var isValidClosedAt = mutableStateOf(true)
 
     // Invoices
     var canAddInvoice by mutableStateOf(false)
@@ -258,6 +284,9 @@ open class ShortNotePostViewModel :
     var canAddZapRaiser by mutableStateOf(false)
     var wantsZapRaiser by mutableStateOf(false)
     override val zapRaiserAmount = mutableStateOf<Long?>(null)
+
+    // Anonymous Reply
+    var wantsAnonymousPost by mutableStateOf(false)
 
     fun lnAddress(): String? = account.userProfile().lnAddress()
 
@@ -312,6 +341,7 @@ open class ShortNotePostViewModel :
                         val currentMentions =
                             (replyNote.event as? TextNoteEvent)
                                 ?.mentions()
+                                ?.toSet()
                                 ?.map { LocalCache.getOrCreateUser(it.pubKey) }
                                 ?: emptyList()
 
@@ -333,6 +363,7 @@ open class ShortNotePostViewModel :
             canAddInvoice = user.lnAddress() != null
             canAddZapRaiser = user.lnAddress() != null
             canUsePoll = originalNote == null
+            canUseZapPoll = originalNote == null
             multiOrchestrator = null
 
             quote?.let { quotedNote ->
@@ -417,6 +448,10 @@ open class ShortNotePostViewModel :
         if (draftEvent is PollEvent) {
             loadFromDraft(draftEvent)
         }
+
+        if (draftEvent is ZapPollEvent) {
+            loadFromDraft(draftEvent)
+        }
     }
 
     private fun loadFromDraft(draftEvent: TextNoteEvent) {
@@ -461,8 +496,8 @@ open class ShortNotePostViewModel :
             }
 
         pTags =
-            draftEvent.tags.filter { it.size > 1 && it[0] == "p" }.map {
-                LocalCache.getOrCreateUser(it[1])
+            draftEvent.tags.filter { it.size > 1 && it[0] == "p" }.mapNotNull {
+                LocalCache.checkGetOrCreateUser(it[1])
             }
 
         draftEvent.tags.filter { it.size > 3 && (it[0] == "e" || it[0] == "a") && it[3] == "fork" }.forEach {
@@ -489,12 +524,14 @@ open class ShortNotePostViewModel :
         }
 
         canUsePoll = originalNote == null
+        canUseZapPoll = originalNote == null
 
         if (forwardZapTo.value.items.isNotEmpty()) {
             wantsForwardZapTo = true
         }
 
         wantsPoll = false
+        wantsZapPoll = false
 
         message = TextFieldValue(draftEvent.content)
 
@@ -545,15 +582,18 @@ open class ShortNotePostViewModel :
             }
 
         pTags =
-            draftEvent.tags.filter { it.size > 1 && it[0] == "p" }.map {
-                LocalCache.getOrCreateUser(it[1])
+            draftEvent.tags.filter { it.size > 1 && it[0] == "p" }.mapNotNull {
+                LocalCache.checkGetOrCreateUser(it[1])
             }
 
         canUsePoll = originalNote == null
+        canUseZapPoll = originalNote == null
 
         if (forwardZapTo.value.items.isNotEmpty()) {
             wantsForwardZapTo = true
         }
+
+        wantsZapPoll = false
 
         val polls = draftEvent.options()
         wantsPoll = polls.isNotEmpty()
@@ -562,7 +602,82 @@ open class ShortNotePostViewModel :
             pollOptions[index] = tag
         }
 
+        pollType = draftEvent.pollType() ?: PollType.SINGLE_CHOICE
         closedAt = draftEvent.endsAt() ?: TimeUtils.oneDayAhead()
+
+        message = TextFieldValue(draftEvent.content)
+
+        iMetaAttachments.addAll(draftEvent.imetas())
+
+        urlPreviews.update(message)
+    }
+
+    private fun loadFromDraft(draftEvent: ZapPollEvent) {
+        canAddInvoice = accountViewModel.userProfile().lnAddress() != null
+        canAddZapRaiser = accountViewModel.userProfile().lnAddress() != null
+        multiOrchestrator = null
+
+        val localForwardZapTo = draftEvent.tags.filter { it.size > 1 && it[0] == "zap" }
+        forwardZapTo.value = SplitBuilder()
+        localForwardZapTo.forEach {
+            val user = LocalCache.getOrCreateUser(it[1])
+            val value = it.last().toFloatOrNull() ?: 0f
+            forwardZapTo.value.addItem(user, value)
+        }
+        forwardZapToEditting.value = TextFieldValue("")
+        wantsForwardZapTo = localForwardZapTo.isNotEmpty()
+
+        wantsToMarkAsSensitive = draftEvent.isSensitive()
+        contentWarningDescription = draftEvent.contentWarningReason() ?: ""
+
+        val draftExpiration = draftEvent.tags.expiration()
+        wantsExpirationDate = draftExpiration != null
+        expirationDate = draftExpiration ?: TimeUtils.oneDayAhead()
+
+        val geohash = draftEvent.getGeoHash()
+        wantsToAddGeoHash = geohash != null
+        if (geohash != null) {
+            wantsExclusiveGeoPost = draftEvent.kind == CommentEvent.KIND
+        }
+
+        val zapRaiser = draftEvent.zapraiserAmount()
+        wantsZapRaiser = zapRaiser != null
+        zapRaiserAmount.value = null
+        if (zapRaiser != null) {
+            zapRaiserAmount.value = zapRaiser
+        }
+
+        eTags =
+            draftEvent.tags.filter { it.size > 1 && (it[0] == "e" || it[0] == "a") && it.getOrNull(3) != "fork" }.mapNotNull {
+                val note = LocalCache.checkGetOrCreateNote(it[1])
+                note
+            }
+
+        pTags =
+            draftEvent.tags.filter { it.size > 1 && it[0] == "p" }.mapNotNull {
+                LocalCache.checkGetOrCreateUser(it[1])
+            }
+
+        canUsePoll = originalNote == null
+        canUseZapPoll = originalNote == null
+
+        if (forwardZapTo.value.items.isNotEmpty()) {
+            wantsForwardZapTo = true
+        }
+
+        wantsPoll = false
+
+        val polls = draftEvent.pollOptionsArray()
+        wantsZapPoll = polls.isNotEmpty()
+
+        polls.forEach { tag ->
+            zapPollOptions[tag.index] = tag.descriptor
+        }
+
+        zapPollValueMinimum = draftEvent.minAmount()
+        zapPollValueMaximum = draftEvent.maxAmount()
+        zapPollConsensusThreshold = draftEvent.consensusThreshold()?.let { (it * 100).toInt() }
+        zapPollClosedAt = draftEvent.closedAt() ?: TimeUtils.oneDayAhead()
 
         message = TextFieldValue(draftEvent.content)
 
@@ -604,9 +719,12 @@ open class ShortNotePostViewModel :
         }
 
         val version = draftTag.current
+        val anonymous = wantsAnonymousPost
         cancel()
 
-        if (accountViewModel.settings.isCompleteUIMode()) {
+        if (anonymous) {
+            accountViewModel.account.signAnonymouslyAndBroadcast(template, extraNotesToBroadcast)
+        } else if (accountViewModel.settings.isCompleteUIMode()) {
             // Tracked broadcasting with progress feedback (non-blocking)
             val (event, relays, extras) = accountViewModel.account.createPostEvent(template, extraNotesToBroadcast)
 
@@ -720,7 +838,36 @@ open class ShortNotePostViewModel :
                 accountViewModel.account.nip65RelayList.outboxFlow.value
                     .toList()
 
-            PollEvent.build(tagger.message, options, closedAt, relays) {
+            PollEvent.build(tagger.message, options, closedAt, relays, pollType) {
+                pTags(tagger.directMentionsUsers.map { it.toPTag() })
+                quotes(quotes)
+                hashtags(findHashtags(tagger.message))
+
+                geoHash?.let { geohash(it) }
+                localZapRaiserAmount?.let { zapraiser(it) }
+                zapReceiver?.let { zapSplits(it) }
+                contentWarningReason?.let { contentWarning(it) }
+                localExpirationDate?.let { expiration(it) }
+
+                emojis(emojis)
+                imetas(usedAttachments)
+            }
+        } else if (wantsZapPoll) {
+            val options = zapPollOptions.map { PollOptionTag(it.key, it.value) }
+
+            if (options.isEmpty()) return null
+
+            val quotes = findNostrUris(tagger.message)
+            val relays =
+                accountViewModel.account.nip65RelayList.outboxFlow.value
+                    .toList()
+
+            ZapPollEvent.build(tagger.message, options) {
+                zapPollValueMinimum?.let { minAmount(it) }
+                zapPollValueMaximum?.let { maxAmount(it) }
+                zapPollClosedAt?.let { closedAt(it) }
+                zapPollConsensusThreshold?.let { consensusThreshold(it / 100.0) }
+
                 pTags(tagger.directMentionsUsers.map { it.toPTag() })
                 quotes(quotes)
                 hashtags(findHashtags(tagger.message))
@@ -811,8 +958,9 @@ open class ShortNotePostViewModel :
         onError: (title: String, message: String) -> Unit,
         context: Context,
         useH265: Boolean,
+        stripMetadata: Boolean = true,
     ) = try {
-        uploadUnsafe(alt, contentWarningReason, mediaQuality, server, onError, context, useH265)
+        uploadUnsafe(alt, contentWarningReason, mediaQuality, server, onError, context, useH265, stripMetadata)
     } catch (_: SignerExceptions.ReadOnlyException) {
         onError(
             stringRes(context, R.string.read_only_user),
@@ -828,6 +976,7 @@ open class ShortNotePostViewModel :
         onError: (title: String, message: String) -> Unit,
         context: Context,
         useH265: Boolean,
+        stripMetadata: Boolean = true,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             val myMultiOrchestrator = multiOrchestrator ?: return@launch
@@ -843,6 +992,8 @@ open class ShortNotePostViewModel :
                     account,
                     context,
                     useH265,
+                    stripMetadata,
+                    onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
                 )
 
             if (results.allGood) {
@@ -913,7 +1064,15 @@ open class ShortNotePostViewModel :
 
         wantsPoll = false
         pollOptions = newStateMapPollOptions()
+        pollType = PollType.SINGLE_CHOICE
         closedAt = TimeUtils.oneDayAhead()
+
+        wantsZapPoll = false
+        zapPollOptions = newStateMapZapPollOptions()
+        zapPollValueMaximum = null
+        zapPollValueMinimum = null
+        zapPollConsensusThreshold = null
+        zapPollClosedAt = TimeUtils.oneDayAhead()
 
         wantsInvoice = false
         wantsZapRaiser = false
@@ -925,6 +1084,7 @@ open class ShortNotePostViewModel :
         wantsToAddGeoHash = false
         wantsExclusiveGeoPost = false
         wantsSecretEmoji = false
+        wantsAnonymousPost = false
 
         forwardZapTo.value = SplitBuilder()
         forwardZapToEditting.value = TextFieldValue("")
@@ -1032,6 +1192,12 @@ open class ShortNotePostViewModel :
             1 to OptionTag(RandomInstance.randomChars(6), ""),
         )
 
+    private fun newStateMapZapPollOptions(): SnapshotStateMap<Int, String> =
+        mutableStateMapOf(
+            0 to "",
+            1 to "",
+        )
+
     fun canPost(): Boolean {
         // Voice messages can be posted without text (with either uploaded or pending recording)
         if (voiceMetadata != null || voiceRecording != null) {
@@ -1047,8 +1213,17 @@ open class ShortNotePostViewModel :
             (
                 !wantsPoll ||
                     (
-                        pollOptions.isNotEmpty() && pollOptions.all { it.value.label.isNotEmpty() } &&
+                        pollOptions.isNotEmpty() &&
+                            pollOptions.all { it.value.label.isNotEmpty() } &&
                             closedAt > TimeUtils.oneMinuteFromNow()
+                    )
+            ) &&
+            (
+                !wantsZapPoll ||
+                    (
+                        zapPollOptions.values.all { it.isNotEmpty() } &&
+                            isValidValueMinimum.value &&
+                            isValidValueMaximum.value
                     )
             ) &&
             multiOrchestrator == null
@@ -1251,6 +1426,61 @@ open class ShortNotePostViewModel :
         val newEntries = keyList.zip(elementList) { key, content -> Pair(key, content) }
         this.clear()
         this.putAll(newEntries)
+    }
+
+    // ---
+    // Zap Polls
+    // ---
+
+    fun updateMinZapAmountForPoll(textMin: String) {
+        zapPollValueMinimum = textMin.toLongOrNull()?.takeIf { it > 0 }
+        checkMinMax()
+        draftTag.newVersion()
+    }
+
+    fun updateMaxZapAmountForPoll(textMax: String) {
+        zapPollValueMaximum = textMax.toLongOrNull()?.takeIf { it > 0 }
+        checkMinMax()
+        draftTag.newVersion()
+    }
+
+    fun checkMinMax() {
+        if ((zapPollValueMinimum ?: 0) > (zapPollValueMaximum ?: Long.MAX_VALUE)) {
+            isValidValueMinimum.value = false
+            isValidValueMaximum.value = false
+        } else {
+            isValidValueMinimum.value = true
+            isValidValueMaximum.value = true
+        }
+    }
+
+    fun removeZapPollOption(optionIndex: Int) {
+        zapPollOptions.removeOrderedZapPoll(optionIndex)
+        draftTag.newVersion()
+    }
+
+    private fun MutableMap<Int, String>.removeOrderedZapPoll(index: Int) {
+        val keyList = keys
+        val elementList = values.toMutableList()
+        run stop@{
+            for (i in index until elementList.size) {
+                val nextIndex = i + 1
+                if (nextIndex == elementList.size) return@stop
+                elementList[i] = elementList[nextIndex].also { elementList[nextIndex] = "null" }
+            }
+        }
+        elementList.removeAt(elementList.size - 1)
+        val newEntries = keyList.zip(elementList) { key, content -> Pair(key, content) }
+        this.clear()
+        this.putAll(newEntries)
+    }
+
+    fun updateZapPollOption(
+        optionIndex: Int,
+        text: String,
+    ) {
+        zapPollOptions[optionIndex] = text
+        draftTag.newVersion()
     }
 
     fun toggleMarkAsSensitive() {

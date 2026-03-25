@@ -68,16 +68,22 @@ import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserLine
 import com.vitorpamplona.amethyst.ui.note.types.DisplayFollowList
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toPersistentList
 
 @Composable
 fun ImportFollowListPickFollowsScreen(
-    contactListNote: AddressableNote,
+    userHex: HexKey,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val contactListNote =
+        remember(userHex) {
+            accountViewModel.getOrCreateAddressableNote(ContactListEvent.createAddress(userHex))
+        }
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
@@ -125,6 +131,7 @@ fun DisplayFollowList(
     val contactsState by observeNoteEventAndMap<ContactListEvent, ImmutableList<User>?>(contactListNote, accountViewModel) { contactList ->
         contactList
             ?.unverifiedFollowKeySet()
+            ?.toSet()
             ?.mapNotNull {
                 accountViewModel.checkGetOrCreateUser(it)
             }?.toPersistentList()

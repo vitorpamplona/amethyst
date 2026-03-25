@@ -65,6 +65,13 @@ actual object OptimizedJsonMapper {
             throw IllegalArgumentException(e.message, e)
         }
 
+    actual fun fromJsonToEventList(json: String): List<Event> =
+        try {
+            KotlinSerializationMapper.fromJsonToEventList(json)
+        } catch (e: SerializationException) {
+            throw IllegalArgumentException(e.message, e)
+        }
+
     actual fun fromJsonToRumor(json: String): Rumor =
         try {
             KotlinSerializationMapper.fromJsonToRumor(json)

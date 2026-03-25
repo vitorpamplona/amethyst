@@ -70,7 +70,7 @@ class NostrClientManualSubTest : BaseNostrClientTest() {
 
             val filters =
                 mapOf(
-                    RelayUrlNormalizer.normalize("wss://relay.damus.io") to
+                    RelayUrlNormalizer.normalize("wss://nos.lol") to
                         listOf(
                             Filter(
                                 kinds = listOf(MetadataEvent.KIND),

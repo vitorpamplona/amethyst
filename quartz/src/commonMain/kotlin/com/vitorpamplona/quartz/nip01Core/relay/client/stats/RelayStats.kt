@@ -42,6 +42,8 @@ class RelayStats(
             override fun create(key: NormalizedRelayUrl): RelayStat = RelayStat()
         }
 
+    fun snapshot(): Map<NormalizedRelayUrl, RelayStat> = innerCache.snapshot()
+
     fun get(url: NormalizedRelayUrl): RelayStat = innerCache[url] ?: throw IllegalArgumentException("Should never happen")
 
     private val clientListener =

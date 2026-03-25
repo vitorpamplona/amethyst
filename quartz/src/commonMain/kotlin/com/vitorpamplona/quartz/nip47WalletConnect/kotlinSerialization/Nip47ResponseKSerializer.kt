@@ -20,38 +20,45 @@
  */
 package com.vitorpamplona.quartz.nip47WalletConnect.kotlinSerialization
 
-import com.vitorpamplona.quartz.nip47WalletConnect.CancelHoldInvoiceSuccessResponse
-import com.vitorpamplona.quartz.nip47WalletConnect.CreateConnectionSuccessResponse
-import com.vitorpamplona.quartz.nip47WalletConnect.GetBalanceSuccessResponse
-import com.vitorpamplona.quartz.nip47WalletConnect.GetBudgetSuccessResponse
-import com.vitorpamplona.quartz.nip47WalletConnect.GetInfoSuccessResponse
-import com.vitorpamplona.quartz.nip47WalletConnect.ListTransactionsSuccessResponse
-import com.vitorpamplona.quartz.nip47WalletConnect.LookupInvoiceSuccessResponse
-import com.vitorpamplona.quartz.nip47WalletConnect.MakeHoldInvoiceSuccessResponse
-import com.vitorpamplona.quartz.nip47WalletConnect.MakeInvoiceSuccessResponse
-import com.vitorpamplona.quartz.nip47WalletConnect.NwcError
-import com.vitorpamplona.quartz.nip47WalletConnect.NwcErrorCode
-import com.vitorpamplona.quartz.nip47WalletConnect.NwcErrorResponse
-import com.vitorpamplona.quartz.nip47WalletConnect.NwcMethod
-import com.vitorpamplona.quartz.nip47WalletConnect.NwcTransaction
-import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceErrorResponse
-import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceSuccessResponse
-import com.vitorpamplona.quartz.nip47WalletConnect.PayKeysendSuccessResponse
-import com.vitorpamplona.quartz.nip47WalletConnect.Response
-import com.vitorpamplona.quartz.nip47WalletConnect.SettleHoldInvoiceSuccessResponse
-import com.vitorpamplona.quartz.nip47WalletConnect.SignMessageSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.CancelHoldInvoiceSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.CreateConnectionSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetBalanceSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetBudgetSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetInfoSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.ListTransactionsSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.LookupInvoiceSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.MakeHoldInvoiceSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.MakeInvoiceSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcError
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcErrorCode
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcErrorResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcTransaction
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceErrorResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayKeysendSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.SettleHoldInvoiceSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.SignMessageSuccessResponse
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.descriptors.buildClassSerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonDecoder
+import kotlinx.serialization.json.JsonEncoder
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
+import kotlinx.serialization.json.put
 
 object Nip47ResponseKSerializer : KSerializer<Response> {
     override val descriptor: SerialDescriptor =
@@ -60,7 +67,154 @@ object Nip47ResponseKSerializer : KSerializer<Response> {
     override fun serialize(
         encoder: Encoder,
         value: Response,
-    ): Unit = throw UnsupportedOperationException("NIP-47 Response serialization not supported")
+    ) {
+        val jsonEncoder = encoder as JsonEncoder
+        val jsonObject =
+            buildJsonObject {
+                put("result_type", value.resultType)
+                when (value) {
+                    is NwcErrorResponse -> {
+                        value.error?.let { put("error", serializeNwcError(it)) }
+                    }
+
+                    is PayInvoiceSuccessResponse -> {
+                        value.result?.let { put("result", serializePayInvoiceResult(it)) }
+                    }
+
+                    is PayInvoiceErrorResponse -> {
+                        value.error?.let { put("error", serializePayInvoiceErrorParams(it)) }
+                    }
+
+                    is PayKeysendSuccessResponse -> {
+                        value.result?.let { put("result", serializePayKeysendResult(it)) }
+                    }
+
+                    is MakeInvoiceSuccessResponse -> {
+                        serializeTransaction(value.result)?.let { put("result", it) }
+                    }
+
+                    is LookupInvoiceSuccessResponse -> {
+                        serializeTransaction(value.result)?.let { put("result", it) }
+                    }
+
+                    is ListTransactionsSuccessResponse -> {
+                        value.result?.let { put("result", serializeListTransactionsResult(it)) }
+                    }
+
+                    is GetBalanceSuccessResponse -> {
+                        value.result?.let { put("result", serializeGetBalanceResult(it)) }
+                    }
+
+                    is GetInfoSuccessResponse -> {
+                        value.result?.let { put("result", serializeGetInfoResult(it)) }
+                    }
+
+                    is GetBudgetSuccessResponse -> {
+                        value.result?.let { put("result", serializeGetBudgetResult(it)) }
+                    }
+
+                    is SignMessageSuccessResponse -> {
+                        value.result?.let { put("result", serializeSignMessageResult(it)) }
+                    }
+
+                    is CreateConnectionSuccessResponse -> {
+                        value.result?.let { put("result", serializeCreateConnectionResult(it)) }
+                    }
+
+                    is MakeHoldInvoiceSuccessResponse -> {
+                        serializeTransaction(value.result)?.let { put("result", it) }
+                    }
+
+                    is CancelHoldInvoiceSuccessResponse -> {
+                        put("result", buildJsonObject {})
+                    }
+
+                    is SettleHoldInvoiceSuccessResponse -> {
+                        put("result", buildJsonObject {})
+                    }
+                }
+            }
+        jsonEncoder.encodeJsonElement(jsonObject)
+    }
+
+    private fun serializeNwcError(error: NwcError): JsonObject =
+        buildJsonObject {
+            error.code?.let { put("code", it.name) }
+            error.message?.let { put("message", it) }
+        }
+
+    private fun serializePayInvoiceResult(result: PayInvoiceSuccessResponse.PayInvoiceResultParams): JsonObject =
+        buildJsonObject {
+            result.preimage?.let { put("preimage", it) }
+            result.fees_paid?.let { put("fees_paid", it) }
+        }
+
+    private fun serializePayInvoiceErrorParams(error: PayInvoiceErrorResponse.PayInvoiceErrorParams): JsonObject =
+        buildJsonObject {
+            error.code?.let { put("code", it.name) }
+            error.message?.let { put("message", it) }
+        }
+
+    private fun serializePayKeysendResult(result: PayKeysendSuccessResponse.PayKeysendResult): JsonObject =
+        buildJsonObject {
+            result.preimage?.let { put("preimage", it) }
+            result.fees_paid?.let { put("fees_paid", it) }
+        }
+
+    private fun serializeListTransactionsResult(result: ListTransactionsSuccessResponse.ListTransactionsResult): JsonObject =
+        buildJsonObject {
+            result.transactions?.let { transactions ->
+                put(
+                    "transactions",
+                    buildJsonArray {
+                        transactions.forEach { serializeTransaction(it)?.let { t -> add(t) } }
+                    },
+                )
+            }
+            result.total_count?.let { put("total_count", it) }
+        }
+
+    private fun serializeGetBalanceResult(result: GetBalanceSuccessResponse.GetBalanceResult): JsonObject =
+        buildJsonObject {
+            result.balance?.let { put("balance", it) }
+        }
+
+    private fun serializeGetInfoResult(result: GetInfoSuccessResponse.GetInfoResult): JsonObject =
+        buildJsonObject {
+            result.alias?.let { put("alias", it) }
+            result.color?.let { put("color", it) }
+            result.pubkey?.let { put("pubkey", it) }
+            result.network?.let { put("network", it) }
+            result.block_height?.let { put("block_height", it) }
+            result.block_hash?.let { put("block_hash", it) }
+            result.methods?.let { methods ->
+                put("methods", buildJsonArray { methods.forEach { add(it) } })
+            }
+            result.notifications?.let { notifications ->
+                put("notifications", buildJsonArray { notifications.forEach { add(it) } })
+            }
+            result.metadata?.let { put("metadata", Json.encodeToJsonElement(it)) }
+            result.lud16?.let { put("lud16", it) }
+        }
+
+    private fun serializeGetBudgetResult(result: GetBudgetSuccessResponse.GetBudgetResult): JsonObject =
+        buildJsonObject {
+            result.used_budget?.let { put("used_budget", it) }
+            result.total_budget?.let { put("total_budget", it) }
+            result.renews_at?.let { put("renews_at", it) }
+            result.renewal_period?.let { put("renewal_period", it) }
+        }
+
+    private fun serializeSignMessageResult(result: SignMessageSuccessResponse.SignMessageResult): JsonObject =
+        buildJsonObject {
+            result.message?.let { put("message", it) }
+            result.signature?.let { put("signature", it) }
+        }
+
+    private fun serializeCreateConnectionResult(result: CreateConnectionSuccessResponse.CreateConnectionResult): JsonObject =
+        buildJsonObject {
+            result.wallet_pubkey?.let { put("wallet_pubkey", it) }
+        }
 
     override fun deserialize(decoder: Decoder): Response {
         val jsonDecoder = decoder as JsonDecoder
@@ -162,6 +316,26 @@ object Nip47ResponseKSerializer : KSerializer<Response> {
         return NwcError(code, obj["message"]?.jsonPrimitive?.content)
     }
 
+    fun serializeTransaction(transaction: NwcTransaction?): JsonObject? {
+        if (transaction == null) return null
+        return buildJsonObject {
+            transaction.type?.let { put("type", it) }
+            transaction.state?.let { put("state", it) }
+            transaction.invoice?.let { put("invoice", it) }
+            transaction.description?.let { put("description", it) }
+            transaction.description_hash?.let { put("description_hash", it) }
+            transaction.preimage?.let { put("preimage", it) }
+            transaction.payment_hash?.let { put("payment_hash", it) }
+            transaction.amount?.let { put("amount", it) }
+            transaction.fees_paid?.let { put("fees_paid", it) }
+            transaction.created_at?.let { put("created_at", it) }
+            transaction.expires_at?.let { put("expires_at", it) }
+            transaction.settled_at?.let { put("settled_at", it) }
+            transaction.settle_deadline?.let { put("settle_deadline", it) }
+            transaction.metadata?.let { put("metadata", Json.encodeToJsonElement(it)) }
+        }
+    }
+
     fun parseTransaction(obj: JsonObject?): NwcTransaction? {
         if (obj == null) return null
         return NwcTransaction(
@@ -178,6 +352,7 @@ object Nip47ResponseKSerializer : KSerializer<Response> {
             expires_at = obj["expires_at"]?.jsonPrimitive?.longOrNull,
             settled_at = obj["settled_at"]?.jsonPrimitive?.longOrNull,
             settle_deadline = obj["settle_deadline"]?.jsonPrimitive?.longOrNull,
+            metadata = obj["metadata"]?.jsonObject?.toAnyMap(),
         )
     }
 
@@ -260,6 +435,7 @@ object Nip47ResponseKSerializer : KSerializer<Response> {
                     block_hash = it["block_hash"]?.jsonPrimitive?.content,
                     methods = it["methods"]?.jsonArray?.map { m -> m.jsonPrimitive.content },
                     notifications = it["notifications"]?.jsonArray?.map { n -> n.jsonPrimitive.content },
+                    metadata = it["metadata"]?.jsonObject?.toAnyMap(),
                     lud16 = it["lud16"]?.jsonPrimitive?.content,
                 )
             },

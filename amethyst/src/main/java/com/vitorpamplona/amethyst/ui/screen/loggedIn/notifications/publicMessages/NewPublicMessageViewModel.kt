@@ -42,6 +42,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
+import com.vitorpamplona.amethyst.service.uploads.SuspendableConfirmation
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
@@ -163,6 +164,9 @@ class NewPublicMessageViewModel :
 
     // Images and Videos
     var multiOrchestrator by mutableStateOf<MultiOrchestrator?>(null)
+
+    // Stripping failure dialog
+    val strippingFailureConfirmation = SuspendableConfirmation()
 
     // Invoices
     var canAddInvoice by mutableStateOf(false)
@@ -322,7 +326,7 @@ class NewPublicMessageViewModel :
     }
 
     suspend fun sendPostSync() {
-        val template = createTemplate() ?: return
+        val template = createTemplate()
         val extraNotesToBroadcast = mutableListOf<Event>()
 
         if (nip95attachments.isNotEmpty()) {
@@ -354,7 +358,7 @@ class NewPublicMessageViewModel :
                 broadcast.add(it.second)
             }
 
-            val template = createTemplate() ?: return
+            val template = createTemplate()
             accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template, broadcast)
         }
     }
@@ -422,8 +426,9 @@ class NewPublicMessageViewModel :
         server: ServerName,
         onError: (title: String, message: String) -> Unit,
         context: Context,
+        stripMetadata: Boolean = true,
     ) = try {
-        uploadUnsafe(alt, contentWarningReason, mediaQuality, server, onError, context)
+        uploadUnsafe(alt, contentWarningReason, mediaQuality, server, onError, context, stripMetadata)
     } catch (e: SignerExceptions.ReadOnlyException) {
         onError(
             stringRes(context, R.string.read_only_user),
@@ -438,6 +443,7 @@ class NewPublicMessageViewModel :
         server: ServerName,
         onError: (title: String, message: String) -> Unit,
         context: Context,
+        stripMetadata: Boolean = true,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             val myMultiOrchestrator = multiOrchestrator ?: return@launch
@@ -452,6 +458,8 @@ class NewPublicMessageViewModel :
                     server,
                     account,
                     context,
+                    stripMetadata = stripMetadata,
+                    onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
                 )
 
             if (results.allGood) {
@@ -459,7 +467,7 @@ class NewPublicMessageViewModel :
                     if (state.result is UploadOrchestrator.OrchestratorResult.NIP95Result) {
                         val nip95 = account.createNip95(state.result.bytes, headerInfo = state.result.fileHeader, alt, contentWarningReason)
                         nip95attachments = nip95attachments + nip95
-                        val note = nip95.let { it1 -> account?.consumeNip95(it1.first, it1.second) }
+                        val note = nip95.let { it1 -> account.consumeNip95(it1.first, it1.second) }
 
                         note?.let {
                             message = message.insertUrlAtCursor("nostr:" + it.toNEvent())

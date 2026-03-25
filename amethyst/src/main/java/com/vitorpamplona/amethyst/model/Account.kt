@@ -139,6 +139,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 import com.vitorpamplona.quartz.nip01Core.tags.references.references
@@ -171,8 +172,8 @@ import com.vitorpamplona.quartz.nip37Drafts.DraftEventCache
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
-import com.vitorpamplona.quartz.nip47WalletConnect.Request
-import com.vitorpamplona.quartz.nip47WalletConnect.Response
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
@@ -1292,6 +1293,30 @@ class Account(
         return event
     }
 
+    suspend fun <T : Event> signAnonymouslyAndBroadcast(
+        template: EventTemplate<T>,
+        broadcast: List<Event> = emptyList(),
+    ): T {
+        val anonymousSigner = NostrSignerInternal(KeyPair())
+        val event = anonymousSigner.sign(template)
+
+        cache.justConsumeMyOwnEvent(event)
+        val note =
+            if (event is AddressableEvent) {
+                cache.getOrCreateAddressableNote(event.address())
+            } else {
+                cache.getOrCreateNote(event.id)
+            }
+
+        val relayList = computeRelayListToBroadcast(note)
+
+        client.send(event, relayList)
+
+        broadcast.forEach { client.send(it, relayList) }
+
+        return event
+    }
+
     /**
      * Creates a post event without sending it.
      * Returns the event, target relays, and extra events to broadcast.
@@ -1609,7 +1634,7 @@ class Account(
         client.send(newEvent, outboxRelays.flow.value + destinationRelays)
     }
 
-    suspend fun sendNip17EncryptedFile(template: EventTemplate<ChatMessageEncryptedFileHeaderEvent>) {
+    override suspend fun sendNip17EncryptedFile(template: EventTemplate<ChatMessageEncryptedFileHeaderEvent>) {
         if (!isWriteable()) return
 
         val wraps = NIP17Factory().createEncryptedFileNIP17(template, signer)
@@ -2016,6 +2041,7 @@ class Account(
         }
 
         scope.launch(Dispatchers.IO) {
+            @OptIn(kotlinx.coroutines.FlowPreview::class)
             settings.saveable.debounce(1000).collect {
                 if (it.accountSettings != null) {
                     LocalPreferences.saveToEncryptedStorage(it.accountSettings)

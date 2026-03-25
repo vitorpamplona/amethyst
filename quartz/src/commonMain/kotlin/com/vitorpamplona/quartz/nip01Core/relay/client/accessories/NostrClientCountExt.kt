@@ -65,15 +65,18 @@ suspend fun INostrClient.queryCountSuspend(
 
     subscribe(listener)
 
-    queryCount(subId = subId, filters = mapOf(relay to listOf(filter)))
-
     val result =
-        withTimeoutOrNull(timeoutMs) {
-            resultChannel.receive()
+        try {
+            queryCount(subId = subId, filters = mapOf(relay to listOf(filter)))
+
+            withTimeoutOrNull(timeoutMs) {
+                resultChannel.receive()
+            }
+        } finally {
+            close(subId)
+            unsubscribe(listener)
         }
 
-    close(subId)
-    unsubscribe(listener)
     resultChannel.close()
 
     return result

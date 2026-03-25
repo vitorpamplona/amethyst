@@ -96,7 +96,7 @@ fun RenderLiveChessChallenge(
     nav: INav,
 ) {
     val event = (note.event as? LiveChessGameChallengeEvent) ?: return
-    val gameId = event.gameId() ?: return
+    val gameId = event.gameId()
 
     val chessViewModel: ChessViewModelNew =
         viewModel(

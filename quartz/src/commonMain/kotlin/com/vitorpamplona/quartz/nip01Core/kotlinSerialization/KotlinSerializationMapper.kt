@@ -33,12 +33,12 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponse
 import com.vitorpamplona.quartz.nip46RemoteSigner.kotlinSerialization.BunkerMessageKSerializer
 import com.vitorpamplona.quartz.nip46RemoteSigner.kotlinSerialization.BunkerRequestKSerializer
 import com.vitorpamplona.quartz.nip46RemoteSigner.kotlinSerialization.BunkerResponseKSerializer
-import com.vitorpamplona.quartz.nip47WalletConnect.Notification
-import com.vitorpamplona.quartz.nip47WalletConnect.Request
-import com.vitorpamplona.quartz.nip47WalletConnect.Response
 import com.vitorpamplona.quartz.nip47WalletConnect.kotlinSerialization.Nip47NotificationKSerializer
 import com.vitorpamplona.quartz.nip47WalletConnect.kotlinSerialization.Nip47RequestKSerializer
 import com.vitorpamplona.quartz.nip47WalletConnect.kotlinSerialization.Nip47ResponseKSerializer
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Notification
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.Rumor
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.kotlinSerialization.RumorKSerializer
 import kotlinx.serialization.json.Json
@@ -63,6 +63,8 @@ class KotlinSerializationMapper {
         fun fromJsonToRumor(jsonStr: String): Rumor = json.decodeFromString(RumorKSerializer, jsonStr)
 
         fun fromJsonToEventTemplate(jsonStr: String): EventTemplate<Event> = json.decodeFromString(EventTemplateKSerializer, jsonStr)
+
+        fun fromJsonToEventList(jsonStr: String): List<Event> = json.decodeFromString(jsonStr)
 
         fun toJson(event: Event): String = json.encodeToString(EventKSerializer, event)
 
@@ -105,6 +107,18 @@ class KotlinSerializationMapper {
 
                 is BunkerMessage -> {
                     json.encodeToString(BunkerMessageKSerializer, value)
+                }
+
+                is Request -> {
+                    json.encodeToString(Nip47RequestKSerializer, value)
+                }
+
+                is Response -> {
+                    json.encodeToString(Nip47ResponseKSerializer, value)
+                }
+
+                is Notification -> {
+                    json.encodeToString(Nip47NotificationKSerializer, value)
                 }
 
                 else -> {

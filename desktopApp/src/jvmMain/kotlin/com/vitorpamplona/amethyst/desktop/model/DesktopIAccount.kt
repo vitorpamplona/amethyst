@@ -33,11 +33,12 @@ import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip17Dm.NIP17Factory
+import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
-import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentRequestEvent
-import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentResponseEvent
-import com.vitorpamplona.quartz.nip47WalletConnect.Request
-import com.vitorpamplona.quartz.nip47WalletConnect.Response
+import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentRequestEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.nip57Zaps.IPrivateZapsDecryptionCache
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
@@ -86,9 +87,9 @@ class DesktopIAccount(
 
     override val privateZapsDecryptionCache: IPrivateZapsDecryptionCache =
         object : IPrivateZapsDecryptionCache {
-            override fun cachedPrivateZap(zapRequest: LnZapRequestEvent): com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent? = null
+            override fun cachedPrivateZap(event: LnZapRequestEvent): com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent? = null
 
-            override suspend fun decryptPrivateZap(zapRequest: LnZapRequestEvent): com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent? = null
+            override suspend fun decryptPrivateZap(event: LnZapRequestEvent): com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent? = null
         }
 
     override fun userProfile(): User = localCache.getOrCreateUser(pubKey)
@@ -108,7 +109,7 @@ class DesktopIAccount(
     override suspend fun sendNip04PrivateMessage(eventTemplate: EventTemplate<PrivateDmEvent>) {
         if (!isWriteable()) return
 
-        val signedEvent = signer.sign<PrivateDmEvent>(eventTemplate)
+        val signedEvent = signer.sign(eventTemplate)
         val recipient = signedEvent.verifiedRecipientPubKey()
 
         // Optimistic local add so the message appears immediately
@@ -135,6 +136,37 @@ class DesktopIAccount(
         addEventToChatroom(innerMsg, innerMsg.chatroomKey(pubKey))
 
         // Collect all wraps with their target relays for batch sending
+        val batch =
+            result.wraps.map { wrap ->
+                val recipientKey = wrap.recipientPubKey()
+                val targetRelays =
+                    if (recipientKey != null) {
+                        val dmRelays =
+                            localCache
+                                .getOrCreateUser(recipientKey)
+                                .dmInboxRelays()
+                                ?.toSet()
+                        dmRelays?.ifEmpty { null }
+                            ?: relayManager.connectedRelays.value
+                    } else {
+                        relayManager.connectedRelays.value
+                    }
+                wrap to targetRelays
+            }
+
+        scope.launch { dmSendTracker.sendBatch(batch) }
+    }
+
+    override suspend fun sendNip17EncryptedFile(template: EventTemplate<ChatMessageEncryptedFileHeaderEvent>) {
+        if (!isWriteable()) return
+
+        val result = NIP17Factory().createEncryptedFileNIP17(template, signer)
+
+        // Optimistic local add
+        val innerEvent = result.msg as ChatMessageEncryptedFileHeaderEvent
+        addEventToChatroom(innerEvent, innerEvent.chatroomKey(pubKey))
+
+        // Collect wraps with target relays and send
         val batch =
             result.wraps.map { wrap ->
                 val recipientKey = wrap.recipientPubKey()

@@ -21,20 +21,24 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header
 
 import android.content.Intent
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Block
+import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.Report
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
+import com.vitorpamplona.amethyst.ui.components.M3ActionRow
+import com.vitorpamplona.amethyst.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.ui.note.externalLinkForUser
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 
 @Composable
@@ -44,108 +48,94 @@ fun UserProfileDropDownMenu(
     onDismiss: () -> Unit,
     accountViewModel: AccountViewModel,
 ) {
-    DropdownMenu(
-        expanded = popupExpanded,
-        onDismissRequest = onDismiss,
+    if (!popupExpanded) return
+
+    M3ActionDialog(
+        title = stringRes(R.string.profile_actions_dialog_title),
+        onDismiss = onDismiss,
     ) {
         val clipboardManager = LocalClipboardManager.current
-
-        DropdownMenuItem(
-            text = { Text(stringRes(R.string.copy_user_id)) },
-            onClick = {
-                clipboardManager.setText(AnnotatedString(user.pubkeyNpub()))
-                onDismiss()
-            },
-        )
-
         val context = LocalContext.current
 
-        DropdownMenuItem(
-            text = { Text(stringRes(R.string.quick_action_share)) },
-            onClick = {
+        // Share section
+        M3ActionSection {
+            M3ActionRow(
+                icon = Icons.Outlined.ContentCopy,
+                text = stringRes(R.string.copy_user_id),
+            ) {
+                clipboardManager.setText(AnnotatedString(user.pubkeyNpub()))
+                onDismiss()
+            }
+            M3ActionRow(
+                icon = Icons.Outlined.Share,
+                text = stringRes(R.string.quick_action_share),
+            ) {
                 val sendIntent =
                     Intent().apply {
                         action = Intent.ACTION_SEND
                         type = "text/plain"
-                        putExtra(
-                            Intent.EXTRA_TEXT,
-                            externalLinkForUser(user),
-                        )
+                        putExtra(Intent.EXTRA_TEXT, externalLinkForUser(user))
                         putExtra(
                             Intent.EXTRA_TITLE,
                             stringRes(context, R.string.quick_action_share_browser_link),
                         )
                     }
-
-                val shareIntent =
-                    Intent.createChooser(sendIntent, stringRes(context, R.string.quick_action_share))
+                val shareIntent = Intent.createChooser(sendIntent, stringRes(context, R.string.quick_action_share))
                 context.startActivity(shareIntent)
                 onDismiss()
-            },
-        )
+            }
+        }
 
+        // Moderation section (if not self)
         if (accountViewModel.userProfile() != user) {
-            HorizontalDivider(thickness = DividerThickness)
-            if (accountViewModel.account.isHidden(user)) {
-                DropdownMenuItem(
-                    text = { Text(stringRes(R.string.unblock_user)) },
-                    onClick = {
+            M3ActionSection {
+                if (accountViewModel.account.isHidden(user)) {
+                    M3ActionRow(
+                        icon = Icons.Outlined.CheckCircle,
+                        text = stringRes(R.string.unblock_user),
+                    ) {
                         accountViewModel.show(user)
                         onDismiss()
-                    },
-                )
-            } else {
-                DropdownMenuItem(
-                    text = { Text(stringRes(id = R.string.block_hide_user)) },
-                    onClick = {
+                    }
+                } else {
+                    M3ActionRow(
+                        icon = Icons.Outlined.Block,
+                        text = stringRes(R.string.block_hide_user),
+                        isDestructive = true,
+                    ) {
                         accountViewModel.hide(user)
                         onDismiss()
-                    },
-                )
+                    }
+                }
             }
-            HorizontalDivider(thickness = DividerThickness)
-            DropdownMenuItem(
-                text = { Text(stringRes(id = R.string.report_spam_scam)) },
-                onClick = {
+
+            // Report section
+            M3ActionSection {
+                M3ActionRow(icon = Icons.Outlined.Report, text = stringRes(R.string.report_spam_scam), isDestructive = true) {
                     accountViewModel.report(user, ReportType.SPAM)
                     onDismiss()
-                },
-            )
-            DropdownMenuItem(
-                text = { Text(stringRes(R.string.report_hateful_speech)) },
-                onClick = {
+                }
+                M3ActionRow(icon = Icons.Outlined.Report, text = stringRes(R.string.report_hateful_speech), isDestructive = true) {
                     accountViewModel.report(user, ReportType.PROFANITY)
                     onDismiss()
-                },
-            )
-            DropdownMenuItem(
-                text = { Text(stringRes(id = R.string.report_impersonation)) },
-                onClick = {
+                }
+                M3ActionRow(icon = Icons.Outlined.Report, text = stringRes(R.string.report_impersonation), isDestructive = true) {
                     accountViewModel.report(user, ReportType.IMPERSONATION)
                     onDismiss()
-                },
-            )
-            DropdownMenuItem(
-                text = { Text(stringRes(R.string.report_nudity_porn)) },
-                onClick = {
+                }
+                M3ActionRow(icon = Icons.Outlined.Report, text = stringRes(R.string.report_nudity_porn), isDestructive = true) {
                     accountViewModel.report(user, ReportType.NUDITY)
                     onDismiss()
-                },
-            )
-            DropdownMenuItem(
-                text = { Text(stringRes(id = R.string.report_illegal_behaviour)) },
-                onClick = {
+                }
+                M3ActionRow(icon = Icons.Outlined.Report, text = stringRes(R.string.report_illegal_behaviour), isDestructive = true) {
                     accountViewModel.report(user, ReportType.ILLEGAL)
                     onDismiss()
-                },
-            )
-            DropdownMenuItem(
-                text = { Text(stringRes(id = R.string.report_malware)) },
-                onClick = {
+                }
+                M3ActionRow(icon = Icons.Outlined.Report, text = stringRes(R.string.report_malware), isDestructive = true) {
                     accountViewModel.report(user, ReportType.MALWARE)
                     onDismiss()
-                },
-            )
+                }
+            }
         }
     }
 }

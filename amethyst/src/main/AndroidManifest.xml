@@ -240,6 +240,11 @@
                 <action android:name="com.shared.NOSTR" />
             </intent-filter>
         </receiver>
+
+        <receiver
+            android:name=".service.notifications.NotificationReplyReceiver"
+            android:exported="false" />
+
     </application>
 
 

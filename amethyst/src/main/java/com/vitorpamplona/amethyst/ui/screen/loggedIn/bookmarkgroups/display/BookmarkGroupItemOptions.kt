@@ -21,10 +21,19 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.display
 
 import android.content.Intent
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.BookmarkRemove
+import androidx.compose.material.icons.outlined.CellTower
+import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.LockOpen
+import androidx.compose.material.icons.outlined.PersonAdd
+import androidx.compose.material.icons.outlined.PersonRemove
+import androidx.compose.material.icons.outlined.Report
+import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
@@ -42,7 +51,11 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.EditPostView
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
+import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
+import com.vitorpamplona.amethyst.ui.components.M3ActionRow
+import com.vitorpamplona.amethyst.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeEditDraftTo
 import com.vitorpamplona.amethyst.ui.note.VerticalDotsIcon
 import com.vitorpamplona.amethyst.ui.note.elements.DropDownParams
@@ -52,9 +65,9 @@ import com.vitorpamplona.amethyst.ui.note.types.EditState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.report.ReportNoteDialog
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Size24Modifier
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -76,20 +89,20 @@ fun BookmarkGroupItemOptions(
         onClick = { popupExpanded.value = true },
     ) {
         VerticalDotsIcon()
+    }
 
-        if (popupExpanded.value) {
-            BookmarkGroupItemOptionsMenu(
-                note = baseNote,
-                isBookmarkItemPrivate = isBookmarkItemPrivate,
-                onDismiss = { popupExpanded.value = false },
-                onMoveBookmarkToPublic = onMoveBookmarkToPublic,
-                onMoveBookmarkToPrivate = onMoveBookmarkToPrivate,
-                onDeleteBookmarkItem = onDeleteBookmarkItem,
-                editState = editState,
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
-        }
+    if (popupExpanded.value) {
+        BookmarkGroupItemOptionsMenu(
+            note = baseNote,
+            isBookmarkItemPrivate = isBookmarkItemPrivate,
+            onDismiss = { popupExpanded.value = false },
+            onMoveBookmarkToPublic = onMoveBookmarkToPublic,
+            onMoveBookmarkToPrivate = onMoveBookmarkToPrivate,
+            onDeleteBookmarkItem = onDeleteBookmarkItem,
+            editState = editState,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
     }
 }
 
@@ -142,89 +155,71 @@ fun BookmarkGroupItemOptionsMenu(
         )
     }
 
-    DropdownMenu(
-        expanded = true,
-        onDismissRequest = onDismiss,
+    M3ActionDialog(
+        title = stringRes(R.string.bookmark_item_actions_dialog_title),
+        onDismiss = onDismiss,
     ) {
         val clipboardManager = LocalClipboardManager.current
         val actContext = LocalContext.current
-
         val scope = rememberCoroutineScope()
-        DropdownMenuItem(
-            text = { Text(stringRes(if (isBookmarkItemPrivate) R.string.move_bookmark_to_public_label else R.string.move_bookmark_to_private_label)) },
-            onClick = if (isBookmarkItemPrivate) onMoveBookmarkToPublic else onMoveBookmarkToPrivate,
-        )
-        DropdownMenuItem(
-            text = { Text(stringRes(R.string.bookmark_remove_action_label)) },
-            onClick = {
+
+        // Bookmark Management section
+        M3ActionSection {
+            M3ActionRow(
+                icon = if (isBookmarkItemPrivate) Icons.Outlined.LockOpen else Icons.Outlined.Lock,
+                text = stringRes(if (isBookmarkItemPrivate) R.string.move_bookmark_to_public_label else R.string.move_bookmark_to_private_label),
+            ) {
+                if (isBookmarkItemPrivate) onMoveBookmarkToPublic() else onMoveBookmarkToPrivate()
+            }
+            M3ActionRow(
+                icon = Icons.Outlined.BookmarkRemove,
+                text = stringRes(R.string.bookmark_remove_action_label),
+                isDestructive = true,
+            ) {
                 onDeleteBookmarkItem()
                 onDismiss()
-            },
-        )
-        HorizontalDivider(thickness = DividerThickness)
+            }
+        }
 
-        if (!state.isFollowingAuthor) {
-            DropdownMenuItem(
-                text = { Text(stringRes(R.string.follow)) },
-                onClick = {
-                    val author = note.author ?: return@DropdownMenuItem
+        // Follow section
+        M3ActionSection {
+            if (!state.isFollowingAuthor) {
+                M3ActionRow(icon = Icons.Outlined.PersonAdd, text = stringRes(R.string.follow)) {
+                    val author = note.author ?: return@M3ActionRow
                     accountViewModel.follow(author)
                     onDismiss()
-                },
-            )
-            HorizontalDivider(thickness = DividerThickness)
-        } else {
-            DropdownMenuItem(
-                text = { Text(stringRes(R.string.unfollow)) },
-                onClick = {
-                    val author = note.author ?: return@DropdownMenuItem
+                }
+            } else {
+                M3ActionRow(icon = Icons.Outlined.PersonRemove, text = stringRes(R.string.unfollow)) {
+                    val author = note.author ?: return@M3ActionRow
                     accountViewModel.unfollow(author)
                     onDismiss()
-                },
-            )
-            HorizontalDivider(thickness = DividerThickness)
-        }
-//        DropdownMenuItem(
-//            text = { Text(text = stringRes(R.string.follow_set_add_author_from_note_action)) },
-//            onClick = {
-//                val authorHexKey = note.author?.pubkeyHex ?: return@DropdownMenuItem
-//                nav.nav(Route.PeopleListManagement(authorHexKey))
-//                onDismiss()
-//            },
-//        )
-        DropdownMenuItem(
-            text = { Text(stringRes(R.string.copy_text)) },
-            onClick = {
-                val lastNoteVersion = (editState?.value as? GenericLoadable.Loaded)?.loaded?.modificationToShow?.value ?: note
-                accountViewModel.decrypt(lastNoteVersion) {
-                    clipboardManager.setText(AnnotatedString(it))
                 }
+            }
+        }
+
+        // Copy & Share section
+        M3ActionSection {
+            M3ActionRow(icon = Icons.Outlined.ContentCopy, text = stringRes(R.string.copy_text)) {
+                val lastNoteVersion = (editState?.value as? GenericLoadable.Loaded)?.loaded?.modificationToShow?.value ?: note
+                accountViewModel.decrypt(lastNoteVersion) { clipboardManager.setText(AnnotatedString(it)) }
                 onDismiss()
-            },
-        )
-        DropdownMenuItem(
-            text = { Text(stringRes(R.string.copy_user_pubkey)) },
-            onClick = {
+            }
+            M3ActionRow(icon = Icons.Outlined.ContentCopy, text = stringRes(R.string.copy_user_pubkey)) {
                 note.author?.let {
                     scope.launch(Dispatchers.IO) {
                         clipboardManager.setText(AnnotatedString("nostr:${it.pubkeyNpub()}"))
                         onDismiss()
                     }
                 }
-            },
-        )
-        DropdownMenuItem(
-            text = { Text(stringRes(R.string.copy_note_id)) },
-            onClick = {
+            }
+            M3ActionRow(icon = Icons.Outlined.ContentCopy, text = stringRes(R.string.copy_note_id)) {
                 scope.launch(Dispatchers.IO) {
                     clipboardManager.setText(AnnotatedString(note.toNostrUri()))
                     onDismiss()
                 }
-            },
-        )
-        DropdownMenuItem(
-            text = { Text(stringRes(R.string.quick_action_share)) },
-            onClick = {
+            }
+            M3ActionRow(icon = Icons.Outlined.Share, text = stringRes(R.string.quick_action_share)) {
                 val sendIntent =
                     Intent().apply {
                         action = Intent.ACTION_SEND
@@ -243,74 +238,63 @@ fun BookmarkGroupItemOptionsMenu(
                     Intent.createChooser(sendIntent, stringRes(actContext, R.string.quick_action_share))
                 ContextCompat.startActivity(actContext, shareIntent, null)
                 onDismiss()
-            },
-        )
-        HorizontalDivider(thickness = DividerThickness)
-        if (state.isLoggedUser && note.isDraft()) {
-            DropdownMenuItem(
-                text = { Text(stringRes(R.string.edit_draft)) },
-                onClick = {
+            }
+        }
+
+        // Edit & Broadcast section
+        M3ActionSection {
+            if (state.isLoggedUser && note.isDraft()) {
+                M3ActionRow(icon = Icons.Outlined.Edit, text = stringRes(R.string.edit_draft)) {
                     nav.nav {
                         routeEditDraftTo(note, accountViewModel.account)
                     }
-                },
-            )
-        }
-        if (note.event is TextNoteEvent && !note.isDraft()) {
-            if (state.isLoggedUser) {
-                DropdownMenuItem(
-                    text = { Text(stringRes(R.string.edit_post)) },
-                    onClick = {
-                        wantsToEditPost.value = true
-                    },
-                )
-            } else {
-                DropdownMenuItem(
-                    text = { Text(stringRes(R.string.propose_an_edit)) },
-                    onClick = {
-                        wantsToEditPost.value = true
-                    },
-                )
+                }
             }
-        }
-        DropdownMenuItem(
-            text = { Text(stringRes(R.string.broadcast)) },
-            onClick = {
+            if (!note.isDraft()) {
+                if (note.event is TextNoteEvent) {
+                    if (state.isLoggedUser) {
+                        M3ActionRow(icon = Icons.Outlined.Edit, text = stringRes(R.string.edit_post)) {
+                            wantsToEditPost.value = true
+                        }
+                    } else {
+                        M3ActionRow(icon = Icons.Outlined.Edit, text = stringRes(R.string.propose_an_edit)) {
+                            wantsToEditPost.value = true
+                        }
+                    }
+                } else if (note.event is LongTextNoteEvent && state.isLoggedUser) {
+                    M3ActionRow(icon = Icons.Outlined.Edit, text = stringRes(R.string.edit_article)) {
+                        nav.nav { Route.NewLongFormPost(version = note.idHex) }
+                    }
+                }
+            }
+            M3ActionRow(icon = Icons.Outlined.CellTower, text = stringRes(R.string.broadcast)) {
                 accountViewModel.broadcast(note)
                 onDismiss()
-            },
-        )
-        HorizontalDivider(thickness = DividerThickness)
-        if (accountViewModel.account.otsState.hasPendingAttestations(note)) {
-            DropdownMenuItem(
-                text = { Text(stringRes(R.string.timestamp_pending)) },
-                onClick = {
+            }
+        }
+
+        // Timestamp & Moderation section
+        M3ActionSection {
+            if (accountViewModel.account.otsState.hasPendingAttestations(note)) {
+                M3ActionRow(icon = Icons.Outlined.Schedule, text = stringRes(R.string.timestamp_pending)) {
                     onDismiss()
-                },
-            )
-        } else {
-            DropdownMenuItem(
-                text = { Text(stringRes(R.string.timestamp_it)) },
-                onClick = {
+                }
+            } else {
+                M3ActionRow(icon = Icons.Outlined.Schedule, text = stringRes(R.string.timestamp_it)) {
                     accountViewModel.timestamp(note)
                     onDismiss()
-                },
-            )
-        }
-        HorizontalDivider(thickness = DividerThickness)
-        if (state.isLoggedUser) {
-            DropdownMenuItem(
-                text = { Text(stringRes(R.string.request_deletion)) },
-                onClick = {
+                }
+            }
+            if (state.isLoggedUser) {
+                M3ActionRow(icon = Icons.Outlined.Delete, text = stringRes(R.string.request_deletion), isDestructive = true) {
                     accountViewModel.delete(note)
                     onDismiss()
-                },
-            )
-        } else {
-            DropdownMenuItem(
-                text = { Text(stringRes(R.string.block_report)) },
-                onClick = { reportDialogShowing = true },
-            )
+                }
+            } else {
+                M3ActionRow(icon = Icons.Outlined.Report, text = stringRes(R.string.block_report), isDestructive = true) {
+                    reportDialogShowing = true
+                }
+            }
         }
     }
 

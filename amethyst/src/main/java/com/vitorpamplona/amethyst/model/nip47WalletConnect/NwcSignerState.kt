@@ -31,13 +31,13 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
-import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentRequestEvent
-import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
-import com.vitorpamplona.quartz.nip47WalletConnect.NostrWalletConnectRequestCache
-import com.vitorpamplona.quartz.nip47WalletConnect.NostrWalletConnectResponseCache
-import com.vitorpamplona.quartz.nip47WalletConnect.Request
-import com.vitorpamplona.quartz.nip47WalletConnect.Response
+import com.vitorpamplona.quartz.nip47WalletConnect.cache.NostrWalletConnectRequestCache
+import com.vitorpamplona.quartz.nip47WalletConnect.cache.NostrWalletConnectResponseCache
+import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentRequestEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -114,7 +114,7 @@ class NwcSignerState(
 
     fun hasWalletConnectSetup(): Boolean = nip47Setup.value != null
 
-    override fun isNIP47Author(pubkey: HexKey?): Boolean = nip47Signer.value.pubKey == pubkey
+    override fun isNIP47Author(pubKey: HexKey?): Boolean = nip47Signer.value.pubKey == pubKey
 
     /**
      * Decrypts a NIP-47 payment request using the current signer.

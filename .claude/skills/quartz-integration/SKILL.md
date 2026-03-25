@@ -7,7 +7,7 @@ description: Integration guide for using the Quartz Nostr KMP library in externa
 
 Reference for integrating `com.vitorpamplona.quartz:quartz` into external Nostr KMP projects.
 
-**Published artifact**: `com.vitorpamplona.quartz:quartz:1.05.1` (Maven Central)
+**Published artifact**: `com.vitorpamplona.quartz:quartz:1.06.3` (Maven Central)
 **Targets**: JVM 21+, Android (minSdk 21+), iOS (XCFramework `quartz-kmpKit`)
 **License**: MIT
 
@@ -19,7 +19,7 @@ Reference for integrating `com.vitorpamplona.quartz:quartz` into external Nostr 
 
 ```toml
 [versions]
-quartz = "1.05.1"
+quartz = "1.06.3"
 
 [libraries]
 quartz = { module = "com.vitorpamplona.quartz:quartz", version.ref = "quartz" }
@@ -41,7 +41,7 @@ kotlin {
 
 ```kotlin
 dependencies {
-    implementation("com.vitorpamplona.quartz:quartz:1.05.1")
+    implementation("com.vitorpamplona.quartz:quartz:1.06.3")
 }
 ```
 
@@ -609,7 +609,7 @@ SQLite-based storage with full NIP support (NIP-09, NIP-40, NIP-45, NIP-50, NIP-
 import com.vitorpamplona.quartz.nip01Core.store.EventStore
 import android.content.Context
 
-val store = EventStore(context)
+val store = EventStore()
 
 // Insert
 store.insert(event)

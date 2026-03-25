@@ -45,6 +45,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -65,6 +66,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.DrawPlayName
 import com.vitorpamplona.amethyst.ui.note.ObserveAndRenderNIP05VerifiedSymbol
+import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.note.toShortDisplay
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -78,11 +80,16 @@ import com.vitorpamplona.amethyst.ui.theme.SpacedBy3dp
 import com.vitorpamplona.amethyst.ui.theme.SpacedBy5dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip39ExtIdentities.GitHubIdentity
 import com.vitorpamplona.quartz.nip39ExtIdentities.IdentityClaimTag
 import com.vitorpamplona.quartz.nip39ExtIdentities.MastodonIdentity
 import com.vitorpamplona.quartz.nip39ExtIdentities.TelegramIdentity
 import com.vitorpamplona.quartz.nip39ExtIdentities.TwitterIdentity
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 private const val IDENTITY_ICON_CACHE_KEY = 0
@@ -200,6 +207,8 @@ fun DrawAdditionalInfo(
             }
         }
 
+        DisplayLastSeen(baseUser, accountViewModel)
+
         DisplayNip05ProfileStatus(baseUser, accountViewModel)
 
         val lud16 =
@@ -278,6 +287,33 @@ fun DrawAdditionalInfo(
         }
 
         DisplayAppRecommendations(appRecommendations, accountViewModel, nav)
+    }
+}
+
+@Composable
+fun DisplayLastSeen(
+    user: User,
+    accountViewModel: AccountViewModel,
+) {
+    val lastSeenFlow =
+        remember {
+            accountViewModel.account.cache
+                .observeLatestEvent<Event>(Filter(authors = listOf(user.pubkeyHex)))
+                .map {
+                    it?.createdAt
+                }.flowOn(Dispatchers.IO)
+        }
+
+    val lastSeen by lastSeenFlow.collectAsStateWithLifecycle(null)
+
+    lastSeen?.let { timestamp ->
+        val context = LocalContext.current
+        Text(
+            text = stringRes(R.string.last_seen, timeAgo(timestamp, context, prefix = "", seconds = R.string.seconds)),
+            color = MaterialTheme.colorScheme.placeholderText,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 

@@ -252,8 +252,14 @@ private fun DiscoverPages(
         },
         floatingButton = {
             val currentPage = pagerState.currentPage
-            if (currentPage >= 0 && currentPage < feedTabs.size && feedTabs[currentPage].resource == R.string.discover_marketplace) {
-                NewProductButton(accountViewModel, nav)
+            if (currentPage >= 0 && currentPage < feedTabs.size) {
+                if (feedTabs[currentPage].resource == R.string.discover_marketplace) {
+                    NewProductButton(accountViewModel, nav)
+                }
+
+                if (feedTabs[currentPage].resource == R.string.discover_reads) {
+                    NewLongFormMarkdownButton(accountViewModel, nav)
+                }
             }
         },
         accountViewModel = accountViewModel,
@@ -351,6 +357,28 @@ fun NewProductButton(
         Icon(
             imageVector = Icons.Outlined.Add,
             contentDescription = stringRes(id = R.string.new_product),
+            modifier = Size26Modifier,
+            tint = Color.White,
+        )
+    }
+}
+
+@Composable
+fun NewLongFormMarkdownButton(
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    FloatingActionButton(
+        onClick = {
+            nav.nav(Route.NewLongFormPost())
+        },
+        modifier = Size55Modifier,
+        shape = CircleShape,
+        containerColor = MaterialTheme.colorScheme.primary,
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.Add,
+            contentDescription = stringRes(id = R.string.new_long_form_post),
             modifier = Size26Modifier,
             tint = Color.White,
         )

@@ -35,11 +35,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.CellTower
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults.cardElevation
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
@@ -68,6 +71,9 @@ import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
+import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
+import com.vitorpamplona.amethyst.ui.components.M3ActionRow
+import com.vitorpamplona.amethyst.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -271,15 +277,16 @@ private fun ListActionsMenuButton(
         onClick = { isActionListOpen.value = true },
     ) {
         VerticalDotsIcon()
+    }
 
-        DropdownMenu(
-            expanded = isActionListOpen.value,
-            onDismissRequest = { isActionListOpen.value = false },
+    if (isActionListOpen.value) {
+        val context = LocalContext.current
+        M3ActionDialog(
+            title = stringRes(R.string.pack_actions_dialog_title),
+            onDismiss = { isActionListOpen.value = false },
         ) {
-            val context = LocalContext.current
-            DropdownMenuItem(
-                text = { Text(stringRes(R.string.quick_action_share)) },
-                onClick = {
+            M3ActionSection {
+                M3ActionRow(icon = Icons.Outlined.Share, text = stringRes(R.string.quick_action_share)) {
                     val sendIntent =
                         Intent().apply {
                             action = Intent.ACTION_SEND
@@ -298,38 +305,22 @@ private fun ListActionsMenuButton(
                         Intent.createChooser(sendIntent, stringRes(context, R.string.quick_action_share))
                     ContextCompat.startActivity(context, shareIntent, null)
                     isActionListOpen.value = false
-                },
-            )
-            HorizontalDivider(thickness = DividerThickness)
-            DropdownMenuItem(
-                text = {
-                    Text(stringRes(R.string.follow_pack_edit_list_metadata))
-                },
-                onClick = {
+                }
+                M3ActionRow(icon = Icons.Outlined.Edit, text = stringRes(R.string.follow_pack_edit_list_metadata)) {
                     onEditList()
                     isActionListOpen.value = false
-                },
-            )
-            HorizontalDivider(thickness = DividerThickness)
-            DropdownMenuItem(
-                text = {
-                    Text(stringRes(R.string.follow_pack_broadcast))
-                },
-                onClick = {
+                }
+                M3ActionRow(icon = Icons.Outlined.CellTower, text = stringRes(R.string.follow_pack_broadcast)) {
                     onBroadcastList()
                     isActionListOpen.value = false
-                },
-            )
-            HorizontalDivider(thickness = DividerThickness)
-            DropdownMenuItem(
-                text = {
-                    Text(stringRes(R.string.follow_pack_delete))
-                },
-                onClick = {
+                }
+            }
+            M3ActionSection {
+                M3ActionRow(icon = Icons.Outlined.Delete, text = stringRes(R.string.follow_pack_delete), isDestructive = true) {
                     onDeleteList()
                     isActionListOpen.value = false
-                },
-            )
+                }
+            }
         }
     }
 }

@@ -54,7 +54,7 @@ fun ZapRaiserRequest(
     Column {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
+            modifier = Modifier.fillMaxWidth().padding(bottom = 5.dp),
         ) {
             Icon(
                 imageVector = CustomHashTagIcons.Lightning,

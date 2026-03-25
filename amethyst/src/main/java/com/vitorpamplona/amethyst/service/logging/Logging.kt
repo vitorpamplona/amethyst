@@ -24,8 +24,6 @@ import android.os.Build
 import android.os.StrictMode
 import android.os.StrictMode.ThreadPolicy
 import android.os.StrictMode.VmPolicy
-import com.skydoves.compose.stability.runtime.ComposeStabilityAnalyzer
-import com.vitorpamplona.amethyst.BuildConfig
 
 class Logging {
     companion object {
@@ -60,9 +58,6 @@ class Logging {
             )
             // Looper.getMainLooper().setMessageLogging(LogMonitor())
             // ChoreographerHelper.start()
-
-            // Enable recomposition tracking ONLY in debug builds
-            ComposeStabilityAnalyzer.setEnabled(BuildConfig.DEBUG)
         }
     }
 }

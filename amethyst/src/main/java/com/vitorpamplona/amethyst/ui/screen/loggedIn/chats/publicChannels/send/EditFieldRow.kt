@@ -37,6 +37,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
@@ -69,6 +70,8 @@ fun EditFieldRow(
         }
         nav.popBack()
     }
+
+    StrippingFailureDialog(channelScreenModel.strippingFailureConfirmation)
 
     channelScreenModel.replyTo.value?.let {
         DisplayReplyingToNote(it, accountViewModel, nav) {

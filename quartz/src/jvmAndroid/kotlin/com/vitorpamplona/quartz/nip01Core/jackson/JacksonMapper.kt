@@ -52,12 +52,15 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.jackson.BunkerRequestDeseriali
 import com.vitorpamplona.quartz.nip46RemoteSigner.jackson.BunkerRequestSerializer
 import com.vitorpamplona.quartz.nip46RemoteSigner.jackson.BunkerResponseDeserializer
 import com.vitorpamplona.quartz.nip46RemoteSigner.jackson.BunkerResponseSerializer
-import com.vitorpamplona.quartz.nip47WalletConnect.Notification
-import com.vitorpamplona.quartz.nip47WalletConnect.Request
-import com.vitorpamplona.quartz.nip47WalletConnect.Response
 import com.vitorpamplona.quartz.nip47WalletConnect.jackson.NotificationDeserializer
+import com.vitorpamplona.quartz.nip47WalletConnect.jackson.NotificationSerializer
 import com.vitorpamplona.quartz.nip47WalletConnect.jackson.RequestDeserializer
+import com.vitorpamplona.quartz.nip47WalletConnect.jackson.RequestSerializer
 import com.vitorpamplona.quartz.nip47WalletConnect.jackson.ResponseDeserializer
+import com.vitorpamplona.quartz.nip47WalletConnect.jackson.ResponseSerializer
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Notification
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.Rumor
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.jackson.RumorDeserializer
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.jackson.RumorSerializer
@@ -93,8 +96,11 @@ class JacksonMapper {
                         .addSerializer(Rumor::class.java, RumorSerializer())
                         .addDeserializer(Rumor::class.java, RumorDeserializer())
                         // nip 47
+                        .addSerializer(Response::class.java, ResponseSerializer())
                         .addDeserializer(Response::class.java, ResponseDeserializer())
+                        .addSerializer(Request::class.java, RequestSerializer())
                         .addDeserializer(Request::class.java, RequestDeserializer())
+                        .addSerializer(Notification::class.java, NotificationSerializer())
                         .addDeserializer(Notification::class.java, NotificationDeserializer())
                         // nip 46
                         .addDeserializer(BunkerMessage::class.java, BunkerMessageDeserializer())
@@ -111,6 +117,7 @@ class JacksonMapper {
         val tagArrayTypeInstance: JavaType = mapper.typeFactory.constructType(jacksonTypeRef<TagArray>())
         val rumorTypeInstance: JavaType = mapper.typeFactory.constructType(jacksonTypeRef<Rumor>())
         val eventTemplateTypeInstance: JavaType = mapper.typeFactory.constructType(jacksonTypeRef<EventTemplate<Event>>())
+        val eventListTypeInstance: JavaType = mapper.typeFactory.constructType(jacksonTypeRef<List<Event>>())
         val messageTypeInstance: JavaType = mapper.typeFactory.constructType(jacksonTypeRef<Message>())
         val commandTypeInstance: JavaType = mapper.typeFactory.constructType(jacksonTypeRef<Command>())
 
@@ -125,6 +132,8 @@ class JacksonMapper {
         fun fromJsonToRumor(json: String): Rumor = mapper.readValue(json, rumorTypeInstance)
 
         fun fromJsonToEventTemplate(json: String): EventTemplate<Event> = mapper.readValue(json, eventTemplateTypeInstance)
+
+        fun fromJsonToEventList(json: String): List<Event> = mapper.readValue(json, eventListTypeInstance)
 
         inline fun <reified T : OptimizedSerializable> fromJsonTo(json: String): T = mapper.readValue<T>(json)
 

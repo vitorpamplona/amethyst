@@ -29,7 +29,7 @@ Visual guide to source set organization with concrete examples from the codebase
 │  - Jackson       │    │   - Platform libs │
 │  - OkHttp        │    └───────┬───────────┘
 └────┬─────────┬───┘            │
-     │         │                ├─→ iosX64Main (simulator Intel)
+     │         │                │
      │         │                ├─→ iosArm64Main (device ARM64)
      │         │                └─→ iosSimulatorArm64Main (Apple Silicon)
      ▼         ▼
@@ -238,7 +238,6 @@ iosMain {
     }
 }
 
-val iosX64Main by getting { dependsOn(iosMain.get()) }
 val iosArm64Main by getting { dependsOn(iosMain.get()) }
 val iosSimulatorArm64Main by getting { dependsOn(iosMain.get()) }
 ```
@@ -249,7 +248,6 @@ val iosSimulatorArm64Main by getting { dependsOn(iosMain.get()) }
 - Different from Android/Desktop
 
 **Architecture targets:**
-- iosX64Main: Intel simulator
 - iosArm64Main: Device (iPhone, iPad)
 - iosSimulatorArm64Main: Apple Silicon simulator
 
@@ -326,7 +324,7 @@ commonMain
 | androidMain | jvmAndroid | Android framework | Activity, ViewModel |
 | jvmMain | jvmAndroid | JVM + Compose Desktop | Window, MenuBar |
 | iosMain | commonMain | iOS platform | Security framework |
-| iosX64Main | iosMain | Simulator (Intel) | Architecture-specific |
+| iosMain | Simulator (Intel) | Architecture-specific |
 | iosArm64Main | iosMain | Device (ARM64) | Architecture-specific |
 | jsMain | commonMain | JS/DOM | Web (future) |
 | wasmMain | commonMain | wasm APIs | WebAssembly (future) |

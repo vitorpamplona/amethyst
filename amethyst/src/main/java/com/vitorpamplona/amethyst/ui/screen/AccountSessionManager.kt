@@ -112,11 +112,11 @@ class AccountSessionManager(
         }
     }
 
-    private suspend fun loginWithDefaultAccount(route: Route? = null) {
+    private suspend fun loginWithDefaultAccount(routeBuilder: ((account: Account) -> Route?)? = null) {
         val accountSettings = localPreferences.loadAccountConfigFromEncryptedStorage()
 
         if (accountSettings != null) {
-            startUI(accountSettings, route)
+            startUI(accountSettings, routeBuilder)
         } else {
             requestLoginUI()
         }
@@ -184,11 +184,11 @@ class AccountSessionManager(
 
     fun startUI(
         accountSettings: AccountSettings,
-        route: Route? = null,
+        routeBuilder: ((account: Account) -> Route?)? = null,
     ) {
         val account = accountsCache.loadAccount(accountSettings)
         _accountContent.update {
-            AccountState.LoggedIn(account, route)
+            AccountState.LoggedIn(account, routeBuilder?.invoke(account))
         }
     }
 
@@ -280,7 +280,7 @@ class AccountSessionManager(
 
             localPreferences.setDefaultAccount(accountSettings)
 
-            startUI(accountSettings, route = Route.ImportFollowsSelectUser)
+            startUI(accountSettings, routeBuilder = { Route.ImportFollowsSelectUser })
 
             scope.launch(Dispatchers.IO) {
                 delay(2000) // waits for the new user to connect to the new relays.
@@ -329,12 +329,12 @@ class AccountSessionManager(
 
     suspend fun checkAndSwitchUserSync(
         npub: String,
-        route: Route,
+        routeBuilder: ((account: Account) -> Route?)? = null,
     ): Boolean {
         if (npub != localPreferences.currentAccount()) {
             val account = localPreferences.allSavedAccounts().firstOrNull { it.npub == npub }
             if (account != null) {
-                switchUserSync(account, route)
+                switchUserSync(account, routeBuilder)
                 return true
             }
         }
@@ -343,10 +343,10 @@ class AccountSessionManager(
 
     private suspend fun switchUserSync(
         accountInfo: AccountInfo,
-        route: Route? = null,
+        routeBuilder: ((account: Account) -> Route?)? = null,
     ) {
         localPreferences.switchToAccount(accountInfo)
-        loginWithDefaultAccount(route)
+        loginWithDefaultAccount(routeBuilder)
     }
 
     fun currentAccountNPub() =

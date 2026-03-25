@@ -47,6 +47,7 @@ import androidx.compose.material.icons.automirrored.filled.Feed
 import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.automirrored.filled.Message
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Code
@@ -61,7 +62,6 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Payment
 import androidx.compose.material.icons.filled.PrivacyTip
-import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material.icons.filled.Topic
@@ -128,6 +128,10 @@ import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.ui.theme.bitcoinColor
 import com.vitorpamplona.amethyst.ui.theme.redColorOnSecondSurface
+import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
+import com.vitorpamplona.quartz.experimental.attestations.proficiency.AttestorProficiencyEvent
+import com.vitorpamplona.quartz.experimental.attestations.recommendation.AttestorRecommendationEvent
+import com.vitorpamplona.quartz.experimental.attestations.request.AttestationRequestEvent
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
@@ -146,7 +150,7 @@ import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryE
 import com.vitorpamplona.quartz.experimental.publicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.experimental.relationshipStatus.ContactCardEvent
 import com.vitorpamplona.quartz.experimental.trustedAssertions.list.TrustProviderListEvent
-import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
+import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.ErrorDebugMessage
@@ -191,8 +195,8 @@ import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayList
 import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
-import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentRequestEvent
-import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentResponseEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentRequestEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
@@ -529,6 +533,10 @@ private fun kindDisplayName(kind: Int): Int =
         AppSpecificDataEvent.KIND -> R.string.kind_user_settings
         AudioHeaderEvent.KIND -> R.string.kind_audio_header
         AudioTrackEvent.KIND -> R.string.kind_audio_track
+        AttestationEvent.KIND -> R.string.attestation
+        AttestationRequestEvent.KIND -> R.string.attestation_request
+        AttestorRecommendationEvent.KIND -> R.string.attestor_recommendation
+        AttestorProficiencyEvent.KIND -> R.string.attestor_proficiency
         BadgeAwardEvent.KIND -> R.string.kind_badge_awards
         BadgeDefinitionEvent.KIND -> R.string.kind_badge_definitions
         BadgeProfilesEvent.KIND -> R.string.kind_profile_badges
@@ -619,7 +627,7 @@ private fun kindDisplayName(kind: Int): Int =
         PeopleListEvent.KIND -> R.string.kind_people_lists
         PictureEvent.KIND -> R.string.kind_pictures
         PinListEvent.KIND -> R.string.kind_pins
-        PollNoteEvent.KIND -> R.string.kind_zap_poll
+        ZapPollEvent.KIND -> R.string.kind_zap_poll
         PollEvent.KIND -> R.string.kind_poll
         PollResponseEvent.KIND -> R.string.kind_poll_response
         PrivateDmEvent.KIND -> R.string.kind_nip04_dms
@@ -661,7 +669,7 @@ val zaps = setOf(9734, 9735, 9041, 17375, 23194, 23195)
 val reports = setOf(ReportEvent.KIND, MuteListEvent.KIND, DeletionEvent.KIND, RequestToVanishEvent.KIND)
 
 @Composable
-private fun KindChip(kind: Int) {
+fun KindChip(kind: Int) {
     val nameResId = kindDisplayName(kind)
     val name = if (nameResId != -1) stringResource(nameResId) else "k$kind"
     val (bg, fg) =
@@ -931,7 +939,7 @@ private fun OutboxEventsCard(eventIds: Set<HexKey>) {
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Send,
+                            imageVector = Icons.AutoMirrored.Filled.Send,
                             contentDescription = null,
                             modifier = Modifier.size(12.dp),
                             tint = MaterialTheme.colorScheme.onTertiaryContainer,

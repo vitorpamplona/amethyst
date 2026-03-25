@@ -39,6 +39,10 @@ import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
 import com.vitorpamplona.amethyst.service.BundledInsert
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.note.dateFormatter
+import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
+import com.vitorpamplona.quartz.experimental.attestations.proficiency.AttestorProficiencyEvent
+import com.vitorpamplona.quartz.experimental.attestations.recommendation.AttestorRecommendationEvent
+import com.vitorpamplona.quartz.experimental.attestations.request.AttestationRequestEvent
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
@@ -58,7 +62,7 @@ import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryE
 import com.vitorpamplona.quartz.experimental.publicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.experimental.relationshipStatus.ContactCardEvent
 import com.vitorpamplona.quartz.experimental.trustedAssertions.list.TrustProviderListEvent
-import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
+import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -135,8 +139,8 @@ import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
 import com.vitorpamplona.quartz.nip39ExtIdentities.ExternalIdentitiesEvent
 import com.vitorpamplona.quartz.nip40Expiration.isExpirationBefore
 import com.vitorpamplona.quartz.nip40Expiration.isExpired
-import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentRequestEvent
-import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentResponseEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentRequestEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
@@ -325,7 +329,7 @@ object LocalCache : ILocalCache, ICacheProvider {
 
             newFilter.init()
 
-            observables.put(newFilter, newFilter)
+            observables[newFilter] = newFilter
 
             awaitClose {
                 observables.remove(newFilter)
@@ -358,19 +362,19 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     fun load(keys: Set<String>): Set<User> = keys.mapNotNullTo(mutableSetOf(), ::checkGetOrCreateUser)
 
-    override fun getOrCreateUser(key: HexKey): User {
-        require(isValidHex(key = key)) { "$key is not a valid hex" }
+    override fun getOrCreateUser(pubkey: HexKey): User {
+        require(isValidHex(key = pubkey)) { "$pubkey is not a valid hex" }
 
-        return users.getOrCreate(key) {
-            val nip65RelayListNote = getOrCreateAddressableNoteInternal(AdvertisedRelayListEvent.createAddress(key))
-            val dmRelayListNote = getOrCreateAddressableNoteInternal(ChatMessageRelayListEvent.createAddress(key))
+        return users.getOrCreate(pubkey) {
+            val nip65RelayListNote = getOrCreateAddressableNoteInternal(AdvertisedRelayListEvent.createAddress(pubkey))
+            val dmRelayListNote = getOrCreateAddressableNoteInternal(ChatMessageRelayListEvent.createAddress(pubkey))
             User(it, nip65RelayListNote, dmRelayListNote)
         }
     }
 
-    override fun getUserIfExists(key: String): User? {
-        if (key.isEmpty()) return null
-        return users.get(key)
+    override fun getUserIfExists(pubkey: String): User? {
+        if (pubkey.isEmpty()) return null
+        return users.get(pubkey)
     }
 
     override fun countUsers(predicate: (String, User) -> Boolean): Int {
@@ -394,7 +398,7 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     fun getAddressableNoteIfExists(address: Address): AddressableNote? = addressables.get(address)
 
-    override fun getNoteIfExists(key: String): Note? = if (key.length == 64) notes.get(key) else Address.parse(key)?.let { addressables.get(it) }
+    override fun getNoteIfExists(hexKey: String): Note? = if (hexKey.length == 64) notes.get(hexKey) else Address.parse(hexKey)?.let { addressables.get(it) }
 
     fun getNoteIfExists(key: ETag): Note? = notes.get(key.eventId)
 
@@ -615,6 +619,30 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     fun consume(
         event: InteractiveStoryReadingStateEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
+
+    fun consume(
+        event: AttestationEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
+
+    fun consume(
+        event: AttestationRequestEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
+
+    fun consume(
+        event: AttestorRecommendationEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
+
+    fun consume(
+        event: AttestorProficiencyEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
@@ -961,7 +989,7 @@ object LocalCache : ILocalCache, ICacheProvider {
     @Suppress("DEPRECATION")
     fun computeReplyTo(event: Event): List<Note> =
         when (event) {
-            is PollNoteEvent -> {
+            is ZapPollEvent -> {
                 event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
             }
 
@@ -1059,7 +1087,7 @@ object LocalCache : ILocalCache, ICacheProvider {
         }
 
     fun consume(
-        event: PollNoteEvent,
+        event: ZapPollEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeRegularEvent(event, relay, wasVerified)
@@ -2250,6 +2278,7 @@ object LocalCache : ILocalCache, ICacheProvider {
 
             requestNote?.let { request -> zappedNote?.addZapPayment(request, note) }
 
+            @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
             GlobalScope.launch(Dispatchers.IO) {
                 responseCallback(event)
             }
@@ -2344,8 +2373,21 @@ object LocalCache : ILocalCache, ICacheProvider {
 
         if (key != null) {
             val note = getNoteIfExists(key)
-            if ((note != null) && !excludeNoteEventFromSearchResults(note)) {
-                return listOfNotNull(note)
+            val noteEvent = note?.event
+            val newNote =
+                if (noteEvent is AddressableEvent) {
+                    val addressableNote = getAddressableNoteIfExists(noteEvent.address())
+                    if (addressableNote?.event?.id == note.idHex) {
+                        addressableNote
+                    } else {
+                        note
+                    }
+                } else {
+                    note
+                }
+
+            if ((newNote != null) && !excludeNoteEventFromSearchResults(newNote)) {
+                return listOfNotNull(newNote)
             }
         }
 
@@ -3050,6 +3092,10 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is AppDefinitionEvent -> consume(event, relay, wasVerified)
                 is AppRecommendationEvent -> consume(event, relay, wasVerified)
                 is AppSpecificDataEvent -> consume(event, relay, wasVerified)
+                is AttestationEvent -> consume(event, relay, wasVerified)
+                is AttestationRequestEvent -> consume(event, relay, wasVerified)
+                is AttestorRecommendationEvent -> consume(event, relay, wasVerified)
+                is AttestorProficiencyEvent -> consume(event, relay, wasVerified)
                 is AudioHeaderEvent -> consume(event, relay, wasVerified)
                 is AudioTrackEvent -> consume(event, relay, wasVerified)
                 is BadgeAwardEvent -> consume(event, relay, wasVerified)
@@ -3140,7 +3186,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is PublicMessageEvent -> consume(event, relay, wasVerified)
                 is PeopleListEvent -> consume(event, relay, wasVerified)
                 is CodeSnippetEvent -> consume(event, relay, wasVerified)
-                is PollNoteEvent -> consume(event, relay, wasVerified)
+                is ZapPollEvent -> consume(event, relay, wasVerified)
                 is PollEvent -> consume(event, relay, wasVerified)
                 is PollResponseEvent -> consume(event, relay, wasVerified)
                 is ReactionEvent -> consume(event, relay, wasVerified)

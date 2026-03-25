@@ -46,7 +46,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromFiles
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
@@ -82,6 +82,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightPage
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -92,8 +93,8 @@ import kotlinx.coroutines.withContext
 fun NewProductScreen(
     message: String? = null,
     attachment: Uri? = null,
-    quote: Note? = null,
-    draft: Note? = null,
+    quoteId: HexKey? = null,
+    draftId: HexKey? = null,
     accountViewModel: AccountViewModel,
     nav: Nav,
 ) {
@@ -104,10 +105,10 @@ fun NewProductScreen(
 
     LaunchedEffect(postViewModel, accountViewModel) {
         postViewModel.reloadRelaySet()
-        draft?.let {
+        draftId?.let { accountViewModel.getNoteIfExists(it) }?.let {
             postViewModel.editFromDraft(it)
         }
-        quote?.let {
+        quoteId?.let { accountViewModel.getNoteIfExists(it) }?.let {
             postViewModel.quote(it)
         }
         message?.ifBlank { null }?.let {
@@ -136,6 +137,8 @@ fun NewProductScreen(
     nav: INav,
 ) {
     WatchAndLoadMyEmojiList(accountViewModel)
+
+    StrippingFailureDialog(postViewModel.strippingFailureConfirmation)
 
     BackHandler {
         accountViewModel.launchSigner {
@@ -223,7 +226,7 @@ private fun NewProductBody(
             if (postViewModel.wantsToMarkAsSensitive) {
                 Row(
                     verticalAlignment = CenterVertically,
-                    modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
+                    modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
                 ) {
                     ContentSensitivityExplainer(
                         description = postViewModel.contentWarningDescription,
@@ -235,7 +238,7 @@ private fun NewProductBody(
             if (postViewModel.wantsExpirationDate) {
                 Row(
                     verticalAlignment = CenterVertically,
-                    modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
+                    modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
                 ) {
                     ExpirationDatePicker(postViewModel)
                 }
@@ -244,7 +247,7 @@ private fun NewProductBody(
             if (postViewModel.wantsToAddGeoHash) {
                 Row(
                     verticalAlignment = CenterVertically,
-                    modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
+                    modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
                 ) {
                     LocationAsHash(postViewModel)
                 }
@@ -253,7 +256,7 @@ private fun NewProductBody(
             if (postViewModel.wantsForwardZapTo) {
                 Row(
                     verticalAlignment = CenterVertically,
-                    modifier = Modifier.padding(top = Size5dp, bottom = Size5dp, start = Size10dp),
+                    modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
                 ) {
                     ForwardZapTo(postViewModel, accountViewModel)
                 }
@@ -262,7 +265,7 @@ private fun NewProductBody(
             postViewModel.multiOrchestrator?.let {
                 Row(
                     verticalAlignment = CenterVertically,
-                    modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
+                    modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
                 ) {
                     val context = LocalContext.current
 
@@ -270,8 +273,8 @@ private fun NewProductBody(
                         uris = it,
                         defaultServer = accountViewModel.account.settings.defaultFileServer,
                         isUploading = postViewModel.mediaUploadTracker.isUploading,
-                        onAdd = { alt, server, sensitiveContent, mediaQuality, _ ->
-                            postViewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, server, accountViewModel.toastManager::toast, context)
+                        onAdd = { alt, server, sensitiveContent, mediaQuality, _, stripMetadata ->
+                            postViewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, server, accountViewModel.toastManager::toast, context, stripMetadata)
                             accountViewModel.account.settings.changeDefaultFileServer(server)
                         },
                         onDelete = postViewModel::deleteMediaToUpload,
@@ -283,25 +286,30 @@ private fun NewProductBody(
 
             if (postViewModel.wantsInvoice) {
                 postViewModel.lnAddress()?.let { lud16 ->
-                    InvoiceRequest(
-                        lud16,
-                        accountViewModel.account.userProfile(),
-                        accountViewModel,
-                        stringRes(id = R.string.lightning_invoice),
-                        stringRes(id = R.string.lightning_create_and_add_invoice),
-                        onNewInvoice = {
-                            postViewModel.insertAtCursor(it)
-                            postViewModel.wantsInvoice = false
-                        },
-                        onError = { title, message -> accountViewModel.toastManager.toast(title, message) },
-                    )
+                    Row(
+                        verticalAlignment = CenterVertically,
+                        modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
+                    ) {
+                        InvoiceRequest(
+                            lud16,
+                            accountViewModel.account.userProfile(),
+                            accountViewModel,
+                            stringRes(id = R.string.lightning_invoice),
+                            stringRes(id = R.string.lightning_create_and_add_invoice),
+                            onNewInvoice = {
+                                postViewModel.insertAtCursor(it)
+                                postViewModel.wantsInvoice = false
+                            },
+                            onError = { title, message -> accountViewModel.toastManager.toast(title, message) },
+                        )
+                    }
                 }
             }
 
             if (postViewModel.wantsSecretEmoji) {
                 Row(
                     verticalAlignment = CenterVertically,
-                    modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
+                    modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
                 ) {
                     Column(Modifier.fillMaxWidth()) {
                         SecretEmojiRequest {
@@ -315,7 +323,7 @@ private fun NewProductBody(
             if (postViewModel.wantsZapraiser && postViewModel.hasLnAddress()) {
                 Row(
                     verticalAlignment = CenterVertically,
-                    modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
+                    modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
                 ) {
                     ZapRaiserRequest(
                         stringRes(id = R.string.zapraiser),

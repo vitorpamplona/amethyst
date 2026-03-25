@@ -67,7 +67,7 @@ fun ForwardZapTo(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 10.dp),
+                    .padding(bottom = 5.dp),
         ) {
             ZapSplitIcon()
 

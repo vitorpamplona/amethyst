@@ -36,6 +36,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
+import com.vitorpamplona.amethyst.service.uploads.MetadataStripper
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
 import com.vitorpamplona.amethyst.service.uploads.nip96.Nip96Uploader
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
@@ -104,7 +105,7 @@ class ChannelMetadataViewModel : ViewModel() {
 
     fun createOrUpdate(onDone: (PublicChatChannel) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
-            account?.let { account ->
+            account.let { account ->
                 val channel = originalChannel
                 if (channel == null) {
                     val template =
@@ -204,10 +205,25 @@ class ChannelMetadataViewModel : ViewModel() {
         onUploaded: (String) -> Unit,
         onError: (String, String) -> Unit,
     ) {
-        val account = account ?: return
+        val account = account
         onUploading(true)
 
-        val compResult = MediaCompressor().compress(galleryUri.uri, galleryUri.mimeType, CompressorQuality.MEDIUM, context.applicationContext)
+        val sourceUri =
+            if (account.settings.stripLocationOnUpload) {
+                val result = MetadataStripper.strip(galleryUri.uri, galleryUri.mimeType, context.applicationContext)
+                if (!result.stripped) {
+                    onError(
+                        stringRes(context, R.string.metadata_strip_failed_title),
+                        stringRes(context, R.string.metadata_strip_failed_upload_cancelled),
+                    )
+                    onUploading(false)
+                    return
+                }
+                result.uri
+            } else {
+                galleryUri.uri
+            }
+        val compResult = MediaCompressor().compress(sourceUri, galleryUri.mimeType, CompressorQuality.MEDIUM, context.applicationContext)
 
         try {
             val result =

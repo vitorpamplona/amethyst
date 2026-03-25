@@ -25,23 +25,37 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
 import android.service.notification.StatusBarNotification
 import androidx.core.app.NotificationCompat
+import androidx.core.app.Person
+import androidx.core.app.RemoteInput
+import androidx.core.graphics.drawable.IconCompat
 import androidx.core.net.toUri
 import coil3.ImageLoader
 import coil3.asDrawable
-import coil3.executeBlocking
 import coil3.request.ImageRequest
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.amethyst.ui.stringRes
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 object NotificationUtils {
     private var dmChannel: NotificationChannel? = null
     private var zapChannel: NotificationChannel? = null
     private const val DM_GROUP_KEY = "com.vitorpamplona.amethyst.DM_NOTIFICATION"
     private const val ZAP_GROUP_KEY = "com.vitorpamplona.amethyst.ZAP_NOTIFICATION"
+    const val REPLY_ACTION = "com.vitorpamplona.amethyst.REPLY_ACTION"
+    const val MARK_READ_ACTION = "com.vitorpamplona.amethyst.MARK_READ_ACTION"
+    const val KEY_REPLY_TEXT = "key_reply_text"
+    const val KEY_NOTIFICATION_ID = "key_notification_id"
+    const val KEY_ACCOUNT_NPUB = "key_account_npub"
+    const val KEY_CHATROOM_MEMBERS = "key_chatroom_members"
+
+    private const val DM_SUMMARY_ID = 0x10000
+    private const val ZAP_SUMMARY_ID = 0x20000
 
     fun getOrCreateDMChannel(applicationContext: Context): NotificationChannel {
         if (dmChannel != null) return dmChannel!!
@@ -50,13 +64,12 @@ object NotificationUtils {
             NotificationChannel(
                 stringRes(applicationContext, R.string.app_notification_dms_channel_id),
                 stringRes(applicationContext, R.string.app_notification_dms_channel_name),
-                NotificationManager.IMPORTANCE_DEFAULT,
+                NotificationManager.IMPORTANCE_HIGH,
             ).apply {
                 description =
                     stringRes(applicationContext, R.string.app_notification_dms_channel_description)
             }
 
-        // Register the channel with the system
         val notificationManager: NotificationManager =
             applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
@@ -78,7 +91,6 @@ object NotificationUtils {
                     stringRes(applicationContext, R.string.app_notification_zaps_channel_description)
             }
 
-        // Register the channel with the system
         val notificationManager: NotificationManager =
             applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
@@ -87,7 +99,7 @@ object NotificationUtils {
         return zapChannel!!
     }
 
-    fun NotificationManager.sendZapNotification(
+    suspend fun NotificationManager.sendZapNotification(
         id: String,
         messageBody: String,
         messageTitle: String,
@@ -96,109 +108,109 @@ object NotificationUtils {
         uri: String,
         applicationContext: Context,
     ) {
-        val zapChannel = getOrCreateZapChannel(applicationContext)
+        getOrCreateZapChannel(applicationContext)
         val channelId = stringRes(applicationContext, R.string.app_notification_zaps_channel_id)
 
         sendNotification(
-            id,
-            messageBody,
-            messageTitle,
-            time,
-            pictureUrl,
-            uri,
-            channelId,
-            ZAP_GROUP_KEY,
-            applicationContext,
+            id = id,
+            messageBody = messageBody,
+            messageTitle = messageTitle,
+            time = time,
+            pictureUrl = pictureUrl,
+            uri = uri,
+            channelId = channelId,
+            notificationGroupKey = ZAP_GROUP_KEY,
+            category = NotificationCompat.CATEGORY_SOCIAL,
+            summaryId = ZAP_SUMMARY_ID,
+            summaryText = stringRes(applicationContext, R.string.app_notification_zaps_summary),
+            applicationContext = applicationContext,
         )
     }
 
-    fun NotificationManager.sendDMNotification(
+    suspend fun NotificationManager.sendDMNotification(
         id: String,
         messageBody: String,
-        messageTitle: String,
+        senderName: String,
         time: Long,
         pictureUrl: String?,
         uri: String,
         applicationContext: Context,
+        accountNpub: String? = null,
+        accountPictureUrl: String? = null,
+        chatroomMembers: String? = null,
     ) {
-        val dmChannel = getOrCreateDMChannel(applicationContext)
+        getOrCreateDMChannel(applicationContext)
         val channelId = stringRes(applicationContext, R.string.app_notification_dms_channel_id)
 
-        sendNotification(
-            id,
-            messageBody,
-            messageTitle,
-            time,
-            pictureUrl,
-            uri,
-            channelId,
-            DM_GROUP_KEY,
-            applicationContext,
+        sendDMNotificationStyled(
+            id = id,
+            messageBody = messageBody,
+            senderName = senderName,
+            time = time,
+            pictureUrl = pictureUrl,
+            uri = uri,
+            channelId = channelId,
+            applicationContext = applicationContext,
+            accountNpub = accountNpub,
+            accountPictureUrl = accountPictureUrl,
+            chatroomMembers = chatroomMembers,
         )
     }
 
-    fun NotificationManager.sendNotification(
+    private suspend fun loadBitmap(
+        pictureUrl: String,
+        applicationContext: Context,
+    ): Bitmap? =
+        withContext(Dispatchers.IO) {
+            try {
+                val request = ImageRequest.Builder(applicationContext).data(pictureUrl).build()
+                val imageLoader = ImageLoader(applicationContext)
+                val result = imageLoader.execute(request)
+                (result.image?.asDrawable(applicationContext.resources) as? BitmapDrawable)?.bitmap
+            } catch (_: Exception) {
+                null
+            }
+        }
+
+    private suspend fun NotificationManager.sendDMNotificationStyled(
         id: String,
         messageBody: String,
-        messageTitle: String,
+        senderName: String,
         time: Long,
         pictureUrl: String?,
         uri: String,
         channelId: String,
-        notificationGroupKey: String,
         applicationContext: Context,
-    ) {
-        if (pictureUrl != null) {
-            val request = ImageRequest.Builder(applicationContext).data(pictureUrl).build()
-
-            val imageLoader = ImageLoader(applicationContext)
-            val imageResult = imageLoader.executeBlocking(request)
-            sendNotificationInner(
-                id = id,
-                messageBody = messageBody,
-                messageTitle = messageTitle,
-                time = time,
-                picture = imageResult.image?.asDrawable(applicationContext.resources) as? BitmapDrawable,
-                uri = uri,
-                channelId,
-                notificationGroupKey,
-                applicationContext = applicationContext,
-            )
-        } else {
-            sendNotificationInner(
-                id = id,
-                messageBody = messageBody,
-                messageTitle = messageTitle,
-                time = time,
-                picture = null,
-                uri = uri,
-                channelId,
-                notificationGroupKey,
-                applicationContext = applicationContext,
-            )
-        }
-    }
-
-    private fun NotificationManager.sendNotificationInner(
-        id: String,
-        messageBody: String,
-        messageTitle: String,
-        time: Long,
-        picture: BitmapDrawable?,
-        uri: String,
-        channelId: String,
-        notificationGroupKey: String,
-        applicationContext: Context,
+        accountNpub: String?,
+        accountPictureUrl: String?,
+        chatroomMembers: String?,
     ) {
         val notId = id.hashCode()
 
-        // dont notify twice
-        val notifications: Array<StatusBarNotification> = getActiveNotifications()
-        for (notification in notifications) {
-            if (notification.id == notId) {
-                return
-            }
-        }
+        if (isDuplicate(notId)) return
+
+        val bitmap = pictureUrl?.let { loadBitmap(it, applicationContext) }
+        val accountBitmap = accountPictureUrl?.let { loadBitmap(it, applicationContext) }
+
+        val senderIcon = bitmap?.let { IconCompat.createWithBitmap(it) }
+        val accountIcon = accountBitmap?.let { IconCompat.createWithBitmap(it) }
+
+        val sender =
+            Person
+                .Builder()
+                .setName(senderName)
+                .apply { senderIcon?.let { setIcon(it) } }
+                .build()
+
+        val messagingStyle =
+            NotificationCompat
+                .MessagingStyle(
+                    Person
+                        .Builder()
+                        .setName("Me")
+                        .setIcon(accountIcon)
+                        .build(),
+                ).addMessage(messageBody, time * 1000, sender)
 
         val contentIntent =
             Intent(applicationContext, MainActivity::class.java).apply { data = uri.toUri() }
@@ -208,41 +220,198 @@ object NotificationUtils {
                 applicationContext,
                 notId,
                 contentIntent,
-                PendingIntent.FLAG_MUTABLE,
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
             )
 
-        // Build the notification
         val builderPublic =
             NotificationCompat
-                .Builder(
-                    applicationContext,
-                    channelId,
-                ).setSmallIcon(R.drawable.amethyst)
-                .setContentTitle(messageTitle)
+                .Builder(applicationContext, channelId)
+                .setSmallIcon(R.drawable.amethyst)
+                .setContentTitle(senderName)
                 .setContentText(stringRes(applicationContext, R.string.app_notification_private_message))
-                .setLargeIcon(picture?.bitmap)
+                .setLargeIcon(bitmap)
                 .setContentIntent(contentPendingIntent)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setAutoCancel(true)
                 .setWhen(time * 1000)
 
-        // Build the notification
         val builder =
             NotificationCompat
-                .Builder(
-                    applicationContext,
-                    channelId,
-                ).setSmallIcon(R.drawable.amethyst)
-                .setContentTitle(messageTitle)
-                .setContentText(messageBody)
-                .setLargeIcon(picture?.bitmap)
+                .Builder(applicationContext, channelId)
+                .setSmallIcon(R.drawable.amethyst)
+                .setLargeIcon(bitmap)
+                .setStyle(messagingStyle)
                 .setContentIntent(contentPendingIntent)
                 .setPublicVersion(builderPublic.build())
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+                .setGroup(DM_GROUP_KEY)
+                .setAutoCancel(true)
+                .setWhen(time * 1000)
+
+        // Direct Reply action
+        if (accountNpub != null && chatroomMembers != null) {
+            val remoteInput =
+                RemoteInput
+                    .Builder(KEY_REPLY_TEXT)
+                    .setLabel(stringRes(applicationContext, R.string.app_notification_reply_label))
+                    .build()
+
+            val replyIntent =
+                Intent(applicationContext, NotificationReplyReceiver::class.java).apply {
+                    action = REPLY_ACTION
+                    putExtra(KEY_NOTIFICATION_ID, notId)
+                    putExtra(KEY_ACCOUNT_NPUB, accountNpub)
+                    putExtra(KEY_CHATROOM_MEMBERS, chatroomMembers)
+                }
+
+            val replyPendingIntent =
+                PendingIntent.getBroadcast(
+                    applicationContext,
+                    notId,
+                    replyIntent,
+                    PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+                )
+
+            val replyAction =
+                NotificationCompat.Action
+                    .Builder(R.drawable.amethyst, stringRes(applicationContext, R.string.app_notification_reply_label), replyPendingIntent)
+                    .addRemoteInput(remoteInput)
+                    .setAllowGeneratedReplies(true)
+                    .setSemanticAction(NotificationCompat.Action.SEMANTIC_ACTION_REPLY)
+                    .build()
+
+            builder.addAction(replyAction)
+        }
+
+        // Mark as Read action
+        val markReadIntent =
+            Intent(applicationContext, NotificationReplyReceiver::class.java).apply {
+                action = MARK_READ_ACTION
+                putExtra(KEY_NOTIFICATION_ID, notId)
+            }
+
+        val markReadPendingIntent =
+            PendingIntent.getBroadcast(
+                applicationContext,
+                notId + 1,
+                markReadIntent,
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+
+        val markReadAction =
+            NotificationCompat.Action
+                .Builder(R.drawable.amethyst, stringRes(applicationContext, R.string.app_notification_mark_read_label), markReadPendingIntent)
+                .setSemanticAction(NotificationCompat.Action.SEMANTIC_ACTION_MARK_AS_READ)
+                .build()
+
+        builder.addAction(markReadAction)
+
+        notify(notId, builder.build())
+
+        // Group summary notification
+        sendGroupSummary(channelId, DM_GROUP_KEY, DM_SUMMARY_ID, stringRes(applicationContext, R.string.app_notification_dms_summary), applicationContext)
+    }
+
+    private suspend fun NotificationManager.sendNotification(
+        id: String,
+        messageBody: String,
+        messageTitle: String,
+        time: Long,
+        pictureUrl: String?,
+        uri: String,
+        channelId: String,
+        notificationGroupKey: String,
+        category: String,
+        summaryId: Int,
+        summaryText: String,
+        applicationContext: Context,
+    ) {
+        val notId = id.hashCode()
+
+        if (isDuplicate(notId)) return
+
+        val bitmap = pictureUrl?.let { loadBitmap(it, applicationContext) }
+
+        val contentIntent =
+            Intent(applicationContext, MainActivity::class.java).apply { data = uri.toUri() }
+
+        val contentPendingIntent =
+            PendingIntent.getActivity(
+                applicationContext,
+                notId,
+                contentIntent,
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+
+        val builderPublic =
+            NotificationCompat
+                .Builder(applicationContext, channelId)
+                .setSmallIcon(R.drawable.amethyst)
+                .setContentTitle(messageTitle)
+                .setContentText(stringRes(applicationContext, R.string.app_notification_private_message))
+                .setLargeIcon(bitmap)
+                .setContentIntent(contentPendingIntent)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setAutoCancel(true)
+                .setWhen(time * 1000)
+
+        val builder =
+            NotificationCompat
+                .Builder(applicationContext, channelId)
+                .setSmallIcon(R.drawable.amethyst)
+                .setContentTitle(messageTitle)
+                .setContentText(messageBody)
+                .setStyle(NotificationCompat.BigTextStyle().bigText(messageBody))
+                .setLargeIcon(bitmap)
+                .setContentIntent(contentPendingIntent)
+                .setPublicVersion(builderPublic.build())
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setCategory(category)
+                .setGroup(notificationGroupKey)
                 .setAutoCancel(true)
                 .setWhen(time * 1000)
 
         notify(notId, builder.build())
+
+        sendGroupSummary(channelId, notificationGroupKey, summaryId, summaryText, applicationContext)
+    }
+
+    private fun NotificationManager.sendGroupSummary(
+        channelId: String,
+        groupKey: String,
+        summaryId: Int,
+        summaryText: String,
+        applicationContext: Context,
+    ) {
+        val activeCount = activeNotifications.count { it.notification.group == groupKey && it.id != summaryId }
+
+        if (activeCount < 2) return
+
+        val summaryBuilder =
+            NotificationCompat
+                .Builder(applicationContext, channelId)
+                .setSmallIcon(R.drawable.amethyst)
+                .setGroup(groupKey)
+                .setGroupSummary(true)
+                .setAutoCancel(true)
+                .setStyle(
+                    NotificationCompat
+                        .InboxStyle()
+                        .setSummaryText(summaryText),
+                )
+
+        notify(summaryId, summaryBuilder.build())
+    }
+
+    private fun NotificationManager.isDuplicate(notId: Int): Boolean {
+        val notifications: Array<StatusBarNotification> = activeNotifications
+        for (notification in notifications) {
+            if (notification.id == notId) {
+                return true
+            }
+        }
+        return false
     }
 
     /** Cancels all notifications. */

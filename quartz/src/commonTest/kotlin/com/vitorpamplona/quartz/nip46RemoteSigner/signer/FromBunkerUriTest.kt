@@ -30,7 +30,7 @@ import kotlin.test.assertNull
 
 class FromBunkerUriTest {
     private val signer = NostrSignerInternal(KeyPair())
-    private val client = EmptyNostrClient
+    private val client = EmptyNostrClient()
     private val validHex = "a".repeat(64)
 
     @Test

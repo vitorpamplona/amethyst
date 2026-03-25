@@ -32,7 +32,7 @@ import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.quartz.experimental.publicMessages.PublicMessageEvent
-import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
+import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
@@ -102,7 +102,7 @@ class FollowPackFeedConversationsFeedFilter(
     ): Boolean =
         (
             event is TextNoteEvent ||
-                event is PollNoteEvent ||
+                event is ZapPollEvent ||
                 event is ChannelMessageEvent ||
                 event is CommentEvent ||
                 event is VoiceReplyEvent ||

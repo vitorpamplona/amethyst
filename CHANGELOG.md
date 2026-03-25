@@ -1,12 +1,19 @@
-Adds support for creating and rendering NIP-85 Polls
+<a id="v1.06.0"></a>
+# [Release v1.06.0: Polls, Relay Feeds, Wallets and much more](https://github.com/vitorpamplona/amethyst/releases/tag/v1.06.0) - 2025-03-21
 
-Adds support for Relay Feeds
+Polls:
+- Adds support for creating and rendering NIP-85
+- Redesign of the poll and zap poll cards
+- Adds special notification card while the poll is running
+
+Relay Feeds
+- Adds support for rendering relay feeds
 - Adds support for NIP-51 favorite relay feeds
 - Shows favorite relays in the top navigation filter
 - Clicking wss:// links shows the global feed for that relay.
 - New user account adds nostr.wine to favorite relay feeds
 
-Redesigns Media Player
+Media Player
 - Redesigned player controls for videos, audios, and picture-in-picture.
 - Adds our own buttons and indicators for the video playback
 - Adds Music support with waveform animations
@@ -15,44 +22,78 @@ Redesigns Media Player
 - Turn video controller creation into a flow to fix playback lifecycle issues
 - Adds support for uploading audio
 
-Adds support for NIP-47 Wallets
+NWC Wallets:
+- Adds support for NIP-47 Wallets and compete NWC spec
+- Adds views for Balance and Transactions
+- Add transaction filtering and pagination to wallet screen
+- Added several test cases from other repos to guarantee interoperability
 
-Adds support for NIP-52 Calendar appointments
+Calendar:
+- Adds support for NIP-52 Calendar appointments
+- Adds proper display of calendar time slot and date slot events in the note feed
+- Refactored the early implementation on Quartz for easier use
 
-Adds support for NIP-39 External Identities with kind 10011
+Code Snippets:
+- Adds support for NIP-C0 Code Snippets
+- Replies using NIP-22
 
-Adds support for NIP-C0 Code Snippets
+NIPs on Nostr
+- Adds support for event kind 30817
+- Replies using NIP-22
 
-Adds support for NIPs on Nostr (event kind 30817)
+PayTo:
+- Adds support for NIP-A3 Payment targets by @npub1w4uswmv6lu9yel005l3qgheysmr7tk9uvwluddznju3nuxalevvs2d0jr5
 
-Adds support for NIP-A3 Payment targets (PayTo: 10133) by @npub1w4uswmv6lu9yel005l3qgheysmr7tk9uvwluddznju3nuxalevvs2d0jr5
+Blossom BUD-10:
+- Adds support for "Blossom:" URIs on the post
+- Supports automatic discovery of blossom servers
+- Renders/Previews images, audios, videos, and documents
+- Includes support for encryption when using it in NIP-17 DMs.
 
-Adds support for BUD-10 "Blossom:" URIs in images, audios, videos, and documents.
+Expirations
+- Adds enhanced support for custom expirations in any new post.
+- Displays expirations on posts and DMs
 
-Adds support for NIP-40 Expirations in any new post.
+Relay Monitors:
+- Adds support for NIP-66 Relay monitor and discovery support to Quartz
 
-Adds support for NIP-66 Relay Monitor and discovery support to Quartz
+Attestations:
+- Adds support for rendering Attestations (https://attestr.xyz/)
+- Recommendations, Requests and Attestor Declarations are also included.
 
-Adds support for Namecoin .bit urls to NIP-05
-- Adds choice of ElectrumX server to resolve namecoins.
+Chess:
+- Adds basic support for Chess with Jester protocol
+- Full chess game implemented
+- Supports for game challenges and view external games
+- Running on debug only for now
 
-Adds basic support for Chess with Jester protocol
+DMs:
+- Removes NIP-04 DMs
+- Blocks DM sending if the receiver doesn't have NIP-17 relay lists.
+- Removed incognito icon from the new post field.
 
-Adds NIP-46 Bunker support to Quartz and Amethyst Desktop
+Push Notifications:
+- Adds support for inline reply
+- Adds support for notification grouping
+- Adds support for Async image Loading
+- Removed NIP-04 notifications
 
-Adds a Broadcasting feedback pop-up in the Complete UI mode
+Long Form:
+- Adds support for writing Long Form/Markdown content
+- Includes support for automatic Draft saving and editing
+- Includes support for editing
 
-Adds support for rendering Zap events when quoted inside of posts.
+Uploads:
+- Adds support to upload Documents to all new post screens.
+- Adds toggle to stip file metadata regardless of compression by @npub1e2yuky03caw4ke3zy68lg0fz3r4gkt94hx4fjmlelacyljgyk79svn3eef
+- Adds encrypted file upload fallback option for NIP-17 chats
+- Removes support for NIP-96 and updates Blossom recommendations
 
-Removes support for NIP-96 and updates Blossom recommendations
-
-Adds support to upload Documents to all new post screens.
-
-Content warning improvements:
-- Adds optional description field for sensitive content warnings in new posts.
+Content Warning:
+- Adds an optional description field for sensitive content warnings in new posts.
 - Displays additional information on warning composables
 
-Redesigns and reorganizes Setting pages
+Settings redesign:
 - Consolidate drawer settings into a single Settings hub screen
 - Redesigns Zap Amount and NWC setup screens
 - Redesigns Custom zap amount screens
@@ -61,13 +102,21 @@ Redesigns and reorganizes Setting pages
 - Adds reactions row settings (enable/disable, order, show/hide counters) by @npub1w4uswmv6lu9yel005l3qgheysmr7tk9uvwluddznju3nuxalevvs2d0jr5
 - Tapping on Zap without any pre-configured amount opens the custom dialog
 
-URL/URI parser rewrite in Kotlin multiplatform (KMP)
+Content parsers:
+- URL/URI parser rewrite in Kotlin multiplatform (KMP)
 - Fixes characters attached to URLs or nostr URLs without a space
 - Massively increases parsing performance
 - Treat multibyte characters as URL terminators in RichTextParser by @npub1k0jrarx8um0lyw3nmysn50539ky4k8p7gfgzgrsvn8d7lccx3d0s38dczd
 - Adds a parser for blossom: uris
 
-Minimizes parent thread rendering in quoted notes by @npub1aeh2zw4elewy5682lxc6xnlqzjnxksq303gwu2npfaxd49vmde6qcq4nwx
+UI Improvements:
+- Minimizes parent thread rendering in quoted notes by @npub1aeh2zw4elewy5682lxc6xnlqzjnxksq303gwu2npfaxd49vmde6qcq4nwx
+- New Material 3 UI for DropDowns by @npub1e2yuky03caw4ke3zy68lg0fz3r4gkt94hx4fjmlelacyljgyk79svn3eef
+- New Material 3 UI for feed filters by @npub1e2yuky03caw4ke3zy68lg0fz3r4gkt94hx4fjmlelacyljgyk79svn3eef
+- Draft Screen requests confirmation before deleting drafts on swipe
+- Swipe to switch tabs. Main screen and messages by @npub1e2yuky03caw4ke3zy68lg0fz3r4gkt94hx4fjmlelacyljgyk79svn3eef
+- Adds support for rendering Zap events when quoted inside of posts.
+- Adds a Broadcasting feedback pop-up in the Complete UI mode
 
 Relay Management:
 - Adds relay search tooltip when adding relays
@@ -75,9 +124,11 @@ Relay Management:
 - Adds active subscriptions and outbox event in the queue to relay information
 - Adds a complete list of event kind names to the subscription card to relay information
 - Tracks and displays connection success rate on relay settings
-- Add relay settings export functionality
+- Adds relay settings export functionality
+- Adds NIP-45 count queries to show how many events each relay has.
+- Adds Relay sync utility to help users move posts between relays.
 
-Search fixes
+Search:
 - Breaks the search filter into two subscriptions to prioritize Metadata without punishing content.
 - Fixes the need to start user searches with @ in user fields
 - Fixes the stability of the search feed when the user navigates away and back.
@@ -87,17 +138,21 @@ Search fixes
 - Removes outdated versions of addressables from the search results
 
 Profiles:
+- Adds support for NIP-39 External Identities with kind 10011
 - Adds a profile picture upload button when the user has no picture
+- Adds last seen to the user profile
+- Adds nprofile and npub copy options to the profile
 - Groups received zap amounts by sending the user in the profile tab
 - Increases the limit of Zap downloads for profiles to 1000
 - Simplifies profile edit screen layout by @npub1aeh2zw4elewy5682lxc6xnlqzjnxksq303gwu2npfaxd49vmde6qcq4nwx
 - Migrates profile galleries to display a thumbnail for videos
 - Fixes profile galleries' aspect ratios
+- Adds support for Namecoin .bit urls to NIP-05 and choice of ElectrumX server to resolve namecoins.
 
-Bulk Follow onboarding
-- Adds screens to search for a user and to copy his/her follow list
+Onboarding
+- Adds bulk follow screens to search for a user and to copy his/her follow list
 
-Voice message support by @npub1e2yuky03caw4ke3zy68lg0fz3r4gkt94hx4fjmlelacyljgyk79svn3eef
+Voice message by @npub1e2yuky03caw4ke3zy68lg0fz3r4gkt94hx4fjmlelacyljgyk79svn3eef
 - Adds voice anonymization
 - Change from "hold to record" to "click to start, click to stop"
 - Display kind 1 voice replies as an audio waveform
@@ -126,16 +181,23 @@ Fixes:
 - Fixes bug on Show More calculations for very long texts without spaces
 - Fixing IO Dispatchers and coroutine scopes of choice
 - Fixes anySync parallel operation that was returning the first result, not the first positive "any".
-
-AI:
-- Add SKILL.md for AI agent customization
-- Add settings and hooks to setup Android Development for the agent
+- Fixes Req onCannotConnect listeners to the relays that actually sent the req
+- Fixes hanging subscriptions when exceptions happen during NostrClient utility methods
 
 Defaults:
 - Switches wss://nostr.band to wss://antiprimal.net, wss://relay.ditto.pub on app defaults
 - Adds wss://nostr.wine, wss://news.utxo.one as favorite relay feeds
 - Adds wss://directory.yabu.me and wss://profiles.nostr1.com as index relays
 - Adds electrumx.testls.space, nmc2.bitcoins.sk, 46.229.238.187 and i665jpwsq46zlsdbnj4axgzd3s56uzey5uhotsnxzsknzbn36jaddsid.onion as ElectrumX servers
+
+Quartz:
+- Adds Relay Server implementation with NIP-45 COUNT and NIP-42 AUTH support
+- Adds support for dynamic auth policies to the relay implementation.
+- Migrates Quartz EventStore from Android-only to KMP
+- Adds a reqUntilEoseAsFlow extension to the Nostr Client
+- Adds a reqBypassingRelayLimits extension to the Nostr Client
+- Adds comprehensive NIP-46 Bunker support
+- Adds comprehensive support for NIP-47 non-payment methods.
 
 Adds complete support for iOS to Quartz by @npub1a3tx8wcrt789skl6gg7rqwj4wey0j53eesr4z6asd4h4jwrd62jq0wkq4k
 - Provide implementation for Rfc3986 on iOS, using the Swift Rfc3986UriBridge.
@@ -149,7 +211,6 @@ Adds complete support for iOS to Quartz by @npub1a3tx8wcrt789skl6gg7rqwj4wey0j53
 - Provide implementation for AESGCM
 - Provide implementation for DigestInstance
 - Provide implementation for LibSodium
-- Adds a reqUntilEoseAsFlow extension to the Nostr Client
 
 Amethyst Desktop by @npub12cfje6nl2nuxplcqfvhg7ljt89fmpj0n0fd24zxsukja5qm9wmtqd7y76c
 - Adds NIP-46 Bunker Login
@@ -159,6 +220,8 @@ Amethyst Desktop by @npub12cfje6nl2nuxplcqfvhg7ljt89fmpj0n0fd24zxsukja5qm9wmtqd7
 - Adds encrypted DMs (NIP-04/NIP-17)
 - Adds proper empty states with EOSE tracking
 - Adds multi-column deck layout
+- Adds Full media parity — images, video, audio, encrypted DMs, upload, lightbox
+- Adds advanced search with NIP-50, collapsible sections, and nav state preservation
 - Clear stored credentials on logout
 - Adds bunker heartbeat indicator
 - Adds QR-based signer pairing
@@ -176,6 +239,7 @@ Amethyst Desktop by @npub12cfje6nl2nuxplcqfvhg7ljt89fmpj0n0fd24zxsukja5qm9wmtqd7
 
 Code Quality
 - Migrates to AGP 9.0
+- Adds Amethyst Desktop to CI/CD and Release builds
 - Removes the in-app memory counter methods
 - Refactors the old NIP-05 code on Quartz
 - Migrates contact list management to addressable notes
@@ -190,6 +254,10 @@ Code Quality
 - Removes support for feed definitions
 - AccountState refactoring
 
+AI:
+- Add SKILL.md for AI agent customization
+- Add settings and hooks to setup Android Development for the agent
+
 Updated translations:
 - Czech, German, Swedish, and Portuguese by @npub1e2yuky03caw4ke3zy68lg0fz3r4gkt94hx4fjmlelacyljgyk79svn3eef
 - Hungarian by @npub1dnvslq0vvrs8d603suykc4harv94yglcxwna9sl2xu8grt2afm3qgfh0tp
@@ -199,6 +267,8 @@ Updated translations:
 - Slovenian by @npub1qqqqqqz7nhdqz3uuwmzlflxt46lyu7zkuqhcapddhgz66c4ddynswreecw
 - Bengali by @npub13qtw3yu0uc9r4yj5x0rhgy8nj5q0uyeq0pavkgt9ly69uuzxgkfqwvx23t
 - Chinese by hypnotichemionus4
+- Spanish by @npub1luhyzgce7qtcs6r6v00ryjxza8av8u4dzh3avg0zks38tjktnmxspxq903
+- Russian by Anton Zhao
 
 <a id="v1.05.1"></a>
 # [Release v1.05.1: BugFixes](https://github.com/vitorpamplona/amethyst/releases/tag/v1.05.0) - 2025-01-08

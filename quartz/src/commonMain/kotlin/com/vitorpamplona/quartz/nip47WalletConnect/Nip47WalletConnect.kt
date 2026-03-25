@@ -32,10 +32,22 @@ import kotlinx.serialization.Serializable
 
 class Nip47WalletConnect {
     companion object {
+        fun fix(uri: String): String {
+            var newUri = uri
+
+            // POCO Phones seem to remove the + sign from the scheme
+            if (uri.startsWith("nostr walletconnect")) {
+                newUri = uri.replaceFirst("nostr walletconnect", "nostr+walletconnect")
+            } else if (uri.startsWith("amethyst walletconnect")) {
+                newUri = uri.replaceFirst("amethyst walletconnect", "amethyst+walletconnect")
+            }
+
+            return newUri
+        }
+
         fun parse(uri: String): Nip47URINorm {
             // nostr+walletconnect://b889ff5b...?relay=wss%3A%2F%2Frelay.damus.io&secret=...&lud16=user@example.com
-
-            val url = UriParser(uri)
+            val url = UriParser(fix(uri))
 
             if (url.scheme() != "nostrwalletconnect" && url.scheme() != "nostr+walletconnect" && url.scheme() != "amethyst+walletconnect") {
                 throw IllegalArgumentException("Not a Wallet Connect QR Code")

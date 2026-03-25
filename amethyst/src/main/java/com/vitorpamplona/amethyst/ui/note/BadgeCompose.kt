@@ -62,7 +62,7 @@ fun BadgeCompose(
     nav: INav,
 ) {
     val noteState by observeNote(likeSetCard.note, accountViewModel)
-    val note = noteState?.note
+    val note = noteState.note
 
     val context = LocalContext.current.applicationContext
 

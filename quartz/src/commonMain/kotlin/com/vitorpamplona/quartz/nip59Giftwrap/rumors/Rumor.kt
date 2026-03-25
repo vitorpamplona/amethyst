@@ -20,14 +20,19 @@
  */
 package com.vitorpamplona.quartz.nip59Giftwrap.rumors
 
+import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedSerializable
 import com.vitorpamplona.quartz.nip01Core.crypto.EventHasher
+import com.vitorpamplona.quartz.nip59Giftwrap.rumors.kotlinSerialization.RumorKSerializer
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.utils.EventFactory
+import kotlinx.serialization.Serializable
 
+@Immutable
+@Serializable(with = RumorKSerializer::class)
 class Rumor(
     val id: HexKey?,
     val pubKey: HexKey?,

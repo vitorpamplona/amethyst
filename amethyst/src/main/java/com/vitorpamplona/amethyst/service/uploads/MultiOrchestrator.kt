@@ -59,6 +59,8 @@ class MultiOrchestrator(
         account: Account,
         context: Context,
         useH265: Boolean = false,
+        stripMetadata: Boolean = true,
+        onStrippingFailed: suspend () -> Boolean = { true },
     ): Result {
         coroutineScope {
             val jobs =
@@ -74,6 +76,8 @@ class MultiOrchestrator(
                             account,
                             context,
                             useH265,
+                            stripMetadata,
+                            onStrippingFailed,
                         )
                     }
                 }
@@ -93,6 +97,8 @@ class MultiOrchestrator(
         account: Account,
         context: Context,
         useH265: Boolean = false,
+        stripMetadata: Boolean = true,
+        onStrippingFailed: suspend () -> Boolean = { true },
     ): Result {
         coroutineScope {
             val jobs =
@@ -109,6 +115,8 @@ class MultiOrchestrator(
                             account,
                             context,
                             useH265,
+                            stripMetadata,
+                            onStrippingFailed,
                         )
                     }
                 }

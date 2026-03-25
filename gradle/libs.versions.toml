@@ -1,8 +1,8 @@
 [versions]
 accompanistAdaptive = "0.37.3"
 cachemapVersion = "0.2.4"
-composeMultiplatform = "1.10.1"
-activityCompose = "1.12.4"
+composeMultiplatform = "1.10.3"
+activityCompose = "1.13.0"
 agp = "9.1.0"
 android-compileSdk = "36"
 android-minSdk = "26"
@@ -11,16 +11,16 @@ androidKotlinGeohash = "b481c6a64e"
 androidxJunit = "1.3.0"
 appcompat = "1.7.1"
 audiowaveform = "1.1.2"
-benchmark = "1.5.0-alpha03"
+benchmark = "1.5.0-alpha04"
 biometricKtx = "1.2.0-alpha05"
 coil = "3.4.0"
-composeBom = "2026.02.01"
-composeRuntimeAnnotation = "1.10.4"
-coreKtx = "1.17.0"
-datastore = "1.2.0"
+composeBom = "2026.03.00"
+composeRuntimeAnnotation = "1.10.5"
+coreKtx = "1.18.0"
+datastore = "1.2.1"
 devWhyolegCryptography = "0.5.0"
 espressoCore = "3.7.0"
-firebaseBom = "34.10.0"
+firebaseBom = "34.11.0"
 fragmentKtx = "1.8.9"
 gms = "4.4.4"
 jacksonModuleKotlin = "2.21.1"
@@ -29,7 +29,7 @@ jna = "5.18.1"
 jtorctl = "0.4.5.7"
 junit = "4.13.2"
 kchesslib = "1.0.5"
-kotlin = "2.3.10"
+kotlin = "2.3.20"
 kotlinxCollectionsImmutable = "0.4.0"
 kotlinxCoroutinesCore = "1.10.2"
 kotlinxSerialization = "1.10.0"
@@ -41,34 +41,38 @@ lightcompressor-enhanced = "1.6.0"
 markdown = "f92ef49c9d"
 material3 = "1.9.0"
 materialIconsExtended = "1.7.3"
-media3 = "1.9.2"
+media3 = "1.9.3"
 mockk = "1.14.9"
 kotlinx-coroutines-test = "1.10.2"
 netUrlencoderLibVersion = "1.6.0"
 navigationCompose = "2.9.7"
 okhttp = "5.3.2"
 runner = "1.7.0"
-rfc3986 = "0.1.2"
-secp256k1KmpJniAndroid = "0.22.0"
+secp256k1KmpJniAndroid = "0.23.0"
 securityCryptoKtx = "1.1.0"
-spotless = "8.3.0"
+slf4j = "2.0.17"
+spotless = "8.4.0"
 tarsosdsp = "2.5"
-torAndroid = "0.4.9.5"
+torAndroid = "0.4.9.5.1"
 translate = "17.0.3"
-jetbrainsCompose = "1.10.2"
+jetbrainsCompose = "1.10.3"
 unifiedpush = "3.0.10"
-vico-charts = "2.4.3"
+uriReferenceKmp = "1.0"
+vico-charts-compose = "3.0.3"
 zelory = "3.0.1"
 zoomable = "2.11.1"
+vlcj = "4.8.3"
+commonsImaging = "1.0.0-alpha6"
 zxing = "3.5.4"
 zxingAndroidEmbedded = "4.3.0"
 windowCoreAndroid = "1.5.1"
 androidxCamera = "1.5.3"
-androidxCollection = "1.5.0"
+androidxCollection = "1.6.0"
+androidxExifinterface = "1.4.2"
 kotlinTest = "2.3.0"
 core = "1.7.0"
 mavenPublish = "0.36.0"
-spmForKmpVersion = "1.4.9"
+sqlite = "2.6.2"
 
 [libraries]
 abedElazizShe-video-compressor-fork = { group = "com.github.davotoula", name = "LightCompressor-enhanced", version.ref = "lightcompressor-enhanced" }
@@ -87,6 +91,7 @@ androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", versi
 androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation" }
 androidx-compose-runtime-annotation = { group = "androidx.compose.runtime", name = "runtime-annotation", version.ref = "composeRuntimeAnnotation" }
 androidx-collection = { group = "androidx.collection", name = "collection", version.ref = "androidxCollection" }
+androidx-exifinterface = { group = "androidx.exifinterface", name = "exifinterface", version.ref = "androidxExifinterface" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
@@ -103,7 +108,6 @@ androidx-media3-datasource-okhttp = { group = "androidx.media3", name = "media3-
 androidx-media3-exoplayer = { group = "androidx.media3", name = "media3-exoplayer", version.ref = "media3" }
 androidx-media3-exoplayer-hls = { group = "androidx.media3", name = "media3-exoplayer-hls", version.ref = "media3" }
 androidx-media3-session = { group = "androidx.media3", name = "media3-session", version.ref = "media3" }
-androidx-media3-ui = { group = "androidx.media3", name = "media3-ui", version.ref = "media3" }
 androidx-media3-ui-compose-material3 = { group = "androidx.media3", name = "media3-ui-compose-material3", version.ref = "media3" }
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
 androidx-runner = { group = "androidx.test", name = "runner", version.ref = "runner" }
@@ -121,6 +125,10 @@ coil-gif = { group = "io.coil-kt.coil3", name = "coil-gif", version.ref = "coil"
 coil-svg = { group = "io.coil-kt.coil3", name = "coil-svg", version.ref = "coil" }
 coil-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
 coil-video = { group = "io.coil-kt.coil3", name = "coil-video", version.ref = "coil" }
+commons-imaging = { group = "org.apache.commons", name = "commons-imaging", version.ref = "commonsImaging" }
+slf4j-nop = { module = "org.slf4j:slf4j-nop", version.ref = "slf4j" }
+uri-reference-kmp = { module = "io.github.kotlingeekdev:uri-reference-kmp", version.ref = "uriReferenceKmp" }
+vlcj = { group = "uk.co.caprica", name = "vlcj", version.ref = "vlcj" }
 dev-whyoleg-cryptography-provider-apple-optimal = { module = "dev.whyoleg.cryptography:cryptography-provider-optimal", version.ref = "devWhyolegCryptography" }
 drfonfon-geohash = { group = "com.github.drfonfon", name = "android-kotlin-geohash", version.ref = "androidKotlinGeohash" }
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
@@ -157,17 +165,14 @@ kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-cor
 net-thauvin-erik-urlencoder-lib = { module = "net.thauvin.erik.urlencoder:urlencoder-lib", version.ref = "netUrlencoderLibVersion" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 okhttpCoroutines = { group = "com.squareup.okhttp3", name = "okhttp-coroutines", version.ref = "okhttp" }
-rfc3986-normalizer = { group = "org.czeal", name = "rfc3986", version.ref = "rfc3986" }
 secp256k1-kmp-common = { group = "fr.acinq.secp256k1", name = "secp256k1-kmp", version.ref = "secp256k1KmpJniAndroid" }
 secp256k1-kmp-jni-android = { group = "fr.acinq.secp256k1", name = "secp256k1-kmp-jni-android", version.ref = "secp256k1KmpJniAndroid" }
 secp256k1-kmp-jni-jvm = { group = "fr.acinq.secp256k1", name = "secp256k1-kmp-jni-jvm", version.ref = "secp256k1KmpJniAndroid" }
 tarsosdsp = { group = "be.tarsos.dsp", name = "core", version.ref = "tarsosdsp" }
 tor-android = { module = "info.guardianproject:tor-android", version.ref = "torAndroid" }
 unifiedpush = { group = "com.github.UnifiedPush", name = "android-connector", version.ref = "unifiedpush" }
-vico-charts-compose = { group = "com.patrykandpatrick.vico", name = "compose", version.ref = "vico-charts" }
-vico-charts-core = { group = "com.patrykandpatrick.vico", name = "core", version.ref = "vico-charts" }
-vico-charts-m3 = { group = "com.patrykandpatrick.vico", name = "compose-m3", version.ref = "vico-charts" }
-vico-charts-views = { group = "com.patrykandpatrick.vico", name = "views", version.ref = "vico-charts" }
+vico-charts-compose = { group = "com.patrykandpatrick.vico", name = "compose", version.ref = "vico-charts-compose" }
+vico-charts-m3 = { group = "com.patrykandpatrick.vico", name = "compose-m3", version.ref = "vico-charts-compose" }
 zelory-image-compressor = { group = "id.zelory", name = "compressor", version.ref = "zelory" }
 zoomable = { group = "net.engawapg.lib", name = "zoomable", version.ref = "zoomable" }
 zxing = { group = "com.google.zxing", name = "core", version.ref = "zxing" }
@@ -176,6 +181,9 @@ androidx-window-core-android = { group = "androidx.window", name = "window-core-
 kotlin-stdlib = { group = "org.jetbrains.kotlin", name = "kotlin-stdlib", version.ref = "kotlin" }
 kotlin-test = { group = "org.jetbrains.kotlin", name = "kotlin-test", version.ref = "kotlinTest" }
 androidx-core = { group = "androidx.test", name = "core", version.ref = "core" }
+androidx-sqlite = { group = "androidx.sqlite", name = "sqlite", version.ref = "sqlite" }
+androidx-sqlite-bundled = { module = "androidx.sqlite:sqlite-bundled", version.ref = "sqlite" }
+androidx-sqlite-bundled-jvm = { module = "androidx.sqlite:sqlite-bundled-jvm", version.ref = "sqlite" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
@@ -189,6 +197,4 @@ serialization = { id = 'org.jetbrains.kotlin.plugin.serialization', version.ref 
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 androidKotlinMultiplatformLibrary = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
 vanniktech-mavenPublish = { id = "com.vanniktech.maven.publish", version.ref = "mavenPublish" }
-stability-analyzer = { id = "com.github.skydoves.compose.stability.analyzer", version = "0.7.0" }
 composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }
-frankois944-spmForKmp = { id = "io.github.frankois944.spmForKmp", version.ref = "spmForKmpVersion" }

@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
+import com.vitorpamplona.amethyst.ui.components.zonedDrawerSwipe
 import com.vitorpamplona.amethyst.ui.feeds.ChannelFeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.ChannelFeedState
 import com.vitorpamplona.amethyst.ui.feeds.PagerStateKeys
@@ -211,7 +212,12 @@ private fun HomePages(
         HorizontalPager(
             contentPadding = it,
             state = pagerState,
-            userScrollEnabled = false,
+            userScrollEnabled = true,
+            modifier =
+                Modifier.zonedDrawerSwipe(
+                    pagerState = pagerState,
+                    openDrawer = nav::openDrawer,
+                ),
         ) { page ->
             HomeFeeds(
                 feedState = tabs[page].feedState,
@@ -307,7 +313,7 @@ fun FeedLoaded(
                 Spacer(StdVertSpacer)
             }
         }
-        itemsIndexed(items.list, key = { _, item -> item.idHex }) { _, item ->
+        itemsIndexed(items.list, key = { _, item -> item.idHex }, contentType = { _, item -> item.event?.kind ?: -1 }) { _, item ->
             Row(
                 Modifier
                     .fillMaxWidth()

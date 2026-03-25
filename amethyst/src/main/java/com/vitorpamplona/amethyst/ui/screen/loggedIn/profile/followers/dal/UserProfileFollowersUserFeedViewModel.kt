@@ -54,8 +54,8 @@ class UserProfileFollowersUserFeedViewModel(
             { it.pubkeyHex },
         )
 
-    fun List<Event>.toNonHiddenOwners(): List<User> =
-        mapNotNull { event ->
+    fun List<Event>.toNonHiddenOwners(): Set<User> =
+        mapNotNullTo(mutableSetOf()) { event ->
             if (!account.isHidden(event.pubKey)) {
                 account.cache.getOrCreateUser(event.pubKey)
             } else {
@@ -63,6 +63,7 @@ class UserProfileFollowersUserFeedViewModel(
             }
         }
 
+    @OptIn(kotlinx.coroutines.FlowPreview::class)
     val followersFlow: StateFlow<List<User>> =
         account.cache
             .observeEvents(followerFilter)

@@ -134,6 +134,8 @@ sealed class Route {
 
     @Serializable object EditRelays : Route()
 
+    @Serializable object EventSync : Route()
+
     @Serializable object EditMediaServers : Route()
 
     @Serializable object UpdateReactionType : Route()
@@ -284,6 +286,12 @@ sealed class Route {
         val attachment: String? = null,
         val quote: String? = null,
         val draft: String? = null,
+    ) : Route()
+
+    @Serializable
+    data class NewLongFormPost(
+        val draft: String? = null,
+        val version: String? = null,
     ) : Route()
 
     @Serializable

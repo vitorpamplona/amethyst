@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.utils.urldetector.detection
 import com.vitorpamplona.quartz.utils.urldetector.Url
 import com.vitorpamplona.quartz.utils.urldetector.UrlMarker
 import com.vitorpamplona.quartz.utils.urldetector.UrlPart
+import com.vitorpamplona.quartz.utils.urldetector.detection.DomainNameReader.Companion.INTERNATIONAL_CHAR_START
 import kotlin.math.max
 import kotlin.text.deleteRange
 
@@ -84,6 +85,9 @@ class UrlDetector(
         var length = 0
         var position = 0
 
+        var lastWasAscii: Boolean? = null
+        var isAscii = false
+
         // until end of string read the contents
         while (!reader.eof()) {
             // read the next char to process.
@@ -96,6 +100,7 @@ class UrlDetector(
                     }
                     readEnd(ReadEndState.InvalidUrl)
                     length = 0
+                    lastWasAscii = null
                 }
 
                 '%' -> {
@@ -116,6 +121,7 @@ class UrlDetector(
                             length = 0
                         }
                     }
+                    lastWasAscii = null
                 }
 
                 '\u3002', '\uFF0E', '\uFF61', '.' -> {
@@ -125,6 +131,7 @@ class UrlDetector(
                         readEnd(ReadEndState.InvalidUrl)
                     }
                     length = 0
+                    lastWasAscii = null
                 }
 
                 '@' -> {
@@ -136,6 +143,7 @@ class UrlDetector(
                         }
                         length = 0
                     }
+                    lastWasAscii = null
                 }
 
                 '[' -> {
@@ -153,6 +161,7 @@ class UrlDetector(
                         reader.seek(beginning)
                     }
                     length = 0
+                    lastWasAscii = null
                 }
 
                 '/' -> {
@@ -180,15 +189,29 @@ class UrlDetector(
                         hasScheme = readHtml5Root()
                         length = buffer.length
                     }
+                    lastWasAscii = null
                 }
 
                 ':' -> {
                     // add the ":" to the url and check for scheme/username
                     buffer.append(curr)
                     length = processColon(length)
+                    lastWasAscii = null
                 }
 
                 else -> {
+                    isAscii = curr.code < INTERNATIONAL_CHAR_START
+                    if (lastWasAscii == null) {
+                        lastWasAscii = isAscii
+                    } else if (isAscii != lastWasAscii) {
+                        // threat changes in char as a space
+                        if (buffer.isNotEmpty() && hasScheme) {
+                            reader.goBack()
+                            readDomainName(buffer.substring(length))
+                        }
+                        length = 0
+                    }
+
                     buffer.append(curr)
                 }
             }

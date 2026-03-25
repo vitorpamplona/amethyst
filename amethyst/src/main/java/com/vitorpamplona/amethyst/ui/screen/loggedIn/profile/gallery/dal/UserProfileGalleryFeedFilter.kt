@@ -77,12 +77,13 @@ class UserProfileGalleryFeedFilter(
         val noteEvent = it.event
         return (
             (
-                it.event?.pubKey == user.pubkeyHex && (
-                    noteEvent is PictureEvent ||
-                        noteEvent is RegularVideoEvent ||
-                        (noteEvent is ReplaceableVideoEvent && it is AddressableNote) ||
-                        (noteEvent is ProfileGalleryEntryEvent && noteEvent.hasUrl() && noteEvent.hasFromEvent())
-                )
+                it.event?.pubKey == user.pubkeyHex &&
+                    (
+                        noteEvent is PictureEvent ||
+                            noteEvent is RegularVideoEvent ||
+                            (noteEvent is ReplaceableVideoEvent && it is AddressableNote) ||
+                            (noteEvent is ProfileGalleryEntryEvent && noteEvent.hasUrl() && noteEvent.hasFromEvent())
+                    )
             ) // && noteEvent.isOneOf(SUPPORTED_VIDEO_FEED_MIME_TYPES_SET))
         ) &&
             params.match(noteEvent, it.relays) &&

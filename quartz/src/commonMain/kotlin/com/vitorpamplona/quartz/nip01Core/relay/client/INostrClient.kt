@@ -31,7 +31,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
-interface INostrClient {
+interface INostrClient : AutoCloseable {
     fun connectedRelaysFlow(): StateFlow<Set<NormalizedRelayUrl>>
 
     fun availableRelaysFlow(): StateFlow<Set<NormalizedRelayUrl>>
@@ -87,7 +87,7 @@ interface INostrClient {
     fun activeOutboxCache(url: NormalizedRelayUrl): Set<HexKey>
 }
 
-object EmptyNostrClient : INostrClient {
+class EmptyNostrClient : INostrClient {
     override fun connectedRelaysFlow() = MutableStateFlow(emptySet<NormalizedRelayUrl>())
 
     override fun availableRelaysFlow() = MutableStateFlow(emptySet<NormalizedRelayUrl>())
@@ -136,4 +136,6 @@ object EmptyNostrClient : INostrClient {
     override fun activeCounts(url: NormalizedRelayUrl): Map<String, List<Filter>> = emptyMap()
 
     override fun activeOutboxCache(url: NormalizedRelayUrl): Set<HexKey> = emptySet()
+
+    override fun close() {}
 }

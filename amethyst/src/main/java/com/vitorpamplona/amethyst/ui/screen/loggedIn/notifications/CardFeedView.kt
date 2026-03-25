@@ -28,11 +28,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.Card
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -49,9 +51,6 @@ import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
-import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
-import com.vitorpamplona.amethyst.ui.feeds.WatchScrollToTop
-import com.vitorpamplona.amethyst.ui.feeds.rememberForeverLazyListState
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.BadgeCompose
 import com.vitorpamplona.amethyst.ui.note.MessageSetCompose
@@ -64,45 +63,14 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.donations.Sho
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
+import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
-
-@Composable
-fun RefreshableCardView(
-    feedContent: CardFeedContentState,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-    routeForLastRead: String,
-    scrollStateKey: String? = null,
-    enablePullRefresh: Boolean = true,
-) {
-    RefresheableBox(feedContent, enablePullRefresh) {
-        SaveableCardFeedState(feedContent, accountViewModel, nav, routeForLastRead, scrollStateKey)
-    }
-}
-
-@Composable
-private fun SaveableCardFeedState(
-    feedContent: CardFeedContentState,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-    routeForLastRead: String,
-    scrollStateKey: String? = null,
-) {
-    val listState =
-        if (scrollStateKey != null) {
-            rememberForeverLazyListState(scrollStateKey)
-        } else {
-            rememberLazyListState()
-        }
-
-    WatchScrollToTop(feedContent, listState)
-
-    RenderCardFeed(feedContent, accountViewModel, listState, nav, routeForLastRead)
-}
+import com.vitorpamplona.amethyst.ui.theme.imageModifier
 
 @Composable
 fun RenderCardFeed(
     feedContent: CardFeedContentState,
+    pollContent: OpenPollsState,
     accountViewModel: AccountViewModel,
     listState: LazyListState,
     nav: INav,
@@ -128,6 +96,7 @@ fun RenderCardFeed(
             is CardFeedState.Loaded -> {
                 FeedLoaded(
                     loaded = state,
+                    polls = pollContent,
                     listState = listState,
                     routeForLastRead = routeForLastRead,
                     accountViewModel = accountViewModel,
@@ -159,12 +128,14 @@ fun NotificationFeedEmpty(onRefresh: () -> Unit) {
 @Composable
 private fun FeedLoaded(
     loaded: CardFeedState.Loaded,
+    polls: OpenPollsState,
     listState: LazyListState,
     routeForLastRead: String,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
+    val openPolls by polls.flow.collectAsStateWithLifecycle()
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -173,6 +144,37 @@ private fun FeedLoaded(
     ) {
         item {
             ShowDonationCard(accountViewModel, nav)
+        }
+
+        if (openPolls.isNotEmpty()) {
+            itemsIndexed(
+                items = openPolls,
+                key = { _, item -> "open-poll-${item.idHex}" },
+                contentType = { _, _ -> "OpenPoll" },
+            ) { _, note ->
+                Row(modifier = Modifier.padding(start = Size10dp, end = Size10dp, bottom = Size10dp)) {
+                    Card(
+                        modifier = MaterialTheme.colorScheme.imageModifier,
+                    ) {
+                        OpenPollsSectionHeader()
+                        Row(Modifier.fillMaxWidth().animateItem()) {
+                            NoteCompose(
+                                baseNote = note,
+                                modifier = Modifier.fillMaxWidth(),
+                                routeForLastRead = routeForLastRead,
+                                isBoostedNote = false,
+                                isQuotedNote = false,
+                                quotesLeft = 3,
+                                accountViewModel = accountViewModel,
+                                nav = nav,
+                            )
+                        }
+                        HorizontalDivider(
+                            thickness = DividerThickness,
+                        )
+                    }
+                }
+            }
         }
 
         itemsIndexed(

@@ -81,6 +81,7 @@ fun ChatFileUploadDialog(
     onCancel: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: INav,
+    isNip17: Boolean = false,
 ) {
     val scrollState = rememberScrollState()
 
@@ -132,7 +133,7 @@ fun ChatFileUploadDialog(
             ) {
                 Column(Modifier.fillMaxSize().padding(start = 10.dp, end = 10.dp, bottom = 10.dp)) {
                     Column(Modifier.fillMaxWidth().verticalScroll(scrollState)) {
-                        ImageVideoPostChat(state, accountViewModel)
+                        ImageVideoPostChat(state, accountViewModel, isNip17)
                     }
                 }
             }
@@ -144,6 +145,7 @@ fun ChatFileUploadDialog(
 private fun ImageVideoPostChat(
     fileUploadState: ChatFileUploadState,
     accountViewModel: AccountViewModel,
+    isNip17: Boolean = false,
 ) {
     val fileServers by accountViewModel.account.blossomServers.hostNameFlow
         .collectAsState()
@@ -190,6 +192,16 @@ private fun ImageVideoPostChat(
         onCheckedChange = fileUploadState::updateContentWarning,
     )
 
+    if (isNip17) {
+        SettingSwitchItem(
+            title = R.string.encrypt_files_label,
+            description = R.string.encrypt_files_description,
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            checked = fileUploadState.encryptFiles,
+            onCheckedChange = { fileUploadState.encryptFiles = it },
+        )
+    }
+
     SettingsRow(R.string.file_server, R.string.file_server_description) {
         TextSpinner(
             label = "",
@@ -222,28 +234,40 @@ private fun ImageVideoPostChat(
         )
     }
 
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(modifier = Modifier.fillMaxWidth()) {
-            Text(
-                text =
-                    when (fileUploadState.mediaQualitySlider) {
-                        0 -> stringRes(R.string.media_compression_quality_low)
-                        1 -> stringRes(R.string.media_compression_quality_medium)
-                        2 -> stringRes(R.string.media_compression_quality_high)
-                        3 -> stringRes(R.string.media_compression_quality_uncompressed)
-                        else -> stringRes(R.string.media_compression_quality_medium)
-                    },
-                modifier = Modifier.align(Alignment.Center),
+    val firstMedia = fileUploadState.multiOrchestrator?.first()?.media
+
+    if (firstMedia?.isVideo() == true || firstMedia?.isImage() == true) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text =
+                        when (fileUploadState.mediaQualitySlider) {
+                            0 -> stringRes(R.string.media_compression_quality_low)
+                            1 -> stringRes(R.string.media_compression_quality_medium)
+                            2 -> stringRes(R.string.media_compression_quality_high)
+                            3 -> stringRes(R.string.media_compression_quality_uncompressed)
+                            else -> stringRes(R.string.media_compression_quality_medium)
+                        },
+                    modifier = Modifier.align(Alignment.Center),
+                )
+            }
+
+            Slider(
+                value = fileUploadState.mediaQualitySlider.toFloat(),
+                onValueChange = { fileUploadState.mediaQualitySlider = it.toInt() },
+                valueRange = 0f..3f,
+                steps = 2,
             )
         }
-
-        Slider(
-            value = fileUploadState.mediaQualitySlider.toFloat(),
-            onValueChange = { fileUploadState.mediaQualitySlider = it.toInt() },
-            valueRange = 0f..3f,
-            steps = 2,
-        )
     }
+
+    SettingSwitchItem(
+        title = R.string.strip_metadata_label,
+        description = R.string.strip_metadata_description,
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+        checked = fileUploadState.stripMetadata,
+        onCheckedChange = { fileUploadState.stripMetadata = it },
+    )
 }
 
 @Composable

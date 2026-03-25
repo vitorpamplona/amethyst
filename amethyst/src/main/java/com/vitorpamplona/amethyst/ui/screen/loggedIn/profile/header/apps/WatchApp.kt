@@ -56,7 +56,7 @@ fun WatchApp(
 
     LaunchedEffect(key1 = appState) {
         withContext(Dispatchers.IO) {
-            (appState?.note?.event as? AppDefinitionEvent)?.appMetaData()?.let { metaData ->
+            (appState.note.event as? AppDefinitionEvent)?.appMetaData()?.let { metaData ->
                 metaData.picture?.ifBlank { null }?.let { newLogo ->
                     if (newLogo != appLogo) appLogo = newLogo
                 }

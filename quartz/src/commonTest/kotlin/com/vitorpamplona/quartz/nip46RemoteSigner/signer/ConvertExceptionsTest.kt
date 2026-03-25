@@ -34,7 +34,7 @@ class ConvertExceptionsTest {
         NostrSignerRemote.fromBunkerUri(
             "bunker://${"a".repeat(64)}?relay=wss://r.com",
             NostrSignerInternal(KeyPair()),
-            EmptyNostrClient,
+            EmptyNostrClient(),
         )
 
     @Test

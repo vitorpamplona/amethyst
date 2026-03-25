@@ -261,7 +261,8 @@ class NamecoinNameResolverTest {
                     pubkey = rootMatch.content
                 }
 
-                firstEntry != null && firstEntry.value is kotlinx.serialization.json.JsonPrimitive &&
+                firstEntry != null &&
+                    firstEntry.value is kotlinx.serialization.json.JsonPrimitive &&
                     (firstEntry.value as kotlinx.serialization.json.JsonPrimitive)
                         .content
                         .matches(Regex("^[0-9a-fA-F]{64}$")) -> {

@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentResponseEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
 
 fun filterNWCPaymentsFromRequests(
     serviceKeys: Set<HexKey>,

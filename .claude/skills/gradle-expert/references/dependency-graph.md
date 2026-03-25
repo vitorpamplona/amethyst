@@ -47,7 +47,7 @@
 
 ### :quartz (KMP Nostr Library)
 **Type:** Kotlin Multiplatform Library
-**Targets:** JVM, Android, iOS (iosX64, iosArm64, iosSimulatorArm64)
+**Targets:** JVM, Android, iOS (iosArm64, iosSimulatorArm64)
 **Dependencies:**
 - External: secp256k1, jackson, okhttp, kotlinx.coroutines, kotlinx.collections.immutable
 - Source sets: commonMain → jvmAndroid → {androidMain, jvmMain}, iosMain
@@ -127,7 +127,6 @@ commonMain (base)
     │   ├─ androidMain (Android platform)
     │   └─ jvmMain (Desktop platform)
     └─ iosMain (iOS platform)
-        ├─ iosX64Main
         ├─ iosArm64Main
         └─ iosSimulatorArm64Main
 ```

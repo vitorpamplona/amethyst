@@ -37,8 +37,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.net.toUri
 import androidx.core.util.Consumer
+import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.crashreports.DisplayCrashMessages
@@ -79,6 +81,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessGameScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessLobbyScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.CommunityScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.DiscoverScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip23LongForm.LongFormPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip99Classifieds.NewProductScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.drafts.DraftListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.DvmContentDiscoveryScreen
@@ -108,6 +111,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.redirect.LoadRedirectScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relay.RelayFeedScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.AllRelayListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.RelayInformationScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync.EventSyncScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.search.SearchScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.AllSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.NIP47SetupScreen
@@ -126,10 +130,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletSendScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletTransactionsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.AddAccountDialog
 import com.vitorpamplona.amethyst.ui.uriToRoute
-import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.nip01Core.core.Address
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
-import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -142,7 +143,17 @@ fun AppNavigation(
 ) {
     val nav = rememberNav()
 
-    AccountSwitcherAndLeftDrawerLayout(accountViewModel, accountSessionManager, nav) {
+    val navBackStackEntry by nav.controller.currentBackStackEntryAsState()
+    val isTabPagerRoute =
+        navBackStackEntry?.destination?.let { dest ->
+            dest.hasRoute<Route.Home>() || dest.hasRoute<Route.Message>()
+        } ?: false
+    val drawerGesturesEnabled =
+        !isTabPagerRoute ||
+            nav.drawerState.isOpen ||
+            nav.drawerState.targetValue != nav.drawerState.currentValue
+
+    AccountSwitcherAndLeftDrawerLayout(accountViewModel, accountSessionManager, nav, drawerGesturesEnabled) {
         NavHost(
             navController = nav.controller,
             startDestination = Route.Home,
@@ -195,16 +206,13 @@ fun AppNavigation(
             composableFromEnd<Route.ReactionsSettings> { ReactionsSettingsScreen(accountViewModel, nav) }
             composableFromEnd<Route.ImportFollowsSelectUser> { ImportFollowListSelectUserScreen(accountViewModel, nav) }
             composableFromEndArgs<Route.ImportFollowsPickFollows> {
-                ImportFollowListPickFollowsScreen(
-                    accountViewModel.getOrCreateAddressableNote(ContactListEvent.createAddress(it.userHex)),
-                    accountViewModel,
-                    nav,
-                )
+                ImportFollowListPickFollowsScreen(it.userHex, accountViewModel, nav)
             }
 
             composableFromEndArgs<Route.Nip47NWCSetup> { NIP47SetupScreen(accountViewModel, nav, it.nip47) }
             composableFromEndArgs<Route.UpdateZapAmount> { UpdateZapAmountScreen(accountViewModel, nav, it.nip47) }
             composableFromEndArgs<Route.EditRelays> { AllRelayListScreen(accountViewModel, nav) }
+            composableFromEnd<Route.EventSync> { EventSyncScreen(accountViewModel, nav) }
             composableFromEndArgs<Route.EditMediaServers> { AllMediaServersScreen(accountViewModel, nav) }
             composableFromEndArgs<Route.UpdateReactionType> { UpdateReactionTypeScreen(accountViewModel, nav) }
 
@@ -223,35 +231,28 @@ fun AppNavigation(
             composableFromEndArgs<Route.RoomByAuthor> { ChatroomByAuthorScreen(it.id, null, accountViewModel, nav) }
 
             composableFromEndArgs<Route.PublicChatChannel> {
-                PublicChatChannelScreen(
-                    it.id,
-                    it.draftId?.let { hex -> accountViewModel.getNoteIfExists(hex) },
-                    it.replyTo?.let { hex -> accountViewModel.checkGetOrCreateNote(hex) },
-                    accountViewModel,
-                    nav,
-                )
+                PublicChatChannelScreen(it.id, it.draftId, it.replyTo, accountViewModel, nav)
             }
 
             composableFromEndArgs<Route.LiveActivityChannel> {
                 LiveActivityChannelScreen(
                     Address(it.kind, it.pubKeyHex, it.dTag),
-                    draft = it.draftId?.let { hex -> accountViewModel.getNoteIfExists(hex) },
-                    replyTo = it.replyTo?.let { hex -> accountViewModel.checkGetOrCreateNote(hex) },
+                    draftId = it.draftId,
+                    replyToId = it.replyTo,
                     accountViewModel,
                     nav,
                 )
             }
 
             composableFromEndArgs<Route.EphemeralChat> {
-                RelayUrlNormalizer.normalizeOrNull(it.relayUrl)?.let { relay ->
-                    EphemeralChatScreen(
-                        channelId = RoomId(it.id, relay),
-                        draft = it.draftId?.let { hex -> accountViewModel.getNoteIfExists(hex) },
-                        replyTo = it.replyTo?.let { hex -> accountViewModel.checkGetOrCreateNote(hex) },
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
-                }
+                EphemeralChatScreen(
+                    id = it.id,
+                    relayUrl = it.relayUrl,
+                    draftId = it.draftId,
+                    replyToId = it.replyTo,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
             }
 
             composableFromBottomArgs<Route.ChannelMetadataEdit> { ChannelMetadataScreen(it.id, accountViewModel, nav) }
@@ -265,9 +266,9 @@ fun AppNavigation(
                     geohash = it.geohash,
                     message = it.message,
                     attachment = it.attachment?.ifBlank { null }?.toUri(),
-                    reply = it.replyTo?.let { hex -> accountViewModel.getNoteIfExists(hex) },
-                    quote = it.quote?.let { hex -> accountViewModel.getNoteIfExists(hex) },
-                    draft = it.draft?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                    replyId = it.replyTo,
+                    quoteId = it.quote,
+                    draftId = it.draft,
                     accountViewModel,
                     nav,
                 )
@@ -276,8 +277,8 @@ fun AppNavigation(
             composableFromBottomArgs<Route.NewPublicMessage> {
                 NewPublicMessageScreen(
                     to = it.toKey(),
-                    reply = it.replyId?.let { hex -> accountViewModel.getNoteIfExists(hex) },
-                    draft = it.draftId?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                    replyId = it.replyId,
+                    draftId = it.draftId,
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
@@ -288,9 +289,9 @@ fun AppNavigation(
                     hashtag = it.hashtag,
                     message = it.message,
                     attachment = it.attachment?.ifBlank { null }?.toUri(),
-                    reply = it.replyTo?.let { hex -> accountViewModel.getNoteIfExists(hex) },
-                    quote = it.quote?.let { hex -> accountViewModel.getNoteIfExists(hex) },
-                    draft = it.draft?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                    replyId = it.replyTo,
+                    quoteId = it.quote,
+                    draftId = it.draft,
                     accountViewModel,
                     nav,
                 )
@@ -298,11 +299,11 @@ fun AppNavigation(
 
             composableFromBottomArgs<Route.GenericCommentPost> {
                 ReplyCommentPostScreen(
-                    reply = it.replyTo?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                    replyId = it.replyTo,
                     message = it.message,
                     attachment = it.attachment?.ifBlank { null }?.toUri(),
-                    quote = it.quote?.let { hex -> accountViewModel.getNoteIfExists(hex) },
-                    draft = it.draft?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                    quoteId = it.quote,
+                    draftId = it.draft,
                     accountViewModel,
                     nav,
                 )
@@ -312,10 +313,19 @@ fun AppNavigation(
                 NewProductScreen(
                     message = it.message,
                     attachment = it.attachment?.ifBlank { null }?.toUri(),
-                    quote = it.quote?.let { hex -> accountViewModel.getNoteIfExists(hex) },
-                    draft = it.draft?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                    quoteId = it.quote,
+                    draftId = it.draft,
                     accountViewModel,
                     nav,
+                )
+            }
+
+            composableFromBottomArgs<Route.NewLongFormPost> {
+                LongFormPostScreen(
+                    draftId = it.draft,
+                    versionId = it.version,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
                 )
             }
 
@@ -323,11 +333,11 @@ fun AppNavigation(
                 ShortNotePostScreen(
                     message = it.message,
                     attachment = it.attachment?.ifBlank { null }?.toUri(),
-                    baseReplyTo = it.baseReplyTo?.let { hex -> accountViewModel.getNoteIfExists(hex) },
-                    quote = it.quote?.let { hex -> accountViewModel.getNoteIfExists(hex) },
-                    fork = it.fork?.let { hex -> accountViewModel.getNoteIfExists(hex) },
-                    version = it.version?.let { hex -> accountViewModel.getNoteIfExists(hex) },
-                    draft = it.draft?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                    baseReplyToId = it.baseReplyTo,
+                    quoteId = it.quote,
+                    forkId = it.fork,
+                    versionId = it.version,
+                    draftId = it.draft,
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
@@ -414,7 +424,9 @@ private fun NavigateIfIntentRequested(
                     actionableNextPage?.let { nextRoute ->
                         val npub = runCatching { URI(intentNextPage.removePrefix("nostr:")).findParameterValue("account") }.getOrNull()
                         if (npub != null && accountSessionManager.currentAccountNPub() != npub) {
-                            accountSessionManager.checkAndSwitchUserSync(npub, nextRoute)
+                            accountSessionManager.checkAndSwitchUserSync(npub) { account ->
+                                uriToRoute(intentNextPage, account)
+                            }
                         } else {
                             val currentRoute = getRouteWithArguments(nextRoute::class, nav.controller)
                             if (!isSameRoute(currentRoute, nextRoute)) {
@@ -470,7 +482,9 @@ private fun NavigateIfIntentRequested(
                                 scope.launch {
                                     val npub = runCatching { URI(uri.removePrefix("nostr:")).findParameterValue("account") }.getOrNull()
                                     if (npub != null && accountSessionManager.currentAccountNPub() != npub) {
-                                        accountSessionManager.checkAndSwitchUserSync(npub, newPage)
+                                        accountSessionManager.checkAndSwitchUserSync(npub) { newAccount ->
+                                            uriToRoute(uri, newAccount)
+                                        }
                                     } else {
                                         val currentRoute = getRouteWithArguments(newPage::class, nav.controller)
                                         if (!isSameRoute(currentRoute, newPage)) {

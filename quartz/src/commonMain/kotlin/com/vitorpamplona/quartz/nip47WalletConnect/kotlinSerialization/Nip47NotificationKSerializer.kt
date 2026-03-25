@@ -20,22 +20,25 @@
  */
 package com.vitorpamplona.quartz.nip47WalletConnect.kotlinSerialization
 
-import com.vitorpamplona.quartz.nip47WalletConnect.HoldInvoiceAcceptedData
-import com.vitorpamplona.quartz.nip47WalletConnect.HoldInvoiceAcceptedNotification
-import com.vitorpamplona.quartz.nip47WalletConnect.Notification
-import com.vitorpamplona.quartz.nip47WalletConnect.NwcNotificationType
-import com.vitorpamplona.quartz.nip47WalletConnect.PaymentReceivedNotification
-import com.vitorpamplona.quartz.nip47WalletConnect.PaymentSentNotification
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.HoldInvoiceAcceptedData
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.HoldInvoiceAcceptedNotification
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Notification
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcNotificationType
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PaymentReceivedNotification
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PaymentSentNotification
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.descriptors.buildClassSerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.JsonDecoder
+import kotlinx.serialization.json.JsonEncoder
 import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
+import kotlinx.serialization.json.put
 
 object Nip47NotificationKSerializer : KSerializer<Notification> {
     override val descriptor: SerialDescriptor =
@@ -44,7 +47,44 @@ object Nip47NotificationKSerializer : KSerializer<Notification> {
     override fun serialize(
         encoder: Encoder,
         value: Notification,
-    ): Unit = throw UnsupportedOperationException("NIP-47 Notification serialization not supported")
+    ) {
+        val jsonEncoder = encoder as JsonEncoder
+        val jsonObject =
+            buildJsonObject {
+                put("notification_type", value.notification_type)
+                when (value) {
+                    is PaymentReceivedNotification -> {
+                        Nip47ResponseKSerializer.serializeTransaction(value.notification)?.let {
+                            put("notification", it)
+                        }
+                    }
+
+                    is PaymentSentNotification -> {
+                        Nip47ResponseKSerializer.serializeTransaction(value.notification)?.let {
+                            put("notification", it)
+                        }
+                    }
+
+                    is HoldInvoiceAcceptedNotification -> {
+                        value.notification?.let { data ->
+                            put(
+                                "notification",
+                                buildJsonObject {
+                                    data.type?.let { put("type", it) }
+                                    data.invoice?.let { put("invoice", it) }
+                                    data.payment_hash?.let { put("payment_hash", it) }
+                                    data.amount?.let { put("amount", it) }
+                                    data.created_at?.let { put("created_at", it) }
+                                    data.expires_at?.let { put("expires_at", it) }
+                                    data.settle_deadline?.let { put("settle_deadline", it) }
+                                },
+                            )
+                        }
+                    }
+                }
+            }
+        jsonEncoder.encodeJsonElement(jsonObject)
+    }
 
     override fun deserialize(decoder: Decoder): Notification {
         val jsonDecoder = decoder as JsonDecoder

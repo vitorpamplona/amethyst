@@ -20,46 +20,54 @@
  */
 package com.vitorpamplona.quartz.nip47WalletConnect.kotlinSerialization
 
-import com.vitorpamplona.quartz.nip47WalletConnect.CancelHoldInvoiceMethod
-import com.vitorpamplona.quartz.nip47WalletConnect.CancelHoldInvoiceParams
-import com.vitorpamplona.quartz.nip47WalletConnect.CreateConnectionMethod
-import com.vitorpamplona.quartz.nip47WalletConnect.CreateConnectionParams
-import com.vitorpamplona.quartz.nip47WalletConnect.GetBalanceMethod
-import com.vitorpamplona.quartz.nip47WalletConnect.GetBudgetMethod
-import com.vitorpamplona.quartz.nip47WalletConnect.GetInfoMethod
-import com.vitorpamplona.quartz.nip47WalletConnect.ListTransactionsMethod
-import com.vitorpamplona.quartz.nip47WalletConnect.ListTransactionsParams
-import com.vitorpamplona.quartz.nip47WalletConnect.LookupInvoiceMethod
-import com.vitorpamplona.quartz.nip47WalletConnect.LookupInvoiceParams
-import com.vitorpamplona.quartz.nip47WalletConnect.MakeHoldInvoiceMethod
-import com.vitorpamplona.quartz.nip47WalletConnect.MakeHoldInvoiceParams
-import com.vitorpamplona.quartz.nip47WalletConnect.MakeInvoiceMethod
-import com.vitorpamplona.quartz.nip47WalletConnect.MakeInvoiceParams
-import com.vitorpamplona.quartz.nip47WalletConnect.NwcMethod
-import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceMethod
-import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceParams
-import com.vitorpamplona.quartz.nip47WalletConnect.PayKeysendMethod
-import com.vitorpamplona.quartz.nip47WalletConnect.PayKeysendParams
-import com.vitorpamplona.quartz.nip47WalletConnect.Request
-import com.vitorpamplona.quartz.nip47WalletConnect.SettleHoldInvoiceMethod
-import com.vitorpamplona.quartz.nip47WalletConnect.SettleHoldInvoiceParams
-import com.vitorpamplona.quartz.nip47WalletConnect.SignMessageMethod
-import com.vitorpamplona.quartz.nip47WalletConnect.SignMessageParams
-import com.vitorpamplona.quartz.nip47WalletConnect.TlvRecord
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.CancelHoldInvoiceMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.CancelHoldInvoiceParams
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.CreateConnectionMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.CreateConnectionParams
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetBalanceMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetBudgetMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetInfoMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.ListTransactionsMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.ListTransactionsParams
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.LookupInvoiceMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.LookupInvoiceParams
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.MakeHoldInvoiceMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.MakeHoldInvoiceParams
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.MakeInvoiceMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.MakeInvoiceParams
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceParams
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayKeysendMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayKeysendParams
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.SettleHoldInvoiceMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.SettleHoldInvoiceParams
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.SignMessageMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.SignMessageParams
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.TlvRecord
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.descriptors.buildClassSerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonDecoder
+import kotlinx.serialization.json.JsonEncoder
 import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonNull.content
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.add
 import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
+import kotlinx.serialization.json.put
 
 object Nip47RequestKSerializer : KSerializer<Request> {
     override val descriptor: SerialDescriptor =
@@ -68,7 +76,159 @@ object Nip47RequestKSerializer : KSerializer<Request> {
     override fun serialize(
         encoder: Encoder,
         value: Request,
-    ): Unit = throw UnsupportedOperationException("NIP-47 Request serialization not supported")
+    ) {
+        val jsonEncoder = encoder as JsonEncoder
+        val jsonObject =
+            buildJsonObject {
+                put("method", value.method)
+                when (value) {
+                    is PayInvoiceMethod -> {
+                        value.params?.let { put("params", serializePayInvoiceParams(it)) }
+                    }
+
+                    is PayKeysendMethod -> {
+                        value.params?.let { put("params", serializePayKeysendParams(it)) }
+                    }
+
+                    is MakeInvoiceMethod -> {
+                        value.params?.let { put("params", serializeMakeInvoiceParams(it)) }
+                    }
+
+                    is LookupInvoiceMethod -> {
+                        value.params?.let { put("params", serializeLookupInvoiceParams(it)) }
+                    }
+
+                    is ListTransactionsMethod -> {
+                        value.params?.let { put("params", serializeListTransactionsParams(it)) }
+                    }
+
+                    is GetBalanceMethod -> {}
+
+                    is GetInfoMethod -> {}
+
+                    is GetBudgetMethod -> {}
+
+                    is SignMessageMethod -> {
+                        value.params?.let { put("params", serializeSignMessageParams(it)) }
+                    }
+
+                    is CreateConnectionMethod -> {
+                        value.params?.let { put("params", serializeCreateConnectionParams(it)) }
+                    }
+
+                    is MakeHoldInvoiceMethod -> {
+                        value.params?.let { put("params", serializeMakeHoldInvoiceParams(it)) }
+                    }
+
+                    is CancelHoldInvoiceMethod -> {
+                        value.params?.let { put("params", serializeCancelHoldInvoiceParams(it)) }
+                    }
+
+                    is SettleHoldInvoiceMethod -> {
+                        value.params?.let { put("params", serializeSettleHoldInvoiceParams(it)) }
+                    }
+                }
+            }
+        jsonEncoder.encodeJsonElement(jsonObject)
+    }
+
+    private fun serializePayInvoiceParams(params: PayInvoiceParams): JsonObject =
+        buildJsonObject {
+            params.invoice?.let { put("invoice", it) }
+            params.amount?.let { put("amount", it) }
+            params.metadata?.let { put("metadata", Json.encodeToJsonElement(it)) }
+        }
+
+    private fun serializePayKeysendParams(params: PayKeysendParams): JsonObject =
+        buildJsonObject {
+            params.amount?.let { put("amount", it) }
+            params.pubkey?.let { put("pubkey", it) }
+            params.preimage?.let { put("preimage", it) }
+            params.tlv_records?.let { records ->
+                put(
+                    "tlv_records",
+                    buildJsonArray {
+                        records.forEach { record ->
+                            add(
+                                buildJsonObject {
+                                    record.type?.let { put("type", it) }
+                                    record.value?.let { put("value", it) }
+                                },
+                            )
+                        }
+                    },
+                )
+            }
+        }
+
+    private fun serializeMakeInvoiceParams(params: MakeInvoiceParams): JsonObject =
+        buildJsonObject {
+            params.amount?.let { put("amount", it) }
+            params.description?.let { put("description", it) }
+            params.description_hash?.let { put("description_hash", it) }
+            params.expiry?.let { put("expiry", it) }
+            params.metadata?.let { put("metadata", Json.encodeToJsonElement(it)) }
+        }
+
+    private fun serializeLookupInvoiceParams(params: LookupInvoiceParams): JsonObject =
+        buildJsonObject {
+            params.payment_hash?.let { put("payment_hash", it) }
+            params.invoice?.let { put("invoice", it) }
+        }
+
+    private fun serializeListTransactionsParams(params: ListTransactionsParams): JsonObject =
+        buildJsonObject {
+            params.from?.let { put("from", it) }
+            params.until?.let { put("until", it) }
+            params.limit?.let { put("limit", it) }
+            params.offset?.let { put("offset", it) }
+            params.unpaid?.let { put("unpaid", it) }
+            params.unpaid_outgoing?.let { put("unpaid_outgoing", it) }
+            params.unpaid_incoming?.let { put("unpaid_incoming", it) }
+            params.type?.let { put("type", it) }
+        }
+
+    private fun serializeSignMessageParams(params: SignMessageParams): JsonObject =
+        buildJsonObject {
+            params.message?.let { put("message", it) }
+        }
+
+    private fun serializeCreateConnectionParams(params: CreateConnectionParams): JsonObject =
+        buildJsonObject {
+            params.pubkey?.let { put("pubkey", it) }
+            params.name?.let { put("name", it) }
+            params.request_methods?.let { methods ->
+                put("request_methods", buildJsonArray { methods.forEach { add(it) } })
+            }
+            params.notification_types?.let { types ->
+                put("notification_types", buildJsonArray { types.forEach { add(it) } })
+            }
+            params.max_amount?.let { put("max_amount", it) }
+            params.budget_renewal?.let { put("budget_renewal", it) }
+            params.expires_at?.let { put("expires_at", it) }
+            params.isolated?.let { put("isolated", it) }
+            params.metadata?.let { put("metadata", Json.encodeToJsonElement(it)) }
+        }
+
+    private fun serializeMakeHoldInvoiceParams(params: MakeHoldInvoiceParams): JsonObject =
+        buildJsonObject {
+            params.amount?.let { put("amount", it) }
+            params.description?.let { put("description", it) }
+            params.description_hash?.let { put("description_hash", it) }
+            params.expiry?.let { put("expiry", it) }
+            params.payment_hash?.let { put("payment_hash", it) }
+            params.min_cltv_expiry_delta?.let { put("min_cltv_expiry_delta", it) }
+        }
+
+    private fun serializeCancelHoldInvoiceParams(params: CancelHoldInvoiceParams): JsonObject =
+        buildJsonObject {
+            params.payment_hash?.let { put("payment_hash", it) }
+        }
+
+    private fun serializeSettleHoldInvoiceParams(params: SettleHoldInvoiceParams): JsonObject =
+        buildJsonObject {
+            params.preimage?.let { put("preimage", it) }
+        }
 
     override fun deserialize(decoder: Decoder): Request {
         val jsonDecoder = decoder as JsonDecoder
@@ -100,6 +260,7 @@ object Nip47RequestKSerializer : KSerializer<Request> {
                 PayInvoiceParams(
                     invoice = it["invoice"]?.jsonPrimitive?.content,
                     amount = it["amount"]?.jsonPrimitive?.longOrNull,
+                    metadata = it["metadata"]?.jsonObject?.toAnyMap(),
                 )
             },
         )
@@ -135,6 +296,7 @@ object Nip47RequestKSerializer : KSerializer<Request> {
                     description = it["description"]?.jsonPrimitive?.content,
                     description_hash = it["description_hash"]?.jsonPrimitive?.content,
                     expiry = it["expiry"]?.jsonPrimitive?.longOrNull,
+                    metadata = it["metadata"]?.jsonObject?.toAnyMap(),
                 )
             },
         )
@@ -194,6 +356,7 @@ object Nip47RequestKSerializer : KSerializer<Request> {
                     budget_renewal = it["budget_renewal"]?.jsonPrimitive?.content,
                     expires_at = it["expires_at"]?.jsonPrimitive?.longOrNull,
                     isolated = it["isolated"]?.jsonPrimitive?.booleanOrNull,
+                    metadata = it["metadata"]?.jsonObject?.toAnyMap(),
                 )
             },
         )

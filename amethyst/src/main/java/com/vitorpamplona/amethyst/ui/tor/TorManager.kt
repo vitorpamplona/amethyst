@@ -81,7 +81,7 @@ class TorManager(
     val activePortOrNull: StateFlow<Int?> =
         status
             .map {
-                (status.value as? TorServiceStatus.Active)?.port
+                (it as? TorServiceStatus.Active)?.port
             }.stateIn(
                 scope,
                 SharingStarted.WhileSubscribed(2000),

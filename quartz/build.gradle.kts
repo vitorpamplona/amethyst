@@ -1,9 +1,5 @@
-@file:OptIn(ExperimentalSpmForKmpFeature::class)
-
 import com.vanniktech.maven.publish.KotlinMultiplatform
 import com.vanniktech.maven.publish.SourcesJar
-import io.github.frankois944.spmForKmp.swiftPackageConfig
-import io.github.frankois944.spmForKmp.utils.ExperimentalSpmForKmpFeature
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeTest
 
@@ -13,7 +9,6 @@ plugins {
     alias(libs.plugins.androidKotlinMultiplatformLibrary)
     alias(libs.plugins.serialization)
     alias(libs.plugins.vanniktech.mavenPublish)
-    alias(libs.plugins.frankois944.spmForKmp)
 }
 
 kotlin {
@@ -26,7 +21,7 @@ kotlin {
         }
     }
 
-    androidLibrary {
+    android {
         namespace = "com.vitorpamplona.quartz"
         compileSdk =
             libs.versions.android.compileSdk
@@ -65,31 +60,49 @@ kotlin {
     val xcfName = "quartz-kmpKit"
     val libsodiumPath = project.file("src/nativeInterop/libsodium")
     val libsodiumHeaderFilesPath = project.file("$libsodiumPath/include/sodium")
-    val libsodiumDefFile = project.file("src/nativeInterop/cinterop/Clibsodium.def")
+
+    // Generate target-specific Libsodium definition files for creating native bindings.
+    // Device (iosArm64) uses libsodium.a, simulator targets use libsodium-simulator.a.
+    val libsodiumDeviceDefFile =
+        project.layout.buildDirectory
+            .file("cinterop/Clibsodium-device.def")
+            .get()
+            .asFile
+    val libsodiumSimulatorDefFile =
+        project.layout.buildDirectory
+            .file("cinterop/Clibsodium-simulator.def")
+            .get()
+            .asFile
 
     // This generates the Libsodium definition file, necessary for creating native bindings(a Kotlin API) for libsodium(for iOS).
     val libsodiumDefFileGeneration =
         tasks.register("GenerateSodiumCinteropFile") {
-            outputs.file(libsodiumDefFile)
+            outputs.files(libsodiumDeviceDefFile, libsodiumSimulatorDefFile)
             doLast {
-                if (!libsodiumDefFile.exists()) {
-                    libsodiumDefFile.parentFile.mkdirs()
-                    libsodiumDefFile.writeText("package = Clibsodium\n")
-                    libsodiumDefFile.appendText("staticLibraries = libsodium.a libsodium-simulator.a\n")
-                    libsodiumDefFile.appendText("libraryPaths = ${libsodiumPath.absolutePath}/ios/lib ${libsodiumPath.absolutePath}/ios-simulators/lib\n")
-                }
+                libsodiumDeviceDefFile.parentFile.mkdirs()
+                libsodiumDeviceDefFile.writeText(
+                    "package = Clibsodium\n" +
+                        "staticLibraries = libsodium.a\n" +
+                        "libraryPaths = ${libsodiumPath.absolutePath}/ios/lib\n",
+                )
+                libsodiumSimulatorDefFile.writeText(
+                    "package = Clibsodium\n" +
+                        "staticLibraries = libsodium-simulator.a\n" +
+                        "libraryPaths = ${libsodiumPath.absolutePath}/ios-simulators/lib\n",
+                )
             }
         }
 
     listOf(
         iosArm64(),
-        iosX64(),
         iosSimulatorArm64(),
     ).forEach { target ->
+        val isSimulator = target.name != "iosArm64"
+        val defFile = if (isSimulator) libsodiumSimulatorDefFile else libsodiumDeviceDefFile
 
         target.compilations.getByName("main") {
-            val Clibsodium by cinterops.creating {
-                definitionFile = libsodiumDefFile
+            val clibsodium by cinterops.creating {
+                definitionFile = defFile
                 packageName = "Clibsodium"
 
                 headers(
@@ -99,49 +112,39 @@ kotlin {
                 )
             }
 
-            tasks.named(cinterops.getByName("Clibsodium").interopProcessingTaskName).configure {
+            tasks.named(cinterops.getByName("clibsodium").interopProcessingTaskName).configure {
                 dependsOn(libsodiumDefFileGeneration)
             }
-        }
-
-        target.swiftPackageConfig(cinteropName = "swiftbridge") {
-            minIos = "17"
-            minMacos = "14"
-            dependency {
-                remotePackageVersion(
-                    url = uri("https://github.com/swift-standards/swift-rfc-3986.git"),
-                    packageName = "swift-rfc-3986",
-                    products = {
-                        add("RFC 3986")
-                    },
-                    version = "0.1.0",
-                )
-            }
-        }
-    }
-
-    iosX64 {
-        binaries.framework {
-            baseName = xcfName
         }
     }
 
     iosArm64 {
+        binaries.all {
+            linkerOpts("-L${libsodiumPath.absolutePath}/ios/lib", "-lsodium")
+        }
         binaries.framework {
             baseName = xcfName
+            isStatic = true
+            binaryOption("bundleId", "com.vitorpamplona.quartz")
         }
     }
 
     iosSimulatorArm64 {
+        binaries.all {
+            linkerOpts("-L${libsodiumPath.absolutePath}/ios-simulators/lib", "-lsodium-simulator")
+        }
         binaries.framework {
             baseName = xcfName
+            isStatic = true
+            binaryOption("bundleId", "com.vitorpamplona.quartz")
         }
     }
 
     // This makes sure that the resource file directory is visible for iOS tests.
-    val rootDir = "${rootProject.rootDir.path}/quartz/src/iosTest/resources"
+    val rootDir = "${rootProject.rootDir.path}/quartz/src/commonTest/resources"
 
     tasks.withType<Test>().configureEach {
+        maxHeapSize = "4g"
         environment("TEST_RESOURCES_ROOT", rootDir)
     }
 
@@ -176,6 +179,13 @@ kotlin {
 
                 // immutable collections to avoid recomposition
                 implementation(libs.kotlinx.collections.immutable)
+
+                // SQLite KMP driver for event store
+                api(libs.androidx.sqlite)
+                implementation(libs.androidx.sqlite.bundled)
+
+                // RFC3986 library(normalizes URLs)
+                api(libs.uri.reference.kmp)
             }
         }
 
@@ -183,6 +193,10 @@ kotlin {
             dependencies {
                 implementation(libs.kotlin.test)
                 implementation(libs.kotlinx.coroutines.test)
+
+                // SQLite bundled driver for tests
+                api(libs.androidx.sqlite)
+                implementation(libs.androidx.sqlite.bundled)
             }
         }
 
@@ -192,9 +206,6 @@ kotlin {
                 dependsOn(commonMain.get())
 
                 dependencies {
-                    // Normalizes URLs
-                    api(libs.rfc3986.normalizer)
-
                     // Performant Parser of JSONs into Events
                     api(libs.jackson.module.kotlin)
 
@@ -236,6 +247,9 @@ kotlin {
             dependencies {
                 // Bitcoin secp256k1 bindings
                 implementation(libs.secp256k1.kmp.jni.jvm)
+
+                // SQLite bundled driver for JVM tests
+                implementation(libs.androidx.sqlite.bundled.jvm)
             }
         }
 
@@ -255,8 +269,18 @@ kotlin {
 
         getByName("androidHostTest") {
             dependencies {
+                implementation(libs.kotlin.test)
+                implementation(libs.kotlinx.coroutines.test)
+
                 // Bitcoin secp256k1 bindings
                 implementation(libs.secp256k1.kmp.jni.jvm)
+
+                // LibSodium for ChaCha encryption (NIP-44) - Needed for host tests
+                implementation(libs.lazysodium.java)
+                implementation(libs.jna)
+
+                // SQLite bundled driver for Host tests
+                implementation(libs.androidx.sqlite.bundled.jvm)
             }
         }
 
@@ -266,7 +290,16 @@ kotlin {
                 implementation(libs.androidx.core)
                 implementation(libs.androidx.junit)
                 implementation(libs.androidx.espresso.core)
+
+                implementation(libs.kotlin.test)
                 implementation(libs.kotlinx.coroutines.test)
+
+                // Bitcoin secp256k1 bindings to Android
+                api(libs.secp256k1.kmp.jni.android)
+
+                // LibSodium for ChaCha encryption (NIP-44)
+                implementation("com.goterl:lazysodium-android:5.2.0@aar")
+                implementation("net.java.dev.jna:jna:5.18.1@aar")
             }
         }
 
@@ -281,10 +314,6 @@ kotlin {
             }
         }
 
-        val iosX64Main by getting {
-            dependsOn(iosMain.get())
-        }
-
         val iosArm64Main by getting {
             dependsOn(iosMain.get())
         }
@@ -297,10 +326,6 @@ kotlin {
             dependsOn(commonTest.get())
             dependencies {
             }
-        }
-
-        val iosX64Test by getting {
-            dependsOn(iosTest.get())
         }
 
         val iosArm64Test by getting {
@@ -325,7 +350,7 @@ mavenPublishing {
     coordinates(
         groupId = "com.vitorpamplona.quartz",
         artifactId = "quartz",
-        version = "1.05.1",
+        version = "1.06.3",
     )
 
     // Configure publishing to Maven Central
