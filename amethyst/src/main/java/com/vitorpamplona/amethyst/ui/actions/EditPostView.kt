@@ -44,7 +44,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -82,6 +81,7 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromFiles
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.components.BechLink
 import com.vitorpamplona.amethyst.ui.components.LoadUrlPreview
+import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
@@ -411,9 +411,8 @@ private fun MessageField(postViewModel: EditPostViewModel) {
         }
     }
 
-    OutlinedTextField(
-        value = postViewModel.message,
-        onValueChange = { postViewModel.updateMessage(it) },
+    ThinPaddingTextField(
+        state = postViewModel.messageState,
         keyboardOptions =
             KeyboardOptions.Default.copy(
                 capitalization = KeyboardCapitalization.Sentences,
@@ -442,7 +441,7 @@ private fun MessageField(postViewModel: EditPostViewModel) {
                 focusedBorderColor = Color.Transparent,
                 unfocusedBorderColor = Color.Transparent,
             ),
-        visualTransformation = UrlUserTagTransformation(MaterialTheme.colorScheme.primary),
+        outputTransformation = UrlUserTagTransformation(MaterialTheme.colorScheme.primary),
         textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
     )
 }
