@@ -87,10 +87,19 @@ private fun DisplayUserNameWithDeleteMark(
     accountViewModel: AccountViewModel,
 ) {
     val innerUserState by observeUserInfo(user, accountViewModel)
-    innerUserState?.let { meta ->
+
+    val meta = innerUserState
+
+    if (meta != null) {
         CreateTextWithEmoji(
             text = remember(meta) { "✖ ${meta.info.bestName() ?: user.pubkeyDisplayHex()}" },
             tags = meta.tags,
+            color = Color.White,
+            textAlign = TextAlign.Center,
+        )
+    } else {
+        Text(
+            text = remember(meta) { "✖ ${user.pubkeyDisplayHex()}" },
             color = Color.White,
             textAlign = TextAlign.Center,
         )

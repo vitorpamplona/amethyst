@@ -28,3 +28,10 @@ class ThrowableToastMsg(
     val msg: String? = null,
     val throwable: Throwable,
 ) : ToastMsg()
+
+@Immutable
+class ThrowableToastMsg2(
+    val titleResId: Int,
+    val description: Int,
+    val throwable: Throwable,
+) : ToastMsg()

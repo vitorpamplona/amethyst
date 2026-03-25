@@ -31,10 +31,12 @@ import com.vitorpamplona.amethyst.service.uploads.nip96.Nip96Uploader
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.ciphers.NostrCipher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import okhttp3.OkHttpClient
+import java.io.File
 import kotlin.coroutines.cancellation.CancellationException
 
 sealed class UploadingState {
@@ -324,6 +326,26 @@ class UploadOrchestrator {
         return strippingResult.uri
     }
 
+    /**
+     * Deletes a temporary file created during the upload pipeline if its URI
+     * differs from the original (meaning it's an intermediate temp file, not the user's content).
+     */
+    private fun deleteTempUri(
+        tempUri: Uri,
+        originalUri: Uri,
+    ) {
+        if (tempUri == originalUri) return
+        try {
+            val path = tempUri.path ?: return
+            val file = File(path)
+            if (file.delete()) {
+                Log.d("UploadOrchestrator", "Deleted temp file: $path")
+            }
+        } catch (e: Exception) {
+            Log.w("UploadOrchestrator", "Failed to delete temp file: ${tempUri.path}", e)
+        }
+    }
+
     suspend fun upload(
         uri: Uri,
         mimeType: String?,
@@ -341,12 +363,20 @@ class UploadOrchestrator {
 
         val finalUri =
             stripAfterCompression(uri, compressed, mimeType, compressionQuality, stripMetadata, onStrippingFailed, context)
-                ?: return error(R.string.upload_cancelled)
+                ?: return error(R.string.upload_cancelled).also {
+                    deleteTempUri(compressed.uri, uri)
+                }
 
-        return when (server.type) {
-            ServerType.NIP95 -> uploadNIP95(finalUri, compressed.contentType, null, null, context)
-            ServerType.NIP96 -> uploadNIP96(finalUri, compressed.contentType, compressed.size, alt, contentWarningReason, server.baseUrl, null, null, account, context)
-            ServerType.Blossom -> uploadBlossom(finalUri, compressed.contentType, compressed.size, alt, contentWarningReason, server.baseUrl, null, null, account, context)
+        if (compressed.uri != finalUri) deleteTempUri(compressed.uri, uri)
+
+        try {
+            return when (server.type) {
+                ServerType.NIP95 -> uploadNIP95(finalUri, compressed.contentType, null, null, context)
+                ServerType.NIP96 -> uploadNIP96(finalUri, compressed.contentType, compressed.size, alt, contentWarningReason, server.baseUrl, null, null, account, context)
+                ServerType.Blossom -> uploadBlossom(finalUri, compressed.contentType, compressed.size, alt, contentWarningReason, server.baseUrl, null, null, account, context)
+            }
+        } finally {
+            deleteTempUri(finalUri, uri)
         }
     }
 
@@ -368,14 +398,23 @@ class UploadOrchestrator {
 
         val finalUri =
             stripAfterCompression(uri, compressed, mimeType, compressionQuality, stripMetadata, onStrippingFailed, context)
-                ?: return error(R.string.upload_cancelled)
+                ?: return error(R.string.upload_cancelled).also {
+                    deleteTempUri(compressed.uri, uri)
+                }
+
+        if (compressed.uri != finalUri) deleteTempUri(compressed.uri, uri)
 
         val encrypted = EncryptFiles().encryptFile(context, finalUri, encrypt)
+        deleteTempUri(finalUri, uri)
 
-        return when (server.type) {
-            ServerType.NIP95 -> uploadNIP95(encrypted.uri, encrypted.contentType, compressed.contentType, encrypted.originalHash, context)
-            ServerType.NIP96 -> uploadNIP96(encrypted.uri, encrypted.contentType, encrypted.size, alt, contentWarningReason, server.baseUrl, compressed.contentType, encrypted.originalHash, account, context)
-            ServerType.Blossom -> uploadBlossom(encrypted.uri, encrypted.contentType, encrypted.size, alt, contentWarningReason, server.baseUrl, compressed.contentType, encrypted.originalHash, account, context)
+        try {
+            return when (server.type) {
+                ServerType.NIP95 -> uploadNIP95(encrypted.uri, encrypted.contentType, compressed.contentType, encrypted.originalHash, context)
+                ServerType.NIP96 -> uploadNIP96(encrypted.uri, encrypted.contentType, encrypted.size, alt, contentWarningReason, server.baseUrl, compressed.contentType, encrypted.originalHash, account, context)
+                ServerType.Blossom -> uploadBlossom(encrypted.uri, encrypted.contentType, encrypted.size, alt, contentWarningReason, server.baseUrl, compressed.contentType, encrypted.originalHash, account, context)
+            }
+        } finally {
+            deleteTempUri(encrypted.uri, uri)
         }
     }
 }

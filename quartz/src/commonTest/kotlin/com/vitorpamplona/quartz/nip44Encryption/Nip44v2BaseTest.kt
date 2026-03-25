@@ -34,7 +34,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.fail
 
-class Nip44v2Test {
+class Nip44v2BaseTest {
     private val vectors: VectorFile =
         JsonMapper.jsonInstance.decodeFromString<VectorFile>(
             TestResourceLoader().loadString("nip44.vectors.json"),

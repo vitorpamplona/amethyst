@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.desktop.account.AccountManager
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
+import com.vitorpamplona.amethyst.desktop.service.highlights.DesktopHighlightStore
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.desktop.ui.ZapFeedback
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalIsImmersiveFullscreen
@@ -79,6 +80,8 @@ private val navItems =
     listOf(
         NavItem(DeckColumnType.HomeFeed, Icons.Default.Home, "Home"),
         NavItem(DeckColumnType.Reads, Icons.AutoMirrored.Filled.Article, "Reads"),
+        NavItem(DeckColumnType.Drafts, Icons.AutoMirrored.Filled.Article, "Drafts"),
+        NavItem(DeckColumnType.MyHighlights, Icons.AutoMirrored.Filled.Article, "Highlights"),
         NavItem(DeckColumnType.Search, Icons.Default.Search, "Search"),
         NavItem(DeckColumnType.Bookmarks, Icons.Default.Bookmark, "Bookmarks"),
         NavItem(DeckColumnType.Messages, Icons.Default.Email, "Messages"),
@@ -97,6 +100,8 @@ fun SinglePaneLayout(
     iAccount: com.vitorpamplona.amethyst.desktop.model.DesktopIAccount,
     nwcConnection: Nip47URINorm?,
     subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator,
+    highlightStore: DesktopHighlightStore,
+    draftStore: com.vitorpamplona.amethyst.desktop.service.drafts.DesktopDraftStore,
     appScope: CoroutineScope,
     onShowComposeDialog: () -> Unit,
     onShowReplyDialog: (com.vitorpamplona.quartz.nip01Core.core.Event) -> Unit,
@@ -171,12 +176,16 @@ fun SinglePaneLayout(
                     iAccount = iAccount,
                     nwcConnection = nwcConnection,
                     subscriptionsCoordinator = subscriptionsCoordinator,
+                    highlightStore = highlightStore,
+                    draftStore = draftStore,
                     appScope = appScope,
                     onShowComposeDialog = onShowComposeDialog,
                     onShowReplyDialog = onShowReplyDialog,
                     onZapFeedback = onZapFeedback,
                     onNavigateToProfile = { navState.push(DesktopScreen.UserProfile(it)) },
                     onNavigateToThread = { navState.push(DesktopScreen.Thread(it)) },
+                    onNavigateToArticle = { navState.push(DesktopScreen.Article(it)) },
+                    onNavigateToEditor = { navState.push(DesktopScreen.Editor(it)) },
                 )
                 if (currentOverlay != null) {
                     Surface(
@@ -190,11 +199,14 @@ fun SinglePaneLayout(
                             account = account,
                             nwcConnection = nwcConnection,
                             subscriptionsCoordinator = subscriptionsCoordinator,
+                            highlightStore = highlightStore,
+                            draftStore = draftStore,
                             onShowComposeDialog = onShowComposeDialog,
                             onShowReplyDialog = onShowReplyDialog,
                             onZapFeedback = onZapFeedback,
                             onNavigateToProfile = { navState.push(DesktopScreen.UserProfile(it)) },
                             onNavigateToThread = { navState.push(DesktopScreen.Thread(it)) },
+                            onNavigateToArticle = { navState.push(DesktopScreen.Article(it)) },
                             onBack = { navState.pop() },
                         )
                     }

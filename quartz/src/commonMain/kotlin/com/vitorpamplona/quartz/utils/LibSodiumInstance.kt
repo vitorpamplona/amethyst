@@ -20,7 +20,14 @@
  */
 package com.vitorpamplona.quartz.utils
 
-expect object LibSodiumInstance {
+import com.vitorpamplona.quartz.nip44Encryption.crypto.ChaCha20Core
+import com.vitorpamplona.quartz.nip44Encryption.crypto.XChaCha20Poly1305
+
+/**
+ * Pure Kotlin replacement for LazySodium/libsodium.
+ * All functions are stateless and thread-safe.
+ */
+object LibSodiumInstance {
     fun cryptoAeadXChaCha20Poly1305IetfDecrypt(
         message: ByteArray,
         nSec: ByteArray,
@@ -28,7 +35,14 @@ expect object LibSodiumInstance {
         ad: ByteArray,
         nPub: ByteArray,
         k: ByteArray,
-    ): Boolean
+    ): Boolean =
+        try {
+            val plaintext = XChaCha20Poly1305.decrypt(ciphertext, ad, nPub, k)
+            plaintext.copyInto(message)
+            true
+        } catch (_: Exception) {
+            false
+        }
 
     fun cryptoAeadXChaCha20Poly1305IetfEncrypt(
         ciphertext: ByteArray,
@@ -37,18 +51,24 @@ expect object LibSodiumInstance {
         nSec: ByteArray,
         nPub: ByteArray,
         k: ByteArray,
-    ): Boolean
+    ): Boolean =
+        try {
+            val result = XChaCha20Poly1305.encrypt(message, ad, nPub, k)
+            result.copyInto(ciphertext)
+            true
+        } catch (_: Exception) {
+            false
+        }
 
     fun cryptoStreamChaCha20IetfXor(
         message: ByteArray,
         nonce: ByteArray?,
         key: ByteArray?,
-    ): ByteArray
+    ): ByteArray = ChaCha20Core.chaCha20Xor(message, key!!, nonce!!, counter = 0)
 
-    // This function wasn't available in the bindings library. I had to move them here from C
     fun cryptoStreamXChaCha20Xor(
         messageBytes: ByteArray,
         nonce: ByteArray,
         key: ByteArray,
-    ): ByteArray
+    ): ByteArray = ChaCha20Core.xChaCha20Xor(messageBytes, nonce, key)
 }

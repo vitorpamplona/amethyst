@@ -61,6 +61,8 @@
     <string name="unauthorized_exception_description">Sygnatariusz nie autoryzował deszyfrowania wymaganego do wykonania tej operacji. Aktywuj deszyfrowanie NIP-44 w aplikacji logującej i spróbuj ponownie</string>
     <string name="signer_not_found_exception">Nie odnaleziono sygnatariusza</string>
     <string name="signer_not_found_exception_description">Czy aplikacja sygnatariusza została odinstalowana? Sprawdź, czy aplikacja sygnatariusza jest zainstalowana i czy ma to konto. Wyloguj się i zaloguj ponownie, jeśli aplikacja sygnatariusza uległa zmianie.</string>
+    <string name="signer_illegal_state_exception">Sygnatariusz działał nieprawidłowo</string>
+    <string name="signer_illegal_state_exception_description">Sygnatariusz zewnętrzny zwrócił dane, które są niezgodne z żądaniem. Być może wystąpił błąd w Amethyst lub w samym sygnatariuszu.</string>
     <string name="zaps">Zapy</string>
     <string name="view_count">Liczba wyświetleń</string>
     <string name="boost">Powtórz</string>
@@ -486,6 +488,9 @@
     <string name="zap_type_anonymous_explainer">Odbiorca i użytkownicy nie wiedzą, kto wysłał płatność</string>
     <string name="zap_type_nonzap">Bez Zapów</string>
     <string name="zap_type_nonzap_explainer">Brak śladu w Nostr, tylko w Lightning</string>
+    <string name="post_anonymously">Anonimowo</string>
+    <string name="post_anonymously_explainer">Opublikuj jako nowa, jednorazowa tożsamość. Twoje konto nie zostanie powiązane z tą odpowiedzią.</string>
+    <string name="anonymous_reply_warning">Ta odpowiedź zostanie wysłana z nowej anonimowej tożsamości</string>
     <string name="file_server">Serwer Plików</string>
     <string name="file_server_description">Wybierz serwer, aby przesłać ten plik</string>
     <string name="zap_forward_lnAddress">LnAdres lub @Użytkownik</string>

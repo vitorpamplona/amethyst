@@ -962,6 +962,12 @@ class AccountViewModel(
                 Log.w("AccountViewModel", "AutomaticallyUnauthorizedException", e)
             } catch (e: SignerExceptions.RunningOnBackgroundWithoutAutomaticPermissionException) {
                 Log.w("AccountViewModel", "TimedOutRunningOnBackgroundWithoutAutomaticPermissionExceptionException", e)
+            } catch (e: IllegalStateException) {
+                toastManager.toast(
+                    R.string.signer_not_found_exception,
+                    R.string.signer_illegal_state_exception_description,
+                    e,
+                )
             }
         }
     }

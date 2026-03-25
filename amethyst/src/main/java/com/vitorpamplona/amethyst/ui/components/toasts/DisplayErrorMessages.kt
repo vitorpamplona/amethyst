@@ -82,6 +82,12 @@ fun DisplayErrorMessages(
                 }
             }
 
+            is ThrowableToastMsg2 -> {
+                InformationDialog(obj) {
+                    toastManager.clearToasts()
+                }
+            }
+
             is MultiErrorToastMsg -> {
                 MultiUserErrorMessageDialog(obj, accountViewModel, nav)
             }

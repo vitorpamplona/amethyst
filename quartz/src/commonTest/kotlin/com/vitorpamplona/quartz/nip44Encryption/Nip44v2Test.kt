@@ -30,7 +30,7 @@ import kotlin.test.assertEquals
  * NIP-44v2 tests verifying conversation key derivation, ECDH symmetry,
  * and encrypt/decrypt round-trips on JVM Desktop.
  */
-class Nip44v2JvmTest {
+class Nip44v2Test {
     @Test
     fun conversationKeyFromSpecVector1() {
         val nip44v2 = Nip44v2()

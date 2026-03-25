@@ -577,6 +577,24 @@ object FilterBuilders {
         )
 
     /**
+     * Creates a filter for a specific long-form article by author pubkey and d-tag.
+     *
+     * @param pubkey Author public key (hex-encoded, 64 chars)
+     * @param dTag The d-tag (slug) identifier for the addressable event
+     * @return Filter for a specific long-form article
+     */
+    fun longFormByAddress(
+        pubkey: String,
+        dTag: String,
+    ): Filter =
+        Filter(
+            kinds = listOf(30023), // LongTextNoteEvent.KIND
+            authors = listOf(pubkey),
+            tags = mapOf("d" to listOf(dTag)),
+            limit = 1,
+        )
+
+    /**
      * Creates a filter for long-form content (kind 30023) from specific authors.
      *
      * @param authors List of author public keys (hex-encoded, 64 chars each)

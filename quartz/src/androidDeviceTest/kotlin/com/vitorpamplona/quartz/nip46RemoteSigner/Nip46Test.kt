@@ -26,7 +26,6 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Ignore
@@ -41,7 +40,7 @@ internal class Nip46Test {
 
     val dummyEvent =
         EventTemplate<Event>(
-            createdAt = TimeUtils.now(),
+            createdAt = 1753988264,
             kind = 1,
             tags = emptyArray(),
             content = "test",
@@ -49,12 +48,12 @@ internal class Nip46Test {
 
     val dummyEventSigned =
         TextNoteEvent(
-            id = "",
-            pubKey = "",
-            createdAt = TimeUtils.now(),
+            id = "0b6d941c46411a95edb1c93da7ad6ca26370497d8c7b7d621f5cb59f48841bad",
+            pubKey = "6dd3b72e325da7383b275eef1c66131ba4664326e162bc060527509b4e33ae43",
+            createdAt = 1753988264,
             tags = emptyArray(),
             content = "test",
-            sig = "",
+            sig = "ec39e60722a083cccbd2d82d2827e13f5499fa7cbcedac5b76011a844c077473adb629d50d01fab147835ac6c8a3d5ba9aaddd87d6723f0c3c864b9119fc4356",
         )
 
     suspend fun <T : BunkerMessage> encodeDecodeEvent(req: T): T {

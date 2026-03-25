@@ -405,24 +405,24 @@ to `onPause` methods.
 
 ### Feature Parity Table
 
-| Feature Category | Feature / Component | Android / JVM Support | iOS Support | Notes |
-| :--- | :--- | :---: | :---: | :--- |
-| **Cryptography** | Secp256k1 (Schnorr, Keys) | ✅ Full | ❌ No | Core Nostr signing/verification is missing on iOS. |
-| | LibSodium (ChaCha20, Poly1305) | ✅ Full | ❌ No | AEAD and stream ciphers are unimplemented. |
-| | AES Encryption (CBC & GCM) | ✅ Full | ❌ No | `AESCBC` and `AESGCM` are stubs on iOS. |
-| | Hashing (SHA-256, etc.) | ✅ Full | ❌ No | `DigestInstance` is unimplemented. |
-| | MAC (HmacSHA256, etc.) | ✅ Full | ❌ No | `MacInstance` is unimplemented. |
-| **Data & Serialization** | JSON Mapping (Optimized) | ✅ Full | ❌ No | `OptimizedJsonMapper` is a stub; cannot parse/serialize Events. |
-| | GZip Compression | ✅ Full | ❌ No | `GZip` implementation is missing. |
-| | BitSet | ✅ Full | ❌ No | `BitSet` utility is unimplemented. |
-| | LargeCache | ✅ Full | ❌ No | `LargeCache` methods (get, keys, size, etc.) are stubs. |
-| **NIP Support** | NIP-96 (File Storage Info) | ✅ Full | ❌ No | `ServerInfoParser` is unimplemented. |
-| | NIP-46 (Remote Signer) | ✅ Full | ⚠️ Partial | Some methods in `NostrSignerRemote` are unimplemented in `commonMain`. |
-| | NIP-03 (OTS / Timestamps) | ✅ Full | ❌ No | `BitcoinExplorer` and `RemoteCalendar` have stubs in `commonMain`. |
-| **Utilities** | URL Encoding / Decoding | ✅ Full | ❌ No | `UrlEncoder` and `URLs.ios.kt` are unimplemented. |
-| | Unicode Normalization | ✅ Full | ❌ No | `UnicodeNormalizer` is a stub. |
-| | Platform Logging | ✅ Full | ✅ Full | iOS uses `NSLog`, Android uses standard Log. |
-| | Current Time | ✅ Full | ✅ Full | Implemented using `NSDate` on iOS. |
+| Feature Category         | Feature / Component            | Android / JVM Support | iOS Support | Notes                                                                  |
+|:-------------------------|:-------------------------------|:---------------------:|:-----------:|:-----------------------------------------------------------------------|
+| **Cryptography**         | Secp256k1 (Schnorr, Keys)      |        ✅ Full         |   ✅ Full    |                                                                        |
+|                          | LibSodium (ChaCha20, Poly1305) |        ✅ Full         |   ✅ Full    |                                                                        |
+|                          | AES Encryption (CBC & GCM)     |        ✅ Full         |   ✅ Full    |                                                                        |
+|                          | Hashing (SHA-256, etc.)        |        ✅ Full         |   ✅ Full    |                                                                        |
+|                          | MAC (HmacSHA256, etc.)         |        ✅ Full         |   ✅ Full    |                                                                        |
+| **Data & Serialization** | JSON Mapping (Optimized)       |        ✅ Full         |   ✅ Full    | A fully custom implementation exists in `commonMain`.                  |
+|                          | GZip Compression               |        ✅ Full         |   ✅ Full    |                                                                        |
+|                          | BitSet                         |        ✅ Full         |   ✅ Full    |                                                                        |
+|                          | LargeCache                     |        ✅ Full         |   ✅ Full    |                                                                        |
+| **NIP Support**          | NIP-96 (File Storage Info)     |        ✅ Full         |   ✅ Full    |                                                                        |
+|                          | NIP-46 (Remote Signer)         |        ✅ Full         | ⚠️ Partial  | Some methods in `NostrSignerRemote` are unimplemented in `commonMain`. |
+|                          | NIP-03 (OTS / Timestamps)      |        ✅ Full         |    ❌ No     | `BitcoinExplorer` and `RemoteCalendar` have stubs in `commonMain`.     |
+| **Utilities**            | URL Encoding / Decoding        |        ✅ Full         |   ✅ Full    |                                                                        |
+|                          | Unicode Normalization          |        ✅ Full         |   ✅ Full    |                                                                        |
+|                          | Platform Logging               |        ✅ Full         |   ✅ Full    | iOS uses `NSLog`, Android uses standard Log.                           |
+|                          | Current Time                   |        ✅ Full         |   ✅ Full    | Implemented using `NSDate` on iOS.                                     |
 
 
 ## Contributing
