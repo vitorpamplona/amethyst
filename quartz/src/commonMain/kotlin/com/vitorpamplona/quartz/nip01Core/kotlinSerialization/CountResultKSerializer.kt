@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.kotlinSerialization
 
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CountResult
+import com.vitorpamplona.quartz.nip45Count.HyperLogLog
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.descriptors.buildClassSerialDescriptor
@@ -57,6 +58,7 @@ object CountResultKSerializer : KSerializer<CountResult> {
             put("count", value.count)
             // Matches Jackson's CountResultSerializer which writes "pubkey" for approximate
             put("pubkey", value.approximate)
+            value.hll?.let { put("hll", HyperLogLog.encode(it)) }
         }
 
     override fun deserialize(decoder: Decoder): CountResult {
@@ -68,5 +70,6 @@ object CountResultKSerializer : KSerializer<CountResult> {
         CountResult(
             count = jsonObject["count"]!!.jsonPrimitive.int,
             approximate = jsonObject["approximate"]?.jsonPrimitive?.boolean ?: false,
+            hll = jsonObject["hll"]?.jsonPrimitive?.content?.let { HyperLogLog.decode(it) },
         )
 }
