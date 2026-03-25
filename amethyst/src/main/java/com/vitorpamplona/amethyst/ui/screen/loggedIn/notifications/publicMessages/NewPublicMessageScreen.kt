@@ -415,8 +415,7 @@ fun SendDirectMessageTo(
             )
 
             ThinPaddingTextField(
-                value = postViewModel.toUsers,
-                onValueChange = postViewModel::updateToUsers,
+                state = postViewModel.toUsersState,
                 modifier =
                     Modifier
                         .weight(1f)
@@ -432,7 +431,7 @@ fun SendDirectMessageTo(
                         color = MaterialTheme.colorScheme.placeholderText,
                     )
                 },
-                visualTransformation =
+                outputTransformation =
                     UrlUserTagTransformation(
                         MaterialTheme.colorScheme.primary,
                     ),
