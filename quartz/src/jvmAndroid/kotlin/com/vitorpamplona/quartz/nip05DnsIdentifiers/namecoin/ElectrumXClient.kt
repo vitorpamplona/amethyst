@@ -150,6 +150,141 @@ class ElectrumXClient(
         throw NamecoinLookupException.ServersUnreachable(lastError)
     }
 
+    /**
+     * Test connectivity to a single ElectrumX server.
+     *
+     * Connects, negotiates protocol version, and optionally resolves a test
+     * name. Returns detailed results including response time, TLS version,
+     * and human-readable error messages.
+     *
+     * @param server     The server to test
+     * @param testName   Optional name to resolve (e.g. "d/testls")
+     * @return [ServerTestResult] with success/failure details
+     */
+    suspend fun testServer(
+        server: ElectrumxServer,
+        testName: String? = "d/testls",
+    ): ServerTestResult =
+        withContext(Dispatchers.IO) {
+            val startTime = System.currentTimeMillis()
+            try {
+                val socket = createSocket(server)
+                socket.soTimeout = readTimeoutMs.toInt()
+
+                val tlsVersion =
+                    if (socket is javax.net.ssl.SSLSocket) {
+                        socket.session.protocol
+                    } else {
+                        null
+                    }
+
+                val writer = PrintWriter(socket.getOutputStream(), true)
+                val reader = BufferedReader(InputStreamReader(socket.getInputStream()))
+
+                try {
+                    // Negotiate protocol version
+                    val versionReq =
+                        buildRpcRequest(
+                            "server.version",
+                            listOf("AmethystNMC/0.1", PROTOCOL_VERSION),
+                        )
+                    writer.println(versionReq)
+                    val versionResponse =
+                        reader.readLine()
+                            ?: return@withContext ServerTestResult(
+                                server = server,
+                                success = false,
+                                responseTimeMs = System.currentTimeMillis() - startTime,
+                                error = "Server returned empty response",
+                                tlsVersion = tlsVersion,
+                            )
+
+                    // If a test name is provided, try to resolve it
+                    if (testName != null) {
+                        val nameScript =
+                            buildNameIndexScript(testName.toByteArray(Charsets.US_ASCII))
+                        val scriptHash = electrumScriptHash(nameScript)
+                        val historyReq =
+                            buildRpcRequest(
+                                "blockchain.scripthash.get_history",
+                                listOf(scriptHash),
+                            )
+                        writer.println(historyReq)
+                        reader.readLine() // consume response
+                    }
+
+                    val elapsed = System.currentTimeMillis() - startTime
+                    ServerTestResult(
+                        server = server,
+                        success = true,
+                        responseTimeMs = elapsed,
+                        tlsVersion = tlsVersion,
+                    )
+                } finally {
+                    runCatching { writer.close() }
+                    runCatching { reader.close() }
+                    runCatching { socket.close() }
+                }
+            } catch (e: java.net.ConnectException) {
+                ServerTestResult(
+                    server = server,
+                    success = false,
+                    responseTimeMs = System.currentTimeMillis() - startTime,
+                    error = "Connection refused",
+                )
+            } catch (e: java.net.SocketTimeoutException) {
+                ServerTestResult(
+                    server = server,
+                    success = false,
+                    responseTimeMs = System.currentTimeMillis() - startTime,
+                    error = "Connection timed out after ${connectTimeoutMs / 1000}s",
+                )
+            } catch (e: java.net.UnknownHostException) {
+                ServerTestResult(
+                    server = server,
+                    success = false,
+                    responseTimeMs = System.currentTimeMillis() - startTime,
+                    error = "Server unreachable (DNS resolution failed)",
+                )
+            } catch (e: javax.net.ssl.SSLHandshakeException) {
+                val detail =
+                    if (e.message?.contains("self-signed", ignoreCase = true) == true ||
+                        e.message?.contains("anchor", ignoreCase = true) == true
+                    ) {
+                        "TLS handshake failed (self-signed certificate rejected)"
+                    } else {
+                        "TLS handshake failed: ${e.message?.take(100) ?: "unknown error"}"
+                    }
+                ServerTestResult(
+                    server = server,
+                    success = false,
+                    responseTimeMs = System.currentTimeMillis() - startTime,
+                    error = detail,
+                )
+            } catch (e: javax.net.ssl.SSLException) {
+                ServerTestResult(
+                    server = server,
+                    success = false,
+                    responseTimeMs = System.currentTimeMillis() - startTime,
+                    error = "TLS error: ${e.message?.take(100) ?: "unknown"}",
+                )
+            } catch (e: java.io.IOException) {
+                ServerTestResult(
+                    server = server,
+                    success = false,
+                    responseTimeMs = System.currentTimeMillis() - startTime,
+                    error = "I/O error: ${e.message?.take(100) ?: "unknown"}",
+                )
+            } catch (e: Exception) {
+                ServerTestResult(
+                    server = server,
+                    success = false,
+                    responseTimeMs = System.currentTimeMillis() - startTime,
+                    error = e.message?.take(150) ?: "Unknown error",
+                )
+            }
+        }
+
     // ── internals ──────────────────────────────────────────────────────
 
     private fun connectAndQuery(

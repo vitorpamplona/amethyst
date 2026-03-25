@@ -72,6 +72,17 @@ sealed class NamecoinLookupException(
     ) : NamecoinLookupException("All ElectrumX servers unreachable", lastError)
 }
 
+/**
+ * Result of testing connectivity to a single ElectrumX server.
+ */
+data class ServerTestResult(
+    val server: ElectrumxServer,
+    val success: Boolean,
+    val responseTimeMs: Long,
+    val error: String? = null,
+    val tlsVersion: String? = null,
+)
+
 /** Well-known public Namecoin ElectrumX servers (clearnet). */
 val DEFAULT_ELECTRUMX_SERVERS =
     listOf(

@@ -161,12 +161,14 @@ class AppModules(
     // Custom fetcher that considers tor settings and avoids forwarding.
     val nip05Fetcher = OkHttpNip05Fetcher(roleBasedHttpClientBuilder::okHttpClientForNip05)
 
+    val electrumXClient =
+        ElectrumXClient(
+            socketFactory = { roleBasedHttpClientBuilder.socketFactoryForNip05() },
+        )
+
     val namecoinResolver =
         NamecoinNameResolver(
-            electrumxClient =
-                ElectrumXClient(
-                    socketFactory = { roleBasedHttpClientBuilder.socketFactoryForNip05() },
-                ),
+            electrumxClient = electrumXClient,
             serverListProvider = {
                 // User-configured custom servers take priority
                 namecoinPrefs.customServersOrNull

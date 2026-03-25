@@ -1842,6 +1842,17 @@
     <string name="select_all">Select All</string>
     <string name="uptime">%1$d%% uptime</string>
     <string name="namecoin_settings">Namecoin Settings</string>
+    <string name="namecoin_test_connection">Test Connection</string>
+    <string name="namecoin_testing">Testing servers…</string>
+    <string name="namecoin_test_success">Connected</string>
+    <string name="namecoin_test_failed">Failed</string>
+    <string name="namecoin_test_results">Test Results</string>
+    <string name="namecoin_diagnostics">Diagnostics</string>
+    <string name="namecoin_last_test">Last test</string>
+    <string name="namecoin_device_info">Device Info</string>
+    <string name="namecoin_tls_info">TLS Info</string>
+    <string name="namecoin_no_test_yet">No test run yet</string>
+    <string name="namecoin_response_time">%dms</string>
     <string name="event_sync_title">Relay Sync</string>
     <string name="event_sync_section">Relay Sync</string>
     <string name="event_sync_section_explainer">Re-publish your events across all known relays to keep your outbox, inbox, and DM relays up to date. Requires Wi-Fi — this may use a lot of data.</string>
