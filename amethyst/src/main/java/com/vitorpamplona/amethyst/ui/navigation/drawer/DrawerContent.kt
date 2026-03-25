@@ -51,6 +51,7 @@ import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material.icons.outlined.CollectionsBookmark
 import androidx.compose.material.icons.outlined.Drafts
 import androidx.compose.material.icons.outlined.GroupAdd
+import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Sync
 import androidx.compose.material3.HorizontalDivider
@@ -456,6 +457,14 @@ fun ListContent(
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
             route = Route.BookmarkGroups,
+        )
+
+        NavigationRow(
+            title = R.string.web_bookmarks,
+            icon = Icons.Outlined.Language,
+            tint = MaterialTheme.colorScheme.onBackground,
+            nav = nav,
+            route = Route.WebBookmarks,
         )
 
         NavigationRow(

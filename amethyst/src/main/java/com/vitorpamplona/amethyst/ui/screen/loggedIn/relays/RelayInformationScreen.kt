@@ -269,6 +269,7 @@ import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
+import com.vitorpamplona.quartz.nipB0WebBookmarks.WebBookmarkEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -658,6 +659,7 @@ private fun kindDisplayName(kind: Int): Int =
         VideoShortEvent.KIND -> R.string.kind_shorts
         VoiceEvent.KIND -> R.string.kind_voice_msg
         VoiceReplyEvent.KIND -> R.string.kind_voice_reply
+        WebBookmarkEvent.KIND -> R.string.kind_web_bookmark
         WikiNoteEvent.KIND -> R.string.kind_wiki
         else -> -1
     }
