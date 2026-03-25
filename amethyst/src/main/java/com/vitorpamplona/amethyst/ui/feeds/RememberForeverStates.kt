@@ -56,6 +56,8 @@ object ScrollStateKeys {
     const val DISCOVER_CHATS = "DiscoverChatsFeed"
 
     const val SEARCH_SCREEN = "SearchFeed"
+
+    const val WEB_BOOKMARKS = "WebBookmarksFeed"
 }
 
 object PagerStateKeys {

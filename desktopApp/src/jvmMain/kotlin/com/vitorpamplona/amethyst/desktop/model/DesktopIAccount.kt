@@ -42,6 +42,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.nip57Zaps.IPrivateZapsDecryptionCache
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.NostrSignerWithClientTag
 import com.vitorpamplona.quartz.utils.DualCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -62,7 +63,7 @@ class DesktopIAccount(
     val dmSendTracker: DmSendTracker,
     private val scope: CoroutineScope,
 ) : IAccount {
-    override val signer: NostrSigner = accountState.signer
+    override val signer: NostrSigner = NostrSignerWithClientTag(accountState.signer, CLIENT_TAG_NAME)
 
     override val pubKey: String = accountState.pubKeyHex
 
@@ -220,5 +221,9 @@ class DesktopIAccount(
             note.loadEvent(event, author, emptyList())
         }
         chatroomList.addMessage(roomKey, note)
+    }
+
+    companion object {
+        const val CLIENT_TAG_NAME = "Amethyst"
     }
 }

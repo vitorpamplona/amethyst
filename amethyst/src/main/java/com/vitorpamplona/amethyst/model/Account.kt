@@ -213,6 +213,7 @@ import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
+import com.vitorpamplona.quartz.nipB0WebBookmarks.WebBookmarkEvent
 import com.vitorpamplona.quartz.utils.DualCase
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.containsAny
@@ -1004,6 +1005,31 @@ class Account(
         if (event == null) return
         cache.justConsumeMyOwnEvent(event)
         client.send(event, computeRelayListToBroadcast(event))
+    }
+
+    suspend fun sendWebBookmark(
+        url: String,
+        title: String?,
+        description: String,
+        hashtags: List<String> = emptyList(),
+    ) {
+        if (!isWriteable()) return
+
+        val template = WebBookmarkEvent.build(url, title, description, tags = hashtags)
+        val signedEvent = signer.sign(template)
+
+        cache.justConsumeMyOwnEvent(signedEvent)
+        client.send(signedEvent, computeRelayListToBroadcast(signedEvent))
+    }
+
+    suspend fun deleteWebBookmark(event: WebBookmarkEvent) {
+        if (!isWriteable()) return
+
+        val template = DeletionEvent.build(listOf(event))
+        val signedEvent = signer.sign(template)
+
+        cache.justConsumeMyOwnEvent(signedEvent)
+        client.send(signedEvent, computeRelayListToBroadcast(signedEvent))
     }
 
     fun sendMyPublicAndPrivateOutbox(event: Event?) {

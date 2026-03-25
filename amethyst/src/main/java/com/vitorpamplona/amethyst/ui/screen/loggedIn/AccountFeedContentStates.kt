@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NotificationS
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.OpenPollsState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.dal.NotificationFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.dal.VideoFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.webBookmarks.dal.WebBookmarkFeedFilter
 import kotlinx.coroutines.CoroutineScope
 
 class AccountFeedContentStates(
@@ -76,6 +77,8 @@ class AccountFeedContentStates(
 
     val drafts = FeedContentState(DraftEventsFeedFilter(account), scope, LocalCache)
 
+    val webBookmarks = FeedContentState(WebBookmarkFeedFilter(account), scope, LocalCache)
+
     suspend fun init() {
         notificationSummary.initializeSuspend()
     }
@@ -104,6 +107,8 @@ class AccountFeedContentStates(
         notificationSummary.invalidateInsertData(newNotes)
 
         drafts.updateFeedWith(newNotes)
+
+        webBookmarks.updateFeedWith(newNotes)
     }
 
     fun deleteNotes(newNotes: Set<Note>) {
@@ -130,6 +135,8 @@ class AccountFeedContentStates(
         notificationSummary.invalidateInsertData(newNotes)
 
         drafts.deleteFromFeed(newNotes)
+
+        webBookmarks.deleteFromFeed(newNotes)
     }
 
     fun destroy() {

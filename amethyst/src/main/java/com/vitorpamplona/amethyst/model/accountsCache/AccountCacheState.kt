@@ -33,6 +33,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip03Timestamp.OtsResolverBuilder
 import com.vitorpamplona.quartz.nip55AndroidSigner.client.NostrSignerExternal
+import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.NostrSignerWithClientTag
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -91,9 +92,11 @@ class AccountCacheState(
         val cached = accounts.value[signer.pubKey]
         if (cached != null) return cached
 
+        val signerWithClientTag = NostrSignerWithClientTag(signer, CLIENT_TAG_NAME)
+
         return Account(
             settings = accountSettings,
-            signer = signer,
+            signer = signerWithClientTag,
             geolocationFlow = geolocationFlow,
             nwcFilterAssembler = nwcFilterAssembler,
             otsResolverBuilder = otsResolverBuilder,
@@ -121,5 +124,9 @@ class AccountCacheState(
             }
             emptyMap()
         }
+    }
+
+    companion object {
+        const val CLIENT_TAG_NAME = "Amethyst"
     }
 }

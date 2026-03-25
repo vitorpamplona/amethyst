@@ -156,6 +156,7 @@ import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
+import com.vitorpamplona.quartz.nipB0WebBookmarks.WebBookmarkEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
@@ -321,6 +322,7 @@ class EventFactory {
                 VideoShortEvent.KIND -> VideoShortEvent(id, pubKey, createdAt, tags, content, sig)
                 VoiceEvent.KIND -> VoiceEvent(id, pubKey, createdAt, tags, content, sig)
                 VoiceReplyEvent.KIND -> VoiceReplyEvent(id, pubKey, createdAt, tags, content, sig)
+                WebBookmarkEvent.KIND -> WebBookmarkEvent(id, pubKey, createdAt, tags, content, sig)
                 WikiNoteEvent.KIND -> WikiNoteEvent(id, pubKey, createdAt, tags, content, sig)
                 else -> factories[kind]?.build(id, pubKey, createdAt, tags, content, sig) ?: Event(id, pubKey, createdAt, kind, tags, content, sig)
             } as T

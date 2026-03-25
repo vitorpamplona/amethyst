@@ -206,6 +206,7 @@ import com.vitorpamplona.quartz.nip96FileStorage.config.FileServersEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
+import com.vitorpamplona.quartz.nipB0WebBookmarks.WebBookmarkEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
 import com.vitorpamplona.quartz.utils.DualCase
@@ -1429,6 +1430,12 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     private fun consume(
         event: CalendarEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
+
+    fun consume(
+        event: WebBookmarkEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
@@ -3209,6 +3216,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is VideoShortEvent -> consume(event, relay, wasVerified)
                 is VoiceEvent -> consume(event, relay, wasVerified)
                 is VoiceReplyEvent -> consume(event, relay, wasVerified)
+                is WebBookmarkEvent -> consume(event, relay, wasVerified)
                 is WikiNoteEvent -> consume(event, relay, wasVerified)
                 is PaymentTargetsEvent -> consume(event, relay, wasVerified)
                 else -> Log.w("Event Not Supported", "From ${relay?.url}: ${event.toJson()}").let { false }
