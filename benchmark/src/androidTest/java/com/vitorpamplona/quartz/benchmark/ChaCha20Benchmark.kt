@@ -67,7 +67,7 @@ class ChaCha20Benchmark {
             chaCha.decrypt(padded, messageKeys.chachaNonce, messageKeys.chachaKey)
         }
     }
-    
+
     @Test
     fun encryptNative() {
         benchmarkRule.measureRepeated {
