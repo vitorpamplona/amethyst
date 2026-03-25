@@ -20,6 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.newUser
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -37,6 +42,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -67,6 +73,7 @@ import com.vitorpamplona.amethyst.service.relayClient.searchCommand.UserSearchDa
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
+import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.NamecoinResolutionState
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserLine
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -99,6 +106,10 @@ class ImportFollowListSelectUserViewModel(
     val results =
         userSuggestions.results
             .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    val namecoinState =
+        userSuggestions.namecoinState
+            .stateIn(viewModelScope, SharingStarted.Eagerly, NamecoinResolutionState.Idle)
 
     class Factory(
         val account: Account,
@@ -166,6 +177,10 @@ private fun InputSelectUserBody(
             supportingText = { Text(stringRes(R.string.supports_npub_nip_05_hex_and_namecoin_bit_d_id)) },
         )
 
+        Spacer(Modifier.height(4.dp))
+
+        NamecoinStatusBanner(viewModel)
+
         Spacer(Modifier.height(8.dp))
 
         CustomShowUserSuggestionList(
@@ -181,6 +196,88 @@ private fun InputSelectUserBody(
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             TextButton(onClick = nav::popBack) { Text(stringRes(R.string.skip_for_now)) }
+        }
+    }
+}
+
+@Composable
+private fun NamecoinStatusBanner(viewModel: ImportFollowListSelectUserViewModel) {
+    val ncState by viewModel.namecoinState.collectAsStateWithLifecycle()
+
+    AnimatedVisibility(
+        visible = ncState !is NamecoinResolutionState.Idle,
+        enter = fadeIn() + expandVertically(),
+        exit = fadeOut() + shrinkVertically(),
+    ) {
+        when (val state = ncState) {
+            is NamecoinResolutionState.Resolving -> {
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 4.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "Resolving via Namecoin blockchain\u2026",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            }
+
+            is NamecoinResolutionState.Resolved -> {
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 4.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        "\u26D3\uFE0F",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        "Resolved via Namecoin: ${state.namecoinName}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Medium,
+                    )
+                }
+            }
+
+            is NamecoinResolutionState.Error -> {
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 4.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        "\u26A0\uFE0F",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        state.message,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            }
+
+            is NamecoinResolutionState.Idle -> {
+                // nothing
+            }
         }
     }
 }
@@ -244,6 +341,7 @@ fun CustomWatchResponses(
     modifier: Modifier = Modifier,
 ) {
     val suggestions by viewModel.results.collectAsStateWithLifecycle()
+    val ncState by viewModel.namecoinState.collectAsStateWithLifecycle()
 
     if (suggestions.isNotEmpty()) {
         LazyColumn(
@@ -252,7 +350,28 @@ fun CustomWatchResponses(
             state = viewModel.listState,
         ) {
             itemsIndexed(suggestions, key = { _, item -> item.pubkeyHex }) { _, item ->
-                UserLine(item, accountViewModel) { onSelect(item) }
+                val isNamecoinResult =
+                    ncState is NamecoinResolutionState.Resolved &&
+                        (ncState as NamecoinResolutionState.Resolved).user == item
+
+                if (isNamecoinResult) {
+                    Column {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                "\u26D3\uFE0F Namecoin result",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Medium,
+                            )
+                        }
+                        UserLine(item, accountViewModel) { onSelect(item) }
+                    }
+                } else {
+                    UserLine(item, accountViewModel) { onSelect(item) }
+                }
                 HorizontalDivider(
                     thickness = DividerThickness,
                 )
