@@ -25,8 +25,11 @@ import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.OutputTransformation
+import androidx.compose.foundation.text.input.TextFieldDecorator
+import androidx.compose.foundation.text.input.TextFieldLineLimits
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.selection.LocalTextSelectionColors
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LocalTextStyle
@@ -42,19 +45,13 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-
-// COPIED FROM TEXT FIELD
-// The only change is the contentPadding below
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ThinPaddingTextField(
-    value: TextFieldValue,
-    onValueChange: (TextFieldValue) -> Unit,
+    state: TextFieldState,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     readOnly: Boolean = false,
@@ -67,16 +64,12 @@ fun ThinPaddingTextField(
     suffix: @Composable (() -> Unit)? = null,
     supportingText: @Composable (() -> Unit)? = null,
     isError: Boolean = false,
-    visualTransformation: VisualTransformation = VisualTransformation.None,
+    outputTransformation: OutputTransformation? = null,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
-    keyboardActions: KeyboardActions = KeyboardActions.Default,
-    singleLine: Boolean = false,
-    maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
-    minLines: Int = 1,
+    lineLimits: TextFieldLineLimits = TextFieldLineLimits.Default,
     interactionSource: MutableInteractionSource? = null,
     shape: Shape = TextFieldDefaults.shape,
     colors: TextFieldColors = TextFieldDefaults.colors(),
-    // new fields
     contentPadding: PaddingValues =
         if (label == null) {
             TextFieldDefaults.contentPaddingWithoutLabel(
@@ -97,12 +90,10 @@ fun ThinPaddingTextField(
     @Suppress("NAME_SHADOWING")
     val interactionSource = interactionSource ?: remember { MutableInteractionSource() }
 
-    // If color is not provided via the text style, use content color as a default
     val textColor =
         textStyle.color.takeOrElse {
             val focused by interactionSource.collectIsFocusedAsState()
 
-            // this has changed, but only because of private access on the original
             when {
                 !enabled -> MaterialTheme.colorScheme.placeholderText
                 isError -> MaterialTheme.colorScheme.onSurface
@@ -114,32 +105,26 @@ fun ThinPaddingTextField(
 
     CompositionLocalProvider(LocalTextSelectionColors provides colors.textSelectionColors) {
         BasicTextField(
-            value = value,
+            state = state,
             modifier =
                 modifier
                     .defaultMinSize(
                         minWidth = TextFieldDefaults.MinWidth,
-                        // this has changed
                         minHeight = 36.dp,
                     ),
-            onValueChange = onValueChange,
             enabled = enabled,
             readOnly = readOnly,
             textStyle = mergedTextStyle,
-            // this has changed
             cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-            visualTransformation = visualTransformation,
+            outputTransformation = outputTransformation,
             keyboardOptions = keyboardOptions,
-            keyboardActions = keyboardActions,
             interactionSource = interactionSource,
-            singleLine = singleLine,
-            maxLines = maxLines,
-            minLines = minLines,
-            decorationBox =
-                @Composable { innerTextField ->
+            lineLimits = lineLimits,
+            decorator =
+                TextFieldDecorator { innerTextField ->
                     TextFieldDefaults.DecorationBox(
-                        value = value.text,
-                        visualTransformation = visualTransformation,
+                        value = state.text.toString(),
+                        visualTransformation = androidx.compose.ui.text.input.VisualTransformation.None,
                         innerTextField = innerTextField,
                         placeholder = placeholder,
                         label = label,
@@ -149,12 +134,11 @@ fun ThinPaddingTextField(
                         suffix = suffix,
                         supportingText = supportingText,
                         shape = shape,
-                        singleLine = singleLine,
+                        singleLine = lineLimits == TextFieldLineLimits.SingleLine,
                         enabled = enabled,
                         isError = isError,
                         interactionSource = interactionSource,
                         colors = colors,
-                        // this has changed
                         contentPadding = contentPadding,
                     )
                 },
