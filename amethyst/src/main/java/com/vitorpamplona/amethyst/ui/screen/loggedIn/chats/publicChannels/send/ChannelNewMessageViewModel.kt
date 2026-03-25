@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.send
 
 import android.content.Context
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
@@ -137,6 +138,7 @@ open class ChannelNewMessageViewModel :
     val iMetaAttachments = IMetaAttachments()
     var nip95attachments by mutableStateOf<List<Pair<FileStorageEvent, FileStorageHeaderEvent>>>(emptyList())
 
+    val messageState = TextFieldState()
     var message by mutableStateOf(TextFieldValue(""))
     var urlPreview by mutableStateOf<String?>(null)
     val isUploadingImage: Boolean get() = uploadState?.isUploadingImage ?: false
