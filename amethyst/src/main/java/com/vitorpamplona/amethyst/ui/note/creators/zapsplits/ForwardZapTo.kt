@@ -25,11 +25,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
+import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -124,9 +125,8 @@ fun ForwardZapTo(
             }
         }
 
-        OutlinedTextField(
-            value = postViewModel.forwardZapToEditting.value,
-            onValueChange = { postViewModel.updateZapForwardTo(it) },
+        ThinPaddingTextField(
+            state = postViewModel.forwardZapToEdittingState,
             label = { Text(text = stringRes(R.string.zap_split_search_and_add_user)) },
             modifier = Modifier.fillMaxWidth(),
             placeholder = {
@@ -135,8 +135,8 @@ fun ForwardZapTo(
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
             },
-            singleLine = true,
-            visualTransformation =
+            lineLimits = TextFieldLineLimits.SingleLine,
+            outputTransformation =
                 UrlUserTagTransformation(
                     MaterialTheme.colorScheme.primary,
                 ),
