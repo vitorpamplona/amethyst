@@ -229,6 +229,8 @@ private fun DisplaySearchResults(
     val hashTags by searchBarViewModel.hashtagResults.collectAsStateWithLifecycle()
     val relays by searchBarViewModel.relayResults.collectAsStateWithLifecycle()
     val users by searchBarViewModel.searchResultsUsers.collectAsStateWithLifecycle()
+    val currentSearch by searchBarViewModel.searchTerm.collectAsStateWithLifecycle()
+    val isNamecoinSearch = currentSearch.endsWith(".bit", ignoreCase = true)
     val publicChatChannels by searchBarViewModel.searchResultsPublicChatChannels.collectAsStateWithLifecycle()
     val ephemeralChannels by searchBarViewModel.searchResultsEphemeralChannels.collectAsStateWithLifecycle()
     val liveActivityChannels by searchBarViewModel.searchResultsLiveActivityChannels.collectAsStateWithLifecycle()
@@ -255,6 +257,16 @@ private fun DisplaySearchResults(
             users,
             key = { _, item -> "u" + item.pubkeyHex },
         ) { _, item ->
+            if (isNamecoinSearch) {
+                Text(
+                    "\u26D3\uFE0F Namecoin",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp),
+                )
+            }
+
             UserCompose(item, accountViewModel = accountViewModel, nav = nav)
 
             HorizontalDivider(
