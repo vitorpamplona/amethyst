@@ -448,6 +448,8 @@
     <string name="poll_zap_value_max">打闪最高金额</string>
     <string name="poll_consensus_threshold">共识</string>
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
+    <string name="poll_single_choice">单选</string>
+    <string name="poll_multiple_choice">多选</string>
     <string name="poll_closing_date_time">投票结束日期 &amp; 时间</string>
     <string name="poll_closing_in">投票结束于 %1$s</string>
     <string name="poll_closing_time">后关闭</string>
@@ -487,6 +489,9 @@
     <string name="zap_type_anonymous_explainer">接收方和公众不知道谁发送了付款</string>
     <string name="zap_type_nonzap">非打闪</string>
     <string name="zap_type_nonzap_explainer">Nostr 上没有痕迹，仅在闪电上</string>
+    <string name="post_anonymously">匿名</string>
+    <string name="post_anonymously_explainer">使用新的一次性身份发布。您的帐户将不会被链接到这个回复。</string>
+    <string name="anonymous_reply_warning">此回复将从新的匿名身份发布</string>
     <string name="file_server">文件服务器</string>
     <string name="file_server_description">选择上传文件时使用的服务器</string>
     <string name="zap_forward_lnAddress">闪电地址或 @User</string>
@@ -786,7 +791,7 @@
     <string name="preferences">偏好设置</string>
     <string name="user_preferences">用户首选项</string>
     <string name="translations">翻译</string>
-    <string name="reactions">反应</string>
+    <string name="reactions">回应</string>
     <string name="settings">设置</string>
     <string name="account_settings">账户设置</string>
     <string name="app_settings">应用程序设置</string>
@@ -1119,8 +1124,8 @@
     <string name="like_description">点赞</string>
     <string name="zap_description">打闪</string>
     <string name="change_reaction">修改快速回应</string>
-    <string name="reactions_settings">反应设置</string>
-    <string name="reactions_settings_description">配置显示的反应按钮、它们的顺序以及是否显示计数器。</string>
+    <string name="reactions_settings">回应设置</string>
+    <string name="reactions_settings_description">配置显示的回应按钮、按钮顺序及是否显示回应计数。</string>
     <string name="reactions_settings_enabled">已启用</string>
     <string name="reactions_settings_show_counter">显示计数</string>
     <string name="reactions_settings_reorder">调整顺序</string>
@@ -1129,7 +1134,7 @@
     <string name="reactions_settings_boost">Boost</string>
     <string name="reactions_settings_boost_description">转发或引用此笔记</string>
     <string name="reactions_settings_like">点赞</string>
-    <string name="reactions_settings_like_description">用表情符号对此笔记进行反应</string>
+    <string name="reactions_settings_like_description">使用表情符号回应笔记</string>
     <string name="reactions_settings_zap">打闪</string>
     <string name="reactions_settings_zap_description">给作者发送 Lightning 网络付款</string>
     <string name="reactions_settings_share">分享</string>
@@ -1541,7 +1546,7 @@
     <string name="kind_private_relays">私密中继</string>
     <string name="kind_proxy_relays">代理中继</string>
     <string name="kind_public_message">公开消息</string>
-    <string name="kind_reactions">反应</string>
+    <string name="kind_reactions">回应</string>
     <string name="kind_contact_card">名片</string>
     <string name="kind_relay_auth">中继认证</string>
     <string name="kind_relay_discovery">中继发现</string>

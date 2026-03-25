@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CountResult
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip45Count.HyperLogLog
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.withTimeoutOrNull
@@ -136,4 +137,51 @@ suspend fun INostrClient.queryCountSuspend(
     resultChannel.close()
 
     return results
+}
+
+/**
+ * Queries multiple relays for a COUNT and merges the HyperLogLog
+ * registers from all responses to produce a single merged estimate.
+ *
+ * If any relay returns HLL data, the results are merged by taking
+ * the maximum register value across all relays, and the cardinality
+ * is re-estimated from the merged registers.
+ *
+ * If no relay returns HLL data, falls back to the maximum count
+ * reported by any relay.
+ *
+ * @param relays List of relays to query.
+ * @param filter The filter to count against.
+ * @param timeoutMs How long to wait for all responses (default 15 s).
+ * @return A merged [CountResult], or `null` if no relay responded.
+ */
+suspend fun INostrClient.queryCountMergedHll(
+    relays: List<NormalizedRelayUrl>,
+    filter: Filter,
+    timeoutMs: Long = 15_000,
+): CountResult? {
+    if (relays.isEmpty()) return null
+
+    val results =
+        queryCountSuspend(
+            filters = relays.associateWith { listOf(filter) },
+            timeoutMs = timeoutMs,
+        )
+
+    if (results.isEmpty()) return null
+
+    val hlls = results.values.mapNotNull { it.hll }
+
+    return if (hlls.isNotEmpty()) {
+        val merged = HyperLogLog.merge(hlls)
+        val estimate = HyperLogLog.estimate(merged)
+        CountResult(
+            count = estimate.toInt(),
+            approximate = true,
+            hll = merged,
+        )
+    } else {
+        // No HLL data - use the maximum count from any relay
+        results.values.maxByOrNull { it.count }
+    }
 }
