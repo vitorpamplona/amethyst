@@ -34,4 +34,5 @@ class CountMessage(
 class CountResult(
     val count: Int,
     val approximate: Boolean = false,
+    val hll: ByteArray? = null,
 )
