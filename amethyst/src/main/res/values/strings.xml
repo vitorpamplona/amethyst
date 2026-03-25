@@ -1568,6 +1568,7 @@
     <string name="feed_group_hashtags">Hashtags</string>
     <string name="feed_group_communities">Communities</string>
     <string name="feed_group_lists">Lists</string>
+    <string name="feed_group_relays">Relays</string>
 
     <string name="temporary_account">Log off on device lock</string>
     <string name="private_message">Private Message</string>
