@@ -23,7 +23,9 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcWalletEntryNorm
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetBalanceMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetBalanceSuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetInfoMethod
@@ -82,6 +84,16 @@ enum class TransactionFilter {
     NON_ZAPS,
 }
 
+data class WalletInfo(
+    val walletId: String,
+    val name: String,
+    val alias: String? = null,
+    val balanceSats: Long? = null,
+    val isDefault: Boolean = false,
+    val isLoading: Boolean = false,
+    val error: String? = null,
+)
+
 private const val NWC_TIMEOUT_MS = 30_000L
 private const val PAYMENT_FAILED = "Payment failed"
 
@@ -92,8 +104,33 @@ class WalletViewModel : ViewModel() {
     private val _hasWalletSetup = MutableStateFlow(false)
     val hasWalletSetup = _hasWalletSetup.asStateFlow()
 
-    private val _lnAddress = MutableStateFlow("")
-    val lnAddress = _lnAddress.asStateFlow()
+    private val walletInfoMap = MutableStateFlow<Map<String, WalletInfo>>(emptyMap())
+
+    private val _wallets = MutableStateFlow<List<NwcWalletEntryNorm>>(emptyList())
+    val wallets = _wallets.asStateFlow()
+
+    private val _defaultWalletId = MutableStateFlow<String?>(null)
+    val defaultWalletId = _defaultWalletId.asStateFlow()
+
+    val walletInfoList =
+        combine(_wallets, _defaultWalletId, walletInfoMap) { wallets, defaultId, infoMap ->
+            wallets.map { wallet ->
+                val info = infoMap[wallet.id]
+                WalletInfo(
+                    walletId = wallet.id,
+                    name = wallet.name,
+                    alias = info?.alias,
+                    balanceSats = info?.balanceSats,
+                    isDefault = wallet.id == defaultId || (defaultId == null && wallet == wallets.firstOrNull()),
+                    isLoading = info?.isLoading == true,
+                    error = info?.error,
+                )
+            }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Selected wallet for detail view
+    private val _selectedWalletId = MutableStateFlow<String?>(null)
+    val selectedWalletId = _selectedWalletId.asStateFlow()
 
     private val _balanceSats = MutableStateFlow<Long?>(null)
     val balanceSats = _balanceSats.asStateFlow()
@@ -142,14 +179,24 @@ class WalletViewModel : ViewModel() {
             onTimeout()
         }
 
+    private val _lnAddress = MutableStateFlow("")
+    val lnAddress = _lnAddress.asStateFlow()
+
     fun init(accountViewModel: AccountViewModel) {
         this.accountViewModel = accountViewModel
         this.account = accountViewModel.account
-        _hasWalletSetup.value = accountViewModel.account.nip47SignerState.hasWalletConnectSetup()
+        refreshWalletList()
+    }
+
+    fun refreshWalletList() {
+        val acc = account ?: return
+        _wallets.value = acc.settings.nwcWallets.value
+        _defaultWalletId.value = acc.settings.defaultNwcWalletId.value
+        _hasWalletSetup.value = _wallets.value.isNotEmpty()
     }
 
     fun refreshWalletSetup() {
-        _hasWalletSetup.value = account?.nip47SignerState?.hasWalletConnectSetup() == true
+        refreshWalletList()
     }
 
     fun loadLnAddress() {
@@ -182,19 +229,116 @@ class WalletViewModel : ViewModel() {
         acc.sendLiterallyEverywhere(event)
     }
 
-    fun fetchBalance() {
+    fun setDefaultWallet(walletId: String) {
         val acc = account ?: return
+        acc.settings.setDefaultNwcWallet(walletId)
+        _defaultWalletId.value = walletId
+    }
+
+    fun removeWallet(walletId: String) {
+        val acc = account ?: return
+        acc.settings.removeNwcWallet(walletId)
+        refreshWalletList()
+    }
+
+    fun selectWallet(walletId: String) {
+        _selectedWalletId.value = walletId
+        _balanceSats.value = walletInfoMap.value[walletId]?.balanceSats
+        _walletAlias.value = walletInfoMap.value[walletId]?.alias
+        allTransactions.value = emptyList()
+    }
+
+    private fun getWalletUri(walletId: String?): Nip47WalletConnect.Nip47URINorm? = _wallets.value.firstOrNull { it.id == walletId }?.uri
+
+    private fun getSelectedWalletUri(): Nip47WalletConnect.Nip47URINorm? = getWalletUri(_selectedWalletId.value)
+
+    fun fetchAllBalances() {
+        _wallets.value.forEach { wallet ->
+            fetchBalanceForWallet(wallet.id)
+        }
+    }
+
+    private fun fetchBalanceForWallet(walletId: String) {
+        val acc = account ?: return
+        val walletUri = getWalletUri(walletId) ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            updateWalletInfo(walletId) { it.copy(isLoading = true, error = null) }
+            try {
+                acc.sendNwcRequestToWallet(walletUri, GetBalanceMethod.create()) { response ->
+                    when (response) {
+                        is GetBalanceSuccessResponse -> {
+                            val sats = (response.result?.balance ?: 0L) / 1000L
+                            updateWalletInfo(walletId) { it.copy(balanceSats = sats, isLoading = false) }
+                        }
+
+                        is NwcErrorResponse -> {
+                            updateWalletInfo(walletId) {
+                                it.copy(error = response.error?.message ?: "Balance request failed", isLoading = false)
+                            }
+                        }
+
+                        else -> {
+                            updateWalletInfo(walletId) { it.copy(isLoading = false) }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                updateWalletInfo(walletId) { it.copy(error = e.message, isLoading = false) }
+            }
+        }
+    }
+
+    fun fetchInfoForWallet(walletId: String) {
+        val acc = account ?: return
+        val walletUri = getWalletUri(walletId) ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                acc.sendNwcRequestToWallet(walletUri, GetInfoMethod.create()) { response ->
+                    when (response) {
+                        is GetInfoSuccessResponse -> {
+                            updateWalletInfo(walletId) { it.copy(alias = response.result?.alias) }
+                        }
+
+                        else -> {}
+                    }
+                }
+            } catch (_: Exception) {
+            }
+        }
+    }
+
+    private fun updateWalletInfo(
+        walletId: String,
+        transform: (WalletInfo) -> WalletInfo,
+    ) {
+        walletInfoMap.value =
+            walletInfoMap.value.toMutableMap().apply {
+                val current =
+                    get(walletId) ?: WalletInfo(
+                        walletId = walletId,
+                        name = _wallets.value.firstOrNull { it.id == walletId }?.name ?: "Wallet",
+                    )
+                put(walletId, transform(current))
+            }
+    }
+
+    // --- Methods below operate on the selected wallet ---
+
+    fun fetchBalance() {
+        val walletId = _selectedWalletId.value ?: _defaultWalletId.value ?: _wallets.value.firstOrNull()?.id ?: return
+        val acc = account ?: return
+        val walletUri = getWalletUri(walletId) ?: return
         viewModelScope.launch(Dispatchers.IO) {
             _isLoading.value = true
             _error.value = null
             val timeoutJob = launchTimeout { _isLoading.value = false }
             try {
-                acc.sendNwcRequest(GetBalanceMethod.create()) { response ->
+                acc.sendNwcRequestToWallet(walletUri, GetBalanceMethod.create()) { response ->
                     timeoutJob.cancel()
                     when (response) {
                         is GetBalanceSuccessResponse -> {
-                            // NWC balance is in millisats, convert to sats
                             _balanceSats.value = (response.result?.balance ?: 0L) / 1000L
+                            updateWalletInfo(walletId) { it.copy(balanceSats = _balanceSats.value) }
                         }
 
                         is NwcErrorResponse -> {
@@ -214,32 +358,37 @@ class WalletViewModel : ViewModel() {
     }
 
     fun fetchInfo() {
+        val walletId = _selectedWalletId.value ?: _defaultWalletId.value ?: _wallets.value.firstOrNull()?.id ?: return
         val acc = account ?: return
+        val walletUri = getWalletUri(walletId) ?: return
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                acc.sendNwcRequest(GetInfoMethod.create()) { response ->
+                acc.sendNwcRequestToWallet(walletUri, GetInfoMethod.create()) { response ->
                     when (response) {
                         is GetInfoSuccessResponse -> {
                             _walletAlias.value = response.result?.alias
+                            updateWalletInfo(walletId) { it.copy(alias = response.result?.alias) }
                         }
 
                         else -> {}
                     }
                 }
-            } catch (e: Exception) {
-                // ignore info errors
+            } catch (_: Exception) {
             }
         }
     }
 
     fun fetchTransactions() {
+        val walletId = _selectedWalletId.value ?: _defaultWalletId.value ?: _wallets.value.firstOrNull()?.id ?: return
         val acc = account ?: return
+        val walletUri = getWalletUri(walletId) ?: return
         viewModelScope.launch(Dispatchers.IO) {
             _isLoading.value = true
             _hasMoreTransactions.value = true
             val timeoutJob = launchTimeout { _isLoading.value = false }
             try {
-                acc.sendNwcRequest(
+                acc.sendNwcRequestToWallet(
+                    walletUri,
                     ListTransactionsMethod.create(
                         limit = pageSize,
                         offset = 0,
@@ -278,13 +427,16 @@ class WalletViewModel : ViewModel() {
 
     fun loadMoreTransactions() {
         if (_isLoadingMore.value || !_hasMoreTransactions.value) return
+        val walletId = _selectedWalletId.value ?: _defaultWalletId.value ?: _wallets.value.firstOrNull()?.id ?: return
         val acc = account ?: return
+        val walletUri = getWalletUri(walletId) ?: return
         val currentOffset = allTransactions.value.size
         viewModelScope.launch(Dispatchers.IO) {
             _isLoadingMore.value = true
             val timeoutJob = launchTimeout { _isLoadingMore.value = false }
             try {
-                acc.sendNwcRequest(
+                acc.sendNwcRequestToWallet(
+                    walletUri,
                     ListTransactionsMethod.create(
                         limit = pageSize,
                         offset = currentOffset,
@@ -295,7 +447,6 @@ class WalletViewModel : ViewModel() {
                     when (response) {
                         is ListTransactionsSuccessResponse -> {
                             val newTxs = response.result?.transactions ?: emptyList()
-
                             allTransactions.value += newTxs
                             val totalCount = response.result?.total_count
                             _hasMoreTransactions.value =
@@ -323,15 +474,16 @@ class WalletViewModel : ViewModel() {
     }
 
     fun sendPayment(bolt11: String) {
+        val walletId = _selectedWalletId.value ?: _defaultWalletId.value ?: _wallets.value.firstOrNull()?.id ?: return
         val acc = account ?: return
+        val walletUri = getWalletUri(walletId) ?: return
         viewModelScope.launch(Dispatchers.IO) {
             _sendState.value = SendState.Sending
             try {
-                acc.sendNwcRequest(PayInvoiceMethod.create(bolt11)) { response ->
+                acc.sendNwcRequestToWallet(walletUri, PayInvoiceMethod.create(bolt11)) { response ->
                     when (response) {
                         is PayInvoiceSuccessResponse -> {
                             _sendState.value = SendState.Success(response.result?.preimage)
-                            // Refresh balance after payment
                             fetchBalance()
                         }
 
@@ -364,12 +516,14 @@ class WalletViewModel : ViewModel() {
         amountSats: Long,
         description: String? = null,
     ) {
+        val walletId = _selectedWalletId.value ?: _defaultWalletId.value ?: _wallets.value.firstOrNull()?.id ?: return
         val acc = account ?: return
+        val walletUri = getWalletUri(walletId) ?: return
         viewModelScope.launch(Dispatchers.IO) {
             _receiveState.value = ReceiveState.Creating
             try {
-                // NWC expects millisats
-                acc.sendNwcRequest(
+                acc.sendNwcRequestToWallet(
+                    walletUri,
                     MakeInvoiceMethod.create(
                         amount = amountSats * 1000L,
                         description = description,

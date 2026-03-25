@@ -144,6 +144,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.UserSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.shorts.ShortsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.ThreadScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.VideoScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletDetailScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletReceiveScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletSendScreen
@@ -223,6 +224,7 @@ fun BuildNavigation(
         composableFromEnd<Route.WalletSend> { WalletSendScreen(accountViewModel, nav) }
         composableFromEnd<Route.WalletReceive> { WalletReceiveScreen(accountViewModel, nav) }
         composableFromEnd<Route.WalletTransactions> { WalletTransactionsScreen(accountViewModel, nav) }
+        composableFromEndArgs<Route.WalletDetail> { WalletDetailScreen(it.walletId, accountViewModel, nav) }
 
         composableFromEnd<Route.Lists> { ListOfPeopleListsScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.MyPeopleListView> { PeopleListScreen(it.dTag, accountViewModel, nav) }

@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -30,15 +32,19 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.ArrowDownward
-import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -47,12 +53,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -91,13 +100,11 @@ fun WalletScreen(
                     }
                 },
                 actions = {
-                    if (hasWallet) {
-                        IconButton(onClick = { nav.nav(Route.Nip47NWCSetup()) }) {
-                            Icon(
-                                imageVector = Icons.Outlined.Settings,
-                                contentDescription = stringRes(R.string.settings),
-                            )
-                        }
+                    IconButton(onClick = { nav.nav(Route.Nip47NWCSetup()) }) {
+                        Icon(
+                            imageVector = Icons.Filled.Add,
+                            contentDescription = stringRes(R.string.wallet_add),
+                        )
                     }
                 },
             )
@@ -109,7 +116,7 @@ fun WalletScreen(
                 nav = nav,
             )
         } else {
-            WalletHomeContent(
+            MultiWalletHomeContent(
                 walletViewModel = walletViewModel,
                 modifier = Modifier.padding(padding),
                 nav = nav,
@@ -132,158 +139,244 @@ private fun NoWalletSetup(
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
-            text = stringRes(R.string.wallet_no_connection),
+            text = stringRes(R.string.wallet_no_wallets),
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = stringRes(R.string.wallet_no_connection_description),
+            text = stringRes(R.string.wallet_no_wallets_description),
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(modifier = Modifier.height(24.dp))
         Button(onClick = { nav.nav(Route.Nip47NWCSetup()) }) {
-            Text(stringRes(R.string.wallet_setup))
+            Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(stringRes(R.string.wallet_add_connection))
         }
     }
 }
 
 @Composable
-private fun WalletHomeContent(
+private fun MultiWalletHomeContent(
     walletViewModel: WalletViewModel,
     modifier: Modifier,
     nav: INav,
 ) {
-    val balance by walletViewModel.balanceSats.collectAsState()
-    val walletAlias by walletViewModel.walletAlias.collectAsState()
-    val isLoading by walletViewModel.isLoading.collectAsState()
-    val error by walletViewModel.error.collectAsState()
+    val walletInfoList by walletViewModel.walletInfoList.collectAsState()
 
     LaunchedEffect(Unit) {
-        walletViewModel.fetchBalance()
-        walletViewModel.fetchInfo()
+        walletViewModel.fetchAllBalances()
+        walletViewModel.wallets.value.forEach { wallet ->
+            walletViewModel.fetchInfoForWallet(wallet.id)
+        }
     }
 
-    Column(
+    LazyColumn(
         modifier =
             modifier
                 .fillMaxSize()
-                .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
+                .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Spacer(modifier = Modifier.height(32.dp))
-
-        // Wallet name
-        if (walletAlias != null) {
-            Text(
-                text = walletAlias!!,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+        item {
             Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = stringRes(R.string.wallet_your_wallets),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
         }
 
-        // Balance display
-        if (isLoading && balance == null) {
-            CircularProgressIndicator(modifier = Modifier.size(48.dp))
-        } else {
-            val formattedBalance =
-                remember(balance) {
-                    val fmt = NumberFormat.getIntegerInstance()
-                    fmt.format(balance ?: 0L)
+        items(walletInfoList, key = { it.walletId }) { walletInfo ->
+            WalletCard(
+                walletInfo = walletInfo,
+                onSelect = {
+                    walletViewModel.selectWallet(walletInfo.walletId)
+                    nav.nav(Route.WalletDetail(walletInfo.walletId))
+                },
+                onSetDefault = {
+                    walletViewModel.setDefaultWallet(walletInfo.walletId)
+                },
+                onRemove = {
+                    walletViewModel.removeWallet(walletInfo.walletId)
+                },
+            )
+        }
+
+        item {
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = { nav.nav(Route.Nip47NWCSetup()) },
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                shape = RoundedCornerShape(12.dp),
+            ) {
+                Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(stringRes(R.string.wallet_add))
+            }
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+    }
+}
+
+@Composable
+private fun WalletCard(
+    walletInfo: WalletInfo,
+    onSelect: () -> Unit,
+    onSetDefault: () -> Unit,
+    onRemove: () -> Unit,
+) {
+    var showRemoveDialog by remember { mutableStateOf(false) }
+
+    if (showRemoveDialog) {
+        AlertDialog(
+            onDismissRequest = { showRemoveDialog = false },
+            title = { Text(stringRes(R.string.wallet_remove_confirm)) },
+            text = { Text(stringRes(R.string.wallet_remove_confirm_description)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showRemoveDialog = false
+                    onRemove()
+                }) {
+                    Text(stringRes(R.string.wallet_remove))
                 }
-            Text(
-                text = formattedBalance,
-                fontSize = 48.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground,
-            )
-            Text(
-                text = stringRes(R.string.wallet_sats),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRemoveDialog = false }) {
+                    Text(stringRes(R.string.cancel))
+                }
+            },
+        )
+    }
 
-        // Error
-        if (error != null) {
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = error!!,
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        // Action buttons
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
+    Card(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onSelect),
+        shape = RoundedCornerShape(16.dp),
+        border =
+            if (walletInfo.isDefault) {
+                BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+            } else {
+                null
+            },
+        colors =
+            CardDefaults.cardColors(
+                containerColor =
+                    if (walletInfo.isDefault) {
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                    } else {
+                        MaterialTheme.colorScheme.surfaceVariant
+                    },
+            ),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
         ) {
-            Button(
-                onClick = { nav.nav(Route.WalletReceive) },
-                modifier =
-                    Modifier
-                        .weight(1f)
-                        .height(56.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors =
-                    ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    ),
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(
-                    imageVector = Icons.Filled.ArrowDownward,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp),
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(stringRes(R.string.wallet_receive), fontWeight = FontWeight.SemiBold)
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = walletInfo.alias ?: walletInfo.name,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        if (walletInfo.isDefault) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Icon(
+                                imageVector = Icons.Filled.Star,
+                                contentDescription = stringRes(R.string.wallet_default),
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    }
+                    if (walletInfo.alias != null && walletInfo.alias != walletInfo.name) {
+                        Text(
+                            text = walletInfo.name,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+
+                // Balance
+                if (walletInfo.isLoading && walletInfo.balanceSats == null) {
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                } else {
+                    Column(horizontalAlignment = Alignment.End) {
+                        val formattedBalance =
+                            remember(walletInfo.balanceSats) {
+                                val fmt = NumberFormat.getIntegerInstance()
+                                fmt.format(walletInfo.balanceSats ?: 0L)
+                            }
+                        Text(
+                            text = formattedBalance,
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        Text(
+                            text = stringRes(R.string.wallet_sats),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
             }
 
-            Button(
-                onClick = { nav.nav(Route.WalletSend) },
-                modifier =
-                    Modifier
-                        .weight(1f)
-                        .height(56.dp),
-                shape = RoundedCornerShape(16.dp),
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.ArrowUpward,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp),
+            if (walletInfo.error != null) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = walletInfo.error,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
                 )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(stringRes(R.string.wallet_send), fontWeight = FontWeight.SemiBold)
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Action buttons row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                if (!walletInfo.isDefault) {
+                    OutlinedButton(
+                        onClick = onSetDefault,
+                        modifier = Modifier.height(36.dp),
+                        shape = RoundedCornerShape(8.dp),
+                    ) {
+                        Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(14.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(stringRes(R.string.wallet_set_default), style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                IconButton(
+                    onClick = { showRemoveDialog = true },
+                    modifier = Modifier.size(36.dp),
+                ) {
+                    Icon(
+                        Icons.Filled.Delete,
+                        contentDescription = stringRes(R.string.wallet_remove),
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.error,
+                    )
+                }
             }
         }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Transactions button
-        OutlinedButton(
-            onClick = { nav.nav(Route.WalletTransactions) },
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .height(48.dp),
-            shape = RoundedCornerShape(16.dp),
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.List,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp),
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(stringRes(R.string.wallet_transactions))
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
     }
 }

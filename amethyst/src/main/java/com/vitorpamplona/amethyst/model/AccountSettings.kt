@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.model
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatRepository
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatListRepository
+import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcWalletEntryNorm
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.screen.FeedDefinition
@@ -170,7 +171,8 @@ class AccountSettings(
     val defaultPicturesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultShortsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultLongsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
-    val zapPaymentRequest: MutableStateFlow<Nip47WalletConnect.Nip47URINorm?> = MutableStateFlow(null),
+    val nwcWallets: MutableStateFlow<List<NwcWalletEntryNorm>> = MutableStateFlow(emptyList()),
+    val defaultNwcWalletId: MutableStateFlow<String?> = MutableStateFlow(null),
     var hideDeleteRequestDialog: Boolean = false,
     var hideBlockAlertDialog: Boolean = false,
     var hideNIP17WarningDialog: Boolean = false,
@@ -253,10 +255,79 @@ class AccountSettings(
         return false
     }
 
-    fun changeZapPaymentRequest(newServer: Nip47WalletConnect.Nip47URINorm?): Boolean {
-        if (zapPaymentRequest.value != newServer) {
-            zapPaymentRequest.tryEmit(newServer)
+    fun defaultNwcWallet(): NwcWalletEntryNorm? {
+        val id = defaultNwcWalletId.value
+        val wallets = nwcWallets.value
+        return if (id != null) {
+            wallets.firstOrNull { it.id == id }
+        } else {
+            wallets.firstOrNull()
+        }
+    }
+
+    fun defaultZapPaymentRequest(): Nip47WalletConnect.Nip47URINorm? = defaultNwcWallet()?.uri
+
+    fun addNwcWallet(wallet: NwcWalletEntryNorm): Boolean {
+        val existing = nwcWallets.value.indexOfFirst { it.id == wallet.id }
+        if (existing >= 0) {
+            nwcWallets.tryEmit(nwcWallets.value.toMutableList().apply { set(existing, wallet) })
+        } else {
+            nwcWallets.tryEmit(nwcWallets.value + wallet)
+            if (nwcWallets.value.size == 1) {
+                defaultNwcWalletId.tryEmit(wallet.id)
+            }
+        }
+        saveAccountSettings()
+        return true
+    }
+
+    fun removeNwcWallet(walletId: String): Boolean {
+        val wallets = nwcWallets.value.filter { it.id != walletId }
+        nwcWallets.tryEmit(wallets)
+        if (defaultNwcWalletId.value == walletId) {
+            defaultNwcWalletId.tryEmit(wallets.firstOrNull()?.id)
+        }
+        saveAccountSettings()
+        return true
+    }
+
+    fun setDefaultNwcWallet(walletId: String): Boolean {
+        if (defaultNwcWalletId.value != walletId && nwcWallets.value.any { it.id == walletId }) {
+            defaultNwcWalletId.tryEmit(walletId)
             saveAccountSettings()
+            return true
+        }
+        return false
+    }
+
+    fun changeZapPaymentRequest(newServer: Nip47WalletConnect.Nip47URINorm?): Boolean {
+        if (newServer == null) {
+            if (nwcWallets.value.isNotEmpty()) {
+                nwcWallets.tryEmit(emptyList())
+                defaultNwcWalletId.tryEmit(null)
+                saveAccountSettings()
+                return true
+            }
+            return false
+        }
+        val current = defaultZapPaymentRequest()
+        if (current != newServer) {
+            val defaultWallet = defaultNwcWallet()
+            if (defaultWallet != null) {
+                val updated = defaultWallet.copy(uri = newServer)
+                addNwcWallet(updated)
+            } else {
+                val entry =
+                    NwcWalletEntryNorm(
+                        id =
+                            java.util.UUID
+                                .randomUUID()
+                                .toString(),
+                        name = "Wallet",
+                        uri = newServer,
+                    )
+                addNwcWallet(entry)
+            }
             return true
         }
         return false
