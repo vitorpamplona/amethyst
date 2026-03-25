@@ -31,11 +31,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
 import org.torproject.jni.TorService
 import org.torproject.jni.TorService.LocalBinder
+
+private const val SOCKS_PORT_POLL_INTERVAL_MS = 100L
 
 class TorService(
     val context: Context,
@@ -46,9 +47,7 @@ class TorService(
             trySend(TorServiceStatus.Connecting)
 
             val currentIntent = Intent(context, TorService::class.java)
-
-            context.bindService(
-                currentIntent,
+            val serviceConnection: ServiceConnection =
                 object : ServiceConnection {
                     override fun onServiceConnected(
                         name: ComponentName,
@@ -59,7 +58,7 @@ class TorService(
                             val torService = (service as LocalBinder).service
 
                             while (torService.socksPort < 0) {
-                                delay(100)
+                                delay(SOCKS_PORT_POLL_INTERVAL_MS)
                             }
 
                             val active = TorServiceStatus.Active(torService.socksPort)
@@ -74,16 +73,25 @@ class TorService(
                         Log.d("TorService", "Tor Service Disconnected")
                         trySend(TorServiceStatus.Off)
                     }
-                },
+                }
+
+            context.bindService(
+                currentIntent,
+                serviceConnection,
                 BIND_AUTO_CREATE,
             )
 
             awaitClose {
                 Log.d("TorService", "Stopping Tor Service")
+                try {
+                    context.unbindService(serviceConnection)
+                } catch (e: Exception) {
+                    Log.d("TorService", "Failed to unbind Tor Service: ${e.message}")
+                }
                 launch {
                     context.stopService(currentIntent)
                 }
                 trySend(TorServiceStatus.Off)
             }
-        }.distinctUntilChanged().flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.IO)
 }

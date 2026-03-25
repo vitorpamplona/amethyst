@@ -22,9 +22,11 @@ package com.vitorpamplona.amethyst.commons.richtext
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.utils.DualCase
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.startsWithAny
 import com.vitorpamplona.quartz.utils.urldetector.Url
 import com.vitorpamplona.quartz.utils.urldetector.detection.UrlDetector
+import kotlinx.coroutines.CancellationException
 
 @Stable
 class Urls(
@@ -77,30 +79,35 @@ class UrlParser {
         val blossom = mutableSetOf<String>()
 
         urls.forEach { url ->
-            if (url.isValidTopLevelDomain()) {
-                if (url.wroteWithSchema()) {
-                    if (url.originalUrl.startsWithAny(httpScheme)) {
-                        // quick exit
-                        completeUrls.add(url.originalUrl)
-                    } else if (url.originalUrl.startsWithAny(nostrScheme)) {
-                        bech32.add(url.originalUrl)
-                    } else if (url.originalUrl.startsWithAny(websocketScheme)) {
-                        relays.add(url.originalUrl)
-                    } else if (url.originalUrl.startsWithAny(blossomScheme)) {
-                        blossom.add(url.originalUrl)
-                    } else {
-                        completeUrls.add(url.originalUrl)
-                    }
-                } else {
-                    // emails are understood as urls from the detector.
-                    if (url.isEmail()) {
-                        Patterns.EMAIL_ADDRESS.findAll(url.originalUrl).forEach {
-                            emails.add(it.value)
+            try {
+                if (url.isValidTopLevelDomain()) {
+                    if (url.wroteWithSchema()) {
+                        if (url.originalUrl.startsWithAny(httpScheme)) {
+                            // quick exit
+                            completeUrls.add(url.originalUrl)
+                        } else if (url.originalUrl.startsWithAny(nostrScheme)) {
+                            bech32.add(url.originalUrl)
+                        } else if (url.originalUrl.startsWithAny(websocketScheme)) {
+                            relays.add(url.originalUrl)
+                        } else if (url.originalUrl.startsWithAny(blossomScheme)) {
+                            blossom.add(url.originalUrl)
+                        } else {
+                            completeUrls.add(url.originalUrl)
                         }
                     } else {
-                        urlsWithoutScheme.add(url.originalUrl)
+                        // emails are understood as urls from the detector.
+                        if (url.isEmail()) {
+                            Patterns.EMAIL_ADDRESS.findAll(url.originalUrl).forEach {
+                                emails.add(it.value)
+                            }
+                        } else {
+                            urlsWithoutScheme.add(url.originalUrl)
+                        }
                     }
                 }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.e("UrlParser", "Trying to parse url `${url.originalUrl}` from `$content`", e)
             }
         }
 

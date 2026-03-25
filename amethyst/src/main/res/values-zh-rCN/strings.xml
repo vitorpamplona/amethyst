@@ -1181,7 +1181,7 @@
     <string name="outbox_relays_title">发件箱中继</string>
     <string name="outbox_relays_not_found">设置您的公共发件箱中继来发布内容</string>
     <string name="outbox_relays_not_found_description">创建专为接收您的内容而设计的中继列表对于您的Nostr体验至关重要，也是您的关注者找到您的唯一途径。 </string>
-    <string name="outbox_relays_not_found_editing">插入 1-3 个接收你帖子的中继。确保它们不需要付款，如果你没有付费来插入</string>
+    <string name="outbox_relays_not_found_editing">插入 1–3 个接收你帖子的中继。确保它们不需要付款，如果你没有付费来插入</string>
     <string name="outbox_relays_not_found_examples">好的选项是：\n - nos.lol\n - nostr.mom\n - nostr.bitcoiner.social</string>
     <string name="inbox_relays_title">收件箱中继</string>
     <string name="inbox_relays_not_found">设置您的公共收件箱中继来接收通知</string>

@@ -543,7 +543,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="follow_set_create_btn_label">Neu</string>
     <string name="follow_set_add_author_from_note_action">Autor zur Follower-Liste hinzufügen</string>
     <string name="follow_set_profile_actions_menu_description">Benutzer zu Listen hinzufügen oder entfernen, oder eine neue Liste mit diesem Benutzer erstellen.</string>
-    <string name="follow_set_icon_description">Symbol für %1$s-Liste</string>
+    <string name="follow_set_icon_description">Symbol für Liste</string>
     <string name="follow_set_public_presence_indicator">%1$s ist ein öffentliches Mitglied</string>
     <string name="follow_set_private_presence_indicator">%1$s ist ein privates Mitglied</string>
     <string name="follow_set_public_member_add_label">Als öffentliches Mitglied hinzufügen</string>

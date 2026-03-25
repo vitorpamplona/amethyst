@@ -28,6 +28,9 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
@@ -43,6 +46,7 @@ import com.vitorpamplona.amethyst.ui.screen.SaveableFeedState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
+import kotlinx.coroutines.launch
 
 @Composable
 fun RefreshingChatroomFeedView(
@@ -131,6 +135,18 @@ fun ChatFeedLoaded(
         }
     }
 
+    val scope = rememberCoroutineScope()
+    val highlightedNoteId = remember { mutableStateOf<String?>(null) }
+    val onScrollToNote: (Note) -> Unit = { note ->
+        val index = items.list.indexOfFirst { it.idHex == note.idHex }
+        if (index >= 0) {
+            scope.launch {
+                listState.animateScrollToItem(index)
+                highlightedNoteId.value = note.idHex
+            }
+        }
+    }
+
     LazyColumn(
         contentPadding = FeedPadding,
         modifier = Modifier.fillMaxSize(),
@@ -147,6 +163,9 @@ fun ChatFeedLoaded(
                     nav = nav,
                     onWantsToReply = onWantsToReply,
                     onWantsToEditDraft = onWantsToEditDraft,
+                    onScrollToNote = onScrollToNote,
+                    shouldHighlight = highlightedNoteId.value == item.idHex,
+                    onHighlightFinished = { highlightedNoteId.value = null },
                 )
 
                 NewDateOrSubjectDivisor(items.list.getOrNull(index + 1), item)

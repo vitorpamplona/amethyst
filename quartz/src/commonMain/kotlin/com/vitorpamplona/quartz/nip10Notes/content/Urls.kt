@@ -20,15 +20,25 @@
  */
 package com.vitorpamplona.quartz.nip10Notes.content
 
-import com.vitorpamplona.quartz.nip01Core.tags.references.HttpUrlFormatter
-import com.vitorpamplona.quartz.utils.fastFindURLs
+import com.vitorpamplona.quartz.utils.DualCase
+import com.vitorpamplona.quartz.utils.startsWithAny
+import com.vitorpamplona.quartz.utils.urldetector.detection.UrlDetector
 
-fun findURLs(text: String) = fastFindURLs(text)
+val rejectSchemes =
+    listOf(
+        DualCase("ftp:"),
+        DualCase("ftps:"),
+        DualCase("ws:"),
+        DualCase("wss:"),
+        DualCase("nostr:"),
+        DualCase("blossom:"),
+    )
 
-fun buildUrlRefs(urls: List<String>): List<Array<String>> =
-    urls
-        .mapTo(HashSet()) { url ->
-            HttpUrlFormatter.normalize(url)
-        }.map {
-            arrayOf("r", it)
+fun findURLs(text: String) =
+    UrlDetector(text).detect().mapNotNull {
+        if (it.originalUrl.startsWithAny(rejectSchemes)) {
+            null
+        } else {
+            it.originalUrl
         }
+    }

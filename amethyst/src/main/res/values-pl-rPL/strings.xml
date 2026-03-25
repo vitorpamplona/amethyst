@@ -181,7 +181,7 @@
     <string name="voice_preset_neutral">Neutralna</string>
     <string name="voice_anonymize_title">Anonimowy</string>
     <string name="voice_anonymize_description">Zmienia barwę głosu. Uwaga: podstawowe zmiany barwy głosu mogą zostać wykryte przez uważnych słuchaczy.</string>
-    <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Użytkownik nie ma skonfigurowanego adresu LN, aby odbierać satsy</string>
+    <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Użytkownik nie ma skonfigurowanego adresu LN, aby odbierać satosze</string>
     <string name="reply_here">"odpowiedz tutaj.. "</string>
     <string name="copies_the_note_id_to_the_clipboard_for_sharing">Kopiuje ID wpisu do schowka w celu udostępnienia w Nostr</string>
     <string name="copy_channel_id_note_to_the_clipboard">Kopiuj ID kanału (wpisu) do schowka</string>
@@ -287,6 +287,7 @@
     <string name="nip_05">Adres Nostr</string>
     <string name="never">nigdy</string>
     <string name="now">teraz</string>
+    <string name="seconds">sekund</string>
     <string name="h">godz.</string>
     <string name="m">m</string>
     <string name="d">d</string>
@@ -431,7 +432,7 @@
     <string name="zap_type_section_explainer">Kontroluje sposób wyświetlania Twojej tożsamości podczas wysyłania zapa.</string>
     <string name="wallet_connect_connect_app">Podłącz portfel</string>
     <string name="see_relay_feed">Przejrzyj kanał transmitera</string>
-    <string name="pledge_amount_in_sats">Kwota zobowiązania w Satach</string>
+    <string name="pledge_amount_in_sats">Kwota zobowiązania w Satoszach</string>
     <string name="post_poll">Wyślij Ankietę</string>
     <string name="poll_heading_required">Wymagane pola:</string>
     <string name="poll_zap_recipients">Odbiorcy zap</string>
@@ -444,6 +445,8 @@
     <string name="poll_zap_value_max">Maksymalny Zap</string>
     <string name="poll_consensus_threshold">Konsensus</string>
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
+    <string name="poll_single_choice">Pojedynczy wybór</string>
+    <string name="poll_multiple_choice">Wielokrotny wybór</string>
     <string name="poll_closing_date_time">Data &amp; godzina zakończenia ankiety</string>
     <string name="poll_closing_in">Ankieta zostanie zamknięta za %1$s</string>
     <string name="poll_closing_time">Zamknij po</string>
@@ -537,7 +540,7 @@
     <string name="follow_set_create_btn_label">Nowa</string>
     <string name="follow_set_add_author_from_note_action">Dodaj autora do listy obserwowanych</string>
     <string name="follow_set_profile_actions_menu_description">Dodaj lub usuń użytkownika z list, lub utwórz nową listę z tym użytkownikiem.</string>
-    <string name="follow_set_icon_description">Ikona dla listy %1$s</string>
+    <string name="follow_set_icon_description">Ikona dla listy</string>
     <string name="follow_set_public_presence_indicator">%1$s jest uczestnikiem publicznym</string>
     <string name="follow_set_private_presence_indicator">%1$s jest uczestnikiem prywatnym</string>
     <string name="follow_set_public_member_add_label">Dodaj jako uczestnika publicznego</string>
@@ -633,7 +636,7 @@
     <string name="app_notification_dms_channel_description">Powiadamia Cię, gdy nadejdzie prywatna wiadomość</string>
     <string name="app_notification_zaps_channel_name">Otrzymano Zapy</string>
     <string name="app_notification_zaps_channel_description">Powiadamia Cię, gdy ktoś prześle ci zapy</string>
-    <string name="app_notification_zaps_channel_message">%1$s Satsów</string>
+    <string name="app_notification_zaps_channel_message">%1$s Satoszy</string>
     <string name="app_notification_zaps_channel_message_from">Od %1$s</string>
     <string name="app_notification_zaps_channel_message_for">dla %1$s</string>
     <string name="app_notification_reply_label">Odpowiedz</string>
@@ -668,9 +671,9 @@
     <string name="new_reaction_symbol">Nowy Symbol Odzewu</string>
     <string name="no_reaction_type_setup_long_press_to_change">Brak wstępnie wybranych typów reakcji dla tego użytkownika. Przytrzymaj przycisk serce, aby zmienić</string>
     <string name="zapraiser">Zapraiser</string>
-    <string name="zapraiser_explainer">Dodaje docelową liczbę satsów do podniesienia dla tego wpisu. W zależności od aplikacji może być pokazywany to jako pasek postępu, aby zachęcić do darowizn</string>
-    <string name="zapraiser_target_amount_in_sats">Docelowa kwota w Satach</string>
-    <string name="sats_to_complete">Zapraiser przy: %1$s. %2$s satach do celu</string>
+    <string name="zapraiser_explainer">Dodaje docelową liczbę satoszy do podniesienia dla tego wpisu. W zależności od aplikacji może być pokazywany to jako pasek postępu, aby zachęcić do darowizn</string>
+    <string name="zapraiser_target_amount_in_sats">Docelowa kwota w Satoszach</string>
+    <string name="sats_to_complete">Zapraiser przy: %1$s. %2$s satoszach do celu</string>
     <string name="read_from_relay">Odczytaj z Transmitera</string>
     <string name="write_to_relay">Zapisz do Transmitera</string>
     <string name="write_to_relay_description">Ilość w bajtach, która została wysłana do tego transmitera, w tym filtry i wydarzenia</string>
@@ -878,7 +881,7 @@
     <string name="copy_to_clipboard">Kopiuj do schowka</string>
     <string name="copy_nprofile_to_clipboard">Skopiuj nprofile do schowka</string>
     <string name="copy_npub_to_clipboard">Kopiuj npub do schowka</string>
-    <string name="share_or_save">Udostępnij lub Zapisz</string>
+    <string name="share_or_save">Udostępnij lub zapisz</string>
     <string name="copy_url_to_clipboard">Kopiuj adres URL do schowka</string>
     <string name="copy_the_note_id_to_the_clipboard">Kopiuj ID wpisu do schowka</string>
     <string name="add_media_to_gallery">Dodaj pliki do Galerii</string>
@@ -916,7 +919,7 @@
     <string name="zap_split_search_and_add_user">Szukaj i dodaj użytkownika</string>
     <string name="zap_split_search_and_add_user_placeholder">Nick lub Login</string>
     <string name="missing_lud16">Brakująca konfiguracja LN</string>
-    <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">Użytkownik %1$s nie ma skonfigurowanego adresu LN, aby odbierać satsy</string>
+    <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">Użytkownik %1$s nie ma skonfigurowanego adresu LN, aby odbierać satosze</string>
     <string name="zap_split_weight">Procentowo</string>
     <string name="zap_split_weight_placeholder">25</string>
     <string name="splitting_zaps_with">Podziel zapsy z</string>
@@ -947,7 +950,7 @@
     <string name="cashu_failed_redemption_explainer_error_msg">Mint dostarczył następujący komunikat błędu: %1$s</string>
     <string name="cashu_failed_redemption_explainer_already_spent">Tokeny Cashu zostały już wydane.</string>
     <string name="cashu_successful_redemption">Cashu odebrano</string>
-    <string name="cashu_successful_redemption_explainer">%1$s satsy zostały wysłane do Twojego portfela. (opłata: %2$s satsów)</string>
+    <string name="cashu_successful_redemption_explainer">%1$s satsy zostały wysłane do Twojego portfela. (opłata: %2$s satoszy)</string>
     <string name="cashu_no_wallet_found">W systemie nie znaleziono kompatybilnego portfela Cashu</string>
     <string name="error_unable_to_fetch_invoice">Nie można pobrać faktury z serwerów odbiorcy</string>
     <string name="wallet_connect_pay_invoice_error_error">Twój dostawca połączenia z portfelem zwrócił następujący błąd: %1$s</string>
@@ -965,7 +968,7 @@
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">Nie znaleziono zwrotnego adresu URL z odpowiedzi %1$s</string>
     <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup">Wystąpił błąd podczas analizowania JSON z pobierania faktury z Lightning Adresu. Sprawdź konfigurację lightning użytkownika</string>
     <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">Błąd przetwarzania pliku JSON z pobierania faktury %1$s. Sprawdź konfigurację lightning użytkownika</string>
-    <string name="incorrect_invoice_amount_sats_from_it_should_have_been">Nieprawidłowa kwota faktury (%1$s satsów) od %2$s. Powinieno być %3$s</string>
+    <string name="incorrect_invoice_amount_sats_from_it_should_have_been">Nieprawidłowa kwota faktury (%1$s satoszy) od %2$s. Powinieno być %3$s</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error">Nie można utworzyć faktury przed wysłaniem zapa. Portfel odbiorcy wysłał następujący błąd: %1$s</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Nie można utworzyć faktury. Wiadomość od %1$s: %2$s</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json">Nie można utworzyć faktury przed wysłaniem zapa. Element pr nie został znaleziony w powstałym JSON.</string>
@@ -992,7 +995,7 @@
     <string name="classifieds_title_placeholder">iPhone 13</string>
     <string name="classifieds_condition">Stan</string>
     <string name="classifieds_category">Kategoria</string>
-    <string name="classifieds_price">Cena (w Satach)</string>
+    <string name="classifieds_price">Cena (w Satoszach)</string>
     <string name="classifieds_price_placeholder">1000</string>
     <string name="classifieds_location">Lokalizacja</string>
     <string name="classifieds_location_placeholder">Miasto, Województwo, Kraj</string>
@@ -1405,7 +1408,7 @@
     <string name="share_of">%1$d/%2$d</string>
     <string name="broadcasting">Przekaz</string>
     <string name="broadcasting_name">Przekaz %1$s</string>
-    <string name="broadcasting_number_events">Liczba przekazów: %1$d...</string>
+    <string name="broadcasting_number_events">Liczba przekazów: %1$d…</string>
     <string name="sent_number_events">Wysłanych przekazów: %1$d</string>
     <string name="bradcasting_result_partial">Niektóre akcje nie powiodły się</string>
     <string name="bradcasting_result_success">Wszystkie akcje udane</string>
@@ -1625,7 +1628,7 @@
     <string name="event_sync_log_new">nowa %1$s</string>
     <string name="event_sync_no_events">brak wydarzeń</string>
     <string name="ots_explorer_settings">Eksplorator Bitcoin (OTS)</string>
-    <string name="events">wydarzenia</string>
+    <string name="events">wydarzeń</string>
     <string name="dms">DMs</string>
     <string name="profiles">profile</string>
     <string name="relay_settings_lower">ustawienia transmiterów</string>

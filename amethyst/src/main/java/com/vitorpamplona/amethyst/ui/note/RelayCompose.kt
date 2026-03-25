@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.note
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -59,11 +60,12 @@ fun RelayCompose(
     accountViewModel: AccountViewModel,
     onAddRelay: () -> Unit,
     onRemoveRelay: () -> Unit,
+    onClick: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
 
     Row(
-        modifier = StdPadding,
+        modifier = StdPadding.then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(

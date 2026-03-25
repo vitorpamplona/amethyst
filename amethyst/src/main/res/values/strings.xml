@@ -483,6 +483,8 @@
     <string name="poll_zap_value_max">Zap maximum</string>
     <string name="poll_consensus_threshold">Consensus</string>
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
+    <string name="poll_single_choice">Single choice</string>
+    <string name="poll_multiple_choice">Multiple choice</string>
     <string name="poll_closing_date_time">Poll Closing Date &amp; Time</string>
     <string name="poll_closing_in">Poll closes in %1$s</string>
     <string name="poll_closing_time">Close after</string>
@@ -538,6 +540,10 @@
     <string name="zap_type_nonzap">Non-Zap</string>
     <string name="zap_type_nonzap_explainer">No trace in Nostr, only in Lightning</string>
 
+
+    <string name="post_anonymously">Anonymous</string>
+    <string name="post_anonymously_explainer">Post as a new throwaway identity. Your account will not be linked to this reply.</string>
+    <string name="anonymous_reply_warning">This reply will be posted from a new anonymous identity</string>
 
     <string name="file_server">File Server</string>
     <string name="file_server_description">Choose a server to upload this file to</string>

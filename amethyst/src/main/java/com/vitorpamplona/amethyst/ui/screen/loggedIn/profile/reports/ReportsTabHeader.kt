@@ -23,18 +23,20 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.reports
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserReportCount
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.reports.dal.UserProfileReportFeedViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
 fun ReportsTabHeader(
     baseUser: User,
+    reportsFeedViewModel: UserProfileReportFeedViewModel,
     accountViewModel: AccountViewModel,
 ) {
-    val reportCount by observeUserReportCount(baseUser, accountViewModel)
+    val reportCount by reportsFeedViewModel.followerCount.collectAsStateWithLifecycle()
 
     if (reportCount > 0) {
         Text(text = stringRes(R.string.number_reports, reportCount))

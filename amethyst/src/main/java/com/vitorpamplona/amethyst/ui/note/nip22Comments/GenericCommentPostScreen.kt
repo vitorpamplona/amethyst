@@ -22,7 +22,9 @@ package com.vitorpamplona.amethyst.ui.note.nip22Comments
 
 import android.net.Uri
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -35,6 +37,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -47,7 +51,6 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromFiles
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
@@ -80,13 +83,17 @@ import com.vitorpamplona.amethyst.ui.note.creators.zapraiser.ZapRaiserRequest
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapTo
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapToButton
 import com.vitorpamplona.amethyst.ui.note.types.ReplyRenderType
+import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
+import com.vitorpamplona.amethyst.ui.theme.Size30Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size35Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightPage
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
@@ -94,11 +101,11 @@ import kotlinx.coroutines.withContext
 
 @Composable
 fun ReplyCommentPostScreen(
-    reply: Note? = null,
+    replyId: HexKey? = null,
     message: String? = null,
     attachment: Uri? = null,
-    quote: Note? = null,
-    draft: Note? = null,
+    quoteId: HexKey? = null,
+    draftId: HexKey? = null,
     accountViewModel: AccountViewModel,
     nav: Nav,
 ) {
@@ -108,13 +115,13 @@ fun ReplyCommentPostScreen(
     val context = LocalContext.current
 
     LaunchedEffect(postViewModel, accountViewModel) {
-        reply?.let {
+        replyId?.let { accountViewModel.getNoteIfExists(it) }?.let {
             postViewModel.reply(it)
         }
-        draft?.let {
+        draftId?.let { accountViewModel.getNoteIfExists(it) }?.let {
             postViewModel.editFromDraft(it)
         }
-        quote?.let {
+        quoteId?.let { accountViewModel.getNoteIfExists(it) }?.let {
             postViewModel.quote(it)
         }
         message?.ifBlank { null }?.let {
@@ -241,11 +248,32 @@ private fun GenericCommentPostBody(
                 Row(
                     modifier = Modifier.padding(vertical = Size10dp),
                 ) {
-                    BaseUserPicture(
-                        accountViewModel.userProfile(),
-                        Size35dp,
-                        accountViewModel = accountViewModel,
-                    )
+                    if (postViewModel.wantsAnonymousPost) {
+                        IconButton(
+                            modifier = Size35Modifier,
+                            onClick = { postViewModel.wantsAnonymousPost = false },
+                        ) {
+                            Icon(
+                                painter = painterRes(resourceId = R.drawable.incognito, 1),
+                                contentDescription = stringRes(R.string.post_anonymously),
+                                modifier = Size30Modifier,
+                                tint = MaterialTheme.colorScheme.onBackground,
+                            )
+                        }
+                    } else {
+                        Box(
+                            modifier =
+                                Modifier.clickable {
+                                    postViewModel.wantsAnonymousPost = true
+                                },
+                        ) {
+                            BaseUserPicture(
+                                accountViewModel.userProfile(),
+                                Size35dp,
+                                accountViewModel = accountViewModel,
+                            )
+                        }
+                    }
                     MessageField(
                         R.string.what_s_on_your_mind,
                         postViewModel,
