@@ -546,7 +546,7 @@ fun SendDirectMessageTo(
                         color = MaterialTheme.colorScheme.placeholderText,
                     )
                 },
-                visualTransformation =
+                outputTransformation =
                     UrlUserTagTransformation(
                         MaterialTheme.colorScheme.primary,
                     ),
@@ -579,7 +579,7 @@ fun SendDirectMessageTo(
                         color = MaterialTheme.colorScheme.placeholderText,
                     )
                 },
-                visualTransformation =
+                outputTransformation =
                     UrlUserTagTransformation(
                         MaterialTheme.colorScheme.primary,
                     ),
