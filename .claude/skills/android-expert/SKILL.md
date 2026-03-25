@@ -745,8 +745,8 @@ android {
         applicationId = "com.vitorpamplona.amethyst"
         minSdk = 26          // Android 8.0 (Oreo)
         targetSdk = 36       // Android 15
-        versionCode = 434
-        versionName = "1.06.2"
+        versionCode = 435
+        versionName = "1.06.3"
 
         vectorDrawables {
             useSupportLibrary = true
