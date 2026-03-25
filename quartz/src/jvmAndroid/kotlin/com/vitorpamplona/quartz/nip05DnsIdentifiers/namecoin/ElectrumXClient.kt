@@ -52,6 +52,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import javax.net.SocketFactory
 import javax.net.ssl.SSLContext
 import javax.net.ssl.SSLSocketFactory
+import javax.net.ssl.TrustManager
 import javax.net.ssl.TrustManagerFactory
 import javax.net.ssl.X509TrustManager
 
@@ -604,8 +605,14 @@ class ElectrumXClient(
         // we use a pinned trust store that contains the known ElectrumX server
         // certs. This is required because Samsung One UI 7 (Android 16) silently
         // rejects connections that use a no-op "trust-all" X509TrustManager.
+        //
+        // Exception: .onion addresses bypass cert pinning entirely — the Tor
+        // hidden service protocol already provides end-to-end authentication
+        // via the onion address, making TLS cert verification redundant.
         val sslFactory =
-            if (server.trustAllCerts) {
+            if (server.host.endsWith(".onion")) {
+                onionSslFactory()
+            } else if (server.trustAllCerts) {
                 cachedPinnedSslFactory()
             } else {
                 SSLSocketFactory.getDefault() as SSLSocketFactory
@@ -623,6 +630,44 @@ class ElectrumXClient(
         }
 
         return sslSocket
+    }
+
+    /**
+     * SSLSocketFactory for .onion addresses.
+     *
+     * Tor hidden services are authenticated by their onion address (the
+     * public key hash), so TLS certificate verification is redundant.
+     * We use a trust-all factory here — this is safe because:
+     * 1. The connection is already end-to-end encrypted by Tor.
+     * 2. The onion address IS the server's identity proof.
+     * 3. Samsung Knox's trust-all rejection doesn't apply to proxied
+     *    sockets routed through Tor's SOCKS interface.
+     */
+    private fun onionSslFactory(): SSLSocketFactory {
+        val trustAll =
+            arrayOf<TrustManager>(
+                object : X509TrustManager {
+                    override fun checkClientTrusted(
+                        chain: Array<java.security.cert.X509Certificate>,
+                        authType: String,
+                    ) {}
+
+                    override fun checkServerTrusted(
+                        chain: Array<java.security.cert.X509Certificate>,
+                        authType: String,
+                    ) {}
+
+                    override fun getAcceptedIssuers(): Array<java.security.cert.X509Certificate> = arrayOf()
+                },
+            )
+        val ctx =
+            try {
+                SSLContext.getInstance("TLSv1.2")
+            } catch (_: Exception) {
+                SSLContext.getInstance("TLS")
+            }
+        ctx.init(null, trustAll, SecureRandom())
+        return ctx.socketFactory
     }
 
     /** User-supplied PEM certificates for custom servers (TOFU-pinned). */
