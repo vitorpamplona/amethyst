@@ -38,28 +38,6 @@ class ChaCha20 {
         key: ByteArray,
     ) = decryptLibSodium(message, nonce, key)
 
-    /*
-    fun encryptNative(
-        message: ByteArray,
-        nonce: ByteArray,
-        key: ByteArray,
-    ): ByteArray {
-        val cipher = Cipher.getInstance("ChaCha20")
-        cipher.init(Cipher.ENCRYPT_MODE, FixedKey(key, "ChaCha20"), IvParameterSpec(nonce))
-        return cipher.doFinal(message)
-    }
-
-    fun decryptNative(
-        message: ByteArray,
-        nonce: ByteArray,
-        key: ByteArray,
-    ): ByteArray {
-        val cipher = Cipher.getInstance("ChaCha20")
-        cipher.init(Cipher.DECRYPT_MODE, FixedKey(key, "ChaCha20"), IvParameterSpec(nonce))
-        return cipher.doFinal(message)
-    }
-     */
-
     fun encryptLibSodium(
         message: ByteArray,
         nonce: ByteArray,

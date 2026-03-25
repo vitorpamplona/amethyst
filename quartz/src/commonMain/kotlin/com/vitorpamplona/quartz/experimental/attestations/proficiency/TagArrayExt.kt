@@ -20,10 +20,7 @@
  */
 package com.vitorpamplona.quartz.experimental.attestations.proficiency
 
-import com.vitorpamplona.quartz.experimental.attestations.recommendation.tags.DescriptionTag
 import com.vitorpamplona.quartz.experimental.attestations.recommendation.tags.KindTag
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 
 fun TagArray.kinds() = mapNotNull(KindTag::parse)
-
-fun TagArray.description() = firstNotNullOfOrNull(DescriptionTag::parse)

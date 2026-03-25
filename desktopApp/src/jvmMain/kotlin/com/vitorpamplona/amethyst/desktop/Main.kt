@@ -77,6 +77,7 @@ import com.vitorpamplona.amethyst.desktop.model.DesktopDmRelayState
 import com.vitorpamplona.amethyst.desktop.model.DesktopIAccount
 import com.vitorpamplona.amethyst.desktop.network.DefaultRelays
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
+import com.vitorpamplona.amethyst.desktop.service.highlights.DesktopHighlightStore
 import com.vitorpamplona.amethyst.desktop.service.images.DesktopImageLoaderSetup
 import com.vitorpamplona.amethyst.desktop.service.media.VlcjPlayerPool
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
@@ -142,6 +143,16 @@ sealed class DesktopScreen {
     data class Thread(
         val noteId: String,
     ) : DesktopScreen()
+
+    data class Article(
+        val addressTag: String,
+    ) : DesktopScreen()
+
+    data class Editor(
+        val draftSlug: String? = null,
+    ) : DesktopScreen()
+
+    data object Drafts : DesktopScreen()
 
     data object Settings : DesktopScreen()
 }
@@ -369,6 +380,8 @@ fun main() {
                             Item("Messages", onClick = { deckState.addColumn(DeckColumnType.Messages) })
                             Item("Search", onClick = { deckState.addColumn(DeckColumnType.Search) })
                             Item("Reads", onClick = { deckState.addColumn(DeckColumnType.Reads) })
+                            Item("Drafts", onClick = { deckState.addColumn(DeckColumnType.Drafts) })
+                            Item("Highlights", onClick = { deckState.addColumn(DeckColumnType.MyHighlights) })
                             Item("Bookmarks", onClick = { deckState.addColumn(DeckColumnType.Bookmarks) })
                             Item("Global Feed", onClick = { deckState.addColumn(DeckColumnType.GlobalFeed) })
                             Item("Profile", onClick = { deckState.addColumn(DeckColumnType.MyProfile) })
@@ -597,6 +610,13 @@ fun MainContent(
             DesktopIAccount(account, localCache, relayManager, dmSendTracker, scope)
         }
 
+    val highlightStore = remember { DesktopHighlightStore(appScope) }
+    val draftStore =
+        remember {
+            com.vitorpamplona.amethyst.desktop.service.drafts
+                .DesktopDraftStore(appScope)
+        }
+
     // Subscribe to incoming DMs and process into chatroomList
     LaunchedEffect(account) {
         relayManager.connectedRelays.first { it.isNotEmpty() }
@@ -716,6 +736,8 @@ fun MainContent(
                             iAccount = iAccount,
                             nwcConnection = nwcConnection,
                             subscriptionsCoordinator = subscriptionsCoordinator,
+                            highlightStore = highlightStore,
+                            draftStore = draftStore,
                             appScope = appScope,
                             onShowComposeDialog = onShowComposeDialog,
                             onShowReplyDialog = onShowReplyDialog,
@@ -753,6 +775,8 @@ fun MainContent(
                             iAccount = iAccount,
                             nwcConnection = nwcConnection,
                             subscriptionsCoordinator = subscriptionsCoordinator,
+                            highlightStore = highlightStore,
+                            draftStore = draftStore,
                             appScope = appScope,
                             onShowComposeDialog = onShowComposeDialog,
                             onShowReplyDialog = onShowReplyDialog,

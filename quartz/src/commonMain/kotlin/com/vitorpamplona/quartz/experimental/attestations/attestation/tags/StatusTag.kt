@@ -26,10 +26,9 @@ import com.vitorpamplona.quartz.utils.ensure
 enum class AttestationStatus(
     val code: String,
 ) {
-    ACCEPTED("accepted"),
-    REJECTED("rejected"),
     VERIFYING("verifying"),
-    VERIFIED("verified"),
+    VALID("valid"),
+    INVALID("invalid"),
     REVOKED("revoked"),
 }
 
@@ -45,10 +44,9 @@ class StatusTag {
             ensure(tag[1].isNotEmpty()) { return null }
 
             return when (tag[1]) {
-                AttestationStatus.ACCEPTED.code -> AttestationStatus.ACCEPTED
-                AttestationStatus.REJECTED.code -> AttestationStatus.REJECTED
                 AttestationStatus.VERIFYING.code -> AttestationStatus.VERIFYING
-                AttestationStatus.VERIFIED.code -> AttestationStatus.VERIFIED
+                AttestationStatus.VALID.code -> AttestationStatus.VALID
+                AttestationStatus.INVALID.code -> AttestationStatus.INVALID
                 AttestationStatus.REVOKED.code -> AttestationStatus.REVOKED
                 else -> null
             }

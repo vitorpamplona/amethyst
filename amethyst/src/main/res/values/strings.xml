@@ -68,7 +68,8 @@
 
     <string name="signer_not_found_exception">Signer not found</string>
     <string name="signer_not_found_exception_description">Was the Signer app uninstalled? Check if the signer is installed and has this account. Log off and Log in again of the signer app has changed.</string>
-
+    <string name="signer_illegal_state_exception">Signer misbehaved</string>
+    <string name="signer_illegal_state_exception_description">External signer returned a payload that is strange for the request. There might be a bug on either Amethyst or the Signer.</string>
 
     <string name="zaps">Zaps</string>
     <string name="view_count">View count</string>
