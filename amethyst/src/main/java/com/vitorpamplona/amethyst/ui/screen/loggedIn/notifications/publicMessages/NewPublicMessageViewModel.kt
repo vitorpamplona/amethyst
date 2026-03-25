@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.publicMessages
 
 import android.content.Context
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
@@ -147,7 +148,8 @@ class NewPublicMessageViewModel :
     val iMetaAttachments = IMetaAttachments()
     var nip95attachments by mutableStateOf<List<Pair<FileStorageEvent, FileStorageHeaderEvent>>>(emptyList())
 
-    override var message by mutableStateOf(TextFieldValue(""))
+    override val messageState = TextFieldState()
+    var message by mutableStateOf(TextFieldValue(""))
 
     val urlPreviews = PreviewState()
 
@@ -160,6 +162,7 @@ class NewPublicMessageViewModel :
 
     var emojiSuggestions: EmojiSuggestionState? = null
 
+    val toUsersState = TextFieldState()
     var toUsers by mutableStateOf(TextFieldValue(""))
 
     // Images and Videos
@@ -178,6 +181,7 @@ class NewPublicMessageViewModel :
     var wantsForwardZapTo by mutableStateOf(false)
     override val forwardZapTo = mutableStateOf<SplitBuilder<User>>(SplitBuilder())
     override val forwardZapToEditting = mutableStateOf(TextFieldValue(""))
+    override val forwardZapToEdittingState = TextFieldState()
 
     // NSFW, Sensitive
     var wantsToMarkAsSensitive by mutableStateOf(false)
@@ -549,7 +553,7 @@ class NewPublicMessageViewModel :
         updateMessage(TextFieldValue(message.text + " " + it))
     }
 
-    override fun updateMessage(newMessage: TextFieldValue) {
+    fun updateMessage(newMessage: TextFieldValue) {
         message = newMessage
         urlPreviews.update(newMessage)
 
