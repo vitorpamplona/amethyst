@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.quartz.nip44Encryption.crypto
 
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
@@ -30,14 +32,9 @@ import kotlin.test.assertFailsWith
  * and libsodium test suite.
  */
 class ChaCha20CoreTest {
-    private fun hex(s: String): ByteArray =
-        s
-            .replace(" ", "")
-            .chunked(2)
-            .map { it.toInt(16).toByte() }
-            .toByteArray()
+    private fun hex(s: String): ByteArray = s.replace(" ", "").hexToByteArray()
 
-    private fun ByteArray.toHex(): String = joinToString("") { "%02x".format(it) }
+    private fun ByteArray.toHex(): String = toHexKey()
 
     // ===== RFC 8439 §2.3.2: ChaCha20 Block Function Test Vector =====
     @Test
