@@ -38,19 +38,21 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import java.io.BufferedReader
+import java.io.ByteArrayInputStream
 import java.io.InputStreamReader
 import java.io.PrintWriter
 import java.net.InetSocketAddress
 import java.net.Socket
+import java.security.KeyStore
 import java.security.MessageDigest
 import java.security.SecureRandom
-import java.security.cert.X509Certificate
+import java.security.cert.CertificateFactory
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import javax.net.SocketFactory
 import javax.net.ssl.SSLContext
 import javax.net.ssl.SSLSocketFactory
-import javax.net.ssl.TrustManager
+import javax.net.ssl.TrustManagerFactory
 import javax.net.ssl.X509TrustManager
 
 /**
@@ -86,25 +88,6 @@ class ElectrumXClient(
         }
     private val requestId = AtomicInteger(0)
     private val serverMutexes = ConcurrentHashMap<String, Mutex>()
-
-    companion object {
-        private const val PROTOCOL_VERSION = "1.4"
-
-        /**
-         * Namecoin names expire this many blocks after their last update.
-         * From chainparams.cpp: consensus.nNameExpirationDepth = 36000
-         * (~250 days at ~10 min/block).
-         */
-        const val NAME_EXPIRE_DEPTH = 36_000
-
-        // Namecoin script opcodes
-        private const val OP_NAME_UPDATE: Byte = 0x53 // OP_3 repurposed by Namecoin
-        private const val OP_2DROP: Byte = 0x6d
-        private const val OP_DROP: Byte = 0x75
-        private const val OP_RETURN: Byte = 0x6a
-        private const val OP_PUSHDATA1: Byte = 0x4c
-        private const val OP_PUSHDATA2: Byte = 0x4d
-    }
 
     /**
      * Perform a name_show lookup against the given ElectrumX server.
@@ -461,39 +444,192 @@ class ElectrumXClient(
         if (!server.useSsl) return baseSocket
 
         // Upgrade to TLS over the already-connected (possibly proxied) socket.
+        // When the server uses a self-signed certificate (trustAllCerts flag),
+        // we use a pinned trust store that contains the known ElectrumX server
+        // certs. This is required because Samsung One UI 7 (Android 16) silently
+        // rejects connections that use a no-op "trust-all" X509TrustManager.
         val sslFactory =
             if (server.trustAllCerts) {
-                trustAllSslFactory()
+                cachedPinnedSslFactory()
             } else {
                 SSLSocketFactory.getDefault() as SSLSocketFactory
             }
-        return sslFactory.createSocket(baseSocket, server.host, server.port, true)
+        val sslSocket = sslFactory.createSocket(baseSocket, server.host, server.port, true)
+
+        // Enforce TLSv1.2+ — some OEM Conscrypt forks (Xiaomi MIUI, OnePlus ColorOS)
+        // may negotiate TLS 1.0/1.1 by default for raw socket upgrades.
+        if (sslSocket is javax.net.ssl.SSLSocket) {
+            val supported = sslSocket.supportedProtocols
+            val modern = supported.filter { it == "TLSv1.2" || it == "TLSv1.3" }
+            if (modern.isNotEmpty()) {
+                sslSocket.enabledProtocols = modern.toTypedArray()
+            }
+        }
+
+        return sslSocket
+    }
+
+    /** Lazy-cached SSLSocketFactory for pinned certs. Thread-safe via volatile + DCL. */
+    @Volatile
+    private var pinnedFactory: SSLSocketFactory? = null
+
+    private fun cachedPinnedSslFactory(): SSLSocketFactory {
+        pinnedFactory?.let { return it }
+        synchronized(this) {
+            pinnedFactory?.let { return it }
+            return buildPinnedSslFactory().also { pinnedFactory = it }
+        }
     }
 
     /**
-     * Create an SSLSocketFactory that accepts any certificate.
-     * Used for servers with self-signed certificates.
+     * Build an SSLSocketFactory that trusts the pinned ElectrumX server
+     * certificates plus the system CA store.
+     *
+     * Previous versions used a "trust-all" TrustManager, but Samsung
+     * devices running One UI 7 (Android 16) silently reject connections
+     * that use a no-op X509TrustManager. Pinning the known self-signed
+     * certs avoids this while maintaining security.
+     *
+     * Also handles OEM-specific quirks:
+     * - Xiaomi MIUI/HyperOS: KeyStore.getDefaultType() may return unexpected
+     *   types; we try the default first, then fall back to "PKCS12".
+     * - OnePlus ColorOS: some versions require explicit TLSv1.2 protocol.
+     * - All OEMs: SSLContext("TLSv1.2") is preferred over ("TLS") which may
+     *   resolve to TLS 1.0 on older Conscrypt forks.
      */
-    private fun trustAllSslFactory(): SSLSocketFactory {
-        val trustAllCerts =
-            arrayOf<TrustManager>(
-                object : X509TrustManager {
-                    override fun checkClientTrusted(
-                        chain: Array<X509Certificate>,
-                        authType: String,
-                    ) {}
+    private fun buildPinnedSslFactory(): SSLSocketFactory {
+        val ks =
+            try {
+                KeyStore.getInstance(KeyStore.getDefaultType()).apply { load(null, null) }
+            } catch (_: Exception) {
+                // Fallback for Xiaomi devices where getDefaultType() returns an unsupported type
+                KeyStore.getInstance("PKCS12").apply { load(null, null) }
+            }
 
-                    override fun checkServerTrusted(
-                        chain: Array<X509Certificate>,
-                        authType: String,
-                    ) {}
+        val cf = CertificateFactory.getInstance("X.509")
 
-                    override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
-                },
-            )
-        val sslContext = SSLContext.getInstance("TLS")
-        sslContext.init(null, trustAllCerts, SecureRandom())
+        // Load each pinned certificate into the keystore
+        for ((index, pem) in PINNED_ELECTRUMX_CERTS.withIndex()) {
+            try {
+                val cert = cf.generateCertificate(ByteArrayInputStream(pem.toByteArray(Charsets.US_ASCII)))
+                ks.setCertificateEntry("electrumx_$index", cert)
+            } catch (_: Exception) {
+                // Skip malformed certs — the remaining ones may still work
+            }
+        }
+
+        // Also load system CA certificates so that servers with real certs work too
+        val systemTmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
+        systemTmf.init(null as KeyStore?) // null = system default
+        val systemTm = systemTmf.trustManagers.filterIsInstance<X509TrustManager>().firstOrNull()
+        if (systemTm != null) {
+            for ((index, issuer) in systemTm.acceptedIssuers.withIndex()) {
+                try {
+                    ks.setCertificateEntry("system_$index", issuer)
+                } catch (_: Exception) {
+                    // Some OEMs return certs that can't be re-inserted; skip
+                }
+            }
+        }
+
+        val tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
+        tmf.init(ks)
+
+        // Prefer TLSv1.2 explicitly — SSLContext.getInstance("TLS") can resolve
+        // to TLS 1.0 on some OEM Conscrypt forks (Xiaomi, OnePlus).
+        val sslContext =
+            try {
+                SSLContext.getInstance("TLSv1.2")
+            } catch (_: Exception) {
+                SSLContext.getInstance("TLS")
+            }
+        sslContext.init(null, tmf.trustManagers, SecureRandom())
         return sslContext.socketFactory
+    }
+
+    companion object {
+        private const val PROTOCOL_VERSION = "1.4"
+
+        /**
+         * Namecoin names expire this many blocks after their last update.
+         * From chainparams.cpp: consensus.nNameExpirationDepth = 36000
+         * (~250 days at ~10 min/block).
+         */
+        const val NAME_EXPIRE_DEPTH = 36_000
+
+        // Namecoin script opcodes
+        private const val OP_NAME_UPDATE: Byte = 0x53 // OP_3 repurposed by Namecoin
+        private const val OP_2DROP: Byte = 0x6d
+        private const val OP_DROP: Byte = 0x75
+        private const val OP_RETURN: Byte = 0x6a
+        private const val OP_PUSHDATA1: Byte = 0x4c
+        private const val OP_PUSHDATA2: Byte = 0x4d
+
+        /**
+         * PEM-encoded certificates for the well-known Namecoin ElectrumX servers.
+         *
+         * These are self-signed certificates that cannot be verified by the
+         * system CA store. We pin them explicitly so that connections succeed
+         * on devices with strict TLS enforcement (e.g. Samsung One UI 7).
+         *
+         * To update: `echo | openssl s_client -connect HOST:PORT 2>/dev/null | openssl x509 -outform PEM`
+         */
+        private val PINNED_ELECTRUMX_CERTS =
+            listOf(
+                // electrumx.testls.space:50002 — expires 2027-05-04
+                """
+-----BEGIN CERTIFICATE-----
+MIIDwzCCAqsCFGGKT5mjh7oN98aNyjOCiqafL8VyMA0GCSqGSIb3DQEBCwUAMIGd
+MQswCQYDVQQGEwJVUzEQMA4GA1UECAwHQ2hpY2FnbzEQMA4GA1UEBwwHQ2hpY2Fn
+bzESMBAGA1UECgwJSW50ZXJuZXRzMQ8wDQYDVQQLDAZJbnRlcncxHjAcBgNVBAMM
+FWVsZWN0cnVtLnRlc3Rscy5zcGFjZTElMCMGCSqGSIb3DQEJARYWbWpfZ2lsbF84
+OUBob3RtYWlsLmNvbTAeFw0yMjA1MDUwNjIzNDFaFw0yNzA1MDQwNjIzNDFaMIGd
+MQswCQYDVQQGEwJVUzEQMA4GA1UECAwHQ2hpY2FnbzEQMA4GA1UEBwwHQ2hpY2Fn
+bzESMBAGA1UECgwJSW50ZXJuZXRzMQ8wDQYDVQQLDAZJbnRlcncxHjAcBgNVBAMM
+FWVsZWN0cnVtLnRlc3Rscy5zcGFjZTElMCMGCSqGSIb3DQEJARYWbWpfZ2lsbF84
+OUBob3RtYWlsLmNvbTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAO4H
++PKCdiiz3jNOA77aAmS2YaU7eOQ8ZGliEVr/PlLcgF5gmthb2DI6iK4KhC1ad34G
+1n9IhkXPhkVJ94i8wB3uoTBlA7mI5h59m01yhzSkJAoYoU/i6DM9ipbakqWFCTEp
+P+yE216NTU5MbYwThZdRSAIIABe9RyIliMSidyrwHvKBLfnJPFScghW6rhBWN7PG
+PA8k0MFGzf+HXbpnV/jAvz08ZC34qiBIjkJrTgh49JweyoZKdppyJcH4UbkslJ2t
+YUJR3oURBvrPj+D7TwLVRbX36ul7r4+dP3IjgmljsSAHDK4N/PfWrCBdlj9Pc1Cp
+yX+ZDh8X2NrL4ukHoVMCAwEAATANBgkqhkiG9w0BAQsFAAOCAQEAeVj6VZNmY/Vb
+nhzrC7xBSHqVWQ1wkLOClLsdvgKP8cFFJuUoCMQU5bPMi7nWnkfvvsIKH4Eibk5K
+fqiA9jVsY0FHvQ8gP3KMk1LVuUf/sTcRe5itp3guBOSk/zXZUD5tUz/oRk3k+rdc
+MsInqhomjNy/dqYmD6Wm4DNPjZh6fWy+AVQKVNOI2t4koaVdpoi8Uv8h4gFGPbdI
+sVmtoGiIGkKNIWum+6mnF6PfynNrLk+ztH4TrdacVNeoJUPYEAxOuesWXFy3H4r+
+HKBqA4xAzyjgKLPqoWnjSu7gxj1GIjBhnDxkM6wUOnDq8A0EqxR+A17OcXW9sZ2O
+2ZIVwmtnyA==
+-----END CERTIFICATE-----
+                """.trimIndent(),
+                // nmc2.bitcoins.sk:57002 / 46.229.238.187:57002 — expires 2030-10-22
+                """
+-----BEGIN CERTIFICATE-----
+MIID+TCCAuGgAwIBAgIUdmJGukmfPvqmAYpTfuGcjRoYHJ8wDQYJKoZIhvcNAQEL
+BQAwgYsxCzAJBgNVBAYTAlNLMREwDwYDVQQIDAhTbG92YWtpYTETMBEGA1UEBwwK
+QnJhdGlzbGF2YTEUMBIGA1UECgwLYml0Y29pbnMuc2sxGTAXBgNVBAMMEG5tYzIu
+Yml0Y29pbnMuc2sxIzAhBgkqhkiG9w0BCQEWFGRlYWZib3lAY2ljb2xpbmEub3Jn
+MB4XDTIwMTAyNDE5MjQzOVoXDTMwMTAyMjE5MjQzOVowgYsxCzAJBgNVBAYTAlNL
+MREwDwYDVQQIDAhTbG92YWtpYTETMBEGA1UEBwwKQnJhdGlzbGF2YTEUMBIGA1UE
+CgwLYml0Y29pbnMuc2sxGTAXBgNVBAMMEG5tYzIuYml0Y29pbnMuc2sxIzAhBgkq
+hkiG9w0BCQEWFGRlYWZib3lAY2ljb2xpbmEub3JnMIIBIjANBgkqhkiG9w0BAQEF
+AAOCAQ8AMIIBCgKCAQEAzBUkZNDfaz7kc28l5tDKohJjekWmz1ynzfGx3ZLsqOZE
+c+kNfcMaWU+zT/j0mV6pX6KSH7G9pPAku+8PRdKRq+d63wiJDEjGSaFztQWKW6L1
+vTxgCK5gu+Eir3BkTagJObsrLKS+T6qH610/3+btGgoR3lunB5TzCgB/9oQanjDW
+zjg2CwmxgR5Iw1Eqfenx7zkSK33FSXSF2SvbUs1Atj2oPU4DLivyrx0RaUmaPemn
+cmcpnax+py4pQeB6dJWU1INhzXt3hTJRyoqsSGY3vCECIKIBIkh8GsYjAX4z+Y9y
+6pJx0da2b88qPWdsoxaIMvrQiuWknDrSJwAyw2Yd8QIDAQABo1MwUTAdBgNVHQ4E
+FgQUT2J83B2/9jxGGdFeWrxMohTzHNwwHwYDVR0jBBgwFoAUT2J83B2/9jxGGdFe
+WrxMohTzHNwwDwYDVR0TAQH/BAUwAwEB/zANBgkqhkiG9w0BAQsFAAOCAQEAsbxX
+wN8tZaXOybImMZCQS7zfxmKl2IAcqu+R01KPfnIfrFqXPsGDDl3rYLkwh1O4/hYQ
+NKNW9KTxoJxuBmAkm7EXQQh1XUUzajdEDqDBVRyvR0Z2MdMYnMSAiiMXMl2wUZnc
+QXYftBo0HbtfsaJjImQdDjmlmRPSzE/RW6iUe+1cesKBC7e8nVf69Yu/fxO4m083
+VWwAstlWJfk1GyU7jzVc8svealg/oIiDoOMe6CFSLx1BDv2FeHSpRdqd3fn+AC73
+bK2N2smrHUOQnFijuiFw3WOrjERi0eMhjVNfVu9W9ZYa/Wd6SdIzV55LbG+NpmSf
+5W7ix41hRvdT6cTAJA==
+-----END CERTIFICATE-----
+                """.trimIndent(),
+            )
     }
 
     private fun buildRpcRequest(
