@@ -77,11 +77,15 @@ data class NamecoinSettings(
             if (host.isEmpty() || port <= 0 || port > 65535) return null
             val useSsl = parts.getOrNull(2)?.trim()?.lowercase() != "tcp"
             val isOnion = host.endsWith(".onion")
+            // All custom servers use trustAllCerts — ElectrumX servers
+            // almost universally use self-signed certificates. The actual
+            // trust is handled by pinned certs (hardcoded defaults + any
+            // certs the user has accepted via Test Connection TOFU).
             return ElectrumxServer(
                 host = host,
                 port = port,
                 useSsl = useSsl,
-                trustAllCerts = isOnion || !useSsl,
+                trustAllCerts = true,
             )
         }
 

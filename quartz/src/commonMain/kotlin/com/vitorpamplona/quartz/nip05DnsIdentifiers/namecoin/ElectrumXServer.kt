@@ -81,6 +81,10 @@ data class ServerTestResult(
     val responseTimeMs: Long,
     val error: String? = null,
     val tlsVersion: String? = null,
+    /** PEM-encoded server certificate, captured during test for TOFU pinning. */
+    val serverCertPem: String? = null,
+    /** SHA-256 fingerprint of the server certificate. */
+    val certFingerprint: String? = null,
 )
 
 /** Well-known public Namecoin ElectrumX servers (clearnet). */

@@ -78,6 +78,12 @@ fun NamecoinSettingsScreen(
                     scope.launch { namecoinPrefs.reset() }
                 },
                 onTestServer = { server -> electrumXClient.testServer(server) },
+                onPinCert = { pem ->
+                    scope.launch {
+                        namecoinPrefs.addPinnedCert(pem)
+                        electrumXClient.addPinnedCert(pem)
+                    }
+                },
             )
         }
     }

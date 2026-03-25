@@ -94,6 +94,7 @@ import java.util.Locale
  * @param onRemoveServer  Called with the server string to remove
  * @param onReset         Called when user resets to defaults
  * @param onTestServer    Suspend function to test a single server
+ * @param onPinCert       Called with PEM string to persist a TOFU-pinned cert
  */
 @Composable
 fun NamecoinSettingsSection(
@@ -103,6 +104,7 @@ fun NamecoinSettingsSection(
     onRemoveServer: (String) -> Unit,
     onReset: () -> Unit,
     onTestServer: suspend (ElectrumxServer) -> ServerTestResult,
+    onPinCert: (String) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.padding(16.dp)) {
@@ -177,6 +179,7 @@ fun NamecoinSettingsSection(
                 TestConnectionSection(
                     settings = settings,
                     onTestServer = onTestServer,
+                    onPinCert = onPinCert,
                 )
             }
         }
@@ -189,6 +192,7 @@ fun NamecoinSettingsSection(
 private fun TestConnectionSection(
     settings: NamecoinSettings,
     onTestServer: suspend (ElectrumxServer) -> ServerTestResult,
+    onPinCert: (String) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
     var isTesting by remember { mutableStateOf(false) }
@@ -210,6 +214,11 @@ private fun TestConnectionSection(
                             val result = onTestServer(server)
                             results.add(result)
                             testResults = results.toList()
+                            // TOFU: auto-pin cert from successful connections
+                            val pem = result.serverCertPem
+                            if (result.success && pem != null) {
+                                onPinCert(pem)
+                            }
                         }
                         lastTestTimestamp = System.currentTimeMillis()
                         isTesting = false
@@ -319,6 +328,17 @@ private fun ServerTestResultRow(result: ServerTestResult) {
                     style = MaterialTheme.typography.labelSmall,
                     color = Color(0xFF2E8B57),
                 )
+                val fp = result.certFingerprint
+                if (fp != null) {
+                    Text(
+                        text = "Cert: ${fp.take(23)}…",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontFamily = FontFamily.Monospace,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             } else {
                 val errorText = result.error
                 if (errorText != null) {

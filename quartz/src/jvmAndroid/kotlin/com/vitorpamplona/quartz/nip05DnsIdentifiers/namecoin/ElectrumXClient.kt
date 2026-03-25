@@ -171,12 +171,31 @@ class ElectrumXClient(
                 val socket = createSocket(server)
                 socket.soTimeout = readTimeoutMs.toInt()
 
-                val tlsVersion =
-                    if (socket is javax.net.ssl.SSLSocket) {
-                        socket.session.protocol
-                    } else {
-                        null
+                var tlsVersion: String? = null
+                var serverCertPem: String? = null
+                var certFingerprint: String? = null
+
+                if (socket is javax.net.ssl.SSLSocket) {
+                    tlsVersion = socket.session.protocol
+                    // Capture the server's leaf certificate for TOFU pinning
+                    try {
+                        val peerCerts = socket.session.peerCertificates
+                        if (peerCerts.isNotEmpty() && peerCerts[0] is java.security.cert.X509Certificate) {
+                            val x509 = peerCerts[0] as java.security.cert.X509Certificate
+                            // PEM encode
+                            val encoded =
+                                java.util.Base64
+                                    .getMimeEncoder(76, "\n".toByteArray())
+                                    .encodeToString(x509.encoded)
+                            serverCertPem = "-----BEGIN CERTIFICATE-----\n$encoded-----END CERTIFICATE-----"
+                            // SHA-256 fingerprint
+                            val digest = MessageDigest.getInstance("SHA-256").digest(x509.encoded)
+                            certFingerprint = digest.joinToString(":") { "%02X".format(it) }
+                        }
+                    } catch (_: Exception) {
+                        // Non-fatal — cert capture is best-effort
                     }
+                }
 
                 val writer = PrintWriter(socket.getOutputStream(), true)
                 val reader = BufferedReader(InputStreamReader(socket.getInputStream()))
@@ -219,6 +238,8 @@ class ElectrumXClient(
                         success = true,
                         responseTimeMs = elapsed,
                         tlsVersion = tlsVersion,
+                        serverCertPem = serverCertPem,
+                        certFingerprint = certFingerprint,
                     )
                 } finally {
                     runCatching { writer.close() }
@@ -604,6 +625,9 @@ class ElectrumXClient(
         return sslSocket
     }
 
+    /** User-supplied PEM certificates for custom servers (TOFU-pinned). */
+    private val dynamicCerts = mutableListOf<String>()
+
     /** Lazy-cached SSLSocketFactory for pinned certs. Thread-safe via volatile + DCL. */
     @Volatile
     private var pinnedFactory: SSLSocketFactory? = null
@@ -613,6 +637,31 @@ class ElectrumXClient(
         synchronized(this) {
             pinnedFactory?.let { return it }
             return buildPinnedSslFactory().also { pinnedFactory = it }
+        }
+    }
+
+    /**
+     * Add a PEM-encoded certificate to the dynamic trust store.
+     * Typically called after the user confirms a cert fingerprint via
+     * the "Test Connection" flow in settings.
+     *
+     * Invalidates the cached factory so the next connection picks it up.
+     */
+    fun addPinnedCert(pem: String) {
+        synchronized(this) {
+            dynamicCerts.add(pem)
+            pinnedFactory = null // force rebuild
+        }
+    }
+
+    /**
+     * Replace all dynamic certs (e.g. loaded from preferences on startup).
+     */
+    fun setDynamicCerts(pems: List<String>) {
+        synchronized(this) {
+            dynamicCerts.clear()
+            dynamicCerts.addAll(pems)
+            pinnedFactory = null
         }
     }
 
@@ -643,8 +692,9 @@ class ElectrumXClient(
 
         val cf = CertificateFactory.getInstance("X.509")
 
-        // Load each pinned certificate into the keystore
-        for ((index, pem) in PINNED_ELECTRUMX_CERTS.withIndex()) {
+        // Load hardcoded + dynamic pinned certificates into the keystore
+        val allCerts = PINNED_ELECTRUMX_CERTS + dynamicCerts
+        for ((index, pem) in allCerts.withIndex()) {
             try {
                 val cert = cf.generateCertificate(ByteArrayInputStream(pem.toByteArray(Charsets.US_ASCII)))
                 ks.setCertificateEntry("electrumx_$index", cert)

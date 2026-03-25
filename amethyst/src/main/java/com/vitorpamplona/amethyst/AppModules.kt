@@ -406,6 +406,18 @@ class AppModules(
             // Eagerly initialize OtsSharedPreferences off the main thread
             otsPrefs
         }
+
+        // Load user-pinned ElectrumX certs from preferences into the client
+        applicationIOScope.launch {
+            try {
+                val pinnedCerts = namecoinPrefs.loadPinnedCerts()
+                if (pinnedCerts.isNotEmpty()) {
+                    electrumXClient.setDynamicCerts(pinnedCerts)
+                }
+            } catch (_: Exception) {
+                // Non-fatal — defaults will still work
+            }
+        }
     }
 
     fun terminate(appContext: Context) {
