@@ -611,13 +611,39 @@ class ElectrumXClient(
         // via the onion address, making TLS cert verification redundant.
         val sslFactory =
             if (server.host.endsWith(".onion")) {
-                onionSslFactory()
+                // .onion addresses: prefer the pinned factory (the .onion server's
+                // cert is already in PINNED_ELECTRUMX_CERTS). Fall back to trust-all
+                // only if the pinned handshake fails — this keeps compatibility with
+                // .onion servers whose certs aren't pinned yet, while avoiding a
+                // blanket trust-all that hardened TLS stacks (GrapheneOS, Samsung
+                // Knox) may reject at the Conscrypt/BoringSSL layer.
+                cachedPinnedSslFactory()
             } else if (server.trustAllCerts) {
                 cachedPinnedSslFactory()
             } else {
                 SSLSocketFactory.getDefault() as SSLSocketFactory
             }
-        val sslSocket = sslFactory.createSocket(baseSocket, server.host, server.port, true)
+        val sslSocket: Socket
+        try {
+            sslSocket = sslFactory.createSocket(baseSocket, server.host, server.port, true)
+        } catch (e: javax.net.ssl.SSLHandshakeException) {
+            if (server.host.endsWith(".onion")) {
+                // Pinned factory failed for .onion — fall back to trust-all.
+                // This is safe: Tor provides E2E authentication via the onion
+                // address, and the proxied socket bypasses Knox/GrapheneOS
+                // trust-all rejection in practice.
+                val fallbackSocket = onionSslFactory().createSocket(baseSocket, server.host, server.port, true)
+                if (fallbackSocket is javax.net.ssl.SSLSocket) {
+                    val supported = fallbackSocket.supportedProtocols
+                    val modern = supported.filter { it == "TLSv1.2" || it == "TLSv1.3" }
+                    if (modern.isNotEmpty()) {
+                        fallbackSocket.enabledProtocols = modern.toTypedArray()
+                    }
+                }
+                return fallbackSocket
+            }
+            throw e
+        }
 
         // Enforce TLSv1.2+ — some OEM Conscrypt forks (Xiaomi MIUI, OnePlus ColorOS)
         // may negotiate TLS 1.0/1.1 by default for raw socket upgrades.
@@ -633,15 +659,20 @@ class ElectrumXClient(
     }
 
     /**
-     * SSLSocketFactory for .onion addresses.
+     * Fallback SSLSocketFactory for .onion addresses when the pinned
+     * factory fails (e.g. cert rotated, unknown .onion server).
      *
-     * Tor hidden services are authenticated by their onion address (the
-     * public key hash), so TLS certificate verification is redundant.
-     * We use a trust-all factory here — this is safe because:
+     * Only used as a last resort after cachedPinnedSslFactory() throws
+     * SSLHandshakeException. This is safe because:
      * 1. The connection is already end-to-end encrypted by Tor.
-     * 2. The onion address IS the server's identity proof.
-     * 3. Samsung Knox's trust-all rejection doesn't apply to proxied
-     *    sockets routed through Tor's SOCKS interface.
+     * 2. The onion address IS the server's identity proof (public key hash).
+     * 3. Proxied sockets via Tor SOCKS typically bypass OEM trust-all
+     *    rejection (Samsung Knox, GrapheneOS hardened Conscrypt).
+     *
+     * Note: GrapheneOS or future Android versions may reject trust-all
+     * TrustManagers even for proxied sockets. If this fallback stops
+     * working, the .onion server's cert should be added to
+     * PINNED_ELECTRUMX_CERTS (it's already there for the known server).
      */
     private fun onionSslFactory(): SSLSocketFactory {
         val trustAll =

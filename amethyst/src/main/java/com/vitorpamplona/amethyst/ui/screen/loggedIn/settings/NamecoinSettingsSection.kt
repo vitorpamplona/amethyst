@@ -42,6 +42,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -188,6 +189,15 @@ fun NamecoinSettingsSection(
 
 // ── Test Connection ────────────────────────────────────────────────────
 
+/**
+ * Holds a cert pending user confirmation before pinning (TOFU).
+ */
+private data class PendingCertPin(
+    val serverHost: String,
+    val fingerprint: String,
+    val pem: String,
+)
+
 @Composable
 private fun TestConnectionSection(
     settings: NamecoinSettings,
@@ -198,8 +208,62 @@ private fun TestConnectionSection(
     var isTesting by remember { mutableStateOf(false) }
     var testResults by remember { mutableStateOf<List<ServerTestResult>>(emptyList()) }
     var lastTestTimestamp by remember { mutableStateOf<Long?>(null) }
+    // Certs discovered during testing that need user confirmation
+    var pendingCerts by remember { mutableStateOf<List<PendingCertPin>>(emptyList()) }
+    // Which cert is currently shown in the confirmation dialog
+    var confirmingCert by remember { mutableStateOf<PendingCertPin?>(null) }
 
     val servers = settings.toElectrumxServers() ?: DEFAULT_ELECTRUMX_SERVERS
+
+    // ── Cert confirmation dialog ───────────────────────────────
+    confirmingCert?.let { pending ->
+        AlertDialog(
+            onDismissRequest = {
+                // Remove from pending list and move to next (or close)
+                pendingCerts = pendingCerts.drop(1)
+                confirmingCert = pendingCerts.firstOrNull()
+            },
+            title = { Text(stringResource(R.string.namecoin_pin_cert_title)) },
+            text = {
+                Column {
+                    Text(
+                        stringResource(R.string.namecoin_pin_cert_body, pending.serverHost),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        "SHA-256:",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = pending.fingerprint,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontFamily = FontFamily.Monospace,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    onPinCert(pending.pem)
+                    pendingCerts = pendingCerts.drop(1)
+                    confirmingCert = pendingCerts.firstOrNull()
+                }) {
+                    Text(stringResource(R.string.namecoin_pin_cert_accept))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    pendingCerts = pendingCerts.drop(1)
+                    confirmingCert = pendingCerts.firstOrNull()
+                }) {
+                    Text(stringResource(R.string.namecoin_pin_cert_reject))
+                }
+            },
+        )
+    }
 
     Column {
         // ── Test button ────────────────────────────────────────
@@ -208,20 +272,34 @@ private fun TestConnectionSection(
                 if (!isTesting) {
                     isTesting = true
                     testResults = emptyList()
+                    pendingCerts = emptyList()
                     scope.launch {
                         val results = mutableListOf<ServerTestResult>()
+                        val newCerts = mutableListOf<PendingCertPin>()
                         for (server in servers) {
                             val result = onTestServer(server)
                             results.add(result)
                             testResults = results.toList()
-                            // TOFU: auto-pin cert from successful connections
+                            // Collect certs for user confirmation (not auto-pinned)
                             val pem = result.serverCertPem
-                            if (result.success && pem != null) {
-                                onPinCert(pem)
+                            val fp = result.certFingerprint
+                            if (result.success && pem != null && fp != null) {
+                                newCerts.add(
+                                    PendingCertPin(
+                                        serverHost = "${server.host}:${server.port}",
+                                        fingerprint = fp,
+                                        pem = pem,
+                                    ),
+                                )
                             }
                         }
                         lastTestTimestamp = System.currentTimeMillis()
                         isTesting = false
+                        // Show confirmation dialog for each new cert
+                        if (newCerts.isNotEmpty()) {
+                            pendingCerts = newCerts
+                            confirmingCert = newCerts.first()
+                        }
                     }
                 }
             },
