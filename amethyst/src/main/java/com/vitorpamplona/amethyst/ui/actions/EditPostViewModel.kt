@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.actions
 
 import android.content.Context
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -79,6 +80,7 @@ open class EditPostViewModel : ViewModel() {
     var nip95attachments by
         mutableStateOf<List<Pair<FileStorageEvent, FileStorageHeaderEvent>>>(emptyList())
 
+    val messageState = TextFieldState()
     var message by mutableStateOf(TextFieldValue(""))
     var urlPreview by mutableStateOf<String?>(null)
     val mediaUploadTracker = MediaUploadTracker()
