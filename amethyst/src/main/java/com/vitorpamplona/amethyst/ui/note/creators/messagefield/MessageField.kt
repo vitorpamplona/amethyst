@@ -20,6 +20,12 @@
  */
 package com.vitorpamplona.amethyst.ui.note.creators.messagefield
 
+import android.net.Uri
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.content.ReceiveContentListener
+import androidx.compose.foundation.content.TransferableContent
+import androidx.compose.foundation.content.consume
+import androidx.compose.foundation.content.contentReceiver
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.LocalTextStyle
@@ -46,11 +52,13 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MessageField(
     placeholder: Int,
     viewModel: IMessageField,
     requestFocus: Boolean = true,
+    onReceiveUri: ((Uri) -> Unit)? = null,
 ) {
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -64,6 +72,36 @@ fun MessageField(
         }
     }
 
+    val baseModifier =
+        Modifier
+            .fillMaxWidth()
+            .focusRequester(focusRequester)
+            .onFocusChanged {
+                if (it.isFocused) {
+                    keyboardController?.show()
+                }
+            }
+
+    val modifier =
+        if (onReceiveUri != null) {
+            baseModifier.contentReceiver(
+                object : ReceiveContentListener {
+                    override fun onReceive(content: TransferableContent): TransferableContent? =
+                        content.consume { item ->
+                            val uri = item.uri
+                            if (uri != null) {
+                                onReceiveUri(uri)
+                                true
+                            } else {
+                                false
+                            }
+                        }
+                },
+            )
+        } else {
+            baseModifier
+        }
+
     ThinPaddingTextField(
         value = viewModel.message,
         onValueChange = viewModel::updateMessage,
@@ -71,15 +109,7 @@ fun MessageField(
             KeyboardOptions.Default.copy(
                 capitalization = KeyboardCapitalization.Sentences,
             ),
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .focusRequester(focusRequester)
-                .onFocusChanged {
-                    if (it.isFocused) {
-                        keyboardController?.show()
-                    }
-                },
+        modifier = modifier,
         placeholder = {
             Text(
                 text = stringRes(placeholder),

@@ -318,9 +318,14 @@ private fun NewPostScreenBody(
                                 )
                             }
                         }
+                        val context = LocalContext.current
                         MessageField(
                             R.string.what_s_on_your_mind,
                             postViewModel,
+                            onReceiveUri = { uri ->
+                                val mediaType = context.contentResolver.getType(uri)
+                                postViewModel.selectImage(persistentListOf(SelectedMedia(uri, mediaType)))
+                            },
                         )
                     }
                 }
