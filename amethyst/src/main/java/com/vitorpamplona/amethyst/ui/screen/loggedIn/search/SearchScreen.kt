@@ -20,29 +20,20 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.search
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -76,7 +67,6 @@ import com.vitorpamplona.amethyst.ui.note.ClearTextIcon
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.SearchIcon
 import com.vitorpamplona.amethyst.ui.note.UserCompose
-import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.NamecoinResolutionState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.ChannelName
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoClickableRow
@@ -170,10 +160,7 @@ private fun SearchBar(
         }
     }
 
-    Column {
-        SearchTextField(searchBarViewModel, Modifier.statusBarsPadding())
-        SearchNamecoinStatusBanner(searchBarViewModel)
-    }
+    SearchTextField(searchBarViewModel, Modifier.statusBarsPadding())
 }
 
 @Composable
@@ -230,88 +217,6 @@ private fun SearchTextField(
 }
 
 @Composable
-private fun SearchNamecoinStatusBanner(searchBarViewModel: SearchBarViewModel) {
-    val ncState by searchBarViewModel.namecoinState.collectAsStateWithLifecycle()
-
-    AnimatedVisibility(
-        visible = ncState !is NamecoinResolutionState.Idle,
-        enter = fadeIn() + expandVertically(),
-        exit = fadeOut() + shrinkVertically(),
-    ) {
-        when (val state = ncState) {
-            is NamecoinResolutionState.Resolving -> {
-                Row(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 14.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(14.dp),
-                        strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        "Resolving via Namecoin blockchain\u2026",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
-            }
-
-            is NamecoinResolutionState.Resolved -> {
-                Row(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 14.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        "\u26D3\uFE0F",
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        "Resolved via Namecoin: ${state.namecoinName}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Medium,
-                    )
-                }
-            }
-
-            is NamecoinResolutionState.Error -> {
-                Row(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 14.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        "\u26A0\uFE0F",
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        state.message,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                }
-            }
-
-            is NamecoinResolutionState.Idle -> {
-                // nothing
-            }
-        }
-    }
-}
-
-@Composable
 private fun DisplaySearchResults(
     searchBarViewModel: SearchBarViewModel,
     nav: INav,
@@ -324,11 +229,11 @@ private fun DisplaySearchResults(
     val hashTags by searchBarViewModel.hashtagResults.collectAsStateWithLifecycle()
     val relays by searchBarViewModel.relayResults.collectAsStateWithLifecycle()
     val users by searchBarViewModel.searchResultsUsers.collectAsStateWithLifecycle()
+    val namecoinUser by searchBarViewModel.namecoinResolvedUser.collectAsStateWithLifecycle()
     val publicChatChannels by searchBarViewModel.searchResultsPublicChatChannels.collectAsStateWithLifecycle()
     val ephemeralChannels by searchBarViewModel.searchResultsEphemeralChannels.collectAsStateWithLifecycle()
     val liveActivityChannels by searchBarViewModel.searchResultsLiveActivityChannels.collectAsStateWithLifecycle()
     val notes by searchBarViewModel.searchResultsNotes.collectAsStateWithLifecycle()
-    val ncState by searchBarViewModel.namecoinState.collectAsStateWithLifecycle()
 
     LazyColumn(
         modifier = Modifier.fillMaxHeight(),
@@ -351,22 +256,14 @@ private fun DisplaySearchResults(
             users,
             key = { _, item -> "u" + item.pubkeyHex },
         ) { _, item ->
-            val isNamecoinResult =
-                ncState is NamecoinResolutionState.Resolved &&
-                    (ncState as NamecoinResolutionState.Resolved).user == item
-
-            if (isNamecoinResult) {
-                Row(
+            if (namecoinUser == item) {
+                Text(
+                    "\u26D3\uFE0F Namecoin",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Medium,
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        "\u26D3\uFE0F Namecoin result",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Medium,
-                    )
-                }
+                )
             }
 
             UserCompose(item, accountViewModel = accountViewModel, nav = nav)

@@ -1820,7 +1820,7 @@
     <string name="select_users_to_follow">Select Users to Follow</string>
     <string name="profile_to_import_from">Profile to import from</string>
     <string name="name_search_npub1_alice_example_com">search, npub1…, alice@example.com</string>
-    <string name="supports_npub_nip_05_hex_and_namecoin_bit_d_id">Supports npub, nprofile, NIP-05, hex, and namecoin (.bit, d/, id/)</string>
+    <string name="supports_npub_nip_05_hex_and_namecoin_bit_d_id">Supports npub, nprofile, NIP-05, hex, and Namecoin (.bit)</string>
     <string name="look_up_follow_list">Look Up Follow List</string>
     <string name="tip">Tip</string>
     <string name="accounts_found">%1$d accounts found</string>

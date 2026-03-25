@@ -36,7 +36,6 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.SearchQueryState
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
-import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.NamecoinResolutionState
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.userUriPrefixes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
@@ -44,7 +43,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrlOrNull
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.INip05Client
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Id
-import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
 import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
@@ -59,6 +57,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.SharingStarted.Companion.WhileSubscribed
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -67,26 +66,6 @@ import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
-
-/** Returns a [Nip05Id] for identifiers that should go through NIP-05 / Namecoin resolution. */
-private fun toNip05IdOrNull(term: String): Nip05Id? =
-    when {
-        term.contains('@') -> {
-            Nip05Id.parse(term)
-        }
-
-        NamecoinNameResolver.isNamecoinIdentifier(term) -> {
-            if (term.endsWith(".bit", ignoreCase = true)) {
-                Nip05Id("_", term.lowercase())
-            } else {
-                Nip05Id("_", term.lowercase())
-            }
-        }
-
-        else -> {
-            null
-        }
-    }
 
 @Stable
 @OptIn(FlowPreview::class)
@@ -101,9 +80,6 @@ class SearchBarViewModel(
     val invalidations = MutableStateFlow(0)
     val searchValueFlow = MutableStateFlow("")
 
-    /** Tracks Namecoin resolution status for the UI. */
-    val namecoinState = MutableStateFlow<NamecoinResolutionState>(NamecoinResolutionState.Idle)
-
     val searchTerm =
         searchValueFlow
             .debounce(300)
@@ -115,16 +91,27 @@ class SearchBarViewModel(
 
     val listState: LazyListState = LazyListState(0, 0)
 
+    /** The user resolved via Namecoin (.bit), if any, for the current search. */
+    private val _namecoinResolvedUser = MutableStateFlow<User?>(null)
+    val namecoinResolvedUser: StateFlow<User?> = _namecoinResolvedUser
+
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     val directNip05Resolver: Flow<User?> =
         searchTerm
             .debounce(400)
             .mapLatest { term ->
-                val nip05 = toNip05IdOrNull(term)
+                // NIP-05 resolution: user@domain or bare .bit domain
+                val nip05 =
+                    if (term.contains('@')) {
+                        Nip05Id.parse(term)
+                    } else if (term.endsWith(".bit", ignoreCase = true)) {
+                        // Bare .bit domain → synthesize _@domain.bit
+                        Nip05Id("_", term.lowercase())
+                    } else {
+                        null
+                    }
+                val isNamecoin = nip05 != null && nip05.domain.endsWith(".bit", ignoreCase = true)
                 if (nip05 != null) {
-                    val isNamecoin = NamecoinNameResolver.isNamecoinIdentifier(nip05.toValue())
-                    if (isNamecoin) namecoinState.emit(NamecoinResolutionState.Resolving)
-
                     val user =
                         runCatching {
                             nip05Client.get(nip05)?.let { info ->
@@ -139,19 +126,10 @@ class SearchBarViewModel(
                                 u
                             }
                         }.getOrNull()
-
-                    if (isNamecoin) {
-                        if (user != null) {
-                            namecoinState.emit(NamecoinResolutionState.Resolved(user, term))
-                        } else {
-                            namecoinState.emit(NamecoinResolutionState.Error("Could not resolve $term via Namecoin"))
-                        }
-                    } else {
-                        namecoinState.emit(NamecoinResolutionState.Idle)
-                    }
+                    _namecoinResolvedUser.value = if (isNamecoin) user else null
                     user
                 } else if (term.startsWithAny(userUriPrefixes)) {
-                    namecoinState.emit(NamecoinResolutionState.Idle)
+                    _namecoinResolvedUser.value = null
                     runCatching {
                         Nip19Parser.uriToRoute(term)?.entity?.let { parsed ->
                             when (parsed) {
@@ -178,10 +156,10 @@ class SearchBarViewModel(
                         }
                     }.getOrNull()
                 } else if (term.length == 64 && Hex.isHex64(term)) {
-                    namecoinState.emit(NamecoinResolutionState.Idle)
+                    _namecoinResolvedUser.value = null
                     account.cache.getOrCreateUser(term)
                 } else {
-                    namecoinState.emit(NamecoinResolutionState.Idle)
+                    _namecoinResolvedUser.value = null
                     null
                 }
             }.flowOn(Dispatchers.IO)

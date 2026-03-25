@@ -31,7 +31,6 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrlOrNull
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.INip05Client
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Id
-import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
@@ -58,44 +57,6 @@ val userUriPrefixes =
         DualCase("nostr:nprofile"),
     )
 
-/** UI state for Namecoin resolution progress. */
-sealed class NamecoinResolutionState {
-    data object Idle : NamecoinResolutionState()
-
-    data object Resolving : NamecoinResolutionState()
-
-    data class Resolved(
-        val user: User,
-        val namecoinName: String,
-    ) : NamecoinResolutionState()
-
-    data class Error(
-        val message: String,
-    ) : NamecoinResolutionState()
-}
-
-/** Returns a [Nip05Id] for identifiers that should go through NIP-05 / Namecoin resolution. */
-private fun toNip05IdOrNull(prefix: String): Nip05Id? =
-    when {
-        prefix.contains('@') -> {
-            Nip05Id.parse(prefix)
-        }
-
-        NamecoinNameResolver.isNamecoinIdentifier(prefix) -> {
-            if (prefix.endsWith(".bit", ignoreCase = true)) {
-                // Bare .bit domain → synthesize _@domain.bit so Nip05Client routes to Namecoin
-                Nip05Id("_", prefix.lowercase())
-            } else {
-                // d/ or id/ — wrap as NIP-05 so it reaches the resolver
-                Nip05Id("_", prefix.lowercase())
-            }
-        }
-
-        else -> {
-            null
-        }
-    }
-
 @Stable
 class UserSuggestionState(
     val account: Account,
@@ -104,9 +65,6 @@ class UserSuggestionState(
     val invalidations = MutableStateFlow(0)
     val currentWord = MutableStateFlow("")
     val searchDataSourceState = SearchQueryState(MutableStateFlow(""), account)
-
-    /** Tracks Namecoin resolution status for the UI. */
-    val namecoinState = MutableStateFlow<NamecoinResolutionState>(NamecoinResolutionState.Idle)
 
     @OptIn(FlowPreview::class)
     val searchTerm =
@@ -124,38 +82,30 @@ class UserSuggestionState(
             .map(::userSearchTermOrNull)
             .map { prefix ->
                 if (prefix != null) {
-                    val nip05 = toNip05IdOrNull(prefix)
+                    // NIP-05 resolution: user@domain or bare .bit domain
+                    val nip05 =
+                        if (prefix.contains('@')) {
+                            Nip05Id.parse(prefix)
+                        } else if (prefix.endsWith(".bit", ignoreCase = true)) {
+                            Nip05Id("_", prefix.lowercase())
+                        } else {
+                            null
+                        }
                     if (nip05 != null) {
-                        val isNamecoin = NamecoinNameResolver.isNamecoinIdentifier(nip05.toValue())
-                        if (isNamecoin) namecoinState.emit(NamecoinResolutionState.Resolving)
-
-                        val user =
-                            runCatching {
-                                nip05Client.get(nip05)?.let { info ->
-                                    val u = account.cache.checkGetOrCreateUser(info.pubkey)
-                                    if (u != null) {
-                                        info.relays.forEach {
-                                            it.normalizeRelayUrlOrNull()?.let { relay ->
-                                                account.cache.relayHints.addKey(u.pubkey(), relay)
-                                            }
+                        runCatching {
+                            nip05Client.get(nip05)?.let { info ->
+                                val user = account.cache.checkGetOrCreateUser(info.pubkey)
+                                if (user != null) {
+                                    info.relays.forEach {
+                                        it.normalizeRelayUrlOrNull()?.let { relay ->
+                                            account.cache.relayHints.addKey(user.pubkey(), relay)
                                         }
                                     }
-                                    u
                                 }
-                            }.getOrNull()
-
-                        if (isNamecoin) {
-                            if (user != null) {
-                                namecoinState.emit(NamecoinResolutionState.Resolved(user, prefix))
-                            } else {
-                                namecoinState.emit(NamecoinResolutionState.Error("Could not resolve $prefix via Namecoin"))
+                                user
                             }
-                        } else {
-                            namecoinState.emit(NamecoinResolutionState.Idle)
-                        }
-                        user
+                        }.getOrNull()
                     } else if (prefix.startsWithAny(userUriPrefixes)) {
-                        namecoinState.emit(NamecoinResolutionState.Idle)
                         runCatching {
                             Nip19Parser.uriToRoute(prefix)?.entity?.let { parsed ->
                                 when (parsed) {
@@ -182,14 +132,11 @@ class UserSuggestionState(
                             }
                         }.getOrNull()
                     } else if (prefix.length == 64 && Hex.isHex64(prefix)) {
-                        namecoinState.emit(NamecoinResolutionState.Idle)
                         account.cache.getOrCreateUser(prefix)
                     } else {
-                        namecoinState.emit(NamecoinResolutionState.Idle)
                         null
                     }
                 } else {
-                    namecoinState.emit(NamecoinResolutionState.Idle)
                     null
                 }
             }.flowOn(Dispatchers.IO)
