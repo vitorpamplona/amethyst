@@ -20,33 +20,16 @@
  */
 package com.vitorpamplona.quartz.nip44Encryption.crypto
 
-import com.vitorpamplona.quartz.utils.LibSodiumInstance
-
-/**
- * Encapsulates the ChaCha20 options. LibSodium is faster on real hardware: 851ns vs 2,535ns encrypt/decrypt times
- */
 class ChaCha20 {
     fun encrypt(
         message: ByteArray,
         nonce: ByteArray,
         key: ByteArray,
-    ) = encryptLibSodium(message, nonce, key)
+    ) = ChaCha20Core.chaCha20Xor(message, key, nonce, counter = 0)
 
     fun decrypt(
         message: ByteArray,
         nonce: ByteArray,
         key: ByteArray,
-    ) = decryptLibSodium(message, nonce, key)
-
-    fun encryptLibSodium(
-        message: ByteArray,
-        nonce: ByteArray,
-        key: ByteArray,
-    ) = LibSodiumInstance.cryptoStreamChaCha20IetfXor(message, nonce, key)
-
-    fun decryptLibSodium(
-        message: ByteArray,
-        nonce: ByteArray,
-        key: ByteArray,
-    ) = LibSodiumInstance.cryptoStreamChaCha20IetfXor(message, nonce, key)
+    ) = ChaCha20Core.chaCha20Xor(message, key, nonce, counter = 0)
 }
