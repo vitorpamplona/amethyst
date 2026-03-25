@@ -24,10 +24,7 @@ import com.vitorpamplona.quartz.experimental.attestations.attestation.tags.Reque
 import com.vitorpamplona.quartz.experimental.attestations.attestation.tags.StatusTag
 import com.vitorpamplona.quartz.experimental.attestations.attestation.tags.ValidFromTag
 import com.vitorpamplona.quartz.experimental.attestations.attestation.tags.ValidToTag
-import com.vitorpamplona.quartz.experimental.attestations.attestation.tags.ValidityTag
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
-
-fun TagArray.validity() = firstNotNullOfOrNull(ValidityTag::parse)
 
 fun TagArray.status() = firstNotNullOfOrNull(StatusTag::parse)
 
