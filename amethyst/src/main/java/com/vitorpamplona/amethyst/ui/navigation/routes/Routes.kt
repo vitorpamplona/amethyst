@@ -96,6 +96,8 @@ sealed class Route {
         )
     }
 
+    @Serializable object WebBookmarks : Route()
+
     @Serializable object Drafts : Route()
 
     @Serializable object AllSettings : Route()

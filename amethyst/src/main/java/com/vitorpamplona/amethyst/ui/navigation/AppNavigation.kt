@@ -128,6 +128,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletReceiveScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletSendScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletTransactionsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.webBookmarks.WebBookmarksScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.AddAccountDialog
 import com.vitorpamplona.amethyst.ui.uriToRoute
 import com.vitorpamplona.quartz.nip01Core.core.Address
@@ -200,6 +201,7 @@ fun AppNavigation(
             composableFromEnd<Route.NamecoinSettings> { NamecoinSettingsScreen(Amethyst.instance.namecoinPrefs, nav) }
             composableFromEnd<Route.OtsSettings> { OtsSettingsScreen(Amethyst.instance.otsPrefs, Amethyst.instance.torPrefs.value, nav) }
             composableFromEnd<Route.Bookmarks> { BookmarkListScreen(accountViewModel, nav) }
+            composableFromEnd<Route.WebBookmarks> { WebBookmarksScreen(accountViewModel, nav) }
             composableFromEnd<Route.Drafts> { DraftListScreen(accountViewModel, nav) }
             composableFromEnd<Route.Settings> { SettingsScreen(accountViewModel, nav) }
             composableFromEnd<Route.UserSettings> { UserSettingsScreen(accountViewModel, nav) }
