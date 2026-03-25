@@ -530,8 +530,7 @@ fun SendDirectMessageTo(
             )
 
             ThinPaddingTextField(
-                value = postViewModel.toUsers,
-                onValueChange = postViewModel::updateToUsers,
+                state = postViewModel.toUsersState,
                 modifier =
                     Modifier
                         .weight(1f)
@@ -572,8 +571,7 @@ fun SendDirectMessageTo(
             )
 
             ThinPaddingTextField(
-                value = postViewModel.subject,
-                onValueChange = { postViewModel.updateSubject(it) },
+                state = postViewModel.subjectState,
                 modifier = Modifier.fillMaxWidth(),
                 placeholder = {
                     Text(
