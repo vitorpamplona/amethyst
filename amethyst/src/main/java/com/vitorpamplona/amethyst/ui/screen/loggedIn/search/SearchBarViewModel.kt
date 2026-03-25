@@ -57,7 +57,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.SharingStarted.Companion.WhileSubscribed
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -91,10 +90,6 @@ class SearchBarViewModel(
 
     val listState: LazyListState = LazyListState(0, 0)
 
-    /** The user resolved via Namecoin (.bit), if any, for the current search. */
-    private val _namecoinResolvedUser = MutableStateFlow<User?>(null)
-    val namecoinResolvedUser: StateFlow<User?> = _namecoinResolvedUser
-
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     val directNip05Resolver: Flow<User?> =
         searchTerm
@@ -110,26 +105,21 @@ class SearchBarViewModel(
                     } else {
                         null
                     }
-                val isNamecoin = nip05 != null && nip05.domain.endsWith(".bit", ignoreCase = true)
                 if (nip05 != null) {
-                    val user =
-                        runCatching {
-                            nip05Client.get(nip05)?.let { info ->
-                                val u = account.cache.checkGetOrCreateUser(info.pubkey)
-                                if (u != null) {
-                                    info.relays.forEach {
-                                        it.normalizeRelayUrlOrNull()?.let { relay ->
-                                            account.cache.relayHints.addKey(u.pubkey(), relay)
-                                        }
+                    runCatching {
+                        nip05Client.get(nip05)?.let { info ->
+                            val user = account.cache.checkGetOrCreateUser(info.pubkey)
+                            if (user != null) {
+                                info.relays.forEach {
+                                    it.normalizeRelayUrlOrNull()?.let { relay ->
+                                        account.cache.relayHints.addKey(user.pubkey(), relay)
                                     }
                                 }
-                                u
                             }
-                        }.getOrNull()
-                    _namecoinResolvedUser.value = if (isNamecoin) user else null
-                    user
+                            user
+                        }
+                    }.getOrNull()
                 } else if (term.startsWithAny(userUriPrefixes)) {
-                    _namecoinResolvedUser.value = null
                     runCatching {
                         Nip19Parser.uriToRoute(term)?.entity?.let { parsed ->
                             when (parsed) {
@@ -156,10 +146,8 @@ class SearchBarViewModel(
                         }
                     }.getOrNull()
                 } else if (term.length == 64 && Hex.isHex64(term)) {
-                    _namecoinResolvedUser.value = null
                     account.cache.getOrCreateUser(term)
                 } else {
-                    _namecoinResolvedUser.value = null
                     null
                 }
             }.flowOn(Dispatchers.IO)
