@@ -41,7 +41,7 @@ class AttestorRecommendationEvent(
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     fun kinds() = tags.kinds()
 
-    fun description() = tags.description()
+    fun description() = content.ifBlank { null }
 
     companion object {
         const val KIND = 31873
@@ -53,11 +53,10 @@ class AttestorRecommendationEvent(
             description: String? = null,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<AttestorRecommendationEvent>.() -> Unit = {},
-        ) = eventTemplate(KIND, "", createdAt) {
+        ) = eventTemplate(KIND, description ?: "", createdAt) {
             alt(ALT_DESCRIPTION)
             dTag(attestorPubKey)
             kinds(kinds)
-            description?.let { desc(it) }
             initializer()
         }
     }

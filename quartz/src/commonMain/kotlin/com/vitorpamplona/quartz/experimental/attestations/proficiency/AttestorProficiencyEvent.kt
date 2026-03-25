@@ -40,7 +40,7 @@ class AttestorProficiencyEvent(
 ) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     fun kinds() = tags.kinds()
 
-    fun description() = tags.description()
+    fun description() = content.ifBlank { null }
 
     companion object {
         const val KIND = 11871
@@ -51,10 +51,9 @@ class AttestorProficiencyEvent(
             description: String? = null,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<AttestorProficiencyEvent>.() -> Unit = {},
-        ) = eventTemplate(KIND, "", createdAt) {
+        ) = eventTemplate(KIND, description ?: "", createdAt) {
             alt(ALT_DESCRIPTION)
             kinds(kinds)
-            description?.let { desc(it) }
             initializer()
         }
     }

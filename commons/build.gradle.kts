@@ -72,6 +72,11 @@ kotlin {
 
                 // Compose Multiplatform Resources
                 implementation(libs.jetbrains.compose.components.resources)
+
+                // Markdown rendering (richtext-commonmark)
+                implementation(libs.markdown.commonmark)
+                implementation(libs.markdown.ui)
+                implementation(libs.markdown.ui.material3)
             }
         }
 

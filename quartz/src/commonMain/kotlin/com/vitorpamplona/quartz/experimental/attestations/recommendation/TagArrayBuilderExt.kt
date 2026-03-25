@@ -20,11 +20,8 @@
  */
 package com.vitorpamplona.quartz.experimental.attestations.recommendation
 
-import com.vitorpamplona.quartz.experimental.attestations.recommendation.tags.DescriptionTag
 import com.vitorpamplona.quartz.experimental.attestations.recommendation.tags.KindTag
 import com.vitorpamplona.quartz.nip01Core.core.Kind
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 
 fun TagArrayBuilder<AttestorRecommendationEvent>.kinds(kinds: List<Kind>) = addAll(KindTag.assemble(kinds))
-
-fun TagArrayBuilder<AttestorRecommendationEvent>.desc(description: String) = addUnique(DescriptionTag.assemble(description))

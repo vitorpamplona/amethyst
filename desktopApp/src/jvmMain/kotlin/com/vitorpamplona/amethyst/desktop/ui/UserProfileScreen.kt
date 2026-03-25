@@ -96,7 +96,9 @@ import com.vitorpamplona.quartz.nip01Core.core.hexToByteArrayOrNull
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
+import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
+import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -118,6 +120,7 @@ fun UserProfileScreen(
     onBack: () -> Unit,
     onCompose: () -> Unit = {},
     onNavigateToProfile: (String) -> Unit = {},
+    onNavigateToArticle: (String) -> Unit = {},
     onZapFeedback: (ZapFeedback) -> Unit = {},
 ) {
     val connectedRelays by relayManager.connectedRelays.collectAsState()
@@ -157,6 +160,8 @@ fun UserProfileScreen(
     var selectedTab by remember { mutableStateOf(0) }
     var lightboxState by remember { mutableStateOf<LightboxState?>(null) }
     val pictureEvents = remember { mutableStateListOf<PictureEvent>() }
+    val articleEvents = remember { mutableStateListOf<LongTextNoteEvent>() }
+    val highlightEvents = remember { mutableStateListOf<HighlightEvent>() }
 
     // Follow state
     val followState =
@@ -335,6 +340,60 @@ fun UserProfileScreen(
                 onEvent = { event, _, _, _ ->
                     if (event is PictureEvent && pictureEvents.none { it.id == event.id }) {
                         pictureEvents.add(event)
+                    }
+                },
+                onEose = { _, _ -> },
+            )
+        } else {
+            null
+        }
+    }
+
+    // Subscribe to long-form articles (kind 30023) for reads tab
+    rememberSubscription(connectedRelays, pubKeyHex, retryTrigger, relayManager = relayManager) {
+        if (connectedRelays.isNotEmpty()) {
+            articleEvents.clear()
+            SubscriptionConfig(
+                subId = generateSubId("articles-${pubKeyHex.take(8)}"),
+                filters =
+                    listOf(
+                        FilterBuilders.byAuthors(
+                            authors = listOf(pubKeyHex),
+                            kinds = listOf(LongTextNoteEvent.KIND),
+                            limit = 50,
+                        ),
+                    ),
+                relays = connectedRelays,
+                onEvent = { event, _, _, _ ->
+                    if (event is LongTextNoteEvent && articleEvents.none { it.id == event.id }) {
+                        articleEvents.add(event)
+                    }
+                },
+                onEose = { _, _ -> },
+            )
+        } else {
+            null
+        }
+    }
+
+    // Subscribe to highlight events (kind 9802) for highlights tab
+    rememberSubscription(connectedRelays, pubKeyHex, retryTrigger, relayManager = relayManager) {
+        if (connectedRelays.isNotEmpty()) {
+            highlightEvents.clear()
+            SubscriptionConfig(
+                subId = generateSubId("hl-${pubKeyHex.take(8)}"),
+                filters =
+                    listOf(
+                        FilterBuilders.byAuthors(
+                            authors = listOf(pubKeyHex),
+                            kinds = listOf(HighlightEvent.KIND),
+                            limit = 100,
+                        ),
+                    ),
+                relays = connectedRelays,
+                onEvent = { event, _, _, _ ->
+                    if (event is HighlightEvent && highlightEvents.none { it.id == event.id }) {
+                        highlightEvents.add(event)
                     }
                 },
                 onEose = { _, _ -> },
@@ -629,7 +688,19 @@ fun UserProfileScreen(
                             Text("Notes", modifier = Modifier.padding(12.dp))
                         }
                         Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }) {
+                            Text(
+                                "Reads${if (articleEvents.isNotEmpty()) " (${articleEvents.size})" else ""}",
+                                modifier = Modifier.padding(12.dp),
+                            )
+                        }
+                        Tab(selected = selectedTab == 2, onClick = { selectedTab = 2 }) {
                             Text("Gallery", modifier = Modifier.padding(12.dp))
+                        }
+                        Tab(selected = selectedTab == 3, onClick = { selectedTab = 3 }) {
+                            Text(
+                                "Highlights${if (highlightEvents.isNotEmpty()) " (${highlightEvents.size})" else ""}",
+                                modifier = Modifier.padding(12.dp),
+                            )
                         }
                     }
                 }
@@ -726,12 +797,71 @@ fun UserProfileScreen(
                     }
 
                     1 -> {
+                        if (articleEvents.isEmpty()) {
+                            item(key = "no-articles") {
+                                Box(
+                                    modifier = Modifier.fillMaxWidth().padding(32.dp),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Text(
+                                        "No long-form articles",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                        } else {
+                            items(
+                                articleEvents.sortedByDescending { it.publishedAt() ?: it.createdAt },
+                                key = { "art-${it.id}" },
+                            ) { article ->
+                                LongFormCard(
+                                    event = article,
+                                    localCache = localCache,
+                                    onAuthorClick = { onNavigateToProfile(article.pubKey) },
+                                    onClick = {
+                                        val addressTag = "${LongTextNoteEvent.KIND}:${article.pubKey}:${article.dTag()}"
+                                        onNavigateToArticle(addressTag)
+                                    },
+                                )
+                            }
+                        }
+                    }
+
+                    2 -> {
                         item(key = "gallery") {
                             GalleryTab(
                                 pictureEvents = pictureEvents,
                                 onImageClick = { urls, index -> lightboxState = LightboxState(urls, index) },
                                 modifier = Modifier.fillParentMaxHeight(),
                             )
+                        }
+                    }
+
+                    3 -> {
+                        if (highlightEvents.isEmpty()) {
+                            item(key = "no-highlights") {
+                                Box(
+                                    modifier = Modifier.fillMaxWidth().padding(32.dp),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Text(
+                                        "No published highlights",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                        } else {
+                            items(
+                                highlightEvents.sortedByDescending { it.createdAt },
+                                key = { "hl-${it.id}" },
+                            ) { highlight ->
+                                PublishedHighlightCard(
+                                    highlight = highlight,
+                                    localCache = localCache,
+                                )
+                            }
                         }
                     }
                 }
@@ -938,5 +1068,66 @@ private suspend fun updateProfileDisplayName(
         onStatusUpdate(ProfileBroadcastStatus.Idle)
     } catch (e: Exception) {
         onStatusUpdate(ProfileBroadcastStatus.Failed("display name", e.message ?: "Unknown error"))
+    }
+}
+
+@Composable
+private fun PublishedHighlightCard(
+    highlight: HighlightEvent,
+    localCache: DesktopLocalCache,
+) {
+    val articleAddress = highlight.inPostAddress()
+    val articleTitle = articleAddress?.let { "Article" } ?: "Unknown source"
+
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface,
+            ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            // Quoted highlight text
+            Text(
+                text = "\u201C${highlight.quote()}\u201D",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Normal,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+
+            // Note/comment
+            val comment = highlight.comment()
+            if (!comment.isNullOrBlank()) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = comment,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            // Context (surrounding paragraph)
+            val context = highlight.context()
+            if (!context.isNullOrBlank() && context != highlight.quote()) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = context.take(200) + if (context.length > 200) "\u2026" else "",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                )
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            // Source article reference
+            if (articleAddress != null) {
+                Text(
+                    text = "from ${articleAddress.dTag.ifBlank { "article" }}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+        }
     }
 }
