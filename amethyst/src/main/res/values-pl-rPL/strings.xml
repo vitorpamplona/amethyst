@@ -66,7 +66,7 @@
     <string name="zaps">Zapy</string>
     <string name="view_count">Liczba wyświetleń</string>
     <string name="boost">Powtórz</string>
-    <string name="boosted">powtórzono</string>
+    <string name="boosted">wpis powtórzono</string>
     <string name="edited">edytowano</string>
     <string name="edited_number">edytuj #%1$s</string>
     <string name="original">oryginalny</string>
@@ -1333,6 +1333,7 @@
     <string name="feed_group_hashtags">Hashtagi</string>
     <string name="feed_group_communities">Społeczności</string>
     <string name="feed_group_lists">Listy</string>
+    <string name="feed_group_relays">Transmitery</string>
     <string name="temporary_account">Wyloguj się przy blokowaniu urządzenia</string>
     <string name="private_message">Wiadomość prywatna</string>
     <string name="public_message">Publiczna wiadomość</string>
