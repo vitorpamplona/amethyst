@@ -86,7 +86,11 @@ fun routeForInner(
 ): Route? =
     when (noteEvent) {
         is AppDefinitionEvent -> {
-            Route.ContentDiscovery(noteEvent.id)
+            if (noteEvent.includeKind(5300)) {
+                Route.ContentDiscovery(noteEvent.id)
+            } else {
+                Route.Note(noteEvent.id)
+            }
         }
 
         is IsInPublicChatChannel -> {

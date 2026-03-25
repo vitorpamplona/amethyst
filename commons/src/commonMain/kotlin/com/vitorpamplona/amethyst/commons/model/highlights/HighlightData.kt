@@ -18,31 +18,15 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.reports.dal
+package com.vitorpamplona.amethyst.commons.model.highlights
 
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
-import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
-import com.vitorpamplona.quartz.nip56Reports.ReportEvent
-
-class UserProfileReportsFeedFilter(
-    val user: User,
-) : AdditiveFeedFilter<Note>() {
-    override fun feedKey(): String = user.pubkeyHex
-
-    override fun feed(): List<Note> = sort(innerApplyFilter(user.reportsOrNull()?.all() ?: emptyList()))
-
-    override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
-
-    private fun innerApplyFilter(collection: Collection<Note>): Set<Note> =
-        collection
-            .filterTo(mutableSetOf()) {
-                it.event is ReportEvent && it.event?.isTaggedUser(user.pubkeyHex) == true
-            }
-
-    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
-
-    override fun limit() = 400
-}
+data class HighlightData(
+    val id: String,
+    val text: String,
+    val note: String? = null,
+    val articleAddressTag: String,
+    val articleTitle: String? = null,
+    val createdAt: Long,
+    val published: Boolean = false,
+    val eventId: String? = null,
+)

@@ -33,9 +33,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class QueryAssemblerTest : BaseDBTest() {
-    val hasher =
-        _root_ide_package_.com.vitorpamplona.quartz.nip01Core.store.sqlite
-            .TagNameValueHasher(0)
+    val hasher = TagNameValueHasher(0)
     val key1 = "7c5eb72a4584fdaaeaa145b25c92ea9917704224951219dbd43acef9e91fb88d"
     val key2 = "f3ac434d61bc0f491a814782ccfdf9c439dae1f0bde9097ad4a245f4c495cd14"
     val key3 = "12ae0fd81c85e1e7d9ed096397dc3129849425fe6f8afce7213ebf38ddfc6ca9"

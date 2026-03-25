@@ -90,8 +90,7 @@ class AddressableNote(
     override fun address() = address
 
     override fun createdAt(): Long? {
-        val currentEvent = event
-        if (currentEvent == null) return null
+        val currentEvent = event ?: return null
         if (currentEvent is PublishedAtProvider) return currentEvent.publishedAt() ?: currentEvent.createdAt
         return currentEvent.createdAt
     }
@@ -204,7 +203,7 @@ open class Note(
 
             is IsInPublicChatChannel -> {
                 inGatherers?.forEach {
-                    if (it is com.vitorpamplona.amethyst.commons.model.Channel) {
+                    if (it is Channel) {
                         it.relays().firstOrNull()?.let { return it }
                     }
                 }
@@ -216,7 +215,7 @@ open class Note(
 
             is LiveActivitiesChatMessageEvent -> {
                 inGatherers?.forEach {
-                    if (it is com.vitorpamplona.amethyst.commons.model.Channel) {
+                    if (it is Channel) {
                         it.relays().firstOrNull()?.let { return it }
                     }
                 }
@@ -230,14 +229,14 @@ open class Note(
         val currentOutbox = author?.outboxRelays()?.toSet()
 
         return if (relays.isNotEmpty()) {
-            if (currentOutbox != null && currentOutbox.isNotEmpty()) {
+            if (!currentOutbox.isNullOrEmpty()) {
                 val relayMatchesOutbox = relays.firstOrNull { it in currentOutbox }
                 if (relayMatchesOutbox != null) {
                     return relayMatchesOutbox
                 }
             }
 
-            return relays.firstOrNull()
+            relays.firstOrNull()
         } else {
             currentOutbox?.firstOrNull() ?: author?.mostUsedNonLocalRelay()
         }
@@ -313,14 +312,14 @@ open class Note(
                 zapPayments.keys +
                 zapPayments.values.filterNotNull()
 
-        replies = listOf<Note>()
-        reactions = mapOf<String, List<Note>>()
-        boosts = listOf<Note>()
-        reports = mapOf<User, List<Note>>()
-        zaps = mapOf<Note, Note?>()
-        zapPayments = mapOf<Note, Note?>()
+        replies = listOf()
+        reactions = mapOf()
+        boosts = listOf()
+        reports = mapOf()
+        zaps = mapOf()
+        zapPayments = mapOf()
         zapsAmount = BigDecimal.ZERO
-        relays = listOf<NormalizedRelayUrl>()
+        relays = listOf()
 
         if (repliesChanged) flowSet?.replies?.invalidateData()
         if (reactionsChanged) flowSet?.reactions?.invalidateData()
@@ -990,11 +989,11 @@ class NoteState(
 
 fun List<AddressableNote>.eventIdSet() = mapNotNullTo(mutableSetOf<HexKey>()) { it.event?.id }
 
-fun <T : Event> Array<NoteState>.events() = mapNotNull { it.note.event as? T }
+inline fun <reified T : Event> Array<NoteState>.events() = mapNotNull { it.note.event as? T }
 
-fun <T : Event> List<AddressableNote>.events() = mapNotNull { it.event as? T }
+inline fun <reified T : Event> List<AddressableNote>.events() = mapNotNull { it.event as? T }
 
-fun <T : Event> List<AddressableNote>.updateFlow(): Flow<List<T>> =
+inline fun <reified T : Event> List<AddressableNote>.updateFlow(): Flow<List<T>> =
     if (this.isEmpty()) {
         MutableStateFlow(emptyList())
     } else {
@@ -1005,7 +1004,7 @@ fun <T : Event> List<AddressableNote>.updateFlow(): Flow<List<T>> =
         }
     }
 
-public inline fun <T> Iterable<Note>.anyEvent(predicate: (T) -> Boolean): Boolean {
+inline fun <reified T : Event> Iterable<Note>.anyEvent(predicate: (T) -> Boolean): Boolean {
     if (this is Collection && isEmpty()) return false
     for (note in this) {
         val noteEvent = note.event as? T
@@ -1014,7 +1013,7 @@ public inline fun <T> Iterable<Note>.anyEvent(predicate: (T) -> Boolean): Boolea
     return false
 }
 
-public inline fun <T> Iterable<Note>.filterEvents(predicate: (T) -> Boolean): List<T> {
+inline fun <reified T : Event> Iterable<Note>.filterEvents(predicate: (T) -> Boolean): List<T> {
     if (this is Collection && isEmpty()) return emptyList()
 
     val dest = ArrayList<T>()
@@ -1027,7 +1026,7 @@ public inline fun <T> Iterable<Note>.filterEvents(predicate: (T) -> Boolean): Li
     return dest
 }
 
-public fun <T> Iterable<Note>.filterAuthoredEvents(pubkey: HexKey): List<T> {
+inline fun <reified T : Event> Iterable<Note>.filterAuthoredEvents(pubkey: HexKey): List<T> {
     if (this is Collection && isEmpty()) return emptyList()
 
     val dest = ArrayList<T>()
@@ -1042,7 +1041,7 @@ public fun <T> Iterable<Note>.filterAuthoredEvents(pubkey: HexKey): List<T> {
     return dest
 }
 
-public inline fun Iterable<Note>.anyNotNullEvent(predicate: (Event) -> Boolean): Boolean {
+inline fun Iterable<Note>.anyNotNullEvent(predicate: (Event) -> Boolean): Boolean {
     if (this is Collection && isEmpty()) return false
     for (note in this) {
         val noteEvent = note.event
@@ -1051,7 +1050,7 @@ public inline fun Iterable<Note>.anyNotNullEvent(predicate: (Event) -> Boolean):
     return false
 }
 
-fun <T : Event> List<Note>.latestByAuthor(): Map<User, T> {
+inline fun <reified T : Event> List<Note>.latestByAuthor(): Map<User, T> {
     val oneResponsePerUser = mutableMapOf<User, T>()
 
     forEach { note ->

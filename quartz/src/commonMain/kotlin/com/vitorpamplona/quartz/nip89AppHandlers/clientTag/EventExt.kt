@@ -21,6 +21,5 @@
 package com.vitorpamplona.quartz.nip89AppHandlers.clientTag
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
 
-fun Event.client() = tags.zapraiserAmount()
+fun Event.client() = tags.client()

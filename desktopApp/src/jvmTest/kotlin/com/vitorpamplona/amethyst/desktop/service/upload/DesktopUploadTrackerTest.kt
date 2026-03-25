@@ -68,7 +68,7 @@ class DesktopUploadTrackerTest {
         val state = tracker.state.value
         assertFalse(state.isUploading)
         assertNotNull(state.result)
-        assertEquals("https://blossom.example.com/abc123.png", state.result!!.blossom.url)
+        assertEquals("https://blossom.example.com/abc123.png", state.result.blossom.url)
         assertNull(state.error)
     }
 

@@ -155,11 +155,21 @@ class EventSync(
         val inboxTargets: Map<NormalizedRelayUrl, DestinationRelayInfo> = emptyMap(),
         val dmTargets: Map<NormalizedRelayUrl, DestinationRelayInfo> = emptyMap(),
     ) {
-        companion object {
-            val DefaultOrder = compareByDescending<SourceRelayInfo> { it.eventsFound.value }.thenByDescending { it.status.value == ConnectionStatus.Completed }
-        }
+        val sortedCompletedRelays =
+            completedRelays.values.let {
+                // precompute to avoid: Comparison method violates its general contract
 
-        val sortedCompletedRelays = completedRelays.values.sortedWith(DefaultOrder)
+                val orderCacheEventsFound = it.associateWith { it.eventsFound.value }
+                val orderCacheCompleted = it.associateWith { it.status.value == ConnectionStatus.Completed }
+                val orderComparator =
+                    compareByDescending<SourceRelayInfo> {
+                        orderCacheEventsFound[it]
+                    }.thenByDescending {
+                        orderCacheCompleted[it]
+                    }
+
+                it.sortedWith(orderComparator)
+            }
 
         constructor(
             runningRelays: List<SourceRelayInfo>,

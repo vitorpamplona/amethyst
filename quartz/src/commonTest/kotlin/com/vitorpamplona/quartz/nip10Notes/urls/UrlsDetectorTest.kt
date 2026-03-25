@@ -21,7 +21,6 @@
 package com.vitorpamplona.quartz.nip10Notes.urls
 
 import com.vitorpamplona.quartz.nip10Notes.content.findURLs
-import com.vitorpamplona.quartz.utils.fastFindURLs
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -31,7 +30,7 @@ class UrlsDetectorTest {
 
     @Test
     fun detectUrlNumber() {
-        val detectedLinks = fastFindURLs(testSentence)
+        val detectedLinks = findURLs(testSentence)
         assertEquals(2, detectedLinks.size)
     }
 
@@ -40,5 +39,15 @@ class UrlsDetectorTest {
         val detectedLinks = findURLs(testSentence)
         assertContains(detectedLinks, "https://mysite.xyz")
         assertContains(detectedLinks, "https://myblog.xyz")
+    }
+
+    /**
+     * Regression test for PR #1907: the Japanese phrase "今北産業" must not crash the URL
+     * detector with a StringIndexOutOfBoundsException and must return no URLs.
+     */
+    @Test
+    fun doesNotCrashOnJapaneseText() {
+        val detectedLinks = findURLs("今北産業")
+        assertEquals(0, detectedLinks.size)
     }
 }

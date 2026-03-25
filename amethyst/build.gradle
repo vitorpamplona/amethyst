@@ -5,7 +5,6 @@ plugins {
     alias(libs.plugins.googleServices)
     alias(libs.plugins.jetbrainsComposeCompiler)
     alias(libs.plugins.serialization)
-    alias(libs.plugins.stability.analyzer)
 }
 
 def getCurrentBranch() {
@@ -55,9 +54,9 @@ android {
         applicationId = "com.vitorpamplona.amethyst"
         minSdk = libs.versions.android.minSdk.get().toInteger()
         targetSdk = libs.versions.android.targetSdk.get().toInteger()
-        versionCode = 432
-        versionName = generateVersionName("1.05.1")
-        buildConfigField "String", "RELEASE_NOTES_ID", "\"b457a20195ffcf501389fcb708f0ef73f4ee263e3bba63f1b893a896129e4c79\""
+        versionCode = 435
+        versionName = generateVersionName("1.06.3")
+        buildConfigField "String", "RELEASE_NOTES_ID", "\"0b6af7660b44215b0edf9c39a1c9c0b4aafba7aba1ae28665ffcecb1a9717195\""
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

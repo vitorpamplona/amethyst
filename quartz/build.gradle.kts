@@ -1,9 +1,5 @@
-@file:OptIn(ExperimentalSpmForKmpFeature::class)
-
 import com.vanniktech.maven.publish.KotlinMultiplatform
 import com.vanniktech.maven.publish.SourcesJar
-import io.github.frankois944.spmForKmp.swiftPackageConfig
-import io.github.frankois944.spmForKmp.utils.ExperimentalSpmForKmpFeature
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeTest
 
@@ -13,7 +9,6 @@ plugins {
     alias(libs.plugins.androidKotlinMultiplatformLibrary)
     alias(libs.plugins.serialization)
     alias(libs.plugins.vanniktech.mavenPublish)
-    alias(libs.plugins.frankois944.spmForKmp)
 }
 
 kotlin {
@@ -26,7 +21,7 @@ kotlin {
         }
     }
 
-    androidLibrary {
+    android {
         namespace = "com.vitorpamplona.quartz"
         compileSdk =
             libs.versions.android.compileSdk
@@ -64,29 +59,10 @@ kotlin {
     // https://developer.android.com/kotlin/multiplatform/migrate
     val xcfName = "quartz-kmpKit"
 
-    listOf(
-        iosArm64(),
-        iosSimulatorArm64(),
-    ).forEach { target ->
-        target.swiftPackageConfig(cinteropName = "swiftbridge") {
-            minIos = "17"
-            minMacos = "14"
-            dependency {
-                remotePackageVersion(
-                    url = uri("https://github.com/swift-standards/swift-rfc-3986.git"),
-                    packageName = "swift-rfc-3986",
-                    products = {
-                        add("RFC 3986")
-                    },
-                    version = "0.1.0",
-                )
-            }
-        }
-    }
-
     iosArm64 {
         binaries.framework {
             baseName = xcfName
+            isStatic = true
             binaryOption("bundleId", "com.vitorpamplona.quartz")
         }
     }
@@ -94,6 +70,7 @@ kotlin {
     iosSimulatorArm64 {
         binaries.framework {
             baseName = xcfName
+            isStatic = true
             binaryOption("bundleId", "com.vitorpamplona.quartz")
         }
     }
@@ -141,6 +118,9 @@ kotlin {
                 // SQLite KMP driver for event store
                 api(libs.androidx.sqlite)
                 implementation(libs.androidx.sqlite.bundled)
+
+                // RFC3986 library(normalizes URLs)
+                api(libs.uri.reference.kmp)
             }
         }
 
@@ -161,9 +141,6 @@ kotlin {
                 dependsOn(commonMain.get())
 
                 dependencies {
-                    // Normalizes URLs
-                    api(libs.rfc3986.normalizer)
-
                     // Performant Parser of JSONs into Events
                     api(libs.jackson.module.kotlin)
 
@@ -296,7 +273,7 @@ mavenPublishing {
     coordinates(
         groupId = "com.vitorpamplona.quartz",
         artifactId = "quartz",
-        version = "1.05.1",
+        version = "1.06.3",
     )
 
     // Configure publishing to Maven Central

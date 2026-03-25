@@ -290,6 +290,7 @@
     <string name="nip_05">Nostr-adress</string>
     <string name="never">aldrig</string>
     <string name="now">nu</string>
+    <string name="seconds">sekunder</string>
     <string name="h">t</string>
     <string name="m">m</string>
     <string name="d">d</string>
@@ -536,7 +537,7 @@
     <string name="follow_set_create_btn_label">Ny</string>
     <string name="follow_set_add_author_from_note_action">Lägg till författare i följelista</string>
     <string name="follow_set_profile_actions_menu_description">Lägg till eller ta bort användare från listor, eller skapa en ny lista med denna användare.</string>
-    <string name="follow_set_icon_description">Ikon för %1$s-lista</string>
+    <string name="follow_set_icon_description">Ikon för lista</string>
     <string name="follow_set_public_presence_indicator">%1$s är en offentlig medlem</string>
     <string name="follow_set_private_presence_indicator">%1$s är en privat medlem</string>
     <string name="follow_set_public_member_add_label">Lägg till som offentlig medlem</string>
@@ -1098,6 +1099,13 @@
     <string name="new_community_note">Nytt Community-meddelande</string>
     <string name="new_product">Ny produkt</string>
     <string name="new_exclusive_geo_note">Nytt Geo-Exklusivt inlägg</string>
+    <string name="new_long_form_post">Ny artikel</string>
+    <string name="article_title">Titel</string>
+    <string name="article_summary">Sammanfattning (valfritt)</string>
+    <string name="article_cover_image_url">URL för omslagsbild (valfritt)</string>
+    <string name="write_your_article_in_markdown">Skriv din artikel i markdown…</string>
+    <string name="markdown_preview">Förhandsgranskning</string>
+    <string name="markdown_edit">Redigera</string>
     <string name="open_all_reactions_to_this_post">Öppna alla reaktioner på detta inlägg</string>
     <string name="close_all_reactions_to_this_post">Stäng alla reaktioner på detta inlägg</string>
     <string name="reply_description">Svara</string>
@@ -1235,6 +1243,7 @@
     <string name="existed_since">OTS: %1$s</string>
     <string name="ots_info_title">Tidsstämpel Bevis</string>
     <string name="ots_info_description">Det finns bevis på att detta inlägg signerades någon gång före %1$s. Beviset stämplades i Bitcoin-blockchainen vid det datumet och den tiden.</string>
+    <string name="edit_article">Redigera artikel</string>
     <string name="edit_post">Redigera inlägg</string>
     <string name="proposal_to_edit">Förslag till att förbättra ditt inlägg</string>
     <string name="message_to_author">Sammanfattning av ändringar</string>
@@ -1658,4 +1667,11 @@
     <string name="attestor_proficiency_for_kinds">Kompetent att verifiera typer: %1$s</string>
     <string name="attestation_attests_to">Intygar</string>
     <string name="attestation_requests_attestation_to">Begär attestering till</string>
+    <string name="event_sync_date_filter_title">Datumintervall</string>
+    <string name="event_sync_date_filter_since">Från</string>
+    <string name="event_sync_date_filter_until">Till</string>
+    <string name="event_sync_date_filter_now">Nu</string>
+    <string name="event_sync_date_filter_all_time">All tid</string>
+    <string name="event_sync_date_filter_last_sync">Senaste synkronisering: %1$s</string>
+    <string name="event_sync_date_filter_since_last_sync">Sedan senaste synkronisering</string>
 </resources>

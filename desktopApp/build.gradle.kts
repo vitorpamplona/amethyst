@@ -63,7 +63,7 @@ dependencies {
     implementation(libs.androidx.collection)
 
     // SLF4J no-op — silence "No SLF4J providers" warnings from transitive deps
-    implementation("org.slf4j:slf4j-nop:2.0.16")
+    implementation(libs.slf4j.nop)
 
     // QR code generation (ZXing core)
     implementation(libs.zxing)
@@ -114,4 +114,8 @@ vlcSetup {
     pathToCopyVlcLinuxFilesTo.set(file("src/jvmMain/appResources/linux/vlc"))
     pathToCopyVlcMacosFilesTo.set(file("src/jvmMain/appResources/macos/vlc"))
     pathToCopyVlcWindowsFilesTo.set(file("src/jvmMain/appResources/windows/vlc"))
+}
+
+tasks.named("spotlessKotlin") {
+    inputs.files(tasks.named("vlcSetup"))
 }

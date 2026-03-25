@@ -27,9 +27,12 @@ import com.vitorpamplona.quartz.nip01Core.crypto.Nip01Crypto
 import com.vitorpamplona.quartz.nip44Encryption.Nip44v2
 import com.vitorpamplona.quartz.nip44Encryption.crypto.ChaCha20
 import com.vitorpamplona.quartz.utils.RandomInstance
+import com.vitorpamplona.quartz.utils.mac.FixedKey
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import javax.crypto.Cipher
+import javax.crypto.spec.IvParameterSpec
 
 @RunWith(AndroidJUnit4::class)
 class ChaCha20Benchmark {
@@ -63,5 +66,39 @@ class ChaCha20Benchmark {
         benchmarkRule.measureRepeated {
             chaCha.decrypt(padded, messageKeys.chachaNonce, messageKeys.chachaKey)
         }
+    }
+    
+    @Test
+    fun encryptNative() {
+        benchmarkRule.measureRepeated {
+            encryptNative(padded, messageKeys.chachaNonce, messageKeys.chachaKey)
+        }
+    }
+
+    @Test
+    fun decryptNative() {
+        benchmarkRule.measureRepeated {
+            decryptNative(padded, messageKeys.chachaNonce, messageKeys.chachaKey)
+        }
+    }
+
+    fun encryptNative(
+        message: ByteArray,
+        nonce: ByteArray,
+        key: ByteArray,
+    ): ByteArray {
+        val cipher = Cipher.getInstance("ChaCha20")
+        cipher.init(Cipher.ENCRYPT_MODE, FixedKey(key, "ChaCha20"), IvParameterSpec(nonce))
+        return cipher.doFinal(message)
+    }
+
+    fun decryptNative(
+        message: ByteArray,
+        nonce: ByteArray,
+        key: ByteArray,
+    ): ByteArray {
+        val cipher = Cipher.getInstance("ChaCha20")
+        cipher.init(Cipher.DECRYPT_MODE, FixedKey(key, "ChaCha20"), IvParameterSpec(nonce))
+        return cipher.doFinal(message)
     }
 }

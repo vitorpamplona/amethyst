@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.desktop.account.AccountManager
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
+import com.vitorpamplona.amethyst.desktop.service.highlights.DesktopHighlightStore
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.desktop.ui.ZapFeedback
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect.Nip47URINorm
@@ -61,6 +62,8 @@ fun DeckLayout(
     iAccount: com.vitorpamplona.amethyst.desktop.model.DesktopIAccount,
     nwcConnection: Nip47URINorm?,
     subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator,
+    highlightStore: DesktopHighlightStore,
+    draftStore: com.vitorpamplona.amethyst.desktop.service.drafts.DesktopDraftStore,
     appScope: CoroutineScope,
     onShowComposeDialog: () -> Unit,
     onShowReplyDialog: (com.vitorpamplona.quartz.nip01Core.core.Event) -> Unit,
@@ -113,6 +116,8 @@ fun DeckLayout(
                     iAccount = iAccount,
                     nwcConnection = nwcConnection,
                     subscriptionsCoordinator = subscriptionsCoordinator,
+                    highlightStore = highlightStore,
+                    draftStore = draftStore,
                     appScope = appScope,
                     onShowComposeDialog = onShowComposeDialog,
                     onShowReplyDialog = onShowReplyDialog,

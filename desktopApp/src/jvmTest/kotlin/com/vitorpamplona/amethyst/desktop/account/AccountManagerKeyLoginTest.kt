@@ -102,7 +102,7 @@ class AccountManagerKeyLoginTest {
         val state = manager.generateNewAccount()
         assertTrue(state.npub.startsWith("npub1"))
         assertNotNull(state.nsec)
-        assertTrue(state.nsec!!.startsWith("nsec1"))
+        assertTrue(state.nsec.startsWith("nsec1"))
         assertFalse(state.isReadOnly)
     }
 

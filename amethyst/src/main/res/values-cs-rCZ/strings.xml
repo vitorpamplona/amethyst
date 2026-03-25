@@ -290,6 +290,7 @@
     <string name="nip_05">Nostr Adresa</string>
     <string name="never">nikdy</string>
     <string name="now">nyní</string>
+    <string name="seconds">sekundy</string>
     <string name="h">h</string>
     <string name="m">m</string>
     <string name="d">d</string>
@@ -536,7 +537,7 @@
     <string name="follow_set_create_btn_label">Nový</string>
     <string name="follow_set_add_author_from_note_action">Přidat autora do seznamu sledování</string>
     <string name="follow_set_profile_actions_menu_description">Přidat nebo odebrat uživatele ze seznamů, nebo vytvořit nový seznam s tímto uživatelem.</string>
-    <string name="follow_set_icon_description">Ikona pro seznam %1$s</string>
+    <string name="follow_set_icon_description">Ikona pro seznam</string>
     <string name="follow_set_public_presence_indicator">%1$s je veřejný člen</string>
     <string name="follow_set_private_presence_indicator">%1$s je soukromý člen</string>
     <string name="follow_set_public_member_add_label">Přidat jako veřejného člena</string>
@@ -1099,6 +1100,13 @@
     <string name="new_community_note">Nová poznámka komunity</string>
     <string name="new_product">Nový produkt</string>
     <string name="new_exclusive_geo_note">Nový geoexkluzivní příspěvek</string>
+    <string name="new_long_form_post">Nový článek</string>
+    <string name="article_title">Název</string>
+    <string name="article_summary">Shrnutí (volitelné)</string>
+    <string name="article_cover_image_url">URL obrázku obálky (volitelné)</string>
+    <string name="write_your_article_in_markdown">Napište svůj článek v markdownu…</string>
+    <string name="markdown_preview">Náhled</string>
+    <string name="markdown_edit">Upravit</string>
     <string name="open_all_reactions_to_this_post">Otevřít všechny reakce pro tento příspěvek</string>
     <string name="close_all_reactions_to_this_post">Zavřít všechny reakce na tento příspěvek</string>
     <string name="reply_description">Odpověď</string>
@@ -1236,6 +1244,7 @@
     <string name="existed_since">OTS: %1$s</string>
     <string name="ots_info_title">Důkaz časového razítka</string>
     <string name="ots_info_description">Existuje důkaz, že tento příspěvek byl podepsán někdy před %1$s. Důkaz byl označen v Bitcoin blockchainu v tomto datu a čase.</string>
+    <string name="edit_article">Upravit článek</string>
     <string name="edit_post">Upravit příspěvek</string>
     <string name="proposal_to_edit">Návrh na vylepšení vašeho příspěvku</string>
     <string name="message_to_author">Souhrn změn</string>
@@ -1659,4 +1668,11 @@
     <string name="attestor_proficiency_for_kinds">Odborník na ověřování druhů: %1$s</string>
     <string name="attestation_attests_to">Potvrzuje</string>
     <string name="attestation_requests_attestation_to">Žádosti o atestaci pro</string>
+    <string name="event_sync_date_filter_title">Časové rozmezí</string>
+    <string name="event_sync_date_filter_since">Od</string>
+    <string name="event_sync_date_filter_until">Do</string>
+    <string name="event_sync_date_filter_now">Nyní</string>
+    <string name="event_sync_date_filter_all_time">Vždy</string>
+    <string name="event_sync_date_filter_last_sync">Poslední synchronizace: %1$s</string>
+    <string name="event_sync_date_filter_since_last_sync">Od poslední synchronizace</string>
 </resources>

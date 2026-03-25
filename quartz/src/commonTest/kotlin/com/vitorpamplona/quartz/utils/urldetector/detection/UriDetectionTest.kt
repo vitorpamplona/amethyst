@@ -740,6 +740,37 @@ class UriDetectionTest {
     }
 
     @Test
+    fun testBrokenCaseInProduction() {
+        runTest("今北産業")
+        runTest("http://test.com今北産業", "http://test.com")
+        runTest("ftp://test.com今北産業", "ftp://test.com")
+        runTest("test.com今北産業", "test.com")
+        runTest("wss://test.com今北産業", "wss://test.com")
+        runTest("blossom:test.com今北産業", "blossom:test.com")
+        runTest("nostr:test.com今北産業", "nostr:test.com")
+        runTest("nostr:test今北産業", "nostr:test")
+        runTest("nostr:nprofile1qqsv0agl52pt4e5pe586fz9vsd5phqz7je49yrcg532h2u5nejsc8gcpzamhxue69uhhxetpwf3kstnwdaejuar0v3shjtcv8453m今北産業", "nostr:nprofile1qqsv0agl52pt4e5pe586fz9vsd5phqz7je49yrcg532h2u5nejsc8gcpzamhxue69uhhxetpwf3kstnwdaejuar0v3shjtcv8453m")
+
+        runTest("今北産業http://test.com", "http://test.com")
+        runTest("今北産業ftp://test.com", "ftp://test.com")
+        runTest("今北産業test.com", "test.com")
+        runTest("今北産業wss://test.com", "wss://test.com")
+        runTest("今北産業blossom:test.com", "blossom:test.com")
+        runTest("今北産業nostr:test.com", "nostr:test.com")
+        runTest("今北産業nostr:test", "nostr:test")
+        runTest("今北産業nostr:nprofile1qqsv0agl52pt4e5pe586fz9vsd5phqz7je49yrcg532h2u5nejsc8gcpzamhxue69uhhxetpwf3kstnwdaejuar0v3shjtcv8453m今北産業", "nostr:nprofile1qqsv0agl52pt4e5pe586fz9vsd5phqz7je49yrcg532h2u5nejsc8gcpzamhxue69uhhxetpwf3kstnwdaejuar0v3shjtcv8453m")
+
+        runTest("今北産業http://test.com今北産業", "http://test.com")
+        runTest("今北産業ftp://test.com今北産業", "ftp://test.com")
+        runTest("今北産業test.com今北産業", "test.com")
+        runTest("今北産業wss://test.com今北産業", "wss://test.com")
+        runTest("今北産業blossom:test.com今北産業", "blossom:test.com")
+        runTest("今北産業nostr:test.com今北産業", "nostr:test.com")
+        runTest("今北産業nostr:test今北産業", "nostr:test")
+        runTest("今北産業nostr:nprofile1qqsv0agl52pt4e5pe586fz9vsd5phqz7je49yrcg532h2u5nejsc8gcpzamhxue69uhhxetpwf3kstnwdaejuar0v3shjtcv8453m今北産業", "nostr:nprofile1qqsv0agl52pt4e5pe586fz9vsd5phqz7je49yrcg532h2u5nejsc8gcpzamhxue69uhhxetpwf3kstnwdaejuar0v3shjtcv8453m")
+    }
+
+    @Test
     fun testFullText() {
         val text =
             """

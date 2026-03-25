@@ -215,7 +215,7 @@ private fun ReRecordButton(
         modifier = Modifier,
         onRecordTaken = onRecordTaken,
         maxDurationSeconds = MAX_VOICE_RECORD_SECONDS,
-    ) { isRecording, elapsedSeconds ->
+    ) { isRecording, elapsedSeconds, _ ->
         val contentColor =
             if (isRecording) {
                 MaterialTheme.colorScheme.onPrimary

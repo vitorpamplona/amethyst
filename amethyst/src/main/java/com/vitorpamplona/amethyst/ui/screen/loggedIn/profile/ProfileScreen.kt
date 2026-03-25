@@ -229,6 +229,7 @@ fun PrepareViewModels(
             factory =
                 UserProfileReportFeedViewModel.Factory(
                     baseUser,
+                    accountViewModel.account,
                 ),
         )
 
@@ -273,7 +274,6 @@ fun ProfileScreen(
     WatchLifecycleAndUpdateModel(appRecommendations)
     WatchLifecycleAndUpdateModel(bookmarksFeedViewModel)
     WatchLifecycleAndUpdateModel(galleryFeedViewModel)
-    WatchLifecycleAndUpdateModel(reportsFeedViewModel)
 
     UserProfileFilterAssemblerSubscription(baseUser, accountViewModel.dataSources().profile)
 
@@ -521,7 +521,7 @@ private fun CreateAndRenderTabs(
             { ZapTabHeader(zapFeedViewModel, accountViewModel) },
             { BookmarkTabHeader(baseUser, accountViewModel) },
             { FollowedTagsTabHeader(baseUser, accountViewModel) },
-            { ReportsTabHeader(baseUser, accountViewModel) },
+            { ReportsTabHeader(baseUser, reportsFeedViewModel, accountViewModel) },
             { RelaysTabHeader(baseUser, accountViewModel) },
         )
 

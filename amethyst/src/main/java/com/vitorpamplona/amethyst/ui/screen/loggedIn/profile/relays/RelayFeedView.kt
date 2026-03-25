@@ -105,6 +105,9 @@ private fun RenderRelayRow(
         onRemoveRelay = {
             nav.nav(Route.EditRelays)
         },
+        onClick = {
+            nav.nav(Route.RelayInfo(relay.url.url))
+        },
     )
     HorizontalDivider(
         thickness = DividerThickness,

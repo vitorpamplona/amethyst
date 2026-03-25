@@ -64,6 +64,14 @@ class ToastManager {
 
     fun toast(
         titleResId: Int,
+        description: Int,
+        throwable: Throwable,
+    ) {
+        toasts.tryEmit(ThrowableToastMsg2(titleResId, description, throwable))
+    }
+
+    fun toast(
+        titleResId: Int,
         resourceId: Int,
         vararg params: String,
     ) {

@@ -47,7 +47,7 @@ val FollowsFollow = Color.Yellow
 val NIP05Verified = Color.Blue
 
 val Nip05EmailColor = Color(0xFFb198ec)
-val Nip05EmailColorDark = Color(0xFF6e5490)
+val Nip05EmailColorDark = Color(0xFF765AA2)
 val Nip05EmailColorLight = Color(0xFFa770f3)
 
 val DarkerGreen = Color.Green.copy(alpha = 0.32f)

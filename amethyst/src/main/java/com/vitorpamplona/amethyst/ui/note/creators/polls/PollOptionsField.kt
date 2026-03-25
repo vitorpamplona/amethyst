@@ -22,7 +22,9 @@ package com.vitorpamplona.amethyst.ui.note.creators.polls
 
 import android.annotation.SuppressLint
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -32,6 +34,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -47,6 +50,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ShortNotePostViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip88Polls.poll.tags.OptionTag
+import com.vitorpamplona.quartz.nip88Polls.poll.tags.PollType
 import com.vitorpamplona.quartz.utils.RandomInstance
 
 @Composable
@@ -55,6 +59,13 @@ fun PollOptionsField(postViewModel: ShortNotePostViewModel) {
     Column(
         modifier = Modifier.fillMaxWidth(),
     ) {
+        PollTypeSelector(
+            selectedType = postViewModel.pollType,
+            onTypeSelected = { postViewModel.pollType = it },
+        )
+
+        Spacer(Modifier.height(4.dp))
+
         optionsList.forEach { option ->
             OutlinedTextField(
                 modifier = Modifier.fillMaxWidth(),
@@ -115,6 +126,27 @@ fun PollOptionsField(postViewModel: ShortNotePostViewModel) {
         ) {
             Icon(Icons.Default.Add, contentDescription = stringRes(R.string.add_poll_option_button))
         }
+    }
+}
+
+@Composable
+fun PollTypeSelector(
+    selectedType: PollType,
+    onTypeSelected: (PollType) -> Unit,
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        FilterChip(
+            selected = selectedType == PollType.SINGLE_CHOICE,
+            onClick = { onTypeSelected(PollType.SINGLE_CHOICE) },
+            label = { Text(stringRes(R.string.poll_single_choice)) },
+        )
+        FilterChip(
+            selected = selectedType == PollType.MULTI_CHOICE,
+            onClick = { onTypeSelected(PollType.MULTI_CHOICE) },
+            label = { Text(stringRes(R.string.poll_multiple_choice)) },
+        )
     }
 }
 
