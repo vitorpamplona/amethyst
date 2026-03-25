@@ -42,9 +42,9 @@ class LnZapPaymentRequestNip44EventTest {
             val walletServicePubkey: HexKey =
                 walletKeyPair.pubKey.toHexKey()
 
-            val request = GetBalanceMethod.create()
+            val request = GetBalanceMethod.Companion.create()
             val event =
-                LnZapPaymentRequestEvent.createRequest(
+                LnZapPaymentRequestEvent.Companion.createRequest(
                     request = request,
                     walletServicePubkey = walletServicePubkey,
                     signer = clientSigner,
@@ -66,9 +66,9 @@ class LnZapPaymentRequestNip44EventTest {
             val walletServicePubkey: HexKey =
                 walletKeyPair.pubKey.toHexKey()
 
-            val request = GetInfoMethod.create()
+            val request = GetInfoMethod.Companion.create()
             val event =
-                LnZapPaymentRequestEvent.createRequest(
+                LnZapPaymentRequestEvent.Companion.createRequest(
                     request = request,
                     walletServicePubkey = walletServicePubkey,
                     signer = clientSigner,
