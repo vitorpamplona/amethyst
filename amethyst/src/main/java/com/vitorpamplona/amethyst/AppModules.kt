@@ -165,14 +165,30 @@ class AppModules(
     // Offers easy methods to know when connections are happening through Tor or not
     val roleBasedHttpClientBuilder = RoleBasedHttpClientBuilder(okHttpClients, torPrefs.value)
 
+    val electrumXClient by lazy {
+        Log.d("AppModules", "ElectrumXClient Init")
+        val client =
+            ElectrumXClient(
+                socketFactory = { roleBasedHttpClientBuilder.socketFactoryForNip05() },
+            )
+        applicationIOScope.launch {
+            try {
+                val pinnedCerts = namecoinPrefs.loadPinnedCerts()
+                if (pinnedCerts.isNotEmpty()) {
+                    client.setDynamicCerts(pinnedCerts)
+                }
+            } catch (_: Exception) {
+                // Non-fatal — defaults will still work
+            }
+        }
+        client
+    }
+
     val namecoinResolver by
         lazy {
             Log.d("AppModules", "Namecoin Resolver Init")
             NamecoinNameResolver(
-                electrumxClient =
-                    ElectrumXClient(
-                        socketFactory = { roleBasedHttpClientBuilder.socketFactoryForNip05() },
-                    ),
+                electrumxClient = electrumXClient,
                 serverListProvider = {
                     // User-configured custom servers take priority
                     namecoinPrefs.customServersOrNull
