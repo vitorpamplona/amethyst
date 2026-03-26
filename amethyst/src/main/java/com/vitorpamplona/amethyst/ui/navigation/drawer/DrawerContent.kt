@@ -275,13 +275,86 @@ private fun EditStatusBoxes(
     val statuses by observeUserStatuses(baseAccountUser, accountViewModel)
 
     if (statuses.isEmpty()) {
-        StatusEditBar(accountViewModel = accountViewModel, nav = nav)
+        PreviewStatusEditBar(accountViewModel = accountViewModel, nav = nav)
     } else {
         statuses.forEach {
             val noteStatus by observeNote(it, accountViewModel)
 
-            StatusEditBar(noteStatus.note.event?.content, it.address, accountViewModel, nav)
+            PreviewStatusEditBar(noteStatus.note.event?.content, it.address, accountViewModel, nav)
         }
+    }
+}
+
+@Composable
+fun PreviewStatusEditBar(
+    savedStatus: String? = null,
+    address: Address? = null,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    var isEditing by remember { mutableStateOf(false) }
+
+    if (isEditing) {
+        StatusEditBar(savedStatus, address, onDone = { isEditing = false }, accountViewModel, nav)
+    } else {
+        FakeEditBar(savedStatus) { isEditing = true }
+    }
+}
+
+@Composable
+fun FakeEditBar(
+    savedStatus: String? = null,
+    onEdit: () -> Unit,
+) {
+    // ── Static text styled to look like OutlinedTextField ───
+    Box(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .height(IntrinsicSize.Min)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onEdit,
+                ).padding(top = 8.dp),
+    ) {
+        // Outer border — matches OutlinedTextField's unfocused border
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .defaultMinSize(minHeight = 56.dp) // same as OutlinedTextField
+                    .border(
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                        shape = RoundedCornerShape(4.dp),
+                    ).padding(horizontal = 16.dp, vertical = 8.dp),
+            contentAlignment = Alignment.CenterStart,
+        ) {
+            Text(
+                text = savedStatus?.ifEmpty { null } ?: stringRes(R.string.status_update),
+                style = MaterialTheme.typography.bodyLarge,
+                color =
+                    if (savedStatus?.ifEmpty { null } == null) {
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    },
+            )
+        }
+
+        // Floating label — sits on top of the border like Material does
+        Text(
+            text = stringRes(R.string.status_update),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier =
+                Modifier
+                    .padding(start = 12.dp)
+                    .align(Alignment.TopStart)
+                    .offset(y = (-8).dp) // float above the border
+                    .background(MaterialTheme.colorScheme.surface) // punch through border line
+                    .padding(horizontal = 4.dp),
+        )
     }
 }
 
@@ -289,16 +362,21 @@ private fun EditStatusBoxes(
 fun StatusEditBar(
     savedStatus: String? = null,
     address: Address? = null,
+    onDone: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val focusManager = LocalFocusManager.current
+    val focusRequester = remember { FocusRequester() }
 
     val currentStatus = remember { mutableStateOf(savedStatus ?: "") }
-    val hasChanged = remember { derivedStateOf { currentStatus.value != (savedStatus ?: "") } }
+
     LaunchedEffect(nav.drawerState.isClosed) {
         if (nav.drawerState.isClosed) {
             focusManager.clearFocus(true)
+            onDone()
+        } else {
+            focusRequester.requestFocus()
         }
     }
 
@@ -306,7 +384,7 @@ fun StatusEditBar(
         value = currentStatus.value,
         onValueChange = { currentStatus.value = it },
         label = { Text(text = stringRes(R.string.status_update)) },
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
         placeholder = {
             Text(
                 text = stringRes(R.string.status_update),
@@ -332,8 +410,11 @@ fun StatusEditBar(
             ),
         singleLine = true,
         trailingIcon = {
+            val hasChanged = remember { derivedStateOf { currentStatus.value != (savedStatus ?: "") } }
             if (hasChanged.value) {
-                SendButton {
+                SendButton(
+                    tint = MaterialTheme.colorScheme.primary,
+                ) {
                     if (address == null) {
                         accountViewModel.createStatus(currentStatus.value)
                     } else {
@@ -354,7 +435,10 @@ fun StatusEditBar(
 }
 
 @Composable
-fun SendButton(onClick: () -> Unit) {
+fun SendButton(
+    tint: Color = MaterialTheme.colorScheme.placeholderText,
+    onClick: () -> Unit,
+) {
     IconButton(
         modifier = Size26Modifier,
         onClick = onClick,
@@ -363,7 +447,7 @@ fun SendButton(onClick: () -> Unit) {
             imageVector = Icons.AutoMirrored.Filled.Send,
             null,
             modifier = Size20Modifier,
-            tint = MaterialTheme.colorScheme.placeholderText,
+            tint = tint,
         )
     }
 }
