@@ -32,6 +32,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
@@ -39,6 +40,12 @@ import com.vitorpamplona.amethyst.ui.tor.PrivacySettingsBody
 import com.vitorpamplona.amethyst.ui.tor.TorDialogViewModel
 import com.vitorpamplona.amethyst.ui.tor.TorSettings
 import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PrivacyOptionsScreen(nav: INav) {
+    PrivacyOptionsScreen(Amethyst.instance.torPrefs.value, nav)
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

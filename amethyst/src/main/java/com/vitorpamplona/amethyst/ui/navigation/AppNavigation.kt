@@ -35,13 +35,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
-import androidx.core.net.toUri
 import androidx.core.util.Consumer
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.crashreports.DisplayCrashMessages
 import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.compose.DisplayNotifyMessages
@@ -197,9 +195,9 @@ fun AppNavigation(
             composableFromEnd<Route.AllSettings> { AllSettingsScreen(accountViewModel, nav) }
             composableFromEnd<Route.AccountBackup> { AccountBackupScreen(accountViewModel, nav) }
             composableFromEnd<Route.SecurityFilters> { SecurityFiltersScreen(accountViewModel, nav) }
-            composableFromEnd<Route.PrivacyOptions> { PrivacyOptionsScreen(Amethyst.instance.torPrefs.value, nav) }
-            composableFromEnd<Route.NamecoinSettings> { NamecoinSettingsScreen(Amethyst.instance.namecoinPrefs, nav) }
-            composableFromEnd<Route.OtsSettings> { OtsSettingsScreen(Amethyst.instance.otsPrefs, Amethyst.instance.torPrefs.value, nav) }
+            composableFromEnd<Route.PrivacyOptions> { PrivacyOptionsScreen(nav) }
+            composableFromEnd<Route.NamecoinSettings> { NamecoinSettingsScreen(nav) }
+            composableFromEnd<Route.OtsSettings> { OtsSettingsScreen(nav) }
             composableFromEnd<Route.Bookmarks> { BookmarkListScreen(accountViewModel, nav) }
             composableFromEnd<Route.WebBookmarks> { WebBookmarksScreen(accountViewModel, nav) }
             composableFromEnd<Route.Drafts> { DraftListScreen(accountViewModel, nav) }
@@ -267,7 +265,7 @@ fun AppNavigation(
                 GeoHashPostScreen(
                     geohash = it.geohash,
                     message = it.message,
-                    attachment = it.attachment?.ifBlank { null }?.toUri(),
+                    attachment = it.attachment,
                     replyId = it.replyTo,
                     quoteId = it.quote,
                     draftId = it.draft,
@@ -290,7 +288,7 @@ fun AppNavigation(
                 HashtagPostScreen(
                     hashtag = it.hashtag,
                     message = it.message,
-                    attachment = it.attachment?.ifBlank { null }?.toUri(),
+                    attachment = it.attachment,
                     replyId = it.replyTo,
                     quoteId = it.quote,
                     draftId = it.draft,
@@ -303,7 +301,7 @@ fun AppNavigation(
                 ReplyCommentPostScreen(
                     replyId = it.replyTo,
                     message = it.message,
-                    attachment = it.attachment?.ifBlank { null }?.toUri(),
+                    attachment = it.attachment,
                     quoteId = it.quote,
                     draftId = it.draft,
                     accountViewModel,
@@ -314,7 +312,7 @@ fun AppNavigation(
             composableFromBottomArgs<Route.NewProduct> {
                 NewProductScreen(
                     message = it.message,
-                    attachment = it.attachment?.ifBlank { null }?.toUri(),
+                    attachment = it.attachment,
                     quoteId = it.quote,
                     draftId = it.draft,
                     accountViewModel,
@@ -334,7 +332,7 @@ fun AppNavigation(
             composableFromBottomArgs<Route.NewShortNote> {
                 ShortNotePostScreen(
                     message = it.message,
-                    attachment = it.attachment?.ifBlank { null }?.toUri(),
+                    attachment = it.attachment,
                     baseReplyToId = it.baseReplyTo,
                     quoteId = it.quote,
                     forkId = it.fork,
