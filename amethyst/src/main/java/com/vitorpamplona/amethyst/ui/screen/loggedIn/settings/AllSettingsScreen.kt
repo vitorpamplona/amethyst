@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.CloudUpload
+import androidx.compose.material.icons.outlined.DeleteForever
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Key
 import androidx.compose.material.icons.outlined.Search
@@ -135,6 +136,13 @@ fun AllSettingsScreen(
                     icon = Icons.Outlined.Key,
                     tint = tint,
                     onClick = { nav.nav(Route.AccountBackup) },
+                )
+                HorizontalDivider()
+                SettingsNavigationRow(
+                    title = R.string.request_to_vanish,
+                    icon = Icons.Outlined.DeleteForever,
+                    tint = MaterialTheme.colorScheme.error,
+                    onClick = { nav.nav(Route.RequestToVanish) },
                 )
             }
             HorizontalDivider(thickness = 4.dp)

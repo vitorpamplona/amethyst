@@ -185,6 +185,7 @@ import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiser
 import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayInfo
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
@@ -2004,6 +2005,31 @@ class Account(
     suspend fun unfollowRelayFeed(url: NormalizedRelayUrl) = sendMyPublicAndPrivateOutbox(relayFeedsList.removeRelay(url))
 
     suspend fun saveBlockedRelayList(blockedRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(blockedRelayList.saveRelayList(blockedRelays))
+
+    suspend fun requestToVanish(
+        relay: String,
+        reason: String,
+        createdAt: Long,
+    ) {
+        if (!isWriteable()) return
+
+        val template = RequestToVanishEvent.build(relay, reason, createdAt)
+        val signedEvent = signer.sign(template)
+        cache.justConsumeMyOwnEvent(signedEvent)
+        client.send(signedEvent, setOf(NormalizedRelayUrl(relay)))
+    }
+
+    suspend fun requestToVanishFromEverywhere(
+        reason: String,
+        createdAt: Long,
+    ) {
+        if (!isWriteable()) return
+
+        val template = RequestToVanishEvent.buildVanishFromEverywhere(reason, createdAt)
+        val signedEvent = signer.sign(template)
+        cache.justConsumeMyOwnEvent(signedEvent)
+        client.send(signedEvent, followPlusAllMineWithIndex.flow.value + client.availableRelaysFlow().value)
+    }
 
     suspend fun sendNip65RelayList(relays: List<AdvertisedRelayInfo>) = sendLiterallyEverywhere(nip65RelayList.saveRelayList(relays))
 

@@ -1955,4 +1955,22 @@
     <string name="web_bookmark_delete">Delete</string>
     <string name="web_bookmark_delete_confirm">Delete this web bookmark?</string>
     <string name="web_bookmark_open_url">Open URL</string>
+
+    <string name="request_to_vanish">Request to Vanish</string>
+    <string name="request_to_vanish_description">Request relays to permanently delete all your data up to the selected date. This action is based on NIP-62 and is legally binding in some jurisdictions.</string>
+    <string name="vanish_select_relay">Select a relay</string>
+    <string name="vanish_target_relay">Target Relay</string>
+    <string name="vanish_all_relays">ALL RELAYS</string>
+    <string name="vanish_all_relays_warning">This will request ALL relays to delete everything associated with your key up to the selected date. This event will be broadcast as widely as possible. This action cannot be undone.</string>
+    <string name="vanish_date_label">Delete data up to</string>
+    <string name="vanish_date_explainer">All your events created before this date will be requested for deletion from the selected relay.</string>
+    <string name="vanish_reason_label">Reason (optional)</string>
+    <string name="vanish_reason_placeholder">Reason or legal notice for the relay operator</string>
+    <string name="vanish_send_request">Send Vanish Request</string>
+    <string name="vanish_confirm_title">Confirm Vanish Request</string>
+    <string name="vanish_confirm_single_relay">You are about to request %1$s to permanently delete all your data created before the selected date. This cannot be undone.</string>
+    <string name="vanish_confirm_all_relays">You are about to request EVERY relay to permanently delete all your data created before the selected date. This will be broadcast everywhere and cannot be undone.</string>
+    <string name="vanish_request_sent">Vanish request sent</string>
+    <string name="vanish_select_date">Select date</string>
+    <string name="vanish_select_time">Select time</string>
 </resources>
