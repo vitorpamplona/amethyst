@@ -112,6 +112,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relay.RelayFeedScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.AllRelayListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.RelayInformationScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync.EventSyncScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.nip86.RelayManagementScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.search.SearchScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.AllSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.NIP47SetupScreen
@@ -226,6 +227,7 @@ fun AppNavigation(
             composableFromEndArgs<Route.RelayFeed> { RelayFeedScreen(it, accountViewModel, nav) }
             composableFromEndArgs<Route.ChessGame> { ChessGameScreen(it.gameId, accountViewModel, nav) }
             composableFromEndArgs<Route.RelayInfo> { RelayInformationScreen(it.url, accountViewModel, nav) }
+            composableFromEndArgs<Route.RelayManagement> { RelayManagementScreen(it.url, accountViewModel, nav) }
             composableFromEndArgs<Route.Community> { CommunityScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
             composableFromEndArgs<Route.FollowPack> { FollowPackFeedScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
 
