@@ -224,9 +224,9 @@ fun ProfileContentTemplate(
                 modifier = bannerModifier,
             )
         } else {
-            Image(
-                painter = painterRes(R.drawable.profile_banner, 3),
-                contentDescription = stringRes(R.string.profile_banner),
+            AsyncImage(
+                model = R.drawable.profile_banner,
+                contentDescription = stringResource(R.string.profile_banner),
                 contentScale = ContentScale.FillWidth,
                 modifier = bannerModifier,
             )
