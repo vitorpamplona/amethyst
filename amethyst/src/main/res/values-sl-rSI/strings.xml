@@ -72,6 +72,8 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="unauthorized_exception_description">Podpisnik ni odobril dešifriranja, ki je potrebno za to operacijo. V aplikaciji za podpisovanje aktivirajte NIP-44 možnost dešifriranja in poskusite znova</string>
     <string name="signer_not_found_exception">Ne najdem podpisnika</string>
     <string name="signer_not_found_exception_description">Ali je bila aplikacija za podpisovanje odstranjena? Preverite, ali je aplikacija za podpisovanje nameščena in ima dostop do tega računa. Odjavite se in ponovno prijavite, če se je aplikacija morda spremenila.</string>
+    <string name="signer_illegal_state_exception">Napačno delovanje podpisnika</string>
+    <string name="signer_illegal_state_exception_description">Zunanji podpisnik je vrnil neobičajen odgovor. Morda gre za napako v aplikaciji Amethyst ali v podpisniku.</string>
     <string name="zaps">Zapi</string>
     <string name="view_count">Števec vpogledov</string>
     <string name="boost">Pošlji naprej</string>
@@ -118,7 +120,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="new_channel">Nov kanal</string>
     <string name="channel_name">Ime kanala</string>
     <string name="my_awesome_group">Moja vrhunska skupina</string>
-    <string name="picture_url">Url slike</string>
+    <string name="picture_url">URL slike</string>
     <string name="optional_picture_url">URL slike (Neobvezno)</string>
     <string name="description">Opis</string>
     <string name="no_description">Ne najdem opisa</string>
@@ -193,7 +195,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="voice_anonymize_title">Anonimiziraj</string>
     <string name="voice_anonymize_description">Prilagodi višino tona svojega glasu: Opomba: osnovne spremembe višine tona lahko poslušalci potencialno razveljavijo.</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Uporabnik nima nastavljenega \"lightning\" naslova za sprejem satoshi-jev</string>
-    <string name="reply_here">"odgovori tukaj.. "</string>
+    <string name="reply_here">"odgovori tukaj… "</string>
     <string name="copies_the_note_id_to_the_clipboard_for_sharing">Kopira ID zapiska v odložišče za deljenje v Nostr</string>
     <string name="copy_channel_id_note_to_the_clipboard">Kopiraj ID kanala (zapisek) v odložišče</string>
     <string name="edits_the_channel_metadata">Uredi metapodatke kanala</string>
@@ -301,6 +303,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="nip_05">Nostr naslov t. i. Nip-05</string>
     <string name="never">nikoli</string>
     <string name="now">zdaj</string>
+    <string name="seconds">sekunde</string>
     <string name="h">h</string>
     <string name="m">m</string>
     <string name="d">d</string>
@@ -387,7 +390,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="manual_zaps">Ročno razdeli zape</string>
     <string name="bookmarks">Zaznamki</string>
     <string name="bookmarks_title">Privzeti zaznamki</string>
-    <string name="bookmarks_explainer">Tvoje privzeti zaznamki, ki jih podpira veliko Nostr odjemalcev.</string>
+    <string name="bookmarks_explainer">Tvoje privzeti zaznamki, ki jih podpira veliko Nostr odjemalcev</string>
     <string name="drafts">Osnutki</string>
     <string name="private_bookmarks">Privatni zaznamki</string>
     <string name="public_bookmarks">Javni zaznamki</string>
@@ -441,7 +444,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="wallet_connect_manual_config">Napredno: ročni vnos podatkov o povezavi</string>
     <string name="quick_zap_amounts">Zneski za hitre zape</string>
     <string name="quick_zap_amounts_explainer">Prikaže se ob pritisku na gumb za zappe. Tapnite znesek, da ga odstranite. Če pustite prazno, se bo ob vsakem zappu odprlo okno za vnos poljubnega zneska.</string>
-    <string name="zap_privacy_section">Zap zasebnost</string>
+    <string name="zap_privacy_section">Zasebnost zapov</string>
     <string name="zap_type_section_explainer">Določa, kako je prikazana vaša identiteta, ko pošljete zap.</string>
     <string name="wallet_connect_connect_app">Poveži denarnico</string>
     <string name="see_relay_feed">Pogled v vsebino releja</string>
@@ -458,6 +461,8 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="poll_zap_value_max">Zap maksimum</string>
     <string name="poll_consensus_threshold">Soglasje</string>
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
+    <string name="poll_single_choice">Ena izbira</string>
+    <string name="poll_multiple_choice">Več izbire</string>
     <string name="poll_closing_date_time">Datum in čas konca glasovanja</string>
     <string name="poll_closing_in">Anketa se zaključi  %1$s</string>
     <string name="poll_closing_time">Zapri po</string>
@@ -497,6 +502,9 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="zap_type_anonymous_explainer">Prejemnik in javnost ne vejo kdo je poslal plačilo</string>
     <string name="zap_type_nonzap">Ni-Zap</string>
     <string name="zap_type_nonzap_explainer">Brez sledi v Nostr, samo v Lightning</string>
+    <string name="post_anonymously">Anonimno</string>
+    <string name="post_anonymously_explainer">Objavite z novo začasno identiteto. Vaš račun ne bo povezan s tem odgovorom.</string>
+    <string name="anonymous_reply_warning">Ta odgovor bo objavljen z novo anonimno identiteto</string>
     <string name="file_server">Datotečni strežnik</string>
     <string name="file_server_description">Izberi strežnik za nalaganje te datoteke</string>
     <string name="zap_forward_lnAddress">LnNaslov ali @Uporabnik</string>
@@ -753,7 +761,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="access_control">Nadzor dostopa</string>
     <string name="minimum_pow">Minimalen PoW</string>
     <string name="auth">Auth</string>
-    <string name="auth_required">Potrebna avtentikacija</string>
+    <string name="auth_required">Potrebna je avtentikacija</string>
     <string name="payment">Plačilo</string>
     <string name="payment_required">Potrebno je plačilo</string>
     <string name="max_message_length">Največja dolžina sporočila</string>
@@ -826,7 +834,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="gallery_style">Slog galerije profila</string>
     <string name="gallery_style_description">Izberi slog galerije</string>
     <string name="load_image">Naloži sliko</string>
-    <string name="spamming_users">Pošiljatelji nezaželjenih vsebin</string>
+    <string name="spamming_users">Pošiljatelji nezaželenih vsebin</string>
     <string name="muted_button">Utišano. Klikni za vklop zvoka</string>
     <string name="mute_button">Zvok je prižgan. Klikni da ga utišaš</string>
     <string name="skip_back">Skoči nazaj za %d sekund</string>
@@ -1260,6 +1268,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="existed_since">OTS: %1$s</string>
     <string name="ots_info_title">Dokaz časovnega žiga</string>
     <string name="ots_info_description">Obstaja dokaz, da je bil ta zapisek podpisan pred %1$s. Dokaz je bil ožigosan v Bitcoin verigi blokov na ta datum in čas.</string>
+    <string name="edit_article">Uredi članek</string>
     <string name="edit_post">Uredi objavo</string>
     <string name="proposal_to_edit">Prošnja za izboljšavo objave</string>
     <string name="message_to_author">Povzetek sprememb</string>
@@ -1339,6 +1348,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="feed_group_hashtags">Ključniki</string>
     <string name="feed_group_communities">Skupnosti</string>
     <string name="feed_group_lists">Seznami</string>
+    <string name="feed_group_relays">Releji</string>
     <string name="temporary_account">Odjava ob zaklepu naprave</string>
     <string name="private_message">Zasebno sporočilo</string>
     <string name="public_message">Javno sporočilo</string>
@@ -1575,6 +1585,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="kind_shorts">Kratki videoposnetki</string>
     <string name="kind_voice_msg">Zvočno sporočilo</string>
     <string name="kind_voice_reply">Zvočni odgovori</string>
+    <string name="kind_web_bookmark">Spletni zaznamek</string>
     <string name="kind_wiki">Wiki</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Zagotovite si odličen vir objav tako, da sledite istim ljudem kot nekdo, ki mu zaupate.</string>
     <string name="import_follow_list">Uvozi seznam sledenih</string>
@@ -1690,4 +1701,20 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="event_sync_date_filter_all_time">Vse do zdaj</string>
     <string name="event_sync_date_filter_last_sync">Zadnja sinhronizacija: %1$s</string>
     <string name="event_sync_date_filter_since_last_sync">Od zadnje sinhronizacije</string>
+    <string name="web_bookmarks">Spletni zaznamki</string>
+    <string name="web_bookmarks_empty">Seznam spletnih zaznamkov je prazen. Dodajte ga s pritiskom na +.</string>
+    <string name="web_bookmark_add_title">Dodaj spletni zaznamek</string>
+    <string name="web_bookmark_edit_title">Uredi spletni zaznamek</string>
+    <string name="web_bookmark_url_label">URL</string>
+    <string name="web_bookmark_url_placeholder">https://primer.si</string>
+    <string name="web_bookmark_title_label">Naslov</string>
+    <string name="web_bookmark_title_placeholder">Naslov zaznamka</string>
+    <string name="web_bookmark_description_label">Opis</string>
+    <string name="web_bookmark_description_placeholder">Kratek opis</string>
+    <string name="web_bookmark_tags_label">Oznake (Ločite z vejicami)</string>
+    <string name="web_bookmark_tags_placeholder">nostr, tehnika , blog</string>
+    <string name="web_bookmark_save">Shrani</string>
+    <string name="web_bookmark_delete">Izbriši</string>
+    <string name="web_bookmark_delete_confirm">Izbriši ta spletni zaznamek</string>
+    <string name="web_bookmark_open_url">Odpri URL</string>
 </resources>
