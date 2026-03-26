@@ -58,6 +58,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
 import com.vitorpamplona.amethyst.commons.ui.feed.FeedHeader
 import com.vitorpamplona.amethyst.commons.util.toTimeAgo
 import com.vitorpamplona.amethyst.desktop.account.AccountState
+import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.desktop.subscriptions.createNotificationsSubscription
@@ -109,6 +110,7 @@ sealed class NotificationItem(
 @Composable
 fun NotificationsScreen(
     relayManager: DesktopRelayConnectionManager,
+    localCache: DesktopLocalCache,
     account: AccountState.LoggedIn,
     subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator? = null,
 ) {
@@ -125,6 +127,38 @@ fun NotificationsScreen(
             )
         }
     val notifications by notificationState.items.collectAsState()
+
+    // Seed from cache — reactions, zaps already consumed are in cache
+    LaunchedEffect(Unit) {
+        val myPubKey = account.pubKeyHex
+        val cached =
+            localCache.notes.filterIntoSet { _, note ->
+                val event = note.event ?: return@filterIntoSet false
+                when (event) {
+                    is ReactionEvent -> event.pubKey != myPubKey
+                    is LnZapEvent -> true
+                    else -> false
+                }
+            }
+        cached.forEach { note ->
+            val event = note.event ?: return@forEach
+            val notification =
+                when (event) {
+                    is ReactionEvent -> {
+                        NotificationItem.Reaction(event, event.createdAt, event.content)
+                    }
+
+                    is LnZapEvent -> {
+                        NotificationItem.Zap(event, event.createdAt, event.amount?.toLong())
+                    }
+
+                    else -> {
+                        null
+                    }
+                }
+            notification?.let { notificationState.addItem(it) }
+        }
+    }
 
     // Load metadata for notification authors via coordinator
     LaunchedEffect(notifications, subscriptionsCoordinator) {

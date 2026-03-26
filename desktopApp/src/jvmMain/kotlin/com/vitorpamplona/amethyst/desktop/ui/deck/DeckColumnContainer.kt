@@ -220,7 +220,7 @@ internal fun RootContent(
         }
 
         DeckColumnType.Notifications -> {
-            NotificationsScreen(relayManager, account, subscriptionsCoordinator)
+            NotificationsScreen(relayManager, localCache, account, subscriptionsCoordinator)
         }
 
         DeckColumnType.Messages -> {
