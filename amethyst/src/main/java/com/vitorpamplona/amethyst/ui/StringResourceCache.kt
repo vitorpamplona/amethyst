@@ -39,6 +39,12 @@ private var resourceCacheLanguage: String? = null
 // Caches most common icons in the app to avoid using disk
 private val iconCache = LruCache<Int, LruCache<Int, Painter>>(30)
 
+fun resourceCacheInit() {
+    resourceCache
+    resourceCacheLanguage
+    iconCache
+}
+
 fun checkLanguage(currentLanguage: String) {
     if (resourceCacheLanguage == null) {
         resourceCacheLanguage = currentLanguage
