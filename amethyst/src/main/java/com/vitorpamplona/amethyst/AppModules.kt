@@ -436,6 +436,12 @@ class AppModules(
             setImageLoader()
         }
 
+        // initializes diskcache on an IO thread.
+        applicationIOScope.launch {
+            // Sets Coil - Tor - OkHttp link
+            uiState
+        }
+
         // registers to receive events
         pokeyReceiver.register(appContext)
 
