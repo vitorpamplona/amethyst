@@ -23,13 +23,11 @@ package com.vitorpamplona.quartz.benchmark
 import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
+import com.vitorpamplona.quartz.utils.Rfc3986
 import com.vitorpamplona.quartz.utils.urldetector.detection.UrlDetector
-import io.kotlingeekdev.urireference.URIReference
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import kotlin.toString
 
 /**
  * Benchmark, which will execute on an Android device.
@@ -38,28 +36,14 @@ import kotlin.toString
  * result. Modify your code to see how it affects performance.
  */
 @RunWith(AndroidJUnit4::class)
-class RelayUrlNormalizerBenchmark {
+class Rfc3986UrlNormalizerBenchmark {
     @get:Rule
     val benchmarkRule = BenchmarkRule()
 
     @Test
     fun normalize() {
         benchmarkRule.measureRepeated {
-            "wss://relay.damus.io".normalizeRelayUrl()
-        }
-    }
-
-    @Test
-    fun normalizeDirect() {
-        benchmarkRule.measureRepeated {
-            URIReference.parse("wss://nostr.mom/").normalize().toString()
-        }
-    }
-
-    @Test
-    fun parseUriReference() {
-        benchmarkRule.measureRepeated {
-            URIReference.parse("wss://nostr.mom/").toString()
+            Rfc3986.normalize("wss://relay.damus.io")
         }
     }
 

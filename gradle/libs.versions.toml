@@ -54,7 +54,6 @@ torAndroid = "0.4.9.5.1"
 translate = "17.0.3"
 jetbrainsCompose = "1.10.3"
 unifiedpush = "3.0.10"
-uriReferenceKmp = "1.0"
 vico-charts-compose = "3.0.3"
 zelory = "3.0.1"
 zoomable = "2.11.1"
@@ -124,7 +123,6 @@ coil-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", versio
 coil-video = { group = "io.coil-kt.coil3", name = "coil-video", version.ref = "coil" }
 commons-imaging = { group = "org.apache.commons", name = "commons-imaging", version.ref = "commonsImaging" }
 slf4j-nop = { module = "org.slf4j:slf4j-nop", version.ref = "slf4j" }
-uri-reference-kmp = { module = "io.github.kotlingeekdev:uri-reference-kmp", version.ref = "uriReferenceKmp" }
 vlcj = { group = "uk.co.caprica", name = "vlcj", version.ref = "vlcj" }
 dev-whyoleg-cryptography-provider-apple-optimal = { module = "dev.whyoleg.cryptography:cryptography-provider-optimal", version.ref = "devWhyolegCryptography" }
 drfonfon-geohash = { group = "com.github.drfonfon", name = "android-kotlin-geohash", version.ref = "androidKotlinGeohash" }

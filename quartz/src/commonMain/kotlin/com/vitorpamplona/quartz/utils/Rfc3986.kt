@@ -20,47 +20,16 @@
  */
 package com.vitorpamplona.quartz.utils
 
-import io.kotlingeekdev.urireference.URIReference
+import com.vitorpamplona.quartz.utils.urldetector.detection.UrlDetector
 
 object Rfc3986 {
-    fun normalize(uri: String): String = URIReference.parse(uri).normalize().toString()
+    fun parse(url: String) = UrlDetector(url).detect()[0]
 
-    fun isValidUrl(url: String): Boolean =
-        runCatching {
-            URIReference.parse(url)
-        }.isSuccess
+    fun normalize(uri: String): String = parse(uri).fullUrl
 
-    fun normalizeAndRemoveFragment(url: String): String =
-        URIReference
-            .parse(url)
-            .normalize()!!
-            .toStringNoFragment()
-            .internIfPossible()
+    fun isValidUrl(url: String): Boolean = runCatching { parse(url) }.isSuccess
 
-    fun host(url: String): String =
-        URIReference
-            .parse(url)
-            .host
-            ?.value
-            .toString()
-}
+    fun normalizeAndRemoveFragment(url: String): String = parse(url).fullUrlWithoutFragment.internIfPossible()
 
-fun URIReference.toStringSchemeHost(): String {
-    val sb = StringBuilder()
-
-    if (scheme != null) sb.append(scheme).append(":")
-    if (authority != null) sb.append("//").append(authority.toString())
-
-    return sb.toString()
-}
-
-fun URIReference.toStringNoFragment(): String {
-    val sb = StringBuilder()
-
-    if (scheme != null) sb.append(scheme).append(":")
-    if (host != null) sb.append("//").append(host.toString())
-    if (path != null) sb.append(path)
-    if (query != null) sb.append("?").append(query)
-
-    return sb.toString()
+    fun host(url: String): String = parse(url).host
 }
