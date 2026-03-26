@@ -389,3 +389,5 @@ val SuggestionListDefaultHeightChat = Modifier.heightIn(0.dp, 200.dp)
 val SuggestionListDefaultHeightPage = Modifier.heightIn(0.dp, 300.dp)
 
 val FollowPackHeaderModifier = Modifier.fillMaxWidth().height(TopBarSize)
+
+val Size22ModifierWith4Padding = Modifier.size(22.dp).padding(end = 4.dp)

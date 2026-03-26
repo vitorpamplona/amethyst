@@ -20,18 +20,23 @@
  */
 package com.vitorpamplona.amethyst.ui.navigation.drawer
 
-import androidx.compose.foundation.Image
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -39,6 +44,7 @@ import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -67,13 +73,17 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
@@ -112,6 +122,7 @@ import com.vitorpamplona.amethyst.ui.theme.IconRowModifier
 import com.vitorpamplona.amethyst.ui.theme.IconRowTextModifier
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size22Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size22ModifierWith4Padding
 import com.vitorpamplona.amethyst.ui.theme.Size26Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.Width16Space
@@ -123,6 +134,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlin.text.ifEmpty
 
 @Composable
 fun DrawerContent(
@@ -524,7 +536,9 @@ fun ListContent(
             icon = Icons.Default.AccountCircle,
             tint = MaterialTheme.colorScheme.primary,
             nav = nav,
-            route = remember { Route.Profile(accountViewModel.userProfile().pubkeyHex) },
+            computeRoute = {
+                Route.Profile(accountViewModel.userProfile().pubkeyHex)
+            },
         )
 
         NavigationRow(
@@ -662,6 +676,25 @@ fun NavigationRow(
 }
 
 @Composable
+fun NavigationRow(
+    title: Int,
+    icon: ImageVector,
+    tint: Color,
+    nav: INav,
+    computeRoute: () -> Route,
+) {
+    IconRow(
+        title = title,
+        icon = icon,
+        tint = tint,
+        onClick = {
+            nav.closeDrawer()
+            nav.nav(computeRoute)
+        },
+    )
+}
+
+@Composable
 fun IconRow(
     title: Int,
     icon: Int,
@@ -669,30 +702,26 @@ fun IconRow(
     tint: Color,
     onClick: () -> Unit,
 ) {
+    val title = stringRes(title)
+
     Row(
         modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable(
-                    onClick = onClick,
-                ),
+            IconRowModifier.clickable(
+                onClick = onClick,
+            ),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            modifier = IconRowModifier,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                painter = painterRes(icon, iconReference),
-                contentDescription = stringRes(title),
-                modifier = Size22Modifier,
-                tint = tint,
-            )
-            Text(
-                modifier = IconRowTextModifier,
-                text = stringRes(title),
-                fontSize = Font18SP,
-            )
-        }
+        Icon(
+            painter = painterRes(icon, iconReference),
+            contentDescription = title,
+            modifier = Size22Modifier,
+            tint = tint,
+        )
+        Text(
+            modifier = IconRowTextModifier,
+            text = title,
+            fontSize = Font18SP,
+        )
     }
 }
 
@@ -703,32 +732,28 @@ fun IconRow(
     tint: Color,
     onClick: () -> Unit,
 ) {
+    val title = stringRes(title)
+
     Row(
         modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable(
-                    onClickLabel = stringRes(title),
-                    onClick = onClick,
-                ),
+            IconRowModifier.clickable(
+                onClickLabel = title,
+                onClick = onClick,
+            ),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            modifier = IconRowModifier,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = stringRes(title),
-                modifier = Size22Modifier.padding(end = 4.dp),
-                tint = tint,
-            )
+        Icon(
+            imageVector = icon,
+            contentDescription = title,
+            modifier = Size22ModifierWith4Padding,
+            tint = tint,
+        )
 
-            Text(
-                modifier = IconRowTextModifier,
-                text = stringRes(title),
-                fontSize = Font18SP,
-            )
-        }
+        Text(
+            modifier = IconRowTextModifier,
+            text = title,
+            fontSize = Font18SP,
+        )
     }
 }
 
