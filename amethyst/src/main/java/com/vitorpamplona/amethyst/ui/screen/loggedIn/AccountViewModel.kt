@@ -1305,7 +1305,7 @@ class AccountViewModel(
     }
 
     init {
-        Log.d("Init", "AccountViewModel")
+        Log.d("AccountViewModel", "Init")
         viewModelScope.launch(Dispatchers.IO) {
             feedStates.init()
             // awaits for init to finish before starting to capture new events.
@@ -1326,7 +1326,7 @@ class AccountViewModel(
     }
 
     override fun onCleared() {
-        Log.d("Init", "AccountViewModel onCleared")
+        Log.d("AccountViewModel", "onCleared")
         feedStates.destroy()
         super.onCleared()
     }
