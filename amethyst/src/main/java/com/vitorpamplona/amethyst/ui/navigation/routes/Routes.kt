@@ -140,6 +140,8 @@ sealed class Route {
 
     @Serializable object RequestToVanish : Route()
 
+    @Serializable object VanishEvents : Route()
+
     @Serializable object EditMediaServers : Route()
 
     @Serializable object UpdateReactionType : Route()

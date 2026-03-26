@@ -1973,4 +1973,17 @@
     <string name="vanish_request_sent">Vanish request sent</string>
     <string name="vanish_select_date">Select date</string>
     <string name="vanish_select_time">Select time</string>
+
+    <string name="vanish_events_title">Vanish History</string>
+    <string name="vanish_events_refresh">Refresh</string>
+    <string name="vanish_events_description">These are your past Request to Vanish events found on connected relays. Relays tagged in these events should not hold any of your data from before the event date.</string>
+    <string name="vanish_events_empty">No vanish requests found</string>
+    <string name="vanish_events_empty_hint">You haven\'t sent any Request to Vanish events yet.</string>
+    <string name="vanish_target_relays_label">Target Relays</string>
+    <string name="vanish_all_relays_compliance_hint">This request targets all relays. Use the Request to Vanish screen to test specific relays for compliance.</string>
+    <string name="vanish_test_button">Test</string>
+    <string name="vanish_compliant">Compliant</string>
+    <string name="vanish_non_compliant">Non-compliant</string>
+    <string name="vanish_test_error">Error</string>
+    <string name="vanish_history">Vanish History</string>
 </resources>
