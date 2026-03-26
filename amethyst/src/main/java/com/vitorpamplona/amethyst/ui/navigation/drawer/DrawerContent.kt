@@ -25,6 +25,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -85,8 +86,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.LinkAnnotation
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -123,8 +122,10 @@ import com.vitorpamplona.amethyst.ui.theme.IconRowTextModifier
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size22Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size22ModifierWith4Padding
+import com.vitorpamplona.amethyst.ui.theme.Size24Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size26Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.TextStyleBottomNavBar
 import com.vitorpamplona.amethyst.ui.theme.Width16Space
 import com.vitorpamplona.amethyst.ui.theme.bannerModifier
 import com.vitorpamplona.amethyst.ui.theme.drawerSpacing
@@ -832,6 +833,7 @@ fun BottomContent(
                     .fillMaxWidth()
                     .padding(horizontal = 15.dp),
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Absolute.SpaceBetween,
         ) {
             val string =
                 remember {
@@ -839,18 +841,16 @@ fun BottomContent(
                         withLink(
                             LinkAnnotation.Clickable(
                                 "clickable",
-                                TextLinkStyles(
-                                    SpanStyle(
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold,
-                                    ),
-                                ),
+                                TextStyleBottomNavBar,
                             ) {
                                 nav.nav(Route.Note(BuildConfig.RELEASE_NOTES_ID))
                                 nav.closeDrawer()
                             },
                         ) {
-                            append("v" + BuildConfig.VERSION_NAME + "-" + BuildConfig.FLAVOR.uppercase())
+                            append("v")
+                            append(BuildConfig.VERSION_NAME)
+                            append("-")
+                            append(BuildConfig.FLAVOR.uppercase())
                         }
                     }
                 }
@@ -861,7 +861,7 @@ fun BottomContent(
                 overflow = TextOverflow.Ellipsis,
                 maxLines = 1,
             )
-            Box(modifier = Modifier.weight(1F))
+
             IconButton(
                 onClick = {
                     nav.nav(Route.QRDisplay(user.pubkeyHex))
@@ -871,7 +871,7 @@ fun BottomContent(
                 Icon(
                     painter = painterRes(R.drawable.ic_qrcode, 2),
                     contentDescription = stringRes(id = R.string.show_npub_as_a_qr_code),
-                    modifier = Modifier.size(24.dp),
+                    modifier = Size24Modifier,
                     tint = MaterialTheme.colorScheme.primary,
                 )
             }

@@ -48,9 +48,13 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarSize
 
 val Shapes =
@@ -391,3 +395,11 @@ val SuggestionListDefaultHeightPage = Modifier.heightIn(0.dp, 300.dp)
 val FollowPackHeaderModifier = Modifier.fillMaxWidth().height(TopBarSize)
 
 val Size22ModifierWith4Padding = Modifier.size(22.dp).padding(end = 4.dp)
+
+val TextStyleBottomNavBar =
+    TextLinkStyles(
+        SpanStyle(
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+        ),
+    )
