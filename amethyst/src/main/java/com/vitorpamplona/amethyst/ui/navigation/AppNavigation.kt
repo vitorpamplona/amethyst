@@ -138,7 +138,6 @@ fun AppNavigation(
     accountViewModel: AccountViewModel,
     accountSessionManager: AccountSessionManager,
 ) {
-    println("AABBCC AppNavigation Begins")
     val nav = rememberNav()
 
     AccountSwitcherAndLeftDrawerLayout(accountViewModel, accountSessionManager, nav) {
@@ -151,7 +150,6 @@ fun AppNavigation(
     DisplayNotifyMessages(accountViewModel, nav)
     DisplayCrashMessages(accountViewModel, nav)
     DisplayBroadcastProgress(accountViewModel)
-    println("AABBCC AppNavigation Ends")
 }
 
 @Composable
