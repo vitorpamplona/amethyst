@@ -158,29 +158,36 @@ class AppModules(
     // Offers easy methods to know when connections are happening through Tor or not
     val roleBasedHttpClientBuilder = RoleBasedHttpClientBuilder(okHttpClients, torPrefs.value)
 
-    // Custom fetcher that considers tor settings and avoids forwarding.
-    val nip05Fetcher = OkHttpNip05Fetcher(roleBasedHttpClientBuilder::okHttpClientForNip05)
-
-    val namecoinResolver =
-        NamecoinNameResolver(
-            electrumxClient =
-                ElectrumXClient(
-                    socketFactory = { roleBasedHttpClientBuilder.socketFactoryForNip05() },
-                ),
-            serverListProvider = {
-                // User-configured custom servers take priority
-                namecoinPrefs.customServersOrNull
-                    ?: if (roleBasedHttpClientBuilder.shouldUseTorForNIP05("https://electrumx.example.com")) {
-                        TOR_ELECTRUMX_SERVERS
-                    } else {
-                        DEFAULT_ELECTRUMX_SERVERS
-                    }
-            },
-        )
-    val nip05Client = Nip05Client(nip05Fetcher, namecoinResolver)
+    val namecoinResolver by
+        lazy {
+            Log.d("AppModules", "Namecoin Resolver Init")
+            NamecoinNameResolver(
+                electrumxClient =
+                    ElectrumXClient(
+                        socketFactory = { roleBasedHttpClientBuilder.socketFactoryForNip05() },
+                    ),
+                serverListProvider = {
+                    // User-configured custom servers take priority
+                    namecoinPrefs.customServersOrNull
+                        ?: if (roleBasedHttpClientBuilder.shouldUseTorForNIP05("https://electrumx.example.com")) {
+                            TOR_ELECTRUMX_SERVERS
+                        } else {
+                            DEFAULT_ELECTRUMX_SERVERS
+                        }
+                },
+            )
+        }
 
     // Application-wide block height request cache
     val otsBlockHeightCache by lazy { OtsBlockHeightCache() }
+    val nip05Client by
+        lazy {
+            Log.d("AppModules", "NIP05Client Init")
+            Nip05Client(
+                fetcher = OkHttpNip05Fetcher(roleBasedHttpClientBuilder::okHttpClientForNip05),
+                namecoinResolverBuilder = { namecoinResolver },
+            )
+        }
 
     val otsResolverBuilder: TorAwareOkHttpOtsResolverBuilder =
         TorAwareOkHttpOtsResolverBuilder(
@@ -280,8 +287,8 @@ class AppModules(
     val sessionManager =
         AccountSessionManager(
             accountsCache = accountsCache,
-            nip05Client = nip05Client,
             client = client,
+            nip05ClientBuilder = { nip05Client },
             localPreferences = LocalPreferences,
             scope = applicationIOScope,
         )

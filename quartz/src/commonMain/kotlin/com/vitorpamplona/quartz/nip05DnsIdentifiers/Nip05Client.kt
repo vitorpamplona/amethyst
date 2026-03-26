@@ -28,7 +28,7 @@ import kotlinx.coroutines.CancellationException
 @Stable
 class Nip05Client(
     val fetcher: Nip05Fetcher,
-    val namecoinResolver: NamecoinNameResolver? = null,
+    val namecoinResolverBuilder: (() -> NamecoinNameResolver)? = null,
 ) : INip05Client {
     val parser = Nip05Parser()
 
@@ -37,8 +37,8 @@ class Nip05Client(
         hexKey: HexKey,
     ): Boolean {
         // Namecoin: route .bit domains to blockchain verification
-        if (namecoinResolver != null && NamecoinNameResolver.isNamecoinIdentifier(nip05.toValue())) {
-            val result = namecoinResolver.resolve(nip05.toValue())
+        if (namecoinResolverBuilder != null && NamecoinNameResolver.isNamecoinIdentifier(nip05.toValue())) {
+            val result = namecoinResolverBuilder().resolve(nip05.toValue())
             return result?.pubkey == hexKey
         }
 
@@ -61,8 +61,8 @@ class Nip05Client(
 
     override suspend fun get(nip05: Nip05Id): Nip05KeyInfo? {
         // Namecoin: route .bit domains to blockchain resolution
-        if (namecoinResolver != null && NamecoinNameResolver.isNamecoinIdentifier(nip05.toValue())) {
-            val result = namecoinResolver.resolve(nip05.toValue()) ?: return null
+        if (namecoinResolverBuilder != null && NamecoinNameResolver.isNamecoinIdentifier(nip05.toValue())) {
+            val result = namecoinResolverBuilder().resolve(nip05.toValue()) ?: return null
             return Nip05KeyInfo(result.pubkey, result.relays)
         }
 

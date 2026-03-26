@@ -173,7 +173,7 @@ class AccountViewModel(
     val torSettings: TorSettingsFlow,
     val dataSources: RelaySubscriptionsCoordinator,
     val httpClientBuilder: IRoleBasedHttpClientBuilder,
-    val nip05Client: INip05Client,
+    val nip05ClientBuilder: () -> INip05Client,
 ) : ViewModel(),
     Dao {
     var firstRoute: Route? = null
@@ -1290,7 +1290,7 @@ class AccountViewModel(
         val torSettings: TorSettingsFlow,
         val dataSources: RelaySubscriptionsCoordinator,
         val okHttpClient: RoleBasedHttpClientBuilder,
-        val nip05Client: Nip05Client,
+        val nip05ClientBuilder: () -> Nip05Client,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T =
@@ -1300,7 +1300,7 @@ class AccountViewModel(
                 torSettings,
                 dataSources,
                 okHttpClient,
-                nip05Client,
+                nip05ClientBuilder,
             ) as T
     }
 
@@ -1822,7 +1822,7 @@ fun mockAccountViewModel(): AccountViewModel {
         torSettings = TorSettingsFlow(torType = MutableStateFlow(TorType.OFF)),
         httpClientBuilder = EmptyRoleBasedHttpClientBuilder(),
         dataSources = RelaySubscriptionsCoordinator(LocalCache, client, authenticator, failureTracker, scope),
-        nip05Client = EmptyNip05Client(),
+        nip05ClientBuilder = { EmptyNip05Client() },
     ).also {
         mockedCache = it
     }
@@ -1873,7 +1873,7 @@ fun mockVitorAccountViewModel(): AccountViewModel {
         torSettings = TorSettingsFlow(torType = MutableStateFlow(TorType.OFF)),
         httpClientBuilder = EmptyRoleBasedHttpClientBuilder(),
         dataSources = RelaySubscriptionsCoordinator(LocalCache, client, authenticator, failureTracker, scope),
-        nip05Client = EmptyNip05Client(),
+        nip05ClientBuilder = { EmptyNip05Client() },
     ).also {
         vitorCache = it
     }
