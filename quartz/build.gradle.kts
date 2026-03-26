@@ -121,6 +121,9 @@ kotlin {
 
                 // RFC3986 library(normalizes URLs)
                 api(libs.uri.reference.kmp)
+
+                // Negentropy set reconciliation (NIP-77)
+                api(libs.negentropy.kmp)
             }
         }
 

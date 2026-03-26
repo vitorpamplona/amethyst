@@ -29,6 +29,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NoticeMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NotifyMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
+import com.vitorpamplona.quartz.nip77Negentropy.NegErrMessage
+import com.vitorpamplona.quartz.nip77Negentropy.NegMsgMessage
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.descriptors.buildClassSerialDescriptor
@@ -94,6 +96,16 @@ object MessageKSerializer : KSerializer<Message> {
                     is EoseMessage -> {
                         add(JsonPrimitive(value.subId))
                     }
+
+                    is NegMsgMessage -> {
+                        add(JsonPrimitive(value.subId))
+                        add(JsonPrimitive(value.message))
+                    }
+
+                    is NegErrMessage -> {
+                        add(JsonPrimitive(value.subId))
+                        add(JsonPrimitive(value.reason))
+                    }
                 }
             }
         jsonEncoder.encodeJsonElement(element)
@@ -146,6 +158,20 @@ object MessageKSerializer : KSerializer<Message> {
                 val queryId = array[1].jsonPrimitive.content
                 val result = CountResultKSerializer.deserializeFromElement(array[2].jsonObject)
                 CountMessage(queryId, result)
+            }
+
+            NegMsgMessage.LABEL -> {
+                NegMsgMessage(
+                    subId = array[1].jsonPrimitive.content,
+                    message = array[2].jsonPrimitive.content,
+                )
+            }
+
+            NegErrMessage.LABEL -> {
+                NegErrMessage(
+                    subId = array[1].jsonPrimitive.content,
+                    reason = if (array.size > 2) array[2].jsonPrimitive.content else "",
+                )
             }
 
             else -> {

@@ -24,6 +24,8 @@ import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import com.vitorpamplona.quartz.nip01Core.jackson.EventSerializer
+import com.vitorpamplona.quartz.nip77Negentropy.NegErrMessage
+import com.vitorpamplona.quartz.nip77Negentropy.NegMsgMessage
 
 class MessageSerializer : StdSerializer<Message>(Message::class.java) {
     val eventSerializer = EventSerializer()
@@ -74,6 +76,16 @@ class MessageSerializer : StdSerializer<Message>(Message::class.java) {
 
             is EoseMessage -> {
                 gen.writeString(msg.subId)
+            }
+
+            is NegMsgMessage -> {
+                gen.writeString(msg.subId)
+                gen.writeString(msg.message)
+            }
+
+            is NegErrMessage -> {
+                gen.writeString(msg.subId)
+                gen.writeString(msg.reason)
             }
         }
 
