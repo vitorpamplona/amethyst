@@ -36,10 +36,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.util.Consumer
-import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.crashreports.DisplayCrashMessages
 import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.compose.DisplayNotifyMessages
@@ -140,221 +138,11 @@ fun AppNavigation(
     accountViewModel: AccountViewModel,
     accountSessionManager: AccountSessionManager,
 ) {
+    println("AABBCC AppNavigation Begins")
     val nav = rememberNav()
 
-    val navBackStackEntry by nav.controller.currentBackStackEntryAsState()
-    val isTabPagerRoute =
-        navBackStackEntry?.destination?.let { dest ->
-            dest.hasRoute<Route.Home>() || dest.hasRoute<Route.Message>()
-        } ?: false
-    val drawerGesturesEnabled =
-        !isTabPagerRoute ||
-            nav.drawerState.isOpen ||
-            nav.drawerState.targetValue != nav.drawerState.currentValue
-
-    AccountSwitcherAndLeftDrawerLayout(accountViewModel, accountSessionManager, nav, drawerGesturesEnabled) {
-        NavHost(
-            navController = nav.controller,
-            startDestination = Route.Home,
-            enterTransition = { fadeIn(animationSpec = tween(200)) },
-            exitTransition = { fadeOut(animationSpec = tween(200)) },
-        ) {
-            composable<Route.Home> { HomeScreen(accountViewModel, nav) }
-            composable<Route.Message> { MessagesScreen(accountViewModel, nav) }
-            composable<Route.Video> { VideoScreen(accountViewModel, nav) }
-            composable<Route.Discover> { DiscoverScreen(accountViewModel, nav) }
-            composable<Route.Notification> { NotificationScreen(accountViewModel, nav) }
-            composable<Route.Chess> { ChessLobbyScreen(accountViewModel, nav) }
-
-            composableFromEnd<Route.Wallet> { WalletScreen(accountViewModel, nav) }
-            composableFromEnd<Route.WalletSend> { WalletSendScreen(accountViewModel, nav) }
-            composableFromEnd<Route.WalletReceive> { WalletReceiveScreen(accountViewModel, nav) }
-            composableFromEnd<Route.WalletTransactions> { WalletTransactionsScreen(accountViewModel, nav) }
-
-            composableFromEnd<Route.Lists> { ListOfPeopleListsScreen(accountViewModel, nav) }
-            composableFromEndArgs<Route.MyPeopleListView> { PeopleListScreen(it.dTag, accountViewModel, nav) }
-            composableFromEndArgs<Route.MyFollowPackView> { FollowPackScreen(it.dTag, accountViewModel, nav) }
-            composableFromBottomArgs<Route.PeopleListManagement> { FollowListAndPackAndUserScreen(it.userToAdd, accountViewModel, nav) }
-
-            composableFromBottomArgs<Route.PeopleListMetadataEdit> { PeopleListMetadataScreen(it.dTag, accountViewModel, nav) }
-            composableFromBottomArgs<Route.FollowPackMetadataEdit> { FollowPackMetadataScreen(it.dTag, accountViewModel, nav) }
-
-            composableFromEnd<Route.BookmarkGroups> { ListOfBookmarkGroupsScreen(accountViewModel, nav) }
-            composableFromEndArgs<Route.BookmarkGroupView> { BookmarkGroupScreen(it.dTag, it.bookmarkType, accountViewModel, nav) }
-            composableFromBottomArgs<Route.BookmarkGroupMetadataEdit> { BookmarkGroupMetadataScreen(it.dTag, accountViewModel, nav) }
-            composableFromBottomArgs<Route.PostBookmarkManagement> { PostBookmarkListManagementScreen(it.postId, accountViewModel, nav) }
-            composableFromBottomArgs<Route.ArticleBookmarkManagement> { ArticleBookmarkListManagementScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
-
-            composableFromBottomArgs<Route.QRDisplay> { ShowQRScreen(it.pubkey, accountViewModel, nav) }
-
-            composableFromBottomArgs<Route.ManualZapSplitPayment> { PayViaIntentScreen(it.paymentId, accountViewModel, nav) }
-
-            composableFromBottomArgs<Route.EditProfile> { NewUserMetadataScreen(nav, accountViewModel) }
-            composable<Route.Search> { SearchScreen(accountViewModel, nav) }
-
-            composableFromEnd<Route.AllSettings> { AllSettingsScreen(accountViewModel, nav) }
-            composableFromEnd<Route.AccountBackup> { AccountBackupScreen(accountViewModel, nav) }
-            composableFromEnd<Route.SecurityFilters> { SecurityFiltersScreen(accountViewModel, nav) }
-            composableFromEnd<Route.PrivacyOptions> { PrivacyOptionsScreen(nav) }
-            composableFromEnd<Route.NamecoinSettings> { NamecoinSettingsScreen(nav) }
-            composableFromEnd<Route.OtsSettings> { OtsSettingsScreen(nav) }
-            composableFromEnd<Route.Bookmarks> { BookmarkListScreen(accountViewModel, nav) }
-            composableFromEnd<Route.WebBookmarks> { WebBookmarksScreen(accountViewModel, nav) }
-            composableFromEnd<Route.Drafts> { DraftListScreen(accountViewModel, nav) }
-            composableFromEnd<Route.Settings> { SettingsScreen(accountViewModel, nav) }
-            composableFromEnd<Route.UserSettings> { UserSettingsScreen(accountViewModel, nav) }
-            composableFromEnd<Route.ReactionsSettings> { ReactionsSettingsScreen(accountViewModel, nav) }
-            composableFromEnd<Route.ImportFollowsSelectUser> { ImportFollowListSelectUserScreen(accountViewModel, nav) }
-            composableFromEndArgs<Route.ImportFollowsPickFollows> {
-                ImportFollowListPickFollowsScreen(it.userHex, accountViewModel, nav)
-            }
-
-            composableFromEndArgs<Route.Nip47NWCSetup> { NIP47SetupScreen(accountViewModel, nav, it.nip47) }
-            composableFromEndArgs<Route.UpdateZapAmount> { UpdateZapAmountScreen(accountViewModel, nav, it.nip47) }
-            composableFromEndArgs<Route.EditRelays> { AllRelayListScreen(accountViewModel, nav) }
-            composableFromEnd<Route.EventSync> { EventSyncScreen(accountViewModel, nav) }
-            composableFromEndArgs<Route.EditMediaServers> { AllMediaServersScreen(accountViewModel, nav) }
-            composableFromEndArgs<Route.UpdateReactionType> { UpdateReactionTypeScreen(accountViewModel, nav) }
-
-            composableFromEndArgs<Route.ContentDiscovery> { DvmContentDiscoveryScreen(it.id, accountViewModel, nav) }
-            composableFromEndArgs<Route.Profile> { ProfileScreen(it.id, accountViewModel, nav) }
-            composableFromEndArgs<Route.Note> { ThreadScreen(it.id, accountViewModel, nav) }
-            composableFromEndArgs<Route.Hashtag> { HashtagScreen(it, accountViewModel, nav) }
-            composableFromEndArgs<Route.Geohash> { GeoHashScreen(it, accountViewModel, nav) }
-            composableFromEndArgs<Route.RelayFeed> { RelayFeedScreen(it, accountViewModel, nav) }
-            composableFromEndArgs<Route.ChessGame> { ChessGameScreen(it.gameId, accountViewModel, nav) }
-            composableFromEndArgs<Route.RelayInfo> { RelayInformationScreen(it.url, accountViewModel, nav) }
-            composableFromEndArgs<Route.Community> { CommunityScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
-            composableFromEndArgs<Route.FollowPack> { FollowPackFeedScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
-
-            composableFromEndArgs<Route.Room> { ChatroomScreen(it.toKey(), it.message, it.replyId, it.draftId, it.expiresDays, accountViewModel, nav) }
-            composableFromEndArgs<Route.RoomByAuthor> { ChatroomByAuthorScreen(it.id, null, accountViewModel, nav) }
-
-            composableFromEndArgs<Route.PublicChatChannel> {
-                PublicChatChannelScreen(it.id, it.draftId, it.replyTo, accountViewModel, nav)
-            }
-
-            composableFromEndArgs<Route.LiveActivityChannel> {
-                LiveActivityChannelScreen(
-                    Address(it.kind, it.pubKeyHex, it.dTag),
-                    draftId = it.draftId,
-                    replyToId = it.replyTo,
-                    accountViewModel,
-                    nav,
-                )
-            }
-
-            composableFromEndArgs<Route.EphemeralChat> {
-                EphemeralChatScreen(
-                    id = it.id,
-                    relayUrl = it.relayUrl,
-                    draftId = it.draftId,
-                    replyToId = it.replyTo,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                )
-            }
-
-            composableFromBottomArgs<Route.ChannelMetadataEdit> { ChannelMetadataScreen(it.id, accountViewModel, nav) }
-            composableFromBottomArgs<Route.NewEphemeralChat> { NewEphemeralChatScreen(accountViewModel, nav) }
-            composableFromBottomArgs<Route.NewGroupDM> { NewGroupDMScreen(it.message, it.attachment, accountViewModel, nav) }
-
-            composableArgs<Route.EventRedirect> { LoadRedirectScreen(it.id, accountViewModel, nav) }
-
-            composableFromBottomArgs<Route.GeoPost> {
-                GeoHashPostScreen(
-                    geohash = it.geohash,
-                    message = it.message,
-                    attachment = it.attachment,
-                    replyId = it.replyTo,
-                    quoteId = it.quote,
-                    draftId = it.draft,
-                    accountViewModel,
-                    nav,
-                )
-            }
-
-            composableFromBottomArgs<Route.NewPublicMessage> {
-                NewPublicMessageScreen(
-                    to = it.toKey(),
-                    replyId = it.replyId,
-                    draftId = it.draftId,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                )
-            }
-
-            composableFromBottomArgs<Route.HashtagPost> {
-                HashtagPostScreen(
-                    hashtag = it.hashtag,
-                    message = it.message,
-                    attachment = it.attachment,
-                    replyId = it.replyTo,
-                    quoteId = it.quote,
-                    draftId = it.draft,
-                    accountViewModel,
-                    nav,
-                )
-            }
-
-            composableFromBottomArgs<Route.GenericCommentPost> {
-                ReplyCommentPostScreen(
-                    replyId = it.replyTo,
-                    message = it.message,
-                    attachment = it.attachment,
-                    quoteId = it.quote,
-                    draftId = it.draft,
-                    accountViewModel,
-                    nav,
-                )
-            }
-
-            composableFromBottomArgs<Route.NewProduct> {
-                NewProductScreen(
-                    message = it.message,
-                    attachment = it.attachment,
-                    quoteId = it.quote,
-                    draftId = it.draft,
-                    accountViewModel,
-                    nav,
-                )
-            }
-
-            composableFromBottomArgs<Route.NewLongFormPost> {
-                LongFormPostScreen(
-                    draftId = it.draft,
-                    versionId = it.version,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                )
-            }
-
-            composableFromBottomArgs<Route.NewShortNote> {
-                ShortNotePostScreen(
-                    message = it.message,
-                    attachment = it.attachment,
-                    baseReplyToId = it.baseReplyTo,
-                    quoteId = it.quote,
-                    forkId = it.fork,
-                    versionId = it.version,
-                    draftId = it.draft,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                )
-            }
-
-            composableFromBottomArgs<Route.VoiceReply> {
-                VoiceReplyScreen(
-                    replyToNoteId = it.replyToNoteId,
-                    recordingFilePath = it.recordingFilePath,
-                    mimeType = it.mimeType,
-                    duration = it.duration,
-                    amplitudesJson = it.amplitudes,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                )
-            }
-        }
+    AccountSwitcherAndLeftDrawerLayout(accountViewModel, accountSessionManager, nav) {
+        BuildNavigation(accountViewModel, nav)
     }
 
     NavigateIfIntentRequested(nav, accountViewModel, accountSessionManager)
@@ -363,6 +151,216 @@ fun AppNavigation(
     DisplayNotifyMessages(accountViewModel, nav)
     DisplayCrashMessages(accountViewModel, nav)
     DisplayBroadcastProgress(accountViewModel)
+    println("AABBCC AppNavigation Ends")
+}
+
+@Composable
+fun BuildNavigation(
+    accountViewModel: AccountViewModel,
+    nav: Nav,
+) {
+    NavHost(
+        navController = nav.controller,
+        startDestination = Route.Home,
+        enterTransition = { fadeIn(animationSpec = tween(200)) },
+        exitTransition = { fadeOut(animationSpec = tween(200)) },
+    ) {
+        composable<Route.Home> { HomeScreen(accountViewModel, nav) }
+        composable<Route.Message> { MessagesScreen(accountViewModel, nav) }
+        composable<Route.Video> { VideoScreen(accountViewModel, nav) }
+        composable<Route.Discover> { DiscoverScreen(accountViewModel, nav) }
+        composable<Route.Notification> { NotificationScreen(accountViewModel, nav) }
+        composable<Route.Chess> { ChessLobbyScreen(accountViewModel, nav) }
+
+        composableFromEnd<Route.Wallet> { WalletScreen(accountViewModel, nav) }
+        composableFromEnd<Route.WalletSend> { WalletSendScreen(accountViewModel, nav) }
+        composableFromEnd<Route.WalletReceive> { WalletReceiveScreen(accountViewModel, nav) }
+        composableFromEnd<Route.WalletTransactions> { WalletTransactionsScreen(accountViewModel, nav) }
+
+        composableFromEnd<Route.Lists> { ListOfPeopleListsScreen(accountViewModel, nav) }
+        composableFromEndArgs<Route.MyPeopleListView> { PeopleListScreen(it.dTag, accountViewModel, nav) }
+        composableFromEndArgs<Route.MyFollowPackView> { FollowPackScreen(it.dTag, accountViewModel, nav) }
+        composableFromBottomArgs<Route.PeopleListManagement> { FollowListAndPackAndUserScreen(it.userToAdd, accountViewModel, nav) }
+
+        composableFromBottomArgs<Route.PeopleListMetadataEdit> { PeopleListMetadataScreen(it.dTag, accountViewModel, nav) }
+        composableFromBottomArgs<Route.FollowPackMetadataEdit> { FollowPackMetadataScreen(it.dTag, accountViewModel, nav) }
+
+        composableFromEnd<Route.BookmarkGroups> { ListOfBookmarkGroupsScreen(accountViewModel, nav) }
+        composableFromEndArgs<Route.BookmarkGroupView> { BookmarkGroupScreen(it.dTag, it.bookmarkType, accountViewModel, nav) }
+        composableFromBottomArgs<Route.BookmarkGroupMetadataEdit> { BookmarkGroupMetadataScreen(it.dTag, accountViewModel, nav) }
+        composableFromBottomArgs<Route.PostBookmarkManagement> { PostBookmarkListManagementScreen(it.postId, accountViewModel, nav) }
+        composableFromBottomArgs<Route.ArticleBookmarkManagement> { ArticleBookmarkListManagementScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
+
+        composableFromBottomArgs<Route.QRDisplay> { ShowQRScreen(it.pubkey, accountViewModel, nav) }
+
+        composableFromBottomArgs<Route.ManualZapSplitPayment> { PayViaIntentScreen(it.paymentId, accountViewModel, nav) }
+
+        composableFromBottomArgs<Route.EditProfile> { NewUserMetadataScreen(nav, accountViewModel) }
+        composable<Route.Search> { SearchScreen(accountViewModel, nav) }
+
+        composableFromEnd<Route.AllSettings> { AllSettingsScreen(accountViewModel, nav) }
+        composableFromEnd<Route.AccountBackup> { AccountBackupScreen(accountViewModel, nav) }
+        composableFromEnd<Route.SecurityFilters> { SecurityFiltersScreen(accountViewModel, nav) }
+        composableFromEnd<Route.PrivacyOptions> { PrivacyOptionsScreen(nav) }
+        composableFromEnd<Route.NamecoinSettings> { NamecoinSettingsScreen(nav) }
+        composableFromEnd<Route.OtsSettings> { OtsSettingsScreen(nav) }
+        composableFromEnd<Route.Bookmarks> { BookmarkListScreen(accountViewModel, nav) }
+        composableFromEnd<Route.WebBookmarks> { WebBookmarksScreen(accountViewModel, nav) }
+        composableFromEnd<Route.Drafts> { DraftListScreen(accountViewModel, nav) }
+        composableFromEnd<Route.Settings> { SettingsScreen(accountViewModel, nav) }
+        composableFromEnd<Route.UserSettings> { UserSettingsScreen(accountViewModel, nav) }
+        composableFromEnd<Route.ReactionsSettings> { ReactionsSettingsScreen(accountViewModel, nav) }
+        composableFromEnd<Route.ImportFollowsSelectUser> { ImportFollowListSelectUserScreen(accountViewModel, nav) }
+        composableFromEndArgs<Route.ImportFollowsPickFollows> {
+            ImportFollowListPickFollowsScreen(it.userHex, accountViewModel, nav)
+        }
+
+        composableFromEndArgs<Route.Nip47NWCSetup> { NIP47SetupScreen(accountViewModel, nav, it.nip47) }
+        composableFromEndArgs<Route.UpdateZapAmount> { UpdateZapAmountScreen(accountViewModel, nav, it.nip47) }
+        composableFromEndArgs<Route.EditRelays> { AllRelayListScreen(accountViewModel, nav) }
+        composableFromEnd<Route.EventSync> { EventSyncScreen(accountViewModel, nav) }
+        composableFromEndArgs<Route.EditMediaServers> { AllMediaServersScreen(accountViewModel, nav) }
+        composableFromEndArgs<Route.UpdateReactionType> { UpdateReactionTypeScreen(accountViewModel, nav) }
+
+        composableFromEndArgs<Route.ContentDiscovery> { DvmContentDiscoveryScreen(it.id, accountViewModel, nav) }
+        composableFromEndArgs<Route.Profile> { ProfileScreen(it.id, accountViewModel, nav) }
+        composableFromEndArgs<Route.Note> { ThreadScreen(it.id, accountViewModel, nav) }
+        composableFromEndArgs<Route.Hashtag> { HashtagScreen(it, accountViewModel, nav) }
+        composableFromEndArgs<Route.Geohash> { GeoHashScreen(it, accountViewModel, nav) }
+        composableFromEndArgs<Route.RelayFeed> { RelayFeedScreen(it, accountViewModel, nav) }
+        composableFromEndArgs<Route.ChessGame> { ChessGameScreen(it.gameId, accountViewModel, nav) }
+        composableFromEndArgs<Route.RelayInfo> { RelayInformationScreen(it.url, accountViewModel, nav) }
+        composableFromEndArgs<Route.Community> { CommunityScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
+        composableFromEndArgs<Route.FollowPack> { FollowPackFeedScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
+
+        composableFromEndArgs<Route.Room> { ChatroomScreen(it.toKey(), it.message, it.replyId, it.draftId, it.expiresDays, accountViewModel, nav) }
+        composableFromEndArgs<Route.RoomByAuthor> { ChatroomByAuthorScreen(it.id, null, accountViewModel, nav) }
+
+        composableFromEndArgs<Route.PublicChatChannel> {
+            PublicChatChannelScreen(it.id, it.draftId, it.replyTo, accountViewModel, nav)
+        }
+
+        composableFromEndArgs<Route.LiveActivityChannel> {
+            LiveActivityChannelScreen(
+                Address(it.kind, it.pubKeyHex, it.dTag),
+                draftId = it.draftId,
+                replyToId = it.replyTo,
+                accountViewModel,
+                nav,
+            )
+        }
+
+        composableFromEndArgs<Route.EphemeralChat> {
+            EphemeralChatScreen(
+                id = it.id,
+                relayUrl = it.relayUrl,
+                draftId = it.draftId,
+                replyToId = it.replyTo,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+
+        composableFromBottomArgs<Route.ChannelMetadataEdit> { ChannelMetadataScreen(it.id, accountViewModel, nav) }
+        composableFromBottomArgs<Route.NewEphemeralChat> { NewEphemeralChatScreen(accountViewModel, nav) }
+        composableFromBottomArgs<Route.NewGroupDM> { NewGroupDMScreen(it.message, it.attachment, accountViewModel, nav) }
+
+        composableArgs<Route.EventRedirect> { LoadRedirectScreen(it.id, accountViewModel, nav) }
+
+        composableFromBottomArgs<Route.GeoPost> {
+            GeoHashPostScreen(
+                geohash = it.geohash,
+                message = it.message,
+                attachment = it.attachment,
+                replyId = it.replyTo,
+                quoteId = it.quote,
+                draftId = it.draft,
+                accountViewModel,
+                nav,
+            )
+        }
+
+        composableFromBottomArgs<Route.NewPublicMessage> {
+            NewPublicMessageScreen(
+                to = it.toKey(),
+                replyId = it.replyId,
+                draftId = it.draftId,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+
+        composableFromBottomArgs<Route.HashtagPost> {
+            HashtagPostScreen(
+                hashtag = it.hashtag,
+                message = it.message,
+                attachment = it.attachment,
+                replyId = it.replyTo,
+                quoteId = it.quote,
+                draftId = it.draft,
+                accountViewModel,
+                nav,
+            )
+        }
+
+        composableFromBottomArgs<Route.GenericCommentPost> {
+            ReplyCommentPostScreen(
+                replyId = it.replyTo,
+                message = it.message,
+                attachment = it.attachment,
+                quoteId = it.quote,
+                draftId = it.draft,
+                accountViewModel,
+                nav,
+            )
+        }
+
+        composableFromBottomArgs<Route.NewProduct> {
+            NewProductScreen(
+                message = it.message,
+                attachment = it.attachment,
+                quoteId = it.quote,
+                draftId = it.draft,
+                accountViewModel,
+                nav,
+            )
+        }
+
+        composableFromBottomArgs<Route.NewLongFormPost> {
+            LongFormPostScreen(
+                draftId = it.draft,
+                versionId = it.version,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+
+        composableFromBottomArgs<Route.NewShortNote> {
+            ShortNotePostScreen(
+                message = it.message,
+                attachment = it.attachment,
+                baseReplyToId = it.baseReplyTo,
+                quoteId = it.quote,
+                forkId = it.fork,
+                versionId = it.version,
+                draftId = it.draft,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+
+        composableFromBottomArgs<Route.VoiceReply> {
+            VoiceReplyScreen(
+                replyToNoteId = it.replyToNoteId,
+                recordingFilePath = it.recordingFilePath,
+                mimeType = it.mimeType,
+                duration = it.duration,
+                amplitudesJson = it.amplitudes,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+    }
 }
 
 @Composable
