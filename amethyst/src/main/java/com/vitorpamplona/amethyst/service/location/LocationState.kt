@@ -65,7 +65,7 @@ class LocationState(
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val geohashStateFlow =
+    val geohashStateFlow by lazy {
         hasLocationPermission
             .transformLatest {
                 if (it) {
@@ -92,4 +92,5 @@ class LocationState(
                 SharingStarted.WhileSubscribed(5000),
                 latestLocation,
             )
+    }
 }
