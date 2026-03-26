@@ -2491,7 +2491,7 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     suspend fun findEarliestOtsForNote(
         note: Note,
-        otsVerifCache: VerificationStateCache,
+        otsVerifCacheBuilder: () -> VerificationStateCache,
     ): Long? {
         checkNotInMainThread()
 
@@ -2502,7 +2502,7 @@ object LocalCache : ILocalCache, ICacheProvider {
             notes.mapNotNull { _, item ->
                 val noteEvent = item.event
                 if ((noteEvent is OtsEvent && noteEvent.isTaggedEvent(note.idHex) && !noteEvent.isExpirationBefore(time))) {
-                    val cachedTime = (otsVerifCache.justCache(noteEvent) as? VerificationState.Verified)?.verifiedTime
+                    val cachedTime = (otsVerifCacheBuilder().justCache(noteEvent) as? VerificationState.Verified)?.verifiedTime
                     if (cachedTime != null) {
                         if (minTime == null || cachedTime < (minTime ?: Long.MAX_VALUE)) {
                             minTime = cachedTime
@@ -2518,7 +2518,7 @@ object LocalCache : ILocalCache, ICacheProvider {
             }
 
         candidates.forEach { noteEvent ->
-            (otsVerifCache.cacheVerify(noteEvent) as? VerificationState.Verified)?.verifiedTime?.let { stampedTime ->
+            (otsVerifCacheBuilder().cacheVerify(noteEvent) as? VerificationState.Verified)?.verifiedTime?.let { stampedTime ->
                 if (minTime == null || stampedTime < (minTime ?: Long.MAX_VALUE)) {
                     minTime = stampedTime
                 }

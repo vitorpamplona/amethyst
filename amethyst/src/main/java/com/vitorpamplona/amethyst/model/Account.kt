@@ -143,7 +143,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 import com.vitorpamplona.quartz.nip01Core.tags.references.references
-import com.vitorpamplona.quartz.nip03Timestamp.OtsResolverBuilder
+import com.vitorpamplona.quartz.nip03Timestamp.OtsResolver
 import com.vitorpamplona.quartz.nip04Dm.PrivateDMCache
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
@@ -235,9 +235,9 @@ import kotlin.coroutines.cancellation.CancellationException
 class Account(
     val settings: AccountSettings = AccountSettings(KeyPair()),
     override val signer: NostrSigner,
-    val geolocationFlow: StateFlow<LocationState.LocationResult>,
-    val nwcFilterAssembler: NWCPaymentFilterAssembler,
-    val otsResolverBuilder: OtsResolverBuilder,
+    val geolocationFlow: () -> StateFlow<LocationState.LocationResult>,
+    val nwcFilterAssembler: () -> NWCPaymentFilterAssembler,
+    val otsResolverBuilder: () -> OtsResolver,
     val cache: LocalCache,
     val client: INostrClient,
     val scope: CoroutineScope,

@@ -93,8 +93,8 @@ sealed class AccountState {
 @Stable
 class AccountSessionManager(
     val accountsCache: AccountCacheState,
-    val client: INostrClient,
     val nip05ClientBuilder: () -> Nip05Client,
+    val clientBuilder: () -> INostrClient,
     val localPreferences: LocalPreferences,
     val scope: CoroutineScope,
 ) {
@@ -286,6 +286,8 @@ class AccountSessionManager(
                 delay(2000) // waits for the new user to connect to the new relays.
 
                 val toPost = accountSettings.backupNIP65RelayList?.writeRelaysNorm()?.toSet() ?: DefaultNIP65RelaySet
+
+                val client = clientBuilder()
 
                 accountSettings.backupUserMetadata?.let { client.send(it, toPost) }
                 accountSettings.backupContactList?.let { client.send(it, toPost) }
