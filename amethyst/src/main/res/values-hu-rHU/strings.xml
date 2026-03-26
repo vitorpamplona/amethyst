@@ -397,7 +397,7 @@
     <string name="bookmark_list_posts_btn_label">Bejegyzések megtekintése</string>
     <string name="bookmark_list_articles_btn_label">Cikkek megtekintése</string>
     <string name="bookmark_list_links_btn_label">Hivakozások megtekintése</string>
-    <string name="bookmark_list_hashtags_btn_label">Hashtagek megtekintése</string>
+    <string name="bookmark_list_hashtags_btn_label">Kulcsszavak megtekintése</string>
     <string name="bookmark_list_feed_empty_msg">Még nincs egyetlen könyvjelzőlistája sem. Koppintson az „Új” gombra, hogy létrehozzon egyet.</string>
     <string name="private_posts_label">Privát bejegyzések</string>
     <string name="private_posts_count">Privát bejegyzések (%1$s)</string>
@@ -843,8 +843,8 @@
     <string name="geohash_explainer">Hozzáadja a helyszínének geokivonatát a bejegyzéséhez. A nyilvánosság tudni fogja, hogy a jelenlegi helytől 5 km-en (3 mi) belül tertózkodik</string>
     <string name="geohash_exclusive">Helyszín-alapú bejegyzés</string>
     <string name="geohash_exclusive_explainer">Csak a helyszín követői láthatják. Az általános követők nem fogják látni.</string>
-    <string name="hashtag_exclusive">Hashtag-exkluzív bejegyzés</string>
-    <string name="hashtag_exclusive_explainer">Csak a hashtag követői fogják látni, de az Ön általános követői viszont nem.</string>
+    <string name="hashtag_exclusive">Kulcsszó-exkluzív bejegyzés</string>
+    <string name="hashtag_exclusive_explainer">Csak a kulcsszó követői fogják látni, de az Ön általános követői viszont nem.</string>
     <string name="loading_location">Helyszín betöltése…</string>
     <string name="lack_location_permissions">A helyszín-meghatározás nincs engedélyezve</string>
     <string name="add_sensitive_content_explainer">Hozzáadja az érzékeny tartalomra vonatkozó figyelmeztetést a tartalom megjelenítése előtt. Ez ideális bármilyen NSFW tartalom vagy olyan tartalom esetén, amelyet egyesek sértőnek vagy zavarónak találhatnak</string>
@@ -1333,7 +1333,7 @@
     <string name="people_list_label">Felhasználók</string>
     <string name="select_list_to_filter">Szempont kiválasztása a hírfolyam szűréséhez</string>
     <string name="feed_group_feeds">Hírfolyamok</string>
-    <string name="feed_group_hashtags">Hashtagek</string>
+    <string name="feed_group_hashtags">Kulcsszavak</string>
     <string name="feed_group_communities">Közösségek</string>
     <string name="feed_group_lists">Listák</string>
     <string name="feed_group_relays">Átjátszók</string>
@@ -1347,7 +1347,7 @@
     <string name="share_video">Videó megosztása…</string>
     <string name="unable_to_share_video">Nem sikerült megosztani a videót, próbálja meg újra később…</string>
     <string name="downloading_video_for_sharing">Videó letöltése…</string>
-    <string name="search_by_hashtag">Hashtag keresése: #%1$s</string>
+    <string name="search_by_hashtag">Kulcsszó keresése: #%1$s</string>
     <string name="dont_translate_from">Innentől NE fordítsa le</string>
     <string name="dont_translate_from_description">Az itt látható nyelvek nem lesznek lefordítva. Az eltávolításához és az újbóli fordításhoz válasszon ki egy nyelvet.</string>
     <string name="translate_to">Fordítás erre:</string>
@@ -1508,7 +1508,7 @@
     <string name="kind_git_repo">Git tároló</string>
     <string name="kind_git_reply">Git válasz</string>
     <string name="kind_zap_goals">Zap-célok</string>
-    <string name="kind_hashtag_follows">Hashtag-követések</string>
+    <string name="kind_hashtag_follows">Kulcsszó-követések</string>
     <string name="kind_highlights">Kiemelések</string>
     <string name="kind_http_auth">Http-hitelesítés</string>
     <string name="kind_index_relay_list">Indexelő átjátszók listája</string>
