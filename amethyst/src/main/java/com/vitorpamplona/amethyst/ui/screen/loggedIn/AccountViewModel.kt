@@ -112,6 +112,7 @@ import com.vitorpamplona.quartz.nip05DnsIdentifiers.INip05Client
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
+import com.vitorpamplona.quartz.nip17Dm.base.NIP17Group
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
@@ -376,7 +377,7 @@ class AccountViewModel(
             if (currentReactions.isNotEmpty()) {
                 account.delete(currentReactions)
             } else {
-                if (settings.isCompleteUIMode()) {
+                if (settings.isCompleteUIMode() && note.event !is NIP17Group) {
                     // Tracked broadcasting with progress feedback
                     account.createReactionEvent(note, reaction)?.let { (event, relays) ->
                         broadcastTracker.trackBroadcast(
