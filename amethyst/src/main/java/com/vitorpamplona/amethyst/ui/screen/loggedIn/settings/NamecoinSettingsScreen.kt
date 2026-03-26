@@ -38,12 +38,14 @@ import com.vitorpamplona.amethyst.model.preferences.NamecoinSharedPreferences
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumXClient
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NamecoinSettingsScreen(
     namecoinPrefs: NamecoinSharedPreferences,
+    electrumXClient: ElectrumXClient,
     nav: INav,
 ) {
     val namecoinSettings by namecoinPrefs.settings.collectAsState()
@@ -74,6 +76,13 @@ fun NamecoinSettingsScreen(
                 },
                 onReset = {
                     scope.launch { namecoinPrefs.reset() }
+                },
+                onTestServer = { server -> electrumXClient.testServer(server) },
+                onPinCert = { pem ->
+                    scope.launch {
+                        namecoinPrefs.addPinnedCert(pem)
+                        electrumXClient.addPinnedCert(pem)
+                    }
                 },
             )
         }

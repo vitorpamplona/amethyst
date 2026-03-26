@@ -58,6 +58,7 @@ class NamecoinSharedPreferences(
     companion object {
         val KEY_ENABLED = booleanPreferencesKey("namecoin.enabled")
         val KEY_CUSTOM_SERVERS = stringPreferencesKey("namecoin.customServers")
+        val KEY_PINNED_CERTS = stringPreferencesKey("namecoin.pinnedCerts")
     }
 
     /**
@@ -99,7 +100,47 @@ class NamecoinSharedPreferences(
 
     suspend fun reset() {
         persist(NamecoinSettings.DEFAULT)
+        clearPinnedCerts()
     }
+
+    /**
+     * Store a PEM-encoded certificate that the user accepted via Test Connection.
+     * The cert is appended to the existing list and synced to the ElectrumXClient.
+     */
+    suspend fun addPinnedCert(pem: String) {
+        val existing = loadPinnedCertsFromDisk()
+        val updated = (existing + pem).distinct()
+        savePinnedCerts(updated)
+    }
+
+    /** Load all user-pinned certs from disk (for startup sync). */
+    suspend fun loadPinnedCerts(): List<String> = loadPinnedCertsFromDisk()
+
+    private suspend fun clearPinnedCerts() = savePinnedCerts(emptyList())
+
+    private suspend fun savePinnedCerts(certs: List<String>) {
+        try {
+            context.sharedPreferencesDataStore.edit { prefs ->
+                prefs[KEY_PINNED_CERTS] = json.encodeToString(certs)
+            }
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.e("NamecoinPrefs", "Error writing pinned certs: ${e.message}")
+        }
+    }
+
+    private suspend fun loadPinnedCertsFromDisk(): List<String> =
+        try {
+            val prefs = context.sharedPreferencesDataStore.data.first()
+            val certsJson = prefs[KEY_PINNED_CERTS]
+            if (certsJson != null) {
+                json.decodeFromString<List<String>>(certsJson)
+            } else {
+                emptyList()
+            }
+        } catch (_: Exception) {
+            emptyList()
+        }
 
     // ── Internal ───────────────────────────────────────────────────────
 

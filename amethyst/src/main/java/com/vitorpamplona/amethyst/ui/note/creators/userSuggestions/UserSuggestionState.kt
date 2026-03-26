@@ -82,20 +82,27 @@ class UserSuggestionState(
             .map(::userSearchTermOrNull)
             .map { prefix ->
                 if (prefix != null) {
-                    if (prefix.contains('@')) {
+                    // NIP-05 resolution: user@domain or bare .bit domain
+                    val nip05 =
+                        if (prefix.contains('@')) {
+                            Nip05Id.parse(prefix)
+                        } else if (prefix.endsWith(".bit", ignoreCase = true)) {
+                            Nip05Id("_", prefix.lowercase())
+                        } else {
+                            null
+                        }
+                    if (nip05 != null) {
                         runCatching {
-                            Nip05Id.parse(prefix)?.let { nip05 ->
-                                nip05Client.get(nip05)?.let { info ->
-                                    val user = account.cache.checkGetOrCreateUser(info.pubkey)
-                                    if (user != null) {
-                                        info.relays.forEach {
-                                            it.normalizeRelayUrlOrNull()?.let { relay ->
-                                                account.cache.relayHints.addKey(user.pubkey(), relay)
-                                            }
+                            nip05Client.get(nip05)?.let { info ->
+                                val user = account.cache.checkGetOrCreateUser(info.pubkey)
+                                if (user != null) {
+                                    info.relays.forEach {
+                                        it.normalizeRelayUrlOrNull()?.let { relay ->
+                                            account.cache.relayHints.addKey(user.pubkey(), relay)
                                         }
                                     }
-                                    user
                                 }
+                                user
                             }
                         }.getOrNull()
                     } else if (prefix.startsWithAny(userUriPrefixes)) {

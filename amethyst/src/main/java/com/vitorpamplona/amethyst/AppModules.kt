@@ -161,12 +161,14 @@ class AppModules(
     // Custom fetcher that considers tor settings and avoids forwarding.
     val nip05Fetcher = OkHttpNip05Fetcher(roleBasedHttpClientBuilder::okHttpClientForNip05)
 
+    val electrumXClient =
+        ElectrumXClient(
+            socketFactory = { roleBasedHttpClientBuilder.socketFactoryForNip05() },
+        )
+
     val namecoinResolver =
         NamecoinNameResolver(
-            electrumxClient =
-                ElectrumXClient(
-                    socketFactory = { roleBasedHttpClientBuilder.socketFactoryForNip05() },
-                ),
+            electrumxClient = electrumXClient,
             serverListProvider = {
                 // User-configured custom servers take priority
                 namecoinPrefs.customServersOrNull
@@ -403,6 +405,18 @@ class AppModules(
         applicationIOScope.launch {
             // Eagerly initialize OtsSharedPreferences off the main thread
             otsPrefs
+        }
+
+        // Load user-pinned ElectrumX certs from preferences into the client
+        applicationIOScope.launch {
+            try {
+                val pinnedCerts = namecoinPrefs.loadPinnedCerts()
+                if (pinnedCerts.isNotEmpty()) {
+                    electrumXClient.setDynamicCerts(pinnedCerts)
+                }
+            } catch (_: Exception) {
+                // Non-fatal — defaults will still work
+            }
         }
     }
 
