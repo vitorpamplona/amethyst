@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model
+package com.vitorpamplona.amethyst.commons.model.cache
 
 import com.vitorpamplona.quartz.utils.cache.CacheOperations
 import java.lang.ref.WeakReference
@@ -59,7 +59,7 @@ class LargeSoftCache<K : Any, V : Any> : CacheOperations<K, V> {
 
     /**
      * Puts an object into the cache with a specified key.
-     * The object is stored as a SoftReference.
+     * The object is stored as a WeakReference.
      *
      * @param key The key to associate with the object.
      * @param value The object to cache.
@@ -105,18 +105,15 @@ class LargeSoftCache<K : Any, V : Any> : CacheOperations<K, V> {
 
     /**
      * Proactively cleans up the cache by removing entries whose weakly referenced
-     * objects have been garbage collected. While `get` handles cleanup on access,
-     * this method can be called periodically or when memory pressure is high.
+     * objects have been garbage collected. Single-pass iterator for efficiency.
      */
     fun cleanUp() {
-        val keysToRemove = mutableMapOf<K, WeakReference<V>>()
-        cache.forEach { key, softRef ->
-            if (softRef.get() == null) {
-                keysToRemove.put(key, softRef)
+        val iter = cache.entries.iterator()
+        while (iter.hasNext()) {
+            val entry = iter.next()
+            if (entry.value.get() == null) {
+                iter.remove()
             }
-        }
-        keysToRemove.forEach { key, value ->
-            cache.remove(key, value)
         }
     }
 

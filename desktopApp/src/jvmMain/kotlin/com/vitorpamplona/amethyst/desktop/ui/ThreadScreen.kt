@@ -42,48 +42,38 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.commons.richtext.UrlParser
-import com.vitorpamplona.amethyst.commons.state.EventCollectionState
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
+import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.ui.thread.drawReplyLevel
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
+import com.vitorpamplona.amethyst.desktop.feeds.DesktopThreadFilter
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
-import com.vitorpamplona.amethyst.desktop.subscriptions.FilterBuilders
-import com.vitorpamplona.amethyst.desktop.subscriptions.SubscriptionConfig
 import com.vitorpamplona.amethyst.desktop.subscriptions.createNoteSubscription
-import com.vitorpamplona.amethyst.desktop.subscriptions.createReactionsSubscription
-import com.vitorpamplona.amethyst.desktop.subscriptions.createRepliesSubscription
-import com.vitorpamplona.amethyst.desktop.subscriptions.createRepostsSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.createThreadRepliesSubscription
-import com.vitorpamplona.amethyst.desktop.subscriptions.createZapsSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
 import com.vitorpamplona.amethyst.desktop.ui.media.LightboxOverlay
-import com.vitorpamplona.amethyst.desktop.ui.note.NoteCard
-import com.vitorpamplona.amethyst.desktop.ui.note.extractMentionedPubkeys
+import com.vitorpamplona.amethyst.desktop.viewmodels.DesktopFeedViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
-import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
-import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
-import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 
 /**
  * Desktop Thread Screen - displays a note and all its replies in a thread view.
  *
- * Uses the shared drawReplyLevel modifier from commons to display reply nesting.
+ * Uses DesktopFeedViewModel + DesktopThreadFilter for cache-backed display.
+ * Keeps relay subscriptions to populate cache with thread data.
  */
 @Composable
 fun ThreadScreen(
@@ -99,115 +89,47 @@ fun ThreadScreen(
     onZapFeedback: (ZapFeedback) -> Unit = {},
     onReply: (Event) -> Unit = {},
 ) {
-    val connectedRelays by relayManager.connectedRelays.collectAsState()
-    val scope = rememberCoroutineScope()
-
-    // State for the root note
-    var rootNote by remember { mutableStateOf<Event?>(null) }
-
-    // State for reply events
-    val replyEventState =
-        remember(noteId) {
-            EventCollectionState<Event>(
-                getId = { it.id },
-                sortComparator = compareBy { it.createdAt },
-                maxSize = 500,
-                scope = scope,
-            )
-        }
-    val replyEvents by replyEventState.items.collectAsState()
-
-    // Cache for calculating reply levels
-    val levelCache = remember(noteId) { mutableMapOf<String, Int>() }
-
-    // Track EOSE to know when initial load is complete
-    var rootNoteEoseReceived by remember(noteId) { mutableStateOf(false) }
-    var repliesEoseReceived by remember(noteId) { mutableStateOf(false) }
-
-    // Track zaps per event
-    var zapsByEvent by remember(noteId) { mutableStateOf<Map<String, List<ZapReceipt>>>(emptyMap()) }
-    // Track reaction event IDs per target event to deduplicate
-    var reactionIdsByEvent by remember(noteId) { mutableStateOf<Map<String, Set<String>>>(emptyMap()) }
-    val reactionsByEvent = reactionIdsByEvent.mapValues { it.value.size }
-    // Track reply/repost event IDs per target event to deduplicate
-    var replyIdsByEvent by remember(noteId) { mutableStateOf<Map<String, Set<String>>>(emptyMap()) }
-    val repliesByEvent = replyIdsByEvent.mapValues { it.value.size }
-    var repostIdsByEvent by remember(noteId) { mutableStateOf<Map<String, Set<String>>>(emptyMap()) }
-    val repostsByEvent = repostIdsByEvent.mapValues { it.value.size }
-
-    // Bookmark state
-    var bookmarkList by remember { mutableStateOf<BookmarkListEvent?>(null) }
-    var bookmarkedEventIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+    val relayStatuses by relayManager.relayStatuses.collectAsState()
+    val connectedRelays = remember(relayStatuses) { relayStatuses.keys }
 
     // Lightbox state
     var lightboxState by remember { mutableStateOf<LightboxState?>(null) }
 
-    // Load metadata for thread authors + mentioned users via coordinator
-    LaunchedEffect(rootNote, replyEvents, subscriptionsCoordinator) {
-        if (subscriptionsCoordinator != null) {
-            val pubkeys = mutableListOf<String>()
-            rootNote?.let { pubkeys.add(it.pubKey) }
-            pubkeys.addAll(replyEvents.map { it.pubKey })
+    // Track EOSE for root note subscription
+    var rootNoteEoseReceived by remember(noteId) { mutableStateOf(false) }
 
-            // Also load metadata for users mentioned in note content
-            val parser = UrlParser()
-            val allEvents = listOfNotNull(rootNote) + replyEvents
-            val mentionedPubkeys =
-                allEvents.flatMap { event ->
-                    extractMentionedPubkeys(parser.parseValidUrls(event.content).bech32s)
-                }
-            pubkeys.addAll(mentionedPubkeys)
-
-            if (pubkeys.isNotEmpty()) {
-                subscriptionsCoordinator.loadMetadataForPubkeys(pubkeys.distinct())
-            }
-        }
-    }
-
-    // Subscribe to user's bookmark list
-    rememberSubscription(connectedRelays, account, relayManager = relayManager) {
-        if (connectedRelays.isNotEmpty() && account != null) {
-            SubscriptionConfig(
-                subId = "thread-bookmarks-${account.pubKeyHex.take(8)}",
-                filters =
-                    listOf(
-                        FilterBuilders.byAuthors(
-                            authors = listOf(account.pubKeyHex),
-                            kinds = listOf(BookmarkListEvent.KIND),
-                            limit = 1,
-                        ),
-                    ),
-                relays = connectedRelays,
-                onEvent = { event, _, _, _ ->
-                    if (event is BookmarkListEvent) {
-                        bookmarkList = event
-                        val pubIds =
-                            event
-                                .publicBookmarks()
-                                .filterIsInstance<EventBookmark>()
-                                .map { it.eventId }
-                                .toSet()
-                        bookmarkedEventIds = pubIds
-                    }
-                },
-                onEose = { _, _ -> },
+    // DesktopFeedViewModel reads thread from cache (root + replies via graph walk)
+    val threadViewModel =
+        remember(noteId) {
+            DesktopFeedViewModel(
+                DesktopThreadFilter(noteId, localCache),
+                localCache,
             )
-        } else {
-            null
         }
+    DisposableEffect(threadViewModel) {
+        onDispose { threadViewModel.destroy() }
     }
+    val feedState by threadViewModel.feedState.feedContent.collectAsState()
+    val threadNotes =
+        if (feedState is FeedState.Loaded) {
+            val loaded by (feedState as FeedState.Loaded).feed.collectAsState()
+            loaded.list
+        } else {
+            kotlinx.collections.immutable.persistentListOf()
+        }
 
-    // Subscribe to the root note
+    // Level cache for reply nesting
+    val levelCache = remember(noteId) { mutableMapOf<String, Int>() }
+
+    // Keep relay subscriptions to populate cache — root note
     rememberSubscription(connectedRelays, noteId, relayManager = relayManager) {
         if (connectedRelays.isNotEmpty()) {
             createNoteSubscription(
                 relays = connectedRelays,
                 noteId = noteId,
-                onEvent = { event, _, _, _ ->
-                    if (event.id == noteId) {
-                        rootNote = event
-                        levelCache[event.id] = 0
-                    }
+                onEvent = { event, _, relay, _ ->
+                    subscriptionsCoordinator?.consumeEvent(event, relay)
+                    levelCache[event.id] = 0
                 },
                 onEose = { _, _ ->
                     rootNoteEoseReceived = true
@@ -218,135 +140,61 @@ fun ThreadScreen(
         }
     }
 
-    // Subscribe to replies
+    // Keep relay subscription for replies
     rememberSubscription(connectedRelays, noteId, relayManager = relayManager) {
         if (connectedRelays.isNotEmpty()) {
             createThreadRepliesSubscription(
                 relays = connectedRelays,
                 noteId = noteId,
-                onEvent = { event, _, _, _ ->
-                    replyEventState.addItem(event)
+                onEvent = { event, _, relay, _ ->
+                    subscriptionsCoordinator?.consumeEvent(event, relay)
                 },
-                onEose = { _, _ ->
-                    repliesEoseReceived = true
-                },
+                onEose = { _, _ -> },
             )
         } else {
             null
         }
     }
 
-    // Subscribe to zaps for thread events
-    val allEventIds = listOf(noteId) + replyEvents.map { it.id }
-    rememberSubscription(connectedRelays, allEventIds, relayManager = relayManager) {
-        if (connectedRelays.isEmpty() || allEventIds.isEmpty()) {
-            return@rememberSubscription null
-        }
-
-        createZapsSubscription(
-            relays = connectedRelays,
-            eventIds = allEventIds,
-            onEvent = { event, _, _, _ ->
-                if (event is LnZapEvent) {
-                    val receipt = event.toZapReceipt(localCache) ?: return@createZapsSubscription
-                    val targetEventId = event.zappedPost().firstOrNull() ?: return@createZapsSubscription
-                    zapsByEvent =
-                        zapsByEvent.toMutableMap().apply {
-                            val existing = this[targetEventId] ?: emptyList()
-                            if (existing.none { it.createdAt == receipt.createdAt && it.senderPubKey == receipt.senderPubKey }) {
-                                this[targetEventId] = existing + receipt
-                            }
-                        }
-                }
-            },
-        )
+    // Request interaction data — keyed on noteId (stable), not threadNotes (changes on every bundle)
+    DisposableEffect(noteId, subscriptionsCoordinator) {
+        val coordinator = subscriptionsCoordinator ?: return@DisposableEffect onDispose {}
+        val noteIds = threadNotes.mapNotNull { it.event?.id }
+        val relays = relayManager.relayStatuses.value.keys
+        val subId =
+            if (noteIds.isNotEmpty()) {
+                coordinator.requestInteractions(noteIds, relays)
+            } else {
+                null
+            }
+        onDispose { subId?.let { coordinator.releaseInteractions(it) } }
     }
 
-    // Subscribe to reactions for thread events
-    rememberSubscription(connectedRelays, allEventIds, relayManager = relayManager) {
-        if (connectedRelays.isEmpty() || allEventIds.isEmpty()) {
-            return@rememberSubscription null
+    // Load metadata for thread authors via coordinator
+    LaunchedEffect(threadNotes, subscriptionsCoordinator) {
+        if (subscriptionsCoordinator != null && threadNotes.isNotEmpty()) {
+            subscriptionsCoordinator.loadMetadataForNotes(threadNotes)
         }
-
-        createReactionsSubscription(
-            relays = connectedRelays,
-            eventIds = allEventIds,
-            onEvent = { event, _, _, _ ->
-                if (event is ReactionEvent) {
-                    val targetEventId = event.originalPost().firstOrNull() ?: return@createReactionsSubscription
-                    reactionIdsByEvent =
-                        reactionIdsByEvent.toMutableMap().apply {
-                            val existing = this[targetEventId] ?: emptySet()
-                            this[targetEventId] = existing + event.id
-                        }
-                }
-            },
-        )
     }
 
-    // Subscribe to replies for thread events (for counts)
-    rememberSubscription(connectedRelays, allEventIds, relayManager = relayManager) {
-        if (connectedRelays.isEmpty() || allEventIds.isEmpty()) {
-            return@rememberSubscription null
-        }
-
-        createRepliesSubscription(
-            relays = connectedRelays,
-            eventIds = allEventIds,
-            onEvent = { event, _, _, _ ->
-                val replyToId =
-                    event.tags
-                        .filter { it.size >= 2 && it[0] == "e" }
-                        .lastOrNull()
-                        ?.get(1) ?: return@createRepliesSubscription
-                if (replyToId in allEventIds) {
-                    replyIdsByEvent =
-                        replyIdsByEvent.toMutableMap().apply {
-                            val existing = this[replyToId] ?: emptySet()
-                            this[replyToId] = existing + event.id
-                        }
-                }
-            },
-        )
-    }
-
-    // Subscribe to reposts for thread events
-    rememberSubscription(connectedRelays, allEventIds, relayManager = relayManager) {
-        if (connectedRelays.isEmpty() || allEventIds.isEmpty()) {
-            return@rememberSubscription null
-        }
-
-        createRepostsSubscription(
-            relays = connectedRelays,
-            eventIds = allEventIds,
-            onEvent = { event, _, _, _ ->
-                if (event is RepostEvent) {
-                    val targetEventId = event.boostedEventId() ?: return@createRepostsSubscription
-                    repostIdsByEvent =
-                        repostIdsByEvent.toMutableMap().apply {
-                            val existing = this[targetEventId] ?: emptySet()
-                            this[targetEventId] = existing + event.id
-                        }
-                }
-            },
-        )
-    }
-
-    // Calculate reply level for an event based on e-tags
-    fun calculateLevel(event: Event): Int {
+    // Calculate reply level for a note based on e-tags
+    fun calculateLevel(note: Note): Int {
+        val event = note.event ?: return 1
         levelCache[event.id]?.let { return it }
 
-        // Find the event this is replying to (last e-tag or marked reply/root)
         val replyToId = findReplyToId(event)
         val level =
             if (replyToId == null || replyToId == noteId) {
-                1 // Direct reply to root
+                1
             } else {
                 (levelCache[replyToId] ?: 0) + 1
             }
         levelCache[event.id] = level
         return level
     }
+
+    val rootNote = threadNotes.firstOrNull { it.idHex == noteId }
+    val replyNotes = threadNotes.filter { it.idHex != noteId }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -370,165 +218,111 @@ fun ThreadScreen(
                 )
             }
 
-            if (connectedRelays.isEmpty()) {
-                LoadingState("Connecting to relays...")
-            } else if (rootNote == null && !rootNoteEoseReceived) {
-                LoadingState("Loading thread...")
-            } else if (rootNote == null && rootNoteEoseReceived) {
-                EmptyState(
-                    title = "Note not found",
-                    description = "This note may have been deleted or is not available from connected relays",
-                    onRefresh = onBack,
-                    refreshLabel = "Go back",
-                )
-            } else {
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(0.dp),
-                ) {
-                    // Root note (no reply level indicator)
-                    item(key = noteId) {
-                        Column {
-                            NoteCard(
-                                note = rootNote!!.toNoteDisplayData(localCache),
-                                localCache = localCache,
-                                onAuthorClick = onNavigateToProfile,
-                                onMentionClick = onNavigateToProfile,
-                                onImageClick = { urls, index -> lightboxState = LightboxState(urls, index) },
-                                onMediaClick = { urls, index, seekPos ->
-                                    com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
-                                        .playVideo(urls[index], seekPos)
-                                    com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
-                                        .toggleFullscreen()
-                                },
-                            )
-                            if (account != null) {
-                                val rootZaps = zapsByEvent[noteId] ?: emptyList()
-                                NoteActionsRow(
-                                    event = rootNote!!,
+            when {
+                connectedRelays.isEmpty() -> {
+                    LoadingState("Connecting to relays...")
+                }
+
+                feedState is FeedState.Loading && !rootNoteEoseReceived -> {
+                    LoadingState("Loading thread...")
+                }
+
+                rootNote == null && rootNoteEoseReceived -> {
+                    EmptyState(
+                        title = "Note not found",
+                        description = "This note may have been deleted or is not available from connected relays",
+                        onRefresh = onBack,
+                        refreshLabel = "Go back",
+                    )
+                }
+
+                else -> {
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(0.dp),
+                    ) {
+                        // Root note
+                        if (rootNote != null) {
+                            item(key = noteId) {
+                                Column {
+                                    FeedNoteCard(
+                                        note = rootNote,
+                                        relayManager = relayManager,
+                                        localCache = localCache,
+                                        account = account,
+                                        nwcConnection = nwcConnection,
+                                        onReply = { rootNote.event?.let { onReply(it) } },
+                                        onZapFeedback = onZapFeedback,
+                                        onNavigateToProfile = onNavigateToProfile,
+                                        onNavigateToThread = onNavigateToThread,
+                                        onImageClick = { urls, index ->
+                                            lightboxState = LightboxState(urls, index)
+                                        },
+                                        onMediaClick = { urls, index, seekPos ->
+                                            com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
+                                                .playVideo(urls[index], seekPos)
+                                            com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
+                                                .toggleFullscreen()
+                                        },
+                                    )
+                                }
+                                HorizontalDivider(thickness = 1.dp)
+                            }
+                        }
+
+                        // Reply notes with level indicators
+                        items(replyNotes, key = { it.idHex }) { note ->
+                            val level = calculateLevel(note)
+                            Column(
+                                modifier =
+                                    Modifier
+                                        .drawReplyLevel(
+                                            level = level,
+                                            color = MaterialTheme.colorScheme.outlineVariant,
+                                            selected = MaterialTheme.colorScheme.outlineVariant,
+                                        ).clickable {
+                                            note.event?.let { onNavigateToThread(it.id) }
+                                        },
+                            ) {
+                                FeedNoteCard(
+                                    note = note,
                                     relayManager = relayManager,
                                     localCache = localCache,
                                     account = account,
                                     nwcConnection = nwcConnection,
-                                    onReplyClick = { onReply(rootNote!!) },
+                                    onReply = { note.event?.let { onReply(it) } },
                                     onZapFeedback = onZapFeedback,
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                                    zapCount = rootZaps.size,
-                                    zapAmountSats = rootZaps.sumOf { it.amountSats },
-                                    zapReceipts = rootZaps,
-                                    reactionCount = reactionsByEvent[noteId] ?: 0,
-                                    replyCount = repliesByEvent[noteId] ?: 0,
-                                    repostCount = repostsByEvent[noteId] ?: 0,
-                                    bookmarkList = bookmarkList,
-                                    isBookmarked = bookmarkedEventIds.contains(noteId),
-                                    onBookmarkChanged = { newList ->
-                                        bookmarkList = newList
-                                        val pubIds =
-                                            newList
-                                                .publicBookmarks()
-                                                .filterIsInstance<EventBookmark>()
-                                                .map { it.eventId }
-                                                .toSet()
-                                        bookmarkedEventIds = pubIds
+                                    onNavigateToProfile = onNavigateToProfile,
+                                    onNavigateToThread = onNavigateToThread,
+                                    onImageClick = { urls, index ->
+                                        lightboxState = LightboxState(urls, index)
+                                    },
+                                    onMediaClick = { urls, index, seekPos ->
+                                        com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
+                                            .playVideo(urls[index], seekPos)
+                                        com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
+                                            .toggleFullscreen()
                                     },
                                 )
                             }
+                            HorizontalDivider(thickness = 1.dp)
                         }
-                        HorizontalDivider(thickness = 1.dp)
-                    }
 
-                    // Reply notes with level indicators
-                    items(replyEvents.distinctBy { it.id }, key = { it.id }) { event ->
-                        val level = calculateLevel(event)
-
-                        Column(
-                            modifier =
-                                Modifier
-                                    .drawReplyLevel(
-                                        level = level,
-                                        color = MaterialTheme.colorScheme.outlineVariant,
-                                        selected =
-                                            if (event.id == noteId) {
-                                                MaterialTheme.colorScheme.primary
-                                            } else {
-                                                MaterialTheme.colorScheme.outlineVariant
-                                            },
-                                    ).clickable {
-                                        onNavigateToThread(event.id)
-                                    },
-                        ) {
-                            NoteCard(
-                                note = event.toNoteDisplayData(localCache),
-                                localCache = localCache,
-                                onAuthorClick = onNavigateToProfile,
-                                onMentionClick = onNavigateToProfile,
-                                onImageClick = { urls, index -> lightboxState = LightboxState(urls, index) },
-                                onMediaClick = { urls, index, seekPos ->
-                                    com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
-                                        .playVideo(urls[index], seekPos)
-                                    com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
-                                        .toggleFullscreen()
-                                },
-                            )
-                            if (account != null) {
-                                val eventZaps = zapsByEvent[event.id] ?: emptyList()
-                                NoteActionsRow(
-                                    event = event,
-                                    relayManager = relayManager,
-                                    localCache = localCache,
-                                    account = account,
-                                    nwcConnection = nwcConnection,
-                                    onReplyClick = { onReply(event) },
-                                    onZapFeedback = onZapFeedback,
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                                    zapCount = eventZaps.size,
-                                    zapAmountSats = eventZaps.sumOf { it.amountSats },
-                                    zapReceipts = eventZaps,
-                                    reactionCount = reactionsByEvent[event.id] ?: 0,
-                                    replyCount = repliesByEvent[event.id] ?: 0,
-                                    repostCount = repostsByEvent[event.id] ?: 0,
-                                    bookmarkList = bookmarkList,
-                                    isBookmarked = bookmarkedEventIds.contains(event.id),
-                                    onBookmarkChanged = { newList ->
-                                        bookmarkList = newList
-                                        val pubIds =
-                                            newList
-                                                .publicBookmarks()
-                                                .filterIsInstance<EventBookmark>()
-                                                .map { it.eventId }
-                                                .toSet()
-                                        bookmarkedEventIds = pubIds
-                                    },
+                        // Empty/loading state for replies
+                        if (replyNotes.isEmpty()) {
+                            item {
+                                Spacer(Modifier.height(32.dp))
+                                Text(
+                                    "No replies yet",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(16.dp),
                                 )
                             }
-                        }
-                        HorizontalDivider(thickness = 1.dp)
-                    }
-
-                    // Empty state for no replies
-                    if (replyEvents.isEmpty() && repliesEoseReceived) {
-                        item {
-                            Spacer(Modifier.height(32.dp))
-                            Text(
-                                "No replies yet",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(16.dp),
-                            )
-                        }
-                    } else if (replyEvents.isEmpty() && !repliesEoseReceived) {
-                        item {
-                            Spacer(Modifier.height(32.dp))
-                            Text(
-                                "Loading replies...",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(16.dp),
-                            )
                         }
                     }
                 }
             }
-        } // end Column
+        }
 
         // Lightbox overlay
         val lb = lightboxState
@@ -541,7 +335,7 @@ fun ThreadScreen(
                 onDismiss = { lightboxState = null },
             )
         }
-    } // end Box
+    }
 }
 
 /**
@@ -552,13 +346,11 @@ private fun findReplyToId(event: Event): String? {
     val eTags = event.tags.filter { it.size >= 2 && it[0] == "e" }
     if (eTags.isEmpty()) return null
 
-    // Check for NIP-10 marked tags first
     val replyTag = eTags.find { it.size >= 4 && it[3] == "reply" }
     if (replyTag != null) return replyTag[1]
 
     val rootTag = eTags.find { it.size >= 4 && it[3] == "root" }
     if (rootTag != null && eTags.size == 1) return rootTag[1]
 
-    // Fall back to positional (last e-tag is the reply-to)
     return eTags.lastOrNull()?.get(1)
 }

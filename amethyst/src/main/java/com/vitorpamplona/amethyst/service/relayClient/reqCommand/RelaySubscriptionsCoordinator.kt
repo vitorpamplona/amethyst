@@ -39,6 +39,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.datasource.HashtagF
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.HomeFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.datasource.UserProfileFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relay.datasource.RelayFeedFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.datasource.RelayInfoNip66FilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.datasources.ThreadFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.VideoFilterAssembler
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -80,6 +81,7 @@ class RelaySubscriptionsCoordinator(
     val hashtags = HashtagFilterAssembler(client)
     val geohashes = GeoHashFilterAssembler(client)
     val relayFeed = RelayFeedFilterAssembler(client)
+    val relayInfoNip66 = RelayInfoNip66FilterAssembler(client)
     val followPacks = FollowPackFeedFilterAssembler(client)
     val chess = ChessFilterAssembler(client)
 
@@ -105,6 +107,7 @@ class RelaySubscriptionsCoordinator(
             hashtags,
             geohashes,
             relayFeed,
+            relayInfoNip66,
             chess,
             nwc,
         )

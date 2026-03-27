@@ -31,19 +31,22 @@ import com.vitorpamplona.quartz.nip19Bech32.toNpub
  * Extension to convert Event to NoteDisplayData for the shared NoteCard.
  */
 fun Event.toNoteDisplayData(cache: ICacheProvider? = null): NoteDisplayData {
-    val npub =
-        try {
-            pubKey.hexToByteArrayOrNull()?.toNpub() ?: pubKey.take(16) + "..."
-        } catch (e: Exception) {
-            pubKey.take(16) + "..."
-        }
+    val user = (cache?.getUserIfExists(pubKey) as? User)
 
-    val pictureUrl = (cache?.getUserIfExists(pubKey) as? User)?.profilePicture()
+    val displayName =
+        user?.toBestDisplayName()
+            ?: try {
+                pubKey.hexToByteArrayOrNull()?.toNpub() ?: pubKey.take(16) + "..."
+            } catch (e: Exception) {
+                pubKey.take(16) + "..."
+            }
+
+    val pictureUrl = user?.profilePicture()
 
     return NoteDisplayData(
         id = id,
         pubKeyHex = pubKey,
-        pubKeyDisplay = npub,
+        pubKeyDisplay = displayName,
         profilePictureUrl = pictureUrl,
         content = content,
         createdAt = createdAt,

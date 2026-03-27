@@ -501,5 +501,4 @@
     <string name="could_not_prepare_local_file_to_upload">Не вдалося підготувати локальний файл для завантаження: %1$s</string>
     <!-- Kind display names for relay subscription filter chips -->
     <!-- M3 Action Dialog titles -->
-    <!-- NIP-86 Relay Management -->
 </resources>

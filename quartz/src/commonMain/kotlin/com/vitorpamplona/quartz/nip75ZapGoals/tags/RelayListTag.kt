@@ -21,10 +21,12 @@
 package com.vitorpamplona.quartz.nip75ZapGoals.tags
 
 import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrlOrNull
 import com.vitorpamplona.quartz.utils.ensure
 
 class RelayListTag(
-    val relayUrls: List<String>,
+    val relays: List<NormalizedRelayUrl>,
 ) {
     companion object {
         const val TAG_NAME = "relays"
@@ -35,13 +37,13 @@ class RelayListTag(
             ensure(tag[1].isNotEmpty()) { return null }
             val relays =
                 tag.mapIndexedNotNull { index, s ->
-                    if (index == 0) null else s
+                    if (index == 0) null else s.normalizeRelayUrlOrNull()
                 }
             return RelayListTag(relays)
         }
 
-        fun assemble(urls: List<String>) = arrayOf(TAG_NAME) + urls.toTypedArray()
+        fun assemble(urls: List<NormalizedRelayUrl>) = arrayOf(TAG_NAME) + urls.map { it.url }.toTypedArray()
 
-        fun assemble(tag: RelayListTag) = assemble(tag.relayUrls)
+        fun assemble(tag: RelayListTag) = assemble(tag.relays)
     }
 }

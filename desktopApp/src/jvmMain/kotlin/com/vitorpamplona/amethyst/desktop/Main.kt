@@ -457,8 +457,16 @@ fun App(
                             RelayUrlNormalizer.normalizeOrNull(it)
                         }.toSet(),
                 localCache = localCache,
-            )
+            ).also { it.startCleanupLoop() }
         }
+
+    // Clear cache and subscriptions on logout
+    LaunchedEffect(accountState) {
+        if (accountState is AccountState.LoggedOut) {
+            subscriptionsCoordinator.clear()
+            localCache.clear()
+        }
+    }
 
     // Try to load saved account on startup
     DisposableEffect(Unit) {
@@ -728,6 +736,7 @@ fun MainContent(
             Row(Modifier.fillMaxSize().weight(1f)) {
                 when (layoutMode) {
                     LayoutMode.SINGLE_PANE -> {
+                        val lastRelayEvent by subscriptionsCoordinator.lastEventAt.collectAsState()
                         SinglePaneLayout(
                             relayManager = relayManager,
                             localCache = localCache,
@@ -744,6 +753,7 @@ fun MainContent(
                             onZapFeedback = onZapFeedback,
                             signerConnectionState = signerConnectionState,
                             lastPingTimeSec = lastPingTimeSec,
+                            lastRelayEventAt = lastRelayEvent,
                             modifier = Modifier.weight(1f),
                         )
                     }

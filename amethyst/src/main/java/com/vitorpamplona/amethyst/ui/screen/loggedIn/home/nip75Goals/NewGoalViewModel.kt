@@ -81,7 +81,7 @@ class NewGoalViewModel : ViewModel() {
 
         val relays =
             account.outboxRelays.flow.value
-                .map { it.url }
+                .toList()
 
         val closedAt = if (wantsDeadline) deadlineTimestamp else null
         val img = imageUrl.text.ifBlank { null }

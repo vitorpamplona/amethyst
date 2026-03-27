@@ -52,7 +52,7 @@ class ThreadAssembler(
                 ?.getOrNull(1)
         if (markedAsRoot != null) {
             // Check to see if there is an error in the tag and the root has replies
-            val rootNote = cache.getNoteIfExists(markedAsRoot) as? Note
+            val rootNote = cache.getNoteIfExists(markedAsRoot)
             if (rootNote?.replyTo?.isEmpty() == true) {
                 return cache.checkGetOrCreateNote(markedAsRoot)
             }
