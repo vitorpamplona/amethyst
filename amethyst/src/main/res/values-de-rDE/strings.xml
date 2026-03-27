@@ -1705,6 +1705,4 @@ anz der Bedingungen ist erforderlich</string>
     <string name="web_bookmark_delete">Löschen</string>
     <string name="web_bookmark_delete_confirm">Dieses Web-Lesezeichen löschen?</string>
     <string name="web_bookmark_open_url">URL öffnen</string>
-    <!-- NIP-75 Zap Goals -->
-    <!-- NIP-86 Relay Management -->
 </resources>
