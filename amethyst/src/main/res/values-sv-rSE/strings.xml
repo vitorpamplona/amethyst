@@ -1699,5 +1699,6 @@
     <string name="web_bookmark_delete">Radera</string>
     <string name="web_bookmark_delete_confirm">Radera detta webbbokmärke?</string>
     <string name="web_bookmark_open_url">Öppna URL</string>
+    <!-- NIP-75 Zap Goals -->
     <!-- NIP-86 Relay Management -->
 </resources>

@@ -1717,5 +1717,6 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="web_bookmark_delete">Izbriši</string>
     <string name="web_bookmark_delete_confirm">Izbriši ta spletni zaznamek</string>
     <string name="web_bookmark_open_url">Odpri URL</string>
+    <!-- NIP-75 Zap Goals -->
     <!-- NIP-86 Relay Management -->
 </resources>

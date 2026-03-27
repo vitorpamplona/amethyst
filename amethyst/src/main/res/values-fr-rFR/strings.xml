@@ -1439,5 +1439,6 @@
     <string name="event_sync_start_over">Recommencer</string>
     <string name="event_sync_cancel">Annuler</string>
     <!-- M3 Action Dialog titles -->
+    <!-- NIP-75 Zap Goals -->
     <!-- NIP-86 Relay Management -->
 </resources>
