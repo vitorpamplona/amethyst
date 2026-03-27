@@ -1700,4 +1700,6 @@
     <string name="web_bookmark_delete">Smazat</string>
     <string name="web_bookmark_delete_confirm">Smazat tuto webovou záložku?</string>
     <string name="web_bookmark_open_url">Otevřít URL</string>
+    <!-- NIP-75 Zap Goals -->
+    <!-- NIP-86 Relay Management -->
 </resources>
