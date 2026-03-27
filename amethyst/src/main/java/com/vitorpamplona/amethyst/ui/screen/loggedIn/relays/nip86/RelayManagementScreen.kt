@@ -47,6 +47,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -67,16 +68,28 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.Nip05State
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.nip86RelayManagement.Nip86Retriever
+import com.vitorpamplona.amethyst.ui.layouts.listItem.SlimListItem
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
+import com.vitorpamplona.amethyst.ui.note.ObserveAndRenderNIP05VerifiedSymbol
+import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.BackButton
+import com.vitorpamplona.amethyst.ui.theme.Font14SP
+import com.vitorpamplona.amethyst.ui.theme.NIP05IconSize
+import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.nip05
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
@@ -197,7 +210,7 @@ fun RelayManagementScreen(
                 )
             }
         } else {
-            RelayManagementContent(pad, viewModel, supportedMethods, error)
+            RelayManagementContent(pad, viewModel, supportedMethods, error, accountViewModel)
         }
     }
 }
@@ -208,6 +221,7 @@ private fun RelayManagementContent(
     viewModel: RelayManagementViewModel,
     supportedMethods: List<String>,
     error: String?,
+    accountViewModel: AccountViewModel,
 ) {
     val tabs =
         remember(supportedMethods) {
@@ -271,7 +285,7 @@ private fun RelayManagementContent(
 
             when (tabs.getOrNull(selectedTab)) {
                 ManagementTab.PUBKEYS -> {
-                    PubkeysTab(viewModel, supportedMethods)
+                    PubkeysTab(viewModel, supportedMethods, accountViewModel)
                 }
 
                 ManagementTab.EVENTS -> {
@@ -322,9 +336,10 @@ private enum class ManagementTab(
 private fun PubkeysTab(
     viewModel: RelayManagementViewModel,
     supportedMethods: List<String>,
+    accountViewModel: AccountViewModel,
 ) {
-    val bannedPubkeys by viewModel.bannedPubkeys.collectAsState()
-    val allowedPubkeys by viewModel.allowedPubkeys.collectAsState()
+    val bannedPubkeyUsers by viewModel.bannedPubkeyUsers.collectAsStateWithLifecycle(emptyList())
+    val allowedPubkeyUsers by viewModel.allowedPubkeyUsers.collectAsStateWithLifecycle(emptyList())
     var showBanDialog by remember { mutableStateOf(false) }
     var showAllowDialog by remember { mutableStateOf(false) }
 
@@ -341,15 +356,15 @@ private fun PubkeysTab(
                 )
             }
 
-            if (bannedPubkeys.isEmpty()) {
+            if (bannedPubkeyUsers.isEmpty()) {
                 item { EmptyListMessage(stringResource(R.string.relay_management_no_banned_pubkeys)) }
             } else {
-                items(bannedPubkeys, key = { it.pubkey }) { entry ->
-                    HexEntryCard(
-                        hex = entry.pubkey,
-                        reason = entry.reason,
+                items(bannedPubkeyUsers, key = { it.user.pubkeyHex }) { entry ->
+                    PubkeyUserCard(
+                        entry = entry,
                         showRemove = supportedMethods.contains(Nip86Method.UNBAN_PUBKEY),
-                        onRemove = { viewModel.unbanPubkey(entry.pubkey) },
+                        onRemove = { viewModel.unbanPubkey(entry.user.pubkeyHex) },
+                        accountViewModel = accountViewModel,
                     )
                 }
             }
@@ -365,15 +380,15 @@ private fun PubkeysTab(
                 )
             }
 
-            if (allowedPubkeys.isEmpty()) {
+            if (allowedPubkeyUsers.isEmpty()) {
                 item { EmptyListMessage(stringResource(R.string.relay_management_no_allowed_pubkeys)) }
             } else {
-                items(allowedPubkeys, key = { it.pubkey }) { entry ->
-                    HexEntryCard(
-                        hex = entry.pubkey,
-                        reason = entry.reason,
+                items(allowedPubkeyUsers, key = { it.user.pubkeyHex }) { entry ->
+                    PubkeyUserCard(
+                        entry = entry,
                         showRemove = supportedMethods.contains(Nip86Method.UNALLOW_PUBKEY),
-                        onRemove = { viewModel.unallowPubkey(entry.pubkey) },
+                        onRemove = { viewModel.unallowPubkey(entry.user.pubkeyHex) },
+                        accountViewModel = accountViewModel,
                     )
                 }
             }
@@ -402,6 +417,92 @@ private fun PubkeysTab(
             },
             onDismiss = { showAllowDialog = false },
         )
+    }
+}
+
+@Composable
+private fun PubkeyUserCard(
+    entry: PubkeyUser,
+    showRemove: Boolean,
+    onRemove: () -> Unit,
+    accountViewModel: AccountViewModel,
+) {
+    SlimListItem(
+        modifier = Modifier.fillMaxWidth(),
+        leadingContent = {
+            ClickableUserPicture(entry.user, Size55dp, accountViewModel = accountViewModel, onClick = null)
+        },
+        headlineContent = {
+            UsernameDisplay(entry.user, accountViewModel = accountViewModel)
+        },
+        supportingContent = {
+            Column {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                ) {
+                    PubkeyNip05Row(entry.user, accountViewModel)
+                }
+                entry.reason?.let {
+                    Text(
+                        it,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        },
+        trailingContent = {
+            if (showRemove) {
+                IconButton(onClick = onRemove) {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = stringResource(R.string.relay_management_remove),
+                        tint = MaterialTheme.colorScheme.error,
+                    )
+                }
+            }
+        },
+    )
+}
+
+@Composable
+private fun PubkeyNip05Row(
+    user: User,
+    accountViewModel: AccountViewModel,
+) {
+    val nip05StateMetadata by user.nip05State().flow.collectAsStateWithLifecycle()
+
+    when (val nip05State = nip05StateMetadata) {
+        is Nip05State.Exists -> {
+            if (nip05State.nip05.name != "_") {
+                Text(
+                    text = remember(nip05State) { AnnotatedString(nip05State.nip05.name) },
+                    fontSize = Font14SP,
+                    color = MaterialTheme.colorScheme.nip05,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+
+            ObserveAndRenderNIP05VerifiedSymbol(nip05State, 1, NIP05IconSize, accountViewModel)
+
+            Text(
+                text = nip05State.nip05.domain,
+                style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.nip05, fontSize = Font14SP),
+                maxLines = 1,
+                overflow = TextOverflow.Visible,
+            )
+        }
+
+        else -> {
+            Text(
+                text = user.pubkeyDisplayHex(),
+                fontSize = Font14SP,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
 

@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.nip86
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.nip86RelayManagement.Nip86Retriever
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -32,9 +34,16 @@ import com.vitorpamplona.quartz.nip86RelayManagement.rpc.BannedPubkey
 import com.vitorpamplona.quartz.nip86RelayManagement.rpc.BlockedIp
 import com.vitorpamplona.quartz.nip86RelayManagement.rpc.EventNeedingModeration
 import com.vitorpamplona.quartz.nip86RelayManagement.rpc.Nip86Request
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+
+class PubkeyUser(
+    val user: User,
+    val reason: String?,
+)
 
 class RelayManagementViewModel(
     relayUrl: NormalizedRelayUrl,
@@ -63,6 +72,20 @@ class RelayManagementViewModel(
 
     private val _blockedIps = MutableStateFlow<List<BlockedIp>>(emptyList())
     val blockedIps: StateFlow<List<BlockedIp>> = _blockedIps
+
+    val bannedPubkeyUsers: Flow<List<PubkeyUser>> =
+        _bannedPubkeys.map { list ->
+            list.mapNotNull { entry ->
+                LocalCache.checkGetOrCreateUser(entry.pubkey)?.let { PubkeyUser(it, entry.reason) }
+            }
+        }
+
+    val allowedPubkeyUsers: Flow<List<PubkeyUser>> =
+        _allowedPubkeys.map { list ->
+            list.mapNotNull { entry ->
+                LocalCache.checkGetOrCreateUser(entry.pubkey)?.let { PubkeyUser(it, entry.reason) }
+            }
+        }
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
