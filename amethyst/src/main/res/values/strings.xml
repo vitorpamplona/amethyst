@@ -2011,7 +2011,7 @@
     <string name="relay_management_error">Unable to connect to relay management</string>
     <string name="relay_management_no_methods">No management methods available</string>
     <string name="relay_management_dismiss">Dismiss</string>
-    <string name="relay_management_tab_pubkeys">Pubkeys</string>
+    <string name="relay_management_tab_pubkeys">Users</string>
     <string name="relay_management_tab_events">Events</string>
     <string name="relay_management_tab_kinds">Kinds</string>
     <string name="relay_management_tab_ips">IPs</string>
