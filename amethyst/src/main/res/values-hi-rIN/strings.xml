@@ -1664,5 +1664,4 @@
     <string name="attestor_proficiency_for_kinds">प्रकारों के सत्यापन में निपुण : %1$s</string>
     <string name="attestation_attests_to">इस के लिए साक्षी</string>
     <string name="attestation_requests_attestation_to">इस के लिए साक्ष्यांकन अनुरोध</string>
-    <!-- NIP-86 Relay Management -->
 </resources>
