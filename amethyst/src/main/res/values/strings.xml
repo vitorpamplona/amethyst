@@ -1955,4 +1955,22 @@
     <string name="web_bookmark_delete">Delete</string>
     <string name="web_bookmark_delete_confirm">Delete this web bookmark?</string>
     <string name="web_bookmark_open_url">Open URL</string>
+
+    <!-- NIP-75 Zap Goals -->
+    <string name="goal_closed">This goal has closed</string>
+    <string name="goal_progress">%1$s funded of %2$s sats goal</string>
+    <string name="goal_amount_label">Goal amount (sats)</string>
+    <string name="goal_amount_placeholder">100000</string>
+    <string name="goal_description_label">Describe your goal</string>
+    <string name="goal_description_placeholder">What are you fundraising for?</string>
+    <string name="goal_summary_label">Short summary</string>
+    <string name="goal_summary_placeholder">Brief description shown in previews</string>
+    <string name="goal_image_label">Image URL (optional)</string>
+    <string name="goal_image_placeholder">https://example.com/image.jpg</string>
+    <string name="goal_website_label">Website URL (optional)</string>
+    <string name="goal_website_placeholder">https://example.com</string>
+    <string name="goal_deadline_label">Deadline (optional)</string>
+    <string name="goal_set_deadline">Set a deadline</string>
+    <string name="new_goal">New Goal</string>
+    <string name="goal_create">Create Goal</string>
 </resources>
