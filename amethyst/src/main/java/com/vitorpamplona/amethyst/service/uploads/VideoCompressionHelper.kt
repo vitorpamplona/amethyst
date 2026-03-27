@@ -50,19 +50,19 @@ data class VideoResolution(
     val width: Int,
     val height: Int,
 ) {
-    val pixels: Int get() = width * height
-
-    fun getStandard(): VideoStandard =
-        when {
-            pixels >= 3840 * 2160 -> VideoStandard.UHD_4K
-            pixels >= 2560 * 1440 -> VideoStandard.QHD_1440P
-            pixels >= 1920 * 1080 -> VideoStandard.FHD_1080P
-            pixels >= 1280 * 720 -> VideoStandard.HD_720P
-            pixels >= 854 * 480 -> VideoStandard.SD_480P
-            pixels >= 640 * 360 -> VideoStandard.NHD_360P
-            pixels >= 426 * 240 -> VideoStandard.QVGA_240P
+    fun getStandard(): VideoStandard {
+        val shortSide = minOf(width, height)
+        return when {
+            shortSide >= 2160 -> VideoStandard.UHD_4K
+            shortSide >= 1440 -> VideoStandard.QHD_1440P
+            shortSide >= 1080 -> VideoStandard.FHD_1080P
+            shortSide >= 720 -> VideoStandard.HD_720P
+            shortSide >= 480 -> VideoStandard.SD_480P
+            shortSide >= 360 -> VideoStandard.NHD_360P
+            shortSide >= 240 -> VideoStandard.QVGA_240P
             else -> VideoStandard.UNKNOWN
         }
+    }
 }
 
 enum class VideoStandard(
@@ -84,8 +84,7 @@ enum class VideoStandard(
 private const val MBPS_TO_BPS_MULTIPLIER = 1_000_000
 
 data class CompressionRule(
-    val width: Int,
-    val height: Int,
+    val shortSide: Int,
     val bitrateMbps: Float,
     val description: String,
 ) {
@@ -95,7 +94,7 @@ data class CompressionRule(
     ): Int {
         // Apply 1.3x multiplier for 60fps+ videos, 0.7x multiplier for H265
         val framerateMultiplier = if (framerate >= 60f) 1.3f else 1.0f
-        val codecMultiplier = if (useH265) 0.7f else 1.0f
+        val codecMultiplier = if (useH265) 0.75f else 1.0f
         val finalMultiplier = framerateMultiplier * codecMultiplier
 
         Log.d("VideoCompressionHelper", "framerate: $framerate, useH265: $useH265, Bitrate multiplier: $finalMultiplier")
@@ -111,36 +110,36 @@ object VideoCompressionHelper {
         mapOf(
             CompressorQuality.LOW to
                 mapOf(
-                    VideoStandard.UHD_4K to CompressionRule(1280, 720, 2f, "4K→720p, 2Mbps"),
-                    VideoStandard.QHD_1440P to CompressionRule(1280, 720, 2f, "1440p→720p, 2Mbps"),
-                    VideoStandard.FHD_1080P to CompressionRule(854, 480, 1f, "1080p→480p, 1Mbps"),
-                    VideoStandard.HD_720P to CompressionRule(640, 360, 1f, "720p→360p, 1Mbps"),
-                    VideoStandard.SD_480P to CompressionRule(426, 240, 1f, "480p→240p, 1Mbps"),
-                    VideoStandard.NHD_360P to CompressionRule(426, 240, 0.3f, "360p→240p, 0.3Mbps"),
-                    VideoStandard.QVGA_240P to CompressionRule(320, 180, 0.2f, "240p→180p, 0.2Mbps"),
-                    VideoStandard.UNKNOWN to CompressionRule(854, 480, 1f, "Low quality fallback, 1Mbps"),
+                    VideoStandard.UHD_4K to CompressionRule(720, 1f, "4K→720p, 1Mbps"),
+                    VideoStandard.QHD_1440P to CompressionRule(720, 1f, "1440p→720p, 1Mbps"),
+                    VideoStandard.FHD_1080P to CompressionRule(480, 0.75f, "1080p→480p, 0.75Mbps"),
+                    VideoStandard.HD_720P to CompressionRule(360, 0.5f, "720p→360p, 0.5Mbps"),
+                    VideoStandard.SD_480P to CompressionRule(240, 0.5f, "480p→240p, 0.5Mbps"),
+                    VideoStandard.NHD_360P to CompressionRule(240, 0.3f, "360p→240p, 0.3Mbps"),
+                    VideoStandard.QVGA_240P to CompressionRule(180, 0.2f, "240p→180p, 0.2Mbps"),
+                    VideoStandard.UNKNOWN to CompressionRule(480, 0.75f, "Low quality fallback, 0.75Mbps"),
                 ),
             CompressorQuality.MEDIUM to
                 mapOf(
-                    VideoStandard.UHD_4K to CompressionRule(1920, 1080, 6f, "4K→1080p, 6Mbps"),
-                    VideoStandard.QHD_1440P to CompressionRule(1920, 1080, 6f, "1440p→1080p, 6Mbps"),
-                    VideoStandard.FHD_1080P to CompressionRule(1280, 720, 3f, "1080p→720p, 3Mbps"),
-                    VideoStandard.HD_720P to CompressionRule(854, 480, 2f, "720p→480p, 2Mbps"),
-                    VideoStandard.SD_480P to CompressionRule(640, 360, 1f, "480p→360p, 1Mbps"),
-                    VideoStandard.NHD_360P to CompressionRule(426, 240, 0.5f, "360p→240p, 0.5Mbps"),
-                    VideoStandard.QVGA_240P to CompressionRule(320, 180, 0.3f, "240p→180p, 0.3Mbps"),
-                    VideoStandard.UNKNOWN to CompressionRule(1280, 720, 2f, "Medium quality fallback, 2Mbps"),
+                    VideoStandard.UHD_4K to CompressionRule(1080, 4f, "4K→1080p, 4Mbps"),
+                    VideoStandard.QHD_1440P to CompressionRule(1080, 4f, "1440p→1080p, 4Mbps"),
+                    VideoStandard.FHD_1080P to CompressionRule(720, 2f, "1080p→720p, 2Mbps"),
+                    VideoStandard.HD_720P to CompressionRule(480, 1.5f, "720p→480p, 1.5Mbps"),
+                    VideoStandard.SD_480P to CompressionRule(360, 1f, "480p→360p, 1Mbps"),
+                    VideoStandard.NHD_360P to CompressionRule(240, 0.5f, "360p→240p, 0.5Mbps"),
+                    VideoStandard.QVGA_240P to CompressionRule(180, 0.3f, "240p→180p, 0.3Mbps"),
+                    VideoStandard.UNKNOWN to CompressionRule(720, 2f, "Medium quality fallback, 2Mbps"),
                 ),
             CompressorQuality.HIGH to
                 mapOf(
-                    VideoStandard.UHD_4K to CompressionRule(3840, 2160, 16f, "4K→4K, 16Mbps"),
-                    VideoStandard.QHD_1440P to CompressionRule(1920, 1080, 8f, "1440p→1080p, 8Mbps"),
-                    VideoStandard.FHD_1080P to CompressionRule(1920, 1080, 6f, "1080p→1080p, 6Mbps"),
-                    VideoStandard.HD_720P to CompressionRule(1280, 720, 3f, "720p→720p, 3Mbps"),
-                    VideoStandard.SD_480P to CompressionRule(854, 480, 2f, "480p→480p, 2Mbps"),
-                    VideoStandard.NHD_360P to CompressionRule(640, 360, 1f, "360p→360p, 1Mbps"),
-                    VideoStandard.QVGA_240P to CompressionRule(426, 240, 0.5f, "240p→240p, 0.5Mbps"),
-                    VideoStandard.UNKNOWN to CompressionRule(1920, 1080, 3f, "High quality fallback, 3Mbps"),
+                    VideoStandard.UHD_4K to CompressionRule(2160, 8f, "4K→4K, 8Mbps"),
+                    VideoStandard.QHD_1440P to CompressionRule(1080, 8f, "1440p→1080p, 8Mbps"),
+                    VideoStandard.FHD_1080P to CompressionRule(1080, 4f, "1080p→1080p, 4Mbps"),
+                    VideoStandard.HD_720P to CompressionRule(720, 2f, "720p→720p, 2Mbps"),
+                    VideoStandard.SD_480P to CompressionRule(480, 1.5f, "480p→480p, 1.5Mbps"),
+                    VideoStandard.NHD_360P to CompressionRule(360, 1f, "360p→360p, 1Mbps"),
+                    VideoStandard.QVGA_240P to CompressionRule(240, 0.5f, "240p→240p, 0.5Mbps"),
+                    VideoStandard.UNKNOWN to CompressionRule(1080, 4f, "High quality fallback, 4Mbps"),
                 ),
         )
 
@@ -167,9 +166,9 @@ object VideoCompressionHelper {
                 Log.d(
                     LOG_TAG,
                     "Resizer: ${info.resolution.width}x${info.resolution.height} -> " +
-                        "${rule.width}x${rule.height} (${rule.description})",
+                        "shortSide=${rule.shortSide} (${rule.description})",
                 )
-                val resizer = VideoResizer.limitSize(rule.width.toDouble(), rule.height.toDouble())
+                val resizer = VideoResizer.limitShortSide(rule.shortSide.toDouble())
 
                 Pair(bitrateBps, resizer)
             } ?: run {
@@ -232,8 +231,10 @@ object VideoCompressionHelper {
                                         }
 
                                     // Sanity check: compression not smaller than original
-                                    if (originalSize > 0 && size >= originalSize) {
-                                        File(path).delete()
+                                    if (originalSize in 1..size) {
+                                        if (!File(path).delete()) {
+                                            Log.w("VideoCompressionHelper", "Failed to delete compressed file: $path")
+                                        }
                                         applicationContext.notifyUser(
                                             "Compressed file larger than original. Using original.",
                                             Log.WARN,
