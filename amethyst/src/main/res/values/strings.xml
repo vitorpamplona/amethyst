@@ -2049,4 +2049,5 @@
     <string name="relay_management_relay_description">Relay Description</string>
     <string name="relay_management_relay_icon_url">Relay Icon URL</string>
     <string name="relay_management_button">Manage Relay</string>
+    <string name="manage">Manage</string>
 </resources>

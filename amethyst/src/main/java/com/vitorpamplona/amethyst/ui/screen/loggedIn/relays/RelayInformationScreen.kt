@@ -62,7 +62,7 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Payment
 import androidx.compose.material.icons.filled.PrivacyTip
-import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material.icons.filled.Topic
@@ -309,23 +309,7 @@ fun RelayInformationScreen(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                actions = {
-                    val relayInfo by loadRelayInfo(relay)
-                    if (Nip86Client.supportsNip86(relayInfo.supported_nips)) {
-                        OutlinedButton(
-                            onClick = { nav.nav(Route.RelayManagement(relay.url)) },
-                            shape = ButtonBorder,
-                        ) {
-                            Icon(
-                                Icons.Default.Shield,
-                                contentDescription = stringRes(R.string.relay_management_button),
-                                modifier = Height25Modifier,
-                            )
-                            Spacer(modifier = StdHorzSpacer)
-                            Text(stringRes(R.string.relay_management_button))
-                        }
-                    }
-                },
+                actions = {},
                 title = {
                     Text(
                         relay.displayUrl(),
@@ -1121,18 +1105,35 @@ private fun RelayHeader(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
-        OutlinedButton(
+        Row(
             modifier = Modifier.padding(horizontal = 30.dp),
-            shape = ButtonBorder,
-            onClick = { nav.nav(Route.RelayFeed(url = relay.url)) },
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.Feed,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp),
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(text = stringRes(R.string.see_relay_feed))
+            OutlinedButton(
+                shape = ButtonBorder,
+                onClick = { nav.nav(Route.RelayFeed(url = relay.url)) },
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.Feed,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(text = stringRes(R.string.see_relay_feed))
+            }
+
+            if (Nip86Client.supportsNip86(relayInfo.supported_nips)) {
+                OutlinedButton(
+                    onClick = { nav.nav(Route.RelayManagement(relay.url)) },
+                    shape = ButtonBorder,
+                ) {
+                    Icon(
+                        Icons.Default.Settings,
+                        contentDescription = stringRes(R.string.manage),
+                        modifier = Height25Modifier,
+                    )
+                }
+            }
         }
     }
 }
