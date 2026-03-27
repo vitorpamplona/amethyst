@@ -88,8 +88,7 @@ class SearchBarState(
             .debounce(debounceMs)
             .onEach { query ->
                 if (query.length >= 2 && _bech32Results.value.isEmpty()) {
-                    @Suppress("UNCHECKED_CAST")
-                    _cachedUserResults.value = cache.findUsersStartingWith(query, 20) as List<User>
+                    _cachedUserResults.value = cache.findUsersStartingWith(query, 20)
                 } else {
                     _cachedUserResults.value = emptyList()
                 }

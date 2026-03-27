@@ -25,6 +25,7 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
+import com.vitorpamplona.amethyst.commons.model.cache.LargeSoftCache
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel

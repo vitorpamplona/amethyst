@@ -57,7 +57,7 @@ interface ICacheProvider {
      * @param pubkey The user's public key in hex format
      * @return The User if exists in cache, null otherwise
      */
-    fun getUserIfExists(pubkey: HexKey): Any?
+    fun getUserIfExists(pubkey: HexKey): User?
 
     /**
      * Counts users matching a predicate.
@@ -75,7 +75,7 @@ interface ICacheProvider {
      * @param hexKey The note's ID in hex format
      * @return The Note if exists in cache, null otherwise
      */
-    fun getNoteIfExists(hexKey: HexKey): Any?
+    fun getNoteIfExists(hexKey: HexKey): Note?
 
     /**
      * Gets an existing Note or creates a new one if it doesn't exist.
@@ -123,7 +123,7 @@ interface ICacheProvider {
     fun findUsersStartingWith(
         prefix: String,
         limit: Int = 50,
-    ): List<Any> = emptyList()
+    ): List<User> = emptyList()
 
     /**
      * Gets or creates a User by public key hex.
@@ -132,7 +132,7 @@ interface ICacheProvider {
      * @param pubkey The user's public key in hex format
      * @return The User (existing or newly created)
      */
-    fun getOrCreateUser(pubkey: HexKey): Any?
+    fun getOrCreateUser(pubkey: HexKey): User?
 
     fun justConsumeMyOwnEvent(event: Event): Boolean
 }
