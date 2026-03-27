@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.note.nip22Comments
 
-import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -49,6 +48,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
@@ -103,7 +103,7 @@ import kotlinx.coroutines.withContext
 fun ReplyCommentPostScreen(
     replyId: HexKey? = null,
     message: String? = null,
-    attachment: Uri? = null,
+    attachment: String? = null,
     quoteId: HexKey? = null,
     draftId: HexKey? = null,
     accountViewModel: AccountViewModel,
@@ -127,7 +127,7 @@ fun ReplyCommentPostScreen(
         message?.ifBlank { null }?.let {
             postViewModel.updateMessage(TextFieldValue(it))
         }
-        attachment?.let {
+        attachment?.ifBlank { null }?.toUri()?.let {
             withContext(Dispatchers.IO) {
                 val mediaType = context.contentResolver.getType(it)
                 postViewModel.selectImage(persistentListOf(SelectedMedia(it, mediaType)))

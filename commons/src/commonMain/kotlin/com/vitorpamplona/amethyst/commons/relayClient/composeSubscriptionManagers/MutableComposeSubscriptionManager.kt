@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers
 
+import androidx.compose.runtime.Stable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
@@ -36,6 +37,7 @@ import java.util.concurrent.ConcurrentHashMap
  *  also allows the subscription itself to change over time as a
  *  flow, which trigger an update on the relay subscriptions
  */
+@Stable
 abstract class MutableComposeSubscriptionManager<T : MutableQueryState>(
     val scope: CoroutineScope,
 ) : ComposeSubscriptionManagerControls {

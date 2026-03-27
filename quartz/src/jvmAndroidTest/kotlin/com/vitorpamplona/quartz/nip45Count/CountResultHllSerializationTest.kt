@@ -74,7 +74,7 @@ class CountResultHllSerializationTest {
         assertEquals(100, result.count)
         assertTrue(result.approximate)
         assertNotNull(result.hll)
-        assertTrue(hll.contentEquals(result.hll!!))
+        assertTrue(hll.contentEquals(result.hll))
     }
 
     @Test
@@ -100,7 +100,7 @@ class CountResultHllSerializationTest {
 
         assertEquals(original.count, deserialized.count)
         assertNotNull(deserialized.hll)
-        assertTrue(hll.contentEquals(deserialized.hll!!))
+        assertTrue(hll.contentEquals(deserialized.hll))
     }
 
     @Test
@@ -115,7 +115,7 @@ class CountResultHllSerializationTest {
         val result = CountResultKSerializer.deserializeFromElement(jsonObject)
         assertEquals(42, result.count)
         assertNotNull(result.hll)
-        assertEquals(256, result.hll!!.size)
-        assertEquals(5, result.hll!![0].toInt() and 0xFF)
+        assertEquals(256, result.hll.size)
+        assertEquals(5, result.hll[0].toInt() and 0xFF)
     }
 }

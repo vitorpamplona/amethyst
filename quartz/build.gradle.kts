@@ -118,10 +118,7 @@ kotlin {
                 // SQLite KMP driver for event store
                 api(libs.androidx.sqlite)
                 implementation(libs.androidx.sqlite.bundled)
-
-                // RFC3986 library(normalizes URLs)
-                api(libs.uri.reference.kmp)
-
+                
                 // Negentropy set reconciliation (NIP-77)
                 api(libs.negentropy.kmp)
             }
@@ -173,7 +170,6 @@ kotlin {
             dependencies {
                 // Bitcoin secp256k1 bindings
                 implementation(libs.secp256k1.kmp.jni.jvm)
-
             }
         }
 
@@ -195,7 +191,6 @@ kotlin {
 
                 // Bitcoin secp256k1 bindings to Android
                 api(libs.secp256k1.kmp.jni.android)
-
             }
         }
 
@@ -206,7 +201,6 @@ kotlin {
 
                 // Bitcoin secp256k1 bindings
                 implementation(libs.secp256k1.kmp.jni.jvm)
-
 
                 // SQLite bundled driver for Host tests
                 implementation(libs.androidx.sqlite.bundled.jvm)
@@ -225,7 +219,6 @@ kotlin {
 
                 // Bitcoin secp256k1 bindings to Android
                 api(libs.secp256k1.kmp.jni.android)
-
             }
         }
 

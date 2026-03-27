@@ -28,8 +28,8 @@
     <string name="relay_icon">中继器图标</string>
     <string name="unknown_author">未知作者</string>
     <string name="copy_text">复制文本</string>
-    <string name="copy_user_pubkey">复制作者@npub</string>
-    <string name="copy_note_id">复制笔记ID</string>
+    <string name="copy_user_pubkey">复制作者公钥 ID</string>
+    <string name="copy_note_id">复制笔记 ID</string>
     <string name="broadcast">广播</string>
     <string name="timestamp_it">获取公开时间戳</string>
     <string name="timestamp_pending">OpenTimestamps：待确认</string>
@@ -61,6 +61,8 @@
     <string name="unauthorized_exception_description">签名器没有授权解密操作，请在签名器中授予 NIP-44 解密权限并重试。</string>
     <string name="signer_not_found_exception">未找到签名器</string>
     <string name="signer_not_found_exception_description">签名器被卸载？请检查是否已经安装了签名器以及其中是否存在该账户。变更签名器需要注销后重新登录。</string>
+    <string name="signer_illegal_state_exception">签名器行为异常</string>
+    <string name="signer_illegal_state_exception_description">外部签名器对该请求返回了不正常的载荷。这可能是 Amethyst 或签名器上的错误。</string>
     <string name="zaps">打闪</string>
     <string name="view_count">浏览次数</string>
     <string name="boost">提升</string>
@@ -70,7 +72,7 @@
     <string name="original">原版</string>
     <string name="quote">引用</string>
     <string name="fork">复刻</string>
-    <string name="propose_an_edit">提议编辑</string>
+    <string name="propose_an_edit">提出修改建议</string>
     <string name="new_amount_in_sats">新的聪金额</string>
     <string name="add">添加</string>
     <string name="replying_to">"回复 "</string>
@@ -114,7 +116,7 @@
     <string name="about_us">"关于我们.. "</string>
     <string name="what_s_on_your_mind">你在想什么？</string>
     <string name="write_a_message">写一条消息…</string>
-    <string name="post">发布</string>
+    <string name="post">贴文</string>
     <string name="save">保存</string>
     <string name="create">创建</string>
     <string name="rename">重命名</string>
@@ -183,7 +185,7 @@
     <string name="voice_anonymize_description">更改您的音高。注意：听众如果下定决定也许能逆转基础音高更改。</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">用户尚未设置闪电地址以接收聪</string>
     <string name="reply_here">"🔏在此回复… "</string>
-    <string name="copies_the_note_id_to_the_clipboard_for_sharing">复制笔记ID到剪贴板，供分享</string>
+    <string name="copies_the_note_id_to_the_clipboard_for_sharing">复制笔记ID到剪贴板以便于在 Nostr 中分享</string>
     <string name="copy_channel_id_note_to_the_clipboard">复制频道ID（笔记）到剪贴板</string>
     <string name="edits_the_channel_metadata">修改频道元数据</string>
     <string name="join">加入</string>
@@ -196,7 +198,7 @@
     <string name="mod_queue">Mod 队列</string>
     <string name="notes">笔记</string>
     <string name="replies">回复</string>
-    <string name="mutual">你的</string>
+    <string name="mutual">互动</string>
     <string name="gallery">相册</string>
     <string name="follows">"关注"</string>
     <string name="reports">"举报"</string>
@@ -326,7 +328,7 @@
     <string name="new_badge_award_notif">你收到了新的徽章奖励</string>
     <string name="award_granted_to">徽章奖励授予</string>
     <string name="copied_note_text_to_clipboard">文本已复制到剪贴板</string>
-    <string name="copied_user_id_to_clipboard" tools:ignore="Typos">复制作者的 @npub 到剪贴板</string>
+    <string name="copied_user_id_to_clipboard" tools:ignore="Typos">已复制作者公钥 ID 到剪贴板</string>
     <string name="copied_note_id_to_clipboard" tools:ignore="Typos">已复制笔记ID (@note1) 到剪贴板</string>
     <string name="select_text_dialog_top">选择文本</string>
     <string name="private_conversation_notification">"&lt;无法解密私密消息&gt;\n\n；你被 %1$s 和 %2$s 之间的私人/加密会话引用。"</string>
@@ -597,7 +599,7 @@
     </string>
     <string name="orbot_socks_port">Orbot Socks 端口</string>
     <string name="use_internal_tor">启动 Tor</string>
-    <string name="use_internal_tor_explainer">使用内置的版本或者 Orbot</string>
+    <string name="use_internal_tor_explainer">使用内置 Tor 或者 Orbot</string>
     <string name="tor_preset">Tor 和隐私预设</string>
     <string name="tor_preset_explainer">快速修改下方的设置</string>
     <string name="tor_use_onion_address">Onion 链接或中继地址</string>
@@ -1131,7 +1133,7 @@
     <string name="reactions_settings_reorder">调整顺序</string>
     <string name="reactions_settings_reply">回复</string>
     <string name="reactions_settings_reply_description">回复此笔记</string>
-    <string name="reactions_settings_boost">Boost</string>
+    <string name="reactions_settings_boost">提升</string>
     <string name="reactions_settings_boost_description">转发或引用此笔记</string>
     <string name="reactions_settings_like">点赞</string>
     <string name="reactions_settings_like_description">使用表情符号回应笔记</string>
@@ -1334,6 +1336,7 @@
     <string name="feed_group_hashtags">话题标签</string>
     <string name="feed_group_communities">社区</string>
     <string name="feed_group_lists">列表</string>
+    <string name="feed_group_relays">中继</string>
     <string name="temporary_account">当设备锁定时注销</string>
     <string name="private_message">私信</string>
     <string name="public_message">公开消息</string>
@@ -1570,6 +1573,7 @@
     <string name="kind_shorts">短篇</string>
     <string name="kind_voice_msg">语音消息</string>
     <string name="kind_voice_reply">语音回复</string>
+    <string name="kind_web_bookmark">网络书签</string>
     <string name="kind_wiki">维基</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">关注你信任的人所关注的人来开启优质的源。</string>
     <string name="import_follow_list">导入关注列表</string>
@@ -1598,6 +1602,21 @@
     <string name="select_all">全选</string>
     <string name="uptime">%1$d%% 运行时间</string>
     <string name="namecoin_settings">Namecoin 设置</string>
+    <string name="namecoin_test_connection">测试连接</string>
+    <string name="namecoin_testing">正在测试服务器…</string>
+    <string name="namecoin_test_success">已连接</string>
+    <string name="namecoin_test_failed">已失败</string>
+    <string name="namecoin_test_results">测试结果</string>
+    <string name="namecoin_diagnostics">诊断</string>
+    <string name="namecoin_last_test">上次测试</string>
+    <string name="namecoin_device_info">设备信息</string>
+    <string name="namecoin_tls_info">TLS 信息</string>
+    <string name="namecoin_no_test_yet">尚未运行测试</string>
+    <string name="namecoin_response_time">%d毫秒</string>
+    <string name="namecoin_pin_cert_title">信任服务器证书？</string>
+    <string name="namecoin_pin_cert_body">服务器 %1$s 提供的证书尚未在您的信任存储中。 验证下面的指纹与服务器运营者发布的内容匹配，然后选择是否信任它来进行未来连接。</string>
+    <string name="namecoin_pin_cert_accept">信任</string>
+    <string name="namecoin_pin_cert_reject">拒绝</string>
     <string name="event_sync_title">中继同步</string>
     <string name="event_sync_section">中继同步</string>
     <string name="event_sync_section_explainer">在所有已知的中继重新发布您的事件，以保持您的发件箱、收件箱和私信中继是最新的。 需要 Wi-Fi - 这可能使用大量数据。</string>
@@ -1639,7 +1658,7 @@
     <string name="dms">私信</string>
     <string name="profiles">个人资料</string>
     <string name="relay_settings_lower">中继设置</string>
-    <string name="last_seen">上次看见在 %1$s 秒前</string>
+    <string name="last_seen">%1$s 前活跃</string>
     <string name="event_sync_less_than_until">&lt;%1$s</string>
     <string name="event_sync_status_connecting">连接中</string>
     <string name="event_sync_status_downloading">下载中</string>
@@ -1685,4 +1704,20 @@
     <string name="event_sync_date_filter_all_time">全部时间</string>
     <string name="event_sync_date_filter_last_sync">上次同步： %1$s</string>
     <string name="event_sync_date_filter_since_last_sync">自上次同步后</string>
+    <string name="web_bookmarks">网络书签</string>
+    <string name="web_bookmarks_empty">暂无网络书签。点击 + 添加一个。</string>
+    <string name="web_bookmark_add_title">添加网络书签</string>
+    <string name="web_bookmark_edit_title">编辑网络书签</string>
+    <string name="web_bookmark_url_label">URL</string>
+    <string name="web_bookmark_url_placeholder">https://example.com</string>
+    <string name="web_bookmark_title_label">标题</string>
+    <string name="web_bookmark_title_placeholder">书签标题</string>
+    <string name="web_bookmark_description_label">描述</string>
+    <string name="web_bookmark_description_placeholder">一段简短描述</string>
+    <string name="web_bookmark_tags_label">标签（以逗号分隔）</string>
+    <string name="web_bookmark_tags_placeholder">nostr, tech, blog</string>
+    <string name="web_bookmark_save">保存</string>
+    <string name="web_bookmark_delete">删除</string>
+    <string name="web_bookmark_delete_confirm">删除该网络书签？</string>
+    <string name="web_bookmark_open_url">打开 URL</string>
 </resources>

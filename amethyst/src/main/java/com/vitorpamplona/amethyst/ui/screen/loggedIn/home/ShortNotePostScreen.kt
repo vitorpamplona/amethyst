@@ -58,6 +58,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.core.util.Consumer
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
@@ -126,7 +127,7 @@ import kotlinx.coroutines.withContext
 @Composable
 fun ShortNotePostScreen(
     message: String? = null,
-    attachment: Uri? = null,
+    attachment: String? = null,
     baseReplyToId: HexKey? = null,
     quoteId: HexKey? = null,
     forkId: HexKey? = null,
@@ -151,7 +152,7 @@ fun ShortNotePostScreen(
         message?.ifBlank { null }?.let {
             postViewModel.updateMessage(TextFieldValue(it))
         }
-        attachment?.let {
+        attachment?.ifBlank { null }?.toUri()?.let {
             withContext(Dispatchers.IO) {
                 val mediaType = context.contentResolver.getType(it)
                 postViewModel.selectImage(persistentListOf(SelectedMedia(it, mediaType)))

@@ -51,7 +51,7 @@ class FeedTopNavFilterState(
     val feedFilterListName: MutableStateFlow<TopFilter>,
     val kind3Follows: StateFlow<Kind3FollowListState.Kind3Follows>,
     val allFollows: StateFlow<MergedFollowListsState.AllFollows>,
-    val locationFlow: StateFlow<LocationState.LocationResult>,
+    val locationFlow: () -> StateFlow<LocationState.LocationResult>,
     val followsRelays: StateFlow<Set<NormalizedRelayUrl>>,
     val blockedRelays: StateFlow<Set<NormalizedRelayUrl>>,
     val proxyRelays: StateFlow<Set<NormalizedRelayUrl>>,
@@ -78,7 +78,7 @@ class FeedTopNavFilterState(
             }
 
             TopFilter.AroundMe -> {
-                AroundMeFeedFlow(locationFlow, followsRelays, proxyRelays)
+                AroundMeFeedFlow(locationFlow(), followsRelays, proxyRelays)
             }
 
             TopFilter.Chess -> {

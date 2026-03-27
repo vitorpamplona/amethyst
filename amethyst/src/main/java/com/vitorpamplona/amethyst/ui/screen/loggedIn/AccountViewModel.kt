@@ -112,6 +112,7 @@ import com.vitorpamplona.quartz.nip05DnsIdentifiers.INip05Client
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
+import com.vitorpamplona.quartz.nip17Dm.base.NIP17Group
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
@@ -128,6 +129,7 @@ import com.vitorpamplona.quartz.nip28PublicChat.base.IsInPublicChatChannel
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
+import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
@@ -172,7 +174,7 @@ class AccountViewModel(
     val torSettings: TorSettingsFlow,
     val dataSources: RelaySubscriptionsCoordinator,
     val httpClientBuilder: IRoleBasedHttpClientBuilder,
-    val nip05Client: INip05Client,
+    val nip05ClientBuilder: () -> INip05Client,
 ) : ViewModel(),
     Dao {
     var firstRoute: Route? = null
@@ -376,7 +378,7 @@ class AccountViewModel(
             if (currentReactions.isNotEmpty()) {
                 account.delete(currentReactions)
             } else {
-                if (settings.isCompleteUIMode()) {
+                if (settings.isCompleteUIMode() && note.event !is NIP17Group) {
                     // Tracked broadcasting with progress feedback
                     account.createReactionEvent(note, reaction)?.let { (event, relays) ->
                         broadcastTracker.trackBroadcast(
@@ -845,6 +847,42 @@ class AccountViewModel(
 
     fun bookmarks(user: User): Note = LocalCache.getOrCreateAddressableNote(BookmarkListEvent.createBookmarkAddress(user.pubkeyHex))
 
+    fun pinnedNotes(user: User): Note = LocalCache.getOrCreateAddressableNote(PinListEvent.createPinAddress(user.pubkeyHex))
+
+    fun addPin(note: Note) {
+        if (settings.isCompleteUIMode()) {
+            launchSigner {
+                account.createAddPinEvent(note)?.let { (event, relays) ->
+                    broadcastTracker.trackBroadcast(
+                        event = event,
+                        relays = relays,
+                        client = account.client,
+                    )
+                    account.consumePinEvent(event)
+                }
+            }
+        } else {
+            launchSigner { account.addPin(note) }
+        }
+    }
+
+    fun removePin(note: Note) {
+        if (settings.isCompleteUIMode()) {
+            launchSigner {
+                account.createRemovePinEvent(note)?.let { (event, relays) ->
+                    broadcastTracker.trackBroadcast(
+                        event = event,
+                        relays = relays,
+                        client = account.client,
+                    )
+                    account.consumePinEvent(event)
+                }
+            }
+        } else {
+            launchSigner { account.removePin(note) }
+        }
+    }
+
     fun addPrivateBookmark(note: Note) {
         if (settings.isCompleteUIMode()) {
             launchSigner {
@@ -1289,7 +1327,7 @@ class AccountViewModel(
         val torSettings: TorSettingsFlow,
         val dataSources: RelaySubscriptionsCoordinator,
         val okHttpClient: RoleBasedHttpClientBuilder,
-        val nip05Client: Nip05Client,
+        val nip05ClientBuilder: () -> Nip05Client,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T =
@@ -1299,12 +1337,12 @@ class AccountViewModel(
                 torSettings,
                 dataSources,
                 okHttpClient,
-                nip05Client,
+                nip05ClientBuilder,
             ) as T
     }
 
     init {
-        Log.d("Init", "AccountViewModel")
+        Log.d("AccountViewModel", "Init")
         viewModelScope.launch(Dispatchers.IO) {
             feedStates.init()
             // awaits for init to finish before starting to capture new events.
@@ -1325,7 +1363,7 @@ class AccountViewModel(
     }
 
     override fun onCleared() {
-        Log.d("Init", "AccountViewModel onCleared")
+        Log.d("AccountViewModel", "onCleared")
         feedStates.destroy()
         super.onCleared()
     }
@@ -1807,9 +1845,9 @@ fun mockAccountViewModel(): AccountViewModel {
         Account(
             settings = AccountSettings(keyPair),
             signer = NostrSignerInternal(keyPair),
-            geolocationFlow = MutableStateFlow<LocationState.LocationResult>(LocationState.LocationResult.Loading),
-            nwcFilterAssembler = nwcFilters,
-            otsResolverBuilder = EmptyOtsResolverBuilder,
+            geolocationFlow = { MutableStateFlow<LocationState.LocationResult>(LocationState.LocationResult.Loading) },
+            nwcFilterAssembler = { nwcFilters },
+            otsResolverBuilder = { EmptyOtsResolverBuilder.build() },
             cache = LocalCache,
             client = client,
             scope = scope,
@@ -1821,7 +1859,7 @@ fun mockAccountViewModel(): AccountViewModel {
         torSettings = TorSettingsFlow(torType = MutableStateFlow(TorType.OFF)),
         httpClientBuilder = EmptyRoleBasedHttpClientBuilder(),
         dataSources = RelaySubscriptionsCoordinator(LocalCache, client, authenticator, failureTracker, scope),
-        nip05Client = EmptyNip05Client(),
+        nip05ClientBuilder = { EmptyNip05Client() },
     ).also {
         mockedCache = it
     }
@@ -1858,9 +1896,9 @@ fun mockVitorAccountViewModel(): AccountViewModel {
         Account(
             settings = AccountSettings(keyPair),
             signer = NostrSignerInternal(keyPair),
-            geolocationFlow = MutableStateFlow<LocationState.LocationResult>(LocationState.LocationResult.Loading),
-            nwcFilterAssembler = nwcFilters,
-            otsResolverBuilder = EmptyOtsResolverBuilder,
+            geolocationFlow = { MutableStateFlow<LocationState.LocationResult>(LocationState.LocationResult.Loading) },
+            nwcFilterAssembler = { nwcFilters },
+            otsResolverBuilder = { EmptyOtsResolverBuilder.build() },
             cache = LocalCache,
             client = EmptyNostrClient(),
             scope = scope,
@@ -1872,7 +1910,7 @@ fun mockVitorAccountViewModel(): AccountViewModel {
         torSettings = TorSettingsFlow(torType = MutableStateFlow(TorType.OFF)),
         httpClientBuilder = EmptyRoleBasedHttpClientBuilder(),
         dataSources = RelaySubscriptionsCoordinator(LocalCache, client, authenticator, failureTracker, scope),
-        nip05Client = EmptyNip05Client(),
+        nip05ClientBuilder = { EmptyNip05Client() },
     ).also {
         vitorCache = it
     }
