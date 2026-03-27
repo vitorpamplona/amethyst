@@ -173,6 +173,7 @@ import com.vitorpamplona.quartz.nip58Badges.BadgeProfilesEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
 import com.vitorpamplona.quartz.nip64Chess.challenge.accept.LiveChessGameAcceptEvent
 import com.vitorpamplona.quartz.nip64Chess.challenge.offer.LiveChessGameChallengeEvent
 import com.vitorpamplona.quartz.nip64Chess.draw.LiveChessDrawOfferEvent
@@ -729,6 +730,12 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     fun consume(
         event: NIP90UserDiscoveryResponseEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: RequestToVanishEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeRegularEvent(event, relay, wasVerified)
@@ -2491,7 +2498,7 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     suspend fun findEarliestOtsForNote(
         note: Note,
-        otsVerifCache: VerificationStateCache,
+        otsVerifCacheBuilder: () -> VerificationStateCache,
     ): Long? {
         checkNotInMainThread()
 
@@ -2502,7 +2509,7 @@ object LocalCache : ILocalCache, ICacheProvider {
             notes.mapNotNull { _, item ->
                 val noteEvent = item.event
                 if ((noteEvent is OtsEvent && noteEvent.isTaggedEvent(note.idHex) && !noteEvent.isExpirationBefore(time))) {
-                    val cachedTime = (otsVerifCache.justCache(noteEvent) as? VerificationState.Verified)?.verifiedTime
+                    val cachedTime = (otsVerifCacheBuilder().justCache(noteEvent) as? VerificationState.Verified)?.verifiedTime
                     if (cachedTime != null) {
                         if (minTime == null || cachedTime < (minTime ?: Long.MAX_VALUE)) {
                             minTime = cachedTime
@@ -2518,7 +2525,7 @@ object LocalCache : ILocalCache, ICacheProvider {
             }
 
         candidates.forEach { noteEvent ->
-            (otsVerifCache.cacheVerify(noteEvent) as? VerificationState.Verified)?.verifiedTime?.let { stampedTime ->
+            (otsVerifCacheBuilder().cacheVerify(noteEvent) as? VerificationState.Verified)?.verifiedTime?.let { stampedTime ->
                 if (minTime == null || stampedTime < (minTime ?: Long.MAX_VALUE)) {
                     minTime = stampedTime
                 }
@@ -3192,6 +3199,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is PinListEvent -> consume(event, relay, wasVerified)
                 is PublicMessageEvent -> consume(event, relay, wasVerified)
                 is PeopleListEvent -> consume(event, relay, wasVerified)
+                is RequestToVanishEvent -> consume(event, relay, wasVerified)
                 is CodeSnippetEvent -> consume(event, relay, wasVerified)
                 is ZapPollEvent -> consume(event, relay, wasVerified)
                 is PollEvent -> consume(event, relay, wasVerified)

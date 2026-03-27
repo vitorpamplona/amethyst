@@ -33,6 +33,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.preferences.OtsSharedPreferences
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -41,6 +42,12 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
 import com.vitorpamplona.amethyst.ui.tor.TorType
 import kotlinx.coroutines.launch
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun OtsSettingsScreen(nav: INav) {
+    OtsSettingsScreen(Amethyst.instance.otsPrefs, Amethyst.instance.torPrefs.value, nav)
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

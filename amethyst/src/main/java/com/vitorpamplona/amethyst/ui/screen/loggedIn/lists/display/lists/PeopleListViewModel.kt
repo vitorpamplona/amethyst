@@ -72,7 +72,7 @@ class PeopleListViewModel : ViewModel() {
     ) {
         if (!this::account.isInitialized || this.account != accountVM.account) {
             this.account = accountVM.account
-            this.userSuggestions = UserSuggestionState(accountVM.account, accountVM.nip05Client)
+            this.userSuggestions = UserSuggestionState(accountVM.account, accountVM.nip05ClientBuilder())
         }
 
         this.selectedDTag.tryEmit(selectedDTag)

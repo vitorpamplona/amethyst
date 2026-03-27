@@ -125,6 +125,7 @@ fun BookmarkGroupItemOptionsMenu(
             isFollowingAuthor = false,
             isPrivateBookmarkNote = false,
             isPublicBookmarkNote = false,
+            isPinnedNote = false,
             isLoggedUser = false,
             isSensitive = false,
             showSensitiveContent = null,

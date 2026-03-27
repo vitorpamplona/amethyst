@@ -116,7 +116,7 @@ fun ImportFollowListSelectUserScreen(
 ) {
     val viewModel: ImportFollowListSelectUserViewModel =
         viewModel(
-            factory = ImportFollowListSelectUserViewModel.Factory(accountViewModel.account, accountViewModel.nip05Client),
+            factory = ImportFollowListSelectUserViewModel.Factory(accountViewModel.account, accountViewModel.nip05ClientBuilder()),
         )
 
     Scaffold(

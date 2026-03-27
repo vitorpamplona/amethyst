@@ -123,7 +123,7 @@ fun LoadOts(
             withContext(Dispatchers.IO) {
                 LocalCache.findEarliestOtsForNote(
                     note = noteStatus?.note ?: note,
-                    otsVerifCache = Amethyst.instance.otsVerifCache,
+                    otsVerifCacheBuilder = { Amethyst.instance.otsVerifCache },
                 )
             }
 

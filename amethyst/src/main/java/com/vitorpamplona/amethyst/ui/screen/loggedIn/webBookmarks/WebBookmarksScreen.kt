@@ -29,15 +29,18 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
@@ -51,9 +54,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -64,6 +69,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.RenderFeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
@@ -77,7 +83,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
+import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 import com.vitorpamplona.quartz.nipB0WebBookmarks.WebBookmarkEvent
+import kotlinx.coroutines.launch
 
 @Composable
 fun WebBookmarksScreen(
@@ -100,6 +108,7 @@ private fun RenderWebBookmarksScreen(
 
     if (showAddDialog) {
         WebBookmarkEditDialog(
+            accountViewModel = accountViewModel,
             onDismiss = { showAddDialog = false },
             onSave = { url, title, description, tags ->
                 accountViewModel.launchSigner {
@@ -127,6 +136,9 @@ private fun RenderWebBookmarksScreen(
         floatingButton = {
             FloatingActionButton(
                 onClick = { showAddDialog = true },
+                modifier = Size55Modifier,
+                shape = CircleShape,
+                containerColor = MaterialTheme.colorScheme.primary,
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
@@ -188,6 +200,7 @@ private fun WebBookmarkCard(
 
     if (showEditDialog) {
         WebBookmarkEditDialog(
+            accountViewModel = accountViewModel,
             initialUrl = event.url(),
             initialTitle = event.title() ?: "",
             initialDescription = event.description(),
@@ -307,6 +320,7 @@ private fun WebBookmarkCard(
 
 @Composable
 fun WebBookmarkEditDialog(
+    accountViewModel: AccountViewModel,
     initialUrl: String = "",
     initialTitle: String = "",
     initialDescription: String = "",
@@ -318,8 +332,38 @@ fun WebBookmarkEditDialog(
     var title by remember { mutableStateOf(initialTitle) }
     var description by remember { mutableStateOf(initialDescription) }
     var tags by remember { mutableStateOf(initialTags) }
+    var isLoadingPreview by remember { mutableStateOf(false) }
+    var lastFetchedUrl by remember { mutableStateOf(initialUrl) }
 
     val isEditing = initialUrl.isNotEmpty()
+    val scope = rememberCoroutineScope()
+
+    fun fetchOpenGraphData(urlToFetch: String) {
+        if (urlToFetch.isBlank() || urlToFetch == lastFetchedUrl) return
+
+        val normalizedUrl = if (!urlToFetch.startsWith("http")) "https://$urlToFetch" else urlToFetch
+        lastFetchedUrl = urlToFetch
+        isLoadingPreview = true
+
+        accountViewModel.urlPreview(normalizedUrl) { state ->
+            scope.launch {
+                when (state) {
+                    is UrlPreviewState.Loaded -> {
+                        val info = state.previewInfo
+                        if (title.isBlank() && info.title.isNotBlank()) {
+                            title = info.title
+                        }
+                        if (description.isBlank() && info.description.isNotBlank()) {
+                            description = info.description
+                        }
+                    }
+
+                    else -> {}
+                }
+                isLoadingPreview = false
+            }
+        }
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -338,7 +382,22 @@ fun WebBookmarkEditDialog(
                     label = { Text(stringResource(R.string.web_bookmark_url_label)) },
                     placeholder = { Text(stringResource(R.string.web_bookmark_url_placeholder)) },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .onFocusChanged { focusState ->
+                                if (!focusState.isFocused && url.isNotBlank()) {
+                                    fetchOpenGraphData(url)
+                                }
+                            },
+                    trailingIcon = {
+                        if (isLoadingPreview) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp,
+                            )
+                        }
+                    },
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))

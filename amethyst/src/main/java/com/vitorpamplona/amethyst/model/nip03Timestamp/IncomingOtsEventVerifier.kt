@@ -32,7 +32,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 
 class IncomingOtsEventVerifier(
-    private val otsVerifCache: VerificationStateCache,
+    private val otsVerifCache: () -> VerificationStateCache,
     private val cache: LocalCache,
     private val scope: CoroutineScope,
 ) {
@@ -52,7 +52,7 @@ class IncomingOtsEventVerifier(
     suspend fun consume(note: Note) {
         note.event?.let { event ->
             if (event is OtsEvent) {
-                otsVerifCache.cacheVerify(event)
+                otsVerifCache().cacheVerify(event)
             }
         }
     }

@@ -62,6 +62,7 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Payment
 import androidx.compose.material.icons.filled.PrivacyTip
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material.icons.filled.Topic
@@ -254,6 +255,7 @@ import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
 import com.vitorpamplona.quartz.nip75ZapGoals.GoalEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
+import com.vitorpamplona.quartz.nip86RelayManagement.Nip86Client
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
@@ -526,7 +528,7 @@ fun RelayInformationBody(
 // Active subscriptions + outbox display
 // ---------------------------------------------------------------------------
 
-private fun kindDisplayName(kind: Int): Int =
+fun kindDisplayName(kind: Int): Int =
     when (kind) {
         AdvertisedRelayListEvent.KIND -> R.string.kind_outbox_relays
         AppDefinitionEvent.KIND -> R.string.kind_apps
@@ -1103,18 +1105,35 @@ private fun RelayHeader(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
-        OutlinedButton(
+        Row(
             modifier = Modifier.padding(horizontal = 30.dp),
-            shape = ButtonBorder,
-            onClick = { nav.nav(Route.RelayFeed(url = relay.url)) },
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.Feed,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp),
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(text = stringRes(R.string.see_relay_feed))
+            OutlinedButton(
+                shape = ButtonBorder,
+                onClick = { nav.nav(Route.RelayFeed(url = relay.url)) },
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.Feed,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(text = stringRes(R.string.see_relay_feed))
+            }
+
+            if (Nip86Client.supportsNip86(relayInfo.supported_nips)) {
+                OutlinedButton(
+                    onClick = { nav.nav(Route.RelayManagement(relay.url)) },
+                    shape = ButtonBorder,
+                ) {
+                    Icon(
+                        Icons.Default.Settings,
+                        contentDescription = stringRes(R.string.manage),
+                        modifier = Height25Modifier,
+                    )
+                }
+            }
         }
     }
 }

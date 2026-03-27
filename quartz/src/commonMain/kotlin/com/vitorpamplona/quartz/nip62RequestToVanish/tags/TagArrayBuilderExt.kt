@@ -21,10 +21,11 @@
 package com.vitorpamplona.quartz.nip62RequestToVanish.tags
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
 
 fun TagArrayBuilder<RequestToVanishEvent>.vanishFromEverywhere() = add(RelayTag.assembleEverywhere())
 
-fun TagArrayBuilder<RequestToVanishEvent>.vanishFrom(relay: String) = add(RelayTag.assemble(relay))
+fun TagArrayBuilder<RequestToVanishEvent>.vanishFrom(relay: NormalizedRelayUrl) = add(RelayTag.assemble(relay))
 
-fun TagArrayBuilder<RequestToVanishEvent>.vanishFrom(relays: List<String>) = addAll(relays.map { RelayTag.assemble(it) })
+fun TagArrayBuilder<RequestToVanishEvent>.vanishFrom(relays: List<NormalizedRelayUrl>) = addAll(relays.map { RelayTag.assemble(it) })

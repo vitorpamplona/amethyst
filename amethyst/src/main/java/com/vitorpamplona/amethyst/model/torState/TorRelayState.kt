@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model.torState
 
+import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.service.okhttp.DualHttpClientManager
 import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
 import com.vitorpamplona.amethyst.ui.tor.TorType
@@ -35,6 +36,7 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import okhttp3.OkHttpClient
 
+@Stable
 class TorRelayState(
     val okHttpClient: DualHttpClientManager,
     val torSettingsFlow: TorSettingsFlow,

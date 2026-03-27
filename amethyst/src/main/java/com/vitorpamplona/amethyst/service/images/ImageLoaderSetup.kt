@@ -64,7 +64,7 @@ class ImageLoaderSetup {
             app: Context,
             diskCache: () -> DiskCache,
             memoryCache: () -> MemoryCache,
-            blossomServerResolver: BlossomServerResolver,
+            blossomServerResolver: () -> BlossomServerResolver,
             callFactory: (url: String) -> Call.Factory,
         ) {
             SingletonImageLoader.setUnsafe(

@@ -138,6 +138,10 @@ sealed class Route {
 
     @Serializable object EventSync : Route()
 
+    @Serializable object RequestToVanish : Route()
+
+    @Serializable object VanishEvents : Route()
+
     @Serializable object EditMediaServers : Route()
 
     @Serializable object UpdateReactionType : Route()
@@ -217,6 +221,10 @@ sealed class Route {
     ) : Route()
 
     @Serializable data class RelayInfo(
+        val url: String,
+    ) : Route()
+
+    @Serializable data class RelayManagement(
         val url: String,
     ) : Route()
 
