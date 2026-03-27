@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip62RequestToVanish.tags.shouldVanishFrom
 import com.vitorpamplona.quartz.nip62RequestToVanish.tags.vanishFrom
+import com.vitorpamplona.quartz.nip62RequestToVanish.tags.vanishFromAllRelays
 import com.vitorpamplona.quartz.nip62RequestToVanish.tags.vanishFromEverywhere
 import com.vitorpamplona.quartz.nip62RequestToVanish.tags.vanishFromRelays
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -42,7 +43,9 @@ class RequestToVanishEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
     fun vanishFromRelays() = tags.vanishFromRelays()
 
-    fun shouldVanishFrom(relayUrl: String?) = tags.shouldVanishFrom(relayUrl)
+    fun vanishFromAllRelays() = tags.vanishFromAllRelays()
+
+    fun shouldVanishFrom(relay: NormalizedRelayUrl?) = tags.shouldVanishFrom(relay)
 
     companion object {
         const val KIND = 62

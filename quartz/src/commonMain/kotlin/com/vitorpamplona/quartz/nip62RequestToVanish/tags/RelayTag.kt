@@ -22,6 +22,8 @@ package com.vitorpamplona.quartz.nip62RequestToVanish.tags
 
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isLocalHost
 import com.vitorpamplona.quartz.utils.ensure
 
 class RelayTag {
@@ -33,16 +35,23 @@ class RelayTag {
 
         fun notMatch(tag: Array<String>) = !(tag.has(0) && tag[0] == TAG_NAME)
 
+        fun shouldVanishFromEverywhere(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && tag[1] == EVERYWHERE
+
         fun shouldVanishFrom(
             tag: Array<String>,
-            relayUrl: String?,
-        ) = tag.has(1) && tag[0] == TAG_NAME && (tag[1] == relayUrl || tag[1] == EVERYWHERE)
+            relay: NormalizedRelayUrl,
+        ) = tag.has(1) && tag[0] == TAG_NAME && (tag[1] == relay.url || tag[1] == EVERYWHERE)
 
-        fun parse(tag: Array<String>): String? {
+        fun parse(tag: Array<String>): NormalizedRelayUrl? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].isNotEmpty()) { return null }
-            return tag[1]
+
+            val relay = RelayUrlNormalizer.normalizeOrNull(tag[1])
+
+            ensure(relay != null && !relay.isLocalHost()) { return null }
+
+            return relay
         }
 
         fun assemble(relay: NormalizedRelayUrl) = arrayOf(TAG_NAME, relay.url)

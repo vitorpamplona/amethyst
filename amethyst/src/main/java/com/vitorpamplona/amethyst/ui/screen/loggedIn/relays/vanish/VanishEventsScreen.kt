@@ -65,6 +65,8 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -79,7 +81,6 @@ fun VanishEventsScreen(
 
     val vanishEvents by viewModel.vanishEvents.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
-    val complianceResults by viewModel.complianceResults.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         viewModel.load()
@@ -143,9 +144,8 @@ fun VanishEventsScreen(
                     items(vanishEvents, key = { it.event.id }) { item ->
                         VanishEventCard(
                             item = item,
-                            complianceResults = complianceResults,
-                            onTestCompliance = { relayUrl, date ->
-                                viewModel.testCompliance(relayUrl, date)
+                            onTestCompliance = { relay ->
+                                viewModel.testCompliance(item, relay)
                             },
                         )
                     }
@@ -160,8 +160,7 @@ fun VanishEventsScreen(
 @Composable
 private fun VanishEventCard(
     item: VanishEventItem,
-    complianceResults: Map<String, ComplianceStatus>,
-    onTestCompliance: (String, Long) -> Unit,
+    onTestCompliance: (NormalizedRelayUrl) -> Unit,
 ) {
     Card(
         modifier =
@@ -230,14 +229,7 @@ private fun VanishEventCard(
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                item.relays.forEach { relayUrl ->
-                    RelayComplianceRow(
-                        relayUrl = relayUrl,
-                        vanishDate = item.event.createdAt,
-                        status = complianceResults["$relayUrl:${item.event.createdAt}"] ?: ComplianceStatus.UNTESTED,
-                        onTest = { onTestCompliance(relayUrl, item.event.createdAt) },
-                    )
-                }
+                RenderRelaysWithComplianceResults(item, onTestCompliance)
             }
 
             if (item.event.content.isNotBlank()) {
@@ -257,9 +249,23 @@ private fun VanishEventCard(
 }
 
 @Composable
+private fun RenderRelaysWithComplianceResults(
+    item: VanishEventItem,
+    onTestCompliance: (NormalizedRelayUrl) -> Unit,
+) {
+    val complianceResults by item.complianceResults.collectAsStateWithLifecycle()
+    item.relays.forEach { relay ->
+        RelayComplianceRow(
+            relay = relay,
+            status = complianceResults[relay] ?: ComplianceStatus.UNTESTED,
+            onTest = { onTestCompliance(relay) },
+        )
+    }
+}
+
+@Composable
 private fun RelayComplianceRow(
-    relayUrl: String,
-    vanishDate: Long,
+    relay: NormalizedRelayUrl,
     status: ComplianceStatus,
     onTest: () -> Unit,
 ) {
@@ -271,11 +277,7 @@ private fun RelayComplianceRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text =
-                relayUrl
-                    .removePrefix("wss://")
-                    .removePrefix("ws://")
-                    .removeSuffix("/"),
+            text = relay.displayUrl(),
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.weight(1f),
             maxLines = 1,

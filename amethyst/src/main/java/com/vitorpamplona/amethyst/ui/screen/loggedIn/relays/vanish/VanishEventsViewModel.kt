@@ -27,18 +27,23 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.downloadFirstEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.query
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
-import com.vitorpamplona.quartz.nip62RequestToVanish.tags.RelayTag
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 @Stable
 data class VanishEventItem(
     val event: RequestToVanishEvent,
-    val relays: List<String>,
+    val relays: List<NormalizedRelayUrl>,
     val isAllRelays: Boolean,
+    val complianceResults: MutableStateFlow<Map<NormalizedRelayUrl, ComplianceStatus>> =
+        MutableStateFlow(
+            relays.associateWith { ComplianceStatus.UNTESTED },
+        ),
 )
 
 enum class ComplianceStatus {
@@ -58,14 +63,10 @@ class VanishEventsViewModel : ViewModel() {
     private val _isLoading = MutableStateFlow(false)
     val isLoading = _isLoading.asStateFlow()
 
-    private val _complianceResults = MutableStateFlow<Map<String, ComplianceStatus>>(emptyMap())
-    val complianceResults = _complianceResults.asStateFlow()
-
     fun load() {
         viewModelScope.launch(Dispatchers.IO) {
             _isLoading.value = true
             _vanishEvents.value = emptyList()
-            _complianceResults.value = emptyMap()
 
             val connectedRelays = account.client.connectedRelaysFlow().value
             if (connectedRelays.isEmpty()) {
@@ -86,7 +87,7 @@ class VanishEventsViewModel : ViewModel() {
                 account.client.query(filters = filtersPerRelay).mapNotNull { event ->
                     if (event is RequestToVanishEvent) {
                         val relayTags = event.vanishFromRelays()
-                        val isAll = relayTags.contains(RelayTag.EVERYWHERE)
+                        val isAll = event.vanishFromAllRelays()
                         VanishEventItem(
                             event = event,
                             relays = relayTags,
@@ -102,35 +103,40 @@ class VanishEventsViewModel : ViewModel() {
     }
 
     fun testCompliance(
-        relayUrl: String,
-        vanishDate: Long,
+        item: VanishEventItem,
+        relay: NormalizedRelayUrl,
     ) {
-        val key = "$relayUrl:$vanishDate"
-        _complianceResults.value = _complianceResults.value + (key to ComplianceStatus.TESTING)
+        item.complianceResults.update {
+            it + (relay to ComplianceStatus.TESTING)
+        }
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val foundEvent =
                     account.client.downloadFirstEvent(
-                        relay = relayUrl,
+                        relay = relay,
                         filter =
                             Filter(
-                                authors = listOf(account.pubKey),
-                                until = vanishDate - 1,
+                                authors = listOf(item.event.pubKey),
+                                until = item.event.createdAt - 1,
                                 limit = 1,
                             ),
                     )
 
-                _complianceResults.value += (
-                    key to
-                        if (foundEvent != null) {
-                            ComplianceStatus.NON_COMPLIANT
-                        } else {
-                            ComplianceStatus.COMPLIANT
-                        }
-                )
+                item.complianceResults.update {
+                    it + (
+                        relay to
+                            if (foundEvent != null) {
+                                ComplianceStatus.NON_COMPLIANT
+                            } else {
+                                ComplianceStatus.COMPLIANT
+                            }
+                    )
+                }
             } catch (_: Exception) {
-                _complianceResults.value += (key to ComplianceStatus.ERROR)
+                item.complianceResults.update {
+                    it + (relay to ComplianceStatus.ERROR)
+                }
             }
         }
     }

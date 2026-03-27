@@ -22,7 +22,15 @@ package com.vitorpamplona.quartz.nip62RequestToVanish.tags
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.any
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 fun TagArray.vanishFromRelays() = mapNotNull(RelayTag::parse)
 
-fun TagArray.shouldVanishFrom(relayUrl: String?) = any(RelayTag::shouldVanishFrom, relayUrl)
+fun TagArray.vanishFromAllRelays() = any(RelayTag::shouldVanishFromEverywhere)
+
+fun TagArray.shouldVanishFrom(relay: NormalizedRelayUrl?): Boolean =
+    if (relay != null) {
+        any(RelayTag::shouldVanishFrom, relay)
+    } else {
+        any(RelayTag::shouldVanishFromEverywhere)
+    }
