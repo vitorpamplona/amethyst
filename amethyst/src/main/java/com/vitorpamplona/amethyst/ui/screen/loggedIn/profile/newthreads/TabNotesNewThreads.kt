@@ -20,28 +20,203 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.newthreads
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
+import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
+import com.vitorpamplona.amethyst.ui.feeds.FeedError
+import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
+import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
+import com.vitorpamplona.amethyst.ui.feeds.WatchScrollToTop
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
+import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.newthreads.dal.UserProfileNewThreadsFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.pinnedNotes.dal.UserProfilePinnedNotesFeedViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 
 @Composable
 fun TabNotesNewThreads(
     feedViewModel: UserProfileNewThreadsFeedViewModel,
+    pinnedNotesFeedViewModel: UserProfilePinnedNotesFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    LaunchedEffect(Unit) { pinnedNotesFeedViewModel.invalidateData() }
+
     Column(Modifier.fillMaxHeight()) {
-        RefresheableFeedView(
-            feedViewModel,
-            null,
-            enablePullRefresh = false,
-            accountViewModel = accountViewModel,
-            nav = nav,
+        RefresheableBox(feedViewModel, enablePullRefresh = false) {
+            val listState =
+                androidx.compose.foundation.lazy
+                    .rememberLazyListState()
+
+            WatchScrollToTop(feedViewModel.feedState, listState)
+
+            val feedState by feedViewModel.feedState.feedContent.collectAsStateWithLifecycle()
+            val pinnedFeedState by pinnedNotesFeedViewModel.feedState.feedContent.collectAsStateWithLifecycle()
+
+            when (val state = feedState) {
+                is FeedState.Empty -> {
+                    val pinnedLoaded = pinnedFeedState as? FeedState.Loaded
+                    if (pinnedLoaded != null) {
+                        val pinnedItems by pinnedLoaded.feed.collectAsStateWithLifecycle()
+                        if (pinnedItems.list.isNotEmpty()) {
+                            FeedLoadedWithPinnedNotes(
+                                pinnedFeedState = pinnedLoaded,
+                                loaded = null,
+                                listState = listState,
+                                accountViewModel = accountViewModel,
+                                nav = nav,
+                            )
+                        } else {
+                            FeedEmpty { feedViewModel.invalidateData() }
+                        }
+                    } else {
+                        FeedEmpty { feedViewModel.invalidateData() }
+                    }
+                }
+
+                is FeedState.FeedError -> {
+                    FeedError(state.errorMessage) { feedViewModel.invalidateData() }
+                }
+
+                is FeedState.Loaded -> {
+                    FeedLoadedWithPinnedNotes(
+                        pinnedFeedState = pinnedFeedState as? FeedState.Loaded,
+                        loaded = state,
+                        listState = listState,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                }
+
+                is FeedState.Loading -> {
+                    LoadingFeed()
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun FeedLoadedWithPinnedNotes(
+    pinnedFeedState: FeedState.Loaded?,
+    loaded: FeedState.Loaded?,
+    listState: LazyListState,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val pinnedItems =
+        pinnedFeedState?.let {
+            val state by it.feed.collectAsStateWithLifecycle()
+            state
+        }
+
+    val feedItems =
+        loaded?.let {
+            val state by it.feed.collectAsStateWithLifecycle()
+            state
+        }
+
+    LazyColumn(
+        contentPadding = FeedPadding,
+        state = listState,
+    ) {
+        if (pinnedItems != null && pinnedItems.list.isNotEmpty()) {
+            items(
+                pinnedItems.list,
+                key = { "pinned-${it.idHex}" },
+                contentType = { it.event?.kind ?: -1 },
+            ) { item ->
+                Column(Modifier.fillMaxWidth().animateItem()) {
+                    PinnedNoteLabel()
+                    NoteCompose(
+                        item,
+                        modifier = Modifier.fillMaxWidth(),
+                        routeForLastRead = null,
+                        isBoostedNote = false,
+                        isHiddenFeed = pinnedItems.showHidden,
+                        quotesLeft = 3,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                }
+                HorizontalDivider(thickness = DividerThickness)
+            }
+        }
+
+        if (feedItems != null) {
+            itemsIndexed(
+                feedItems.list,
+                key = { _, item -> item.idHex },
+                contentType = { _, item -> item.event?.kind ?: -1 },
+            ) { _, item ->
+                Row(Modifier.fillMaxWidth().animateItem()) {
+                    NoteCompose(
+                        item,
+                        modifier = Modifier.fillMaxWidth(),
+                        routeForLastRead = null,
+                        isBoostedNote = false,
+                        isHiddenFeed = feedItems.showHidden,
+                        quotesLeft = 3,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                }
+                HorizontalDivider(thickness = DividerThickness)
+            }
+        }
+    }
+}
+
+@Composable
+private fun PinnedNoteLabel() {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 0.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = Icons.Default.PushPin,
+            contentDescription = stringRes(R.string.pinned_notes),
+            modifier = Modifier.size(14.dp),
+            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+        )
+        Spacer(Modifier.width(4.dp))
+        Text(
+            text = stringRes(R.string.pinned_notes),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
         )
     }
 }
