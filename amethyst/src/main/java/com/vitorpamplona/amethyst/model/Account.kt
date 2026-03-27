@@ -56,6 +56,7 @@ import com.vitorpamplona.amethyst.model.nip17Dms.DmRelayListState
 import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcSignerState
 import com.vitorpamplona.amethyst.model.nip51Lists.BookmarkListState
 import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
+import com.vitorpamplona.amethyst.model.nip51Lists.PinListState
 import com.vitorpamplona.amethyst.model.nip51Lists.blockPeopleList.BlockPeopleListState
 import com.vitorpamplona.amethyst.model.nip51Lists.blockedRelays.BlockedRelayListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.blockedRelays.BlockedRelayListState
@@ -318,6 +319,7 @@ class Account(
 
     val labeledBookmarkLists = LabeledBookmarkListsState(signer, cache, scope)
     val bookmarkState = BookmarkListState(signer, cache, scope)
+    val pinState = PinListState(signer, cache, scope)
     val emoji = EmojiPackState(signer, cache, scope)
 
     val appSpecific = AppSpecificState(signer, cache, scope, settings)
@@ -1806,6 +1808,43 @@ class Account(
      * Called when tracked broadcasting succeeds.
      */
     fun consumeBookmarkEvent(event: Event) {
+        cache.justConsumeMyOwnEvent(event)
+    }
+
+    suspend fun addPin(note: Note) {
+        if (!isWriteable() || note.isDraft()) return
+
+        sendMyPublicAndPrivateOutbox(pinState.addPin(note))
+    }
+
+    suspend fun removePin(note: Note) {
+        if (!isWriteable() || note.isDraft()) return
+
+        val event = pinState.removePin(note)
+        if (event != null) {
+            sendMyPublicAndPrivateOutbox(event)
+        }
+    }
+
+    suspend fun createAddPinEvent(note: Note): Pair<Event, Set<NormalizedRelayUrl>>? {
+        if (!isWriteable() || note.isDraft()) return null
+
+        val event = pinState.addPin(note)
+        val relays = outboxRelays.flow.value
+
+        return event to relays
+    }
+
+    suspend fun createRemovePinEvent(note: Note): Pair<Event, Set<NormalizedRelayUrl>>? {
+        if (!isWriteable() || note.isDraft()) return null
+
+        val event = pinState.removePin(note) ?: return null
+        val relays = outboxRelays.flow.value
+
+        return event to relays
+    }
+
+    fun consumePinEvent(event: Event) {
         cache.justConsumeMyOwnEvent(event)
     }
 

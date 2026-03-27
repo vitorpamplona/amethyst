@@ -18,39 +18,29 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.metadata
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.pinnedNotes.dal
 
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.ui.dal.FeedFilter
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
-import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
-import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 
-val ReportsAndBookmarksFromKeyKinds =
-    listOf(
-        ReportEvent.KIND,
-        BookmarkListEvent.KIND,
-        PinListEvent.KIND,
-    )
+class UserProfilePinnedNotesFeedFilter(
+    val user: User,
+    val account: Account,
+) : FeedFilter<Note>() {
+    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + user.pubkeyHex
 
-fun filterBookmarksAndReportsFromKey(
-    relay: NormalizedRelayUrl,
-    pubkey: HexKey?,
-    since: Long?,
-): List<RelayBasedFilter> {
-    if (pubkey.isNullOrEmpty()) return emptyList()
+    override fun feed(): List<Note> {
+        val note = LocalCache.getOrCreateAddressableNote(PinListEvent.createPinAddress(user.pubkeyHex))
+        val noteEvent = note.event as? PinListEvent ?: return emptyList()
 
-    return listOf(
-        RelayBasedFilter(
-            relay = relay,
-            filter =
-                Filter(
-                    kinds = ReportsAndBookmarksFromKeyKinds,
-                    authors = listOf(pubkey),
-                    since = since,
-                ),
-        ),
-    )
+        return noteEvent
+            .pinnedEvents()
+            .mapNotNull {
+                LocalCache.checkGetOrCreateNote(it.eventId)
+            }.reversed()
+    }
 }
