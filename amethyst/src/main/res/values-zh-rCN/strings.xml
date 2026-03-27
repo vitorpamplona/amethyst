@@ -1720,4 +1720,6 @@
     <string name="web_bookmark_delete">删除</string>
     <string name="web_bookmark_delete_confirm">删除该网络书签？</string>
     <string name="web_bookmark_open_url">打开 URL</string>
+    <!-- NIP-75 Zap Goals -->
+    <!-- NIP-86 Relay Management -->
 </resources>
