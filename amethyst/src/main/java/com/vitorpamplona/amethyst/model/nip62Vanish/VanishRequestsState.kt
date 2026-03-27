@@ -18,22 +18,26 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.vanish
+package com.vitorpamplona.amethyst.model.nip62Vanish
 
 import androidx.compose.runtime.Stable
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.LocalCache.notes
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.downloadFirstEvent
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.query
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlin.collections.plus
 
 @Stable
 data class VanishEventItem(
@@ -54,55 +58,43 @@ enum class ComplianceStatus {
     ERROR,
 }
 
-class VanishEventsViewModel : ViewModel() {
-    lateinit var account: Account
-
-    private val _vanishEvents = MutableStateFlow<List<VanishEventItem>>(emptyList())
-    val vanishEvents = _vanishEvents.asStateFlow()
-
-    private val _isLoading = MutableStateFlow(false)
-    val isLoading = _isLoading.asStateFlow()
-
-    fun load() {
-        viewModelScope.launch(Dispatchers.IO) {
-            _isLoading.value = true
-            _vanishEvents.value = emptyList()
-
-            val connectedRelays = account.client.connectedRelaysFlow().value
-            if (connectedRelays.isEmpty()) {
-                _isLoading.value = false
-                return@launch
-            }
-
-            val filter =
+class VanishRequestsState(
+    val signer: NostrSigner,
+    val cache: LocalCache,
+    val client: INostrClient,
+    val scope: CoroutineScope,
+) {
+    val noteFlow =
+        cache
+            .observeNotes(
                 Filter(
                     kinds = listOf(RequestToVanishEvent.KIND),
-                    authors = listOf(account.pubKey),
-                    limit = 100,
-                )
+                    authors = listOf(signer.pubKey),
+                ),
+            ).stateIn(
+                scope = scope,
+                started = SharingStarted.Eagerly,
+                initialValue = emptyList(),
+            )
 
-            val filtersPerRelay = connectedRelays.associateWith { listOf(filter) }
-
-            val events =
-                account.client.query(filters = filtersPerRelay).mapNotNull { event ->
-                    if (event is RequestToVanishEvent) {
-                        val relayTags = event.vanishFromRelays()
-                        val isAll = event.vanishFromAllRelays()
-                        VanishEventItem(
-                            event = event,
-                            relays = relayTags,
-                            isAllRelays = isAll,
-                        )
+    val testableFlow =
+        noteFlow
+            .map { notes ->
+                notes.mapNotNull {
+                    val noteEvent = it.event
+                    if (noteEvent is RequestToVanishEvent) {
+                        VanishEventItem(noteEvent, noteEvent.vanishFromRelays(), noteEvent.vanishFromAllRelays())
                     } else {
                         null
                     }
                 }
-            _vanishEvents.value = events
-            _isLoading.value = false
-        }
-    }
+            }.stateIn(
+                scope = scope,
+                started = SharingStarted.WhileSubscribed(10000),
+                initialValue = emptyList(),
+            )
 
-    fun testCompliance(
+    suspend fun testVanishCompliance(
         item: VanishEventItem,
         relay: NormalizedRelayUrl,
     ) {
@@ -110,10 +102,10 @@ class VanishEventsViewModel : ViewModel() {
             it + (relay to ComplianceStatus.TESTING)
         }
 
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val foundEvent =
-                    account.client.downloadFirstEvent(
+        try {
+            val foundEvent =
+                withContext(Dispatchers.IO) {
+                    client.downloadFirstEvent(
                         relay = relay,
                         filter =
                             Filter(
@@ -122,21 +114,21 @@ class VanishEventsViewModel : ViewModel() {
                                 limit = 1,
                             ),
                     )
+                }
 
-                item.complianceResults.update {
-                    it + (
-                        relay to
-                            if (foundEvent != null) {
-                                ComplianceStatus.NON_COMPLIANT
-                            } else {
-                                ComplianceStatus.COMPLIANT
-                            }
-                    )
-                }
-            } catch (_: Exception) {
-                item.complianceResults.update {
-                    it + (relay to ComplianceStatus.ERROR)
-                }
+            item.complianceResults.update {
+                it + (
+                    relay to
+                        if (foundEvent != null) {
+                            ComplianceStatus.NON_COMPLIANT
+                        } else {
+                            ComplianceStatus.COMPLIANT
+                        }
+                )
+            }
+        } catch (_: Exception) {
+            item.complianceResults.update {
+                it + (relay to ComplianceStatus.ERROR)
             }
         }
     }

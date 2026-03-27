@@ -50,16 +50,17 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.nip62Vanish.ComplianceStatus
+import com.vitorpamplona.amethyst.model.nip62Vanish.VanishEventItem
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -67,6 +68,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -76,16 +78,6 @@ fun VanishEventsScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val viewModel: VanishEventsViewModel = viewModel()
-    viewModel.account = accountViewModel.account
-
-    val vanishEvents by viewModel.vanishEvents.collectAsStateWithLifecycle()
-    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
-
-    LaunchedEffect(Unit) {
-        viewModel.load()
-    }
-
     Scaffold(
         topBar = {
             TopBarWithBackButton(
@@ -99,60 +91,71 @@ fun VanishEventsScreen(
                 Modifier
                     .fillMaxSize()
                     .padding(padding),
+            contentAlignment = Alignment.Center,
         ) {
-            if (isLoading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.align(Alignment.Center),
+            VanishEventsBody(accountViewModel, nav)
+        }
+    }
+}
+
+@Composable
+fun VanishEventsBody(
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val vanishEvents by accountViewModel.account.vanish.testableFlow
+        .collectAsStateWithLifecycle()
+    val scope = rememberCoroutineScope()
+
+    if (vanishEvents.isEmpty()) {
+        Column(
+            modifier = Modifier.padding(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Icon(
+                Icons.Outlined.PublicOff,
+                contentDescription = null,
+                modifier = Modifier.size(48.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = stringRes(R.string.vanish_events_empty),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = stringRes(R.string.vanish_events_empty_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    } else {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            item {
+                Text(
+                    text = stringRes(R.string.vanish_events_description),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
-            } else if (vanishEvents.isEmpty()) {
-                Column(
-                    modifier = Modifier.align(Alignment.Center).padding(32.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Icon(
-                        Icons.Outlined.PublicOff,
-                        contentDescription = null,
-                        modifier = Modifier.size(48.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = stringRes(R.string.vanish_events_empty),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = stringRes(R.string.vanish_events_empty_hint),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                ) {
-                    item {
-                        Text(
-                            text = stringRes(R.string.vanish_events_description),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                        )
-                    }
-
-                    items(vanishEvents, key = { it.event.id }) { item ->
-                        VanishEventCard(
-                            item = item,
-                            onTestCompliance = { relay ->
-                                viewModel.testCompliance(item, relay)
-                            },
-                        )
-                    }
-
-                    item { Spacer(modifier = Modifier.height(16.dp)) }
-                }
             }
+
+            items(vanishEvents, key = { it.event.id }) { item ->
+                VanishEventCard(
+                    item = item,
+                    onTestCompliance = { relay ->
+                        scope.launch {
+                            accountViewModel.account.vanish.testVanishCompliance(item, relay)
+                        }
+                    },
+                )
+            }
+
+            item { Spacer(modifier = Modifier.height(16.dp)) }
         }
     }
 }
