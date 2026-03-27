@@ -44,6 +44,6 @@ class RelayListTag(
 
         fun assemble(urls: List<NormalizedRelayUrl>) = arrayOf(TAG_NAME) + urls.map { it.url }.toTypedArray()
 
-        fun assemble(tag: RelayListTag) = assemble(tag.relayUrls)
+        fun assemble(tag: RelayListTag) = assemble(tag.relays)
     }
 }
