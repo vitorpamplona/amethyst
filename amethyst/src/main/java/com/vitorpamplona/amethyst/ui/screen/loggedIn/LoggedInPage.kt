@@ -72,7 +72,7 @@ fun LoggedInPage(
                     torSettings = Amethyst.instance.torPrefs.value,
                     dataSources = Amethyst.instance.sources,
                     okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder,
-                    nip05Client = Amethyst.instance.nip05Client,
+                    nip05ClientBuilder = { Amethyst.instance.nip05Client },
                 ),
         )
 

@@ -34,6 +34,7 @@ import androidx.compose.material.icons.outlined.LockOpen
 import androidx.compose.material.icons.outlined.PersonAdd
 import androidx.compose.material.icons.outlined.PersonRemove
 import androidx.compose.material.icons.outlined.PlaylistAdd
+import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material.icons.outlined.Report
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Share
@@ -110,6 +111,7 @@ data class DropDownParams(
     val isFollowingAuthor: Boolean,
     val isPrivateBookmarkNote: Boolean,
     val isPublicBookmarkNote: Boolean,
+    val isPinnedNote: Boolean,
     val isLoggedUser: Boolean,
     val isSensitive: Boolean,
     val showSensitiveContent: Boolean?,
@@ -130,6 +132,7 @@ fun NoteDropDownMenu(
             isFollowingAuthor = false,
             isPrivateBookmarkNote = false,
             isPublicBookmarkNote = false,
+            isPinnedNote = false,
             isLoggedUser = false,
             isSensitive = false,
             showSensitiveContent = null,
@@ -265,6 +268,19 @@ fun NoteDropDownMenu(
                     onDismiss()
                 }
             }
+            if (state.isLoggedUser) {
+                if (state.isPinnedNote) {
+                    M3ActionRow(icon = Icons.Outlined.PushPin, text = stringRes(R.string.unpin_from_profile)) {
+                        accountViewModel.removePin(note)
+                        onDismiss()
+                    }
+                } else {
+                    M3ActionRow(icon = Icons.Outlined.PushPin, text = stringRes(R.string.pin_to_profile)) {
+                        accountViewModel.addPin(note)
+                        onDismiss()
+                    }
+                }
+            }
             val noteBookmarkType = if (note.event is LongTextNoteEvent) stringRes(R.string.article) else stringRes(R.string.post)
             M3ActionRow(icon = Icons.Outlined.BookmarkAdd, text = stringRes(R.string.manage_bookmark_label, noteBookmarkType)) {
                 if (note.event is LongTextNoteEvent) {
@@ -329,12 +345,14 @@ fun observeBookmarksFollowsAndAccount(
     combine(
         accountViewModel.account.kind3FollowList.flow,
         accountViewModel.account.bookmarkState.bookmarks,
+        accountViewModel.account.pinState.pinnedEventIdSet,
         accountViewModel.showSensitiveContent(),
-    ) { follows, bookmarks, showSensitiveContent ->
+    ) { follows, bookmarks, pinnedIds, showSensitiveContent ->
         DropDownParams(
             isFollowingAuthor = note.author?.pubkeyHex in follows.authors,
             isPrivateBookmarkNote = note in bookmarks.private,
             isPublicBookmarkNote = note in bookmarks.public,
+            isPinnedNote = note.idHex in pinnedIds,
             isLoggedUser = accountViewModel.isLoggedUser(note.author),
             isSensitive = note.event?.isSensitiveOrNSFW() ?: false,
             showSensitiveContent = showSensitiveContent,
@@ -345,6 +363,7 @@ fun observeBookmarksFollowsAndAccount(
                 isFollowingAuthor = note.author?.pubkeyHex?.let { accountViewModel.account.isFollowing(it) } ?: false,
                 isPrivateBookmarkNote = note in accountViewModel.account.bookmarkState.bookmarks.value.private,
                 isPublicBookmarkNote = note in accountViewModel.account.bookmarkState.bookmarks.value.public,
+                isPinnedNote = accountViewModel.account.pinState.isPinned(note),
                 isLoggedUser = accountViewModel.isLoggedUser(note.author),
                 isSensitive = note.event?.isSensitiveOrNSFW() ?: false,
                 showSensitiveContent = accountViewModel.showSensitiveContent().value,

@@ -142,55 +142,58 @@ class BroadcastTracker {
                 }
             }
 
-        client.subscribe(subscription)
+        try {
+            client.subscribe(subscription)
 
-        val finalBroadcast =
-            coroutineScope {
-                val resultCollector =
-                    async {
-                        val receivedRelays = mutableSetOf<NormalizedRelayUrl>()
-                        var currentBroadcast = broadcast
+            val finalBroadcast =
+                coroutineScope {
+                    val resultCollector =
+                        async {
+                            val receivedRelays = mutableSetOf<NormalizedRelayUrl>()
+                            var currentBroadcast = broadcast
 
-                        withTimeoutOrNull(TIMEOUT_SECONDS * 1000) {
-                            while (receivedRelays.size < relays.size) {
-                                val response = resultChannel.receive()
+                            withTimeoutOrNull(TIMEOUT_SECONDS * 1000) {
+                                while (receivedRelays.size < relays.size) {
+                                    val response = resultChannel.receive()
 
-                                // Skip if already received (don't override success)
-                                if (response.relay in receivedRelays) continue
+                                    // Skip if already received (don't override success)
+                                    if (response.relay in receivedRelays) continue
 
-                                receivedRelays.add(response.relay)
-                                currentBroadcast = currentBroadcast.withResult(response.relay, response.result)
+                                    receivedRelays.add(response.relay)
+                                    currentBroadcast = currentBroadcast.withResult(response.relay, response.result)
 
-                                // Update active broadcasts with new progress
-                                _activeBroadcasts.update { list ->
-                                    list.map { if (it.id == trackingId) currentBroadcast else it }.toImmutableList()
+                                    // Update active broadcasts with new progress
+                                    _activeBroadcasts.update { list ->
+                                        list.map { if (it.id == trackingId) currentBroadcast else it }.toImmutableList()
+                                    }
                                 }
                             }
+
+                            // Mark remaining relays as timeout
+                            relays.filter { it !in receivedRelays }.forEach { relay ->
+                                currentBroadcast = currentBroadcast.withResult(relay, RelayResult.Timeout)
+                            }
+
+                            currentBroadcast
                         }
 
-                        // Mark remaining relays as timeout
-                        relays.filter { it !in receivedRelays }.forEach { relay ->
-                            currentBroadcast = currentBroadcast.withResult(relay, RelayResult.Timeout)
-                        }
+                    // Send after setting up listener
+                    client.send(event, relays)
 
-                        currentBroadcast
-                    }
+                    resultCollector.await()
+                }
 
-                // Send after setting up listener
-                client.send(event, relays)
+            resultChannel.close()
 
-                resultCollector.await()
+            // Remove from active, emit to completed
+            _activeBroadcasts.update { list ->
+                list.map { if (it.id == trackingId) finalBroadcast else it }.toImmutableList()
             }
 
-        client.unsubscribe(subscription)
-        resultChannel.close()
-
-        // Remove from active, emit to completed
-        _activeBroadcasts.update { list ->
-            list.map { if (it.id == trackingId) finalBroadcast else it }.toImmutableList()
+            Log.d(TAG, "Broadcast $trackingId complete: ${finalBroadcast.successCount}/${finalBroadcast.totalRelays} success")
+        } finally {
+            client.unsubscribe(subscription)
         }
-
-        Log.d(TAG, "Broadcast $trackingId complete: ${finalBroadcast.successCount}/${finalBroadcast.totalRelays} success")
     }
 
     /**

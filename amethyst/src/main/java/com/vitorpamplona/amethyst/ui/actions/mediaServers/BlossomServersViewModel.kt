@@ -109,7 +109,12 @@ class BlossomServersViewModel : ViewModel() {
         serverUrl: String,
     ) {
         viewModelScope.launch {
-            val serverName = name.ifBlank { Rfc3986.host(serverUrl) }
+            val serverName =
+                name.ifBlank {
+                    runCatching {
+                        Rfc3986.host(serverUrl)
+                    }.getOrNull()
+                } ?: serverUrl
             _fileServers.update {
                 it.minus(
                     ServerName(serverName, serverUrl, ServerType.Blossom),

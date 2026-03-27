@@ -56,6 +56,7 @@ import com.vitorpamplona.amethyst.model.nip17Dms.DmRelayListState
 import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcSignerState
 import com.vitorpamplona.amethyst.model.nip51Lists.BookmarkListState
 import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
+import com.vitorpamplona.amethyst.model.nip51Lists.PinListState
 import com.vitorpamplona.amethyst.model.nip51Lists.blockPeopleList.BlockPeopleListState
 import com.vitorpamplona.amethyst.model.nip51Lists.blockedRelays.BlockedRelayListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.blockedRelays.BlockedRelayListState
@@ -81,6 +82,7 @@ import com.vitorpamplona.amethyst.model.nip51Lists.searchRelays.SearchRelayListD
 import com.vitorpamplona.amethyst.model.nip51Lists.searchRelays.SearchRelayListState
 import com.vitorpamplona.amethyst.model.nip51Lists.trustedRelays.TrustedRelayListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.trustedRelays.TrustedRelayListState
+import com.vitorpamplona.amethyst.model.nip62Vanish.VanishRequestsState
 import com.vitorpamplona.amethyst.model.nip65RelayList.Nip65RelayListState
 import com.vitorpamplona.amethyst.model.nip72Communities.CommunityListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip72Communities.CommunityListState
@@ -143,7 +145,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 import com.vitorpamplona.quartz.nip01Core.tags.references.references
-import com.vitorpamplona.quartz.nip03Timestamp.OtsResolverBuilder
+import com.vitorpamplona.quartz.nip03Timestamp.OtsResolver
 import com.vitorpamplona.quartz.nip04Dm.PrivateDMCache
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
@@ -185,6 +187,7 @@ import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiser
 import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayInfo
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
@@ -213,6 +216,7 @@ import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
+import com.vitorpamplona.quartz.nipB0WebBookmarks.WebBookmarkEvent
 import com.vitorpamplona.quartz.utils.DualCase
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.containsAny
@@ -225,8 +229,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
+import kotlin.collections.plus
 import kotlin.coroutines.cancellation.CancellationException
 
 @OptIn(DelicateCoroutinesApi::class)
@@ -234,9 +240,9 @@ import kotlin.coroutines.cancellation.CancellationException
 class Account(
     val settings: AccountSettings = AccountSettings(KeyPair()),
     override val signer: NostrSigner,
-    val geolocationFlow: StateFlow<LocationState.LocationResult>,
-    val nwcFilterAssembler: NWCPaymentFilterAssembler,
-    val otsResolverBuilder: OtsResolverBuilder,
+    val geolocationFlow: () -> StateFlow<LocationState.LocationResult>,
+    val nwcFilterAssembler: () -> NWCPaymentFilterAssembler,
+    val otsResolverBuilder: () -> OtsResolver,
     val cache: LocalCache,
     val client: INostrClient,
     val scope: CoroutineScope,
@@ -317,7 +323,10 @@ class Account(
 
     val labeledBookmarkLists = LabeledBookmarkListsState(signer, cache, scope)
     val bookmarkState = BookmarkListState(signer, cache, scope)
+    val pinState = PinListState(signer, cache, scope)
     val emoji = EmojiPackState(signer, cache, scope)
+
+    val vanish = VanishRequestsState(signer, cache, client, scope)
 
     val appSpecific = AppSpecificState(signer, cache, scope, settings)
 
@@ -1004,6 +1013,31 @@ class Account(
         if (event == null) return
         cache.justConsumeMyOwnEvent(event)
         client.send(event, computeRelayListToBroadcast(event))
+    }
+
+    suspend fun sendWebBookmark(
+        url: String,
+        title: String?,
+        description: String,
+        hashtags: List<String> = emptyList(),
+    ) {
+        if (!isWriteable()) return
+
+        val template = WebBookmarkEvent.build(url, title, description, tags = hashtags)
+        val signedEvent = signer.sign(template)
+
+        cache.justConsumeMyOwnEvent(signedEvent)
+        client.send(signedEvent, computeRelayListToBroadcast(signedEvent))
+    }
+
+    suspend fun deleteWebBookmark(event: WebBookmarkEvent) {
+        if (!isWriteable()) return
+
+        val template = DeletionEvent.build(listOf(event))
+        val signedEvent = signer.sign(template)
+
+        cache.justConsumeMyOwnEvent(signedEvent)
+        client.send(signedEvent, computeRelayListToBroadcast(signedEvent))
     }
 
     fun sendMyPublicAndPrivateOutbox(event: Event?) {
@@ -1783,6 +1817,43 @@ class Account(
         cache.justConsumeMyOwnEvent(event)
     }
 
+    suspend fun addPin(note: Note) {
+        if (!isWriteable() || note.isDraft()) return
+
+        sendMyPublicAndPrivateOutbox(pinState.addPin(note))
+    }
+
+    suspend fun removePin(note: Note) {
+        if (!isWriteable() || note.isDraft()) return
+
+        val event = pinState.removePin(note)
+        if (event != null) {
+            sendMyPublicAndPrivateOutbox(event)
+        }
+    }
+
+    suspend fun createAddPinEvent(note: Note): Pair<Event, Set<NormalizedRelayUrl>>? {
+        if (!isWriteable() || note.isDraft()) return null
+
+        val event = pinState.addPin(note)
+        val relays = outboxRelays.flow.value
+
+        return event to relays
+    }
+
+    suspend fun createRemovePinEvent(note: Note): Pair<Event, Set<NormalizedRelayUrl>>? {
+        if (!isWriteable() || note.isDraft()) return null
+
+        val event = pinState.removePin(note) ?: return null
+        val relays = outboxRelays.flow.value
+
+        return event to relays
+    }
+
+    fun consumePinEvent(event: Event) {
+        cache.justConsumeMyOwnEvent(event)
+    }
+
     suspend fun createAuthEvent(
         relay: NormalizedRelayUrl,
         challenge: String,
@@ -1978,6 +2049,31 @@ class Account(
     suspend fun unfollowRelayFeed(url: NormalizedRelayUrl) = sendMyPublicAndPrivateOutbox(relayFeedsList.removeRelay(url))
 
     suspend fun saveBlockedRelayList(blockedRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(blockedRelayList.saveRelayList(blockedRelays))
+
+    suspend fun requestToVanish(
+        relays: List<NormalizedRelayUrl>,
+        reason: String,
+        createdAt: Long,
+    ) {
+        if (!isWriteable() || relays.isEmpty()) return
+
+        val template = RequestToVanishEvent.build(relays, reason, createdAt)
+        val signedEvent = signer.sign(template)
+        cache.justConsumeMyOwnEvent(signedEvent)
+        client.send(signedEvent, outboxRelays.flow.value + relays.toSet())
+    }
+
+    suspend fun requestToVanishFromEverywhere(
+        reason: String,
+        createdAt: Long,
+    ) {
+        if (!isWriteable()) return
+
+        val template = RequestToVanishEvent.buildVanishFromEverywhere(reason, createdAt)
+        val signedEvent = signer.sign(template)
+        cache.justConsumeMyOwnEvent(signedEvent)
+        client.send(signedEvent, followPlusAllMineWithIndex.flow.value + client.availableRelaysFlow().value)
+    }
 
     suspend fun sendNip65RelayList(relays: List<AdvertisedRelayInfo>) = sendLiterallyEverywhere(nip65RelayList.saveRelayList(relays))
 

@@ -134,7 +134,7 @@ private fun VerifyAndDisplayNIP05OrStatusLine(
             if (nip05VerifState.isExpired()) {
                 LaunchedEffect(key1 = nip05VerifState) {
                     accountViewModel.runOnIO {
-                        nip05State.checkAndUpdate(accountViewModel.nip05Client)
+                        nip05State.checkAndUpdate(accountViewModel.nip05ClientBuilder)
                     }
                 }
             }
@@ -442,7 +442,7 @@ fun ObserveAndRenderNIP05VerifiedSymbol(
     if (state.isExpired()) {
         LaunchedEffect(key1 = state) {
             accountViewModel.runOnIO {
-                nip05State.checkAndUpdate(accountViewModel.nip05Client)
+                nip05State.checkAndUpdate(accountViewModel.nip05ClientBuilder)
             }
         }
     }

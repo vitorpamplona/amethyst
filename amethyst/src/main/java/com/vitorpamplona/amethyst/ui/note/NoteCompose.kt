@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -123,6 +124,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderFhirResource
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitIssueEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitPatchEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitRepositoryEvent
+import com.vitorpamplona.amethyst.ui.note.types.RenderGoal
 import com.vitorpamplona.amethyst.ui.note.types.RenderHighlight
 import com.vitorpamplona.amethyst.ui.note.types.RenderInteractiveStory
 import com.vitorpamplona.amethyst.ui.note.types.RenderLiveActivityChatMessage
@@ -250,6 +252,7 @@ import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprov
 import com.vitorpamplona.quartz.nip72ModCommunities.communityAddress
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.isACommunityPost
+import com.vitorpamplona.quartz.nip75ZapGoals.GoalEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
@@ -273,6 +276,7 @@ fun NoteCompose(
     unPackReply: ReplyRenderType = ReplyRenderType.FULL,
     makeItShort: Boolean = false,
     isHiddenFeed: Boolean = false,
+    isPinned: Boolean = false,
     quotesLeft: Int,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
@@ -302,6 +306,7 @@ fun NoteCompose(
                 unPackReply = unPackReply,
                 makeItShort = makeItShort,
                 canPreview = canPreview,
+                isPinned = isPinned,
                 quotesLeft = quotesLeft,
                 parentBackgroundColor = parentBackgroundColor,
                 accountViewModel = accountViewModel,
@@ -322,6 +327,7 @@ fun AcceptableNote(
     unPackReply: ReplyRenderType = ReplyRenderType.FULL,
     makeItShort: Boolean = false,
     canPreview: Boolean = true,
+    isPinned: Boolean = false,
     quotesLeft: Int,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
@@ -377,6 +383,7 @@ fun AcceptableNote(
                         makeItShort = makeItShort,
                         canPreview = canPreview,
                         quotesLeft = quotesLeft,
+                        isPinned = isPinned,
                         parentBackgroundColor = parentBackgroundColor,
                         accountViewModel = accountViewModel,
                         showPopup = showPopup,
@@ -433,6 +440,7 @@ fun AcceptableNote(
                         unPackReply = unPackReply,
                         makeItShort = makeItShort,
                         canPreview = canPreview,
+                        isPinned = isPinned,
                         quotesLeft = quotesLeft,
                         parentBackgroundColor = parentBackgroundColor,
                         accountViewModel = accountViewModel,
@@ -494,6 +502,7 @@ private fun CheckNewAndRenderNote(
     unPackReply: ReplyRenderType = ReplyRenderType.FULL,
     makeItShort: Boolean = false,
     canPreview: Boolean = true,
+    isPinned: Boolean = false,
     quotesLeft: Int,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
@@ -525,6 +534,7 @@ private fun CheckNewAndRenderNote(
             unPackReply = unPackReply,
             makeItShort = makeItShort,
             canPreview = canPreview,
+            isPinned = isPinned,
             quotesLeft = quotesLeft,
             accountViewModel = accountViewModel,
             nav = nav,
@@ -582,6 +592,7 @@ fun InnerNoteWithReactions(
     unPackReply: ReplyRenderType,
     makeItShort: Boolean,
     canPreview: Boolean,
+    isPinned: Boolean,
     quotesLeft: Int,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -624,6 +635,7 @@ fun InnerNoteWithReactions(
                 makeItShort = makeItShort,
                 canPreview = canPreview,
                 showSecondRow = showSecondRow,
+                isPinned = isPinned,
                 quotesLeft = quotesLeft,
                 backgroundColor = backgroundColor,
                 editState = editState,
@@ -707,6 +719,7 @@ fun NoteBody(
     makeItShort: Boolean = false,
     canPreview: Boolean = true,
     showSecondRow: Boolean,
+    isPinned: Boolean = false,
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     editState: State<GenericLoadable<EditState>>,
@@ -717,6 +730,7 @@ fun NoteBody(
     FirstUserInfoRow(
         baseNote = baseNote,
         showAuthorPicture = showAuthorPicture,
+        isPinned = isPinned,
         editState = editState,
         accountViewModel = accountViewModel,
         nav = nav,
@@ -1015,6 +1029,10 @@ private fun RenderNoteRow(
 
         is CalendarDateSlotEvent -> {
             RenderCalendarDateSlotEvent(baseNote, accountViewModel, nav)
+        }
+
+        is GoalEvent -> {
+            RenderGoal(baseNote, accountViewModel, nav)
         }
 
         is HighlightEvent -> {
@@ -1438,6 +1456,7 @@ fun DisplayDraftChat() {
 fun FirstUserInfoRow(
     baseNote: Note,
     showAuthorPicture: Boolean,
+    isPinned: Boolean,
     editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -1492,6 +1511,10 @@ fun FirstUserInfoRow(
             DisplayDraft()
         }
 
+        if (isPinned) {
+            PinnedMark()
+        }
+
         Expiration(baseNote)
 
         TimeAgo(baseNote)
@@ -1502,6 +1525,16 @@ fun FirstUserInfoRow(
             moreOptions()
         }
     }
+}
+
+@Composable
+fun PinnedMark() {
+    Icon(
+        imageVector = Icons.Default.PushPin,
+        contentDescription = stringRes(R.string.pinned_notes),
+        modifier = Modifier.padding(start = 5.dp).size(16.dp),
+        tint = MaterialTheme.colorScheme.placeholderText,
+    )
 }
 
 @Composable

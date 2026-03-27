@@ -96,6 +96,8 @@ sealed class Route {
         )
     }
 
+    @Serializable object WebBookmarks : Route()
+
     @Serializable object Drafts : Route()
 
     @Serializable object AllSettings : Route()
@@ -135,6 +137,10 @@ sealed class Route {
     @Serializable object EditRelays : Route()
 
     @Serializable object EventSync : Route()
+
+    @Serializable object RequestToVanish : Route()
+
+    @Serializable object VanishEvents : Route()
 
     @Serializable object EditMediaServers : Route()
 
@@ -218,6 +224,10 @@ sealed class Route {
         val url: String,
     ) : Route()
 
+    @Serializable data class RelayManagement(
+        val url: String,
+    ) : Route()
+
     @Serializable data class RelayFeed(
         val url: String,
     ) : Route()
@@ -287,6 +297,8 @@ sealed class Route {
         val quote: String? = null,
         val draft: String? = null,
     ) : Route()
+
+    @Serializable data object NewGoal : Route()
 
     @Serializable
     data class NewLongFormPost(

@@ -23,14 +23,16 @@ package com.vitorpamplona.quartz.nip01Core.store.sqlite
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 
 class EventStore(
     dbName: String? = "events.db",
-    relayUrl: String? = "wss://quartz.local",
+    relay: NormalizedRelayUrl? = "wss://quartz.local/".normalizeRelayUrl(),
     val indexStrategy: IndexingStrategy = DefaultIndexingStrategy(),
 ) : IEventStore {
-    val store = SQLiteEventStore(BundledSQLiteDriver(), dbName, relayUrl, indexStrategy)
+    val store = SQLiteEventStore(BundledSQLiteDriver(), dbName, relay, indexStrategy)
 
     override fun insert(event: Event) = store.insertEvent(event)
 

@@ -98,9 +98,9 @@ class Url(
                     if (index != -1) {
                         _scheme = _scheme!!.substring(0, index)
                     }
+                    _scheme = _scheme!!.lowercase()
                 } else if (!originalUrl.startsWith("//")) {
-                    _scheme =
-                        DEFAULT_SCHEME
+                    _scheme = DEFAULT_SCHEME
                 }
             }
             return _scheme ?: ""
@@ -125,7 +125,10 @@ class Url(
     val host: String
         get() {
             if (this.rawHost == null) {
-                this.rawHost = getPart(UrlPart.HOST)
+                this.rawHost =
+                    getPart(UrlPart.HOST)?.let {
+                        lowercaseLiteralChars(normalizeComponent(it))
+                    }
                 if (exists(UrlPart.PORT)) {
                     this.rawHost =
                         rawHost?.let {
@@ -142,8 +145,7 @@ class Url(
     val port: Int
         get() {
             if (_port == 0) {
-                val portString =
-                    getPart(UrlPart.PORT)
+                val portString = getPart(UrlPart.PORT)
                 if (!portString.isNullOrEmpty()) {
                     _port = portString.toIntOrNull() ?: -1
                 } else {
@@ -156,14 +158,9 @@ class Url(
     val path: String?
         get() {
             if (this.rawPath == null) {
-                this.rawPath =
-                    if (exists(UrlPart.PATH)) {
-                        getPart(
-                            UrlPart.PATH,
-                        )
-                    } else {
-                        "/"
-                    }
+                this.rawPath = getPart(UrlPart.PATH)?.let {
+                    normalizeComponent(removeDotSegments(it))
+                } ?: "/"
             }
             return this.rawPath
         }
@@ -171,7 +168,10 @@ class Url(
     val query: String
         get() {
             if (_query == null) {
-                _query = getPart(UrlPart.QUERY)
+                _query =
+                    getPart(UrlPart.QUERY)?.let {
+                        normalizeComponent(it)
+                    } ?: ""
             }
             return _query ?: ""
         }
@@ -179,7 +179,9 @@ class Url(
     val fragment: String
         get() {
             if (_fragment == null) {
-                _fragment = getPart(UrlPart.FRAGMENT)
+                _fragment = getPart(UrlPart.FRAGMENT)?.let {
+                    normalizeComponent(it)
+                } ?: ""
             }
             return _fragment ?: ""
         }
@@ -190,10 +192,10 @@ class Url(
             val usernamePasswordParts: List<String> =
                 usernamePassword.substring(0, usernamePassword.length - 1).split(":")
             if (usernamePasswordParts.size == 1) {
-                _username = usernamePasswordParts[0]
+                _username = normalizeComponent(usernamePasswordParts[0])
             } else if (usernamePasswordParts.size == 2) {
-                _username = usernamePasswordParts[0]
-                _password = usernamePasswordParts[1]
+                _username = normalizeComponent(usernamePasswordParts[0])
+                _password = normalizeComponent(usernamePasswordParts[1])
             }
         }
     }
@@ -242,7 +244,206 @@ class Url(
         }
     }
 
+    /**
+     * Removes dot segments from the given path as stated in
+     * ["RFC 3986, 5.2.4. Remove Dot Segments"](https://www.rfc-editor.org/rfc/rfc3986#section-5.2.4).
+     *
+     * @param path
+     * The path from which dot segments are to be removed.
+     *
+     * @return
+     * The path from which dot segments are removed.
+     */
+    fun removeDotSegments(path: String): String {
+        // Initialize the input with the no-appended path components and the output
+        // with the empty string.
+        var input = path
+        var output = ""
+
+        // While the input is not empty, loop the following steps.
+        while (input.isNotEmpty()) {
+            // If the input begins with a prefix of "../" or "./", then
+            // remove that prefix from the input;
+            if (DOT_DOT_SLASH.find(input) != null) {
+                input = DOT_DOT_SLASH.replaceFirst(input, "")
+                continue
+            }
+
+            // If the input begins with a prefix of "/./" or "/.", where
+            // "." is a complete path segment, then replace that prefix
+            // with "/" in the input.
+            if (SLASH_DOT_SLASH.find(input) != null) {
+                input = SLASH_DOT_SLASH.replaceFirst(input, "/")
+                continue
+            }
+
+            // If the input begins with a prefix of "/../" or "/..",
+            // where ".." is a complete path segment, then replace that
+            // prefix with "/" in the input and remove the last segment
+            // and its preceding "/" (if any) from the output.
+            if (SLASH_DOT_DOT_SLASH.find(input) != null) {
+                input = SLASH_DOT_DOT_SLASH.replaceFirst(input, "/")
+                output = dropLastSegment(output, true)
+                continue
+            }
+
+            // If the input consists only of "." or "..", then remove
+            // that from the input.
+            if (DOT_OR_DOT_DOT.find(input) != null) {
+                input = DOT_OR_DOT_DOT.replaceFirst(input, "")
+                continue
+            }
+
+            // Move the first path segment in the input buffer to the
+            // end of the output, including the initial "/" character
+            // (if any) and any subsequent characters up to, but not
+            // including, the next "/" character or the end of the input.
+            val matchResult = MOVE_REGEX.find(input)
+            if (matchResult != null) {
+                input = matchResult.groups["remaining"]!!.value
+                output += matchResult.groups["firstsegment"]!!.value
+                continue
+            }
+        }
+
+        return output
+    }
+
+    /**
+     * Drops the last segment (= characters after the last slash) of a path and
+     * optionally the last slash. If the path doesn't contain slash, an empty string
+     * is returned.
+     *
+     * @param path
+     * The path.
+     *
+     * @param dropLastSlash
+     * Whether or not to drop the last slash if present.
+     *
+     * @return The path from which the last segment is removed.
+     */
+    fun dropLastSegment(
+        path: String,
+        dropLastSlash: Boolean,
+    ): String {
+        // The regular expression for the target.
+        val m = if (dropLastSlash) DROP_LAST_SLASH_REGEX else DROP_LAST_SEGMENT_REGEX
+
+        // Find the target. (Any inputs matches the pattern.)
+        m.find(path)
+
+        // Drop the target.
+        return m.replaceFirst(path, "")
+    }
+
+    /**
+     * Unreserved characters per RFC 3986 §2.3:
+     * ALPHA / DIGIT / "-" / "." / "_" / "~"
+     */
+    private fun isUnreserved(c: Char): Boolean = c.isLetter() || c.isDigit() || c == '-' || c == '.' || c == '_' || c == '~'
+
+    /**
+     * Normalize percent-encoded triplets in a single URI component string.
+     *
+     * For each %XX triplet:
+     * - If the decoded byte is an unreserved ASCII character → decode it
+     * - Otherwise → keep encoded but uppercase the hex digits
+     *
+     * Non-ASCII bytes (e.g. UTF-8 multi-byte sequences) are left encoded
+     * since they cannot be unreserved characters.
+     */
+    fun normalizeComponent(input: String): String {
+        val sb = StringBuilder(input.length)
+        var i = 0
+
+        while (i < input.length) {
+            val c = input[i]
+
+            if (c == '%' && i + 2 < input.length) {
+                val hex = input.substring(i + 1, i + 3)
+
+                // Validate that both characters are valid hex digits
+                if (hex.all { it.isDigit() || it in 'a'..'f' || it in 'A'..'F' }) {
+                    val byteValue = hex.toInt(16)
+
+                    // Only consider single-byte ASCII values for potential decoding
+                    if (byteValue < 0x80) {
+                        val decoded = byteValue.toChar()
+                        if (isUnreserved(decoded)) {
+                            // Decode: replace %XX with the literal character
+                            sb.append(decoded)
+                            i += 3
+                            continue
+                        }
+                    }
+
+                    // Keep encoded, but uppercase the hex digits
+                    sb.append('%')
+                    sb.append(hex.uppercase())
+                    i += 3
+                    continue
+                }
+            }
+
+            // Regular character — pass through as-is
+            sb.append(c)
+            i++
+        }
+
+        return sb.toString()
+    }
+
+    /**
+     * Lowercase only the literal (non-percent-encoded) characters in a string.
+     * Percent-encoded triplets are left untouched so their uppercased hex digits
+     * are not inadvertently lowercased.
+     */
+    private fun lowercaseLiteralChars(input: String): String {
+        val sb = StringBuilder(input.length)
+        var i = 0
+        while (i < input.length) {
+            if (input[i] == '%' && i + 2 < input.length) {
+                sb.append(input[i])
+                sb.append(input[i + 1])
+                sb.append(input[i + 2])
+                i += 3
+            } else {
+                sb.append(input[i].lowercaseChar())
+                i++
+            }
+        }
+        return sb.toString()
+    }
+
     companion object {
+        val DROP_LAST_SLASH_REGEX = Regex("\\/?[^/]*$")
+        val DROP_LAST_SEGMENT_REGEX = Regex("[^/]*$")
+
+        // If the input begins with a prefix of "../" or "./", then
+        // remove that prefix from the input;
+        val DOT_DOT_SLASH = Regex("^\\.?\\./")
+
+        // If the input begins with a prefix of "/./" or "/.", where
+        // "." is a complete path segment, then replace that prefix
+        // with "/" in the input.
+        val SLASH_DOT_SLASH = Regex("^\\/\\.(\\/|$)")
+
+        // If the input begins with a prefix of "/../" or "/..",
+        // where ".." is a complete path segment, then replace that
+        // prefix with "/" in the input and remove the last segment
+        // and its preceding "/" (if any) from the output.
+        val SLASH_DOT_DOT_SLASH = Regex("^\\/\\.\\.(\\/|$)")
+
+        // If the input consists only of "." or "..", then remove
+        // that from the input.
+        val DOT_OR_DOT_DOT = Regex("^\\.?\\.$")
+
+        // Move the first path segment in the input buffer to the
+        // end of the output, including the initial "/" character
+        // (if any) and any subsequent characters up to, but not
+        // including, the next "/" character or the end of the input.
+        val MOVE_REGEX = Regex("^(?<firstsegment>\\/?[^/]*)(?<remaining>.*)$")
+
         private const val DEFAULT_SCHEME = "https"
         private val SCHEME_PORT_MAP: Map<String, Int> =
             mapOf(

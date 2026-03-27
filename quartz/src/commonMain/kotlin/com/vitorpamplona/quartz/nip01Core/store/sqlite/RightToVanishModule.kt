@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip01Core.store.sqlite
 
 import androidx.sqlite.SQLiteConnection
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
 
 class RightToVanishModule(
@@ -100,11 +101,11 @@ class RightToVanishModule(
 
     fun insert(
         event: Event,
-        relayUrl: String?,
+        relay: NormalizedRelayUrl?,
         headerId: Long,
         db: SQLiteConnection,
     ) {
-        if (event is RequestToVanishEvent && event.shouldVanishFrom(relayUrl)) {
+        if (event is RequestToVanishEvent && event.shouldVanishFrom(relay)) {
             db.prepare(insertRTV).use { stmt ->
                 stmt.bindLong(1, headerId)
                 stmt.bindLong(2, hasher(db).hash(event.pubKey))

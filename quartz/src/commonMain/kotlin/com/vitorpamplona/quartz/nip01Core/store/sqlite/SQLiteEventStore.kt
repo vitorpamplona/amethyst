@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Kind
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.isEphemeral
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip40Expiration.isExpired
 import com.vitorpamplona.quartz.utils.EventFactory
@@ -40,7 +41,7 @@ import kotlinx.coroutines.withContext
 class SQLiteEventStore(
     val driver: SQLiteDriver = BundledSQLiteDriver(),
     val dbName: String? = "events.db",
-    val relayUrl: String? = null,
+    val relay: NormalizedRelayUrl? = null,
     val indexStrategy: IndexingStrategy = DefaultIndexingStrategy(),
 ) {
     companion object {
@@ -182,7 +183,7 @@ class SQLiteEventStore(
         deletionModule.insert(event, db)
         expirationModule.insert(event, headerId, db)
         fullTextSearchModule.insert(event, headerId, db)
-        rightToVanishModule.insert(event, relayUrl, headerId, db)
+        rightToVanishModule.insert(event, relay, headerId, db)
     }
 
     fun insertEvent(event: Event) {

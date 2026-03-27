@@ -20,11 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag
 
-import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
@@ -41,7 +41,7 @@ import kotlinx.coroutines.withContext
 fun HashtagPostScreen(
     hashtag: String? = null,
     message: String? = null,
-    attachment: Uri? = null,
+    attachment: String? = null,
     replyId: HexKey? = null,
     quoteId: HexKey? = null,
     draftId: HexKey? = null,
@@ -69,7 +69,7 @@ fun HashtagPostScreen(
         message?.ifBlank { null }?.let {
             postViewModel.updateMessage(TextFieldValue(it))
         }
-        attachment?.let {
+        attachment?.ifBlank { null }?.toUri()?.let {
             withContext(Dispatchers.IO) {
                 val mediaType = context.contentResolver.getType(it)
                 postViewModel.selectImage(persistentListOf(SelectedMedia(it, mediaType)))

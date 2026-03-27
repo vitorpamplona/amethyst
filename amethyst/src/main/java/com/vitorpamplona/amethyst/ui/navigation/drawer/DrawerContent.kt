@@ -20,18 +20,24 @@
  */
 package com.vitorpamplona.amethyst.ui.navigation.drawer
 
-import androidx.compose.foundation.Image
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -39,6 +45,7 @@ import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -51,6 +58,7 @@ import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material.icons.outlined.CollectionsBookmark
 import androidx.compose.material.icons.outlined.Drafts
 import androidx.compose.material.icons.outlined.GroupAdd
+import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Sync
 import androidx.compose.material3.HorizontalDivider
@@ -66,16 +74,18 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.LinkAnnotation
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -111,8 +121,11 @@ import com.vitorpamplona.amethyst.ui.theme.IconRowModifier
 import com.vitorpamplona.amethyst.ui.theme.IconRowTextModifier
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size22Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size22ModifierWith4Padding
+import com.vitorpamplona.amethyst.ui.theme.Size24Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size26Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.TextStyleBottomNavBar
 import com.vitorpamplona.amethyst.ui.theme.Width16Space
 import com.vitorpamplona.amethyst.ui.theme.bannerModifier
 import com.vitorpamplona.amethyst.ui.theme.drawerSpacing
@@ -122,6 +135,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlin.text.ifEmpty
 
 @Composable
 fun DrawerContent(
@@ -223,9 +237,9 @@ fun ProfileContentTemplate(
                 modifier = bannerModifier,
             )
         } else {
-            Image(
-                painter = painterRes(R.drawable.profile_banner, 3),
-                contentDescription = stringRes(R.string.profile_banner),
+            AsyncImage(
+                model = R.drawable.profile_banner,
+                contentDescription = stringResource(R.string.profile_banner),
                 contentScale = ContentScale.FillWidth,
                 modifier = bannerModifier,
             )
@@ -274,13 +288,86 @@ private fun EditStatusBoxes(
     val statuses by observeUserStatuses(baseAccountUser, accountViewModel)
 
     if (statuses.isEmpty()) {
-        StatusEditBar(accountViewModel = accountViewModel, nav = nav)
+        PreviewStatusEditBar(accountViewModel = accountViewModel, nav = nav)
     } else {
         statuses.forEach {
             val noteStatus by observeNote(it, accountViewModel)
 
-            StatusEditBar(noteStatus.note.event?.content, it.address, accountViewModel, nav)
+            PreviewStatusEditBar(noteStatus.note.event?.content, it.address, accountViewModel, nav)
         }
+    }
+}
+
+@Composable
+fun PreviewStatusEditBar(
+    savedStatus: String? = null,
+    address: Address? = null,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    var isEditing by remember { mutableStateOf(false) }
+
+    if (isEditing) {
+        StatusEditBar(savedStatus, address, onDone = { isEditing = false }, accountViewModel, nav)
+    } else {
+        FakeEditBar(savedStatus) { isEditing = true }
+    }
+}
+
+@Composable
+fun FakeEditBar(
+    savedStatus: String? = null,
+    onEdit: () -> Unit,
+) {
+    // ── Static text styled to look like OutlinedTextField ───
+    Box(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .height(IntrinsicSize.Min)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onEdit,
+                ).padding(top = 8.dp),
+    ) {
+        // Outer border — matches OutlinedTextField's unfocused border
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .defaultMinSize(minHeight = 56.dp) // same as OutlinedTextField
+                    .border(
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                        shape = RoundedCornerShape(4.dp),
+                    ).padding(horizontal = 16.dp, vertical = 8.dp),
+            contentAlignment = Alignment.CenterStart,
+        ) {
+            Text(
+                text = savedStatus?.ifEmpty { null } ?: stringRes(R.string.status_update),
+                style = MaterialTheme.typography.bodyLarge,
+                color =
+                    if (savedStatus?.ifEmpty { null } == null) {
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    },
+            )
+        }
+
+        // Floating label — sits on top of the border like Material does
+        Text(
+            text = stringRes(R.string.status_update),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier =
+                Modifier
+                    .padding(start = 12.dp)
+                    .align(Alignment.TopStart)
+                    .offset(y = (-8).dp) // float above the border
+                    .background(MaterialTheme.colorScheme.surface) // punch through border line
+                    .padding(horizontal = 4.dp),
+        )
     }
 }
 
@@ -288,16 +375,21 @@ private fun EditStatusBoxes(
 fun StatusEditBar(
     savedStatus: String? = null,
     address: Address? = null,
+    onDone: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val focusManager = LocalFocusManager.current
+    val focusRequester = remember { FocusRequester() }
 
     val currentStatus = remember { mutableStateOf(savedStatus ?: "") }
-    val hasChanged = remember { derivedStateOf { currentStatus.value != (savedStatus ?: "") } }
+
     LaunchedEffect(nav.drawerState.isClosed) {
         if (nav.drawerState.isClosed) {
             focusManager.clearFocus(true)
+            onDone()
+        } else {
+            focusRequester.requestFocus()
         }
     }
 
@@ -305,7 +397,7 @@ fun StatusEditBar(
         value = currentStatus.value,
         onValueChange = { currentStatus.value = it },
         label = { Text(text = stringRes(R.string.status_update)) },
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
         placeholder = {
             Text(
                 text = stringRes(R.string.status_update),
@@ -331,8 +423,11 @@ fun StatusEditBar(
             ),
         singleLine = true,
         trailingIcon = {
+            val hasChanged = remember { derivedStateOf { currentStatus.value != (savedStatus ?: "") } }
             if (hasChanged.value) {
-                SendButton {
+                SendButton(
+                    tint = MaterialTheme.colorScheme.primary,
+                ) {
                     if (address == null) {
                         accountViewModel.createStatus(currentStatus.value)
                     } else {
@@ -353,7 +448,10 @@ fun StatusEditBar(
 }
 
 @Composable
-fun SendButton(onClick: () -> Unit) {
+fun SendButton(
+    tint: Color = MaterialTheme.colorScheme.placeholderText,
+    onClick: () -> Unit,
+) {
     IconButton(
         modifier = Size26Modifier,
         onClick = onClick,
@@ -362,7 +460,7 @@ fun SendButton(onClick: () -> Unit) {
             imageVector = Icons.AutoMirrored.Filled.Send,
             null,
             modifier = Size20Modifier,
-            tint = MaterialTheme.colorScheme.placeholderText,
+            tint = tint,
         )
     }
 }
@@ -439,7 +537,9 @@ fun ListContent(
             icon = Icons.Default.AccountCircle,
             tint = MaterialTheme.colorScheme.primary,
             nav = nav,
-            route = remember { Route.Profile(accountViewModel.userProfile().pubkeyHex) },
+            computeRoute = {
+                Route.Profile(accountViewModel.userProfile().pubkeyHex)
+            },
         )
 
         NavigationRow(
@@ -456,6 +556,14 @@ fun ListContent(
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
             route = Route.BookmarkGroups,
+        )
+
+        NavigationRow(
+            title = R.string.web_bookmarks,
+            icon = Icons.Outlined.Language,
+            tint = MaterialTheme.colorScheme.onBackground,
+            nav = nav,
+            route = Route.WebBookmarks,
         )
 
         NavigationRow(
@@ -569,6 +677,25 @@ fun NavigationRow(
 }
 
 @Composable
+fun NavigationRow(
+    title: Int,
+    icon: ImageVector,
+    tint: Color,
+    nav: INav,
+    computeRoute: () -> Route,
+) {
+    IconRow(
+        title = title,
+        icon = icon,
+        tint = tint,
+        onClick = {
+            nav.closeDrawer()
+            nav.nav(computeRoute)
+        },
+    )
+}
+
+@Composable
 fun IconRow(
     title: Int,
     icon: Int,
@@ -576,30 +703,26 @@ fun IconRow(
     tint: Color,
     onClick: () -> Unit,
 ) {
+    val title = stringRes(title)
+
     Row(
         modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable(
-                    onClick = onClick,
-                ),
+            IconRowModifier.clickable(
+                onClick = onClick,
+            ),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            modifier = IconRowModifier,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                painter = painterRes(icon, iconReference),
-                contentDescription = stringRes(title),
-                modifier = Size22Modifier,
-                tint = tint,
-            )
-            Text(
-                modifier = IconRowTextModifier,
-                text = stringRes(title),
-                fontSize = Font18SP,
-            )
-        }
+        Icon(
+            painter = painterRes(icon, iconReference),
+            contentDescription = title,
+            modifier = Size22Modifier,
+            tint = tint,
+        )
+        Text(
+            modifier = IconRowTextModifier,
+            text = title,
+            fontSize = Font18SP,
+        )
     }
 }
 
@@ -610,32 +733,28 @@ fun IconRow(
     tint: Color,
     onClick: () -> Unit,
 ) {
+    val title = stringRes(title)
+
     Row(
         modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable(
-                    onClickLabel = stringRes(title),
-                    onClick = onClick,
-                ),
+            IconRowModifier.clickable(
+                onClickLabel = title,
+                onClick = onClick,
+            ),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            modifier = IconRowModifier,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = stringRes(title),
-                modifier = Size22Modifier.padding(end = 4.dp),
-                tint = tint,
-            )
+        Icon(
+            imageVector = icon,
+            contentDescription = title,
+            modifier = Size22ModifierWith4Padding,
+            tint = tint,
+        )
 
-            Text(
-                modifier = IconRowTextModifier,
-                text = stringRes(title),
-                fontSize = Font18SP,
-            )
-        }
+        Text(
+            modifier = IconRowTextModifier,
+            text = title,
+            fontSize = Font18SP,
+        )
     }
 }
 
@@ -714,6 +833,7 @@ fun BottomContent(
                     .fillMaxWidth()
                     .padding(horizontal = 15.dp),
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Absolute.SpaceBetween,
         ) {
             val string =
                 remember {
@@ -721,18 +841,16 @@ fun BottomContent(
                         withLink(
                             LinkAnnotation.Clickable(
                                 "clickable",
-                                TextLinkStyles(
-                                    SpanStyle(
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold,
-                                    ),
-                                ),
+                                TextStyleBottomNavBar,
                             ) {
                                 nav.nav(Route.Note(BuildConfig.RELEASE_NOTES_ID))
                                 nav.closeDrawer()
                             },
                         ) {
-                            append("v" + BuildConfig.VERSION_NAME + "-" + BuildConfig.FLAVOR.uppercase())
+                            append("v")
+                            append(BuildConfig.VERSION_NAME)
+                            append("-")
+                            append(BuildConfig.FLAVOR.uppercase())
                         }
                     }
                 }
@@ -743,7 +861,7 @@ fun BottomContent(
                 overflow = TextOverflow.Ellipsis,
                 maxLines = 1,
             )
-            Box(modifier = Modifier.weight(1F))
+
             IconButton(
                 onClick = {
                     nav.nav(Route.QRDisplay(user.pubkeyHex))
@@ -753,7 +871,7 @@ fun BottomContent(
                 Icon(
                     painter = painterRes(R.drawable.ic_qrcode, 2),
                     contentDescription = stringRes(id = R.string.show_npub_as_a_qr_code),
-                    modifier = Modifier.size(24.dp),
+                    modifier = Size24Modifier,
                     tint = MaterialTheme.colorScheme.primary,
                 )
             }
