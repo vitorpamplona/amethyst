@@ -24,27 +24,21 @@ import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.downloadFirstEvent
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
-import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.query
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
 import com.vitorpamplona.quartz.nip62RequestToVanish.tags.RelayTag
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
 
 @Stable
 data class VanishEventItem(
     val event: RequestToVanishEvent,
     val relays: List<String>,
     val isAllRelays: Boolean,
-    val sourceRelay: NormalizedRelayUrl,
 )
 
 enum class ComplianceStatus {
@@ -87,80 +81,22 @@ class VanishEventsViewModel : ViewModel() {
                 )
 
             val filtersPerRelay = connectedRelays.associateWith { listOf(filter) }
-            val events = mutableListOf<VanishEventItem>()
-            val seenIds = mutableSetOf<String>()
-            val subId = newSubId()
-            val doneChannel = Channel<Unit>(Channel.CONFLATED)
-            var eoseCount = 0
-            val totalRelays = connectedRelays.size
 
-            val listener =
-                object : IRequestListener {
-                    override fun onEvent(
-                        event: Event,
-                        isLive: Boolean,
-                        relay: NormalizedRelayUrl,
-                        forFilters: List<Filter>?,
-                    ) {
-                        if (event is RequestToVanishEvent && seenIds.add(event.id)) {
-                            val relayTags = event.vanishFromRelays()
-                            val isAll = relayTags.contains(RelayTag.EVERYWHERE)
-                            events.add(
-                                VanishEventItem(
-                                    event = event,
-                                    relays = relayTags,
-                                    isAllRelays = isAll,
-                                    sourceRelay = relay,
-                                ),
-                            )
-                        }
-                    }
-
-                    override fun onEose(
-                        relay: NormalizedRelayUrl,
-                        forFilters: List<Filter>?,
-                    ) {
-                        eoseCount++
-                        if (eoseCount >= totalRelays) {
-                            doneChannel.trySend(Unit)
-                        }
-                    }
-
-                    override fun onClosed(
-                        message: String,
-                        relay: NormalizedRelayUrl,
-                        forFilters: List<Filter>?,
-                    ) {
-                        eoseCount++
-                        if (eoseCount >= totalRelays) {
-                            doneChannel.trySend(Unit)
-                        }
-                    }
-
-                    override fun onCannotConnect(
-                        relay: NormalizedRelayUrl,
-                        message: String,
-                        forFilters: List<Filter>?,
-                    ) {
-                        eoseCount++
-                        if (eoseCount >= totalRelays) {
-                            doneChannel.trySend(Unit)
-                        }
+            val events =
+                account.client.query(filters = filtersPerRelay).mapNotNull { event ->
+                    if (event is RequestToVanishEvent) {
+                        val relayTags = event.vanishFromRelays()
+                        val isAll = relayTags.contains(RelayTag.EVERYWHERE)
+                        VanishEventItem(
+                            event = event,
+                            relays = relayTags,
+                            isAllRelays = isAll,
+                        )
+                    } else {
+                        null
                     }
                 }
-
-            try {
-                account.client.openReqSubscription(subId, filtersPerRelay, listener)
-
-                withTimeoutOrNull(15_000) {
-                    doneChannel.receive()
-                }
-            } finally {
-                account.client.close(subId)
-                doneChannel.close()
-            }
-
-            _vanishEvents.value = events.sortedByDescending { it.event.createdAt }
+            _vanishEvents.value = events
             _isLoading.value = false
         }
     }
@@ -180,23 +116,21 @@ class VanishEventsViewModel : ViewModel() {
                         filter =
                             Filter(
                                 authors = listOf(account.pubKey),
-                                until = vanishDate,
+                                until = vanishDate - 1,
                                 limit = 1,
                             ),
                     )
 
-                _complianceResults.value =
-                    _complianceResults.value +
-                    (
-                        key to
-                            if (foundEvent != null) {
-                                ComplianceStatus.NON_COMPLIANT
-                            } else {
-                                ComplianceStatus.COMPLIANT
-                            }
-                    )
+                _complianceResults.value += (
+                    key to
+                        if (foundEvent != null) {
+                            ComplianceStatus.NON_COMPLIANT
+                        } else {
+                            ComplianceStatus.COMPLIANT
+                        }
+                )
             } catch (_: Exception) {
-                _complianceResults.value = _complianceResults.value + (key to ComplianceStatus.ERROR)
+                _complianceResults.value += (key to ComplianceStatus.ERROR)
             }
         }
     }
