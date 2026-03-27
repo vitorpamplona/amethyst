@@ -294,14 +294,14 @@ fun BuildNavigation(
                 nav = nav,
             )
         }
-      
+
         composableFromBottom<Route.NewGoal> {
             NewGoalScreen(
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
         }
-      
+
         composableFromBottomArgs<Route.HashtagPost> {
             HashtagPostScreen(
                 hashtag = it.hashtag,
