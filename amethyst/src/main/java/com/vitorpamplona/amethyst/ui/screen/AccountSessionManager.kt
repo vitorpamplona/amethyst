@@ -93,8 +93,8 @@ sealed class AccountState {
 @Stable
 class AccountSessionManager(
     val accountsCache: AccountCacheState,
-    val nip05Client: Nip05Client,
-    val client: INostrClient,
+    val nip05ClientBuilder: () -> Nip05Client,
+    val clientBuilder: () -> INostrClient,
     val localPreferences: LocalPreferences,
     val scope: CoroutineScope,
 ) {
@@ -227,7 +227,7 @@ class AccountSessionManager(
                     onError("Could not parse nip05 address: $nip05")
                 } else {
                     try {
-                        val pubkeyInfo = nip05Client.get(nip05)
+                        val pubkeyInfo = nip05ClientBuilder().get(nip05)
                         if (pubkeyInfo == null) {
                             onError("User not found in the nip05 server: $nip05")
                         } else {
@@ -286,6 +286,8 @@ class AccountSessionManager(
                 delay(2000) // waits for the new user to connect to the new relays.
 
                 val toPost = accountSettings.backupNIP65RelayList?.writeRelaysNorm()?.toSet() ?: DefaultNIP65RelaySet
+
+                val client = clientBuilder()
 
                 accountSettings.backupUserMetadata?.let { client.send(it, toPost) }
                 accountSettings.backupContactList?.let { client.send(it, toPost) }

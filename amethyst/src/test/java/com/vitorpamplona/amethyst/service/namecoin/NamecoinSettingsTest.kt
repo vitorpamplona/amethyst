@@ -56,7 +56,7 @@ class NamecoinSettingsTest {
         assertEquals("abc123def.onion", s!!.host)
         assertEquals(50001, s.port)
         assertFalse(s.useSsl)
-        assertTrue(s.trustAllCerts)
+        assertTrue(s.usePinnedTrustStore)
     }
 
     @Test
@@ -131,7 +131,7 @@ class NamecoinSettingsTest {
         assertTrue(servers[0].useSsl)
         assertEquals("server2.onion", servers[1].host)
         assertFalse(servers[1].useSsl)
-        assertTrue(servers[1].trustAllCerts)
+        assertTrue(servers[1].usePinnedTrustStore)
     }
 
     @Test

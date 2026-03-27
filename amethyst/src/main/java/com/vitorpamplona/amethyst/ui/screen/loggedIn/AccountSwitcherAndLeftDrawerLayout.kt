@@ -37,9 +37,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.navigation.NavDestination.Companion.hasRoute
+import androidx.navigation.compose.currentBackStackEntryAsState
 import com.vitorpamplona.amethyst.ui.navigation.drawer.AccountSwitchBottomSheet
 import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerContent
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import kotlinx.coroutines.launch
 
@@ -48,8 +51,7 @@ import kotlinx.coroutines.launch
 fun AccountSwitcherAndLeftDrawerLayout(
     accountViewModel: AccountViewModel,
     accountSessionManager: AccountSessionManager,
-    nav: INav,
-    gesturesEnabled: Boolean = true,
+    nav: Nav,
     content: @Composable () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
@@ -82,9 +84,19 @@ fun AccountSwitcherAndLeftDrawerLayout(
         }
     }
 
+    val navBackStackEntry by nav.controller.currentBackStackEntryAsState()
+    val isTabPagerRoute =
+        navBackStackEntry?.destination?.let { dest ->
+            dest.hasRoute<Route.Home>() || dest.hasRoute<Route.Message>()
+        } ?: false
+    val drawerGesturesEnabled =
+        !isTabPagerRoute ||
+            nav.drawerState.isOpen ||
+            nav.drawerState.targetValue != nav.drawerState.currentValue
+
     ModalNavigationDrawer(
         drawerState = nav.drawerState,
-        gesturesEnabled = gesturesEnabled,
+        gesturesEnabled = drawerGesturesEnabled,
         drawerContent = {
             DrawerContent(nav, openSheetFunction, accountViewModel)
             BackHandler(enabled = nav.drawerState.isOpen, nav::closeDrawer)

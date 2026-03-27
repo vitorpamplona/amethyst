@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers
 
+import androidx.compose.runtime.Stable
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.collections.forEach
 
@@ -28,6 +29,7 @@ import kotlin.collections.forEach
  *  to relays. There may be multiple duplications in these
  *  subscriptions since we do not control when screens are removed.
  */
+@Stable
 abstract class ComposeSubscriptionManager<T> :
     ComposeSubscriptionManagerControls,
     Subscribable<T> {

@@ -61,6 +61,8 @@
     <string name="unauthorized_exception_description">O assinador não autorizou a descriptografia necessária para realizar esta operação. Ative as descriptografias NIP-44 no seu aplicativo de assinatura e tente novamente</string>
     <string name="signer_not_found_exception">Assinador não encontrado</string>
     <string name="signer_not_found_exception_description">O aplicativo de assinatura foi desinstalado? Verifique se ele está instalado e com esta conta. Saia e entre novamente se ele foi alterado.</string>
+    <string name="signer_illegal_state_exception">Assinador se comportou de forma inesperada</string>
+    <string name="signer_illegal_state_exception_description">O assinador externo retornou dados estranhos para a solicitação. Pode haver um bug no Amethyst ou no assinador.</string>
     <string name="zaps">Zaps</string>
     <string name="view_count">Contagem de visualizações</string>
     <string name="boost">Impulsionar</string>
@@ -446,6 +448,8 @@
     <string name="poll_zap_value_max">Zap máximo</string>
     <string name="poll_consensus_threshold">Consenso</string>
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
+    <string name="poll_single_choice">Escolha única</string>
+    <string name="poll_multiple_choice">Múltipla escolha</string>
     <string name="poll_closing_date_time">Data e hora de encerramento da enquete</string>
     <string name="poll_closing_in">Enquete encerra em %1$s</string>
     <string name="poll_closing_time">Fechar depois</string>
@@ -485,6 +489,9 @@
     <string name="zap_type_anonymous_explainer">Destinatário e o público não sabem quem enviou o pagamento</string>
     <string name="zap_type_nonzap">Sem Zap</string>
     <string name="zap_type_nonzap_explainer">Nenhum traço no Nostr, apenas na Lightning</string>
+    <string name="post_anonymously">Anônimo</string>
+    <string name="post_anonymously_explainer">Postar como uma nova identidade descartável. Sua conta não será vinculada a esta resposta.</string>
+    <string name="anonymous_reply_warning">Esta resposta será postada a partir de uma nova identidade anônima</string>
     <string name="file_server">Servidor de arquivos</string>
     <string name="file_server_description">Escolha um servidor para onde enviar este arquivo</string>
     <string name="zap_forward_lnAddress">LnAddress ou @Usuário</string>
@@ -1324,6 +1331,7 @@
     <string name="feed_group_hashtags">Hashtags</string>
     <string name="feed_group_communities">Comunidades</string>
     <string name="feed_group_lists">Listas</string>
+    <string name="feed_group_relays">Relés</string>
     <string name="temporary_account">Terminar sessão no bloqueio do dispositivo</string>
     <string name="private_message">Mensagem Privada</string>
     <string name="public_message">Mensagem pública</string>
@@ -1560,6 +1568,7 @@
     <string name="kind_shorts">Shorts</string>
     <string name="kind_voice_msg">Mensagem de voz</string>
     <string name="kind_voice_reply">Resposta de voz</string>
+    <string name="kind_web_bookmark">Marcador Web</string>
     <string name="kind_wiki">Wiki</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Comece com um ótimo feed seguindo as mesmas pessoas que alguém em quem você confia.</string>
     <string name="import_follow_list">Importar lista de seguidos</string>
@@ -1675,4 +1684,21 @@
     <string name="event_sync_date_filter_all_time">Todo o período</string>
     <string name="event_sync_date_filter_last_sync">Última sincronização: %1$s</string>
     <string name="event_sync_date_filter_since_last_sync">Desde a última sincronização</string>
+    <string name="web_bookmarks">Marcadores Web</string>
+    <string name="web_bookmarks_empty">Nenhum marcador web ainda. Toque em + para adicionar.</string>
+    <string name="web_bookmark_add_title">Adicionar Marcador Web</string>
+    <string name="web_bookmark_edit_title">Editar Marcador Web</string>
+    <string name="web_bookmark_url_label">URL</string>
+    <string name="web_bookmark_url_placeholder">https://exemplo.com</string>
+    <string name="web_bookmark_title_label">Título</string>
+    <string name="web_bookmark_title_placeholder">Título do marcador</string>
+    <string name="web_bookmark_description_label">Descrição</string>
+    <string name="web_bookmark_description_placeholder">Uma breve descrição</string>
+    <string name="web_bookmark_tags_label">Tags (separadas por vírgula)</string>
+    <string name="web_bookmark_tags_placeholder">nostr, tech, blog</string>
+    <string name="web_bookmark_save">Salvar</string>
+    <string name="web_bookmark_delete">Excluir</string>
+    <string name="web_bookmark_delete_confirm">Excluir este marcador web?</string>
+    <string name="web_bookmark_open_url">Abrir URL</string>
+    <!-- NIP-86 Relay Management -->
 </resources>

@@ -25,9 +25,31 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.runtime.Immutable
 import androidx.core.content.edit
+import coil3.util.CoilUtils.result
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.model.UiSettings
+import com.vitorpamplona.amethyst.model.preferences.AccountPreferenceStores.Companion.defaultDiscoveryFollowList
+import com.vitorpamplona.amethyst.model.preferences.AccountPreferenceStores.Companion.defaultFileServer
+import com.vitorpamplona.amethyst.model.preferences.AccountPreferenceStores.Companion.defaultHomeFollowList
+import com.vitorpamplona.amethyst.model.preferences.AccountPreferenceStores.Companion.defaultNotificationFollowList
+import com.vitorpamplona.amethyst.model.preferences.AccountPreferenceStores.Companion.defaultStoriesFollowList
+import com.vitorpamplona.amethyst.model.preferences.AccountPreferenceStores.Companion.hasDonatedInVersion
+import com.vitorpamplona.amethyst.model.preferences.AccountPreferenceStores.Companion.hideBlockAlertDialog
+import com.vitorpamplona.amethyst.model.preferences.AccountPreferenceStores.Companion.hideDeleteRequestDialog
+import com.vitorpamplona.amethyst.model.preferences.AccountPreferenceStores.Companion.latestAppSpecificData
+import com.vitorpamplona.amethyst.model.preferences.AccountPreferenceStores.Companion.latestBlockedRelayList
+import com.vitorpamplona.amethyst.model.preferences.AccountPreferenceStores.Companion.latestChannelList
+import com.vitorpamplona.amethyst.model.preferences.AccountPreferenceStores.Companion.latestCommunityList
+import com.vitorpamplona.amethyst.model.preferences.AccountPreferenceStores.Companion.latestContactList
+import com.vitorpamplona.amethyst.model.preferences.AccountPreferenceStores.Companion.latestGeohashList
+import com.vitorpamplona.amethyst.model.preferences.AccountPreferenceStores.Companion.latestHashtagList
+import com.vitorpamplona.amethyst.model.preferences.AccountPreferenceStores.Companion.latestMuteList
+import com.vitorpamplona.amethyst.model.preferences.AccountPreferenceStores.Companion.latestPrivateHomeRelayList
+import com.vitorpamplona.amethyst.model.preferences.AccountPreferenceStores.Companion.latestSearchRelayList
+import com.vitorpamplona.amethyst.model.preferences.AccountPreferenceStores.Companion.latestTrustedRelayList
+import com.vitorpamplona.amethyst.model.preferences.AccountPreferenceStores.Companion.latestUserMetadata
+import com.vitorpamplona.amethyst.model.preferences.AccountPreferenceStores.Companion.localRelayServers
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
@@ -62,6 +84,7 @@ import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -448,96 +471,128 @@ object LocalPreferences {
         Log.d("LocalPreferences", "Load account from file $npub")
         val result =
             withContext(Dispatchers.IO) {
-                checkNotInMainThread()
-
                 return@withContext with(encryptedPreferences(npub)) {
+                    Log.d("LocalPreferences", "Load account from file $npub - opened file")
                     val privKey = getString(PrefKeys.NOSTR_PRIVKEY, null)
                     val pubKey = getString(PrefKeys.NOSTR_PUBKEY, null) ?: return@with null
-                    val externalSignerPackageName =
-                        getString(PrefKeys.SIGNER_PACKAGE_NAME, null)
-                            ?: if (getBoolean(PrefKeys.LOGIN_WITH_EXTERNAL_SIGNER, false)) "com.greenart7c3.nostrsigner" else null
+                    val externalSignerPackageName = getString(PrefKeys.SIGNER_PACKAGE_NAME, null) ?: if (getBoolean(PrefKeys.LOGIN_WITH_EXTERNAL_SIGNER, false)) "com.greenart7c3.nostrsigner" else null
 
-                    val defaultHomeFollowList = parseOrNull<TopFilter>(PrefKeys.DEFAULT_HOME_FOLLOW_LIST) ?: TopFilter.AllFollows
-                    val defaultStoriesFollowList = parseOrNull<TopFilter>(PrefKeys.DEFAULT_STORIES_FOLLOW_LIST) ?: TopFilter.Global
-                    val defaultNotificationFollowList = parseOrNull<TopFilter>(PrefKeys.DEFAULT_NOTIFICATION_FOLLOW_LIST) ?: TopFilter.Global
-                    val defaultDiscoveryFollowList = parseOrNull<TopFilter>(PrefKeys.DEFAULT_DISCOVERY_FOLLOW_LIST) ?: TopFilter.Global
+                    val keyPair = KeyPair(privKey = privKey?.hexToByteArray(), pubKey = pubKey.hexToByteArray())
 
-                    val zapPaymentRequestServer = parseOrNull<Nip47WalletConnect.Nip47URI>(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER)
-                    val defaultFileServer = parseOrNull<ServerName>(PrefKeys.DEFAULT_FILE_SERVER) ?: DEFAULT_MEDIA_SERVERS[0]
+                    Log.d("LocalPreferences", "Load account from file $npub - keys ready")
+
                     val stripLocationOnUpload = getBoolean(PrefKeys.STRIP_LOCATION_ON_UPLOAD, true)
-
-                    val pendingAttestations = parseOrNull<Map<HexKey, String>>(PrefKeys.PENDING_ATTESTATIONS) ?: mapOf()
-                    val localRelayServers = getStringSet(PrefKeys.LOCAL_RELAY_SERVERS, null) ?: setOf()
-
-                    val latestUserMetadata = parseEventOrNull<MetadataEvent>(PrefKeys.LATEST_USER_METADATA)
-                    val latestContactList = parseEventOrNull<ContactListEvent>(PrefKeys.LATEST_CONTACT_LIST)
-                    val latestDmRelayList = parseEventOrNull<ChatMessageRelayListEvent>(PrefKeys.LATEST_DM_RELAY_LIST)
-                    val latestNip65RelayList = parseEventOrNull<AdvertisedRelayListEvent>(PrefKeys.LATEST_NIP65_RELAY_LIST)
-                    val latestSearchRelayList = parseEventOrNull<SearchRelayListEvent>(PrefKeys.LATEST_SEARCH_RELAY_LIST)
-                    val latestIndexRelayList = parseEventOrNull<IndexerRelayListEvent>(PrefKeys.LATEST_INDEX_RELAY_LIST)
-                    val latestRelayFeedsList = parseEventOrNull<RelayFeedsListEvent>(PrefKeys.LATEST_RELAY_FEEDS_LIST)
-                    val latestBlockedRelayList = parseEventOrNull<BlockedRelayListEvent>(PrefKeys.LATEST_BLOCKED_RELAY_LIST)
-                    val latestTrustedRelayList = parseEventOrNull<TrustedRelayListEvent>(PrefKeys.LATEST_TRUSTED_RELAY_LIST)
-                    val latestMuteList = parseEventOrNull<MuteListEvent>(PrefKeys.LATEST_MUTE_LIST)
-                    val latestPrivateHomeRelayList = parseEventOrNull<PrivateOutboxRelayListEvent>(PrefKeys.LATEST_PRIVATE_HOME_RELAY_LIST)
-                    val latestAppSpecificData = parseEventOrNull<AppSpecificDataEvent>(PrefKeys.LATEST_APP_SPECIFIC_DATA)
-                    val latestChannelList = parseEventOrNull<ChannelListEvent>(PrefKeys.LATEST_CHANNEL_LIST)
-                    val latestCommunityList = parseEventOrNull<CommunityListEvent>(PrefKeys.LATEST_COMMUNITY_LIST)
-                    val latestHashtagList = parseEventOrNull<HashtagListEvent>(PrefKeys.LATEST_HASHTAG_LIST)
-                    val latestGeohashList = parseEventOrNull<GeohashListEvent>(PrefKeys.LATEST_GEOHASH_LIST)
-                    val latestEphemeralList = parseEventOrNull<EphemeralChatListEvent>(PrefKeys.LATEST_EPHEMERAL_LIST)
-                    val latestTrustProviderList = parseEventOrNull<TrustProviderListEvent>(PrefKeys.LATEST_TRUST_PROVIDER_LIST)
-                    val latestPaymentTargets = parseEventOrNull<PaymentTargetsEvent>(PrefKeys.LATEST_PAYMENT_TARGETS)
-
                     val hideDeleteRequestDialog = getBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, false)
                     val hideBlockAlertDialog = getBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, false)
                     val hideNIP17WarningDialog = getBoolean(PrefKeys.HIDE_NIP_17_WARNING_DIALOG, false)
+                    val hasDonatedInVersion = getStringSet(PrefKeys.HAS_DONATED_IN_VERSION, null) ?: setOf()
+                    val localRelayServers = getStringSet(PrefKeys.LOCAL_RELAY_SERVERS, null) ?: setOf()
+
+                    val defaultHomeFollowListStr = getString(PrefKeys.DEFAULT_HOME_FOLLOW_LIST, null)
+                    val defaultStoriesFollowListStr = getString(PrefKeys.DEFAULT_STORIES_FOLLOW_LIST, null)
+                    val defaultNotificationFollowListStr = getString(PrefKeys.DEFAULT_NOTIFICATION_FOLLOW_LIST, null)
+                    val defaultDiscoveryFollowListStr = getString(PrefKeys.DEFAULT_DISCOVERY_FOLLOW_LIST, null)
+                    val zapPaymentRequestServerStr = getString(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER, null)
+                    val defaultFileServerStr = getString(PrefKeys.DEFAULT_FILE_SERVER, null)
+
+                    val pendingAttestationsStr = getString(PrefKeys.PENDING_ATTESTATIONS, null)
+                    val latestUserMetadataStr = getString(PrefKeys.LATEST_USER_METADATA, null)
+                    val latestContactListStr = getString(PrefKeys.LATEST_CONTACT_LIST, null)
+                    val latestDmRelayListStr = getString(PrefKeys.LATEST_DM_RELAY_LIST, null)
+                    val latestNip65RelayListStr = getString(PrefKeys.LATEST_NIP65_RELAY_LIST, null)
+                    val latestSearchRelayListStr = getString(PrefKeys.LATEST_SEARCH_RELAY_LIST, null)
+                    val latestIndexRelayListStr = getString(PrefKeys.LATEST_INDEX_RELAY_LIST, null)
+                    val latestRelayFeedsListStr = getString(PrefKeys.LATEST_RELAY_FEEDS_LIST, null)
+                    val latestBlockedRelayListStr = getString(PrefKeys.LATEST_BLOCKED_RELAY_LIST, null)
+                    val latestTrustedRelayListStr = getString(PrefKeys.LATEST_TRUSTED_RELAY_LIST, null)
+                    val latestMuteListStr = getString(PrefKeys.LATEST_MUTE_LIST, null)
+                    val latestPrivateHomeRelayListStr = getString(PrefKeys.LATEST_PRIVATE_HOME_RELAY_LIST, null)
+                    val latestAppSpecificDataStr = getString(PrefKeys.LATEST_APP_SPECIFIC_DATA, null)
+                    val latestChannelListStr = getString(PrefKeys.LATEST_CHANNEL_LIST, null)
+                    val latestCommunityListStr = getString(PrefKeys.LATEST_COMMUNITY_LIST, null)
+                    val latestHashtagListStr = getString(PrefKeys.LATEST_HASHTAG_LIST, null)
+                    val latestGeohashListStr = getString(PrefKeys.LATEST_GEOHASH_LIST, null)
+                    val latestEphemeralListStr = getString(PrefKeys.LATEST_EPHEMERAL_LIST, null)
+                    val latestTrustProviderListStr = getString(PrefKeys.LATEST_TRUST_PROVIDER_LIST, null)
+                    val latestPaymentTargetsStr = getString(PrefKeys.LATEST_PAYMENT_TARGETS, null)
+                    val lastReadPerRouteStr = getString(PrefKeys.LAST_READ_PER_ROUTE, null)
+
+                    Log.d("LocalPreferences", "Load account from file $npub - before parsing events")
+
+                    val defaultHomeFollowList = async { parseOrNull<TopFilter>(defaultHomeFollowListStr) ?: TopFilter.AllFollows }
+                    val defaultStoriesFollowList = async { parseOrNull<TopFilter>(defaultStoriesFollowListStr) ?: TopFilter.Global }
+                    val defaultNotificationFollowList = async { parseOrNull<TopFilter>(defaultNotificationFollowListStr) ?: TopFilter.Global }
+                    val defaultDiscoveryFollowList = async { parseOrNull<TopFilter>(defaultDiscoveryFollowListStr) ?: TopFilter.Global }
+                    val zapPaymentRequestServer = async { parseOrNull<Nip47WalletConnect.Nip47URI>(zapPaymentRequestServerStr) }
+                    val defaultFileServer = async { parseOrNull<ServerName>(defaultFileServerStr) ?: DEFAULT_MEDIA_SERVERS[0] }
+
+                    val pendingAttestations = async { parseOrNull<Map<HexKey, String>>(pendingAttestationsStr) ?: mapOf() }
+                    val latestUserMetadata = async { parseEventOrNull<MetadataEvent>(latestUserMetadataStr) }
+                    val latestContactList = async { parseEventOrNull<ContactListEvent>(latestContactListStr) }
+                    val latestDmRelayList = async { parseEventOrNull<ChatMessageRelayListEvent>(latestDmRelayListStr) }
+                    val latestNip65RelayList = async { parseEventOrNull<AdvertisedRelayListEvent>(latestNip65RelayListStr) }
+                    val latestSearchRelayList = async { parseEventOrNull<SearchRelayListEvent>(latestSearchRelayListStr) }
+                    val latestIndexRelayList = async { parseEventOrNull<IndexerRelayListEvent>(latestIndexRelayListStr) }
+                    val latestRelayFeedsList = async { parseEventOrNull<RelayFeedsListEvent>(latestRelayFeedsListStr) }
+                    val latestBlockedRelayList = async { parseEventOrNull<BlockedRelayListEvent>(latestBlockedRelayListStr) }
+                    val latestTrustedRelayList = async { parseEventOrNull<TrustedRelayListEvent>(latestTrustedRelayListStr) }
+                    val latestMuteList = async { parseEventOrNull<MuteListEvent>(latestMuteListStr) }
+                    val latestPrivateHomeRelayList = async { parseEventOrNull<PrivateOutboxRelayListEvent>(latestPrivateHomeRelayListStr) }
+                    val latestAppSpecificData = async { parseEventOrNull<AppSpecificDataEvent>(latestAppSpecificDataStr) }
+                    val latestChannelList = async { parseEventOrNull<ChannelListEvent>(latestChannelListStr) }
+                    val latestCommunityList = async { parseEventOrNull<CommunityListEvent>(latestCommunityListStr) }
+                    val latestHashtagList = async { parseEventOrNull<HashtagListEvent>(latestHashtagListStr) }
+                    val latestGeohashList = async { parseEventOrNull<GeohashListEvent>(latestGeohashListStr) }
+                    val latestEphemeralList = async { parseEventOrNull<EphemeralChatListEvent>(latestEphemeralListStr) }
+                    val latestTrustProviderList = async { parseEventOrNull<TrustProviderListEvent>(latestTrustProviderListStr) }
+                    val latestPaymentTargets = async { parseEventOrNull<PaymentTargetsEvent>(latestPaymentTargetsStr) }
 
                     val lastReadPerRoute =
-                        parseOrNull<Map<String, Long>>(PrefKeys.LAST_READ_PER_ROUTE)?.mapValues {
-                            MutableStateFlow(it.value)
-                        } ?: mapOf()
+                        async {
+                            parseOrNull<Map<String, Long>>(lastReadPerRouteStr)?.mapValues {
+                                MutableStateFlow(it.value)
+                            } ?: mapOf()
+                        }
 
-                    val keyPair = KeyPair(privKey = privKey?.hexToByteArray(), pubKey = pubKey.hexToByteArray())
-                    val hasDonatedInVersion = getStringSet(PrefKeys.HAS_DONATED_IN_VERSION, null) ?: setOf()
+                    Log.d("LocalPreferences", "Load account from file $npub - asyncs created")
 
                     return@with AccountSettings(
                         keyPair = keyPair,
                         transientAccount = false,
                         externalSignerPackageName = externalSignerPackageName,
                         localRelayServers = MutableStateFlow(localRelayServers),
-                        defaultFileServer = defaultFileServer,
+                        defaultFileServer = defaultFileServer.await(),
                         stripLocationOnUpload = stripLocationOnUpload,
-                        defaultHomeFollowList = MutableStateFlow(defaultHomeFollowList),
-                        defaultStoriesFollowList = MutableStateFlow(defaultStoriesFollowList),
-                        defaultNotificationFollowList = MutableStateFlow(defaultNotificationFollowList),
-                        defaultDiscoveryFollowList = MutableStateFlow(defaultDiscoveryFollowList),
-                        zapPaymentRequest = MutableStateFlow(zapPaymentRequestServer?.normalize()),
+                        defaultHomeFollowList = MutableStateFlow(defaultHomeFollowList.await()),
+                        defaultStoriesFollowList = MutableStateFlow(defaultStoriesFollowList.await()),
+                        defaultNotificationFollowList = MutableStateFlow(defaultNotificationFollowList.await()),
+                        defaultDiscoveryFollowList = MutableStateFlow(defaultDiscoveryFollowList.await()),
+                        zapPaymentRequest = MutableStateFlow(zapPaymentRequestServer.await()?.normalize()),
                         hideDeleteRequestDialog = hideDeleteRequestDialog,
                         hideBlockAlertDialog = hideBlockAlertDialog,
                         hideNIP17WarningDialog = hideNIP17WarningDialog,
-                        backupUserMetadata = latestUserMetadata,
-                        backupContactList = latestContactList,
-                        backupNIP65RelayList = latestNip65RelayList,
-                        backupDMRelayList = latestDmRelayList,
-                        backupSearchRelayList = latestSearchRelayList,
-                        backupIndexRelayList = latestIndexRelayList,
-                        backupRelayFeedsList = latestRelayFeedsList,
-                        backupBlockedRelayList = latestBlockedRelayList,
-                        backupTrustedRelayList = latestTrustedRelayList,
-                        backupPrivateHomeRelayList = latestPrivateHomeRelayList,
-                        backupMuteList = latestMuteList,
-                        backupAppSpecificData = latestAppSpecificData,
-                        backupChannelList = latestChannelList,
-                        backupCommunityList = latestCommunityList,
-                        backupHashtagList = latestHashtagList,
-                        backupGeohashList = latestGeohashList,
-                        backupEphemeralChatList = latestEphemeralList,
-                        backupTrustProviderList = latestTrustProviderList,
-                        lastReadPerRoute = MutableStateFlow(lastReadPerRoute),
+                        backupUserMetadata = latestUserMetadata.await(),
+                        backupContactList = latestContactList.await(),
+                        backupNIP65RelayList = latestNip65RelayList.await(),
+                        backupDMRelayList = latestDmRelayList.await(),
+                        backupSearchRelayList = latestSearchRelayList.await(),
+                        backupIndexRelayList = latestIndexRelayList.await(),
+                        backupRelayFeedsList = latestRelayFeedsList.await(),
+                        backupBlockedRelayList = latestBlockedRelayList.await(),
+                        backupTrustedRelayList = latestTrustedRelayList.await(),
+                        backupPrivateHomeRelayList = latestPrivateHomeRelayList.await(),
+                        backupMuteList = latestMuteList.await(),
+                        backupAppSpecificData = latestAppSpecificData.await(),
+                        backupChannelList = latestChannelList.await(),
+                        backupCommunityList = latestCommunityList.await(),
+                        backupHashtagList = latestHashtagList.await(),
+                        backupGeohashList = latestGeohashList.await(),
+                        backupEphemeralChatList = latestEphemeralList.await(),
+                        backupTrustProviderList = latestTrustProviderList.await(),
+                        lastReadPerRoute = MutableStateFlow(lastReadPerRoute.await()),
                         hasDonatedInVersion = MutableStateFlow(hasDonatedInVersion),
-                        pendingAttestations = MutableStateFlow(pendingAttestations),
-                        backupNipA3PaymentTargets = latestPaymentTargets,
+                        pendingAttestations = MutableStateFlow(pendingAttestations.await()),
+                        backupNipA3PaymentTargets = latestPaymentTargets.await(),
                     )
                 }
             }
@@ -545,8 +600,7 @@ object LocalPreferences {
         return result
     }
 
-    private inline fun <reified T : Any> SharedPreferences.parseOrNull(key: String): T? {
-        val value = getString(key, null)
+    private inline fun <reified T : Any> parseOrNull(value: String?): T? {
         if (value.isNullOrEmpty() || value == "null") {
             return null
         }
@@ -558,13 +612,12 @@ object LocalPreferences {
             }
         } catch (e: Throwable) {
             if (e is CancellationException) throw e
-            Log.w("LocalPreferences", "Error Decoding $key from Preferences with value $value", e)
+            Log.w("LocalPreferences", "Error Decoding ${T::class.java} from Preferences with value $value", e)
             null
         }
     }
 
-    private inline fun <reified T> SharedPreferences.parseEventOrNull(key: String): T? {
-        val value = getString(key, null)
+    private inline fun <reified T> parseEventOrNull(value: String?): T? {
         if (value.isNullOrEmpty() || value == "null") {
             return null
         }
@@ -572,7 +625,7 @@ object LocalPreferences {
             Event.fromJson(value) as T?
         } catch (e: Throwable) {
             if (e is CancellationException) throw e
-            Log.w("LocalPreferences", "Error Decoding $key from Preferences with value $value", e)
+            Log.w("LocalPreferences", "Error Decoding ${T::class.java} from Preferences with value $value", e)
             null
         }
     }
