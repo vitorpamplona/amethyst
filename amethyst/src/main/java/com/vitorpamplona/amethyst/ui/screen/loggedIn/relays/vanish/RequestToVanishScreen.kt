@@ -65,16 +65,25 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.components.TextSpinner
+import com.vitorpamplona.amethyst.model.nip11RelayInfo.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.ui.components.TitleExplainer
+import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoDialog
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayUrlEditField
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.toImmutableList
@@ -91,11 +100,25 @@ fun RequestToVanishScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    RequestToVanishScreen(
+        nip11CachedRetriever = Amethyst.instance.nip11Cache,
+        accountViewModel = accountViewModel,
+        nav = nav,
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun RequestToVanishScreen(
+    nip11CachedRetriever: Nip11CachedRetriever,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
     val connectedRelays by accountViewModel.account.client
         .connectedRelaysFlow()
         .collectAsStateWithLifecycle()
 
-    var selectedRelayUrl by remember { mutableStateOf<String?>(null) }
+    var selectedRelayUrls by remember { mutableStateOf(emptyList<NormalizedRelayUrl>()) }
     var allRelaysSelected by remember { mutableStateOf(false) }
     var vanishDate by remember { mutableLongStateOf(TimeUtils.now()) }
     var reason by remember { mutableStateOf("") }
@@ -149,43 +172,22 @@ fun RequestToVanishScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Relay Selection
-            Text(
-                text = stringRes(R.string.vanish_target_relay),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            TextSpinner(
-                label = stringRes(R.string.vanish_target_relay),
-                placeholder =
-                    if (allRelaysSelected) {
-                        stringRes(R.string.vanish_all_relays)
-                    } else {
-                        selectedRelayUrl ?: stringRes(R.string.vanish_select_relay)
-                    },
-                options = relayOptions,
-                onSelect = { index ->
-                    selectedRelayUrl = relayOptions[index].explainer
-                    allRelaysSelected = false
-                },
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
             // ALL RELAYS checkbox
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth(),
             ) {
+                // Relay Selection
+                Text(
+                    text = stringRes(R.string.vanish_target_relay),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Spacer(Modifier.weight(1f))
                 Checkbox(
                     checked = allRelaysSelected,
                     onCheckedChange = {
                         allRelaysSelected = it
-                        if (it) selectedRelayUrl = null
                     },
                 )
                 Text(
@@ -196,7 +198,33 @@ fun RequestToVanishScreen(
                 )
             }
 
-            if (allRelaysSelected) {
+            if (!allRelaysSelected) {
+                selectedRelayUrls.forEach {
+                    val info =
+                        remember(it) {
+                            relaySetupInfoBuilder(it, false)
+                        }
+
+                    BasicRelaySetupInfoDialog(
+                        info,
+                        onDelete = { selectedRelayUrls -= selectedRelayUrls },
+                        nip11CachedRetriever = nip11CachedRetriever,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+                RelayUrlEditField(
+                    onNewRelay = {
+                        selectedRelayUrls += selectedRelayUrls + it
+                        allRelaysSelected = false
+                    },
+                    nip11CachedRetriever = nip11CachedRetriever,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            } else {
                 Row(
                     modifier =
                         Modifier
@@ -279,7 +307,7 @@ fun RequestToVanishScreen(
                 label = { Text(stringRes(R.string.vanish_reason_label)) },
                 placeholder = { Text(stringRes(R.string.vanish_reason_placeholder)) },
                 modifier = Modifier.fillMaxWidth(),
-                minLines = 2,
+                minLines = 1,
                 maxLines = 4,
             )
 
@@ -289,7 +317,7 @@ fun RequestToVanishScreen(
             Button(
                 onClick = { showConfirmDialog = true },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = allRelaysSelected || selectedRelayUrl != null,
+                enabled = allRelaysSelected || selectedRelayUrls.isNotEmpty(),
                 colors =
                     ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.error,
@@ -354,14 +382,14 @@ fun RequestToVanishScreen(
     if (showConfirmDialog) {
         ConfirmVanishDialog(
             isAllRelays = allRelaysSelected,
-            relayUrl = selectedRelayUrl,
+            relayUrls = selectedRelayUrls,
             onConfirm = {
                 showConfirmDialog = false
                 if (allRelaysSelected) {
                     accountViewModel.requestToVanishFromEverywhere(reason, vanishDate)
                 } else {
-                    selectedRelayUrl?.let {
-                        accountViewModel.requestToVanish(it, reason, vanishDate)
+                    if (selectedRelayUrls.isNotEmpty()) {
+                        accountViewModel.requestToVanish(selectedRelayUrls, reason, vanishDate)
                     }
                 }
                 accountViewModel.toastManager.toast(
@@ -378,7 +406,7 @@ fun RequestToVanishScreen(
 @Composable
 private fun ConfirmVanishDialog(
     isAllRelays: Boolean,
-    relayUrl: String?,
+    relayUrls: List<NormalizedRelayUrl>,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -404,7 +432,7 @@ private fun ConfirmVanishDialog(
                     if (isAllRelays) {
                         stringRes(R.string.vanish_confirm_all_relays)
                     } else {
-                        stringRes(R.string.vanish_confirm_single_relay, relayUrl ?: "")
+                        stringRes(R.string.vanish_confirm_single_relay, relayUrls.joinToString(", ") { it.displayUrl() })
                     },
             )
         },
@@ -430,4 +458,16 @@ private fun ConfirmVanishDialog(
 private fun formatTimestamp(epochSeconds: Long): String {
     val sdf = SimpleDateFormat("MMM dd, yyyy  hh:mm a", Locale.getDefault())
     return sdf.format(Date(epochSeconds * 1000))
+}
+
+@Preview
+@Composable
+fun RequestToVanishScreenPreview() {
+    ThemeComparisonColumn {
+        RequestToVanishScreen(
+            nip11CachedRetriever = Nip11CachedRetriever { TODO() },
+            accountViewModel = mockAccountViewModel(),
+            nav = EmptyNav(),
+        )
+    }
 }

@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip62RequestToVanish.tags
 
 import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.ensure
 
 class RelayTag {
@@ -44,7 +45,7 @@ class RelayTag {
             return tag[1]
         }
 
-        fun assemble(relay: String) = arrayOf(TAG_NAME, relay)
+        fun assemble(relay: NormalizedRelayUrl) = arrayOf(TAG_NAME, relay.url)
 
         fun assembleEverywhere() = arrayOf(TAG_NAME, EVERYWHERE)
     }

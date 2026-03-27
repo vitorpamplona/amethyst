@@ -142,17 +142,17 @@ fun AllSettingsScreen(
                 SettingsNavigationRow(
                     title = R.string.request_to_vanish,
                     icon = Icons.Outlined.DeleteForever,
-                    tint = MaterialTheme.colorScheme.error,
+                    tint = tint,
                     onClick = { nav.nav(Route.RequestToVanish) },
                 )
-                HorizontalDivider()
-                SettingsNavigationRow(
-                    title = R.string.vanish_history,
-                    icon = Icons.Outlined.History,
-                    tint = tint,
-                    onClick = { nav.nav(Route.VanishEvents) },
-                )
             }
+            HorizontalDivider()
+            SettingsNavigationRow(
+                title = R.string.vanish_history,
+                icon = Icons.Outlined.History,
+                tint = tint,
+                onClick = { nav.nav(Route.VanishEvents) },
+            )
             HorizontalDivider(thickness = 4.dp)
             SettingsSectionHeader(R.string.app_settings)
             SettingsNavigationRow(

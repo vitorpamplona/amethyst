@@ -2046,16 +2046,16 @@ class Account(
     suspend fun saveBlockedRelayList(blockedRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(blockedRelayList.saveRelayList(blockedRelays))
 
     suspend fun requestToVanish(
-        relay: String,
+        relays: List<NormalizedRelayUrl>,
         reason: String,
         createdAt: Long,
     ) {
-        if (!isWriteable()) return
+        if (!isWriteable() || relays.isEmpty()) return
 
-        val template = RequestToVanishEvent.build(relay, reason, createdAt)
+        val template = RequestToVanishEvent.build(relays, reason, createdAt)
         val signedEvent = signer.sign(template)
         cache.justConsumeMyOwnEvent(signedEvent)
-        client.send(signedEvent, setOf(NormalizedRelayUrl(relay)))
+        client.send(signedEvent, relays.toSet())
     }
 
     suspend fun requestToVanishFromEverywhere(

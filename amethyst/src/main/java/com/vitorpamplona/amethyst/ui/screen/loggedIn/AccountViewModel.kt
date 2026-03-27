@@ -961,10 +961,10 @@ class AccountViewModel(
     fun delete(note: Note) = launchSigner { account.delete(note) }
 
     fun requestToVanish(
-        relay: String,
+        relays: List<NormalizedRelayUrl>,
         reason: String,
         createdAt: Long,
-    ) = launchSigner { account.requestToVanish(relay, reason, createdAt) }
+    ) = launchSigner { account.requestToVanish(relays, reason, createdAt) }
 
     fun requestToVanishFromEverywhere(
         reason: String,

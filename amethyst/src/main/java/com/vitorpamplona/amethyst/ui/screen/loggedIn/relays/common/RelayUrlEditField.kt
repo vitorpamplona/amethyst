@@ -123,8 +123,22 @@ fun RelayUrlEditField(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    RelayUrlEditField(
+        onNewRelay = onNewRelay,
+        nip11CachedRetriever = Amethyst.instance.nip11Cache,
+        accountViewModel = accountViewModel,
+        nav = nav,
+    )
+}
+
+@Composable
+fun RelayUrlEditField(
+    onNewRelay: (NormalizedRelayUrl) -> Unit,
+    nip11CachedRetriever: Nip11CachedRetriever,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
     val relaySuggestions = remember { RelaySuggestionState() }
-    val nip11CachedRetriever = remember { Amethyst.instance.nip11Cache }
     RelayUrlEditField(
         onNewRelay = onNewRelay,
         relaySuggestions = relaySuggestions,

@@ -1978,7 +1978,7 @@
     <string name="request_to_vanish">Request to Vanish</string>
     <string name="request_to_vanish_description">Request relays to permanently delete all your data up to the selected date. This action is based on NIP-62 and is legally binding in some jurisdictions.</string>
     <string name="vanish_select_relay">Select a relay</string>
-    <string name="vanish_target_relay">Target Relay</string>
+    <string name="vanish_target_relay">Target Relays</string>
     <string name="vanish_all_relays">ALL RELAYS</string>
     <string name="vanish_all_relays_warning">This will request ALL relays to delete everything associated with your key up to the selected date. This event will be broadcast as widely as possible. This action cannot be undone.</string>
     <string name="vanish_date_label">Delete data up to</string>
