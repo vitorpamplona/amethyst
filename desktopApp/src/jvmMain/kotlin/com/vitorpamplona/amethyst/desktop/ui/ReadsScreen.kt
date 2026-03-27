@@ -46,6 +46,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -62,6 +63,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
+import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.desktop.subscriptions.FeedMode
 import com.vitorpamplona.amethyst.desktop.subscriptions.createContactListSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.createFollowingLongFormFeedSubscription
@@ -180,12 +182,14 @@ fun ReadsScreen(
     localCache: DesktopLocalCache,
     account: AccountState.LoggedIn? = null,
     nwcConnection: Nip47WalletConnect.Nip47URINorm? = null,
+    subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator? = null,
     onNavigateToProfile: (String) -> Unit = {},
     onNavigateToArticle: (String) -> Unit = {},
     onNavigateToThread: (String) -> Unit = {},
     onZapFeedback: (ZapFeedback) -> Unit = {},
 ) {
-    val connectedRelays by relayManager.connectedRelays.collectAsState()
+    val relayStatuses by relayManager.relayStatuses.collectAsState()
+    val connectedRelays = remember(relayStatuses) { relayStatuses.keys }
     val scope = rememberCoroutineScope()
 
     val eventState =
@@ -203,6 +207,18 @@ fun ReadsScreen(
     var followedUsers by remember { mutableStateOf<Set<String>>(emptySet()) }
     var eoseReceivedCount by remember { mutableStateOf(0) }
     val initialLoadComplete = eoseReceivedCount > 0
+
+    // Seed from cache — long-form notes already consumed are in cache
+    LaunchedEffect(Unit) {
+        val cached =
+            localCache.notes.filterIntoSet { _, note ->
+                note.event is LongTextNoteEvent
+            }
+        cached.forEach { note ->
+            (note.event as? LongTextNoteEvent)?.let { eventState.addItem(it) }
+        }
+        if (cached.isNotEmpty()) eoseReceivedCount++
+    }
 
     // Load followed users for Following feed mode
     rememberSubscription(connectedRelays, account, feedMode, relayManager = relayManager) {
@@ -239,7 +255,8 @@ fun ReadsScreen(
             FeedMode.GLOBAL -> {
                 createLongFormFeedSubscription(
                     relays = connectedRelays,
-                    onEvent = { event, _, _, _ ->
+                    onEvent = { event, _, relay, _ ->
+                        subscriptionsCoordinator?.consumeEvent(event, relay)
                         if (event is LongTextNoteEvent) {
                             eventState.addItem(event)
                         }

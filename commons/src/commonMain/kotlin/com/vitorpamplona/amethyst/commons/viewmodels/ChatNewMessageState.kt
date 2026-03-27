@@ -24,7 +24,6 @@ import androidx.compose.runtime.Stable
 import androidx.compose.ui.text.input.TextFieldValue
 import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.references.references
@@ -95,7 +94,7 @@ class ChatNewMessageState(
         if (currentRoom != null) {
             _recipientsMissingDmRelays.value =
                 currentRoom.users.any { hexKey ->
-                    val user = cache.getOrCreateUser(hexKey) as? User
+                    val user = cache.getOrCreateUser(hexKey)
                     user?.dmInboxRelays().isNullOrEmpty()
                 }
         } else {
@@ -141,7 +140,7 @@ class ChatNewMessageState(
     ) {
         val pTags =
             room.users.mapNotNull { hexKey ->
-                (cache.getOrCreateUser(hexKey) as? User)?.toPTag()
+                cache.getOrCreateUser(hexKey)?.toPTag()
             }
 
         val replyHint = _replyTo.value?.toEventHint<BaseDMGroupEvent>()

@@ -18,37 +18,23 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.desktop.ui
+package com.vitorpamplona.amethyst.commons.model.nip65RelayList
 
-import com.vitorpamplona.amethyst.commons.model.User
-import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
-import com.vitorpamplona.amethyst.desktop.ui.note.NoteDisplayData
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.hexToByteArrayOrNull
-import com.vitorpamplona.quartz.nip19Bech32.toNpub
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 
 /**
- * Extension to convert Event to NoteDisplayData for the shared NoteCard.
+ * Narrow repository interface for Nip65RelayListState's settings needs.
+ * Follows the established pattern of EphemeralChatRepository / PublicChatListRepository.
  */
-fun Event.toNoteDisplayData(cache: ICacheProvider? = null): NoteDisplayData {
-    val user = (cache?.getUserIfExists(pubKey) as? User)
+interface Nip65RelayListRepository {
+    val backupNIP65RelayList: AdvertisedRelayListEvent?
 
-    val displayName =
-        user?.toBestDisplayName()
-            ?: try {
-                pubKey.hexToByteArrayOrNull()?.toNpub() ?: pubKey.take(16) + "..."
-            } catch (e: Exception) {
-                pubKey.take(16) + "..."
-            }
+    fun updateNIP65RelayList(event: AdvertisedRelayListEvent)
 
-    val pictureUrl = user?.profilePicture()
+    /** Default relay set when no NIP-65 list is available (write relays). */
+    val defaultOutboxRelays: Set<NormalizedRelayUrl>
 
-    return NoteDisplayData(
-        id = id,
-        pubKeyHex = pubKey,
-        pubKeyDisplay = displayName,
-        profilePictureUrl = pictureUrl,
-        content = content,
-        createdAt = createdAt,
-    )
+    /** Default relay set when no NIP-65 list is available (read relays). */
+    val defaultInboxRelays: Set<NormalizedRelayUrl>
 }

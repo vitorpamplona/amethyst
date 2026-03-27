@@ -76,7 +76,8 @@ fun BookmarksScreen(
     onNavigateToThread: (String) -> Unit = {},
     onZapFeedback: (ZapFeedback) -> Unit = {},
 ) {
-    val connectedRelays by relayManager.connectedRelays.collectAsState()
+    val relayStatuses by relayManager.relayStatuses.collectAsState()
+    val connectedRelays = remember(relayStatuses) { relayStatuses.keys }
     val scope = rememberCoroutineScope()
 
     // Tab state
@@ -116,6 +117,27 @@ fun BookmarksScreen(
             val pubkeys = (publicEvents + privateEvents).map { it.pubKey }.distinct()
             if (pubkeys.isNotEmpty()) {
                 subscriptionsCoordinator.loadMetadataForPubkeys(pubkeys)
+            }
+        }
+    }
+
+    // Seed from cache — bookmark list event may already be in addressableNotes
+    LaunchedEffect(account.pubKeyHex) {
+        val address = BookmarkListEvent.createBookmarkAddress(account.pubKeyHex)
+        val cachedNote = localCache.getOrCreateAddressableNote(address)
+        val cachedEvent = cachedNote.event as? BookmarkListEvent
+        if (cachedEvent != null) {
+            bookmarkList = cachedEvent
+            publicBookmarkIds =
+                cachedEvent
+                    .publicBookmarks()
+                    .filterIsInstance<EventBookmark>()
+                    .map { it.eventId }
+            // Seed public events from cache
+            publicBookmarkIds.forEach { id ->
+                val note = localCache.getNoteIfExists(id)
+                val event = note?.event
+                if (event != null) publicEventState.addItem(event)
             }
         }
     }
@@ -188,7 +210,8 @@ fun BookmarksScreen(
                         FilterBuilders.byIds(publicBookmarkIds),
                     ),
                 relays = connectedRelays,
-                onEvent = { event, _, _, _ ->
+                onEvent = { event, _, relay, _ ->
+                    subscriptionsCoordinator?.consumeEvent(event, relay)
                     publicEventState.addItem(event)
                 },
                 onEose = { _, _ -> },
@@ -209,7 +232,8 @@ fun BookmarksScreen(
                         FilterBuilders.byIds(privateBookmarkIds),
                     ),
                 relays = connectedRelays,
-                onEvent = { event, _, _, _ ->
+                onEvent = { event, _, relay, _ ->
+                    subscriptionsCoordinator?.consumeEvent(event, relay)
                     privateEventState.addItem(event)
                 },
                 onEose = { _, _ -> },

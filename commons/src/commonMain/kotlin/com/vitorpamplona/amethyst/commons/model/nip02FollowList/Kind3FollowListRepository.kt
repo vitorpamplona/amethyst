@@ -18,37 +18,16 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.desktop.ui
+package com.vitorpamplona.amethyst.commons.model.nip02FollowList
 
-import com.vitorpamplona.amethyst.commons.model.User
-import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
-import com.vitorpamplona.amethyst.desktop.ui.note.NoteDisplayData
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.hexToByteArrayOrNull
-import com.vitorpamplona.quartz.nip19Bech32.toNpub
+import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 
 /**
- * Extension to convert Event to NoteDisplayData for the shared NoteCard.
+ * Narrow repository interface for Kind3FollowListState's settings needs.
+ * Follows the established pattern of EphemeralChatRepository / PublicChatListRepository.
  */
-fun Event.toNoteDisplayData(cache: ICacheProvider? = null): NoteDisplayData {
-    val user = (cache?.getUserIfExists(pubKey) as? User)
+interface Kind3FollowListRepository {
+    val backupContactList: ContactListEvent?
 
-    val displayName =
-        user?.toBestDisplayName()
-            ?: try {
-                pubKey.hexToByteArrayOrNull()?.toNpub() ?: pubKey.take(16) + "..."
-            } catch (e: Exception) {
-                pubKey.take(16) + "..."
-            }
-
-    val pictureUrl = user?.profilePicture()
-
-    return NoteDisplayData(
-        id = id,
-        pubKeyHex = pubKey,
-        pubKeyDisplay = displayName,
-        profilePictureUrl = pictureUrl,
-        content = content,
-        createdAt = createdAt,
-    )
+    fun updateContactListTo(event: ContactListEvent)
 }
