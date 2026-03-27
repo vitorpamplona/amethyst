@@ -960,6 +960,17 @@ class AccountViewModel(
 
     fun delete(note: Note) = launchSigner { account.delete(note) }
 
+    fun requestToVanish(
+        relay: String,
+        reason: String,
+        createdAt: Long,
+    ) = launchSigner { account.requestToVanish(relay, reason, createdAt) }
+
+    fun requestToVanishFromEverywhere(
+        reason: String,
+        createdAt: Long,
+    ) = launchSigner { account.requestToVanishFromEverywhere(reason, createdAt) }
+
     fun cachedDecrypt(note: Note): String? = account.cachedDecryptContent(note)
 
     fun decrypt(
