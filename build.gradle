@@ -13,6 +13,10 @@ plugins {
 }
 
 allprojects {
+    configurations.configureEach {
+        resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
+    }
+
     apply plugin: 'com.diffplug.spotless'
 
     if (project === rootProject) {
