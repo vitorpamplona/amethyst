@@ -1720,4 +1720,5 @@
     <string name="web_bookmark_delete">Törlés</string>
     <string name="web_bookmark_delete_confirm">Törli ezt a webes könyvjelzőt?</string>
     <string name="web_bookmark_open_url">Webcím megnyitása</string>
+    <!-- NIP-86 Relay Management -->
 </resources>

@@ -70,4 +70,5 @@
     <string name="profile_banner">Profil banneri</string>
     <!-- Kind display names for relay subscription filter chips -->
     <!-- M3 Action Dialog titles -->
+    <!-- NIP-86 Relay Management -->
 </resources>
