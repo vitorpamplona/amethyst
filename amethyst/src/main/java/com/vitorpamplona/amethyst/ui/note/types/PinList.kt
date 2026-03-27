@@ -45,15 +45,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.ShowMoreButton
-import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.PinIcon
 import com.vitorpamplona.amethyst.ui.note.getGradient
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
+import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -66,7 +65,7 @@ fun RenderPinListEvent(
 ) {
     val noteEvent = baseNote.event as? PinListEvent ?: return
 
-    val pins by remember { mutableStateOf(noteEvent.pins()) }
+    val pins by remember { mutableStateOf(noteEvent.pinnedEvents()) }
 
     var expanded by remember { mutableStateOf(false) }
 
@@ -78,7 +77,7 @@ fun RenderPinListEvent(
         }
 
     Text(
-        text = "#${noteEvent.dTag()}",
+        text = "Pinned Notes",
         fontWeight = FontWeight.Bold,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
@@ -103,15 +102,10 @@ fun RenderPinListEvent(
 
                     Spacer(modifier = Modifier.width(5.dp))
 
-                    TranslatableRichTextViewer(
-                        content = pin,
-                        canPreview = true,
-                        quotesLeft = 1,
-                        tags = EmptyTagList,
-                        backgroundColor = backgroundColor,
-                        id = baseNote.idHex,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
+                    Text(
+                        text = NEvent.create(pin.eventId, pin.author, null, pin.relay),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
             }

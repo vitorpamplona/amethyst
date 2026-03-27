@@ -20,11 +20,13 @@
  */
 package com.vitorpamplona.amethyst.ui.components.toasts
 
+import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.toasts.multiline.MultiErrorToastMsg
 import com.vitorpamplona.amethyst.ui.components.toasts.multiline.UserBasedErrorMessage
 import kotlinx.coroutines.flow.MutableStateFlow
 
+@Stable
 class ToastManager {
     val toasts = MutableStateFlow<ToastMsg?>(null)
 

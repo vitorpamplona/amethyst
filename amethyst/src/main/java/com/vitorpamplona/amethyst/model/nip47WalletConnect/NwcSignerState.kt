@@ -64,7 +64,7 @@ import kotlinx.coroutines.launch
  */
 class NwcSignerState(
     val signer: NostrSigner,
-    val nwcFilterAssembler: NWCPaymentFilterAssembler,
+    val nwcFilterAssembler: () -> NWCPaymentFilterAssembler,
     val cache: LocalCache,
     val scope: CoroutineScope,
     val nip47Setup: MutableStateFlow<Nip47WalletConnect.Nip47URINorm?>,
@@ -163,11 +163,13 @@ class NwcSignerState(
                 relay = walletService.relayUri,
             )
 
-        nwcFilterAssembler.subscribe(filter)
+        val assembler = nwcFilterAssembler()
+
+        assembler.subscribe(filter)
 
         scope.launch(Dispatchers.IO) {
             delay(60000)
-            nwcFilterAssembler.unsubscribe(filter)
+            assembler.unsubscribe(filter)
         }
 
         cache.consume(event, null, true, walletService.relayUri) {
@@ -204,11 +206,13 @@ class NwcSignerState(
                 relay = walletService.relayUri,
             )
 
-        nwcFilterAssembler.subscribe(filter)
+        val assembler = nwcFilterAssembler()
+
+        assembler.subscribe(filter)
 
         scope.launch(Dispatchers.IO) {
             delay(60000) // waits 1 minute to complete payment.
-            nwcFilterAssembler.unsubscribe(filter)
+            assembler.unsubscribe(filter)
         }
 
         cache.consume(event, zappedNote, true, walletService.relayUri) {

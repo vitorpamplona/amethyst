@@ -31,7 +31,7 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
-import com.vitorpamplona.quartz.nip03Timestamp.OtsResolverBuilder
+import com.vitorpamplona.quartz.nip03Timestamp.OtsResolver
 import com.vitorpamplona.quartz.nip55AndroidSigner.client.NostrSignerExternal
 import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.NostrSignerWithClientTag
 import com.vitorpamplona.quartz.utils.Log
@@ -45,10 +45,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 
 class AccountCacheState(
-    val geolocationFlow: StateFlow<LocationState.LocationResult>,
-    val nwcFilterAssembler: NWCPaymentFilterAssembler,
+    val geolocationFlow: () -> StateFlow<LocationState.LocationResult>,
+    val nwcFilterAssembler: () -> NWCPaymentFilterAssembler,
     val contentResolverFn: () -> ContentResolver,
-    val otsResolverBuilder: OtsResolverBuilder,
+    val otsResolverBuilder: () -> OtsResolver,
     val cache: LocalCache,
     val client: INostrClient,
 ) {

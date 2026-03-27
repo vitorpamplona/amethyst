@@ -41,12 +41,12 @@ import kotlin.coroutines.cancellation.CancellationException
 class BlossomFetcher(
     private val options: Options,
     private val data: Uri,
-    private val blossomServerResolver: BlossomServerResolver,
+    private val blossomServerResolver: () -> BlossomServerResolver,
     private val networkFetcher: (url: String) -> Fetcher,
 ) : Fetcher {
     override suspend fun fetch(): FetchResult? =
         try {
-            val urlResult = blossomServerResolver.findServers(data.toString())
+            val urlResult = blossomServerResolver().findServers(data.toString())
             networkFetcher(urlResult?.serverUrl ?: data.toString()).fetch()
         } catch (e: Exception) {
             if (e is CancellationException) throw e
@@ -55,7 +55,7 @@ class BlossomFetcher(
 
     @OptIn(ExperimentalCoilApi::class)
     class Factory(
-        val blossomServerResolver: BlossomServerResolver,
+        val blossomServerResolver: () -> BlossomServerResolver,
         val networkClient: (url: String) -> Call.Factory,
     ) : Fetcher.Factory<Uri> {
         private val connectivityCheckerLazy = singleParameterLazy(::ConnectivityChecker)

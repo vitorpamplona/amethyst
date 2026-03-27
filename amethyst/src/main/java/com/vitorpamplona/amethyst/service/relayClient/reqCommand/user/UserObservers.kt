@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
+import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
 import kotlinx.collections.immutable.ImmutableList
@@ -269,6 +270,30 @@ fun observeUserBookmarkCount(
                 .sample(200)
                 .mapLatest { noteState ->
                     (noteState.note.event as? BookmarkListEvent)?.countBookmarks() ?: 0
+                }.distinctUntilChanged()
+                .flowOn(Dispatchers.IO)
+        }
+
+    return flow.collectAsStateWithLifecycle(0)
+}
+
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
+@Composable
+fun observeUserPinnedNotesCount(
+    user: User,
+    accountViewModel: AccountViewModel,
+): State<Int> {
+    UserFinderFilterAssemblerSubscription(user, accountViewModel)
+
+    val flow =
+        remember(user) {
+            accountViewModel
+                .pinnedNotes(user)
+                .flow()
+                .metadata.stateFlow
+                .sample(200)
+                .mapLatest { noteState ->
+                    (noteState.note.event as? PinListEvent)?.countPins() ?: 0
                 }.distinctUntilChanged()
                 .flowOn(Dispatchers.IO)
         }
