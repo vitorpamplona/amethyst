@@ -382,7 +382,7 @@ fun RequestToVanishScreen(
     if (showConfirmDialog) {
         ConfirmVanishDialog(
             isAllRelays = allRelaysSelected,
-            relayUrls = selectedRelayUrls,
+            relays = selectedRelayUrls,
             onConfirm = {
                 showConfirmDialog = false
                 if (allRelaysSelected) {
@@ -406,7 +406,7 @@ fun RequestToVanishScreen(
 @Composable
 private fun ConfirmVanishDialog(
     isAllRelays: Boolean,
-    relayUrls: List<NormalizedRelayUrl>,
+    relays: List<NormalizedRelayUrl>,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -432,7 +432,13 @@ private fun ConfirmVanishDialog(
                     if (isAllRelays) {
                         stringRes(R.string.vanish_confirm_all_relays)
                     } else {
-                        stringRes(R.string.vanish_confirm_single_relay, relayUrls.joinToString(", ") { it.displayUrl() })
+                        val relayNames =
+                            relays.joinToString(
+                                ", ",
+                                limit = 10,
+                                transform = { it.displayUrl() },
+                            )
+                        stringRes(R.string.vanish_confirm_single_relay, relayNames)
                     },
             )
         },
