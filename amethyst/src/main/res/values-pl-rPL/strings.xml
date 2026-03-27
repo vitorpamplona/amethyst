@@ -1715,4 +1715,5 @@
     <string name="web_bookmark_delete">Usuń</string>
     <string name="web_bookmark_delete_confirm">Usunąć tę zakładkę?</string>
     <string name="web_bookmark_open_url">Otwórz adres URL</string>
+    <!-- NIP-86 Relay Management -->
 </resources>
