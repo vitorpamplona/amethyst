@@ -85,6 +85,7 @@ import com.vitorpamplona.amethyst.ui.note.ObserveAndRenderNIP05VerifiedSymbol
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.BackButton
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.kindDisplayName
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.NIP05IconSize
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
@@ -94,6 +95,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip86RelayManagement.rpc.Nip86Method
+import kotlinx.collections.immutable.ImmutableList
 
 @Composable
 fun RelayManagementScreen(
@@ -219,7 +221,7 @@ fun RelayManagementScreen(
 private fun RelayManagementContent(
     pad: PaddingValues,
     viewModel: RelayManagementViewModel,
-    supportedMethods: List<String>,
+    supportedMethods: ImmutableList<String>,
     error: String?,
     accountViewModel: AccountViewModel,
 ) {
@@ -881,8 +883,11 @@ private fun KindEntryCard(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            val nameResId = kindDisplayName(kind)
+            val name = if (nameResId != -1) stringResource(nameResId) else ""
+
             Text(
-                "Kind $kind",
+                "Kind $kind: $name",
                 style = MaterialTheme.typography.bodyMedium,
                 fontFamily = FontFamily.Monospace,
             )

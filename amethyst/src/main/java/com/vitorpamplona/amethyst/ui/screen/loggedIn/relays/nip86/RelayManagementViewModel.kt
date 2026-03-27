@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.nip86
 
+import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -34,6 +35,9 @@ import com.vitorpamplona.quartz.nip86RelayManagement.rpc.BannedPubkey
 import com.vitorpamplona.quartz.nip86RelayManagement.rpc.BlockedIp
 import com.vitorpamplona.quartz.nip86RelayManagement.rpc.EventNeedingModeration
 import com.vitorpamplona.quartz.nip86RelayManagement.rpc.Nip86Request
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -45,6 +49,7 @@ class PubkeyUser(
     val reason: String?,
 )
 
+@Stable
 class RelayManagementViewModel(
     relayUrl: NormalizedRelayUrl,
     signer: NostrSigner,
@@ -52,8 +57,8 @@ class RelayManagementViewModel(
 ) : ViewModel() {
     val client = Nip86Client(relayUrl, signer)
 
-    private val _supportedMethods = MutableStateFlow<List<String>>(emptyList())
-    val supportedMethods: StateFlow<List<String>> = _supportedMethods
+    private val _supportedMethods = MutableStateFlow<ImmutableList<String>>(persistentListOf())
+    val supportedMethods: StateFlow<ImmutableList<String>> = _supportedMethods
 
     private val _bannedPubkeys = MutableStateFlow<List<BannedPubkey>>(emptyList())
     val bannedPubkeys: StateFlow<List<BannedPubkey>> = _bannedPubkeys
@@ -101,7 +106,7 @@ class RelayManagementViewModel(
             if (response.error != null) {
                 _error.value = response.error
             } else {
-                _supportedMethods.value = client.parseSupportedMethods(response) ?: emptyList()
+                _supportedMethods.value = client.parseSupportedMethods(response)?.toImmutableList() ?: persistentListOf()
             }
             _isLoading.value = false
         }

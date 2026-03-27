@@ -528,7 +528,7 @@ fun RelayInformationBody(
 // Active subscriptions + outbox display
 // ---------------------------------------------------------------------------
 
-private fun kindDisplayName(kind: Int): Int =
+fun kindDisplayName(kind: Int): Int =
     when (kind) {
         AdvertisedRelayListEvent.KIND -> R.string.kind_outbox_relays
         AppDefinitionEvent.KIND -> R.string.kind_apps
