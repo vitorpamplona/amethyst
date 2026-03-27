@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.nip86
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.nip86RelayManagement.Nip86Retriever
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -64,6 +66,12 @@ class RelayManagementViewModel(
     private val _blockedIps = MutableStateFlow<List<BlockedIp>>(emptyList())
     val blockedIps: StateFlow<List<BlockedIp>> = _blockedIps
 
+    private val _bannedPubkeyUsers = MutableStateFlow<Map<String, User?>>(emptyMap())
+    val bannedPubkeyUsers: StateFlow<Map<String, User?>> = _bannedPubkeyUsers
+
+    private val _allowedPubkeyUsers = MutableStateFlow<Map<String, User?>>(emptyMap())
+    val allowedPubkeyUsers: StateFlow<Map<String, User?>> = _allowedPubkeyUsers
+
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
@@ -90,7 +98,9 @@ class RelayManagementViewModel(
             if (response.error != null) {
                 _error.value = response.error
             } else {
-                _bannedPubkeys.value = client.parseBannedPubkeys(response) ?: emptyList()
+                val pubkeys = client.parseBannedPubkeys(response) ?: emptyList()
+                _bannedPubkeys.value = pubkeys
+                _bannedPubkeyUsers.value = resolvePubkeysToUsers(pubkeys.map { it.pubkey })
             }
         }
     }
@@ -101,10 +111,14 @@ class RelayManagementViewModel(
             if (response.error != null) {
                 _error.value = response.error
             } else {
-                _allowedPubkeys.value = client.parseAllowedPubkeys(response) ?: emptyList()
+                val pubkeys = client.parseAllowedPubkeys(response) ?: emptyList()
+                _allowedPubkeys.value = pubkeys
+                _allowedPubkeyUsers.value = resolvePubkeysToUsers(pubkeys.map { it.pubkey })
             }
         }
     }
+
+    private fun resolvePubkeysToUsers(pubkeys: List<String>): Map<String, User?> = pubkeys.associateWith { LocalCache.getUserIfExists(it) }
 
     fun loadBannedEvents() {
         viewModelScope.launch {
