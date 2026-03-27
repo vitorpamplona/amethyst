@@ -89,6 +89,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.HashtagScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.HomeScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ShortNotePostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.VoiceReplyScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.nip75Goals.NewGoalScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.keyBackup.AccountBackupScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.display.lists.PeopleListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.display.packs.FollowPackScreen
@@ -293,7 +294,14 @@ fun BuildNavigation(
                 nav = nav,
             )
         }
-
+      
+        composableFromBottom<Route.NewGoal> {
+            NewGoalScreen(
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+      
         composableFromBottomArgs<Route.HashtagPost> {
             HashtagPostScreen(
                 hashtag = it.hashtag,

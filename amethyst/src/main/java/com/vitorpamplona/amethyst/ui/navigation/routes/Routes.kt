@@ -298,6 +298,8 @@ sealed class Route {
         val draft: String? = null,
     ) : Route()
 
+    @Serializable data object NewGoal : Route()
+
     @Serializable
     data class NewLongFormPost(
         val draft: String? = null,
