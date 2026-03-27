@@ -153,6 +153,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderFhirResource
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitIssueEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitPatchEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitRepositoryEvent
+import com.vitorpamplona.amethyst.ui.note.types.RenderGoal
 import com.vitorpamplona.amethyst.ui.note.types.RenderHighlight
 import com.vitorpamplona.amethyst.ui.note.types.RenderInteractiveStory
 import com.vitorpamplona.amethyst.ui.note.types.RenderLiveActivityChatMessage
@@ -252,6 +253,7 @@ import com.vitorpamplona.quartz.nip71Video.VideoEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.communityAddress
 import com.vitorpamplona.quartz.nip72ModCommunities.isACommunityPost
+import com.vitorpamplona.quartz.nip75ZapGoals.GoalEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
@@ -688,6 +690,8 @@ private fun FullBleedNoteCompose(
                     RenderCalendarTimeSlotEvent(baseNote, accountViewModel, nav)
                 } else if (noteEvent is CalendarDateSlotEvent) {
                     RenderCalendarDateSlotEvent(baseNote, accountViewModel, nav)
+                } else if (noteEvent is GoalEvent) {
+                    RenderGoal(baseNote, accountViewModel, nav)
                 } else if (noteEvent is CommentEvent) {
                     RenderTextEvent(
                         baseNote,

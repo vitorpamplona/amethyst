@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip75ZapGoals
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
@@ -31,7 +32,7 @@ import com.vitorpamplona.quartz.nip75ZapGoals.tags.RelayListTag
 
 fun TagArrayBuilder<GoalEvent>.amount(amountInMillisats: Long) = addUnique(AmountTag.assemble(amountInMillisats))
 
-fun TagArrayBuilder<GoalEvent>.relays(urls: List<String>) = add(RelayListTag.assemble(urls))
+fun TagArrayBuilder<GoalEvent>.relays(urls: List<NormalizedRelayUrl>) = add(RelayListTag.assemble(urls))
 
 fun TagArrayBuilder<GoalEvent>.summary(summary: String) = addUnique(SummaryTag.assemble(summary))
 
