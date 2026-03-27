@@ -2016,10 +2016,10 @@
     <string name="relay_management_tab_kinds">Kinds</string>
     <string name="relay_management_tab_ips">IPs</string>
     <string name="relay_management_tab_settings">Settings</string>
-    <string name="relay_management_banned_pubkeys">Banned Pubkeys</string>
-    <string name="relay_management_no_banned_pubkeys">No banned pubkeys</string>
-    <string name="relay_management_allowed_pubkeys">Allowed Pubkeys</string>
-    <string name="relay_management_no_allowed_pubkeys">No allowed pubkeys</string>
+    <string name="relay_management_banned_pubkeys">Banned Users</string>
+    <string name="relay_management_no_banned_pubkeys">No banned users</string>
+    <string name="relay_management_allowed_pubkeys">Allowed Users</string>
+    <string name="relay_management_no_allowed_pubkeys">No allowed users</string>
     <string name="relay_management_moderation_queue">Moderation Queue</string>
     <string name="relay_management_no_moderation_events">No events needing moderation</string>
     <string name="relay_management_banned_events">Banned Events</string>
