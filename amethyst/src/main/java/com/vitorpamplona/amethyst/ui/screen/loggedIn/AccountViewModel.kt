@@ -129,6 +129,7 @@ import com.vitorpamplona.quartz.nip28PublicChat.base.IsInPublicChatChannel
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
+import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
@@ -845,6 +846,42 @@ class AccountViewModel(
     fun hashtagFollows(user: User): Note = LocalCache.getOrCreateAddressableNote(HashtagListEvent.createAddress(user.pubkeyHex))
 
     fun bookmarks(user: User): Note = LocalCache.getOrCreateAddressableNote(BookmarkListEvent.createBookmarkAddress(user.pubkeyHex))
+
+    fun pinnedNotes(user: User): Note = LocalCache.getOrCreateAddressableNote(PinListEvent.createPinAddress(user.pubkeyHex))
+
+    fun addPin(note: Note) {
+        if (settings.isCompleteUIMode()) {
+            launchSigner {
+                account.createAddPinEvent(note)?.let { (event, relays) ->
+                    broadcastTracker.trackBroadcast(
+                        event = event,
+                        relays = relays,
+                        client = account.client,
+                    )
+                    account.consumePinEvent(event)
+                }
+            }
+        } else {
+            launchSigner { account.addPin(note) }
+        }
+    }
+
+    fun removePin(note: Note) {
+        if (settings.isCompleteUIMode()) {
+            launchSigner {
+                account.createRemovePinEvent(note)?.let { (event, relays) ->
+                    broadcastTracker.trackBroadcast(
+                        event = event,
+                        relays = relays,
+                        client = account.client,
+                    )
+                    account.consumePinEvent(event)
+                }
+            }
+        } else {
+            launchSigner { account.removePin(note) }
+        }
+    }
 
     fun addPrivateBookmark(note: Note) {
         if (settings.isCompleteUIMode()) {
