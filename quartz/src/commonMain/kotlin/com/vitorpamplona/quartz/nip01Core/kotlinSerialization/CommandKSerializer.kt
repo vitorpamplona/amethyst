@@ -27,6 +27,9 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CountCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
+import com.vitorpamplona.quartz.nip77Negentropy.NegCloseCmd
+import com.vitorpamplona.quartz.nip77Negentropy.NegMsgCmd
+import com.vitorpamplona.quartz.nip77Negentropy.NegOpenCmd
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.descriptors.buildClassSerialDescriptor
@@ -78,6 +81,21 @@ object CommandKSerializer : KSerializer<Command> {
                             add(FilterKSerializer.serializeToElement(filter))
                         }
                     }
+
+                    is NegOpenCmd -> {
+                        add(JsonPrimitive(value.subId))
+                        add(FilterKSerializer.serializeToElement(value.filter))
+                        add(JsonPrimitive(value.initialMessage))
+                    }
+
+                    is NegMsgCmd -> {
+                        add(JsonPrimitive(value.subId))
+                        add(JsonPrimitive(value.message))
+                    }
+
+                    is NegCloseCmd -> {
+                        add(JsonPrimitive(value.subId))
+                    }
                 }
             }
         jsonEncoder.encodeJsonElement(element)
@@ -117,6 +135,27 @@ object CommandKSerializer : KSerializer<Command> {
 
             AuthCmd.LABEL -> {
                 AuthCmd(EventKSerializer.deserializeFromElement(array[1].jsonObject) as RelayAuthEvent)
+            }
+
+            NegOpenCmd.LABEL -> {
+                NegOpenCmd(
+                    subId = array[1].jsonPrimitive.content,
+                    filter = FilterKSerializer.deserializeFromElement(array[2].jsonObject),
+                    initialMessage = array[3].jsonPrimitive.content,
+                )
+            }
+
+            NegMsgCmd.LABEL -> {
+                NegMsgCmd(
+                    subId = array[1].jsonPrimitive.content,
+                    message = array[2].jsonPrimitive.content,
+                )
+            }
+
+            NegCloseCmd.LABEL -> {
+                NegCloseCmd(
+                    subId = array[1].jsonPrimitive.content,
+                )
             }
 
             else -> {

@@ -29,6 +29,9 @@ import com.vitorpamplona.quartz.nip01Core.jackson.EventDeserializer
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.ManualFilterDeserializer
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
+import com.vitorpamplona.quartz.nip77Negentropy.NegCloseCmd
+import com.vitorpamplona.quartz.nip77Negentropy.NegMsgCmd
+import com.vitorpamplona.quartz.nip77Negentropy.NegOpenCmd
 
 class CommandDeserializer : StdDeserializer<Command>(Command::class.java) {
     val eventDeserializer = EventDeserializer()
@@ -94,6 +97,33 @@ class CommandDeserializer : StdDeserializer<Command>(Command::class.java) {
                     jp.nextToken()
                     AuthCmd(
                         event = eventDeserializer.deserialize(jp, ctxt) as RelayAuthEvent,
+                    )
+                }
+
+                NegOpenCmd.LABEL -> {
+                    val subId = jp.nextTextValue()
+                    jp.nextToken()
+                    val filterObj: ObjectNode = jp.codec.readTree(jp)
+                    val filter = ManualFilterDeserializer.fromJson(filterObj)
+                    val initialMessage = jp.nextTextValue()
+
+                    NegOpenCmd(
+                        subId = subId,
+                        filter = filter,
+                        initialMessage = initialMessage,
+                    )
+                }
+
+                NegMsgCmd.LABEL -> {
+                    NegMsgCmd(
+                        subId = jp.nextTextValue(),
+                        message = jp.nextTextValue(),
+                    )
+                }
+
+                NegCloseCmd.LABEL -> {
+                    NegCloseCmd(
+                        subId = jp.nextTextValue(),
                     )
                 }
 

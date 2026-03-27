@@ -118,6 +118,9 @@ kotlin {
                 // SQLite KMP driver for event store
                 api(libs.androidx.sqlite)
                 implementation(libs.androidx.sqlite.bundled)
+                
+                // Negentropy set reconciliation (NIP-77)
+                api(libs.negentropy.kmp)
             }
         }
 

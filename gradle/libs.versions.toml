@@ -41,6 +41,7 @@ materialIconsExtended = "1.7.3"
 media3 = "1.9.3"
 mockk = "1.14.9"
 kotlinx-coroutines-test = "1.10.2"
+negentropyKmp = "1.0.1"
 netUrlencoderLibVersion = "1.6.0"
 navigationCompose = "2.9.7"
 okhttp = "5.3.2"
@@ -154,6 +155,7 @@ markdown-ui-material3 = { group = "com.github.vitorpamplona.compose-richtext", n
 mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
 mockk-android = { group = "io.mockk", name = "mockk-android", version.ref = "mockk" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinx-coroutines-test"}
+negentropy-kmp = { module = "com.vitorpamplona.negentropy:kmp-negentropy", version.ref = "negentropyKmp" }
 net-thauvin-erik-urlencoder-lib = { module = "net.thauvin.erik.urlencoder:urlencoder-lib", version.ref = "netUrlencoderLibVersion" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 okhttpCoroutines = { group = "com.squareup.okhttp3", name = "okhttp-coroutines", version.ref = "okhttp" }

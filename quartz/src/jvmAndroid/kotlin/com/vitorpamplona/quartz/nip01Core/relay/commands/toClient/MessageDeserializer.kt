@@ -26,6 +26,8 @@ import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.vitorpamplona.quartz.nip01Core.jackson.EventDeserializer
+import com.vitorpamplona.quartz.nip77Negentropy.NegErrMessage
+import com.vitorpamplona.quartz.nip77Negentropy.NegMsgMessage
 
 class MessageDeserializer : StdDeserializer<Message>(Message::class.java) {
     val eventDeserializer = EventDeserializer()
@@ -98,6 +100,20 @@ class MessageDeserializer : StdDeserializer<Message>(Message::class.java) {
                     CountMessage(
                         queryId = queryId,
                         result = CountResultDeserializer.fromJson(result),
+                    )
+                }
+
+                NegMsgMessage.LABEL -> {
+                    NegMsgMessage(
+                        subId = jp.nextTextValue(),
+                        message = jp.nextTextValue(),
+                    )
+                }
+
+                NegErrMessage.LABEL -> {
+                    NegErrMessage(
+                        subId = jp.nextTextValue(),
+                        reason = jp.nextTextValue() ?: "",
                     )
                 }
 
