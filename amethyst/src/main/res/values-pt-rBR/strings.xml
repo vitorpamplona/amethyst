@@ -1700,5 +1700,6 @@
     <string name="web_bookmark_delete">Excluir</string>
     <string name="web_bookmark_delete_confirm">Excluir este marcador web?</string>
     <string name="web_bookmark_open_url">Abrir URL</string>
+    <!-- NIP-75 Zap Goals -->
     <!-- NIP-86 Relay Management -->
 </resources>

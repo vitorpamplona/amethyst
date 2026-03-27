@@ -1723,6 +1723,7 @@
     <string name="web_bookmark_delete">Törlés</string>
     <string name="web_bookmark_delete_confirm">Törli ezt a webes könyvjelzőt?</string>
     <string name="web_bookmark_open_url">Webcím megnyitása</string>
+    <!-- NIP-75 Zap Goals -->
     <string name="request_to_vanish">Törlési kérés</string>
     <string name="request_to_vanish_description">Kérés az átjátszóknak, hogy a kiválasztott dátumig visszamenőleg véglegesen töröljék az Ön összes adatát. Ez a művelet a NIP-62 szabványon alapul, és egyes joghatóságokban jogilag kötelező érvényű.</string>
     <string name="vanish_select_relay">Egy átjátszó kiválasztása</string>
