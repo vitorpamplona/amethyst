@@ -34,9 +34,16 @@ import com.vitorpamplona.quartz.nip86RelayManagement.rpc.BannedPubkey
 import com.vitorpamplona.quartz.nip86RelayManagement.rpc.BlockedIp
 import com.vitorpamplona.quartz.nip86RelayManagement.rpc.EventNeedingModeration
 import com.vitorpamplona.quartz.nip86RelayManagement.rpc.Nip86Request
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+
+class PubkeyUser(
+    val user: User,
+    val reason: String?,
+)
 
 class RelayManagementViewModel(
     relayUrl: NormalizedRelayUrl,
@@ -66,11 +73,19 @@ class RelayManagementViewModel(
     private val _blockedIps = MutableStateFlow<List<BlockedIp>>(emptyList())
     val blockedIps: StateFlow<List<BlockedIp>> = _blockedIps
 
-    private val _bannedPubkeyUsers = MutableStateFlow<Map<String, User?>>(emptyMap())
-    val bannedPubkeyUsers: StateFlow<Map<String, User?>> = _bannedPubkeyUsers
+    val bannedPubkeyUsers: Flow<List<PubkeyUser>> =
+        _bannedPubkeys.map { list ->
+            list.mapNotNull { entry ->
+                LocalCache.checkGetOrCreateUser(entry.pubkey)?.let { PubkeyUser(it, entry.reason) }
+            }
+        }
 
-    private val _allowedPubkeyUsers = MutableStateFlow<Map<String, User?>>(emptyMap())
-    val allowedPubkeyUsers: StateFlow<Map<String, User?>> = _allowedPubkeyUsers
+    val allowedPubkeyUsers: Flow<List<PubkeyUser>> =
+        _allowedPubkeys.map { list ->
+            list.mapNotNull { entry ->
+                LocalCache.checkGetOrCreateUser(entry.pubkey)?.let { PubkeyUser(it, entry.reason) }
+            }
+        }
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
@@ -98,9 +113,7 @@ class RelayManagementViewModel(
             if (response.error != null) {
                 _error.value = response.error
             } else {
-                val pubkeys = client.parseBannedPubkeys(response) ?: emptyList()
-                _bannedPubkeys.value = pubkeys
-                _bannedPubkeyUsers.value = resolvePubkeysToUsers(pubkeys.map { it.pubkey })
+                _bannedPubkeys.value = client.parseBannedPubkeys(response) ?: emptyList()
             }
         }
     }
@@ -111,14 +124,10 @@ class RelayManagementViewModel(
             if (response.error != null) {
                 _error.value = response.error
             } else {
-                val pubkeys = client.parseAllowedPubkeys(response) ?: emptyList()
-                _allowedPubkeys.value = pubkeys
-                _allowedPubkeyUsers.value = resolvePubkeysToUsers(pubkeys.map { it.pubkey })
+                _allowedPubkeys.value = client.parseAllowedPubkeys(response) ?: emptyList()
             }
         }
     }
-
-    private fun resolvePubkeysToUsers(pubkeys: List<String>): Map<String, User?> = pubkeys.associateWith { LocalCache.getUserIfExists(it) }
 
     fun loadBannedEvents() {
         viewModelScope.launch {

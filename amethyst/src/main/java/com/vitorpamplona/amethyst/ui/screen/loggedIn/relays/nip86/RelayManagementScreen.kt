@@ -338,10 +338,8 @@ private fun PubkeysTab(
     supportedMethods: List<String>,
     accountViewModel: AccountViewModel,
 ) {
-    val bannedPubkeys by viewModel.bannedPubkeys.collectAsState()
-    val allowedPubkeys by viewModel.allowedPubkeys.collectAsState()
-    val bannedPubkeyUsers by viewModel.bannedPubkeyUsers.collectAsState()
-    val allowedPubkeyUsers by viewModel.allowedPubkeyUsers.collectAsState()
+    val bannedPubkeyUsers by viewModel.bannedPubkeyUsers.collectAsStateWithLifecycle(emptyList())
+    val allowedPubkeyUsers by viewModel.allowedPubkeyUsers.collectAsStateWithLifecycle(emptyList())
     var showBanDialog by remember { mutableStateOf(false) }
     var showAllowDialog by remember { mutableStateOf(false) }
 
@@ -358,17 +356,14 @@ private fun PubkeysTab(
                 )
             }
 
-            if (bannedPubkeys.isEmpty()) {
+            if (bannedPubkeyUsers.isEmpty()) {
                 item { EmptyListMessage(stringResource(R.string.relay_management_no_banned_pubkeys)) }
             } else {
-                items(bannedPubkeys, key = { it.pubkey }) { entry ->
-                    val user = bannedPubkeyUsers[entry.pubkey]
+                items(bannedPubkeyUsers, key = { it.user.pubkeyHex }) { entry ->
                     PubkeyUserCard(
-                        pubkey = entry.pubkey,
-                        user = user,
-                        reason = entry.reason,
+                        entry = entry,
                         showRemove = supportedMethods.contains(Nip86Method.UNBAN_PUBKEY),
-                        onRemove = { viewModel.unbanPubkey(entry.pubkey) },
+                        onRemove = { viewModel.unbanPubkey(entry.user.pubkeyHex) },
                         accountViewModel = accountViewModel,
                     )
                 }
@@ -385,17 +380,14 @@ private fun PubkeysTab(
                 )
             }
 
-            if (allowedPubkeys.isEmpty()) {
+            if (allowedPubkeyUsers.isEmpty()) {
                 item { EmptyListMessage(stringResource(R.string.relay_management_no_allowed_pubkeys)) }
             } else {
-                items(allowedPubkeys, key = { it.pubkey }) { entry ->
-                    val user = allowedPubkeyUsers[entry.pubkey]
+                items(allowedPubkeyUsers, key = { it.user.pubkeyHex }) { entry ->
                     PubkeyUserCard(
-                        pubkey = entry.pubkey,
-                        user = user,
-                        reason = entry.reason,
+                        entry = entry,
                         showRemove = supportedMethods.contains(Nip86Method.UNALLOW_PUBKEY),
-                        onRemove = { viewModel.unallowPubkey(entry.pubkey) },
+                        onRemove = { viewModel.unallowPubkey(entry.user.pubkeyHex) },
                         accountViewModel = accountViewModel,
                     )
                 }
@@ -430,59 +422,48 @@ private fun PubkeysTab(
 
 @Composable
 private fun PubkeyUserCard(
-    pubkey: String,
-    user: User?,
-    reason: String?,
+    entry: PubkeyUser,
     showRemove: Boolean,
     onRemove: () -> Unit,
     accountViewModel: AccountViewModel,
 ) {
-    if (user != null) {
-        SlimListItem(
-            modifier = Modifier.fillMaxWidth(),
-            leadingContent = {
-                ClickableUserPicture(user, Size55dp, accountViewModel = accountViewModel, onClick = null)
-            },
-            headlineContent = {
-                UsernameDisplay(user, accountViewModel = accountViewModel)
-            },
-            supportingContent = {
-                Column {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center,
-                    ) {
-                        PubkeyNip05Row(user, accountViewModel)
-                    }
-                    reason?.let {
-                        Text(
-                            it,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
+    SlimListItem(
+        modifier = Modifier.fillMaxWidth(),
+        leadingContent = {
+            ClickableUserPicture(entry.user, Size55dp, accountViewModel = accountViewModel, onClick = null)
+        },
+        headlineContent = {
+            UsernameDisplay(entry.user, accountViewModel = accountViewModel)
+        },
+        supportingContent = {
+            Column {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                ) {
+                    PubkeyNip05Row(entry.user, accountViewModel)
                 }
-            },
-            trailingContent = {
-                if (showRemove) {
-                    IconButton(onClick = onRemove) {
-                        Icon(
-                            Icons.Default.Close,
-                            contentDescription = stringResource(R.string.relay_management_remove),
-                            tint = MaterialTheme.colorScheme.error,
-                        )
-                    }
+                entry.reason?.let {
+                    Text(
+                        it,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
-            },
-        )
-    } else {
-        HexEntryCard(
-            hex = pubkey,
-            reason = reason,
-            showRemove = showRemove,
-            onRemove = onRemove,
-        )
-    }
+            }
+        },
+        trailingContent = {
+            if (showRemove) {
+                IconButton(onClick = onRemove) {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = stringResource(R.string.relay_management_remove),
+                        tint = MaterialTheme.colorScheme.error,
+                    )
+                }
+            }
+        },
+    )
 }
 
 @Composable
