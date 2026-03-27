@@ -87,8 +87,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.mutual.TabMutualCon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.mutual.dal.UserProfileMutualFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.newthreads.TabNotesNewThreads
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.newthreads.dal.UserProfileNewThreadsFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.pinnedNotes.PinnedNotesTabHeader
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.pinnedNotes.TabPinnedNotes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.pinnedNotes.dal.UserProfilePinnedNotesFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.relays.RelaysTabHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.relays.TabRelays
@@ -408,7 +406,7 @@ private fun RenderScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val pagerState = rememberPagerState { 12 }
+    val pagerState = rememberPagerState { 11 }
 
     Column {
         ProfileHeader(baseUser, appRecommendations, externalIdentities, nav, accountViewModel)
@@ -430,7 +428,6 @@ private fun RenderScreen(
                 followersFeedViewModel,
                 zapFeedViewModel,
                 bookmarksFeedViewModel,
-                pinnedNotesFeedViewModel,
                 galleryFeedViewModel,
                 reportsFeedViewModel,
                 accountViewModel,
@@ -485,7 +482,7 @@ private fun CreateAndRenderPages(
     )
 
     when (page) {
-        0 -> TabNotesNewThreads(threadsViewModel, accountViewModel, nav)
+        0 -> TabNotesNewThreads(threadsViewModel, pinnedNotesFeedViewModel, accountViewModel, nav)
         1 -> TabNotesConversations(repliesViewModel, accountViewModel, nav)
         2 -> TabMutualConversations(mutualViewModel, accountViewModel, nav)
         3 -> TabGallery(galleryFeedViewModel, accountViewModel, nav)
@@ -493,10 +490,9 @@ private fun CreateAndRenderPages(
         5 -> TabFollowers(followersFeedViewModel, accountViewModel, nav)
         6 -> TabReceivedZaps(baseUser, zapFeedViewModel, accountViewModel, nav)
         7 -> TabBookmarks(bookmarksFeedViewModel, accountViewModel, nav)
-        8 -> TabPinnedNotes(pinnedNotesFeedViewModel, accountViewModel, nav)
-        9 -> TabFollowedTags(baseUser, accountViewModel, nav)
-        10 -> TabReports(baseUser, reportsFeedViewModel, accountViewModel, nav)
-        11 -> TabRelays(baseUser, accountViewModel, nav)
+        8 -> TabFollowedTags(baseUser, accountViewModel, nav)
+        9 -> TabReports(baseUser, reportsFeedViewModel, accountViewModel, nav)
+        10 -> TabRelays(baseUser, accountViewModel, nav)
     }
 }
 
@@ -526,7 +522,6 @@ private fun CreateAndRenderTabs(
     followersFeedViewModel: UserProfileFollowersUserFeedViewModel,
     zapFeedViewModel: UserProfileZapsViewModel,
     bookmarksFeedViewModel: UserProfileBookmarksFeedViewModel,
-    pinnedNotesFeedViewModel: UserProfilePinnedNotesFeedViewModel,
     galleryFeedViewModel: UserProfileGalleryFeedViewModel,
     reportsFeedViewModel: UserProfileReportFeedViewModel,
     accountViewModel: AccountViewModel,
@@ -543,7 +538,6 @@ private fun CreateAndRenderTabs(
             { FollowersTabHeader(baseUser, followersFeedViewModel, accountViewModel) },
             { ZapTabHeader(zapFeedViewModel, accountViewModel) },
             { BookmarkTabHeader(baseUser, accountViewModel) },
-            { PinnedNotesTabHeader(baseUser, accountViewModel) },
             { FollowedTagsTabHeader(baseUser, accountViewModel) },
             { ReportsTabHeader(baseUser, reportsFeedViewModel, accountViewModel) },
             { RelaysTabHeader(baseUser, accountViewModel) },
