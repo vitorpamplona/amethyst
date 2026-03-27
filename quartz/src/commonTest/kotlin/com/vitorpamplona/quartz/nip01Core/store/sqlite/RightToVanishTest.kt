@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip01Core.store.sqlite
 
 import androidx.sqlite.SQLiteException
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
@@ -49,7 +50,7 @@ class RightToVanishTest : BaseDBTest() {
             db.assertQuery(note2, Filter(ids = listOf(note2.id)))
             db.assertQuery(note3, Filter(ids = listOf(note3.id)))
 
-            val vanish = signer.sign(RequestToVanishEvent.build("wss://quartz.local", createdAt = time + 2))
+            val vanish = signer.sign(RequestToVanishEvent.build("wss://quartz.local".normalizeRelayUrl(), createdAt = time + 2))
 
             db.insert(vanish)
 
@@ -86,14 +87,14 @@ class RightToVanishTest : BaseDBTest() {
             db.assertQuery(wrap1, Filter(ids = listOf(wrap1.id)))
             db.assertQuery(wrap2, Filter(ids = listOf(wrap2.id)))
 
-            val randomVanishToWrap = signer.sign(RequestToVanishEvent.build("wss://quartz.local", createdAt = time + 2))
+            val randomVanishToWrap = signer.sign(RequestToVanishEvent.build("wss://quartz.local".normalizeRelayUrl(), createdAt = time + 2))
 
             db.insert(randomVanishToWrap)
 
             db.assertQuery(wrap1, Filter(ids = listOf(wrap1.id)))
             db.assertQuery(wrap2, Filter(ids = listOf(wrap2.id)))
 
-            val vanish = me.sign(RequestToVanishEvent.build("wss://quartz.local", createdAt = time + 2))
+            val vanish = me.sign(RequestToVanishEvent.build("wss://quartz.local".normalizeRelayUrl(), createdAt = time + 2))
 
             db.insert(vanish)
 
