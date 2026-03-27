@@ -574,6 +574,4 @@
     <string name="accessibility_scan_qr_code">QR কোড স্ক্যান করুন</string>
     <!-- Kind display names for relay subscription filter chips -->
     <!-- M3 Action Dialog titles -->
-    <!-- NIP-75 Zap Goals -->
-    <!-- NIP-86 Relay Management -->
 </resources>

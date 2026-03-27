@@ -35,6 +35,4 @@
     <string name="no_zap_amount_setup_long_press_to_change">Нема подешавања износа Зап. Дуго притисните да бисте променили</string>
     <!-- Kind display names for relay subscription filter chips -->
     <!-- M3 Action Dialog titles -->
-    <!-- NIP-75 Zap Goals -->
-    <!-- NIP-86 Relay Management -->
 </resources>
