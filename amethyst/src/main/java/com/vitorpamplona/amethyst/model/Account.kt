@@ -2055,7 +2055,7 @@ class Account(
         val template = RequestToVanishEvent.build(relays, reason, createdAt)
         val signedEvent = signer.sign(template)
         cache.justConsumeMyOwnEvent(signedEvent)
-        client.send(signedEvent, relays.toSet())
+        client.send(signedEvent, outboxRelays.flow.value + relays.toSet())
     }
 
     suspend fun requestToVanishFromEverywhere(
