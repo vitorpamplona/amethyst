@@ -145,6 +145,8 @@ fun AppNavigation(
         BuildNavigation(accountViewModel, nav)
     }
 
+    NavigateIfIntentRequested(nav, accountViewModel, accountSessionManager)
+
     DisplayErrorMessages(accountViewModel.toastManager, accountViewModel, nav)
     DisplayNotifyMessages(accountViewModel, nav)
     DisplayCrashMessages(accountViewModel, nav)
