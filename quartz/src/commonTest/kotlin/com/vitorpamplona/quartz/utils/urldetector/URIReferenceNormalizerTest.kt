@@ -89,5 +89,7 @@ class URIReferenceNormalizerTest {
 
         // Already normalized
         assertEquals("http://example.com/~user", Rfc3986.normalize("http://example.com/~user"))
+
+        assertEquals("wss://localhost:3030/", Rfc3986.normalize("wss://localhost:3030"))
     }
 }

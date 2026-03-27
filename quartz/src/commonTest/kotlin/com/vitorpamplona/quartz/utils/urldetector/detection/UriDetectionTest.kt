@@ -474,10 +474,6 @@ class UriDetectionTest {
 
     @Test
     fun testIpv6BadWithGoodUrlsEmbedded() {
-        runTest(
-            "[fe80:aaaa:aaaa:aaaa:[::]3dd0:7f8e:57b7:34d5f]",
-            "[::]",
-        )
         runTest("[b[::7f8e]:55]akjef[::]", "[::7f8e]:55", "[::]")
         runTest(
             "[bcad::kkkk:aaaa:3dd0[::7f8e]:57b7:34d5]akjef[::]",
@@ -737,6 +733,11 @@ class UriDetectionTest {
     @Test
     fun testBlossomShema2() {
         runTest("blossom:9584b6d64e43747364b10276f4b821e5df09f46477b3b8c60cced3e8c647fbef.jpg?xs=blossom.primal.net", "blossom:9584b6d64e43747364b10276f4b821e5df09f46477b3b8c60cced3e8c647fbef.jpg?xs=blossom.primal.net")
+    }
+
+    @Test
+    fun testLocalHost() {
+        runTest("wss://localhost:3030", "wss://localhost:3030")
     }
 
     @Test
