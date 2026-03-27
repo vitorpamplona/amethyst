@@ -220,6 +220,10 @@ sealed class Route {
         val url: String,
     ) : Route()
 
+    @Serializable data class RelayManagement(
+        val url: String,
+    ) : Route()
+
     @Serializable data class RelayFeed(
         val url: String,
     ) : Route()

@@ -62,6 +62,7 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Payment
 import androidx.compose.material.icons.filled.PrivacyTip
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material.icons.filled.Topic
@@ -254,6 +255,7 @@ import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
 import com.vitorpamplona.quartz.nip75ZapGoals.GoalEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
+import com.vitorpamplona.quartz.nip86RelayManagement.Nip86Client
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
@@ -307,7 +309,23 @@ fun RelayInformationScreen(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                actions = {},
+                actions = {
+                    val relayInfo by loadRelayInfo(relay)
+                    if (Nip86Client.supportsNip86(relayInfo.supported_nips)) {
+                        OutlinedButton(
+                            onClick = { nav.nav(Route.RelayManagement(relay.url)) },
+                            shape = ButtonBorder,
+                        ) {
+                            Icon(
+                                Icons.Default.Shield,
+                                contentDescription = stringRes(R.string.relay_management_button),
+                                modifier = Height25Modifier,
+                            )
+                            Spacer(modifier = StdHorzSpacer)
+                            Text(stringRes(R.string.relay_management_button))
+                        }
+                    }
+                },
                 title = {
                     Text(
                         relay.displayUrl(),
