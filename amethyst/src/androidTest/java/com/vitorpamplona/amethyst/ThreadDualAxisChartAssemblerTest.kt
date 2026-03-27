@@ -70,9 +70,9 @@ class ThreadDualAxisChartAssemblerTest {
             Account(
                 settings = AccountSettings(keyPair = keyPair),
                 signer = NostrSignerInternal(keyPair),
-                geolocationFlow = MutableStateFlow<LocationState.LocationResult>(LocationState.LocationResult.Loading),
-                nwcFilterAssembler = NWCPaymentFilterAssembler(client),
-                otsResolverBuilder = EmptyOtsResolverBuilder,
+                geolocationFlow = { MutableStateFlow<LocationState.LocationResult>(LocationState.LocationResult.Loading) },
+                nwcFilterAssembler = { NWCPaymentFilterAssembler(client) },
+                otsResolverBuilder = { EmptyOtsResolverBuilder.build() },
                 cache = LocalCache,
                 client = client,
                 scope = scope,
