@@ -111,6 +111,7 @@ class TorrentCommentEvent(
 
     fun torrentIds() = tags.firstNotNullOfOrNull(MarkedETag::parseRootId) ?: tags.firstNotNullOfOrNull(ETag::parseId)
 
+    @Suppress("DEPRECATION")
     companion object {
         const val KIND = 2004
         const val ALT_DESCRIPTION = "Comment for a Torrent file"

@@ -34,7 +34,7 @@ allprojects {
                 target 'src/**/*.kt'
 
                 ktlint()
-                licenseHeaderFile rootProject.file('.spotless/copyright.kt'), "package|import|class|object|sealed|open|interface|abstract "
+                licenseHeaderFile rootProject.file('.spotless/copyright.kt'), "@file:|package|import|class|object|sealed|open|interface|abstract "
             }
 
             groovyGradle {
