@@ -51,7 +51,7 @@ import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.SecondaryScrollableTabRow
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
@@ -272,7 +272,7 @@ private fun RelayManagementContent(
         }
 
         if (tabs.isNotEmpty()) {
-            ScrollableTabRow(
+            SecondaryScrollableTabRow(
                 selectedTabIndex = selectedTab.coerceAtMost(tabs.size - 1),
                 edgePadding = 8.dp,
             ) {
