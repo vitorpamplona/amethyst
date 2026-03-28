@@ -137,7 +137,7 @@ class Nip65RelayListViewModel : ViewModel() {
                         RelayCountResult(
                             listOf(
                                 RelayCountResult.CountEntry(
-                                    label = R.string.events,
+                                    label = R.string.events_from_you,
                                     count = result.count,
                                     approximate = result.approximate,
                                 ),
@@ -156,7 +156,7 @@ class Nip65RelayListViewModel : ViewModel() {
                         RelayCountResult(
                             listOf(
                                 RelayCountResult.CountEntry(
-                                    label = R.string.events,
+                                    label = R.string.events_to_you,
                                     count = result.count,
                                     approximate = result.approximate,
                                 ),

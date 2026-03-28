@@ -1917,8 +1917,12 @@
     <string name="event_sync_no_events">no events</string>
     <string name="ots_explorer_settings">Bitcoin Explorer (OTS)</string>
     <string name="events">events</string>
+    <string name="events_from_you">events from you</string>
+    <string name="events_to_you">events to you</string>
+    <string name="searchable_events">searchable events</string>
     <string name="dms">DMs</string>
     <string name="profiles">profiles</string>
+    <string name="relay_settings_lower2">outbox lists</string>
     <string name="relay_settings_lower">relay settings</string>
     <string name="last_seen">Last seen %1$s ago</string>
 
