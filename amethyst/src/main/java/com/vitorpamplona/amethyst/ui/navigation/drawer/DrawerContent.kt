@@ -575,6 +575,15 @@ fun ListContent(
         )
 
         NavigationRow(
+            title = R.string.polls,
+            icon = R.drawable.ic_poll,
+            iconReference = 1,
+            tint = MaterialTheme.colorScheme.onBackground,
+            nav = nav,
+            route = Route.Polls,
+        )
+
+        NavigationRow(
             title = R.string.wallet,
             icon = Icons.Outlined.AccountBalanceWallet,
             tint = MaterialTheme.colorScheme.onBackground,
