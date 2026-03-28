@@ -839,6 +839,8 @@
     <string name="relay_monitor_requirements">Requirements</string>
     <string name="relay_monitor_last_check">Last check</string>
     <string name="relay_monitor_ms">%1$d ms</string>
+    <string name="relay_discovery_accepted_kinds">Accepted Kinds</string>
+    <string name="relay_discovery_geohash">Location</string>
     <string name="relay_active_subscriptions">Active Subscriptions</string>
     <string name="relay_active_outbox">Pending Outbox Events</string>
     <string name="relay_req_subscriptions">REQ Subscriptions (%1$d)</string>

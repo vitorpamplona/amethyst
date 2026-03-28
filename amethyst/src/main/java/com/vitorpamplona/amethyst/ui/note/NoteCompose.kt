@@ -144,6 +144,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderPostApproval
 import com.vitorpamplona.amethyst.ui.note.types.RenderPrivateMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderPublicMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderReaction
+import com.vitorpamplona.amethyst.ui.note.types.RenderRelayDiscovery
 import com.vitorpamplona.amethyst.ui.note.types.RenderReport
 import com.vitorpamplona.amethyst.ui.note.types.RenderTextEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderTextModificationEvent
@@ -244,6 +245,7 @@ import com.vitorpamplona.quartz.nip64Chess.challenge.offer.LiveChessGameChalleng
 import com.vitorpamplona.quartz.nip64Chess.end.LiveChessGameEndEvent
 import com.vitorpamplona.quartz.nip64Chess.game.ChessGameEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.RelayDiscoveryEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
@@ -909,6 +911,10 @@ private fun RenderNoteRow(
 
         is BroadcastRelayListEvent -> {
             DisplayBroadcastRelayList(baseNote, backgroundColor, accountViewModel, nav)
+        }
+
+        is RelayDiscoveryEvent -> {
+            RenderRelayDiscovery(baseNote, accountViewModel, nav)
         }
 
         is PinListEvent -> {
