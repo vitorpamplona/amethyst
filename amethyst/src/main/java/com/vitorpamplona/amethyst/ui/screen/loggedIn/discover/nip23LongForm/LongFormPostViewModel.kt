@@ -700,7 +700,7 @@ class LongFormPostViewModel :
     override fun updateZapFromText() {
         viewModelScope.launch(Dispatchers.IO) {
             val tagger =
-                NewMessageTagger(message.text, emptyList(), emptyList(), accountViewModel)
+                NewMessageTagger(message.text.toString(), emptyList(), emptyList(), accountViewModel)
             tagger.run()
             tagger.pTags?.forEach { taggedUser ->
                 if (!forwardZapTo.value.items.any { it.key == taggedUser }) {

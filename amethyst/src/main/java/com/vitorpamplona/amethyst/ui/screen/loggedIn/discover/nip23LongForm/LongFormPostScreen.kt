@@ -62,8 +62,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
-import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
+import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromFiles
+import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectSingleFromGallery
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakePictureButton
@@ -293,7 +294,7 @@ private fun MarkdownPostScreenBody(
                                 .padding(Size10dp),
                     ) {
                         RenderContentAsMarkdown(
-                            content = postViewModel.message.text,
+                            content = postViewModel.message.text.toString(),
                             tags = EmptyTagList,
                             canPreview = true,
                             quotesLeft = 1,
@@ -304,9 +305,9 @@ private fun MarkdownPostScreenBody(
                     }
                 } else {
                     // Markdown editor
-                    OutlinedTextField(
-                        value = postViewModel.message,
-                        onValueChange = postViewModel::updateMessage,
+                    ThinPaddingTextField(
+                        state = postViewModel.message,
+                        onTextChanged = postViewModel::onMessageChanged,
                         modifier =
                             Modifier
                                 .fillMaxWidth()
@@ -328,7 +329,7 @@ private fun MarkdownPostScreenBody(
                                 focusedBorderColor = Color.Transparent,
                                 unfocusedBorderColor = Color.Transparent,
                             ),
-                        visualTransformation = UrlUserTagTransformation(MaterialTheme.colorScheme.primary),
+                        outputTransformation = UrlUserTagOutputTransformation(MaterialTheme.colorScheme.primary),
                         keyboardOptions =
                             KeyboardOptions.Default.copy(
                                 capitalization = KeyboardCapitalization.Sentences,
