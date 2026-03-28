@@ -28,6 +28,13 @@ import com.vitorpamplona.quartz.utils.startsWithAny
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+@Serializable
+class Birthday {
+    var year: Int? = null
+    var month: Int? = null
+    var day: Int? = null
+}
+
 @Stable
 @Serializable
 class UserMetadata {
@@ -41,6 +48,7 @@ class UserMetadata {
     var about: String? = null
     var bot: Boolean? = null
     var pronouns: String? = null
+    var birthday: Birthday? = null
     var nip05: String? = null
     var domain: String? = null
     var lud06: String? = null
