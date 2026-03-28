@@ -23,11 +23,11 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.nip86
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.nip86RelayManagement.Nip86Retriever
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip86RelayManagement.Nip86Client
 import com.vitorpamplona.quartz.nip86RelayManagement.rpc.AllowedPubkey
 import com.vitorpamplona.quartz.nip86RelayManagement.rpc.BannedEvent
@@ -52,10 +52,10 @@ class PubkeyUser(
 @Stable
 class RelayManagementViewModel(
     relayUrl: NormalizedRelayUrl,
-    signer: NostrSigner,
+    account: Account,
     private val retriever: Nip86Retriever,
 ) : ViewModel() {
-    val client = Nip86Client(relayUrl, signer)
+    val client = Nip86Client(relayUrl, account.signer)
 
     private val _supportedMethods = MutableStateFlow<ImmutableList<String>>(persistentListOf())
     val supportedMethods: StateFlow<ImmutableList<String>> = _supportedMethods
@@ -80,16 +80,18 @@ class RelayManagementViewModel(
 
     val bannedPubkeyUsers: Flow<List<PubkeyUser>> =
         _bannedPubkeys.map { list ->
-            list.mapNotNull { entry ->
-                LocalCache.checkGetOrCreateUser(entry.pubkey)?.let { PubkeyUser(it, entry.reason) }
-            }
+            list
+                .mapNotNull { entry ->
+                    LocalCache.checkGetOrCreateUser(entry.pubkey)?.let { PubkeyUser(it, entry.reason) }
+                }.sortedByDescending { account.isKnown(it.user) }
         }
 
     val allowedPubkeyUsers: Flow<List<PubkeyUser>> =
         _allowedPubkeys.map { list ->
-            list.mapNotNull { entry ->
-                LocalCache.checkGetOrCreateUser(entry.pubkey)?.let { PubkeyUser(it, entry.reason) }
-            }
+            list
+                .mapNotNull { entry ->
+                    LocalCache.checkGetOrCreateUser(entry.pubkey)?.let { PubkeyUser(it, entry.reason) }
+                }.sortedByDescending { account.isKnown(it.user) }
         }
 
     private val _isLoading = MutableStateFlow(false)
@@ -118,7 +120,7 @@ class RelayManagementViewModel(
             if (response.error != null) {
                 _error.value = response.error
             } else {
-                _bannedPubkeys.value = client.parseBannedPubkeys(response) ?: emptyList()
+                _bannedPubkeys.value = client.parseBannedPubkeys(response)?.distinctBy { it.pubkey } ?: emptyList()
             }
         }
     }
@@ -129,7 +131,7 @@ class RelayManagementViewModel(
             if (response.error != null) {
                 _error.value = response.error
             } else {
-                _allowedPubkeys.value = client.parseAllowedPubkeys(response) ?: emptyList()
+                _allowedPubkeys.value = client.parseAllowedPubkeys(response)?.distinctBy { it.pubkey } ?: emptyList()
             }
         }
     }
@@ -140,7 +142,7 @@ class RelayManagementViewModel(
             if (response.error != null) {
                 _error.value = response.error
             } else {
-                _bannedEvents.value = client.parseBannedEvents(response) ?: emptyList()
+                _bannedEvents.value = client.parseBannedEvents(response)?.distinctBy { it.id } ?: emptyList()
             }
         }
     }
@@ -151,7 +153,7 @@ class RelayManagementViewModel(
             if (response.error != null) {
                 _error.value = response.error
             } else {
-                _eventsNeedingModeration.value = client.parseEventsNeedingModeration(response) ?: emptyList()
+                _eventsNeedingModeration.value = client.parseEventsNeedingModeration(response)?.distinctBy { it.id } ?: emptyList()
             }
         }
     }
@@ -162,7 +164,7 @@ class RelayManagementViewModel(
             if (response.error != null) {
                 _error.value = response.error
             } else {
-                _allowedKinds.value = client.parseAllowedKinds(response) ?: emptyList()
+                _allowedKinds.value = client.parseAllowedKinds(response)?.distinctBy { it } ?: emptyList()
             }
         }
     }
@@ -173,7 +175,7 @@ class RelayManagementViewModel(
             if (response.error != null) {
                 _error.value = response.error
             } else {
-                _blockedIps.value = client.parseBlockedIps(response) ?: emptyList()
+                _blockedIps.value = client.parseBlockedIps(response)?.distinctBy { it.ip } ?: emptyList()
             }
         }
     }
