@@ -46,9 +46,9 @@ data class ServiceType(
 }
 
 object ProviderTypes {
+    // Kind 30382: User assertions
     val rank = ServiceType(30382, "rank")
     val followerCount = ServiceType(30382, "followers")
-
     val firstPost = ServiceType(30382, "first_created_at")
     val postCount = ServiceType(30382, "post_cnt")
     val replyCount = ServiceType(30382, "reply_cnt")
@@ -64,4 +64,27 @@ object ProviderTypes {
     val topics = ServiceType(30382, "t")
     val activeFrom = ServiceType(30382, "active_hours_start")
     val activeTo = ServiceType(30382, "active_hours_end")
+
+    // Kind 30383: Event assertions
+    val eventRank = ServiceType(30383, "rank")
+    val eventCommentCount = ServiceType(30383, "comment_cnt")
+    val eventQuoteCount = ServiceType(30383, "quote_cnt")
+    val eventRepostCount = ServiceType(30383, "repost_cnt")
+    val eventReactionCount = ServiceType(30383, "reaction_cnt")
+    val eventZapCount = ServiceType(30383, "zap_cnt")
+    val eventZapAmount = ServiceType(30383, "zap_amount")
+
+    // Kind 30384: Addressable event assertions
+    val addressRank = ServiceType(30384, "rank")
+    val addressCommentCount = ServiceType(30384, "comment_cnt")
+    val addressQuoteCount = ServiceType(30384, "quote_cnt")
+    val addressRepostCount = ServiceType(30384, "repost_cnt")
+    val addressReactionCount = ServiceType(30384, "reaction_cnt")
+    val addressZapCount = ServiceType(30384, "zap_cnt")
+    val addressZapAmount = ServiceType(30384, "zap_amount")
+
+    // Kind 30385: External identifier assertions
+    val externalIdRank = ServiceType(30385, "rank")
+    val externalIdCommentCount = ServiceType(30385, "comment_cnt")
+    val externalIdReactionCount = ServiceType(30385, "reaction_cnt")
 }

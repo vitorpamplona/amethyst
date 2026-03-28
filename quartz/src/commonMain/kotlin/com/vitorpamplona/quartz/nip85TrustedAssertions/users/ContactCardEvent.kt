@@ -31,10 +31,25 @@ import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ActiveHoursEndTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ActiveHoursStartTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.FirstCreatedAtTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.FollowerCountTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.PetNameTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.PostCountTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.RankTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ReactionsCountTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ReplyCountTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ReportsCountReceivedTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ReportsCountSentTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.SummaryTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.TopicTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ZapAmountReceivedTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ZapAmountSentTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ZapAvgAmountDayReceivedTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ZapAvgAmountDaySentTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ZapCountReceivedTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ZapCountSentTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -51,6 +66,36 @@ class ContactCardEvent(
     fun rank() = tags.firstNotNullOfOrNull(RankTag::parse)
 
     fun followerCount() = tags.firstNotNullOfOrNull(FollowerCountTag::parse)
+
+    fun firstCreatedAt() = tags.firstNotNullOfOrNull(FirstCreatedAtTag::parse)
+
+    fun postCount() = tags.firstNotNullOfOrNull(PostCountTag::parse)
+
+    fun replyCount() = tags.firstNotNullOfOrNull(ReplyCountTag::parse)
+
+    fun reactionsCount() = tags.firstNotNullOfOrNull(ReactionsCountTag::parse)
+
+    fun zapAmountReceived() = tags.firstNotNullOfOrNull(ZapAmountReceivedTag::parse)
+
+    fun zapAmountSent() = tags.firstNotNullOfOrNull(ZapAmountSentTag::parse)
+
+    fun zapCountReceived() = tags.firstNotNullOfOrNull(ZapCountReceivedTag::parse)
+
+    fun zapCountSent() = tags.firstNotNullOfOrNull(ZapCountSentTag::parse)
+
+    fun zapAvgAmountDayReceived() = tags.firstNotNullOfOrNull(ZapAvgAmountDayReceivedTag::parse)
+
+    fun zapAvgAmountDaySent() = tags.firstNotNullOfOrNull(ZapAvgAmountDaySentTag::parse)
+
+    fun reportsCountReceived() = tags.firstNotNullOfOrNull(ReportsCountReceivedTag::parse)
+
+    fun reportsCountSent() = tags.firstNotNullOfOrNull(ReportsCountSentTag::parse)
+
+    fun topics() = tags.mapNotNull(TopicTag::parse)
+
+    fun activeHoursStart() = tags.firstNotNullOfOrNull(ActiveHoursStartTag::parse)
+
+    fun activeHoursEnd() = tags.firstNotNullOfOrNull(ActiveHoursEndTag::parse)
 
     fun petName() = tags.firstNotNullOfOrNull(PetNameTag::parse)
 
