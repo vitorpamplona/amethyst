@@ -24,6 +24,9 @@ import android.util.LruCache
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.Channel
+import com.vitorpamplona.amethyst.commons.model.CommentContent
+import com.vitorpamplona.amethyst.commons.model.LongFormContent
+import com.vitorpamplona.amethyst.commons.model.TextNoteContent
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.model.cache.LargeSoftCache
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
@@ -2100,6 +2103,23 @@ object LocalCache : ILocalCache, ICacheProvider {
             event.editedNote()?.let {
                 checkGetOrCreateNote(it.eventId)?.let { editedNote ->
                     modificationCache.remove(editedNote.idHex)
+
+                    // Store edit on the note's content for direct access
+                    val editContent = editedNote.content
+                    if (editContent is TextNoteContent) {
+                        if (note !in editContent.edits) {
+                            editContent.edits = editContent.edits + note
+                        }
+                    } else if (editContent is LongFormContent) {
+                        if (note !in editContent.edits) {
+                            editContent.edits = editContent.edits + note
+                        }
+                    } else if (editContent is CommentContent) {
+                        if (note !in editContent.edits) {
+                            editContent.edits = editContent.edits + note
+                        }
+                    }
+
                     // must update list of Notes to quickly update the user.
                     editedNote.flowSet?.edits?.invalidateData()
                 }

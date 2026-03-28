@@ -25,7 +25,6 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.nip88Polls.PollResponsesCache
 import com.vitorpamplona.amethyst.commons.threading.checkNotInMainThread
 import com.vitorpamplona.amethyst.commons.util.firstFullCharOrEmoji
-import com.vitorpamplona.amethyst.commons.util.replace
 import com.vitorpamplona.amethyst.commons.util.toShortDisplay
 import com.vitorpamplona.quartz.experimental.bounties.addedRewardValue
 import com.vitorpamplona.quartz.experimental.bounties.hasAdditionalReward
@@ -131,32 +130,55 @@ open class Note(
         removeReport(note)
     }
 
-    var poll: PollResponsesCache? = null
+    // --- Type-specific content (set on loadEvent, null for stubs) ---
 
-    fun pollStateOrNull(): PollResponsesCache? = poll
+    var content: NoteContent? = null
 
-    fun pollState(): PollResponsesCache = poll ?: PollResponsesCache().also { poll = it }
+    // --- Social interactions (lazy - null until first interaction arrives) ---
 
-    // These fields are updated every time an event related to this note is received.
-    var replies = listOf<Note>()
-        private set
+    var social: SocialInteractions? = null
 
-    var reactions = mapOf<String, List<Note>>()
-        private set
+    fun socialOrCreate(): SocialInteractions = social ?: SocialInteractions().also { social = it }
 
-    var boosts = listOf<Note>()
-        private set
+    // --- Poll access (migrated to PollContent) ---
 
-    var reports = mapOf<User, List<Note>>()
-        private set
+    fun pollStateOrNull(): PollResponsesCache? = (content as? PollContent)?.responses
 
-    var zaps = mapOf<Note, Note?>()
-        private set
+    fun pollState(): PollResponsesCache {
+        val c = content
+        return if (c is PollContent) {
+            c.responses
+        } else {
+            // Legacy fallback: create PollContent if not yet typed
+            val pollContent = PollContent()
+            content = pollContent
+            pollContent.responses
+        }
+    }
 
-    var zapsAmount: BigDecimal = BigDecimal.ZERO
+    // --- Delegation properties for backward compatibility ---
+    // These forward to social.* so existing callers don't break.
 
-    var zapPayments = mapOf<Note, Note?>()
-        private set
+    val replies: List<Note>
+        get() = social?.replies ?: emptyList()
+
+    val reactions: Map<String, List<Note>>
+        get() = social?.reactions ?: emptyMap()
+
+    val boosts: List<Note>
+        get() = social?.boosts ?: emptyList()
+
+    val reports: Map<User, List<Note>>
+        get() = social?.reports ?: emptyMap()
+
+    val zaps: Map<Note, Note?>
+        get() = social?.zaps ?: emptyMap()
+
+    val zapsAmount: BigDecimal
+        get() = social?.zapsAmount ?: BigDecimal.ZERO
+
+    val zapPayments: Map<Note, Note?>
+        get() = social?.zapPayments ?: emptyMap()
 
     var relays = listOf<NormalizedRelayUrl>()
         private set
@@ -261,6 +283,7 @@ open class Note(
             this.event = event
             this.author = author
             this.replyTo = replyTo
+            this.content = createNoteContent(event)
 
             flowSet?.metadata?.invalidateData()
         }
@@ -275,50 +298,41 @@ open class Note(
     }
 
     fun addReply(note: Note) {
-        if (note !in replies) {
-            replies = replies + note
+        val s = socialOrCreate()
+        if (note !in s.replies) {
+            s.replies = s.replies + note
             flowSet?.replies?.invalidateData()
         }
     }
 
     fun removeReply(note: Note) {
-        if (note in replies) {
-            replies = replies - note
+        val s = social ?: return
+        if (note in s.replies) {
+            s.replies = s.replies - note
             flowSet?.replies?.invalidateData()
         }
     }
 
     fun removeBoost(note: Note) {
-        if (note in boosts) {
-            boosts = boosts - note
+        val s = social ?: return
+        if (note in s.boosts) {
+            s.boosts = s.boosts - note
             flowSet?.boosts?.invalidateData()
         }
     }
 
     fun removeAllChildNotes(): List<Note> {
-        val repliesChanged = replies.isNotEmpty()
-        val reactionsChanged = reactions.isNotEmpty()
-        val zapsChanged = zaps.isNotEmpty() || zapPayments.isNotEmpty()
-        val boostsChanged = boosts.isNotEmpty()
-        val reportsChanged = reports.isNotEmpty()
+        val s = social ?: return emptyList()
 
-        val toBeRemoved =
-            replies +
-                reactions.values.flatten() +
-                boosts +
-                reports.values.flatten() +
-                zaps.keys +
-                zaps.values.filterNotNull() +
-                zapPayments.keys +
-                zapPayments.values.filterNotNull()
+        val repliesChanged = s.replies.isNotEmpty()
+        val reactionsChanged = s.reactions.isNotEmpty()
+        val zapsChanged = s.zaps.isNotEmpty() || s.zapPayments.isNotEmpty()
+        val boostsChanged = s.boosts.isNotEmpty()
+        val reportsChanged = s.reports.isNotEmpty()
+        val labelsChanged = s.labels.isNotEmpty()
 
-        replies = listOf()
-        reactions = mapOf()
-        boosts = listOf()
-        reports = mapOf()
-        zaps = mapOf()
-        zapPayments = mapOf()
-        zapsAmount = BigDecimal.ZERO
+        val toBeRemoved = s.removeAllChildren()
+
         relays = listOf()
 
         if (repliesChanged) flowSet?.replies?.invalidateData()
@@ -326,22 +340,24 @@ open class Note(
         if (boostsChanged) flowSet?.boosts?.invalidateData()
         if (reportsChanged) flowSet?.reports?.invalidateData()
         if (zapsChanged) flowSet?.zaps?.invalidateData()
+        if (labelsChanged) flowSet?.labels?.invalidateData()
 
         return toBeRemoved
     }
 
     fun removeReaction(note: Note) {
+        val s = social ?: return
         val tags = note.event?.tags ?: emptyArray()
         val reaction = note.event?.content?.firstFullCharOrEmoji(ImmutableListOfLists(tags)) ?: "+"
 
-        if (reactions[reaction]?.contains(note) == true) {
-            reactions[reaction]?.let {
+        if (s.reactions[reaction]?.contains(note) == true) {
+            s.reactions[reaction]?.let {
                 if (note in it) {
                     val newList = it.minus(note)
                     if (newList.isEmpty()) {
-                        reactions = reactions.minus(reaction)
+                        s.reactions = s.reactions.minus(reaction)
                     } else {
-                        reactions = reactions + Pair(reaction, newList)
+                        s.reactions = s.reactions + Pair(reaction, newList)
                     }
 
                     flowSet?.reactions?.invalidateData()
@@ -351,41 +367,45 @@ open class Note(
     }
 
     fun removeReport(deleteNote: Note) {
+        val s = social ?: return
         val author = deleteNote.author ?: return
 
-        if (reports[author]?.contains(deleteNote) == true) {
-            reports[author]?.let {
-                reports = reports + Pair(author, it.minus(deleteNote))
+        if (s.reports[author]?.contains(deleteNote) == true) {
+            s.reports[author]?.let {
+                s.reports = s.reports + Pair(author, it.minus(deleteNote))
                 flowSet?.reports?.invalidateData()
             }
         }
     }
 
     fun removeZap(note: Note) {
-        if (zaps[note] != null) {
-            zaps = zaps.minus(note)
+        val s = social ?: return
+        if (s.zaps[note] != null) {
+            s.zaps = s.zaps.minus(note)
             updateZapTotal()
             flowSet?.zaps?.invalidateData()
-        } else if (zaps.containsValue(note)) {
-            zaps = zaps.filterValues { it != note }
+        } else if (s.zaps.containsValue(note)) {
+            s.zaps = s.zaps.filterValues { it != note }
             updateZapTotal()
             flowSet?.zaps?.invalidateData()
         }
     }
 
     fun removeZapPayment(note: Note) {
-        if (zapPayments.containsKey(note)) {
-            zapPayments = zapPayments.minus(note)
+        val s = social ?: return
+        if (s.zapPayments.containsKey(note)) {
+            s.zapPayments = s.zapPayments.minus(note)
             flowSet?.zaps?.invalidateData()
-        } else if (zapPayments.containsValue(note)) {
-            zapPayments = zapPayments.filterValues { it != note }
+        } else if (s.zapPayments.containsValue(note)) {
+            s.zapPayments = s.zapPayments.filterValues { it != note }
             flowSet?.zaps?.invalidateData()
         }
     }
 
     fun addBoost(note: Note) {
-        if (note !in boosts) {
-            boosts = boosts + note
+        val s = socialOrCreate()
+        if (note !in s.boosts) {
+            s.boosts = s.boosts + note
             flowSet?.boosts?.invalidateData()
         }
     }
@@ -395,8 +415,9 @@ open class Note(
         zapRequest: Note,
         zap: Note?,
     ): Boolean {
-        if (zaps[zapRequest] == null) {
-            zaps = zaps + Pair(zapRequest, zap)
+        val s = socialOrCreate()
+        if (s.zaps[zapRequest] == null) {
+            s.zaps = s.zaps + Pair(zapRequest, zap)
             return true
         }
 
@@ -421,8 +442,9 @@ open class Note(
         zapPaymentRequest: Note,
         zapPayment: Note?,
     ): Boolean {
-        if (zapPayments[zapPaymentRequest] == null) {
-            zapPayments = zapPayments + Pair(zapPaymentRequest, zapPayment)
+        val s = socialOrCreate()
+        if (s.zapPayments[zapPaymentRequest] == null) {
+            s.zapPayments = s.zapPayments + Pair(zapPaymentRequest, zapPayment)
             return true
         }
 
@@ -443,30 +465,55 @@ open class Note(
     }
 
     fun addReaction(note: Note) {
+        val s = socialOrCreate()
         val tags = note.event?.tags ?: emptyArray()
         val reaction = note.event?.content?.firstFullCharOrEmoji(ImmutableListOfLists(tags)) ?: "+"
 
-        val listOfAuthors = reactions[reaction]
+        val listOfAuthors = s.reactions[reaction]
         if (listOfAuthors == null) {
-            reactions = reactions + Pair(reaction, listOf(note))
+            s.reactions = s.reactions + Pair(reaction, listOf(note))
             flowSet?.reactions?.invalidateData()
         } else if (!listOfAuthors.contains(note)) {
-            reactions = reactions + Pair(reaction, listOfAuthors + note)
+            s.reactions = s.reactions + Pair(reaction, listOfAuthors + note)
             flowSet?.reactions?.invalidateData()
         }
     }
 
     fun addReport(note: Note) {
+        val s = socialOrCreate()
         val author = note.author ?: return
 
-        val reportsByAuthor = reports[author]
+        val reportsByAuthor = s.reports[author]
 
         if (reportsByAuthor == null) {
-            reports = reports + Pair(author, listOf(note))
+            s.reports = s.reports + Pair(author, listOf(note))
             flowSet?.reports?.invalidateData()
         } else if (!reportsByAuthor.contains(note)) {
-            reports = reports + Pair(author, reportsByAuthor + note)
+            s.reports = s.reports + Pair(author, reportsByAuthor + note)
             flowSet?.reports?.invalidateData()
+        }
+    }
+
+    fun addLabel(
+        namespace: String,
+        note: Note,
+    ) {
+        val s = socialOrCreate()
+        val existing = s.labels[namespace]
+        if (existing == null) {
+            s.labels = s.labels + Pair(namespace, listOf(note))
+            flowSet?.labels?.invalidateData()
+        } else if (!existing.contains(note)) {
+            s.labels = s.labels + Pair(namespace, existing + note)
+            flowSet?.labels?.invalidateData()
+        }
+    }
+
+    fun addQuote(note: Note) {
+        val s = socialOrCreate()
+        if (note !in s.quotes) {
+            s.quotes = s.quotes + note
+            flowSet?.quotes?.invalidateData()
         }
     }
 
@@ -618,17 +665,18 @@ open class Note(
             }.flatten()
 
     private fun updateZapTotal() {
+        val s = social ?: return
         var sumOfAmounts = BigDecimal.ZERO
 
         // Regular Zap Receipts
-        zaps.forEach {
+        s.zaps.forEach {
             val noteEvent = it.value?.event
             if (noteEvent is LnZapEvent) {
                 sumOfAmounts += noteEvent.amount ?: BigDecimal.ZERO
             }
         }
 
-        zapsAmount = sumOfAmounts
+        s.zapsAmount = sumOfAmounts
     }
 
     private suspend fun zappedAmountCalculation(
@@ -813,40 +861,15 @@ open class Note(
     fun boostedBy(loggedIn: User): List<Note> = boosts.filter { it.author == loggedIn }
 
     fun moveAllReferencesTo(note: AddressableNote) {
-        // migrates these comments to a new version
-        replies.forEach {
-            note.addReply(it)
-            it.replyTo = it.replyTo?.replace(this, note)
-        }
-        reactions.forEach {
-            it.value.forEach {
-                note.addReaction(it)
-                it.replyTo = it.replyTo?.replace(this, note)
-            }
-        }
-        boosts.forEach {
-            note.addBoost(it)
-            it.replyTo = it.replyTo?.replace(this, note)
-        }
-        reports.forEach {
-            it.value.forEach {
-                note.addReport(it)
-                it.replyTo = it.replyTo?.replace(this, note)
-            }
-        }
-        zaps.forEach {
-            note.addZap(it.key, it.value)
-            it.key.replyTo = it.key.replyTo?.replace(this, note)
-            it.value?.replyTo = it.value?.replyTo?.replace(this, note)
-        }
+        // migrates social interactions to the new version
+        social?.migrateAllTo(note.socialOrCreate(), this, note)
+        social = null
+
+        // migrate content
+        content?.let { note.content = it }
+        content = null
 
         replyTo = null
-        replies = emptyList()
-        reactions = emptyMap()
-        boosts = emptyList()
-        reports = emptyMap()
-        zaps = emptyMap()
-        zapsAmount = BigDecimal.ZERO
     }
 
     fun isHiddenFor(accountChoices: LiveHiddenUsers): Boolean {
@@ -947,6 +970,9 @@ class NoteFlowSet(
     val zaps = NoteBundledRefresherFlow(u)
     val ots = NoteBundledRefresherFlow(u)
     val edits = NoteBundledRefresherFlow(u)
+    val labels = NoteBundledRefresherFlow(u)
+    val quotes = NoteBundledRefresherFlow(u)
+    val contentFlow = NoteBundledRefresherFlow(u)
 
     @OptIn(ExperimentalCoroutinesApi::class)
     fun author() =
@@ -965,7 +991,10 @@ class NoteFlowSet(
             replies.hasObservers() ||
             zaps.hasObservers() ||
             ots.hasObservers() ||
-            edits.hasObservers()
+            edits.hasObservers() ||
+            labels.hasObservers() ||
+            quotes.hasObservers() ||
+            contentFlow.hasObservers()
 }
 
 @Stable
