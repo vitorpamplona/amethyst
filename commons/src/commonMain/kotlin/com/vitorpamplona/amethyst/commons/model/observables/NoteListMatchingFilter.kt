@@ -20,7 +20,9 @@
  */
 package com.vitorpamplona.amethyst.commons.model.observables
 
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import java.util.SortedSet
@@ -43,6 +45,8 @@ class NoteListMatchingFilter(
         event: Event,
         note: Note,
     ) {
+        if (event is AddressableEvent && note !is AddressableNote) return
+
         if (filter.match(event)) {
             if (currentResults.add(note)) {
                 val limit = filter.limit

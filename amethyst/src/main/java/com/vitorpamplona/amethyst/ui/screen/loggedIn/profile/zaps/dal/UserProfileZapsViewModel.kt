@@ -28,7 +28,6 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.utils.BigDecimal
@@ -96,16 +95,14 @@ class UserProfileZapsViewModel(
         }
     }
 
-    suspend fun List<Event>.sumAmountsByUser(): List<ZapAmount> {
+    suspend fun List<LnZapEvent>.sumAmountsByUser(): List<ZapAmount> {
         val results = mutableMapOf<User, BigDecimal>()
 
         this.forEach { zapEvent ->
-            if (zapEvent is LnZapEvent) {
-                val zapAmount = mapRequest(zapEvent)
-                if (zapAmount != null) {
-                    val existingAmount = results[zapAmount.user] ?: BigDecimal.ZERO
-                    results[zapAmount.user] = existingAmount + zapAmount.amount
-                }
+            val zapAmount = mapRequest(zapEvent)
+            if (zapAmount != null) {
+                val existingAmount = results[zapAmount.user] ?: BigDecimal.ZERO
+                results[zapAmount.user] = existingAmount + zapAmount.amount
             }
         }
 
@@ -115,7 +112,7 @@ class UserProfileZapsViewModel(
     @OptIn(kotlinx.coroutines.FlowPreview::class)
     val receivedZapAmountsByUser: StateFlow<List<ZapAmount>> =
         account.cache
-            .observeEvents(zapsToUser)
+            .observeEvents<LnZapEvent>(zapsToUser)
             .sample(500)
             .map { zapEvents ->
                 zapEvents.sumAmountsByUser()

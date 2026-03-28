@@ -85,7 +85,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -102,6 +101,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.util.timeDiffAgoShortish
@@ -115,6 +115,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.RenderRelayIcon
 import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.note.UserPicture
+import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.graspLink
 import com.vitorpamplona.amethyst.ui.note.nipLink
 import com.vitorpamplona.amethyst.ui.note.timeAgoNoDot
@@ -283,6 +284,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.flow.map
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 
@@ -440,7 +442,7 @@ fun RelayInformationBody(
 
         if (discoveryEvents.isNotEmpty()) {
             item { SectionHeader(stringRes(R.string.relay_monitor_reports)) }
-            items(discoveryEvents, key = { it.id }) { event ->
+            items(discoveryEvents, key = { it.addressTag() }) { event ->
                 RelayMonitorReportCard(event, accountViewModel, nav)
             }
         }
@@ -1575,21 +1577,19 @@ fun PoliciesCard(relay: Nip11RelayInformation) {
 
 @Composable
 fun loadRelayDiscoveryEvents(relay: NormalizedRelayUrl): State<ImmutableList<RelayDiscoveryEvent>> =
-    produceState<ImmutableList<RelayDiscoveryEvent>>(persistentListOf(), relay) {
+    remember(relay) {
         LocalCache
-            .observeEvents(
+            .observeEvents<RelayDiscoveryEvent>(
                 Filter(
                     kinds = listOf(RelayDiscoveryEvent.KIND),
                     tags = mapOf("d" to listOf(relay.url)),
+                    since = TimeUtils.oneWeekAgo(),
+                    limit = 3,
                 ),
-            ).collect { events ->
-                value =
-                    events
-                        .filterIsInstance<RelayDiscoveryEvent>()
-                        .sortedByDescending { it.createdAt }
-                        .toImmutableList()
+            ).map {
+                it.toImmutableList()
             }
-    }
+    }.collectAsStateWithLifecycle(persistentListOf())
 
 @Composable
 private fun RelayMonitorReportCard(
@@ -1622,11 +1622,7 @@ private fun RelayMonitorReportCard(
                                 accountViewModel = accountViewModel,
                                 nav = nav,
                             )
-                            UserCompose(
-                                baseUser = user,
-                                accountViewModel = accountViewModel,
-                                nav = nav,
-                            )
+                            UsernameDisplay(user, weight = Modifier.weight(1f), accountViewModel = accountViewModel)
                         }
                     }
                 }
@@ -1646,11 +1642,6 @@ private fun RelayMonitorReportCard(
             val rttWrite = event.rttWrite()
 
             if (rttOpen != null || rttRead != null || rttWrite != null) {
-                Text(
-                    stringRes(R.string.relay_monitor_rtt),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                )
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly,
@@ -1685,33 +1676,6 @@ private fun RelayMonitorReportCard(
                     stringRes(R.string.relay_monitor_relay_type),
                     relayTypes.joinToString(),
                 )
-            }
-
-            // Supported NIPs
-            val supportedNips = event.supportedNips()
-            if (supportedNips.isNotEmpty()) {
-                Text(
-                    stringRes(R.string.relay_monitor_supported_nips),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                val uri = LocalUriHandler.current
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    supportedNips.forEach { nip ->
-                        val nipStr = nip.toString().padStart(2, '0')
-                        SuggestionChip(
-                            onClick = {
-                                runCatching {
-                                    uri.openUri(nipLink(nipStr))
-                                }
-                            },
-                            label = { Text(nipStr) },
-                        )
-                    }
-                }
             }
 
             // Requirements

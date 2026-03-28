@@ -182,6 +182,8 @@ import com.vitorpamplona.quartz.nip64Chess.game.ChessGameEvent
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterEvent
 import com.vitorpamplona.quartz.nip64Chess.move.LiveChessMoveEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.RelayDiscoveryEvent
+import com.vitorpamplona.quartz.nip66RelayMonitor.monitor.RelayMonitorEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
@@ -341,10 +343,10 @@ object LocalCache : ILocalCache, ICacheProvider {
             }
         }.buffer(kotlinx.coroutines.channels.Channel.CONFLATED)
 
-    fun observeEvents(filter: Filter): Flow<List<Event>> =
+    fun <T : Event> observeEvents(filter: Filter): Flow<List<T>> =
         callbackFlow {
             val cachedFilter =
-                EventListMatchingFilter(filter, this@LocalCache::filter) {
+                EventListMatchingFilter<T>(filter, this@LocalCache::filter) {
                     trySend(it)
                 }
 
@@ -358,7 +360,7 @@ object LocalCache : ILocalCache, ICacheProvider {
         }.buffer(kotlinx.coroutines.channels.Channel.CONFLATED)
 
     @Suppress("UNCHECKED_CAST")
-    fun <T : Event> observeLatestEvent(filter: Filter) = observeEvents(filter).map { it.firstNotNullOfOrNull { it as? T } }
+    fun <T : Event> observeLatestEvent(filter: Filter) = observeEvents<T>(filter).map { it.firstOrNull() }
 
     fun observeLatestNote(filter: Filter) = observeNotes(filter).map { it.firstOrNull() }
 
@@ -1348,6 +1350,18 @@ object LocalCache : ILocalCache, ICacheProvider {
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeRegularEvent(event, relay, wasVerified)
+
+    private fun consume(
+        event: RelayDiscoveryEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
+
+    private fun consume(
+        event: RelayMonitorEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
 
     fun consume(
         event: StatusEvent,
@@ -3208,6 +3222,8 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is ZapPollEvent -> consume(event, relay, wasVerified)
                 is PollEvent -> consume(event, relay, wasVerified)
                 is PollResponseEvent -> consume(event, relay, wasVerified)
+                is RelayDiscoveryEvent -> consume(event, relay, wasVerified)
+                is RelayMonitorEvent -> consume(event, relay, wasVerified)
                 is ReactionEvent -> consume(event, relay, wasVerified)
                 is ContactCardEvent -> consume(event, relay, wasVerified)
                 is RelaySetEvent -> consume(event, relay, wasVerified)
