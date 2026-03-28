@@ -65,7 +65,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -295,8 +294,10 @@ fun EditPostView(
                                                 stringRes(id = R.string.lightning_invoice),
                                                 stringRes(id = R.string.lightning_create_and_add_invoice),
                                                 onNewInvoice = {
-                                                    postViewModel.message =
-                                                        TextFieldValue(postViewModel.message.text + "\n\n" + it)
+                                                    postViewModel.messageState.edit {
+                                                        append("\n\n$it")
+                                                        placeCursorBeforeCharAt(length)
+                                                    }
                                                     postViewModel.wantsInvoice = false
                                                 },
                                                 onError = { title, message -> accountViewModel.toastManager.toast(title, message) },
