@@ -57,7 +57,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
@@ -519,7 +518,7 @@ fun ShareCommunityButton(
 
             val shareIntent =
                 Intent.createChooser(sendIntent, stringRes(actContext, R.string.quick_action_share))
-            ContextCompat.startActivity(actContext, shareIntent, null)
+            actContext.startActivity(shareIntent)
         },
     ) {
         Icon(

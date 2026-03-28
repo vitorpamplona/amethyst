@@ -44,14 +44,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat.startActivity
 import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.Cashu
@@ -142,7 +141,7 @@ fun CashuPreviewNew(
     toast: (String, String) -> Unit,
 ) {
     val context = LocalContext.current
-    val clipboardManager = LocalClipboardManager.current
+    val clipboardManager = LocalClipboard.current
 
     Card(
         modifier = CashuCardBorders,
@@ -217,7 +216,7 @@ fun CashuPreviewNew(
                             val intent = Intent(Intent.ACTION_VIEW, "cashu://${token.token}".toUri())
                             intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
 
-                            startActivity(context, intent, null)
+                            context.startActivity(intent)
                         } catch (e: Exception) {
                             if (e is CancellationException) throw e
                             toast(stringRes(context, R.string.cashu), stringRes(context, R.string.cashu_no_wallet_found))

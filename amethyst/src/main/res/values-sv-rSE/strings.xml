@@ -722,11 +722,13 @@
     <string name="relay_monitor_rtt_open">Öppna</string>
     <string name="relay_monitor_rtt_read">Läs</string>
     <string name="relay_monitor_rtt_write">Skriv</string>
+    <string name="relay_monitor_rtt">RTT</string>
     <string name="relay_monitor_network">Nätverk</string>
     <string name="relay_monitor_relay_type">Typ</string>
     <string name="relay_monitor_supported_nips">NIP som stöds</string>
     <string name="relay_monitor_requirements">Krav</string>
     <string name="relay_monitor_last_check">Senaste kontroll</string>
+    <string name="relay_monitor_ms">%1$d ms</string>
     <string name="relay_active_subscriptions">Aktiva prenumerationer</string>
     <string name="relay_active_outbox">Väntande utgående händelser</string>
     <string name="relay_req_subscriptions">REQ-prenumerationer (%1$d)</string>
@@ -1619,6 +1621,7 @@
     <string name="namecoin_device_info">Enhetsinformation</string>
     <string name="namecoin_tls_info">TLS-information</string>
     <string name="namecoin_no_test_yet">Inget test har körts ännu</string>
+    <string name="namecoin_response_time">%dms</string>
     <string name="namecoin_pin_cert_title">Lita på servercertifikat?</string>
     <string name="namecoin_pin_cert_body">Servern %1$s presenterade ett certifikat som ännu inte finns i ditt förtroendelager. Verifiera att fingeravtrycket nedan matchar det som serveroperatören publicerat och välj sedan om du vill lita på det för framtida anslutningar.</string>
     <string name="namecoin_pin_cert_accept">Lita på</string>
@@ -1734,12 +1737,15 @@
     <string name="goal_closed">Detta mål har avslutats</string>
     <string name="goal_progress">%1$s finansierat av %2$s sats mål</string>
     <string name="goal_amount_label">Målbelopp (sats)</string>
+    <string name="goal_amount_placeholder">100000</string>
     <string name="goal_description_label">Beskriv ditt mål</string>
     <string name="goal_description_placeholder">Vad samlar du in pengar till?</string>
     <string name="goal_summary_label">Kort sammanfattning</string>
     <string name="goal_summary_placeholder">Kort beskrivning som visas i förhandsvisningar</string>
     <string name="goal_image_label">Bild-URL (valfritt)</string>
+    <string name="goal_image_placeholder">https://example.com/image.jpg</string>
     <string name="goal_website_label">Webbplats-URL (valfritt)</string>
+    <string name="goal_website_placeholder">https://exempel.se</string>
     <string name="goal_deadline_label">Tidsfrist (valfritt)</string>
     <string name="goal_set_deadline">Sätt en tidsfrist</string>
     <string name="new_goal">Nytt mål</string>

@@ -40,10 +40,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SecondaryTabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -268,7 +268,7 @@ private fun MarkdownPostScreenBody(
                 HorizontalDivider(modifier = Modifier.padding(vertical = Size5dp))
 
                 // Edit / Preview tabs
-                TabRow(
+                SecondaryTabRow(
                     selectedTabIndex = if (postViewModel.showPreview) 1 else 0,
                 ) {
                     Tab(

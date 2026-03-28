@@ -723,11 +723,13 @@
     <string name="relay_monitor_rtt_open">Abrir</string>
     <string name="relay_monitor_rtt_read">Leitura</string>
     <string name="relay_monitor_rtt_write">Escrita</string>
+    <string name="relay_monitor_rtt">RTT</string>
     <string name="relay_monitor_network">Rede</string>
     <string name="relay_monitor_relay_type">Tipo</string>
     <string name="relay_monitor_supported_nips">NIPs Suportados</string>
     <string name="relay_monitor_requirements">Requisitos</string>
     <string name="relay_monitor_last_check">Última verificação</string>
+    <string name="relay_monitor_ms">%1$d ms</string>
     <string name="relay_active_subscriptions">Assinaturas Ativas</string>
     <string name="relay_active_outbox">Eventos Pendentes na Outbox</string>
     <string name="relay_req_subscriptions">Assinaturas REQ (%1$d)</string>
@@ -1620,6 +1622,7 @@
     <string name="namecoin_device_info">Informações do Dispositivo</string>
     <string name="namecoin_tls_info">Informações TLS</string>
     <string name="namecoin_no_test_yet">Nenhum teste realizado ainda</string>
+    <string name="namecoin_response_time">%dms</string>
     <string name="namecoin_pin_cert_title">Confiar no Certificado do Servidor?</string>
     <string name="namecoin_pin_cert_body">O servidor %1$s apresentou um certificado que ainda não está no seu armazenamento de confiança. Verifique se a impressão digital abaixo corresponde ao que o operador do servidor publicou e escolha se deseja confiar nele para conexões futuras.</string>
     <string name="namecoin_pin_cert_accept">Confiar</string>
@@ -1735,12 +1738,15 @@
     <string name="goal_closed">Esta meta foi encerrada</string>
     <string name="goal_progress">%1$s financiado de %2$s sats da meta</string>
     <string name="goal_amount_label">Valor da meta (sats)</string>
+    <string name="goal_amount_placeholder">100000</string>
     <string name="goal_description_label">Descreva sua meta</string>
     <string name="goal_description_placeholder">Para que você está arrecadando fundos?</string>
     <string name="goal_summary_label">Resumo curto</string>
     <string name="goal_summary_placeholder">Breve descrição mostrada nas prévias</string>
     <string name="goal_image_label">URL da imagem (opcional)</string>
+    <string name="goal_image_placeholder">https://exemplo.com.br/imagem.jpg</string>
     <string name="goal_website_label">URL do site (opcional)</string>
+    <string name="goal_website_placeholder">https://exemplo.com</string>
     <string name="goal_deadline_label">Prazo (opcional)</string>
     <string name="goal_set_deadline">Definir um prazo</string>
     <string name="new_goal">Nova Meta</string>
@@ -1783,6 +1789,7 @@
     <string name="relay_management_tab_pubkeys">Usuários</string>
     <string name="relay_management_tab_events">Eventos</string>
     <string name="relay_management_tab_kinds">Tipos</string>
+    <string name="relay_management_tab_ips">IPs</string>
     <string name="relay_management_tab_settings">Configurações</string>
     <string name="relay_management_banned_pubkeys">Usuários Banidos</string>
     <string name="relay_management_no_banned_pubkeys">Nenhum usuário banido</string>
