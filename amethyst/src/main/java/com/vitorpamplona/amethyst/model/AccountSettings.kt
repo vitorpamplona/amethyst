@@ -28,7 +28,6 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.screen.FeedDefinition
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
-import com.vitorpamplona.quartz.experimental.trustedAssertions.list.TrustProviderListEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
@@ -57,6 +56,7 @@ import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayInfo
 import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayType
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

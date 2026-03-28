@@ -18,22 +18,20 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.experimental.relationshipStatus.tags
+package com.vitorpamplona.quartz.nip85TrustedAssertions.list
 
-import com.vitorpamplona.quartz.nip01Core.core.has
-import com.vitorpamplona.quartz.utils.ensure
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceProviderTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceType
 
-class SummaryTag {
-    companion object {
-        const val TAG_NAME = "summary"
+fun TagArrayBuilder<TrustProviderListEvent>.serviceProvider(
+    service: ServiceType,
+    pubkey: HexKey,
+    relayUrl: NormalizedRelayUrl,
+) = addUnique(ServiceProviderTag.assemble(service, pubkey, relayUrl))
 
-        fun parse(tag: Array<String>): String? {
-            ensure(tag.has(1)) { return null }
-            ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].isNotEmpty()) { return null }
-            return tag[1]
-        }
+fun TagArrayBuilder<TrustProviderListEvent>.serviceProvider(provider: ServiceProviderTag) = addUnique(provider.toTagArray())
 
-        fun assemble(ip: String) = arrayOf(TAG_NAME, ip)
-    }
-}
+fun TagArrayBuilder<TrustProviderListEvent>.serviceProviders(providers: List<ServiceProviderTag>) = addAll(providers.map { it.toTagArray() })

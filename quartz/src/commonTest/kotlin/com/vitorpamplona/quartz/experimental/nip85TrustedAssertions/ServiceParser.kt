@@ -18,12 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.experimental.trustedAssertions
+package com.vitorpamplona.quartz.experimental.nip85TrustedAssertions
 
-import com.vitorpamplona.quartz.experimental.trustedAssertions.list.TrustProviderListEvent
-import com.vitorpamplona.quartz.experimental.trustedAssertions.list.tags.ServiceProviderTag
-import com.vitorpamplona.quartz.experimental.trustedAssertions.list.tags.ServiceType
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceProviderTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceType
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

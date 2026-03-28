@@ -20,11 +20,11 @@
  */
 package com.vitorpamplona.amethyst.model.trustedAssertions
 
-import com.vitorpamplona.quartz.experimental.trustedAssertions.list.TrustProviderListEvent
-import com.vitorpamplona.quartz.experimental.trustedAssertions.list.serviceProviderSet
-import com.vitorpamplona.quartz.experimental.trustedAssertions.list.serviceProviders
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEventCache
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.serviceProviderSet
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.serviceProviders
 
 class TrustProviderListDecryptionCache(
     val signer: NostrSigner,

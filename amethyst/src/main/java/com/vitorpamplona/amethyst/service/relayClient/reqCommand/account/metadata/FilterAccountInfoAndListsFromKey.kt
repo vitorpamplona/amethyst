@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.metada
 
 import com.vitorpamplona.amethyst.model.nip78AppSpecific.AppSpecificState.Companion.APP_SPECIFIC_DATA_D_TAG
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
-import com.vitorpamplona.quartz.experimental.trustedAssertions.list.TrustProviderListEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
@@ -43,6 +42,7 @@ import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
 import com.vitorpamplona.quartz.nip96FileStorage.config.FileServersEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 

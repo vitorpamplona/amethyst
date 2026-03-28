@@ -18,13 +18,9 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.experimental.relationshipStatus
+package com.vitorpamplona.quartz.nip85TrustedAssertions.users
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.experimental.relationshipStatus.tags.FollowerCountTag
-import com.vitorpamplona.quartz.experimental.relationshipStatus.tags.PetNameTag
-import com.vitorpamplona.quartz.experimental.relationshipStatus.tags.RankTag
-import com.vitorpamplona.quartz.experimental.relationshipStatus.tags.SummaryTag
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
@@ -35,6 +31,10 @@ import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.FollowerCountTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.PetNameTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.RankTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.SummaryTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable

@@ -18,22 +18,15 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.experimental.relationshipStatus.tags
+package com.vitorpamplona.quartz.nip85TrustedAssertions.users
 
-import com.vitorpamplona.quartz.nip01Core.core.has
-import com.vitorpamplona.quartz.utils.ensure
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.PetNameTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.RankTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.SummaryTag
 
-class PetNameTag {
-    companion object {
-        const val TAG_NAME = "petname"
+fun TagArrayBuilder<ContactCardEvent>.rank(rank: Int) = add(RankTag.assemble(rank))
 
-        fun parse(tag: Array<String>): String? {
-            ensure(tag.has(1)) { return null }
-            ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].isNotEmpty()) { return null }
-            return tag[1]
-        }
+fun TagArrayBuilder<ContactCardEvent>.petName(name: String) = add(PetNameTag.assemble(name))
 
-        fun assemble(petName: String) = arrayOf(TAG_NAME, petName)
-    }
-}
+fun TagArrayBuilder<ContactCardEvent>.summary(summary: String) = add(SummaryTag.assemble(summary))

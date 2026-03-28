@@ -18,10 +18,9 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.experimental.trustedAssertions.list
+package com.vitorpamplona.quartz.nip85TrustedAssertions.list
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.experimental.trustedAssertions.list.tags.ServiceProviderTag
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
@@ -35,6 +34,7 @@ import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
 import com.vitorpamplona.quartz.nip51Lists.removeParsing
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceProviderTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable

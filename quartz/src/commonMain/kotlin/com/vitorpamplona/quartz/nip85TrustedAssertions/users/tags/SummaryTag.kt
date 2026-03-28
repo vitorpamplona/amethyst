@@ -18,22 +18,22 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.experimental.relationshipStatus.tags
+package com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags
 
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.utils.ensure
 
-class RankTag {
+class SummaryTag {
     companion object {
-        const val TAG_NAME = "rank"
+        const val TAG_NAME = "summary"
 
-        fun parse(tag: Array<String>): Int? {
+        fun parse(tag: Array<String>): String? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].isNotEmpty()) { return null }
-            return tag[1].toIntOrNull()
+            return tag[1]
         }
 
-        fun assemble(rank: Int) = arrayOf(TAG_NAME, rank.toString())
+        fun assemble(ip: String) = arrayOf(TAG_NAME, ip)
     }
 }

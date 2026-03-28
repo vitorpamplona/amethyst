@@ -18,15 +18,11 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.experimental.relationshipStatus
+package com.vitorpamplona.quartz.nip85TrustedAssertions.list
 
-import com.vitorpamplona.quartz.experimental.relationshipStatus.tags.PetNameTag
-import com.vitorpamplona.quartz.experimental.relationshipStatus.tags.RankTag
-import com.vitorpamplona.quartz.experimental.relationshipStatus.tags.SummaryTag
-import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceProviderTag
 
-fun TagArrayBuilder<ContactCardEvent>.rank(rank: Int) = add(RankTag.assemble(rank))
+fun TagArray.serviceProviders() = mapNotNull(ServiceProviderTag::parse)
 
-fun TagArrayBuilder<ContactCardEvent>.petName(name: String) = add(PetNameTag.assemble(name))
-
-fun TagArrayBuilder<ContactCardEvent>.summary(summary: String) = add(SummaryTag.assemble(summary))
+fun TagArray.serviceProviderSet() = mapNotNullTo(mutableSetOf(), ServiceProviderTag::parse)

@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.experimental.trustedAssertions.list.tags
+package com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags
 
 data class ServiceType(
     val kind: Int,

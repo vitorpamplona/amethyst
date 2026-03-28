@@ -152,8 +152,6 @@ import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.nns.NNSEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.experimental.publicMessages.PublicMessageEvent
-import com.vitorpamplona.quartz.experimental.relationshipStatus.ContactCardEvent
-import com.vitorpamplona.quartz.experimental.trustedAssertions.list.TrustProviderListEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
@@ -258,6 +256,8 @@ import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
 import com.vitorpamplona.quartz.nip75ZapGoals.GoalEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
 import com.vitorpamplona.quartz.nip86RelayManagement.Nip86Client
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent

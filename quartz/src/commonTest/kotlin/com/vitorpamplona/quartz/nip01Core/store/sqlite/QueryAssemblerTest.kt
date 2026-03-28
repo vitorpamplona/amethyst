@@ -20,15 +20,14 @@
  */
 package com.vitorpamplona.quartz.nip01Core.store.sqlite
 
-import com.vitorpamplona.quartz.experimental.relationshipStatus.ContactCardEvent
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
