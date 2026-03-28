@@ -44,12 +44,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.input.TextFieldValue  // kept for readonly dropdown ThinPaddingTextField
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
+import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.components.TitleExplainer
@@ -109,10 +109,8 @@ fun SellProduct(postViewModel: NewProductViewModel) {
             )
 
             ThinPaddingTextField(
-                value = postViewModel.title,
-                onValueChange = {
-                    postViewModel.updateTitle(it)
-                },
+                state = postViewModel.title,
+                onTextChanged = { postViewModel.onTitleChanged() },
                 modifier = Modifier.fillMaxWidth(),
                 placeholder = {
                     Text(
@@ -120,8 +118,8 @@ fun SellProduct(postViewModel: NewProductViewModel) {
                         color = MaterialTheme.colorScheme.placeholderText,
                     )
                 },
-                visualTransformation =
-                    UrlUserTagTransformation(
+                outputTransformation =
+                    UrlUserTagOutputTransformation(
                         MaterialTheme.colorScheme.primary,
                     ),
                 colors =
@@ -146,10 +144,8 @@ fun SellProduct(postViewModel: NewProductViewModel) {
 
             ThinPaddingTextField(
                 modifier = Modifier.fillMaxWidth(),
-                value = postViewModel.price,
-                onValueChange = {
-                    postViewModel.updatePrice(it)
-                },
+                state = postViewModel.price,
+                onTextChanged = { postViewModel.onPriceChanged() },
                 placeholder = {
                     Text(
                         text = "1000",
@@ -275,10 +271,10 @@ fun SellProduct(postViewModel: NewProductViewModel) {
                     categoryTypes.map { TitleExplainer(it.second, null) }.toImmutableList()
                 }
             TextSpinner(
-                placeholder = categoryTypes.firstOrNull { it.second == postViewModel.category.text }?.second ?: "",
+                placeholder = categoryTypes.firstOrNull { it.second == postViewModel.category.text.toString() }?.second ?: "",
                 options = categoryOptions,
                 onSelect = {
-                    postViewModel.updateCategory(TextFieldValue(categoryTypes[it].second))
+                    postViewModel.updateCategory(categoryTypes[it].second)
                 },
                 modifier =
                     Modifier
@@ -313,10 +309,8 @@ fun SellProduct(postViewModel: NewProductViewModel) {
             )
 
             ThinPaddingTextField(
-                value = postViewModel.locationText,
-                onValueChange = {
-                    postViewModel.updateLocation(it)
-                },
+                state = postViewModel.locationText,
+                onTextChanged = { postViewModel.onLocationChanged() },
                 modifier = Modifier.fillMaxWidth(),
                 placeholder = {
                     Text(
@@ -324,8 +318,8 @@ fun SellProduct(postViewModel: NewProductViewModel) {
                         color = MaterialTheme.colorScheme.placeholderText,
                     )
                 },
-                visualTransformation =
-                    UrlUserTagTransformation(
+                outputTransformation =
+                    UrlUserTagOutputTransformation(
                         MaterialTheme.colorScheme.primary,
                     ),
                 colors =

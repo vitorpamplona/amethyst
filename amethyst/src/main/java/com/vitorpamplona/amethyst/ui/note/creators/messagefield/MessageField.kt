@@ -39,7 +39,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
+import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -65,8 +65,8 @@ fun MessageField(
     }
 
     ThinPaddingTextField(
-        value = viewModel.message,
-        onValueChange = viewModel::updateMessage,
+        state = viewModel.message,
+        onTextChanged = viewModel::onMessageChanged,
         keyboardOptions =
             KeyboardOptions.Default.copy(
                 capitalization = KeyboardCapitalization.Sentences,
@@ -91,7 +91,7 @@ fun MessageField(
                 focusedBorderColor = Color.Transparent,
                 unfocusedBorderColor = Color.Transparent,
             ),
-        visualTransformation = UrlUserTagTransformation(MaterialTheme.colorScheme.primary),
+        outputTransformation = UrlUserTagOutputTransformation(MaterialTheme.colorScheme.primary),
         textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
         contentPadding =
             TextFieldDefaults.contentPaddingWithoutLabel(

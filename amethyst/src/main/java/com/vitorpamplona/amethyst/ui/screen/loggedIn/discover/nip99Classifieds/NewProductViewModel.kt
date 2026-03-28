@@ -26,6 +26,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -131,7 +132,7 @@ open class NewProductViewModel :
     var productImages by mutableStateOf<List<ProductImageMeta>>(emptyList())
     val iMetaDescription = IMetaAttachments()
 
-    override var message by mutableStateOf(TextFieldValue(""))
+    override val message = TextFieldState()
 
     val urlPreviews = PreviewState()
 
@@ -151,10 +152,10 @@ open class NewProductViewModel :
     val strippingFailureConfirmation = SuspendableConfirmation()
 
     // Classifieds
-    var title by mutableStateOf(TextFieldValue(""))
-    var price by mutableStateOf(TextFieldValue(""))
-    var locationText by mutableStateOf(TextFieldValue(""))
-    var category by mutableStateOf(TextFieldValue(""))
+    val title = TextFieldState()
+    val price = TextFieldState()
+    val locationText = TextFieldState()
+    val category = TextFieldState()
     var condition by mutableStateOf(ConditionTag.CONDITION.USED_LIKE_NEW)
 
     // Invoices
@@ -226,7 +227,7 @@ open class NewProductViewModel :
     open fun quote(quote: Note) {
         val accountViewModel = accountViewModel
 
-        message = TextFieldValue(message.text + "\nnostr:${quote.toNEvent()}")
+        message.setTextAndPlaceCursorAtEnd(message.text.toString() + "\nnostr:${quote.toNEvent()}")
 
         quote.author?.let { quotedUser ->
             if (quotedUser.pubkeyHex != accountViewModel.userProfile().pubkeyHex) {
@@ -246,7 +247,7 @@ open class NewProductViewModel :
             wantsForwardZapTo = true
         }
 
-        urlPreviews.update(message)
+        urlPreviews.update(message.text.toString())
     }
 
     private fun loadFromDraft(draft: Note) {
@@ -284,10 +285,10 @@ open class NewProductViewModel :
             zapRaiserAmount.value = zapraiser
         }
 
-        title = TextFieldValue(draftEvent.title() ?: "")
-        price = TextFieldValue(draftEvent.price()?.amount ?: "")
-        category = TextFieldValue(draftEvent.categories().firstOrNull() ?: "")
-        locationText = TextFieldValue(draftEvent.location() ?: "")
+        title.setTextAndPlaceCursorAtEnd(draftEvent.title() ?: "")
+        price.setTextAndPlaceCursorAtEnd(draftEvent.price()?.amount ?: "")
+        category.setTextAndPlaceCursorAtEnd(draftEvent.categories().firstOrNull() ?: "")
+        locationText.setTextAndPlaceCursorAtEnd(draftEvent.location() ?: "")
         condition = draftEvent.conditionValid() ?: ConditionTag.CONDITION.USED_LIKE_NEW
 
         val imageSet = draftEvent.images().toMutableSet()
@@ -305,9 +306,9 @@ open class NewProductViewModel :
             productImages = productImages + ProductImageMeta(it)
         }
 
-        message = TextFieldValue(draftEvent.content)
+        message.setTextAndPlaceCursorAtEnd(draftEvent.content)
 
-        urlPreviews.update(message)
+        urlPreviews.update(message.text.toString())
     }
 
     suspend fun sendPostSync() {
@@ -323,7 +324,7 @@ open class NewProductViewModel :
     }
 
     suspend fun sendDraftSync() {
-        if (message.text.isBlank()) {
+        if (message.text.toString().isBlank()) {
             accountViewModel.account.deleteDraftIgnoreErrors(draftTag.current)
         } else {
             val template = createTemplate() ?: return
@@ -336,7 +337,7 @@ open class NewProductViewModel :
 
         val tagger =
             NewMessageTagger(
-                message = message.text,
+                message = message.text.toString(),
                 dao = accountViewModel,
             )
         tagger.run()
@@ -356,15 +357,15 @@ open class NewProductViewModel :
 
         val template =
             ClassifiedsEvent.build(
-                title.text,
-                PriceTag(price.text, "SATS", null),
+                title.text.toString(),
+                PriceTag(price.text.toString(), "SATS", null),
                 tagger.message,
-                locationText.text.ifBlank { null },
+                locationText.text.toString().ifBlank { null },
                 condition,
             ) {
                 productImages.forEach { image(it.url) }
 
-                hashtags(listOfNotNull(category.text.ifBlank { null }) + findHashtags(tagger.message))
+                hashtags(listOfNotNull(category.text.toString().ifBlank { null }) + findHashtags(tagger.message))
                 quotes(quotes)
 
                 geoHash?.let { geohash(it) }
@@ -438,8 +439,8 @@ open class NewProductViewModel :
                         } else {
                             iMetaDescription.add(it.result, alt, contentWarningReason)
 
-                            message = message.insertUrlAtCursor(it.result.url)
-                            urlPreviews.update(message)
+                            message.insertUrlAtCursor(it.result.url)
+                            urlPreviews.update(message.text.toString())
                         }
                     }
                 }
@@ -458,7 +459,7 @@ open class NewProductViewModel :
     open fun cancel() {
         draftTag.rotate()
 
-        message = TextFieldValue("")
+        message.setTextAndPlaceCursorAtEnd("")
 
         multiOrchestrator = null
         mediaUploadTracker.finishUpload()
@@ -468,10 +469,10 @@ open class NewProductViewModel :
         zapRaiserAmount.value = null
 
         condition = ConditionTag.CONDITION.USED_LIKE_NEW
-        locationText = TextFieldValue("")
-        title = TextFieldValue("")
-        category = TextFieldValue("")
-        price = TextFieldValue("")
+        locationText.setTextAndPlaceCursorAtEnd("")
+        title.setTextAndPlaceCursorAtEnd("")
+        category.setTextAndPlaceCursorAtEnd("")
+        price.setTextAndPlaceCursorAtEnd("")
 
         wantsForwardZapTo = false
         wantsToMarkAsSensitive = false
@@ -505,9 +506,8 @@ open class NewProductViewModel :
         this.multiOrchestrator?.remove(selected)
     }
 
-    override fun updateMessage(newMessage: TextFieldValue) {
-        message = newMessage
-        urlPreviews.update(message)
+    override fun onMessageChanged() {
+        urlPreviews.update(message.text.toString())
 
         if (message.selection.collapsed) {
             val lastWord = message.currentWord()
@@ -538,8 +538,8 @@ open class NewProductViewModel :
         userSuggestions?.let { userSuggestions ->
             if (userSuggestionsMainMessage == UserSuggestionAnchor.MAIN_MESSAGE) {
                 val lastWord = message.currentWord()
-                message = userSuggestions.replaceCurrentWord(message, lastWord, item)
-                urlPreviews.update(message)
+                userSuggestions.replaceCurrentWord(message, lastWord, item)
+                urlPreviews.update(message.text.toString())
             } else if (userSuggestionsMainMessage == UserSuggestionAnchor.FORWARD_ZAPS) {
                 forwardZapTo.value.addItem(item)
                 forwardZapToEditting.value = TextFieldValue("")
@@ -555,8 +555,8 @@ open class NewProductViewModel :
     open fun autocompleteWithEmoji(item: EmojiPackState.EmojiMedia) {
         val wordToInsert = ":${item.code}:"
 
-        message = message.replaceCurrentWord(wordToInsert)
-        urlPreviews.update(message)
+        message.replaceCurrentWord(wordToInsert)
+        urlPreviews.update(message.text.toString())
 
         emojiSuggestions?.reset()
 
@@ -572,8 +572,8 @@ open class NewProductViewModel :
             }
         }
 
-        message = message.replaceCurrentWord(wordToInsert)
-        urlPreviews.update(message)
+        message.replaceCurrentWord(wordToInsert)
+        urlPreviews.update(message.text.toString())
 
         emojiSuggestions?.reset()
 
@@ -591,7 +591,7 @@ open class NewProductViewModel :
             multiOrchestrator == null
 
     fun insertAtCursor(newElement: String) {
-        message = message.insertUrlAtCursor(newElement)
+        message.insertUrlAtCursor(newElement)
     }
 
     fun selectImage(uris: ImmutableList<SelectedMedia>) {
@@ -620,7 +620,7 @@ open class NewProductViewModel :
 
     override fun updateZapFromText() {
         viewModelScope.launch(Dispatchers.IO) {
-            val tagger = NewMessageTagger(message.text, emptyList(), emptyList(), accountViewModel)
+            val tagger = NewMessageTagger(message.text.toString(), emptyList(), emptyList(), accountViewModel)
             tagger.run()
             tagger.pTags?.forEach { taggedUser ->
                 if (!forwardZapTo.value.items.any { it.key == taggedUser }) {
@@ -648,19 +648,11 @@ open class NewProductViewModel :
         draftTag.newVersion()
     }
 
-    fun updateTitle(it: TextFieldValue) {
-        title = it
+    fun onTitleChanged() {
         draftTag.newVersion()
     }
 
-    fun updatePrice(it: TextFieldValue) {
-        runCatching {
-            if (it.text.isEmpty()) {
-                price = TextFieldValue("")
-            } else if (it.text.toLongOrNull() != null) {
-                price = it
-            }
-        }
+    fun onPriceChanged() {
         draftTag.newVersion()
     }
 
@@ -669,13 +661,12 @@ open class NewProductViewModel :
         draftTag.newVersion()
     }
 
-    fun updateCategory(value: TextFieldValue) {
-        category = value
+    fun updateCategory(text: String) {
+        category.setTextAndPlaceCursorAtEnd(text)
         draftTag.newVersion()
     }
 
-    fun updateLocation(it: TextFieldValue) {
-        locationText = it
+    fun onLocationChanged() {
         draftTag.newVersion()
     }
 

@@ -21,12 +21,14 @@
 package com.vitorpamplona.amethyst.ui.note.nip22Comments
 
 import android.content.Context
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.runtime.Stable
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
@@ -147,7 +149,7 @@ open class CommentPostViewModel :
 
     var notifying by mutableStateOf<List<User>?>(null)
 
-    override var message by mutableStateOf(TextFieldValue(""))
+    override val message = TextFieldState()
 
     val urlPreviews = PreviewState()
 
@@ -242,7 +244,7 @@ open class CommentPostViewModel :
     }
 
     open fun quote(quote: Note) {
-        message = TextFieldValue(message.text + "\nnostr:${quote.toNEvent()}")
+        message.setTextAndPlaceCursorAtEnd(message.text.toString() + "\nnostr:${quote.toNEvent()}")
 
         quote.author?.let { quotedUser ->
             if (quotedUser.pubkeyHex != accountViewModel.userProfile().pubkeyHex) {
@@ -262,7 +264,7 @@ open class CommentPostViewModel :
             wantsForwardZapTo = true
         }
 
-        urlPreviews.update(message)
+        urlPreviews.update(message.text.toString())
     }
 
     private fun loadFromDraft(draft: Note) {
@@ -322,11 +324,11 @@ open class CommentPostViewModel :
             wantsForwardZapTo = true
         }
 
-        message = TextFieldValue(draftEvent.content)
+        message.setTextAndPlaceCursorAtEnd(draftEvent.content)
 
         iMetaAttachments.addAll(draftEvent.imetas())
 
-        urlPreviews.update(message)
+        urlPreviews.update(message.text.toString())
     }
 
     suspend fun sendPostSync() {
@@ -359,7 +361,7 @@ open class CommentPostViewModel :
     }
 
     suspend fun sendDraftSync() {
-        if (message.text.isBlank()) {
+        if (message.text.toString().isBlank()) {
             accountViewModel.account.deleteDraftIgnoreErrors(draftTag.current)
         } else {
             val attachments = mutableSetOf<Event>()
@@ -376,7 +378,7 @@ open class CommentPostViewModel :
     private suspend fun createTemplate(): EventTemplate<out Event>? {
         val tagger =
             NewMessageTagger(
-                message = message.text,
+                message = message.text.toString(),
                 dao = accountViewModel,
             )
         tagger.run()
@@ -525,8 +527,8 @@ open class CommentPostViewModel :
                         val note = nip95.let { it1 -> account.consumeNip95(it1.first, it1.second) }
 
                         note?.let {
-                            message = message.insertUrlAtCursor("nostr:" + it.toNEvent())
-                            urlPreviews.update(message)
+                            message.insertUrlAtCursor("nostr:" + it.toNEvent())
+                            urlPreviews.update(message.text.toString())
                         }
                     } else if (state.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
                         val iMeta =
@@ -549,8 +551,8 @@ open class CommentPostViewModel :
 
                         iMetaAttachments.replace(iMeta.url, iMeta)
 
-                        message = message.insertUrlAtCursor(state.result.url)
-                        urlPreviews.update(message)
+                        message.insertUrlAtCursor(state.result.url)
+                        urlPreviews.update(message.text.toString())
                     }
                 }
 
@@ -576,7 +578,7 @@ open class CommentPostViewModel :
     open fun cancel() {
         draftTag.rotate()
 
-        message = TextFieldValue("")
+        message.setTextAndPlaceCursorAtEnd("")
 
         replyingTo = null
         externalIdentity = null
@@ -618,9 +620,8 @@ open class CommentPostViewModel :
         notifying = notifying?.filter { it != userToRemove }
     }
 
-    override fun updateMessage(newMessage: TextFieldValue) {
-        message = newMessage
-        urlPreviews.update(message)
+    override fun onMessageChanged() {
+        urlPreviews.update(message.text.toString())
 
         if (message.selection.collapsed) {
             val lastWord = message.currentWord()
@@ -651,8 +652,8 @@ open class CommentPostViewModel :
         userSuggestions?.let { userSuggestions ->
             if (userSuggestionsMainMessage == UserSuggestionAnchor.MAIN_MESSAGE) {
                 val lastWord = message.currentWord()
-                message = userSuggestions.replaceCurrentWord(message, lastWord, item)
-                urlPreviews.update(message)
+                userSuggestions.replaceCurrentWord(message, lastWord, item)
+                urlPreviews.update(message.text.toString())
             } else if (userSuggestionsMainMessage == UserSuggestionAnchor.FORWARD_ZAPS) {
                 forwardZapTo.value.addItem(item)
                 forwardZapToEditting.value = TextFieldValue("")
@@ -668,8 +669,8 @@ open class CommentPostViewModel :
     open fun autocompleteWithEmoji(item: EmojiPackState.EmojiMedia) {
         val wordToInsert = ":${item.code}:"
 
-        message = message.replaceCurrentWord(wordToInsert)
-        urlPreviews.update(message)
+        message.replaceCurrentWord(wordToInsert)
+        urlPreviews.update(message.text.toString())
 
         emojiSuggestions?.reset()
 
@@ -685,8 +686,8 @@ open class CommentPostViewModel :
             }
         }
 
-        message = message.replaceCurrentWord(wordToInsert)
-        urlPreviews.update(message)
+        message.replaceCurrentWord(wordToInsert)
+        urlPreviews.update(message.text.toString())
 
         emojiSuggestions?.reset()
 
@@ -694,14 +695,14 @@ open class CommentPostViewModel :
     }
 
     fun canPost(): Boolean =
-        message.text.isNotBlank() &&
+        message.text.toString().isNotBlank() &&
             !mediaUploadTracker.isUploading &&
             !wantsInvoice &&
             (!wantsZapraiser || zapRaiserAmount.value != null) &&
             multiOrchestrator == null
 
     fun insertAtCursor(newElement: String) {
-        message = message.insertUrlAtCursor(newElement)
+        message.insertUrlAtCursor(newElement)
     }
 
     fun selectImage(uris: ImmutableList<SelectedMedia>) {
@@ -718,7 +719,7 @@ open class CommentPostViewModel :
     override fun updateZapFromText() {
         viewModelScope.launch(Dispatchers.IO) {
             val tagger =
-                NewMessageTagger(message.text, emptyList(), emptyList(), accountViewModel)
+                NewMessageTagger(message.text.toString(), emptyList(), emptyList(), accountViewModel)
             tagger.run()
             tagger.pTags?.forEach { taggedUser ->
                 if (!forwardZapTo.value.items.any { it.key == taggedUser }) {

@@ -26,6 +26,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -147,7 +148,7 @@ class NewPublicMessageViewModel :
     val iMetaAttachments = IMetaAttachments()
     var nip95attachments by mutableStateOf<List<Pair<FileStorageEvent, FileStorageHeaderEvent>>>(emptyList())
 
-    override var message by mutableStateOf(TextFieldValue(""))
+    override val message = TextFieldState()
 
     val urlPreviews = PreviewState()
 
@@ -160,7 +161,7 @@ class NewPublicMessageViewModel :
 
     var emojiSuggestions: EmojiSuggestionState? = null
 
-    var toUsers by mutableStateOf(TextFieldValue(""))
+    val toUsers = TextFieldState()
 
     // Images and Videos
     var multiOrchestrator by mutableStateOf<MultiOrchestrator?>(null)
@@ -218,10 +219,9 @@ class NewPublicMessageViewModel :
     fun load(users: Set<HexKey>) {
         val userSet = users - account.userProfile().pubkeyHex
 
-        toUsers =
-            TextFieldValue(
-                userSet.mapNotNull { runCatching { Hex.decode(it).toNpub() }.getOrNull() }.joinToString(", ") { "@$it" },
-            )
+        toUsers.setTextAndPlaceCursorAtEnd(
+            userSet.mapNotNull { runCatching { Hex.decode(it).toNpub() }.getOrNull() }.joinToString(", ") { "@$it" },
+        )
     }
 
     fun reply(post: Note) {
@@ -229,8 +229,8 @@ class NewPublicMessageViewModel :
     }
 
     fun quote(quote: Note) {
-        message = TextFieldValue(message.text + "\nnostr:${quote.toNEvent()}")
-        urlPreviews.update(message)
+        message.setTextAndPlaceCursorAtEnd(message.text.toString() + "\nnostr:${quote.toNEvent()}")
+        urlPreviews.update(message.text.toString())
 
         // creates a split with that author.
         val quotedAuthor = quote.author ?: return
@@ -306,13 +306,12 @@ class NewPublicMessageViewModel :
 
         val userSet = draftEvent.groupKeys() - account.userProfile().pubkeyHex
 
-        toUsers =
-            TextFieldValue(
-                userSet.mapNotNull { runCatching { Hex.decode(it).toNpub() }.getOrNull() }.joinToString(", ") { "@$it" },
-            )
+        toUsers.setTextAndPlaceCursorAtEnd(
+            userSet.mapNotNull { runCatching { Hex.decode(it).toNpub() }.getOrNull() }.joinToString(", ") { "@$it" },
+        )
 
-        message = TextFieldValue(draftEvent.content)
-        urlPreviews.update(message)
+        message.setTextAndPlaceCursorAtEnd(draftEvent.content)
+        urlPreviews.update(message.text.toString())
 
         iMetaAttachments.addAll(draftEvent.imetas())
     }
@@ -349,7 +348,7 @@ class NewPublicMessageViewModel :
     }
 
     suspend fun sendDraftSync() {
-        if (message.text.isBlank()) {
+        if (message.text.toString().isBlank()) {
             accountViewModel.account.deleteDraftIgnoreErrors(draftTag.current)
         } else {
             val broadcast = mutableSetOf<Event>()
@@ -364,13 +363,14 @@ class NewPublicMessageViewModel :
     }
 
     private suspend fun createTemplate(): EventTemplate<PublicMessageEvent> {
-        val toUsersTagger = NewMessageTagger(this@NewPublicMessageViewModel.toUsers.text, null, null, accountViewModel)
+        val toUsersTagger = NewMessageTagger(this@NewPublicMessageViewModel.toUsers.text.toString(), null, null, accountViewModel)
         toUsersTagger.run()
 
+        val messageText = message.text.toString()
         val msg =
             replyingTo?.let {
-                it.toNostrUri() + "\n" + message.text
-            } ?: message.text
+                it.toNostrUri() + "\n" + messageText
+            } ?: messageText
 
         val tagger = NewMessageTagger(msg, null, null, accountViewModel)
         tagger.run()
@@ -470,8 +470,8 @@ class NewPublicMessageViewModel :
                         val note = nip95.let { it1 -> account.consumeNip95(it1.first, it1.second) }
 
                         note?.let {
-                            message = message.insertUrlAtCursor("nostr:" + it.toNEvent())
-                            urlPreviews.update(message)
+                            message.insertUrlAtCursor("nostr:" + it.toNEvent())
+                            urlPreviews.update(message.text.toString())
                         }
                     } else if (state.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
                         val iMeta =
@@ -494,8 +494,8 @@ class NewPublicMessageViewModel :
 
                         iMetaAttachments.replace(iMeta.url, iMeta)
 
-                        message = message.insertUrlAtCursor(state.result.url)
-                        urlPreviews.update(message)
+                        message.insertUrlAtCursor(state.result.url)
+                        urlPreviews.update(message.text.toString())
                     }
                 }
 
@@ -512,8 +512,8 @@ class NewPublicMessageViewModel :
     fun cancel() {
         draftTag.rotate()
 
-        toUsers = TextFieldValue("")
-        message = TextFieldValue("")
+        toUsers.setTextAndPlaceCursorAtEnd("")
+        message.setTextAndPlaceCursorAtEnd("")
         multiOrchestrator = null
 
         wantsInvoice = false
@@ -546,15 +546,15 @@ class NewPublicMessageViewModel :
     }
 
     fun addToMessage(it: String) {
-        updateMessage(TextFieldValue(message.text + " " + it))
+        message.setTextAndPlaceCursorAtEnd(message.text.toString() + " " + it)
+        onMessageChanged()
     }
 
-    override fun updateMessage(newMessage: TextFieldValue) {
-        message = newMessage
-        urlPreviews.update(newMessage)
+    override fun onMessageChanged() {
+        urlPreviews.update(message.text.toString())
 
         if (message.selection.collapsed) {
-            val lastWord = newMessage.currentWord()
+            val lastWord = message.currentWord()
             if (lastWord.startsWith("@")) {
                 userSuggestionsMainMessage = UserSuggestionAnchor.MAIN_MESSAGE
                 userSuggestions?.processCurrentWord(lastWord)
@@ -569,11 +569,9 @@ class NewPublicMessageViewModel :
         draftTag.newVersion()
     }
 
-    fun updateToUsers(newToUsersValue: TextFieldValue) {
-        toUsers = newToUsersValue
-
-        if (newToUsersValue.selection.collapsed) {
-            val lastWord = newToUsersValue.currentWord()
+    fun onToUsersChanged() {
+        if (toUsers.selection.collapsed) {
+            val lastWord = toUsers.currentWord()
             userSuggestionsMainMessage = UserSuggestionAnchor.TO_USERS
             userSuggestions?.processCurrentWord(lastWord)
         }
@@ -594,14 +592,14 @@ class NewPublicMessageViewModel :
         userSuggestions?.let { userSuggestions ->
             if (userSuggestionsMainMessage == UserSuggestionAnchor.MAIN_MESSAGE) {
                 val lastWord = message.currentWord()
-                message = userSuggestions.replaceCurrentWord(message, lastWord, item)
-                urlPreviews.update(message)
+                userSuggestions.replaceCurrentWord(message, lastWord, item)
+                urlPreviews.update(message.text.toString())
             } else if (userSuggestionsMainMessage == UserSuggestionAnchor.FORWARD_ZAPS) {
                 forwardZapTo.value.addItem(item)
                 forwardZapToEditting.value = TextFieldValue("")
             } else if (userSuggestionsMainMessage == UserSuggestionAnchor.TO_USERS) {
                 val lastWord = toUsers.currentWord()
-                toUsers = userSuggestions.replaceCurrentWord(toUsers, lastWord, item)
+                userSuggestions.replaceCurrentWord(toUsers, lastWord, item)
             }
 
             userSuggestionsMainMessage = null
@@ -614,8 +612,8 @@ class NewPublicMessageViewModel :
     fun autocompleteWithEmoji(item: EmojiPackState.EmojiMedia) {
         val wordToInsert = ":${item.code}:"
 
-        message = message.replaceCurrentWord(wordToInsert)
-        urlPreviews.update(message)
+        message.replaceCurrentWord(wordToInsert)
+        urlPreviews.update(message.text.toString())
 
         emojiSuggestions?.reset()
 
@@ -631,8 +629,8 @@ class NewPublicMessageViewModel :
             }
         }
 
-        message = message.replaceCurrentWord(wordToInsert)
-        urlPreviews.update(message)
+        message.replaceCurrentWord(wordToInsert)
+        urlPreviews.update(message.text.toString())
 
         emojiSuggestions?.reset()
 
@@ -648,7 +646,7 @@ class NewPublicMessageViewModel :
             multiOrchestrator == null
 
     fun insertAtCursor(newElement: String) {
-        message = message.insertUrlAtCursor(newElement)
+        message.insertUrlAtCursor(newElement)
     }
 
     fun selectImage(uris: ImmutableList<SelectedMedia>) {
@@ -671,7 +669,7 @@ class NewPublicMessageViewModel :
 
     override fun updateZapFromText() {
         viewModelScope.launch(Dispatchers.IO) {
-            val tagger = NewMessageTagger(message.text, emptyList(), emptyList(), accountViewModel)
+            val tagger = NewMessageTagger(message.text.toString(), emptyList(), emptyList(), accountViewModel)
             tagger.run()
             tagger.pTags?.forEach { taggedUser ->
                 if (!forwardZapTo.value.items.any { it.key == taggedUser }) {

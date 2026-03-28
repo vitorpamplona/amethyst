@@ -29,7 +29,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
@@ -109,7 +109,8 @@ fun ChatroomView(
 
     if (draftMessage != null) {
         LaunchedEffect(key1 = draftMessage) {
-            newPostModel.updateMessage(TextFieldValue(draftMessage))
+            newPostModel.message.setTextAndPlaceCursorAtEnd(draftMessage)
+            newPostModel.onMessageChanged()
         }
     }
 
