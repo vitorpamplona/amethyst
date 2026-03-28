@@ -26,7 +26,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import kotlin.math.max
 import kotlin.math.min
 
-// ── TextFieldState extensions (new BasicTextField) ──────────────────────────────────────────
+// ── TextFieldState extensions (new BasicTextField) ──────────────────────────
 
 fun TextFieldState.updateText(newText: String) {
     edit {
@@ -103,7 +103,7 @@ private fun currentWordEndIdx(
     return nextNewLine
 }
 
-// ── TextFieldValue extensions (legacy) ──────────────────────────────────────────────
+// ── TextFieldValue extensions (legacy) ──────────────────────────────────────
 
 fun TextFieldValue.insertUrlAtCursor(url: String): TextFieldValue {
     var toInsert = url.trim()
