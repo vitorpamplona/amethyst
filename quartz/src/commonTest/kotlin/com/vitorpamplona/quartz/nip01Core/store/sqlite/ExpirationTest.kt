@@ -27,7 +27,6 @@ import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertFailsWith
 
@@ -59,9 +58,7 @@ class ExpirationTest : BaseDBTest() {
 
             db.assertQuery(noteToExpire, Filter(ids = listOf(noteToExpire.id)))
 
-            runBlocking {
-                delay(2000)
-            }
+            delay(2000)
 
             db.deleteExpiredEvents()
 

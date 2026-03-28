@@ -75,7 +75,7 @@ open class BaseDBTest {
         dbs.forEach { it.value.close() }
     }
 
-    fun forEachDB(action: (EventStore) -> Unit) =
+    fun forEachDB(action: suspend (EventStore) -> Unit) =
         runBlocking {
             dbs.forEach { (key, value) ->
                 launch(Dispatchers.Default) {
