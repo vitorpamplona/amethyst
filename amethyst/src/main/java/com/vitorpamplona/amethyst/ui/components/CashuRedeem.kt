@@ -51,7 +51,6 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat.startActivity
 import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.Cashu
@@ -217,7 +216,7 @@ fun CashuPreviewNew(
                             val intent = Intent(Intent.ACTION_VIEW, "cashu://${token.token}".toUri())
                             intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
 
-                            startActivity(context, intent, null)
+                            context.startActivity(intent)
                         } catch (e: Exception) {
                             if (e is CancellationException) throw e
                             toast(stringRes(context, R.string.cashu), stringRes(context, R.string.cashu_no_wallet_found))
