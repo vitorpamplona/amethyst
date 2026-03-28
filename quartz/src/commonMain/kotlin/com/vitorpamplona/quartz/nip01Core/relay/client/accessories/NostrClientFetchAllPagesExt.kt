@@ -22,7 +22,7 @@ package com.vitorpamplona.quartz.nip01Core.relay.client.accessories
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -51,7 +51,7 @@ import kotlin.math.min
  * @param onEvent     Called for every event received (in page order, after each EOSE).
  * @return Total number of events received across all pages.
  */
-suspend fun INostrClient.reqBypassingRelayLimits(
+suspend fun INostrClient.fetchAllPages(
     relay: NormalizedRelayUrl,
     filters: List<Filter>,
     timeoutMs: Long = 30_000L,
@@ -95,7 +95,7 @@ suspend fun INostrClient.reqBypassingRelayLimits(
 
         try {
             val listener =
-                object : IRequestListener {
+                object : SubscriptionListener {
                     override fun onEvent(
                         event: Event,
                         isLive: Boolean,
@@ -144,16 +144,16 @@ suspend fun INostrClient.reqBypassingRelayLimits(
                     }
                 }
 
-            openReqSubscription(subId, mapOf(relay to remainingFilters), listener)
+            subscribe(subId, mapOf(relay to remainingFilters), listener)
 
             withTimeoutOrNull(timeoutMs) {
                 doneChannel.receive()
             }
 
-            close(subId)
+            unsubscribe(subId)
             doneChannel.close()
         } finally {
-            close(subId)
+            unsubscribe(subId)
             doneChannel.close()
         }
 
@@ -168,14 +168,14 @@ suspend fun INostrClient.reqBypassingRelayLimits(
     return totalEvents
 }
 
-suspend fun INostrClient.reqBypassingRelayLimits(
+suspend fun INostrClient.fetchAllPages(
     relay: String,
     filters: List<Filter>,
     timeoutMs: Long = 30_000L,
     onNewPage: ((Long) -> Unit)? = null,
     onEvent: (Event) -> Unit,
 ): Int =
-    reqBypassingRelayLimits(
+    fetchAllPages(
         relay = RelayUrlNormalizer.normalize(relay),
         filters = filters,
         timeoutMs = timeoutMs,

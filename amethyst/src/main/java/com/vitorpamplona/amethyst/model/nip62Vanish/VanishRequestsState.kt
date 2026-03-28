@@ -24,7 +24,7 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.LocalCache.notes
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.downloadFirstEvent
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchFirst
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -105,7 +105,7 @@ class VanishRequestsState(
         try {
             val foundEvent =
                 withContext(Dispatchers.IO) {
-                    client.downloadFirstEvent(
+                    client.fetchFirst(
                         relay = relay,
                         filter =
                             Filter(

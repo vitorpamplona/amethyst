@@ -18,26 +18,10 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions
+package com.vitorpamplona.quartz.nip01Core.relay.client.reqs
 
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
-import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+interface SubscriptionHandle {
+    fun refresh()
 
-data class Subscription(
-    val id: String = newSubId(),
-    val listener: SubscriptionListener,
-) {
-    private var currentVersion: Map<NormalizedRelayUrl, List<Filter>>? = null // Inactive when null
-
-    fun reset() {
-        currentVersion = null
-    }
-
-    fun updateFilters(newFilters: Map<NormalizedRelayUrl, List<Filter>>?) {
-        currentVersion = newFilters
-    }
-
-    fun filters() = currentVersion
+    fun close()
 }

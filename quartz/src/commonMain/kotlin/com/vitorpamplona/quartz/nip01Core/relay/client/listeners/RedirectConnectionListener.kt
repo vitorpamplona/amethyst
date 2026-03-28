@@ -24,9 +24,9 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 
-open class RedirectRelayClientListener(
-    val listener: IRelayClientListener,
-) : IRelayClientListener {
+open class RedirectConnectionListener(
+    val listener: RelayConnectionListener,
+) : RelayConnectionListener {
     override fun onConnecting(relay: IRelayClient) {
         listener.onConnecting(relay)
     }

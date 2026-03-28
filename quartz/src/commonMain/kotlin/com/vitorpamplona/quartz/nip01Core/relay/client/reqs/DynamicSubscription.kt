@@ -21,38 +21,42 @@
 package com.vitorpamplona.quartz.nip01Core.relay.client.reqs
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.utils.RandomInstance
 
-interface IRequestListener {
-    fun onEose(
-        relay: NormalizedRelayUrl,
-        forFilters: List<Filter>?,
-    ) {}
+class DynamicSubscription(
+    val client: INostrClient,
+    val filter: () -> Map<NormalizedRelayUrl, List<Filter>>,
+    val onEvent: (event: Event) -> Unit = {},
+) : SubscriptionListener,
+    SubscriptionHandle {
+    val subId = RandomInstance.randomChars(10)
 
-    fun onEvent(
+    override fun onEvent(
         event: Event,
         isLive: Boolean,
         relay: NormalizedRelayUrl,
         forFilters: List<Filter>?,
-    ) {}
+    ) {
+        onEvent(event)
+    }
 
-    fun onClosed(
-        message: String,
-        relay: NormalizedRelayUrl,
-        forFilters: List<Filter>?,
-    ) {}
+    /**
+     * Creates or Updates the filter with relays. This method should be called
+     * everytime the filter changes.
+     */
+    override fun refresh() = client.subscribe(subId, filter(), this)
 
-    fun onCannotConnect(
-        relay: NormalizedRelayUrl,
-        message: String,
-        forFilters: List<Filter>?,
-    ) {}
+    override fun close() = client.unsubscribe(subId)
 
-    fun onStartReq(
-        relay: String,
-        forFilters: List<Filter>,
-    ) {}
-
-    fun onCloseReq(relay: String) {}
+    init {
+        refresh()
+    }
 }
+
+fun INostrClient.subscribe(
+    filters: () -> Map<NormalizedRelayUrl, List<Filter>>,
+    onEvent: (event: Event) -> Unit = {},
+): SubscriptionHandle = DynamicSubscription(this, filters, onEvent)

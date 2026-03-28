@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.relay.client.counts
 
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CountMessage
@@ -40,7 +40,7 @@ class RelayActiveCountStates(
     fun subGetOrCreate(relay: NormalizedRelayUrl): CountQueryState<String> = queryStates[relay] ?: CountQueryState<String>().also { queryStates.put(relay, it) }
 
     private val clientListener =
-        object : IRelayClientListener {
+        object : RelayConnectionListener {
             override fun onConnecting(relay: IRelayClient) {
                 queryStates.put(relay.url, CountQueryState())
             }
@@ -75,12 +75,12 @@ class RelayActiveCountStates(
 
     init {
         Log.d("RelaySubStateMachine", "Init, Subscribe")
-        client.subscribe(clientListener)
+        client.addConnectionListener(clientListener)
     }
 
     fun destroy() {
         // makes sure to run
         Log.d("RelaySubStateMachine", "Destroy, Unsubscribe")
-        client.unsubscribe(clientListener)
+        client.removeConnectionListener(clientListener)
     }
 }

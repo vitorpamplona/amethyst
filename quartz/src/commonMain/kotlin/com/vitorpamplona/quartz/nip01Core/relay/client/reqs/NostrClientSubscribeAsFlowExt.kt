@@ -42,22 +42,22 @@ import kotlinx.coroutines.flow.callbackFlow
  *    - They will be ignored if they are already in the list.
  *    - They will be added to the beginning of the list if they are new.
  */
-fun INostrClient.reqAsFlow(
+fun INostrClient.subscribeAsFlow(
     relay: String,
     filters: List<Filter>,
-) = reqAsFlow(RelayUrlNormalizer.normalize(relay), filters)
+) = subscribeAsFlow(RelayUrlNormalizer.normalize(relay), filters)
 
-fun INostrClient.reqAsFlow(
+fun INostrClient.subscribeAsFlow(
     relay: String,
     filter: Filter,
-) = reqAsFlow(RelayUrlNormalizer.normalize(relay), listOf(filter))
+) = subscribeAsFlow(RelayUrlNormalizer.normalize(relay), listOf(filter))
 
-fun INostrClient.reqAsFlow(
+fun INostrClient.subscribeAsFlow(
     relay: NormalizedRelayUrl,
     filter: Filter,
-) = reqAsFlow(relay, listOf(filter))
+) = subscribeAsFlow(relay, listOf(filter))
 
-fun INostrClient.reqAsFlow(
+fun INostrClient.subscribeAsFlow(
     relay: NormalizedRelayUrl,
     filters: List<Filter>,
 ): Flow<List<Event>> =
@@ -68,7 +68,7 @@ fun INostrClient.reqAsFlow(
         var currentEvents = listOf<Event>()
 
         val listener =
-            object : IRequestListener {
+            object : SubscriptionListener {
                 override fun onEvent(
                     event: Event,
                     isLive: Boolean,
@@ -98,9 +98,9 @@ fun INostrClient.reqAsFlow(
                 }
             }
 
-        openReqSubscription(subId, mapOf(relay to filters), listener)
+        subscribe(subId, mapOf(relay to filters), listener)
 
         awaitClose {
-            close(subId)
+            unsubscribe(subId)
         }
     }

@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.service.broadcast
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
@@ -90,7 +90,7 @@ class BroadcastTracker {
         val resultChannel = Channel<RelayResponse>(UNLIMITED)
 
         val subscription =
-            object : IRelayClientListener {
+            object : RelayConnectionListener {
                 override fun onCannotConnect(
                     relay: IRelayClient,
                     errorMessage: String,
@@ -143,7 +143,7 @@ class BroadcastTracker {
             }
 
         try {
-            client.subscribe(subscription)
+            client.addConnectionListener(subscription)
 
             val finalBroadcast =
                 coroutineScope {
@@ -178,7 +178,7 @@ class BroadcastTracker {
                         }
 
                     // Send after setting up listener
-                    client.send(event, relays)
+                    client.publish(event, relays)
 
                     resultCollector.await()
                 }
@@ -192,7 +192,7 @@ class BroadcastTracker {
 
             Log.d(TAG, "Broadcast $trackingId complete: ${finalBroadcast.successCount}/${finalBroadcast.totalRelays} success")
         } finally {
-            client.unsubscribe(subscription)
+            client.removeConnectionListener(subscription)
         }
     }
 
@@ -266,7 +266,7 @@ class BroadcastTracker {
         val resultChannel = Channel<RelayResponse>(UNLIMITED)
 
         val subscription =
-            object : IRelayClientListener {
+            object : RelayConnectionListener {
                 override fun onCannotConnect(
                     relay: IRelayClient,
                     errorMessage: String,
@@ -318,7 +318,7 @@ class BroadcastTracker {
                 }
             }
 
-        client.subscribe(subscription)
+        client.addConnectionListener(subscription)
 
         val finalBroadcast =
             coroutineScope {
@@ -370,12 +370,12 @@ class BroadcastTracker {
                         currentBroadcast.copy(status = newStatus)
                     }
 
-                client.send(event, relaysToRetry)
+                client.publish(event, relaysToRetry)
 
                 resultCollector.await()
             }
 
-        client.unsubscribe(subscription)
+        client.removeConnectionListener(subscription)
         resultChannel.close()
 
         // Update in active broadcasts

@@ -69,7 +69,6 @@ import com.vitorpamplona.amethyst.ui.screen.UiSettingsState
 import com.vitorpamplona.amethyst.ui.tor.TorManager
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayLogger
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.stats.RelayReqStats
@@ -245,7 +244,7 @@ class AppModules(
             scope = applicationIOScope,
         )
 
-    // Connects the NostrClient class with okHttp
+    // Connects the INostrClient class with okHttp
     val websocketBuilder =
         OkHttpWebSocket.Builder { url ->
             val useTor = torEvaluatorFlow.flow.value.useTor(url)

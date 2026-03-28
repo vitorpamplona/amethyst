@@ -22,8 +22,8 @@ package com.vitorpamplona.quartz.nip01Core.relay.client
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -52,29 +52,29 @@ interface INostrClient : AutoCloseable {
      * This is called every time the relay connects
      * and when auth is successful
      */
-    fun renewFilters(relay: IRelayClient)
+    fun syncFilters(relay: IRelayClient)
 
-    fun openReqSubscription(
+    fun subscribe(
         subId: String = newSubId(),
         filters: Map<NormalizedRelayUrl, List<Filter>>,
-        listener: IRequestListener? = null,
+        listener: SubscriptionListener? = null,
     )
 
-    fun queryCount(
+    fun count(
         subId: String = newSubId(),
         filters: Map<NormalizedRelayUrl, List<Filter>>,
     )
 
-    fun close(subId: String)
+    fun unsubscribe(subId: String)
 
-    fun send(
+    fun publish(
         event: Event,
         relayList: Set<NormalizedRelayUrl>,
     )
 
-    fun subscribe(listener: IRelayClientListener)
+    fun addConnectionListener(listener: RelayConnectionListener)
 
-    fun unsubscribe(listener: IRelayClientListener)
+    fun removeConnectionListener(listener: RelayConnectionListener)
 
     fun getReqFiltersOrNull(subId: String): Map<NormalizedRelayUrl, List<Filter>>?
 
@@ -103,29 +103,29 @@ class EmptyNostrClient : INostrClient {
 
     override fun isActive() = false
 
-    override fun renewFilters(relay: IRelayClient) { }
+    override fun syncFilters(relay: IRelayClient) { }
 
-    override fun openReqSubscription(
+    override fun subscribe(
         subId: String,
         filters: Map<NormalizedRelayUrl, List<Filter>>,
-        listener: IRequestListener?,
+        listener: SubscriptionListener?,
     ) { }
 
-    override fun queryCount(
+    override fun count(
         subId: String,
         filters: Map<NormalizedRelayUrl, List<Filter>>,
     ) { }
 
-    override fun close(subId: String) { }
+    override fun unsubscribe(subId: String) { }
 
-    override fun send(
+    override fun publish(
         event: Event,
         relayList: Set<NormalizedRelayUrl>,
     ) { }
 
-    override fun subscribe(listener: IRelayClientListener) {}
+    override fun addConnectionListener(listener: RelayConnectionListener) {}
 
-    override fun unsubscribe(listener: IRelayClientListener) {}
+    override fun removeConnectionListener(listener: RelayConnectionListener) {}
 
     override fun getReqFiltersOrNull(subId: String): Map<NormalizedRelayUrl, List<Filter>>? = null
 

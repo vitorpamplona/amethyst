@@ -28,7 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -79,7 +79,7 @@ class FeedMetadataCoordinator(
             // Create listener to pass events to the callback
             val listener =
                 if (onEvent != null) {
-                    object : IRequestListener {
+                    object : SubscriptionListener {
                         override fun onEvent(
                             event: Event,
                             isLive: Boolean,
@@ -93,7 +93,7 @@ class FeedMetadataCoordinator(
                     null
                 }
 
-            client.openReqSubscription(
+            client.subscribe(
                 subId = newSubId(),
                 filters = filterMap,
                 listener = listener,

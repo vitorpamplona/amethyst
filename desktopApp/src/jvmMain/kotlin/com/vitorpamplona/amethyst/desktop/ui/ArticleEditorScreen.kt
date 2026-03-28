@@ -175,7 +175,7 @@ fun ArticleEditorScreen(
                     )
                 // TODO: send() is fire-and-forget; markPublished runs before relay ack.
                 //  Consider waiting for relay OK response before marking as published.
-                relayManager.send(event)
+                relayManager.publish(event)
                 draftStore.markPublished(slug)
                 onPublished()
             } catch (e: Exception) {

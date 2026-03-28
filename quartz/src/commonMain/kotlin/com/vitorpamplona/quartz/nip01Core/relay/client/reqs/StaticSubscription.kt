@@ -24,14 +24,15 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.utils.RandomInstance
 
-class NostrClientDynamicReq(
+class StaticSubscription(
     val client: INostrClient,
-    val filter: () -> Map<NormalizedRelayUrl, List<Filter>>,
+    val filter: Map<NormalizedRelayUrl, List<Filter>>,
     val onEvent: (event: Event) -> Unit = {},
-) : IRequestListener,
-    IOpenNostrRequest {
+) : SubscriptionListener,
+    SubscriptionHandle {
     val subId = RandomInstance.randomChars(10)
 
     override fun onEvent(
@@ -47,16 +48,50 @@ class NostrClientDynamicReq(
      * Creates or Updates the filter with relays. This method should be called
      * everytime the filter changes.
      */
-    override fun updateFilter() = client.openReqSubscription(subId, filter(), this)
+    override fun refresh() = client.subscribe(subId, filter, this)
 
-    override fun close() = client.close(subId)
+    override fun close() = client.unsubscribe(subId)
 
     init {
-        updateFilter()
+        refresh()
     }
 }
 
-fun INostrClient.req(
-    filters: () -> Map<NormalizedRelayUrl, List<Filter>>,
+fun INostrClient.subscribe(
+    relay: NormalizedRelayUrl,
+    filters: List<Filter>,
     onEvent: (event: Event) -> Unit = {},
-): IOpenNostrRequest = NostrClientDynamicReq(this, filters, onEvent)
+): SubscriptionHandle = StaticSubscription(this, mapOf(relay to filters), onEvent)
+
+fun INostrClient.subscribe(
+    relay: NormalizedRelayUrl,
+    filter: Filter,
+    onEvent: (event: Event) -> Unit = {},
+): SubscriptionHandle = StaticSubscription(this, mapOf(relay to listOf(filter)), onEvent)
+
+fun INostrClient.subscribe(
+    relays: List<NormalizedRelayUrl>,
+    filters: List<Filter>,
+    onEvent: (event: Event) -> Unit = {},
+): SubscriptionHandle = StaticSubscription(this, relays.associateWith { filters }, onEvent)
+
+fun INostrClient.subscribe(
+    relays: List<NormalizedRelayUrl>,
+    filter: Filter,
+    onEvent: (event: Event) -> Unit = {},
+): SubscriptionHandle = StaticSubscription(this, relays.associateWith { listOf(filter) }, onEvent)
+
+// -----------------------------------
+// Helper methods with relay as string
+// -----------------------------------
+fun INostrClient.subscribe(
+    relay: String,
+    filters: List<Filter>,
+    onEvent: (event: Event) -> Unit = {},
+): SubscriptionHandle = StaticSubscription(this, mapOf(RelayUrlNormalizer.normalize(relay) to filters), onEvent)
+
+fun INostrClient.subscribe(
+    relay: String,
+    filter: Filter,
+    onEvent: (event: Event) -> Unit = {},
+): SubscriptionHandle = StaticSubscription(this, mapOf(RelayUrlNormalizer.normalize(relay) to listOf(filter)), onEvent)

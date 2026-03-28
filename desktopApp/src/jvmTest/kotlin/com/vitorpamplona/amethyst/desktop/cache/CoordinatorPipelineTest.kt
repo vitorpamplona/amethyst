@@ -28,8 +28,8 @@ import com.vitorpamplona.amethyst.desktop.viewmodels.DesktopFeedViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -69,7 +69,7 @@ class CoordinatorPipelineTest {
      * This lets us test the coordinator's event routing without network dependencies.
      */
     private class StubNostrClient : INostrClient {
-        val openedSubs = mutableMapOf<String, Pair<Map<NormalizedRelayUrl, List<Filter>>, IRequestListener?>>()
+        val openedSubs = mutableMapOf<String, Pair<Map<NormalizedRelayUrl, List<Filter>>, SubscriptionListener?>>()
 
         override fun connectedRelaysFlow(): StateFlow<Set<NormalizedRelayUrl>> = MutableStateFlow(emptySet())
 
@@ -88,17 +88,17 @@ class CoordinatorPipelineTest {
 
         override fun isActive() = false
 
-        override fun renewFilters(relay: IRelayClient) {}
+        override fun syncFilters(relay: IRelayClient) {}
 
-        override fun openReqSubscription(
+        override fun subscribe(
             subId: String,
             filters: Map<NormalizedRelayUrl, List<Filter>>,
-            listener: IRequestListener?,
+            listener: SubscriptionListener?,
         ) {
             openedSubs[subId] = filters to listener
         }
 
-        override fun queryCount(
+        override fun count(
             subId: String,
             filters: Map<NormalizedRelayUrl, List<Filter>>,
         ) {}
@@ -112,9 +112,9 @@ class CoordinatorPipelineTest {
             relayList: Set<NormalizedRelayUrl>,
         ) {}
 
-        override fun subscribe(listener: IRelayClientListener) {}
+        override fun addConnectionListener(listener: RelayConnectionListener) {}
 
-        override fun unsubscribe(listener: IRelayClientListener) {}
+        override fun removeConnectionListener(listener: RelayConnectionListener) {}
 
         override fun getReqFiltersOrNull(subId: String): Map<NormalizedRelayUrl, List<Filter>>? = null
 
@@ -376,7 +376,7 @@ class CoordinatorPipelineTest {
             val noteIds = listOf("n1".padEnd(64, '0'))
             val subId = coordinator.requestInteractions(noteIds, setOf(relayUrl))
 
-            // openReqSubscription is launched in scope — wait for it
+            // subscribe is launched in scope — wait for it
             delay(200)
 
             assertTrue(client.openedSubs.containsKey(subId), "Interaction subscription should be opened")
