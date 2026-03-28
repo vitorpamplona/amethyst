@@ -67,7 +67,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.AnnotatedString
@@ -265,7 +265,7 @@ fun CardBody(
 ) {
     val context = LocalContext.current
     val primaryLight = lightenColor(MaterialTheme.colorScheme.primary, 0.1f)
-    val clipboardManager = LocalClipboardManager.current
+    val clipboardManager = LocalClipboard.current
     val scope = rememberCoroutineScope()
 
     val showToast = { stringRes: Int ->

@@ -33,7 +33,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
@@ -59,7 +59,7 @@ fun UrlPreviewCard(
         }
 
     if (popupExpanded.value) {
-        val clipboardManager = LocalClipboardManager.current
+        val clipboardManager = LocalClipboard.current
         M3ActionDialog(
             title = stringRes(R.string.link_actions_dialog_title),
             onDismiss = { popupExpanded.value = false },

@@ -32,7 +32,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
@@ -63,7 +63,7 @@ fun DrawBanner(
     accountViewModel: AccountViewModel,
 ) {
     if (!banner.isNullOrBlank()) {
-        val clipboardManager = LocalClipboardManager.current
+        val clipboardManager = LocalClipboard.current
         var zoomImageDialogOpen by remember { mutableStateOf(false) }
 
         AsyncImage(

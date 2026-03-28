@@ -26,7 +26,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -37,7 +37,7 @@ fun ClickableRelayUrl(
     relayUrl: String,
     nav: INav,
 ) {
-    val clipboardManager = LocalClipboardManager.current
+    val clipboardManager = LocalClipboard.current
     val clickableModifier =
         remember(relayUrl) {
             Modifier

@@ -46,7 +46,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -166,7 +166,7 @@ fun NoteDropDownMenu(
         title = stringRes(R.string.note_actions_dialog_title),
         onDismiss = onDismiss,
     ) {
-        val clipboardManager = LocalClipboardManager.current
+        val clipboardManager = LocalClipboard.current
         val actContext = LocalContext.current
         val scope = rememberCoroutineScope()
 

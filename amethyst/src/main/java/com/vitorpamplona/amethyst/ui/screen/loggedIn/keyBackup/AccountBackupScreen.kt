@@ -71,7 +71,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.LocalAutofill
 import androidx.compose.ui.platform.LocalAutofillTree
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.ImeAction
@@ -281,7 +281,7 @@ private fun AccountBackupScreenContent(
 
 @Composable
 private fun NSecCopyButton(accountViewModel: AccountViewModel) {
-    val clipboardManager = LocalClipboardManager.current
+    val clipboardManager = LocalClipboard.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -329,7 +329,7 @@ private fun EncryptNSecCopyButton(
     accountViewModel: AccountViewModel,
     password: MutableState<TextFieldValue>,
 ) {
-    val clipboardManager = LocalClipboardManager.current
+    val clipboardManager = LocalClipboard.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
