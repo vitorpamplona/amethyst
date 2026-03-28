@@ -199,11 +199,11 @@ class ChatroomListState(
             // Skip rooms with no messages
             if (chatroom.messages.isEmpty()) continue
 
-            val users = key.users.mapNotNull { cacheProvider.getUserIfExists(it) as? User }
+            val users = key.users.mapNotNull { cacheProvider.getUserIfExists(it) }
 
             // Collect pubkeys without profile info
             for (pubkey in key.users) {
-                val user = cacheProvider.getUserIfExists(pubkey) as? User
+                val user = cacheProvider.getUserIfExists(pubkey)
                 if (user == null || user.metadataOrNull() == null) {
                     pubkeysNeedingMetadata.add(pubkey)
                 }

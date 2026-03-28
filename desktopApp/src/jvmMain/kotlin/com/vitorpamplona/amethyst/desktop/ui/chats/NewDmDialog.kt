@@ -51,7 +51,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.search.SearchResult
 import com.vitorpamplona.amethyst.commons.ui.components.UserSearchCard
@@ -183,7 +182,7 @@ fun NewDmDialog(
                         bech32Results.filterIsInstance<SearchResult.UserResult>()
                     items(userResults) { result ->
                         val user =
-                            cacheProvider.getUserIfExists(result.pubKeyHex) as? User
+                            cacheProvider.getUserIfExists(result.pubKeyHex)
                         if (user != null) {
                             UserSearchCard(
                                 user = user,

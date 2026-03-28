@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui
 
-import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.desktop.ui.note.NoteDisplayData
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -31,7 +30,7 @@ import com.vitorpamplona.quartz.nip19Bech32.toNpub
  * Extension to convert Event to NoteDisplayData for the shared NoteCard.
  */
 fun Event.toNoteDisplayData(cache: ICacheProvider? = null): NoteDisplayData {
-    val user = (cache?.getUserIfExists(pubKey) as? User)
+    val user = (cache?.getUserIfExists(pubKey))
 
     val displayName =
         user?.toBestDisplayName()
