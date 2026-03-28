@@ -723,11 +723,13 @@
     <string name="relay_monitor_rtt_open">Otevření</string>
     <string name="relay_monitor_rtt_read">Čtení</string>
     <string name="relay_monitor_rtt_write">Zápis</string>
+    <string name="relay_monitor_rtt">RTT</string>
     <string name="relay_monitor_network">Síť</string>
     <string name="relay_monitor_relay_type">Typ</string>
     <string name="relay_monitor_supported_nips">Podporované NIP</string>
     <string name="relay_monitor_requirements">Požadavky</string>
     <string name="relay_monitor_last_check">Poslední kontrola</string>
+    <string name="relay_monitor_ms">%1$d ms</string>
     <string name="relay_active_subscriptions">Aktivní odběry</string>
     <string name="relay_active_outbox">Čekající události k odeslání</string>
     <string name="relay_req_subscriptions">REQ odběry (%1$d)</string>
@@ -1620,6 +1622,7 @@
     <string name="namecoin_device_info">Informace o zařízení</string>
     <string name="namecoin_tls_info">Informace o TLS</string>
     <string name="namecoin_no_test_yet">Zatím nebyl proveden žádný test</string>
+    <string name="namecoin_response_time">%dms</string>
     <string name="namecoin_pin_cert_title">Důvěřovat certifikátu serveru?</string>
     <string name="namecoin_pin_cert_body">Server %1$s předložil certifikát, který dosud není ve vašem úložišti důvěry. Ověřte, že otisk níže odpovídá tomu, co zveřejnil provozovatel serveru, a poté zvolte, zda mu budete důvěřovat pro budoucí připojení.</string>
     <string name="namecoin_pin_cert_accept">Důvěřovat</string>
@@ -1735,12 +1738,15 @@
     <string name="goal_closed">Tento cíl byl ukončen</string>
     <string name="goal_progress">%1$s financováno z %2$s sats cíle</string>
     <string name="goal_amount_label">Cílová částka (sats)</string>
+    <string name="goal_amount_placeholder">100000</string>
     <string name="goal_description_label">Popište svůj cíl</string>
     <string name="goal_description_placeholder">Na co sbíráte prostředky?</string>
     <string name="goal_summary_label">Krátký souhrn</string>
     <string name="goal_summary_placeholder">Stručný popis zobrazený v náhledech</string>
     <string name="goal_image_label">URL obrázku (volitelné)</string>
+    <string name="goal_image_placeholder">https://example.com/image.jpg</string>
     <string name="goal_website_label">URL webu (volitelné)</string>
+    <string name="goal_website_placeholder">https://example.com</string>
     <string name="goal_deadline_label">Termín (volitelný)</string>
     <string name="goal_set_deadline">Nastavit termín</string>
     <string name="new_goal">Nový cíl</string>
@@ -1769,6 +1775,7 @@
     <string name="vanish_events_empty_hint">Zatím jste neodeslali žádné události Žádost o zmizení.</string>
     <string name="vanish_target_relays_label">Cílové relé</string>
     <string name="vanish_all_relays_compliance_hint">Tento požadavek cílí na všechna relé. Použijte obrazovku Žádost o zmizení k otestování konkrétních relé na shodu.</string>
+    <string name="vanish_test_button">Testovat</string>
     <string name="vanish_compliant">Vyhovující</string>
     <string name="vanish_non_compliant">Nevyhovující</string>
     <string name="vanish_test_error">Chyba</string>

@@ -728,11 +728,13 @@ anz der Bedingungen ist erforderlich</string>
     <string name="relay_monitor_rtt_open">Öffnen</string>
     <string name="relay_monitor_rtt_read">Lesen</string>
     <string name="relay_monitor_rtt_write">Schreiben</string>
+    <string name="relay_monitor_rtt">RTT</string>
     <string name="relay_monitor_network">Netzwerk</string>
     <string name="relay_monitor_relay_type">Typ</string>
     <string name="relay_monitor_supported_nips">Unterstützte NIPs</string>
     <string name="relay_monitor_requirements">Anforderungen</string>
     <string name="relay_monitor_last_check">Letzte Prüfung</string>
+    <string name="relay_monitor_ms">%1$d ms</string>
     <string name="relay_active_subscriptions">Aktive Abonnements</string>
     <string name="relay_active_outbox">Ausstehende Outbox-Ereignisse</string>
     <string name="relay_req_subscriptions">REQ-Abonnements (%1$d)</string>
@@ -1625,6 +1627,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="namecoin_device_info">Geräteinformationen</string>
     <string name="namecoin_tls_info">TLS-Informationen</string>
     <string name="namecoin_no_test_yet">Noch kein Test durchgeführt</string>
+    <string name="namecoin_response_time">%dms</string>
     <string name="namecoin_pin_cert_title">Serverzertifikat vertrauen?</string>
     <string name="namecoin_pin_cert_body">Der Server %1$s hat ein Zertifikat vorgelegt, das noch nicht in deinem Vertrauensspeicher ist. Überprüfe, ob der Fingerabdruck unten mit dem übereinstimmt, was der Serverbetreiber veröffentlicht hat, und wähle dann, ob du ihm für zukünftige Verbindungen vertrauen möchtest.</string>
     <string name="namecoin_pin_cert_accept">Vertrauen</string>
@@ -1740,12 +1743,15 @@ anz der Bedingungen ist erforderlich</string>
     <string name="goal_closed">Dieses Ziel wurde geschlossen</string>
     <string name="goal_progress">%1$s finanziert von %2$s Sats Ziel</string>
     <string name="goal_amount_label">Zielbetrag (Sats)</string>
+    <string name="goal_amount_placeholder">100000</string>
     <string name="goal_description_label">Beschreibe dein Ziel</string>
     <string name="goal_description_placeholder">Wofür sammelst du Geld?</string>
     <string name="goal_summary_label">Kurze Zusammenfassung</string>
     <string name="goal_summary_placeholder">Kurze Beschreibung für Vorschauen</string>
     <string name="goal_image_label">Bild-URL (optional)</string>
+    <string name="goal_image_placeholder">https://example.com/image.jpg</string>
     <string name="goal_website_label">Website-URL (optional)</string>
+    <string name="goal_website_placeholder">https://beispiel.com</string>
     <string name="goal_deadline_label">Frist (optional)</string>
     <string name="goal_set_deadline">Frist festlegen</string>
     <string name="new_goal">Neues Ziel</string>
@@ -1788,6 +1794,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="relay_management_tab_pubkeys">Benutzer</string>
     <string name="relay_management_tab_events">Ereignisse</string>
     <string name="relay_management_tab_kinds">Arten</string>
+    <string name="relay_management_tab_ips">IPs</string>
     <string name="relay_management_tab_settings">Einstellungen</string>
     <string name="relay_management_banned_pubkeys">Gesperrte Benutzer</string>
     <string name="relay_management_no_banned_pubkeys">Keine gesperrten Benutzer</string>
