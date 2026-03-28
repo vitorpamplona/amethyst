@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.home
 
 import android.content.Context
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
@@ -183,7 +184,8 @@ open class ShortNotePostViewModel :
     val iMetaAttachments = IMetaAttachments()
     var nip95attachments by mutableStateOf<List<Pair<FileStorageEvent, FileStorageHeaderEvent>>>(emptyList())
 
-    override var message by mutableStateOf(TextFieldValue(""))
+    override val messageState = TextFieldState()
+    var message by mutableStateOf(TextFieldValue(""))
 
     val urlPreviews = PreviewState()
 
@@ -266,6 +268,7 @@ open class ShortNotePostViewModel :
     var wantsForwardZapTo by mutableStateOf(false)
     override var forwardZapTo = mutableStateOf<SplitBuilder<User>>(SplitBuilder())
     override var forwardZapToEditting = mutableStateOf(TextFieldValue(""))
+    override val forwardZapToEdittingState = TextFieldState()
 
     // NSFW, Sensitive
     var wantsToMarkAsSensitive by mutableStateOf(false)
@@ -1107,7 +1110,7 @@ open class ShortNotePostViewModel :
         updateMessage(TextFieldValue(message.text + " " + it))
     }
 
-    override fun updateMessage(newMessage: TextFieldValue) {
+    open fun updateMessage(newMessage: TextFieldValue) {
         message = newMessage
         urlPreviews.update(message)
 
