@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.ui.components
 import android.Manifest
 import android.content.Context
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
@@ -301,6 +303,15 @@ private fun DialogContent(
     }
 }
 
+private fun showToastOnMain(
+    context: Context,
+    resId: Int,
+) {
+    Handler(Looper.getMainLooper()).post {
+        Toast.makeText(context.applicationContext, resId, Toast.LENGTH_SHORT).show()
+    }
+}
+
 private suspend fun saveMediaToGallery(
     content: BaseMediaContent,
     localContext: Context,
@@ -324,7 +335,7 @@ private suspend fun saveMediaToGallery(
             },
             localContext,
             onSuccess = {
-                accountViewModel.toastManager.toast(success, success)
+                showToastOnMain(localContext, success)
             },
             onError = {
                 accountViewModel.toastManager.toast(failure, null, it)
@@ -337,7 +348,7 @@ private suspend fun saveMediaToGallery(
                 content.mimeType,
                 localContext,
                 onSuccess = {
-                    accountViewModel.toastManager.toast(success, success)
+                    showToastOnMain(localContext, success)
                 },
                 onError = { innerIt ->
                     accountViewModel.toastManager.toast(failure, null, innerIt)

@@ -23,7 +23,10 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.drawable.Drawable
+import android.os.Handler
+import android.os.Looper
 import android.util.LruCache
+import android.widget.Toast
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
@@ -1709,7 +1712,11 @@ class AccountViewModel(
                 mimeType = mimeType,
                 localContext = localContext,
                 onSuccess = {
-                    toastManager.toast(R.string.video_saved_to_the_gallery, R.string.video_saved_to_the_gallery)
+                    Handler(Looper.getMainLooper()).post {
+                        Toast
+                            .makeText(localContext.applicationContext, R.string.video_saved_to_the_gallery, Toast.LENGTH_SHORT)
+                            .show()
+                    }
                 },
                 onError = {
                     toastManager.toast(R.string.failed_to_save_the_video, null, it)
