@@ -51,7 +51,7 @@ class Nip86Client(
                 method = "POST",
                 file = payload,
             )
-        val signedEvent = signer.sign<HTTPAuthorizationEvent>(template)
+        val signedEvent = signer.sign(template)
         return signedEvent.toAuthToken()
     }
 
