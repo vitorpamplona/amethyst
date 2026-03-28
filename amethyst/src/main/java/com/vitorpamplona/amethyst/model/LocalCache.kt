@@ -357,6 +357,7 @@ object LocalCache : ILocalCache, ICacheProvider {
             }
         }.buffer(kotlinx.coroutines.channels.Channel.CONFLATED)
 
+    @Suppress("UNCHECKED_CAST")
     fun <T : Event> observeLatestEvent(filter: Filter) = observeEvents(filter).map { it.firstNotNullOfOrNull { it as? T } }
 
     fun observeLatestNote(filter: Filter) = observeNotes(filter).map { it.firstOrNull() }

@@ -44,6 +44,7 @@ class RecordingResult(
     val duration: Int,
 )
 
+@Suppress("DEPRECATION")
 class VoiceMessageRecorder {
     @Volatile
     private var recorder: MediaRecorder? = null

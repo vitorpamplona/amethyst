@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.navigation
 
 import android.content.Intent
 import android.net.Uri
-import android.os.Parcelable
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -35,6 +34,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.IntentCompat
 import androidx.core.util.Consumer
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -409,7 +409,7 @@ private fun NavigateIfIntentRequested(
 
         var media by remember {
             mutableStateOf(
-                (activity.intent.getParcelableExtra<Parcelable>(Intent.EXTRA_STREAM) as? Uri),
+                IntentCompat.getParcelableExtra(activity.intent, Intent.EXTRA_STREAM, Uri::class.java),
             )
         }
 
@@ -479,7 +479,7 @@ private fun NavigateIfIntentRequested(
                                 nav.newStack(Route.NewShortNote(message = it))
                             }
 
-                            (intent.getParcelableExtra<Parcelable>(Intent.EXTRA_STREAM) as? Uri)?.let {
+                            IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)?.let {
                                 nav.newStack(Route.NewShortNote(attachment = it.toString()))
                             }
                         }

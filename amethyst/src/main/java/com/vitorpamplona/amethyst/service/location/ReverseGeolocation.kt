@@ -29,6 +29,7 @@ import androidx.annotation.RequiresApi
 import com.vitorpamplona.quartz.utils.Log
 import java.io.IOException
 
+@Suppress("DEPRECATION")
 class ReverseGeolocation {
     companion object {
         fun execute(
