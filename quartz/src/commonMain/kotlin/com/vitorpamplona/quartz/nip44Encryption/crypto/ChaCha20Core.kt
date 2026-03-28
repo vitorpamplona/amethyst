@@ -32,10 +32,10 @@ package com.vitorpamplona.quartz.nip44Encryption.crypto
  */
 object ChaCha20Core {
     // "expand 32-byte k" as little-endian integers
-    private const val SIGMA0 = 0x61707865.toInt()
-    private const val SIGMA1 = 0x3320646e.toInt()
-    private const val SIGMA2 = 0x79622d32.toInt()
-    private const val SIGMA3 = 0x6b206574.toInt()
+    private const val SIGMA0 = 0x61707865
+    private const val SIGMA1 = 0x3320646e
+    private const val SIGMA2 = 0x79622d32
+    private const val SIGMA3 = 0x6b206574
 
     /**
      * ChaCha20 quarter round (RFC 8439 §2.1).

@@ -115,6 +115,7 @@ class GitReplyEvent(
 
     fun rootIssueOrPatch() = tags.lastNotNullOfOrNull(MarkedETag::parseRootId)
 
+    @Suppress("DEPRECATION")
     companion object {
         const val KIND = 1622
         const val ALT_DESCRIPTION = "A Git Reply"
