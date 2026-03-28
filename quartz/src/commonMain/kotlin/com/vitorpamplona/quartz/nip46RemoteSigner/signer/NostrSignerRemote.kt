@@ -121,6 +121,7 @@ class NostrSignerRemote(
             )
 
         if (result is SignerResult.RequestAddressed.Successful<SignResult>) {
+            @Suppress("UNCHECKED_CAST")
             (result.result.event as? T)?.let {
                 return it
             }

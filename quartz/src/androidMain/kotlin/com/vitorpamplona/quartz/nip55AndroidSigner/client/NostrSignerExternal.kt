@@ -83,6 +83,7 @@ class NostrSignerExternal(
         val result = backgroundQuery.sign(unsignedEvent) ?: foregroundQuery.sign(unsignedEvent)
 
         if (result is SignerResult.RequestAddressed.Successful<SignResult>) {
+            @Suppress("UNCHECKED_CAST")
             (result.result.event as? T)?.let {
                 return it
             }

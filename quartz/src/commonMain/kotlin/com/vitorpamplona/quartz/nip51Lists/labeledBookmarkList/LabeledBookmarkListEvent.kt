@@ -73,6 +73,7 @@ class LabeledBookmarkListEvent(
 
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 
+    @Suppress("DEPRECATION")
     fun titleOrName() = title() ?: name()
 
     fun description() = tags.firstNotNullOfOrNull(DescriptionTag::parse)

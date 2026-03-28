@@ -64,6 +64,7 @@ class PeopleListEvent(
     @Deprecated("NIP-51 has deprecated name. Use title instead", ReplaceWith("title()"))
     fun name() = tags.firstNotNullOfOrNull(NameTag::parse)
 
+    @Suppress("DEPRECATION")
     fun titleOrName() = title() ?: name()
 
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
