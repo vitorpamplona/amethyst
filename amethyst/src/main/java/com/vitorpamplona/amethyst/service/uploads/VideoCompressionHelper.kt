@@ -26,7 +26,6 @@ import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.text.format.Formatter.formatFileSize
-import android.util.Log
 import android.widget.Toast
 import com.abedelazizshe.lightcompressorlibrary.CompressionListener
 import com.abedelazizshe.lightcompressorlibrary.VideoCodec
@@ -34,6 +33,8 @@ import com.abedelazizshe.lightcompressorlibrary.VideoCompressor
 import com.abedelazizshe.lightcompressorlibrary.config.AppSpecificStorageConfiguration
 import com.abedelazizshe.lightcompressorlibrary.config.Configuration
 import com.abedelazizshe.lightcompressorlibrary.config.VideoResizer
+import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.LogLevel
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.File
@@ -217,7 +218,7 @@ object VideoCompressionHelper {
                                     if (path == null) {
                                         applicationContext.notifyUser(
                                             "Video compression succeeded, but path was null",
-                                            Log.WARN,
+                                            LogLevel.WARN,
                                         )
                                         if (continuation.isActive) continuation.resume(null)
                                         return
@@ -237,7 +238,7 @@ object VideoCompressionHelper {
                                         }
                                         applicationContext.notifyUser(
                                             "Compressed file larger than original. Using original.",
-                                            Log.WARN,
+                                            LogLevel.WARN,
                                         )
                                         if (continuation.isActive) {
                                             continuation.resume(
@@ -276,7 +277,7 @@ object VideoCompressionHelper {
                                 ) {
                                     applicationContext.notifyUser(
                                         "Video compression failed: $failureMessage",
-                                        Log.ERROR,
+                                        LogLevel.ERROR,
                                     )
                                     if (continuation.isActive) continuation.resume(null)
                                 }
@@ -306,16 +307,17 @@ object VideoCompressionHelper {
 
     private fun Context.notifyUser(
         message: String,
-        logLevel: Int = Log.DEBUG,
+        logLevel: LogLevel = LogLevel.DEBUG,
         duration: Int = Toast.LENGTH_LONG,
     ) {
         Handler(Looper.getMainLooper()).post {
             Toast.makeText(this, message, duration).show()
         }
         when (logLevel) {
-            Log.ERROR -> Log.e(LOG_TAG, message)
-            Log.WARN -> Log.w(LOG_TAG, message)
-            else -> Log.d(LOG_TAG, message)
+            LogLevel.ERROR -> Log.e(LOG_TAG, message)
+            LogLevel.WARN -> Log.w(LOG_TAG, message)
+            LogLevel.INFO -> Log.i(LOG_TAG, message)
+            LogLevel.DEBUG -> Log.d(LOG_TAG, message)
         }
     }
 

@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.actions.uploads
 
 import android.media.MediaPlayer
-import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -60,6 +59,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.components.AudioWaveformReadOnly
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nipA0VoiceMessages.AudioMeta
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import java.io.File
@@ -275,7 +275,7 @@ private fun ManageMediaPlayer(
             try {
                 player?.stop()
             } catch (e: IllegalStateException) {
-                Log.d("VoiceMessagePreview", "MediaPlayer stop failed (already stopped)", e)
+                Log.d("VoiceMessagePreview", "MediaPlayer stop failed (already stopped): ${e.message}")
             }
             player?.release()
             onPlayerChanged(null)

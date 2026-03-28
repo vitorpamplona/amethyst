@@ -23,9 +23,11 @@ package com.vitorpamplona.amethyst
 import android.app.Application
 import com.vitorpamplona.amethyst.service.logging.Logging
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.LogLevel
 
 class Amethyst : Application() {
     init {
+        Log.minLevel = if (BuildConfig.DEBUG) LogLevel.DEBUG else LogLevel.ERROR
         Log.d("AmethystApp", "Creating App $this")
     }
 
