@@ -33,6 +33,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -47,6 +48,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.os.LocaleListCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.FeatureSetType
@@ -89,7 +91,7 @@ fun SettingsScreen(
         },
     ) {
         Column(Modifier.padding(it)) {
-            SettingsScreen(accountViewModel.settings.uiSettingsFlow)
+            SettingsScreen(accountViewModel.settings.uiSettingsFlow, accountViewModel)
         }
     }
 }
@@ -103,7 +105,10 @@ fun SettingsScreenPreview() {
 }
 
 @Composable
-fun SettingsScreen(sharedPrefs: UiSettingsFlow) {
+fun SettingsScreen(
+    sharedPrefs: UiSettingsFlow,
+    accountViewModel: AccountViewModel? = null,
+) {
     Column(
         Modifier
             .fillMaxSize()
@@ -124,6 +129,9 @@ fun SettingsScreen(sharedPrefs: UiSettingsFlow) {
         GalleryChoice(sharedPrefs)
         AiWritingHelpChoice(sharedPrefs)
         PushNotificationSettingsRow(sharedPrefs)
+        if (accountViewModel != null) {
+            AlwaysOnNotificationServiceChoice(accountViewModel)
+        }
     }
 }
 
@@ -493,5 +501,23 @@ fun SettingsRow(
                 overflow = TextOverflow.Ellipsis,
             )
         }
+    }
+}
+
+@Composable
+fun AlwaysOnNotificationServiceChoice(accountViewModel: AccountViewModel) {
+    val enabled by accountViewModel.account.settings.alwaysOnNotificationService
+        .collectAsStateWithLifecycle()
+
+    SettingsRow(
+        R.string.always_on_notif_setting_title,
+        R.string.always_on_notif_setting_description,
+    ) {
+        Switch(
+            checked = enabled,
+            onCheckedChange = {
+                accountViewModel.account.settings.toggleAlwaysOnNotificationService()
+            },
+        )
     }
 }

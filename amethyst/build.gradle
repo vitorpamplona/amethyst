@@ -279,6 +279,9 @@ dependencies {
     // Biometrics
     implementation libs.androidx.biometric.ktx
 
+    // Background Work
+    implementation libs.androidx.work.runtime.ktx
+
     // Websockets API
     implementation libs.okhttp
     implementation libs.okhttpCoroutines
