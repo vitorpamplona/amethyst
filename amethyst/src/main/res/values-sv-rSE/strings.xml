@@ -1812,4 +1812,16 @@
     <string name="relay_management_relay_icon_url">URL för reläikon</string>
     <string name="relay_management_button">Hantera relä</string>
     <string name="manage">Hantera</string>
+    <string name="events_from_you">händelser från dig</string>
+    <string name="events_to_you">händelser till dig</string>
+    <string name="goal_amount_placeholder">100000</string>
+    <string name="goal_image_placeholder">https://example.com/image.jpg</string>
+    <string name="goal_website_placeholder">https://example.com</string>
+    <string name="namecoin_response_time">%dms</string>
+    <string name="polls">Omröstningar</string>
+    <string name="relay_management_pubkey_hex">Publik nyckel (hex)</string>
+    <string name="relay_monitor_ms">%1$d ms</string>
+    <string name="relay_monitor_rtt">RTT</string>
+    <string name="relay_settings_lower2">utgående listor</string>
+    <string name="searchable_events">sökbara händelser</string>
 </resources>

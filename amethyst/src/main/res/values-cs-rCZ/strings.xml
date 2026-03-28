@@ -1812,4 +1812,17 @@
     <string name="relay_management_relay_icon_url">URL ikony relé</string>
     <string name="relay_management_button">Spravovat relé</string>
     <string name="manage">Spravovat</string>
+    <string name="events_from_you">události od vás</string>
+    <string name="events_to_you">události pro vás</string>
+    <string name="goal_amount_placeholder">100000</string>
+    <string name="goal_image_placeholder">https://example.com/image.jpg</string>
+    <string name="goal_website_placeholder">https://example.com</string>
+    <string name="namecoin_response_time">%dms</string>
+    <string name="polls">Ankety</string>
+    <string name="relay_management_pubkey_hex">Veřejný klíč (hex)</string>
+    <string name="relay_monitor_ms">%1$d ms</string>
+    <string name="relay_monitor_rtt">RTT</string>
+    <string name="relay_settings_lower2">odchozí seznamy</string>
+    <string name="searchable_events">vyhledatelné události</string>
+    <string name="vanish_test_button">Test</string>
 </resources>
