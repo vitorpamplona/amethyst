@@ -32,7 +32,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.core.content.ContextCompat
+import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.compose.ContentFrame
 import androidx.media3.ui.compose.state.rememberMuteButtonState
@@ -51,6 +53,8 @@ fun RenderPipVideo(
     controller: MediaControllerState,
     waveformData: WaveformData?,
 ) {
+    KeepScreenOnWhilePlaying(controller)
+
     val modifier =
         remember {
             val ratio =
@@ -74,6 +78,31 @@ fun RenderPipVideo(
 
         Row(VoiceHeightModifier, verticalAlignment = Alignment.CenterVertically) {
             waveformData?.let { Waveform(it, controller, Modifier) }
+        }
+    }
+}
+
+@Composable
+fun KeepScreenOnWhilePlaying(controller: MediaControllerState) {
+    val view = LocalView.current
+
+    DisposableEffect(controller.controller, view) {
+        val listener =
+            object : Player.Listener {
+                override fun onIsPlayingChanged(isPlaying: Boolean) {
+                    if (view.keepScreenOn != isPlaying) {
+                        view.keepScreenOn = isPlaying
+                    }
+                }
+            }
+
+        // Set initial state
+        view.keepScreenOn = controller.controller.isPlaying
+
+        controller.controller.addListener(listener)
+        onDispose {
+            controller.controller.removeListener(listener)
+            view.keepScreenOn = false
         }
     }
 }
