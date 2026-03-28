@@ -21,6 +21,9 @@
 package com.vitorpamplona.quartz.nip01Core.store.sqlite
 
 import com.vitorpamplona.quartz.utils.Secp256k1Instance
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 
@@ -72,12 +75,15 @@ open class BaseDBTest {
         dbs.forEach { it.value.close() }
     }
 
-    fun forEachDB(action: (EventStore) -> Unit) {
-        dbs.forEach {
-            println("--------------------")
-            println(it.key)
-            println("--------------------")
-            action(it.value)
+    fun forEachDB(action: suspend (EventStore) -> Unit) =
+        runBlocking {
+            dbs.forEach { (key, value) ->
+                launch(Dispatchers.Default) {
+                    println("--------------------")
+                    println(key)
+                    println("--------------------")
+                    action(value)
+                }
+            }
         }
-    }
 }
