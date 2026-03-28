@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.model
 import android.util.LruCache
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.data.AsyncEventWriter
+import com.vitorpamplona.amethyst.commons.data.EventStoreBootstrap
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.model.cache.LargeSoftCache
@@ -80,6 +82,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.taggedAddresses
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
@@ -217,6 +220,7 @@ import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.channels.BufferOverflow
@@ -262,6 +266,52 @@ object LocalCache : ILocalCache, ICacheProvider {
     val deletionIndex = DeletionIndex()
 
     val observables = ConcurrentHashMap<Observable, Observable>(10)
+
+    // Async persistence: memory is source of truth, SQLite catches up in background.
+    private var asyncWriter: AsyncEventWriter? = null
+    private var bootstrap: EventStoreBootstrap? = null
+
+    /**
+     * Initializes the async SQLite persistence layer.
+     * Call once at app startup, before connecting to relays.
+     *
+     * @param store  The SQLite event store to persist into.
+     * @param scope  CoroutineScope that controls the writer's lifetime.
+     */
+    fun initPersistence(
+        store: IEventStore,
+        scope: CoroutineScope,
+    ) {
+        bootstrap = EventStoreBootstrap(store)
+        asyncWriter = AsyncEventWriter(store, scope)
+    }
+
+    /**
+     * Loads events from SQLite into memory caches for a fast cold start.
+     * Call after [initPersistence] and before connecting to relays.
+     *
+     * Events are fed through the normal consume pipeline so all in-memory
+     * indexes and observable flows are populated correctly. They are NOT
+     * re-enqueued to the [AsyncEventWriter] since they already exist in SQLite.
+     *
+     * @param filters  Filters selecting which events to bootstrap (e.g., user's
+     *                 own metadata, recent feed, deletion events).
+     * @return The number of events loaded.
+     */
+    fun loadFromStore(filters: List<Filter>): Int =
+        bootstrap?.loadInto(filters) { event ->
+            justConsumeAndUpdateIndexes(event, null, true)
+        } ?: 0
+
+    /**
+     * Flushes pending writes and closes the persistence layer.
+     * Call during graceful app shutdown.
+     */
+    fun closePersistence() {
+        asyncWriter?.close()
+        asyncWriter = null
+        bootstrap = null
+    }
 
     fun Filter.match(note: Note): Boolean {
         val event = note.event
@@ -359,6 +409,13 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     fun observeLatestNote(filter: Filter) = observeNotes(filter).map { it.firstOrNull() }
 
+    /**
+     * Queries the SQLite store directly with a [Filter] and returns matching events.
+     * Useful for historical lookups when the in-memory cache doesn't have the data.
+     * Returns an empty list if persistence is not initialized.
+     */
+    fun <T : Event> queryStore(filter: Filter): List<T> = bootstrap?.query(filter) ?: emptyList()
+
     fun checkGetOrCreateUser(key: String): User? = runCatching { getOrCreateUser(key) }.getOrNull()
 
     fun load(keys: List<String>): List<User> = keys.mapNotNull(::checkGetOrCreateUser)
@@ -402,6 +459,26 @@ object LocalCache : ILocalCache, ICacheProvider {
     fun getAddressableNoteIfExists(address: Address): AddressableNote? = addressables.get(address)
 
     override fun getNoteIfExists(hexKey: String): Note? = if (hexKey.length == 64) notes.get(hexKey) else Address.parse(hexKey)?.let { addressables.get(it) }
+
+    /**
+     * Tries to find a note in memory first. If the note has been garbage-collected
+     * from [LargeSoftCache], attempts to recover it from SQLite, re-consuming it
+     * into memory. Returns null only if the event doesn't exist anywhere.
+     */
+    fun getOrRecoverNote(hexKey: String): Note? {
+        getNoteIfExists(hexKey)?.let { return it }
+
+        if (hexKey.length != 64) return null
+
+        // Attempt SQLite recovery
+        val event = bootstrap?.queryById(hexKey) ?: return null
+        val note = getOrCreateNote(event.id)
+        if (note.event == null) {
+            val author = getOrCreateUser(event.pubKey)
+            note.loadEvent(event, author, emptyList())
+        }
+        return note
+    }
 
     fun getNoteIfExists(key: ETag): Note? = notes.get(key.eventId)
 
@@ -2887,6 +2964,9 @@ object LocalCache : ILocalCache, ICacheProvider {
 
         observables.forEach(observableBiConsumer)
         live.newNote(newNote)
+
+        // Persist asynchronously — fire-and-forget, never blocks
+        asyncWriter?.enqueue(event)
     }
 
     private fun refreshDeletedNoteObservers(newNote: Note) {
