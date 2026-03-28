@@ -44,7 +44,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
@@ -237,7 +236,7 @@ fun BookmarkGroupItemOptionsMenu(
 
                 val shareIntent =
                     Intent.createChooser(sendIntent, stringRes(actContext, R.string.quick_action_share))
-                ContextCompat.startActivity(actContext, shareIntent, null)
+                actContext.startActivity(shareIntent)
                 onDismiss()
             }
         }
