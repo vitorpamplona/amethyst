@@ -18,10 +18,10 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.experimental.publicMessages
+package com.vitorpamplona.quartz.nipA4PublicMessages
 
-import com.vitorpamplona.quartz.experimental.publicMessages.tags.ReceiverTag
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nipA4PublicMessages.tags.ReceiverTag
 
 fun TagArrayBuilder<PublicMessageEvent>.toGroup(list: List<ReceiverTag>) = addAll(list.map { it.toTagArray() })
 
