@@ -664,7 +664,7 @@ class Account(
                     myRelayList.addAll(it.relays)
                 }
 
-                client.send(deletionEvent, myRelayList)
+                client.publish(deletionEvent, myRelayList)
                 cache.justConsumeMyOwnEvent(deletionEvent)
             }
         }
@@ -678,7 +678,7 @@ class Account(
         if (event.pubKey != signer.pubKey) return
 
         val deletionEvent = signer.sign(DeletionEvent.build(listOf(event)))
-        client.send(deletionEvent, outboxRelays.flow.value + additionalRelays)
+        client.publish(deletionEvent, outboxRelays.flow.value + additionalRelays)
         cache.justConsumeMyOwnEvent(deletionEvent)
     }
 
@@ -952,11 +952,11 @@ class Account(
                                 },
                         )?.let { downloadedEvent ->
                             val toRelays = computeRelayListToBroadcast(downloadedEvent)
-                            client.send(downloadedEvent, toRelays)
+                            client.publish(downloadedEvent, toRelays)
                         }
                 }
             } else {
-                client.send(noteEvent, computeRelayListToBroadcast(note))
+                client.publish(noteEvent, computeRelayListToBroadcast(note))
             }
         }
     }
@@ -1004,7 +1004,7 @@ class Account(
         val relays = outboxRelays.flow.value + commEvent.relayUrls() + community.relays + (post.author?.inboxRelays() ?: emptyList())
 
         cache.justConsumeMyOwnEvent(signedEvent)
-        client.send(signedEvent, relays)
+        client.publish(signedEvent, relays)
     }
 
     fun sendAutomatic(events: List<Event>) = events.forEach { sendAutomatic(it) }
@@ -1027,7 +1027,7 @@ class Account(
         val signedEvent = signer.sign(template)
 
         cache.justConsumeMyOwnEvent(signedEvent)
-        client.send(signedEvent, computeRelayListToBroadcast(signedEvent))
+        client.publish(signedEvent, computeRelayListToBroadcast(signedEvent))
     }
 
     suspend fun deleteWebBookmark(event: WebBookmarkEvent) {
@@ -1037,7 +1037,7 @@ class Account(
         val signedEvent = signer.sign(template)
 
         cache.justConsumeMyOwnEvent(signedEvent)
-        client.send(signedEvent, computeRelayListToBroadcast(signedEvent))
+        client.publish(signedEvent, computeRelayListToBroadcast(signedEvent))
     }
 
     fun sendMyPublicAndPrivateOutbox(event: Event?) {
@@ -1048,7 +1048,7 @@ class Account(
 
     fun sendMyPublicAndPrivateOutbox(events: List<Event>) {
         events.forEach {
-            client.send(it, outboxRelays.flow.value)
+            client.publish(it, outboxRelays.flow.value)
             cache.justConsumeMyOwnEvent(it)
         }
     }
@@ -1071,7 +1071,7 @@ class Account(
 
             cache.justConsumeMyOwnEvent(signedEvent)
 
-            client.send(signedEvent, computeRelayListToBroadcast(signedEvent))
+            client.publish(signedEvent, computeRelayListToBroadcast(signedEvent))
         }
     }
 
@@ -1107,10 +1107,10 @@ class Account(
 
         val relayList = computeRelayListToBroadcast(signedEvent)
 
-        client.send(data, relayList = relayList)
+        client.publish(data, relayList = relayList)
         cache.justConsumeMyOwnEvent(data)
 
-        client.send(signedEvent, relayList = relayList)
+        client.publish(signedEvent, relayList = relayList)
         cache.justConsumeMyOwnEvent(signedEvent)
 
         return cache.getNoteIfExists(signedEvent.id)
@@ -1131,8 +1131,8 @@ class Account(
         signedEvent: FileStorageHeaderEvent,
         relayList: Set<NormalizedRelayUrl>,
     ) {
-        client.send(data, relayList = relayList)
-        client.send(signedEvent, relayList = relayList)
+        client.publish(data, relayList = relayList)
+        client.publish(signedEvent, relayList = relayList)
     }
 
     fun sendHeader(
@@ -1140,7 +1140,7 @@ class Account(
         relayList: Set<NormalizedRelayUrl>,
         onReady: (Note) -> Unit,
     ) {
-        client.send(signedEvent, relayList = relayList)
+        client.publish(signedEvent, relayList = relayList)
         cache.justConsumeMyOwnEvent(signedEvent)
 
         cache.getNoteIfExists(signedEvent.id)?.let { onReady(it) }
@@ -1322,7 +1322,7 @@ class Account(
 
         client.publish(event, relayList)
 
-        broadcast.forEach { client.send(it, relayList) }
+        broadcast.forEach { client.publish(it, relayList) }
 
         return event
     }
@@ -1346,7 +1346,7 @@ class Account(
 
         client.publish(event, relayList)
 
-        broadcast.forEach { client.send(it, relayList) }
+        broadcast.forEach { client.publish(it, relayList) }
 
         return event
     }
@@ -1378,7 +1378,7 @@ class Account(
         extraNotesToBroadcast: List<Event>,
     ) {
         cache.justConsumeMyOwnEvent(event)
-        extraNotesToBroadcast.forEach { client.send(it, relays) }
+        extraNotesToBroadcast.forEach { client.publish(it, relays) }
     }
 
     suspend fun createAndSendDraftIgnoreErrors(
@@ -1410,9 +1410,9 @@ class Account(
 
         val relayList = (privateStorageRelayList.flow.value + localRelayList.flow.value + extraRelays).toSet()
         if (relayList.isNotEmpty()) {
-            client.send(draftEvent, relayList)
+            client.publish(draftEvent, relayList)
             broadcast.forEach {
-                client.send(it, relayList.toSet())
+                client.publish(it, relayList.toSet())
             }
         }
     }
@@ -1439,8 +1439,8 @@ class Account(
         cache.justConsumeMyOwnEvent(deletionEvent)
 
         if (relayList.isNotEmpty()) {
-            client.send(deletedDraft, relayList)
-            client.send(deletionEvent, relayList)
+            client.publish(deletedDraft, relayList)
+            client.publish(deletionEvent, relayList)
         }
     }
 
@@ -1552,9 +1552,9 @@ class Account(
         } else {
             val it = signer.sign(template)
             cache.justConsumeMyOwnEvent(it)
-            client.send(it, relayList = relayList)
+            client.publish(it, relayList = relayList)
 
-            mapEntitiesToNotes(quotes).forEach { it.event?.let { client.send(it, relayList = relayList) } }
+            mapEntitiesToNotes(quotes).forEach { it.event?.let { client.publish(it, relayList = relayList) } }
         }
     }
 
@@ -1597,9 +1597,9 @@ class Account(
         } else {
             val it = signer.sign(template)
             cache.justConsumeMyOwnEvent(it)
-            client.send(it, relayList = relayList)
+            client.publish(it, relayList = relayList)
 
-            broadcastNotes.forEach { it.event?.let { client.send(it, relayList = relayList) } }
+            broadcastNotes.forEach { it.event?.let { client.publish(it, relayList = relayList) } }
         }
     }
 
@@ -1624,8 +1624,8 @@ class Account(
         val newEvent = signer.sign(template)
         cache.justConsumeMyOwnEvent(newEvent)
 
-        client.send(newEvent, relayList = relays)
-        client.send(bountyEvent, relayList = relays)
+        client.publish(newEvent, relayList = relays)
+        client.publish(bountyEvent, relayList = relays)
     }
 
     suspend fun sendEdit(
@@ -1654,7 +1654,7 @@ class Account(
 
         client.publish(event, relayList = relayList)
 
-        broadcast.forEach { client.send(it, relayList) }
+        broadcast.forEach { client.publish(it, relayList) }
     }
 
     override suspend fun sendNip04PrivateMessage(eventTemplate: EventTemplate<PrivateDmEvent>) {
@@ -1665,7 +1665,7 @@ class Account(
         val destinationRelays = recipient?.let { cache.getOrCreateUser(it).dmInboxRelays() } ?: emptyList()
 
         cache.justConsumeMyOwnEvent(newEvent)
-        client.send(newEvent, outboxRelays.flow.value + destinationRelays)
+        client.publish(newEvent, outboxRelays.flow.value + destinationRelays)
     }
 
     override suspend fun sendNip17EncryptedFile(template: EventTemplate<ChatMessageEncryptedFileHeaderEvent>) {
@@ -1683,7 +1683,7 @@ class Account(
     override suspend fun sendGiftWraps(wraps: List<GiftWrapEvent>) {
         wraps.forEach { wrap ->
             val relayList = computeRelayListToBroadcast(wrap)
-            client.send(wrap, relayList)
+            client.publish(wrap, relayList)
         }
     }
 
@@ -1704,7 +1704,7 @@ class Account(
             }
 
             val relayList = computeRelayListToBroadcast(wrap)
-            client.send(wrap, relayList)
+            client.publish(wrap, relayList)
         }
     }
 
@@ -1892,7 +1892,7 @@ class Account(
         cache.justConsumeMyOwnEvent(request)
         onReady(request)
         delay(100)
-        client.send(request, relayList)
+        client.publish(request, relayList)
     }
 
     fun cachedDecryptContent(note: Note): String? = cachedDecryptContent(note.event)
@@ -2060,7 +2060,7 @@ class Account(
         val template = RequestToVanishEvent.build(relays, reason, createdAt)
         val signedEvent = signer.sign(template)
         cache.justConsumeMyOwnEvent(signedEvent)
-        client.send(signedEvent, outboxRelays.flow.value + relays.toSet())
+        client.publish(signedEvent, outboxRelays.flow.value + relays.toSet())
     }
 
     suspend fun requestToVanishFromEverywhere(
@@ -2072,7 +2072,7 @@ class Account(
         val template = RequestToVanishEvent.buildVanishFromEverywhere(reason, createdAt)
         val signedEvent = signer.sign(template)
         cache.justConsumeMyOwnEvent(signedEvent)
-        client.send(signedEvent, followPlusAllMineWithIndex.flow.value + client.availableRelaysFlow().value)
+        client.publish(signedEvent, followPlusAllMineWithIndex.flow.value + client.availableRelaysFlow().value)
     }
 
     suspend fun sendNip65RelayList(relays: List<AdvertisedRelayInfo>) = sendLiterallyEverywhere(nip65RelayList.saveRelayList(relays))

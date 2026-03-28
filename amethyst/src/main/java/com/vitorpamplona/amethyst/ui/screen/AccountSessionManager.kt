@@ -289,13 +289,13 @@ class AccountSessionManager(
 
                 val client = clientBuilder()
 
-                accountSettings.backupUserMetadata?.let { client.send(it, toPost) }
-                accountSettings.backupContactList?.let { client.send(it, toPost) }
-                accountSettings.backupNIP65RelayList?.let { client.send(it, toPost) }
-                accountSettings.backupDMRelayList?.let { client.send(it, toPost) }
-                accountSettings.backupSearchRelayList?.let { client.send(it, toPost) }
-                accountSettings.backupIndexRelayList?.let { client.send(it, toPost) }
-                accountSettings.backupRelayFeedsList?.let { client.send(it, toPost) }
+                accountSettings.backupUserMetadata?.let { client.publish(it, toPost) }
+                accountSettings.backupContactList?.let { client.publish(it, toPost) }
+                accountSettings.backupNIP65RelayList?.let { client.publish(it, toPost) }
+                accountSettings.backupDMRelayList?.let { client.publish(it, toPost) }
+                accountSettings.backupSearchRelayList?.let { client.publish(it, toPost) }
+                accountSettings.backupIndexRelayList?.let { client.publish(it, toPost) }
+                accountSettings.backupRelayFeedsList?.let { client.publish(it, toPost) }
             }
         }
     }

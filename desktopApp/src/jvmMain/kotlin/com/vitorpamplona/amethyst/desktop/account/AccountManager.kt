@@ -30,6 +30,8 @@ import com.vitorpamplona.amethyst.desktop.network.DesktopHttpClient
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
@@ -302,7 +304,7 @@ class AccountManager internal constructor(
 
     suspend fun loginWithBunker(bunkerUri: String): Result<AccountState.LoggedIn> {
         val listener = createLoginRelayListener()
-        var client: NostrClient? = null
+        var client: INostrClient? = null
         try {
             val ephemeralKeyPair = KeyPair()
             val ephemeralSigner = NostrSignerInternal(ephemeralKeyPair)
@@ -363,7 +365,7 @@ class AccountManager internal constructor(
 
     suspend fun loginWithNostrConnect(onUriGenerated: (String) -> Unit): Result<AccountState.LoggedIn> {
         val listener = createLoginRelayListener()
-        var client: NostrClient? = null
+        var client: INostrClient? = null
         try {
             val ephemeralKeyPair = KeyPair()
             val uriData = NostrConnectLoginUseCase.generateUri(ephemeralKeyPair, NIP46_RELAYS, "Amethyst%20Desktop")

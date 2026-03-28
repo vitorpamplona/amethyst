@@ -103,11 +103,11 @@ class CoordinatorPipelineTest {
             filters: Map<NormalizedRelayUrl, List<Filter>>,
         ) {}
 
-        override fun close(subId: String) {
+        override fun unsubscribe(subId: String) {
             openedSubs.remove(subId)
         }
 
-        override fun send(
+        override fun publish(
             event: Event,
             relayList: Set<NormalizedRelayUrl>,
         ) {}
