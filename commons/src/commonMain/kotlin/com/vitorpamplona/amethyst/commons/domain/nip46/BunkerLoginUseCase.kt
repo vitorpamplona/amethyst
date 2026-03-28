@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.domain.nip46
 
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip46RemoteSigner.signer.NostrSignerRemote
 import kotlinx.coroutines.flow.first
@@ -32,7 +32,7 @@ object BunkerLoginUseCase {
     suspend fun execute(
         bunkerUri: String,
         ephemeralSigner: NostrSignerInternal,
-        client: NostrClient,
+        client: INostrClient,
     ): BunkerLoginResult {
         val remoteSigner = NostrSignerRemote.fromBunkerUri(bunkerUri, ephemeralSigner, client)
         remoteSigner.openSubscription()

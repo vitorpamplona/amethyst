@@ -22,11 +22,11 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.datasource
 
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 
 class UserProfilePostsFilterSubAssembler(
-    client: NostrClient,
+    client: INostrClient,
     allKeys: () -> Set<UserProfileQueryState>,
 ) : PerUserEoseManager<UserProfileQueryState>(client, allKeys) {
     override fun updateFilter(

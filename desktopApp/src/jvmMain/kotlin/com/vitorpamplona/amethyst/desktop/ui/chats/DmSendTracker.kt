@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.desktop.ui.chats
 
 import com.vitorpamplona.amethyst.commons.ui.chat.DmBroadcastStatus
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirmDetailed
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.delay
@@ -31,7 +31,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 class DmSendTracker(
-    private val client: NostrClient,
+    private val client: INostrClient,
 ) {
     private val _status = MutableStateFlow<DmBroadcastStatus>(DmBroadcastStatus.Idle)
     val status: StateFlow<DmBroadcastStatus> = _status.asStateFlow()

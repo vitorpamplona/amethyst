@@ -193,7 +193,7 @@ class PoolRequests {
                 state?.onNewEvent(relay.url)
                 desiredSubListeners.get(msg.subId)?.onEvent(
                     event = msg.event,
-                    isRealTime = state?.currentState(relay.url) == ReqSubStatus.LIVE,
+                    isLive = state?.currentState(relay.url) == ReqSubStatus.LIVE,
                     relay = relay.url,
                     forFilters = state?.lastKnownFilterStates(relay.url),
                 )
@@ -201,8 +201,8 @@ class PoolRequests {
 
             is EoseMessage -> {
                 val state = relayState.get(msg.subId)
-                state?.onCaughtUp(relay.url)
-                desiredSubListeners.get(msg.subId)?.onCaughtUp(
+                state?.onEose(relay.url)
+                desiredSubListeners.get(msg.subId)?.onEose(
                     relay = relay.url,
                     forFilters = state?.lastKnownFilterStates(relay.url),
                 )

@@ -54,7 +54,7 @@ class ThreadDualAxisChartAssemblerTest {
         val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
         val client =
-            DefaultNostrClient(
+            NostrClient(
                 OkHttpWebSocket.Builder {
                     OkHttpClient
                         .Builder()

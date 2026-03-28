@@ -131,11 +131,11 @@ class AccountManager internal constructor(
     // --- Dedicated NIP-46 client (isolated from general relay pool) ---
 
     private val nip46ClientMutex = Mutex()
-    private var nip46Client: DefaultDefaultNostrClient? = null
+    private var nip46Client: NostrClient? = null
 
-    private suspend fun getOrCreateNip46Client(): DefaultNostrClient =
+    private suspend fun getOrCreateNip46Client(): INostrClient =
         nip46ClientMutex.withLock {
-            nip46Client ?: DefaultNostrClient(
+            nip46Client ?: NostrClient(
                 BasicOkHttpWebSocket.Builder(DesktopHttpClient::getHttpClient),
             ).also {
                 nip46Client = it
@@ -155,7 +155,7 @@ class AccountManager internal constructor(
      * but we must wait for the websocket to be ready before sending requests.
      */
     private suspend fun awaitNip46RelayConnection(
-        client: DefaultNostrClient,
+        client: INostrClient,
         targetRelays: Set<NormalizedRelayUrl>,
     ) {
         withTimeout(NIP46_RELAY_CONNECT_TIMEOUT_MS) {
@@ -302,7 +302,7 @@ class AccountManager internal constructor(
 
     suspend fun loginWithBunker(bunkerUri: String): Result<AccountState.LoggedIn> {
         val listener = createLoginRelayListener()
-        var client: DefaultDefaultNostrClient? = null
+        var client: NostrClient? = null
         try {
             val ephemeralKeyPair = KeyPair()
             val ephemeralSigner = NostrSignerInternal(ephemeralKeyPair)
@@ -363,7 +363,7 @@ class AccountManager internal constructor(
 
     suspend fun loginWithNostrConnect(onUriGenerated: (String) -> Unit): Result<AccountState.LoggedIn> {
         val listener = createLoginRelayListener()
-        var client: DefaultDefaultNostrClient? = null
+        var client: NostrClient? = null
         try {
             val ephemeralKeyPair = KeyPair()
             val uriData = NostrConnectLoginUseCase.generateUri(ephemeralKeyPair, NIP46_RELAYS, "Amethyst%20Desktop")

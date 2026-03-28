@@ -30,7 +30,7 @@ import com.vitorpamplona.amethyst.desktop.model.DesktopDmRelayState
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -73,7 +73,7 @@ import kotlin.time.Duration.Companion.seconds
  * ```
  */
 class DesktopRelaySubscriptionsCoordinator(
-    private val client: NostrClient,
+    private val client: INostrClient,
     private val scope: CoroutineScope,
     private val indexRelays: Set<NormalizedRelayUrl>,
     private val localCache: DesktopLocalCache,
@@ -180,7 +180,7 @@ class DesktopRelaySubscriptionsCoordinator(
             object : SubscriptionListener {
                 override fun onEvent(
                     event: Event,
-                    isRealTime: Boolean,
+                    isLive: Boolean,
                     relay: NormalizedRelayUrl,
                     forFilters: List<Filter>?,
                 ) {
@@ -284,7 +284,7 @@ class DesktopRelaySubscriptionsCoordinator(
             object : SubscriptionListener {
                 override fun onEvent(
                     event: Event,
-                    isRealTime: Boolean,
+                    isLive: Boolean,
                     relay: NormalizedRelayUrl,
                     forFilters: List<Filter>?,
                 ) {

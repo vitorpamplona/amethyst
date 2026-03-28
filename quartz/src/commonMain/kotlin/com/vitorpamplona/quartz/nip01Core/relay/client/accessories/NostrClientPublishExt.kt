@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.relay.client.accessories
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
@@ -41,7 +41,7 @@ class Result(
 )
 
 @OptIn(DelicateCoroutinesApi::class)
-suspend fun NostrClient.publishAndConfirm(
+suspend fun INostrClient.publishAndConfirm(
     event: Event,
     relayList: Set<NormalizedRelayUrl>,
     timeoutInSeconds: Long = 15,
@@ -52,7 +52,7 @@ suspend fun NostrClient.publishAndConfirm(
  * Returns per-relay results: relay URL -> accepted (true/false).
  */
 @OptIn(DelicateCoroutinesApi::class)
-suspend fun NostrClient.publishAndConfirmDetailed(
+suspend fun INostrClient.publishAndConfirmDetailed(
     event: Event,
     relayList: Set<NormalizedRelayUrl>,
     timeoutInSeconds: Long = 15,

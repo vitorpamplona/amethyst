@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.client.counts
 
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage
@@ -33,7 +33,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.Log
 
 class RelayActiveCountStates(
-    val client: NostrClient,
+    val client: INostrClient,
 ) {
     private var queryStates = mutableMapOf<NormalizedRelayUrl, CountQueryState<String>>()
 

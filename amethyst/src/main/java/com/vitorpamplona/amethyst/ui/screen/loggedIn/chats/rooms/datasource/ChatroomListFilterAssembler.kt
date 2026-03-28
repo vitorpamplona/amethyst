@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.datasource
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 
 // This allows multiple screen to be listening to tags, even the same tag
 @Stable
@@ -33,7 +33,7 @@ class ChatroomListState(
 
 @Stable
 class ChatroomListFilterAssembler(
-    client: NostrClient,
+    client: INostrClient,
 ) : ComposeSubscriptionManager<ChatroomListState>() {
     val group =
         listOf(

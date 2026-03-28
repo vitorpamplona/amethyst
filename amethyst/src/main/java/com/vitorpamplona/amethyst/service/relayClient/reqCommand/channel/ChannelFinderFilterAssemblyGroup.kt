@@ -25,7 +25,7 @@ import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.mixChatsLive.ChannelMetadataAndLiveActivityWatcherSubAssembler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.nip28PublicChats.ChannelLoaderSubAssembler
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 
 // This allows multiple screen to be listening to tags, even the same tag
 @Stable
@@ -35,7 +35,7 @@ class ChannelFinderQueryState(
 
 @Stable
 class ChannelFinderFilterAssemblyGroup(
-    client: NostrClient,
+    client: INostrClient,
 ) : ComposeSubscriptionManager<ChannelFinderQueryState>() {
     val group =
         listOf(

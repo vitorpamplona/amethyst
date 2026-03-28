@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.commons.relayClient.assemblers
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.SingleSubEoseManager
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -48,7 +48,7 @@ data class ReactionsQueryState(
  * - Caches EOSE to avoid re-fetching known reactions
  */
 class ReactionsFilterAssembler(
-    client: NostrClient,
+    client: INostrClient,
     allKeys: () -> Set<ReactionsQueryState>,
 ) : SingleSubEoseManager<ReactionsQueryState>(client, allKeys, invalidateAfterEose = true) {
     override fun distinct(key: ReactionsQueryState): Any = key.noteIds.hashCode()

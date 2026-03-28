@@ -202,7 +202,7 @@ fun SearchScreen(
                     }
                 }
             },
-            onCaughtUp = { relay, _ ->
+            onEose = { relay, _ ->
                 state.updateRelayState(relay.url, RelaySyncStatus.EOSE_RECEIVED)
                 state.stopSearching("people-search")
             },
@@ -236,7 +236,7 @@ fun SearchScreen(
                     }
                 }
             },
-            onCaughtUp = { relay, _ ->
+            onEose = { relay, _ ->
                 state.updateRelayState(relay.url, RelaySyncStatus.EOSE_RECEIVED)
                 state.stopSearching("adv-search")
             },

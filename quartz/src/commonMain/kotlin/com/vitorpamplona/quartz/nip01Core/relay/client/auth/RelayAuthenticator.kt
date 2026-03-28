@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.client.auth
 
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.AuthMessage
@@ -46,7 +46,7 @@ object EmptyIAuthStatus : IAuthStatus {
 }
 
 class RelayAuthenticator(
-    val client: NostrClient,
+    val client: INostrClient,
     val scope: CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
     val signWithAllLoggedInUsers: suspend (EventTemplate<RelayAuthEvent>) -> List<RelayAuthEvent>,
 ) : IAuthStatus {

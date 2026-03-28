@@ -27,7 +27,7 @@ import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscription
 import com.vitorpamplona.amethyst.desktop.viewmodels.DesktopFeedViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
@@ -50,7 +50,7 @@ import kotlin.test.assertTrue
 /**
  * Integration tests for the Coordinator → Cache → ViewModel pipeline.
  *
- * These tests use a stub NostrClient (no real relay connections) and exercise
+ * These tests use a stub INostrClient (no real relay connections) and exercise
  * the full event consumption path through DesktopRelaySubscriptionsCoordinator.
  *
  * Key invariant being tested: when coordinator.consumeEvent() is called,
@@ -65,10 +65,10 @@ class CoordinatorPipelineTest {
     private suspend fun waitForBundler() = delay(600)
 
     /**
-     * Stub NostrClient — records subscription calls but doesn't connect to any relay.
+     * Stub INostrClient — records subscription calls but doesn't connect to any relay.
      * This lets us test the coordinator's event routing without network dependencies.
      */
-    private class StubNostrClient : NostrClient {
+    private class StubNostrClient : INostrClient {
         val openedSubs = mutableMapOf<String, Pair<Map<NormalizedRelayUrl, List<Filter>>, SubscriptionListener?>>()
 
         override fun connectedRelaysFlow(): StateFlow<Set<NormalizedRelayUrl>> = MutableStateFlow(emptySet())

@@ -22,11 +22,11 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.datasource
 
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 
 class GeoHashFeedFilterSubAssembler(
-    client: NostrClient,
+    client: INostrClient,
     allKeys: () -> Set<GeohashQueryState>,
 ) : PerUniqueIdEoseManager<GeohashQueryState, String>(client, allKeys) {
     override fun updateFilter(

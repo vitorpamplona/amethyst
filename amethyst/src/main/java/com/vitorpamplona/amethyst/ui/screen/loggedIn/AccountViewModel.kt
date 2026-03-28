@@ -219,7 +219,7 @@ class AccountViewModel(
                 val customScope = CoroutineScope(viewModelScope.coroutineContext + SupervisorJob())
 
                 // Provides a relay pool
-                val newClient = DefaultNostrClient(Amethyst.instance.websocketBuilder, customScope)
+                val newClient = NostrClient(Amethyst.instance.websocketBuilder, customScope)
 
                 // Authenticates with relays.
                 val auth =

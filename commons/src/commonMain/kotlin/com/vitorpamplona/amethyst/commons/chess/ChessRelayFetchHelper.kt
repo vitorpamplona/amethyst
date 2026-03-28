@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.commons.chess
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -49,7 +49,7 @@ enum class RelayFetchStatus {
 /**
  * One-shot relay fetch helper for chess events.
  *
- * Follows the existing NostrClient + SubscriptionListener + Channel pattern
+ * Follows the existing INostrClient + SubscriptionListener + Channel pattern
  * from quartz (see NostrClientSingleDownloadExt.kt).
  *
  * Each fetch opens a subscription, collects events until EOSE from all relays,
@@ -57,12 +57,12 @@ enum class RelayFetchStatus {
  * no state is cached between fetches.
  */
 class ChessRelayFetchHelper(
-    private val client: NostrClient,
+    private val client: INostrClient,
 ) {
     /**
      * Fetch events matching filters from relays, waiting for EOSE.
      *
-     * @param filters Map of relay → filter list (same format as NostrClient.subscribe)
+     * @param filters Map of relay → filter list (same format as INostrClient.subscribe)
      * @param timeoutMs Max time to wait for relays to respond (default from ChessConfig)
      * @param onProgress Optional callback for progress updates per relay
      * @return Deduplicated list of events received before timeout/EOSE
@@ -91,7 +91,7 @@ class ChessRelayFetchHelper(
             object : SubscriptionListener {
                 override fun onEvent(
                     event: Event,
-                    isRealTime: Boolean,
+                    isLive: Boolean,
                     relay: NormalizedRelayUrl,
                     forFilters: List<Filter>?,
                 ) {
@@ -100,7 +100,7 @@ class ChessRelayFetchHelper(
                     onProgress?.invoke(RelayFetchProgress(relay, RelayFetchStatus.RECEIVING, count))
                 }
 
-                override fun onCaughtUp(
+                override fun onEose(
                     relay: NormalizedRelayUrl,
                     forFilters: List<Filter>?,
                 ) {

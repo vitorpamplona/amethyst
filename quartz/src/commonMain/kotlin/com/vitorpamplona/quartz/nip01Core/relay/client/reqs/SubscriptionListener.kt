@@ -25,14 +25,14 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 interface SubscriptionListener {
-    fun onCaughtUp(
+    fun onEose(
         relay: NormalizedRelayUrl,
         forFilters: List<Filter>?,
     ) {}
 
     fun onEvent(
         event: Event,
-        isRealTime: Boolean,
+        isLive: Boolean,
         relay: NormalizedRelayUrl,
         forFilters: List<Filter>?,
     ) {}

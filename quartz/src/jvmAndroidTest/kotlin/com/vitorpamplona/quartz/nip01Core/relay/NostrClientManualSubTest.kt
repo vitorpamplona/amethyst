@@ -21,7 +21,6 @@
 package com.vitorpamplona.quartz.nip01Core.relay
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
-import com.vitorpamplona.quartz.nip01Core.relay.client.DefaultNostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -42,7 +41,7 @@ class NostrClientManualSubTest : BaseNostrClientTest() {
     fun testEoseAfter100Events() =
         runBlocking {
             val appScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-            val client = DefaultNostrClient(socketBuilder, appScope)
+            val client = NostrClient(socketBuilder, appScope)
 
             val resultChannel = Channel<String>(UNLIMITED)
             val events = mutableListOf<String>()
@@ -52,14 +51,14 @@ class NostrClientManualSubTest : BaseNostrClientTest() {
                 object : SubscriptionListener {
                     override fun onEvent(
                         event: Event,
-                        isRealTime: Boolean,
+                        isLive: Boolean,
                         relay: NormalizedRelayUrl,
                         forFilters: List<Filter>?,
                     ) {
                         resultChannel.trySend(event.id)
                     }
 
-                    override fun onCaughtUp(
+                    override fun onEose(
                         relay: NormalizedRelayUrl,
                         forFilters: List<Filter>?,
                     ) {

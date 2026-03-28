@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relay.datasource
 
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 // This allows multiple screens to be listening to the same or different relay feeds.
@@ -30,7 +30,7 @@ class RelayFeedQueryState(
 )
 
 class RelayFeedFilterAssembler(
-    client: NostrClient,
+    client: INostrClient,
 ) : ComposeSubscriptionManager<RelayFeedQueryState>() {
     val group =
         listOf(

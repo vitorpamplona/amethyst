@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
-import com.vitorpamplona.quartz.nip01Core.relay.client.DefaultNostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirm
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
@@ -38,7 +37,7 @@ class NostrClientSendAndWaitTest : BaseNostrClientTest() {
     fun testSendAndWaitForResponse() =
         runBlocking {
             val appScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-            val client = DefaultNostrClient(socketBuilder, appScope)
+            val client = NostrClient(socketBuilder, appScope)
 
             val randomSigner = NostrSignerInternal(KeyPair())
 

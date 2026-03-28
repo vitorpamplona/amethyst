@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.speedLogger
 
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
@@ -29,10 +29,10 @@ import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
 
 /**
- * Listens to NostrClient's onNotify messages from the relay
+ * Listens to INostrClient's onNotify messages from the relay
  */
 class RelaySpeedLogger(
-    val client: NostrClient,
+    val client: INostrClient,
 ) {
     companion object {
         val TAG: String = RelaySpeedLogger::class.java.simpleName

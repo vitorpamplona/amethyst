@@ -439,7 +439,7 @@ private suspend fun fetchMetadataForUsers(
                 object : SubscriptionListener {
                     override fun onEvent(
                         event: Event,
-                        isRealTime: Boolean,
+                        isLive: Boolean,
                         relay: NormalizedRelayUrl,
                         forFilters: List<Filter>?,
                     ) {
@@ -457,7 +457,7 @@ private suspend fun fetchMetadataForUsers(
                         }
                     }
 
-                    override fun onCaughtUp(
+                    override fun onEose(
                         relay: NormalizedRelayUrl,
                         forFilters: List<Filter>?,
                     ) {
@@ -1061,7 +1061,7 @@ private suspend fun fetchUserLightningAddress(
                 object : SubscriptionListener {
                     override fun onEvent(
                         event: Event,
-                        isRealTime: Boolean,
+                        isLive: Boolean,
                         relay: NormalizedRelayUrl,
                         forFilters: List<Filter>?,
                     ) {
@@ -1078,7 +1078,7 @@ private suspend fun fetchUserLightningAddress(
                         }
                     }
 
-                    override fun onCaughtUp(
+                    override fun onEose(
                         relay: NormalizedRelayUrl,
                         forFilters: List<Filter>?,
                     ) {

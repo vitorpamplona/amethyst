@@ -21,13 +21,13 @@
 package com.vitorpamplona.quartz.nip01Core.relay.client.reqs
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.RandomInstance
 
 class DynamicSubscription(
-    val client: NostrClient,
+    val client: INostrClient,
     val filter: () -> Map<NormalizedRelayUrl, List<Filter>>,
     val onEvent: (event: Event) -> Unit = {},
 ) : SubscriptionListener,
@@ -36,7 +36,7 @@ class DynamicSubscription(
 
     override fun onEvent(
         event: Event,
-        isRealTime: Boolean,
+        isLive: Boolean,
         relay: NormalizedRelayUrl,
         forFilters: List<Filter>?,
     ) {
@@ -56,7 +56,7 @@ class DynamicSubscription(
     }
 }
 
-fun NostrClient.subscribe(
+fun INostrClient.subscribe(
     filters: () -> Map<NormalizedRelayUrl, List<Filter>>,
     onEvent: (event: Event) -> Unit = {},
 ): SubscriptionHandle = DynamicSubscription(this, filters, onEvent)

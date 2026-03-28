@@ -190,7 +190,7 @@ fun UserProfileScreen(
                 onEvent = { event, _, relay, _ ->
                     subscriptionsCoordinator?.consumeEvent(event, relay)
                 },
-                onCaughtUp = { _, _ -> },
+                onEose = { _, _ -> },
             )
         } else {
             null
@@ -232,7 +232,7 @@ fun UserProfileScreen(
                         contactListLoaded = true
                     }
                 },
-                onCaughtUp = { _, _ ->
+                onEose = { _, _ ->
                     eoseReceivedCount++
 
                     // Wait for EOSE from at least 2 relays or all relays before enabling button
@@ -294,7 +294,7 @@ fun UserProfileScreen(
                         localCache.cacheFollowingCount(pubKeyHex, count)
                     }
                 },
-                onCaughtUp = { _, _ -> },
+                onEose = { _, _ -> },
             )
         } else {
             null
@@ -329,7 +329,7 @@ fun UserProfileScreen(
                         localCache.cacheFollowerCount(pubKeyHex, count)
                     }
                 },
-                onCaughtUp = { _, _ -> },
+                onEose = { _, _ -> },
             )
         } else {
             null
@@ -356,7 +356,7 @@ fun UserProfileScreen(
                         pictureEvents.add(event)
                     }
                 },
-                onCaughtUp = { _, _ -> },
+                onEose = { _, _ -> },
             )
         } else {
             null
@@ -383,7 +383,7 @@ fun UserProfileScreen(
                         articleEvents.add(event)
                     }
                 },
-                onCaughtUp = { _, _ -> },
+                onEose = { _, _ -> },
             )
         } else {
             null
@@ -410,7 +410,7 @@ fun UserProfileScreen(
                         highlightEvents.add(event)
                     }
                 },
-                onCaughtUp = { _, _ -> },
+                onEose = { _, _ -> },
             )
         } else {
             null

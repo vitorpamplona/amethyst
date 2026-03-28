@@ -21,7 +21,6 @@
 package com.vitorpamplona.quartz.nip01Core.relay
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
-import com.vitorpamplona.quartz.nip01Core.relay.client.DefaultNostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.fetchAsFlow
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.utils.Log
@@ -49,7 +48,7 @@ class NostrClientSubscriptionUntilEoseAsFlowTest : BaseNostrClientTest() {
     fun testNostrClientSubscriptionUntilEoseAsFlow() =
         runTest {
             val appScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-            val client = DefaultNostrClient(socketBuilder, appScope)
+            val client = NostrClient(socketBuilder, appScope)
 
             val flow =
                 client.fetchAsFlow(
@@ -88,7 +87,7 @@ class NostrClientSubscriptionUntilEoseAsFlowTest : BaseNostrClientTest() {
     fun testNostrClientSubscriptionUntilEoseAsFlowDebouncing() =
         runTest {
             val appScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-            val client = DefaultNostrClient(socketBuilder, appScope)
+            val client = NostrClient(socketBuilder, appScope)
 
             val flow =
                 client.fetchAsFlow(

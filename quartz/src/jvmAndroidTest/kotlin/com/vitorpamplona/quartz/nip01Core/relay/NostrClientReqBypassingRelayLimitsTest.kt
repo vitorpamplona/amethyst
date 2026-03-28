@@ -21,7 +21,6 @@
 package com.vitorpamplona.quartz.nip01Core.relay
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
-import com.vitorpamplona.quartz.nip01Core.relay.client.DefaultNostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPages
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
@@ -39,7 +38,7 @@ class NostrClientReqBypassingRelayLimitsTest : BaseNostrClientTest() {
     fun testDownloadFromRelayReturnsMetadataEvents() =
         runBlocking {
             val appScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-            val client = DefaultNostrClient(socketBuilder, appScope)
+            val client = NostrClient(socketBuilder, appScope)
 
             val events = mutableListOf<Event>()
 
@@ -73,7 +72,7 @@ class NostrClientReqBypassingRelayLimitsTest : BaseNostrClientTest() {
     fun testDownloadFromRelayReturnsMetadataAndContactListEvents() =
         runBlocking {
             val appScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-            val client = DefaultNostrClient(socketBuilder, appScope)
+            val client = NostrClient(socketBuilder, appScope)
 
             val metadataEvents = mutableListOf<Event>()
             val contactListEvents = mutableListOf<Event>()

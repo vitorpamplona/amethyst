@@ -135,7 +135,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchFirst
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -244,7 +244,7 @@ class Account(
     val nwcFilterAssembler: () -> NWCPaymentFilterAssembler,
     val otsResolverBuilder: () -> OtsResolver,
     val cache: LocalCache,
-    val client: NostrClient,
+    val client: INostrClient,
     val scope: CoroutineScope,
 ) : IAccount {
     private var userProfileCache: User? = null

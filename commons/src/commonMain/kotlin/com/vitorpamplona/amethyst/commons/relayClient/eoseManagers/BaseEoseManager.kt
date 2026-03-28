@@ -21,14 +21,14 @@
 package com.vitorpamplona.amethyst.commons.relayClient.eoseManagers
 
 import com.vitorpamplona.amethyst.commons.service.BundledUpdate
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.SubscriptionController
 import kotlinx.coroutines.Dispatchers
 
 abstract class BaseEoseManager<T>(
-    val client: NostrClient,
+    val client: INostrClient,
     val allKeys: () -> Set<T>,
     val sampleTime: Long = 500,
 ) : IEoseManager {

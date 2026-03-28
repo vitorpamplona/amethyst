@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.client.accessories
 
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
@@ -43,7 +43,7 @@ import kotlinx.coroutines.withTimeoutOrNull
  * @param timeoutMs How long to wait for a response (default 15 s).
  * @return The [CountResult], or `null` on timeout.
  */
-suspend fun NostrClient.count(
+suspend fun INostrClient.count(
     relay: NormalizedRelayUrl,
     filter: Filter,
     timeoutMs: Long = 15_000,
@@ -92,7 +92,7 @@ suspend fun NostrClient.count(
  * @param timeoutMs How long to wait for all responses (default 15 s).
  * @return Map of relay -> [CountResult] for every relay that responded in time.
  */
-suspend fun NostrClient.count(
+suspend fun INostrClient.count(
     filters: Map<NormalizedRelayUrl, List<Filter>>,
     timeoutMs: Long = 15_000,
 ): Map<NormalizedRelayUrl, CountResult> {
@@ -155,7 +155,7 @@ suspend fun NostrClient.count(
  * @param timeoutMs How long to wait for all responses (default 15 s).
  * @return A merged [CountResult], or `null` if no relay responded.
  */
-suspend fun NostrClient.countMerged(
+suspend fun INostrClient.countMerged(
     relays: List<NormalizedRelayUrl>,
     filter: Filter,
     timeoutMs: Long = 15_000,

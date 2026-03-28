@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.commons.chess
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirm
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
@@ -46,7 +46,7 @@ data class BroadcastResult(
  * ensuring the event was actually received and accepted.
  */
 class ChessEventBroadcaster(
-    private val client: NostrClient,
+    private val client: INostrClient,
 ) {
     /**
      * Broadcast an event to the chess relays with confirmation.
@@ -87,12 +87,12 @@ class ChessEventBroadcaster(
                 object : SubscriptionListener {
                     override fun onEvent(
                         event: Event,
-                        isRealTime: Boolean,
+                        isLive: Boolean,
                         relay: NormalizedRelayUrl,
                         forFilters: List<Filter>?,
                     ) { }
 
-                    override fun onCaughtUp(
+                    override fun onEose(
                         relay: NormalizedRelayUrl,
                         forFilters: List<Filter>?,
                     ) { }

@@ -21,7 +21,6 @@
 package com.vitorpamplona.quartz.nip01Core.relay
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
-import com.vitorpamplona.quartz.nip01Core.relay.client.DefaultNostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.StaticSubscription
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -41,7 +40,7 @@ class NostrClientSubscriptionTest : BaseNostrClientTest() {
     fun testNostrClientSubscription() =
         runBlocking {
             val appScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-            val client = DefaultNostrClient(socketBuilder, appScope)
+            val client = NostrClient(socketBuilder, appScope)
 
             val resultChannel = Channel<Event>(UNLIMITED)
             val events = mutableSetOf<Event>()

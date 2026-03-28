@@ -58,7 +58,7 @@ private val CHESS_EVENT_KINDS =
 class DesktopChessSubscriptionController(
     private val relayManager: RelayConnectionManager,
     private val onEvent: (Event, Boolean, NormalizedRelayUrl, List<Filter>?) -> Unit,
-    private val onCaughtUp: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
+    private val onEose: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
 ) : ChessSubscriptionController {
     private val _currentState = MutableStateFlow<ChessSubscriptionState?>(null)
     override val currentState: StateFlow<ChessSubscriptionState?> = _currentState.asStateFlow()
@@ -98,7 +98,7 @@ class DesktopChessSubscriptionController(
                 object : SubscriptionListener {
                     override fun onEvent(
                         event: Event,
-                        isRealTime: Boolean,
+                        isLive: Boolean,
                         relay: NormalizedRelayUrl,
                         forFilters: List<Filter>?,
                     ) {
@@ -106,16 +106,16 @@ class DesktopChessSubscriptionController(
                         if (event.kind in CHESS_EVENT_KINDS) {
                             DesktopChessEventCache.add(event)
                         }
-                        onEvent(event, isRealTime, relay, forFilters)
+                        onEvent(event, isLive, relay, forFilters)
                     }
 
-                    override fun onCaughtUp(
+                    override fun onEose(
                         relay: NormalizedRelayUrl,
                         forFilters: List<Filter>?,
                     ) {
                         // Track EOSE time for this relay for efficient re-subscription
                         relayEoseTimes[relay] = TimeUtils.now()
-                        onCaughtUp(relay, forFilters)
+                        onEose(relay, forFilters)
                     }
                 },
         )
@@ -162,7 +162,7 @@ class DesktopChessSubscriptionController(
  * @param activeGameIds Set of game IDs the user is actively playing (for game-specific filters)
  * @param opponentPubkeys Set of opponent pubkeys for active games (for move filtering)
  * @param onEvent Callback for incoming events
- * @param onCaughtUp Callback for EOSE (End of Stored Events)
+ * @param onEose Callback for EOSE (End of Stored Events)
  */
 fun createChessSubscriptionWithGames(
     relays: Set<NormalizedRelayUrl>,
@@ -170,7 +170,7 @@ fun createChessSubscriptionWithGames(
     activeGameIds: Set<String> = emptySet(),
     opponentPubkeys: Set<String> = emptySet(),
     onEvent: (Event, Boolean, NormalizedRelayUrl, List<Filter>?) -> Unit,
-    onCaughtUp: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
+    onEose: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
 ): SubscriptionConfig? {
     if (relays.isEmpty()) return null
 
@@ -197,7 +197,7 @@ fun createChessSubscriptionWithGames(
         filters = filters,
         relays = relays,
         onEvent = onEvent,
-        onCaughtUp = onCaughtUp,
+        onEose = onEose,
     )
 }
 
@@ -207,11 +207,11 @@ fun createChessSubscriptionWithGames(
  */
 @Deprecated(
     "Use createChessSubscriptionWithGames for active game support",
-    ReplaceWith("createChessSubscriptionWithGames(relays, userPubkey, emptySet(), emptySet(), onEvent, onCaughtUp)"),
+    ReplaceWith("createChessSubscriptionWithGames(relays, userPubkey, emptySet(), emptySet(), onEvent, onEose)"),
 )
 fun createChessSubscription(
     relays: Set<NormalizedRelayUrl>,
     userPubkey: String,
     onEvent: (Event, Boolean, NormalizedRelayUrl, List<Filter>?) -> Unit,
-    onCaughtUp: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
-): SubscriptionConfig? = createChessSubscriptionWithGames(relays, userPubkey, emptySet(), emptySet(), onEvent, onCaughtUp)
+    onEose: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
+): SubscriptionConfig? = createChessSubscriptionWithGames(relays, userPubkey, emptySet(), emptySet(), onEvent, onEose)

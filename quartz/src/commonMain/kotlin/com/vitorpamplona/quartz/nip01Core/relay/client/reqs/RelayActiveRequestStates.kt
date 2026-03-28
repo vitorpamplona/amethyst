@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.client.reqs
 
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage
@@ -34,7 +34,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.Log
 
 class RelayActiveRequestStates(
-    val client: NostrClient,
+    val client: INostrClient,
 ) {
     private var subStates = mutableMapOf<NormalizedRelayUrl, RequestSubscriptionState<String>>()
 
@@ -53,7 +53,7 @@ class RelayActiveRequestStates(
             ) {
                 when (msg) {
                     is EventMessage -> subGetOrCreate(relay.url).onNewEvent(msg.subId)
-                    is EoseMessage -> subGetOrCreate(relay.url).onCaughtUp(msg.subId)
+                    is EoseMessage -> subGetOrCreate(relay.url).onEose(msg.subId)
                     is ClosedMessage -> subGetOrCreate(relay.url).onClosed(msg.subId)
                 }
             }

@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.relay.client.accessories
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
@@ -29,10 +29,10 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.utils.Log
 
 /**
- * Listens to NostrClient's onEvent messages for caching purposes.
+ * Listens to INostrClient's onEvent messages for caching purposes.
  */
 class EventCollector(
-    val client: NostrClient,
+    val client: INostrClient,
     val onEvent: (event: Event, relay: IRelayClient) -> Unit,
 ) {
     private val clientListener =

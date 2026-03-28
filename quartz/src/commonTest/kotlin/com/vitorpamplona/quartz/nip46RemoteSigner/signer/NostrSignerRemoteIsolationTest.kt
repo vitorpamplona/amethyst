@@ -22,7 +22,7 @@ package com.vitorpamplona.quartz.nip46RemoteSigner.signer
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
@@ -37,10 +37,10 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
- * NostrClient that records subscribe calls for verification.
+ * INostrClient that records subscribe calls for verification.
  * Used instead of mockk since commonTest doesn't have mockk.
  */
-private class TrackingNostrClient : NostrClient {
+private class TrackingNostrClient : INostrClient {
     data class SubscriptionRecord(
         val subId: String,
         val filters: Map<NormalizedRelayUrl, List<Filter>>,

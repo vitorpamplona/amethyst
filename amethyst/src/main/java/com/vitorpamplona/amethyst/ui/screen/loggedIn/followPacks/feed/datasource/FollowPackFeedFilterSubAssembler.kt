@@ -25,12 +25,12 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.allUserFollows.AllUserFollow
 import com.vitorpamplona.amethyst.model.topNavFeeds.allUserFollows.AllUserFollowsByProxyTopNavFilter
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip65Follows.filterHomePostsByAuthors
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 
 class FollowPackFeedFilterSubAssembler(
-    client: NostrClient,
+    client: INostrClient,
     allKeys: () -> Set<FollowPackFeedQueryState>,
 ) : SingleSubEoseManager<FollowPackFeedQueryState>(client, allKeys) {
     override fun updateFilter(

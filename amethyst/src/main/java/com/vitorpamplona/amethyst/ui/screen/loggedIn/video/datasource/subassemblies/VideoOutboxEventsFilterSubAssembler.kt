@@ -40,7 +40,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.subassembl
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.subassemblies.nip65Follows.filterPictureAndVideoByFollows
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.subassemblies.nip72Communities.filterPictureAndVideoByAllCommunities
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.subassemblies.nip72Communities.filterPictureAndVideoByCommunity
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -52,7 +52,7 @@ import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.launch
 
 class VideoOutboxEventsFilterSubAssembler(
-    client: NostrClient,
+    client: INostrClient,
     allKeys: () -> Set<VideoQueryState>,
 ) : PerUserAndFollowListEoseManager<VideoQueryState, TopFilter>(client, allKeys) {
     override fun updateFilter(

@@ -164,7 +164,7 @@ class ChatroomListState(
             object : SubscriptionListener {
                 override fun onEvent(
                     event: Event,
-                    isRealTime: Boolean,
+                    isLive: Boolean,
                     relay: NormalizedRelayUrl,
                     forFilters: List<Filter>?,
                 ) {

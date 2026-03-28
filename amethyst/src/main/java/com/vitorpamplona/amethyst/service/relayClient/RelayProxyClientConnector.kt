@@ -26,7 +26,7 @@ import com.vitorpamplona.amethyst.service.connectivity.ConnectivityStatus
 import com.vitorpamplona.amethyst.service.okhttp.DualHttpClientManagerForRelays
 import com.vitorpamplona.amethyst.ui.tor.TorManager
 import com.vitorpamplona.amethyst.ui.tor.TorServiceStatus
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -48,7 +48,7 @@ class RelayProxyClientConnector(
     val okHttpClients: DualHttpClientManagerForRelays,
     val connManager: ConnectivityManager,
     val torManager: TorManager,
-    val client: NostrClient,
+    val client: INostrClient,
     val scope: CoroutineScope,
 ) {
     data class RelayServiceInfra(

@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.desktop.network
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
@@ -44,10 +44,10 @@ import kotlinx.coroutines.flow.asStateFlow
 open class RelayConnectionManager(
     websocketBuilder: WebsocketBuilder,
 ) : RelayConnectionListener {
-    private val _client = DefaultNostrClient(websocketBuilder)
+    private val _client = NostrClient(websocketBuilder)
 
-    /** Exposes the underlying NostrClient for subscription coordinators */
-    val client: com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient get() = _client
+    /** Exposes the underlying INostrClient for subscription coordinators */
+    val client: com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient get() = _client
 
     private val _relayStatuses = MutableStateFlow<Map<NormalizedRelayUrl, RelayStatus>>(emptyMap())
     val relayStatuses: StateFlow<Map<NormalizedRelayUrl, RelayStatus>> = _relayStatuses.asStateFlow()
@@ -145,7 +145,7 @@ open class RelayConnectionManager(
                 object : SubscriptionListener {
                     override fun onEvent(
                         event: Event,
-                        isRealTime: Boolean,
+                        isLive: Boolean,
                         relay: NormalizedRelayUrl,
                         forFilters: List<Filter>?,
                     ) {

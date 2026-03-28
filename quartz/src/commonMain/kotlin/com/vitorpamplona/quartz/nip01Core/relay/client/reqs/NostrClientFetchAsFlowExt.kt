@@ -22,7 +22,7 @@ package com.vitorpamplona.quartz.nip01Core.relay.client.reqs
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -37,22 +37,22 @@ import kotlinx.coroutines.flow.callbackFlow
  * 3. Closes the flow (completes) when the relay sends EOSE,
  *    cancelling the subscription automatically via [awaitClose].
  */
-fun NostrClient.fetchAsFlow(
+fun INostrClient.fetchAsFlow(
     relay: String,
     filters: List<Filter>,
 ) = fetchAsFlow(RelayUrlNormalizer.normalize(relay), filters)
 
-fun NostrClient.fetchAsFlow(
+fun INostrClient.fetchAsFlow(
     relay: String,
     filter: Filter,
 ) = fetchAsFlow(RelayUrlNormalizer.normalize(relay), listOf(filter))
 
-fun NostrClient.fetchAsFlow(
+fun INostrClient.fetchAsFlow(
     relay: NormalizedRelayUrl,
     filter: Filter,
 ) = fetchAsFlow(relay, listOf(filter))
 
-fun NostrClient.fetchAsFlow(
+fun INostrClient.fetchAsFlow(
     relay: NormalizedRelayUrl,
     filters: List<Filter>,
 ): Flow<List<Event>> =
@@ -65,7 +65,7 @@ fun NostrClient.fetchAsFlow(
             object : SubscriptionListener {
                 override fun onEvent(
                     event: Event,
-                    isRealTime: Boolean,
+                    isLive: Boolean,
                     relay: NormalizedRelayUrl,
                     forFilters: List<Filter>?,
                 ) {
@@ -76,7 +76,7 @@ fun NostrClient.fetchAsFlow(
                     }
                 }
 
-                override fun onCaughtUp(
+                override fun onEose(
                     relay: NormalizedRelayUrl,
                     forFilters: List<Filter>?,
                 ) {

@@ -57,7 +57,7 @@ class RequestSubscriptionState<T> {
         }
     }
 
-    fun onCaughtUp(reference: T) {
+    fun onEose(reference: T) {
         subStates[reference] = ReqSubStatus.LIVE
     }
 

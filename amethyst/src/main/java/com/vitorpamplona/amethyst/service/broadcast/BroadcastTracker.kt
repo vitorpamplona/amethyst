@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.service.broadcast
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
@@ -71,7 +71,7 @@ class BroadcastTracker {
     suspend fun trackBroadcast(
         event: Event,
         relays: Set<NormalizedRelayUrl>,
-        client: NostrClient,
+        client: INostrClient,
     ) {
         val trackingId = UUID.randomUUID().toString()
 
@@ -232,7 +232,7 @@ class BroadcastTracker {
     @OptIn(DelicateCoroutinesApi::class)
     suspend fun retry(
         broadcast: BroadcastEvent,
-        client: NostrClient,
+        client: INostrClient,
         specificRelay: NormalizedRelayUrl? = null,
     ): BroadcastEvent {
         val event = broadcast.event

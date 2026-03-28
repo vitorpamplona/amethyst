@@ -22,7 +22,7 @@ package com.vitorpamplona.quartz.nip01Core.relay.client.reqs
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -42,22 +42,22 @@ import kotlinx.coroutines.flow.callbackFlow
  *    - They will be ignored if they are already in the list.
  *    - They will be added to the beginning of the list if they are new.
  */
-fun NostrClient.subscribeAsFlow(
+fun INostrClient.subscribeAsFlow(
     relay: String,
     filters: List<Filter>,
 ) = subscribeAsFlow(RelayUrlNormalizer.normalize(relay), filters)
 
-fun NostrClient.subscribeAsFlow(
+fun INostrClient.subscribeAsFlow(
     relay: String,
     filter: Filter,
 ) = subscribeAsFlow(RelayUrlNormalizer.normalize(relay), listOf(filter))
 
-fun NostrClient.subscribeAsFlow(
+fun INostrClient.subscribeAsFlow(
     relay: NormalizedRelayUrl,
     filter: Filter,
 ) = subscribeAsFlow(relay, listOf(filter))
 
-fun NostrClient.subscribeAsFlow(
+fun INostrClient.subscribeAsFlow(
     relay: NormalizedRelayUrl,
     filters: List<Filter>,
 ): Flow<List<Event>> =
@@ -71,7 +71,7 @@ fun NostrClient.subscribeAsFlow(
             object : SubscriptionListener {
                 override fun onEvent(
                     event: Event,
-                    isRealTime: Boolean,
+                    isLive: Boolean,
                     relay: NormalizedRelayUrl,
                     forFilters: List<Filter>?,
                 ) {
@@ -90,7 +90,7 @@ fun NostrClient.subscribeAsFlow(
                     }
                 }
 
-                override fun onCaughtUp(
+                override fun onEose(
                     relay: NormalizedRelayUrl,
                     forFilters: List<Filter>?,
                 ) {

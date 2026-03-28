@@ -20,14 +20,14 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions
 
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 
 /**
- * Manages Nostr subscriptions using a [NostrClient], allowing subscriptions to be created, modified,
+ * Manages Nostr subscriptions using a [INostrClient], allowing subscriptions to be created, modified,
  * and synchronized with relay filters. Subscriptions are stored in a cache and processed through
  * [updateRelays] to update relay filters dynamically. Also tracks event statistics and EOSE (End of
  * Stored Events) events, and provides utility methods to interact with subscriptions like dismissal.
@@ -45,7 +45,7 @@ import com.vitorpamplona.quartz.utils.cache.LargeCache
  * - Dismiss subscriptions with [dismissSubscription].
  */
 class SubscriptionController(
-    val client: NostrClient,
+    val client: INostrClient,
 ) {
     private val subscriptions = LargeCache<String, Subscription>()
 

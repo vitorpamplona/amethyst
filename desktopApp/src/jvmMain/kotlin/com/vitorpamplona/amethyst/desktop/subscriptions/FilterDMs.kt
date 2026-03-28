@@ -144,7 +144,7 @@ fun createNip04DmInboxSubscription(
     since: Long? = null,
     limit: Int? = null,
     onEvent: (Event, Boolean, NormalizedRelayUrl, List<Filter>?) -> Unit,
-    onCaughtUp: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
+    onEose: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
 ): SubscriptionConfig? {
     if (relays.isEmpty() || userPubKeyHex.length != 64) return null
 
@@ -153,7 +153,7 @@ fun createNip04DmInboxSubscription(
         filters = listOf(FilterDMs.nip04ToMe(userPubKeyHex, since, limit)),
         relays = relays,
         onEvent = onEvent,
-        onCaughtUp = onCaughtUp,
+        onEose = onEose,
     )
 }
 
@@ -167,7 +167,7 @@ fun createNip04DmOutboxSubscription(
     since: Long? = null,
     limit: Int? = null,
     onEvent: (Event, Boolean, NormalizedRelayUrl, List<Filter>?) -> Unit,
-    onCaughtUp: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
+    onEose: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
 ): SubscriptionConfig? {
     if (relays.isEmpty() || userPubKeyHex.length != 64) return null
 
@@ -176,7 +176,7 @@ fun createNip04DmOutboxSubscription(
         filters = listOf(FilterDMs.nip04FromMe(userPubKeyHex, since, limit)),
         relays = relays,
         onEvent = onEvent,
-        onCaughtUp = onCaughtUp,
+        onEose = onEose,
     )
 }
 
@@ -189,7 +189,7 @@ fun createGiftWrapSubscription(
     userPubKeyHex: HexKey,
     since: Long? = null,
     onEvent: (Event, Boolean, NormalizedRelayUrl, List<Filter>?) -> Unit,
-    onCaughtUp: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
+    onEose: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
 ): SubscriptionConfig? {
     if (relays.isEmpty() || userPubKeyHex.length != 64) return null
 
@@ -198,7 +198,7 @@ fun createGiftWrapSubscription(
         filters = listOf(FilterDMs.giftWrapsToMe(userPubKeyHex, since)),
         relays = relays,
         onEvent = onEvent,
-        onCaughtUp = onCaughtUp,
+        onEose = onEose,
     )
 }
 
@@ -213,7 +213,7 @@ fun createDmConversationSubscription(
     conversationPubKeys: Set<HexKey>,
     since: Long? = null,
     onEvent: (Event, Boolean, NormalizedRelayUrl, List<Filter>?) -> Unit,
-    onCaughtUp: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
+    onEose: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
 ): SubscriptionConfig? {
     if (conversationPubKeys.isEmpty() || userPubKeyHex.length != 64) return null
 
@@ -225,6 +225,6 @@ fun createDmConversationSubscription(
         filters = FilterDMs.nip04Conversation(userPubKeyHex, conversationPubKeys, since),
         relays = allRelays,
         onEvent = onEvent,
-        onCaughtUp = onCaughtUp,
+        onEose = onEose,
     )
 }

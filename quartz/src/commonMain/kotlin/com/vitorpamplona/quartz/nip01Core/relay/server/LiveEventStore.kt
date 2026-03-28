@@ -54,13 +54,13 @@ class LiveEventStore(
     suspend fun query(
         filters: List<Filter>,
         onEach: (Event) -> Unit,
-        onCaughtUp: () -> Unit,
+        onEose: () -> Unit,
     ) {
         // 1. Replay stored events matching filters.
         store.query(filters, onEach)
 
         // 2. Signal end of stored events.
-        onCaughtUp()
+        onEose()
 
         // 3. Stream live events until cancelled.
         newEventStream.collect { newEvent ->

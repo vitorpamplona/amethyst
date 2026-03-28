@@ -22,7 +22,7 @@ package com.vitorpamplona.quartz.nip01Core.relay.client.accessories
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -31,45 +31,45 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.withTimeoutOrNull
 
-suspend fun NostrClient.fetchAll(
+suspend fun INostrClient.fetchAll(
     relay: String,
     filter: Filter,
     timeoutMs: Long = 30_000L,
 ) = fetchAll(newSubId(), mapOf(RelayUrlNormalizer.normalize(relay) to listOf(filter)), timeoutMs)
 
-suspend fun NostrClient.fetchAll(
+suspend fun INostrClient.fetchAll(
     relay: String,
     filters: List<Filter>,
     timeoutMs: Long = 30_000L,
 ) = fetchAll(newSubId(), mapOf(RelayUrlNormalizer.normalize(relay) to filters), timeoutMs)
 
-suspend fun NostrClient.fetchAll(
+suspend fun INostrClient.fetchAll(
     subscriptionId: String = newSubId(),
     relay: String,
     filters: List<Filter>,
     timeoutMs: Long = 30_000L,
 ) = fetchAll(subscriptionId, mapOf(RelayUrlNormalizer.normalize(relay) to filters), timeoutMs)
 
-suspend fun NostrClient.fetchAll(
+suspend fun INostrClient.fetchAll(
     relay: NormalizedRelayUrl,
     filter: Filter,
     timeoutMs: Long = 30_000L,
 ) = fetchAll(newSubId(), mapOf(relay to listOf(filter)), timeoutMs)
 
-suspend fun NostrClient.fetchAll(
+suspend fun INostrClient.fetchAll(
     relay: NormalizedRelayUrl,
     filters: List<Filter>,
     timeoutMs: Long = 30_000L,
 ) = fetchAll(newSubId(), mapOf(relay to filters), timeoutMs)
 
-suspend fun NostrClient.fetchAll(
+suspend fun INostrClient.fetchAll(
     subscriptionId: String = newSubId(),
     relay: NormalizedRelayUrl,
     filters: List<Filter>,
     timeoutMs: Long = 30_000L,
 ) = fetchAll(subscriptionId, mapOf(relay to filters), timeoutMs)
 
-suspend fun NostrClient.fetchAll(
+suspend fun INostrClient.fetchAll(
     subscriptionId: String = newSubId(),
     filters: Map<NormalizedRelayUrl, List<Filter>>,
     timeoutMs: Long = 30_000L,
@@ -85,7 +85,7 @@ suspend fun NostrClient.fetchAll(
         object : SubscriptionListener {
             override fun onEvent(
                 event: Event,
-                isRealTime: Boolean,
+                isLive: Boolean,
                 relay: NormalizedRelayUrl,
                 forFilters: List<Filter>?,
             ) {
@@ -110,7 +110,7 @@ suspend fun NostrClient.fetchAll(
                 doneChannel.trySend(relay)
             }
 
-            override fun onCaughtUp(
+            override fun onEose(
                 relay: NormalizedRelayUrl,
                 forFilters: List<Filter>?,
             ) {

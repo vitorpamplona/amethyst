@@ -131,7 +131,7 @@ fun ThreadScreen(
                     subscriptionsCoordinator?.consumeEvent(event, relay)
                     levelCache[event.id] = 0
                 },
-                onCaughtUp = { _, _ ->
+                onEose = { _, _ ->
                     rootNoteEoseReceived = true
                 },
             )
@@ -149,7 +149,7 @@ fun ThreadScreen(
                 onEvent = { event, _, relay, _ ->
                     subscriptionsCoordinator?.consumeEvent(event, relay)
                 },
-                onCaughtUp = { _, _ -> },
+                onEose = { _, _ -> },
             )
         } else {
             null

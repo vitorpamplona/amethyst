@@ -261,7 +261,7 @@ fun ReadsScreen(
                             eventState.addItem(event)
                         }
                     },
-                    onCaughtUp = { _, _ ->
+                    onEose = { _, _ ->
                         eoseReceivedCount++
                     },
                 )
@@ -277,7 +277,7 @@ fun ReadsScreen(
                                 eventState.addItem(event)
                             }
                         },
-                        onCaughtUp = { _, _ ->
+                        onEose = { _, _ ->
                             eoseReceivedCount++
                         },
                     )

@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.commons.relayClient.eoseManagers
 import com.vitorpamplona.amethyst.commons.relays.EOSERelayList
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.groupByRelay
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
@@ -44,7 +44,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
  * shares all EOSEs among all users.
  */
 abstract class SingleSubEoseManager<T>(
-    client: NostrClient,
+    client: INostrClient,
     allKeys: () -> Set<T>,
     val invalidateAfterEose: Boolean = false,
 ) : BaseEoseManager<T>(client, allKeys) {
@@ -67,7 +67,7 @@ abstract class SingleSubEoseManager<T>(
     val sub =
         requestNewSubscription(
             object : SubscriptionListener {
-                override fun onCaughtUp(
+                override fun onEose(
                     relay: NormalizedRelayUrl,
                     forFilters: List<Filter>?,
                 ) {
@@ -76,11 +76,11 @@ abstract class SingleSubEoseManager<T>(
 
                 override fun onEvent(
                     event: Event,
-                    isRealTime: Boolean,
+                    isLive: Boolean,
                     relay: NormalizedRelayUrl,
                     forFilters: List<Filter>?,
                 ) {
-                    if (isRealTime) {
+                    if (isLive) {
                         newEose(relay, TimeUtils.now(), forFilters)
                     }
                 }

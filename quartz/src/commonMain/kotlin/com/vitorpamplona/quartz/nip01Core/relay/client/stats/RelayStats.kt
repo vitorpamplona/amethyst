@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.relay.client.stats
 
 import androidx.collection.LruCache
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage
@@ -35,7 +35,7 @@ import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
 
 class RelayStats(
-    val client: NostrClient,
+    val client: INostrClient,
 ) {
     private val innerCache =
         object : LruCache<NormalizedRelayUrl, RelayStat>(1000) {

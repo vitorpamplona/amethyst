@@ -27,14 +27,14 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderQueryState
 import com.vitorpamplona.amethyst.service.relays.MutableTime
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.mapOfSet
 
 class UserReportsSubAssembler(
-    client: NostrClient,
+    client: INostrClient,
     val cache: LocalCache,
     allKeys: () -> Set<UserFinderQueryState>,
 ) : SingleSubEoseManager<UserFinderQueryState>(client, allKeys) {

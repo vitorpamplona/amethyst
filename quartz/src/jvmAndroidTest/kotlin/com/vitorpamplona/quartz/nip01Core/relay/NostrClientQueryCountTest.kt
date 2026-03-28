@@ -19,7 +19,6 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 package com.vitorpamplona.quartz.nip01Core.relay
-import com.vitorpamplona.quartz.nip01Core.relay.client.DefaultNostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.count
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
@@ -42,7 +41,7 @@ class NostrClientQueryCountTest : BaseNostrClientTest() {
     fun testQueryCountSuspend() =
         runBlocking {
             val appScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-            val client = DefaultNostrClient(socketBuilder, appScope)
+            val client = NostrClient(socketBuilder, appScope)
 
             val result = client.count(fiatjaf, metadata)
 
@@ -56,7 +55,7 @@ class NostrClientQueryCountTest : BaseNostrClientTest() {
     fun testQueryCountSuspendAllEvents() =
         runBlocking {
             val appScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-            val client = DefaultNostrClient(socketBuilder, appScope)
+            val client = NostrClient(socketBuilder, appScope)
 
             val result = client.count(fiatjaf, Filter())
 
@@ -70,7 +69,7 @@ class NostrClientQueryCountTest : BaseNostrClientTest() {
     fun testQueryCountSuspendMultipleRelays() =
         runBlocking {
             val appScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-            val client = DefaultNostrClient(socketBuilder, appScope)
+            val client = NostrClient(socketBuilder, appScope)
 
             val results =
                 client.count(

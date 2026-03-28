@@ -22,7 +22,7 @@ package com.vitorpamplona.quartz.nip46RemoteSigner.signer
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.StaticSubscription
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -52,7 +52,7 @@ class NostrSignerRemote(
     val signer: NostrSignerInternal,
     val remotePubkey: HexKey,
     val relays: Set<NormalizedRelayUrl>,
-    val client: NostrClient,
+    val client: INostrClient,
     val permissions: String? = null,
     val secret: String? = null,
 ) : NostrSigner(signer.pubKey) {
@@ -296,7 +296,7 @@ class NostrSignerRemote(
         fun fromBunkerUri(
             bunkerUri: String,
             signer: NostrSignerInternal,
-            client: NostrClient,
+            client: INostrClient,
             permissions: String? = null,
         ): NostrSignerRemote {
             if (!bunkerUri.startsWith("bunker://")) throw Exception("Invalid bunker uri")

@@ -38,7 +38,7 @@ import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip02FollowList.tags.ContactTag
@@ -94,7 +94,7 @@ sealed class AccountState {
 class AccountSessionManager(
     val accountsCache: AccountCacheState,
     val nip05ClientBuilder: () -> Nip05Client,
-    val clientBuilder: () -> NostrClient,
+    val clientBuilder: () -> INostrClient,
     val localPreferences: LocalPreferences,
     val scope: CoroutineScope,
 ) {

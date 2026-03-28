@@ -222,7 +222,7 @@ fun ArticleReaderScreen(
                     }
                 }
             },
-            onCaughtUp = { _, _ ->
+            onEose = { _, _ ->
                 eoseReceived = true
             },
         )
@@ -335,7 +335,7 @@ fun ArticleReaderScreen(
                                 .toSet()
                     }
                 },
-                onCaughtUp = { _, _ -> },
+                onEose = { _, _ -> },
             )
         } else {
             null

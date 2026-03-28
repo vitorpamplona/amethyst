@@ -24,7 +24,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.SingleSubEose
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -48,7 +48,7 @@ data class MetadataQueryState(
  * - Caches EOSE to avoid re-fetching known metadata
  */
 class MetadataFilterAssembler(
-    client: NostrClient,
+    client: INostrClient,
     allKeys: () -> Set<MetadataQueryState>,
 ) : SingleSubEoseManager<MetadataQueryState>(client, allKeys, invalidateAfterEose = true) {
     override fun distinct(key: MetadataQueryState): Any = key.pubkeys.hashCode()

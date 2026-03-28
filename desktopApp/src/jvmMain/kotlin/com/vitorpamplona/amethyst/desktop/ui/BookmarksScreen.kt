@@ -168,7 +168,7 @@ fun BookmarksScreen(
                         publicBookmarkIds = pubIds
                     }
                 },
-                onCaughtUp = { _, _ ->
+                onEose = { _, _ ->
                     hasReceivedEose = true
                     isLoading = false
                 },
@@ -214,7 +214,7 @@ fun BookmarksScreen(
                     subscriptionsCoordinator?.consumeEvent(event, relay)
                     publicEventState.addItem(event)
                 },
-                onCaughtUp = { _, _ -> },
+                onEose = { _, _ -> },
             )
         } else {
             null
@@ -236,7 +236,7 @@ fun BookmarksScreen(
                     subscriptionsCoordinator?.consumeEvent(event, relay)
                     privateEventState.addItem(event)
                 },
-                onCaughtUp = { _, _ -> },
+                onEose = { _, _ -> },
             )
         } else {
             null

@@ -27,7 +27,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.Subscription
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -55,7 +55,7 @@ import kotlinx.coroutines.CoroutineScope
  * ```
  */
 class FeedMetadataCoordinator(
-    private val client: NostrClient,
+    private val client: INostrClient,
     private val scope: CoroutineScope,
     private val indexRelays: Set<NormalizedRelayUrl>,
     private val preloader: MetadataPreloader? = null,
@@ -82,7 +82,7 @@ class FeedMetadataCoordinator(
                     object : SubscriptionListener {
                         override fun onEvent(
                             event: Event,
-                            isRealTime: Boolean,
+                            isLive: Boolean,
                             relay: NormalizedRelayUrl,
                             forFilters: List<Filter>?,
                         ) {

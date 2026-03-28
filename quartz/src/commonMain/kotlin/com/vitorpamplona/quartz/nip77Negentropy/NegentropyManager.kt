@@ -63,7 +63,7 @@ interface INegentropyListener {
  * per relay and subscription ID.
  *
  * Usage:
- * 1. Register this as a listener on the NostrClient
+ * 1. Register this as a listener on the INostrClient
  * 2. Call [startSync] with a filter and local events to begin reconciliation
  * 3. Receive results via [INegentropyListener] callbacks
  */

@@ -24,7 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.StaticSubscription
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -83,7 +83,7 @@ object NostrConnectLoginUseCase {
 
     suspend fun awaitAndLogin(
         uriData: NostrConnectUri,
-        client: NostrClient,
+        client: INostrClient,
     ): BunkerLoginResult {
         val connectData =
             waitForConnectRequest(
@@ -117,7 +117,7 @@ object NostrConnectLoginUseCase {
         ephemeralPubKey: HexKey,
         relays: Set<NormalizedRelayUrl>,
         expectedSecret: String,
-        client: NostrClient,
+        client: INostrClient,
     ): ConnectRequestData {
         val deferred = CompletableDeferred<NostrConnectEvent>()
 
@@ -201,7 +201,7 @@ object NostrConnectLoginUseCase {
         ephemeralSigner: NostrSignerInternal,
         connectData: ConnectRequestData,
         relays: Set<NormalizedRelayUrl>,
-        client: NostrClient,
+        client: INostrClient,
     ) {
         val ackResponse = BunkerResponseAck(id = connectData.requestId!!)
         val ackEvent =

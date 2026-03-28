@@ -27,7 +27,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync.EventSync.
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync.EventSync.LiveSyncActivity.SourceRelayInfo
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPages
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
@@ -80,7 +80,7 @@ class EventSync(
     private val outboxTargets: () -> Set<NormalizedRelayUrl>,
     private val inboxTargets: () -> Set<NormalizedRelayUrl>,
     private val dmTargets: () -> Set<NormalizedRelayUrl>,
-    private val clientBuilder: () -> NostrClient,
+    private val clientBuilder: () -> INostrClient,
     private val scope: CoroutineScope,
 ) {
     companion object {
@@ -622,7 +622,7 @@ class EventSync(
      *
      * [onEvent] receives the event and the URL of the relay it came from.
      */
-    private suspend fun NostrClient.downloadFromPool(
+    private suspend fun INostrClient.downloadFromPool(
         relays: List<NormalizedRelayUrl>,
         filters: Map<NormalizedRelayUrl, List<Filter>>,
         onNewPage: (Long, NormalizedRelayUrl) -> Unit,
@@ -661,7 +661,7 @@ class EventSync(
      *
      * @return total number of events received across all pages.
      */
-    private suspend fun NostrClient.downloadFromRelay(
+    private suspend fun INostrClient.downloadFromRelay(
         relay: NormalizedRelayUrl,
         filters: List<Filter>,
         onNewPage: (Long) -> Unit,

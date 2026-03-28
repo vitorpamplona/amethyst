@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
-import com.vitorpamplona.quartz.nip01Core.relay.client.DefaultNostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchFirst
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import kotlinx.coroutines.CoroutineScope
@@ -36,7 +35,7 @@ class NostrClientFirstEventTest : BaseNostrClientTest() {
     fun testDownloadFirstEvent() =
         runBlocking {
             val appScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-            val client = DefaultNostrClient(socketBuilder, appScope)
+            val client = NostrClient(socketBuilder, appScope)
 
             val event =
                 client.fetchFirst(

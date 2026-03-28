@@ -32,7 +32,7 @@ fun createMetadataSubscription(
     relays: Set<NormalizedRelayUrl>,
     pubKeyHex: String,
     onEvent: (Event, Boolean, NormalizedRelayUrl, List<Filter>?) -> Unit,
-    onCaughtUp: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
+    onEose: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
 ): SubscriptionConfig? {
     // Validate pubkey length
     if (pubKeyHex.length != 64) {
@@ -43,7 +43,7 @@ fun createMetadataSubscription(
         filters = listOf(FilterBuilders.userMetadata(pubKeyHex)),
         relays = relays,
         onEvent = onEvent,
-        onCaughtUp = onCaughtUp,
+        onEose = onEose,
     )
 }
 
@@ -56,7 +56,7 @@ fun createBatchMetadataSubscription(
     relays: Set<NormalizedRelayUrl>,
     pubKeyHexList: List<String>,
     onEvent: (Event, Boolean, NormalizedRelayUrl, List<Filter>?) -> Unit,
-    onCaughtUp: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
+    onEose: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
 ): SubscriptionConfig? {
     // Filter out invalid pubkeys
     val validPubkeys = pubKeyHexList.filter { it.length == 64 }
@@ -67,7 +67,7 @@ fun createBatchMetadataSubscription(
         filters = listOf(FilterBuilders.userMetadataBatch(validPubkeys)),
         relays = relays,
         onEvent = onEvent,
-        onCaughtUp = onCaughtUp,
+        onEose = onEose,
     )
 }
 
@@ -79,7 +79,7 @@ fun createMetadataListSubscription(
     relays: Set<NormalizedRelayUrl>,
     pubKeys: List<String>,
     onEvent: (Event, Boolean, NormalizedRelayUrl, List<Filter>?) -> Unit,
-    onCaughtUp: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
+    onEose: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
 ): SubscriptionConfig? {
     if (pubKeys.isEmpty()) return null
 
@@ -88,7 +88,7 @@ fun createMetadataListSubscription(
         filters = listOf(FilterBuilders.userMetadataMultiple(pubKeys)),
         relays = relays,
         onEvent = onEvent,
-        onCaughtUp = onCaughtUp,
+        onEose = onEose,
     )
 }
 
@@ -100,7 +100,7 @@ fun createUserPostsSubscription(
     pubKeyHex: String,
     limit: Int = 50,
     onEvent: (Event, Boolean, NormalizedRelayUrl, List<Filter>?) -> Unit,
-    onCaughtUp: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
+    onEose: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
 ): SubscriptionConfig =
     SubscriptionConfig(
         subId = generateSubId("posts-${pubKeyHex.take(8)}"),
@@ -111,7 +111,7 @@ fun createUserPostsSubscription(
             ),
         relays = relays,
         onEvent = onEvent,
-        onCaughtUp = onCaughtUp,
+        onEose = onEose,
     )
 
 /**
@@ -122,12 +122,12 @@ fun createNotificationsSubscription(
     pubKeyHex: String,
     limit: Int = 100,
     onEvent: (Event, Boolean, NormalizedRelayUrl, List<Filter>?) -> Unit,
-    onCaughtUp: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
+    onEose: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
 ): SubscriptionConfig =
     SubscriptionConfig(
         subId = generateSubId("notif-${pubKeyHex.take(8)}"),
         filters = listOf(FilterBuilders.notificationsForUser(pubKeyHex, limit = limit)),
         relays = relays,
         onEvent = onEvent,
-        onCaughtUp = onCaughtUp,
+        onEose = onEose,
     )

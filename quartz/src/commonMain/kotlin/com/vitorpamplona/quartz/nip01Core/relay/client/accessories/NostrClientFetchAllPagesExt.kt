@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.relay.client.accessories
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -51,7 +51,7 @@ import kotlin.math.min
  * @param onEvent     Called for every event received (in page order, after each EOSE).
  * @return Total number of events received across all pages.
  */
-suspend fun NostrClient.fetchAllPages(
+suspend fun INostrClient.fetchAllPages(
     relay: NormalizedRelayUrl,
     filters: List<Filter>,
     timeoutMs: Long = 30_000L,
@@ -98,7 +98,7 @@ suspend fun NostrClient.fetchAllPages(
                 object : SubscriptionListener {
                     override fun onEvent(
                         event: Event,
-                        isRealTime: Boolean,
+                        isLive: Boolean,
                         relay: NormalizedRelayUrl,
                         forFilters: List<Filter>?,
                     ) {
@@ -120,7 +120,7 @@ suspend fun NostrClient.fetchAllPages(
                         }
                     }
 
-                    override fun onCaughtUp(
+                    override fun onEose(
                         relay: NormalizedRelayUrl,
                         forFilters: List<Filter>?,
                     ) {
@@ -168,7 +168,7 @@ suspend fun NostrClient.fetchAllPages(
     return totalEvents
 }
 
-suspend fun NostrClient.fetchAllPages(
+suspend fun INostrClient.fetchAllPages(
     relay: String,
     filters: List<Filter>,
     timeoutMs: Long = 30_000L,

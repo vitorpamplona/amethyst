@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.relay.client.accessories
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -31,39 +31,39 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.withTimeoutOrNull
 
-suspend fun NostrClient.fetchFirst(
+suspend fun INostrClient.fetchFirst(
     relay: String,
     filter: Filter,
 ) = fetchFirst(newSubId(), mapOf(RelayUrlNormalizer.normalize(relay) to listOf(filter)))
 
-suspend fun NostrClient.fetchFirst(
+suspend fun INostrClient.fetchFirst(
     relay: String,
     filters: List<Filter>,
 ) = fetchFirst(newSubId(), mapOf(RelayUrlNormalizer.normalize(relay) to filters))
 
-suspend fun NostrClient.fetchFirst(
+suspend fun INostrClient.fetchFirst(
     subscriptionId: String = newSubId(),
     relay: String,
     filters: List<Filter>,
 ) = fetchFirst(subscriptionId, mapOf(RelayUrlNormalizer.normalize(relay) to filters))
 
-suspend fun NostrClient.fetchFirst(
+suspend fun INostrClient.fetchFirst(
     relay: NormalizedRelayUrl,
     filter: Filter,
 ) = fetchFirst(newSubId(), mapOf(relay to listOf(filter)))
 
-suspend fun NostrClient.fetchFirst(
+suspend fun INostrClient.fetchFirst(
     relay: NormalizedRelayUrl,
     filters: List<Filter>,
 ) = fetchFirst(newSubId(), mapOf(relay to filters))
 
-suspend fun NostrClient.fetchFirst(
+suspend fun INostrClient.fetchFirst(
     subscriptionId: String = newSubId(),
     relay: NormalizedRelayUrl,
     filters: List<Filter>,
 ) = fetchFirst(subscriptionId, mapOf(relay to filters))
 
-suspend fun NostrClient.fetchFirst(
+suspend fun INostrClient.fetchFirst(
     subscriptionId: String = newSubId(),
     filters: Map<NormalizedRelayUrl, List<Filter>>,
 ): Event? {
@@ -73,7 +73,7 @@ suspend fun NostrClient.fetchFirst(
         object : SubscriptionListener {
             override fun onEvent(
                 event: Event,
-                isRealTime: Boolean,
+                isLive: Boolean,
                 relay: NormalizedRelayUrl,
                 forFilters: List<Filter>?,
             ) {
@@ -96,7 +96,7 @@ suspend fun NostrClient.fetchFirst(
                 resultChannel.trySend(null)
             }
 
-            override fun onCaughtUp(
+            override fun onEose(
                 relay: NormalizedRelayUrl,
                 forFilters: List<Filter>?,
             ) {
