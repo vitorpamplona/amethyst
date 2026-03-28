@@ -69,7 +69,7 @@ import androidx.compose.ui.input.key.isMetaPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.compose.article.ArticleHeader
 import com.vitorpamplona.amethyst.commons.compose.article.TableOfContents
@@ -80,6 +80,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
+import com.vitorpamplona.amethyst.desktop.getPlainText
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.service.highlights.DesktopHighlightStore
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
@@ -366,7 +367,7 @@ fun ArticleReaderScreen(
     val authorName = authorUser?.toBestDisplayName()
     val authorPicture = authorUser?.profilePicture()
 
-    val clipboardManager = LocalClipboardManager.current
+    val clipboardManager = LocalClipboard.current
 
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
@@ -574,6 +575,7 @@ fun ArticleReaderScreen(
                                         HighlightContextMenuRepresentation(
                                             delegate = defaultRepresentation,
                                             clipboardManager = clipboardManager,
+                                            scope = scope,
                                             onHighlight = { text ->
                                                 scope.launch {
                                                     highlightStore?.addHighlight(
@@ -695,7 +697,8 @@ fun ArticleReaderScreen(
  */
 private class HighlightContextMenuRepresentation(
     private val delegate: ContextMenuRepresentation,
-    private val clipboardManager: androidx.compose.ui.platform.ClipboardManager,
+    private val clipboardManager: androidx.compose.ui.platform.Clipboard,
+    private val scope: kotlinx.coroutines.CoroutineScope,
     private val onHighlight: (String) -> Unit,
     private val onHighlightWithNote: (String) -> Unit,
 ) : ContextMenuRepresentation {
@@ -713,16 +716,20 @@ private class HighlightContextMenuRepresentation(
                     listOf(
                         ContextMenuItem("Highlight") {
                             copyItem.onClick()
-                            val text = clipboardManager.getText()?.text
-                            if (!text.isNullOrBlank()) {
-                                onHighlight(text)
+                            scope.launch {
+                                val text = clipboardManager.getPlainText()
+                                if (!text.isNullOrBlank()) {
+                                    onHighlight(text)
+                                }
                             }
                         },
                         ContextMenuItem("Highlight with Note") {
                             copyItem.onClick()
-                            val text = clipboardManager.getText()?.text
-                            if (!text.isNullOrBlank()) {
-                                onHighlightWithNote(text)
+                            scope.launch {
+                                val text = clipboardManager.getPlainText()
+                                if (!text.isNullOrBlank()) {
+                                    onHighlightWithNote(text)
+                                }
                             }
                         },
                     )

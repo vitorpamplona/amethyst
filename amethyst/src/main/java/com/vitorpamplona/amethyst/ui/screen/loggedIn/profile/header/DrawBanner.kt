@@ -29,11 +29,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
@@ -41,9 +41,11 @@ import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserBanner
 import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog
+import com.vitorpamplona.amethyst.ui.components.util.setPlainText
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -63,7 +65,8 @@ fun DrawBanner(
     accountViewModel: AccountViewModel,
 ) {
     if (!banner.isNullOrBlank()) {
-        val clipboardManager = LocalClipboardManager.current
+        val clipboardManager = LocalClipboard.current
+        val scope = rememberCoroutineScope()
         var zoomImageDialogOpen by remember { mutableStateOf(false) }
 
         AsyncImage(
@@ -78,7 +81,7 @@ fun DrawBanner(
                     .height(150.dp)
                     .combinedClickable(
                         onClick = { zoomImageDialogOpen = true },
-                        onLongClick = { clipboardManager.setText(AnnotatedString(banner)) },
+                        onLongClick = { scope.launch { clipboardManager.setPlainText(banner) } },
                     ),
         )
 

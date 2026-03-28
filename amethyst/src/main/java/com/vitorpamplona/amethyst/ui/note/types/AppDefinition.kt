@@ -42,14 +42,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.ui.components.ClickableTextPrimary
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog
+import com.vitorpamplona.amethyst.ui.components.util.setPlainText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.LinkIcon
 import com.vitorpamplona.amethyst.ui.painterRes
@@ -74,6 +75,7 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppMetadata
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -93,7 +95,8 @@ fun RenderAppDefinition(
 
     metadata?.let { theAppMetadata ->
         Box {
-            val clipboardManager = LocalClipboardManager.current
+            val clipboardManager = LocalClipboard.current
+            val scope = rememberCoroutineScope()
             val uri = LocalUriHandler.current
 
             if (!theAppMetadata.banner.isNullOrBlank()) {
@@ -109,7 +112,7 @@ fun RenderAppDefinition(
                             .height(125.dp)
                             .combinedClickable(
                                 onClick = {},
-                                onLongClick = { clipboardManager.setText(AnnotatedString(theAppMetadata.banner!!)) },
+                                onLongClick = { scope.launch { clipboardManager.setPlainText(theAppMetadata.banner!!) } },
                             ),
                 )
 
@@ -161,7 +164,7 @@ fun RenderAppDefinition(
                                         .background(MaterialTheme.colorScheme.background)
                                         .combinedClickable(
                                             onClick = { zoomImageDialogOpen = true },
-                                            onLongClick = { clipboardManager.setText(AnnotatedString(picture)) },
+                                            onLongClick = { scope.launch { clipboardManager.setPlainText(picture) } },
                                         ),
                             )
 

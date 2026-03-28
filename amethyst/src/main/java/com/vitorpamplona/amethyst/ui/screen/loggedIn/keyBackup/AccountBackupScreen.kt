@@ -68,12 +68,11 @@ import androidx.compose.ui.autofill.AutofillType
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.ClipboardManager
+import androidx.compose.ui.platform.Clipboard
 import androidx.compose.ui.platform.LocalAutofill
 import androidx.compose.ui.platform.LocalAutofillTree
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -92,6 +91,7 @@ import com.halilibo.richtext.ui.material3.RichText
 import com.halilibo.richtext.ui.resolveDefaults
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.ui.components.util.setPlainText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.note.authenticate
@@ -281,7 +281,7 @@ private fun AccountBackupScreenContent(
 
 @Composable
 private fun NSecCopyButton(accountViewModel: AccountViewModel) {
-    val clipboardManager = LocalClipboardManager.current
+    val clipboardManager = LocalClipboard.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -329,7 +329,7 @@ private fun EncryptNSecCopyButton(
     accountViewModel: AccountViewModel,
     password: MutableState<TextFieldValue>,
 ) {
-    val clipboardManager = LocalClipboardManager.current
+    val clipboardManager = LocalClipboard.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -390,10 +390,12 @@ private fun copyNSec(
     context: Context,
     scope: CoroutineScope,
     account: Account,
-    clipboardManager: ClipboardManager,
+    clipboardManager: Clipboard,
 ) {
     account.settings.keyPair.privKey?.let {
-        clipboardManager.setText(AnnotatedString(it.toNsec()))
+        scope.launch {
+            clipboardManager.setPlainText(it.toNsec())
+        }
         scope.launch {
             Toast
                 .makeText(
@@ -410,7 +412,7 @@ private fun encryptCopyNSec(
     context: Context,
     scope: CoroutineScope,
     accountViewModel: AccountViewModel,
-    clipboardManager: ClipboardManager,
+    clipboardManager: Clipboard,
 ) {
     if (password.value.text.isBlank()) {
         scope.launch {
@@ -425,7 +427,9 @@ private fun encryptCopyNSec(
         accountViewModel.account.settings.keyPair.privKey?.let {
             val key = runCatching { Nip49().encrypt(it.toHexKey(), password.value.text) }.getOrNull()
             if (key != null) {
-                clipboardManager.setText(AnnotatedString(key))
+                scope.launch {
+                    clipboardManager.setPlainText(key)
+                }
                 scope.launch {
                     Toast
                         .makeText(

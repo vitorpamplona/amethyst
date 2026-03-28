@@ -38,17 +38,19 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.components.toasts.ThrowableToastMsg
 import com.vitorpamplona.amethyst.ui.components.toasts.ThrowableToastMsg2
+import com.vitorpamplona.amethyst.ui.components.util.setPlainText
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size16dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
+import kotlinx.coroutines.launch
 import java.io.PrintWriter
 import java.io.StringWriter
 
@@ -119,9 +121,10 @@ fun InformationDialog(
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 moreInfo?.let {
-                    val clipboardManager = LocalClipboardManager.current
+                    val clipboardManager = LocalClipboard.current
+                    val scope = rememberCoroutineScope()
                     TextButton(onClick = {
-                        clipboardManager.setText(AnnotatedString(it))
+                        scope.launch { clipboardManager.setPlainText(it) }
                     }) {
                         Text(stringRes(R.string.copy_stack_to_clipboard))
                     }

@@ -59,10 +59,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
@@ -90,6 +89,7 @@ import com.vitorpamplona.amethyst.service.playback.composable.VideoView
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.openBlossomUriAsIntent
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.actions.InformationDialog
+import com.vitorpamplona.amethyst.ui.components.util.setPlainText
 import com.vitorpamplona.amethyst.ui.note.BlankNote
 import com.vitorpamplona.amethyst.ui.note.DownloadForOfflineIcon
 import com.vitorpamplona.amethyst.ui.painterRes
@@ -771,20 +771,20 @@ fun ShareMediaAction(
             title = stringRes(R.string.media_actions_dialog_title),
             onDismiss = { if (!isDownloadingVideo.value) onDismiss() },
         ) {
-            val clipboardManager = LocalClipboardManager.current
+            val clipboardManager = LocalClipboard.current
 
             // Copy & Gallery section
             if ((videoUri != null && !videoUri.startsWith("file")) || postNostrUri != null) {
                 M3ActionSection {
                     if (videoUri != null && !videoUri.startsWith("file")) {
                         M3ActionRow(icon = Icons.Outlined.Link, text = stringRes(R.string.copy_url_to_clipboard)) {
-                            clipboardManager.setText(AnnotatedString(videoUri))
+                            scope.launch { clipboardManager.setPlainText(videoUri) }
                             onDismiss()
                         }
                     }
                     postNostrUri?.let {
                         M3ActionRow(icon = Icons.Outlined.ContentCopy, text = stringRes(R.string.copy_the_note_id_to_the_clipboard)) {
-                            clipboardManager.setText(AnnotatedString(it))
+                            scope.launch { clipboardManager.setPlainText(it) }
                             onDismiss()
                         }
                         M3ActionRow(icon = Icons.Outlined.Collections, text = stringRes(R.string.add_media_to_gallery)) {

@@ -39,11 +39,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -54,6 +54,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
+import com.vitorpamplona.amethyst.ui.components.util.setPlainText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -71,6 +72,7 @@ import com.vitorpamplona.amethyst.ui.theme.relayIconModifier
 import com.vitorpamplona.amethyst.ui.theme.ripple24dp
 import com.vitorpamplona.amethyst.ui.theme.warningColorOnSecondSurface
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import kotlinx.coroutines.launch
 
 private const val DAMUS_RELAY_URL = "wss://relay.damus.io"
 
@@ -129,7 +131,8 @@ fun RenderRelay(
 ) {
     val relayInfo by loadRelayInfo(relay)
 
-    val clipboardManager = LocalClipboardManager.current
+    val clipboardManager = LocalClipboard.current
+    val scope = rememberCoroutineScope()
     val clickableModifier =
         remember(relay) {
             Modifier
@@ -138,7 +141,7 @@ fun RenderRelay(
                     indication = ripple24dp,
                     interactionSource = MutableInteractionSource(),
                     onLongClick = {
-                        clipboardManager.setText(AnnotatedString(relay.url))
+                        scope.launch { clipboardManager.setPlainText(relay.url) }
                     },
                     onClick = { nav.nav(Route.RelayInfo(relay.url)) },
                 )
