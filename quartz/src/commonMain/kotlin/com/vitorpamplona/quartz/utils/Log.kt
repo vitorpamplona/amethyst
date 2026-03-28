@@ -20,26 +20,36 @@
  */
 package com.vitorpamplona.quartz.utils
 
-expect object Log {
+object Log {
+    @Volatile var minLevel: LogLevel = LogLevel.DEBUG
+
+    fun d(
+        tag: String,
+        message: String,
+    ) {
+        if (minLevel <= LogLevel.DEBUG) PlatformLog.d(tag, message)
+    }
+
+    fun i(
+        tag: String,
+        message: String,
+    ) {
+        if (minLevel <= LogLevel.INFO) PlatformLog.i(tag, message)
+    }
+
     fun w(
         tag: String,
         message: String,
         throwable: Throwable? = null,
-    )
+    ) {
+        if (minLevel <= LogLevel.WARN) PlatformLog.w(tag, message, throwable)
+    }
 
     fun e(
         tag: String,
         message: String,
         throwable: Throwable? = null,
-    )
-
-    fun d(
-        tag: String,
-        message: String,
-    )
-
-    fun i(
-        tag: String,
-        message: String,
-    )
+    ) {
+        if (minLevel <= LogLevel.ERROR) PlatformLog.e(tag, message, throwable)
+    }
 }
