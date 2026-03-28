@@ -39,14 +39,14 @@ fun createGlobalFeedSubscription(
     relays: Set<NormalizedRelayUrl>,
     limit: Int = 50,
     onEvent: (Event, Boolean, NormalizedRelayUrl, List<Filter>?) -> Unit,
-    onEose: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
+    onCaughtUp: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
 ): SubscriptionConfig =
     SubscriptionConfig(
         subId = generateSubId("global-feed"),
         filters = listOf(FilterBuilders.textNotesGlobal(limit = limit)),
         relays = relays,
         onEvent = onEvent,
-        onEose = onEose,
+        onCaughtUp = onCaughtUp,
     )
 
 /**
@@ -57,7 +57,7 @@ fun createFollowingFeedSubscription(
     followedUsers: List<String>,
     limit: Int = 50,
     onEvent: (Event, Boolean, NormalizedRelayUrl, List<Filter>?) -> Unit,
-    onEose: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
+    onCaughtUp: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
 ): SubscriptionConfig? {
     if (followedUsers.isEmpty()) return null
 
@@ -66,7 +66,7 @@ fun createFollowingFeedSubscription(
         filters = listOf(FilterBuilders.textNotesFromAuthors(followedUsers, limit = limit)),
         relays = relays,
         onEvent = onEvent,
-        onEose = onEose,
+        onCaughtUp = onCaughtUp,
     )
 }
 
@@ -77,14 +77,14 @@ fun createContactListSubscription(
     relays: Set<NormalizedRelayUrl>,
     pubKeyHex: String,
     onEvent: (Event, Boolean, NormalizedRelayUrl, List<Filter>?) -> Unit,
-    onEose: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
+    onCaughtUp: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
 ): SubscriptionConfig =
     SubscriptionConfig(
         subId = generateSubId("contacts-${pubKeyHex.take(8)}"),
         filters = listOf(FilterBuilders.contactList(pubKeyHex)),
         relays = relays,
         onEvent = onEvent,
-        onEose = onEose,
+        onCaughtUp = onCaughtUp,
     )
 
 /**
@@ -94,14 +94,14 @@ fun createNoteSubscription(
     relays: Set<NormalizedRelayUrl>,
     noteId: String,
     onEvent: (Event, Boolean, NormalizedRelayUrl, List<Filter>?) -> Unit,
-    onEose: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
+    onCaughtUp: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
 ): SubscriptionConfig =
     SubscriptionConfig(
         subId = generateSubId("note-${noteId.take(8)}"),
         filters = listOf(FilterBuilders.byIds(listOf(noteId))),
         relays = relays,
         onEvent = onEvent,
-        onEose = onEose,
+        onCaughtUp = onCaughtUp,
     )
 
 /**
@@ -115,7 +115,7 @@ fun createThreadRepliesSubscription(
     noteId: String,
     limit: Int = 200,
     onEvent: (Event, Boolean, NormalizedRelayUrl, List<Filter>?) -> Unit,
-    onEose: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
+    onCaughtUp: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
 ): SubscriptionConfig =
     SubscriptionConfig(
         subId = generateSubId("thread-${noteId.take(8)}"),
@@ -129,7 +129,7 @@ fun createThreadRepliesSubscription(
             ),
         relays = relays,
         onEvent = onEvent,
-        onEose = onEose,
+        onCaughtUp = onCaughtUp,
     )
 
 /**
@@ -144,7 +144,7 @@ fun createSearchPeopleSubscription(
     searchQuery: String,
     limit: Int = 50,
     onEvent: (Event, Boolean, NormalizedRelayUrl, List<Filter>?) -> Unit,
-    onEose: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
+    onCaughtUp: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
     onClosed: (NormalizedRelayUrl, String, List<Filter>?) -> Unit = { _, _, _ -> },
 ): SubscriptionConfig? {
     if (searchQuery.isBlank()) return null
@@ -154,7 +154,7 @@ fun createSearchPeopleSubscription(
         filters = listOf(FilterBuilders.searchPeople(searchQuery, limit)),
         relays = relays,
         onEvent = onEvent,
-        onEose = onEose,
+        onCaughtUp = onCaughtUp,
         onClosed = onClosed,
     )
 }
@@ -171,7 +171,7 @@ fun createSearchNotesSubscription(
     searchQuery: String,
     limit: Int = 50,
     onEvent: (Event, Boolean, NormalizedRelayUrl, List<Filter>?) -> Unit,
-    onEose: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
+    onCaughtUp: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
 ): SubscriptionConfig? {
     if (searchQuery.isBlank()) return null
 
@@ -180,7 +180,7 @@ fun createSearchNotesSubscription(
         filters = listOf(FilterBuilders.searchNotes(searchQuery, limit)),
         relays = relays,
         onEvent = onEvent,
-        onEose = onEose,
+        onCaughtUp = onCaughtUp,
     )
 }
 
@@ -195,7 +195,7 @@ fun createZapsSubscription(
     eventIds: List<String>,
     limit: Int = 100,
     onEvent: (Event, Boolean, NormalizedRelayUrl, List<Filter>?) -> Unit,
-    onEose: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
+    onCaughtUp: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
 ): SubscriptionConfig? {
     if (eventIds.isEmpty()) return null
 
@@ -204,7 +204,7 @@ fun createZapsSubscription(
         filters = listOf(FilterBuilders.zapsForEvents(eventIds, limit)),
         relays = relays,
         onEvent = onEvent,
-        onEose = onEose,
+        onCaughtUp = onCaughtUp,
     )
 }
 
@@ -219,7 +219,7 @@ fun createReactionsSubscription(
     eventIds: List<String>,
     limit: Int = 100,
     onEvent: (Event, Boolean, NormalizedRelayUrl, List<Filter>?) -> Unit,
-    onEose: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
+    onCaughtUp: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
 ): SubscriptionConfig? {
     if (eventIds.isEmpty()) return null
 
@@ -228,7 +228,7 @@ fun createReactionsSubscription(
         filters = listOf(FilterBuilders.reactionsForEvents(eventIds, limit)),
         relays = relays,
         onEvent = onEvent,
-        onEose = onEose,
+        onCaughtUp = onCaughtUp,
     )
 }
 
@@ -243,7 +243,7 @@ fun createRepliesSubscription(
     eventIds: List<String>,
     limit: Int = 100,
     onEvent: (Event, Boolean, NormalizedRelayUrl, List<Filter>?) -> Unit,
-    onEose: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
+    onCaughtUp: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
 ): SubscriptionConfig? {
     if (eventIds.isEmpty()) return null
 
@@ -252,7 +252,7 @@ fun createRepliesSubscription(
         filters = listOf(FilterBuilders.repliesForEvents(eventIds, limit)),
         relays = relays,
         onEvent = onEvent,
-        onEose = onEose,
+        onCaughtUp = onCaughtUp,
     )
 }
 
@@ -267,7 +267,7 @@ fun createRepostsSubscription(
     eventIds: List<String>,
     limit: Int = 100,
     onEvent: (Event, Boolean, NormalizedRelayUrl, List<Filter>?) -> Unit,
-    onEose: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
+    onCaughtUp: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
 ): SubscriptionConfig? {
     if (eventIds.isEmpty()) return null
 
@@ -276,7 +276,7 @@ fun createRepostsSubscription(
         filters = listOf(FilterBuilders.repostsForEvents(eventIds, limit)),
         relays = relays,
         onEvent = onEvent,
-        onEose = onEose,
+        onCaughtUp = onCaughtUp,
     )
 }
 
@@ -287,14 +287,14 @@ fun createLongFormFeedSubscription(
     relays: Set<NormalizedRelayUrl>,
     limit: Int = 30,
     onEvent: (Event, Boolean, NormalizedRelayUrl, List<Filter>?) -> Unit,
-    onEose: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
+    onCaughtUp: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
 ): SubscriptionConfig =
     SubscriptionConfig(
         subId = generateSubId("longform-feed"),
         filters = listOf(FilterBuilders.longFormGlobal(limit = limit)),
         relays = relays,
         onEvent = onEvent,
-        onEose = onEose,
+        onCaughtUp = onCaughtUp,
     )
 
 /**
@@ -305,7 +305,7 @@ fun createFollowingLongFormFeedSubscription(
     followedUsers: List<String>,
     limit: Int = 30,
     onEvent: (Event, Boolean, NormalizedRelayUrl, List<Filter>?) -> Unit,
-    onEose: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
+    onCaughtUp: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
 ): SubscriptionConfig? {
     if (followedUsers.isEmpty()) return null
 
@@ -314,7 +314,7 @@ fun createFollowingLongFormFeedSubscription(
         filters = listOf(FilterBuilders.longFormFromAuthors(followedUsers, limit = limit)),
         relays = relays,
         onEvent = onEvent,
-        onEose = onEose,
+        onCaughtUp = onCaughtUp,
     )
 }
 
@@ -333,7 +333,7 @@ fun createChessSubscription(
     userPubkey: String,
     limit: Int = 100,
     onEvent: (Event, Boolean, NormalizedRelayUrl, List<Filter>?) -> Unit,
-    onEose: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
+    onCaughtUp: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
 ): SubscriptionConfig =
     SubscriptionConfig(
         subId = generateSubId("chess-${userPubkey.take(8)}"),
@@ -348,5 +348,5 @@ fun createChessSubscription(
             ),
         relays = relays,
         onEvent = onEvent,
-        onEose = onEose,
+        onCaughtUp = onCaughtUp,
     )

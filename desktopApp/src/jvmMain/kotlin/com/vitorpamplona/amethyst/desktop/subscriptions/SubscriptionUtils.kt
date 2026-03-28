@@ -25,7 +25,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.desktop.network.RelayConnectionManager
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
@@ -45,7 +45,7 @@ data class SubscriptionConfig(
     val filters: List<Filter>,
     val relays: Set<NormalizedRelayUrl>,
     val onEvent: (Event, Boolean, NormalizedRelayUrl, List<Filter>?) -> Unit,
-    val onEose: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
+    val onCaughtUp: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
     val onClosed: (NormalizedRelayUrl, String, List<Filter>?) -> Unit = { _, _, _ -> },
 )
 
@@ -80,21 +80,21 @@ fun rememberSubscription(
                     filters = cfg.filters,
                     relays = cfg.relays,
                     listener =
-                        object : IRequestListener {
+                        object : SubscriptionListener {
                             override fun onEvent(
                                 event: Event,
-                                isLive: Boolean,
+                                isRealTime: Boolean,
                                 relay: NormalizedRelayUrl,
                                 forFilters: List<Filter>?,
                             ) {
-                                cfg.onEvent(event, isLive, relay, forFilters)
+                                cfg.onEvent(event, isRealTime, relay, forFilters)
                             }
 
-                            override fun onEose(
+                            override fun onCaughtUp(
                                 relay: NormalizedRelayUrl,
                                 forFilters: List<Filter>?,
                             ) {
-                                cfg.onEose(relay, forFilters)
+                                cfg.onCaughtUp(relay, forFilters)
                             }
 
                             override fun onClosed(

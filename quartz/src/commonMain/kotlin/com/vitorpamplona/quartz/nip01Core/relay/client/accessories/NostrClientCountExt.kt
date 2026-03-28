@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.client.accessories
 
-import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CountMessage
@@ -43,7 +43,7 @@ import kotlinx.coroutines.withTimeoutOrNull
  * @param timeoutMs How long to wait for a response (default 15 s).
  * @return The [CountResult], or `null` on timeout.
  */
-suspend fun INostrClient.queryCountSuspend(
+suspend fun NostrClient.count(
     relay: NormalizedRelayUrl,
     filter: Filter,
     timeoutMs: Long = 15_000,
@@ -52,7 +52,7 @@ suspend fun INostrClient.queryCountSuspend(
     val resultChannel = Channel<CountResult>(UNLIMITED)
 
     val listener =
-        object : IRelayClientListener {
+        object : RelayConnectionListener {
             override fun onIncomingMessage(
                 relay: IRelayClient,
                 msgStr: String,
@@ -64,18 +64,18 @@ suspend fun INostrClient.queryCountSuspend(
             }
         }
 
-    subscribe(listener)
+    addConnectionListener(listener)
 
     val result =
         try {
-            queryCount(subId = subId, filters = mapOf(relay to listOf(filter)))
+            count(subId = subId, filters = mapOf(relay to listOf(filter)))
 
             withTimeoutOrNull(timeoutMs) {
                 resultChannel.receive()
             }
         } finally {
-            close(subId)
-            unsubscribe(listener)
+            unsubscribe(subId)
+            removeConnectionListener(listener)
         }
 
     resultChannel.close()
@@ -92,7 +92,7 @@ suspend fun INostrClient.queryCountSuspend(
  * @param timeoutMs How long to wait for all responses (default 15 s).
  * @return Map of relay -> [CountResult] for every relay that responded in time.
  */
-suspend fun INostrClient.queryCountSuspend(
+suspend fun NostrClient.count(
     filters: Map<NormalizedRelayUrl, List<Filter>>,
     timeoutMs: Long = 15_000,
 ): Map<NormalizedRelayUrl, CountResult> {
@@ -102,7 +102,7 @@ suspend fun INostrClient.queryCountSuspend(
     val resultChannel = Channel<Pair<NormalizedRelayUrl, CountResult>>(UNLIMITED)
 
     val listener =
-        object : IRelayClientListener {
+        object : RelayConnectionListener {
             override fun onIncomingMessage(
                 relay: IRelayClient,
                 msgStr: String,
@@ -115,12 +115,12 @@ suspend fun INostrClient.queryCountSuspend(
             }
         }
 
-    subscribe(listener)
+    addConnectionListener(listener)
 
     filters.forEach { (relay, filterList) ->
         val subId = newSubId()
         subIdToRelay[subId] = relay
-        queryCount(subId = subId, filters = mapOf(relay to filterList))
+        count(subId = subId, filters = mapOf(relay to filterList))
     }
 
     val results = mutableMapOf<NormalizedRelayUrl, CountResult>()
@@ -132,8 +132,8 @@ suspend fun INostrClient.queryCountSuspend(
         }
     }
 
-    subIdToRelay.keys.forEach { close(it) }
-    unsubscribe(listener)
+    subIdToRelay.keys.forEach { unsubscribe(it) }
+    removeConnectionListener(listener)
     resultChannel.close()
 
     return results
@@ -155,7 +155,7 @@ suspend fun INostrClient.queryCountSuspend(
  * @param timeoutMs How long to wait for all responses (default 15 s).
  * @return A merged [CountResult], or `null` if no relay responded.
  */
-suspend fun INostrClient.queryCountMergedHll(
+suspend fun NostrClient.countMerged(
     relays: List<NormalizedRelayUrl>,
     filter: Filter,
     timeoutMs: Long = 15_000,
@@ -163,7 +163,7 @@ suspend fun INostrClient.queryCountMergedHll(
     if (relays.isEmpty()) return null
 
     val results =
-        queryCountSuspend(
+        count(
             filters = relays.associateWith { listOf(filter) },
             timeoutMs = timeoutMs,
         )

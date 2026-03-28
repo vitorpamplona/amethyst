@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.speedLogger
 
-import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
@@ -32,7 +32,7 @@ import com.vitorpamplona.quartz.utils.bytesUsedInMemory
  * Listens to NostrClient's onNotify messages from the relay
  */
 class RelaySpeedLogger(
-    val client: INostrClient,
+    val client: NostrClient,
 ) {
     companion object {
         val TAG: String = RelaySpeedLogger::class.java.simpleName
@@ -41,7 +41,7 @@ class RelaySpeedLogger(
     var current = FrameStat()
 
     private val clientListener =
-        object : IRelayClientListener {
+        object : RelayConnectionListener {
             override fun onIncomingMessage(
                 relay: IRelayClient,
                 msgStr: String,
@@ -55,7 +55,7 @@ class RelaySpeedLogger(
 
     init {
         Log.d(TAG, "Init, Subscribe")
-        client.subscribe(clientListener)
+        client.addConnectionListener(clientListener)
         // OkHttpDebugLogging.enableHttp2()
         // OkHttpDebugLogging.enableTaskRunner()
     }
@@ -63,6 +63,6 @@ class RelaySpeedLogger(
     fun destroy() {
         // makes sure to run
         Log.d(TAG, "Destroy, Unsubscribe")
-        client.unsubscribe(clientListener)
+        client.removeConnectionListener(clientListener)
     }
 }

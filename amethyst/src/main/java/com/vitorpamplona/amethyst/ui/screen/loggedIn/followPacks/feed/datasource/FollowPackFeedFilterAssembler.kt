@@ -24,7 +24,7 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 
 // This allows multiple screen to be listening to tags, even the same tag
 class FollowPackFeedQueryState(
@@ -34,7 +34,7 @@ class FollowPackFeedQueryState(
 
 @Stable
 class FollowPackFeedFilterAssembler(
-    client: INostrClient,
+    client: NostrClient,
 ) : ComposeSubscriptionManager<FollowPackFeedQueryState>() {
     val group =
         listOf(

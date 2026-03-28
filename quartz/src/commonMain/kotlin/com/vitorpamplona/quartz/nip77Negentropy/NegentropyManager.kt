@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.nip77Negentropy
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -58,7 +58,7 @@ interface INegentropyListener {
 /**
  * Manages NIP-77 negentropy sync sessions across multiple relays.
  *
- * This class acts as a [IRelayClientListener] that intercepts NEG-MSG and NEG-ERR
+ * This class acts as a [RelayConnectionListener] that intercepts NEG-MSG and NEG-ERR
  * messages and drives the reconciliation protocol. It maintains active sessions
  * per relay and subscription ID.
  *
@@ -69,7 +69,7 @@ interface INegentropyListener {
  */
 class NegentropyManager(
     private val listener: INegentropyListener,
-) : IRelayClientListener {
+) : RelayConnectionListener {
     private val activeSessions = mutableMapOf<String, Pair<NormalizedRelayUrl, NegentropySession>>()
 
     fun startSync(

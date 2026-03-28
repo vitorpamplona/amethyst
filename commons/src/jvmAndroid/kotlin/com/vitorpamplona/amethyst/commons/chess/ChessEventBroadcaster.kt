@@ -21,9 +21,9 @@
 package com.vitorpamplona.amethyst.commons.chess
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.sendAndWaitForResponse
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirm
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -42,11 +42,11 @@ data class BroadcastResult(
 /**
  * Helper for broadcasting chess events to relays with reliable delivery.
  *
- * Uses sendAndWaitForResponse to get actual OK confirmations from relays,
+ * Uses publishAndConfirm to get actual OK confirmations from relays,
  * ensuring the event was actually received and accepted.
  */
 class ChessEventBroadcaster(
-    private val client: INostrClient,
+    private val client: NostrClient,
 ) {
     /**
      * Broadcast an event to the chess relays with confirmation.
@@ -84,15 +84,15 @@ class ChessEventBroadcaster(
                 )
 
             val listener =
-                object : IRequestListener {
+                object : SubscriptionListener {
                     override fun onEvent(
                         event: Event,
-                        isLive: Boolean,
+                        isRealTime: Boolean,
                         relay: NormalizedRelayUrl,
                         forFilters: List<Filter>?,
                     ) { }
 
-                    override fun onEose(
+                    override fun onCaughtUp(
                         relay: NormalizedRelayUrl,
                         forFilters: List<Filter>?,
                     ) { }
@@ -100,19 +100,19 @@ class ChessEventBroadcaster(
 
             // Open subscription to all target relays (triggers connection)
             val filterMap = targetRelays.associateWith { listOf(dummyFilter) }
-            client.openReqSubscription(subId, filterMap, listener)
+            client.subscribe(subId, filterMap, listener)
 
             // Wait for relays to connect (poll with timeout)
             waitForRelays(targetRelays, 5000L)
 
             // Close the dummy subscription
-            client.close(subId)
+            client.unsubscribe(subId)
         }
 
         // Step 3: Send the event and wait for OK responses
-        val success = client.sendAndWaitForResponse(event, targetRelays, timeoutSeconds)
+        val success = client.publishAndConfirm(event, targetRelays, timeoutSeconds)
 
-        // Note: sendAndWaitForResponse only returns aggregate success (any relay accepted)
+        // Note: publishAndConfirm only returns aggregate success (any relay accepted)
         // We don't have per-relay results, so relayResults is empty
         return BroadcastResult(
             success = success,

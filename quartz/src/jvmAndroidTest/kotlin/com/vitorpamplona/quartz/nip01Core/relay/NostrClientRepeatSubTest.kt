@@ -19,10 +19,9 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 package com.vitorpamplona.quartz.nip01Core.relay
-
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.DefaultNostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EoseMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
@@ -49,14 +48,14 @@ class NostrClientRepeatSubTest : BaseNostrClientTest() {
     fun testRepeatSubEvents() =
         runBlocking {
             val appScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-            val client = NostrClient(socketBuilder, appScope)
+            val client = DefaultNostrClient(socketBuilder, appScope)
 
             val resultChannel = Channel<String>(UNLIMITED)
             val events = mutableListOf<String>()
             val mySubId = "test-sub-id-2"
 
             val listener =
-                object : IRelayClientListener {
+                object : RelayConnectionListener {
                     override fun onIncomingMessage(
                         relay: IRelayClient,
                         msgStr: String,
@@ -79,7 +78,7 @@ class NostrClientRepeatSubTest : BaseNostrClientTest() {
                     }
                 }
 
-            client.subscribe(listener)
+            client.addConnectionListener(listener)
 
             val filters =
                 mapOf(
@@ -121,10 +120,10 @@ class NostrClientRepeatSubTest : BaseNostrClientTest() {
                             Log.d("Test", "Processing message ${events.size}")
                             // simulates an update in the middle of the sub
                             if (events.size == 1) {
-                                client.openReqSubscription(mySubId, filtersShouldIgnore)
+                                client.subscribe(mySubId, filtersShouldIgnore)
                             }
                             if (events.size == 5) {
-                                client.openReqSubscription(mySubId, filtersShouldSendAfterEOSE)
+                                client.subscribe(mySubId, filtersShouldSendAfterEOSE)
                             }
                             events.add(resultChannel.receive())
                         }
@@ -132,12 +131,12 @@ class NostrClientRepeatSubTest : BaseNostrClientTest() {
                 }
 
                 launch {
-                    client.openReqSubscription(mySubId, filters)
+                    client.subscribe(mySubId, filters)
                 }
             }
 
-            client.close(mySubId)
-            client.unsubscribe(listener)
+            client.unsubscribe(mySubId)
+            client.removeConnectionListener(listener)
             client.disconnect()
 
             appScope.cancel()

@@ -28,7 +28,7 @@ import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip03Timestamp.OtsResolver
@@ -50,7 +50,7 @@ class AccountCacheState(
     val contentResolverFn: () -> ContentResolver,
     val otsResolverBuilder: () -> OtsResolver,
     val cache: LocalCache,
-    val client: INostrClient,
+    val client: NostrClient,
 ) {
     val accounts = MutableStateFlow<Map<HexKey, Account>>(emptyMap())
 

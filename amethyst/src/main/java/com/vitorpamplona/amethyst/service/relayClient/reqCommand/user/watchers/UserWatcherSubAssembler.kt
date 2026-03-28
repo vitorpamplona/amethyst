@@ -27,15 +27,15 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderQueryState
 import com.vitorpamplona.amethyst.service.relays.EOSEAccountFast
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.groupByRelay
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 class UserWatcherSubAssembler(
-    client: INostrClient,
+    client: NostrClient,
     val cache: LocalCache,
     allKeys: () -> Set<UserFinderQueryState>,
 ) : BaseEoseManager<UserFinderQueryState>(client, allKeys) {
@@ -61,8 +61,8 @@ class UserWatcherSubAssembler(
 
     val sub =
         requestNewSubscription(
-            object : IRequestListener {
-                override fun onEose(
+            object : SubscriptionListener {
+                override fun onCaughtUp(
                     relay: NormalizedRelayUrl,
                     forFilters: List<Filter>?,
                 ) {
@@ -71,11 +71,11 @@ class UserWatcherSubAssembler(
 
                 override fun onEvent(
                     event: Event,
-                    isLive: Boolean,
+                    isRealTime: Boolean,
                     relay: NormalizedRelayUrl,
                     forFilters: List<Filter>?,
                 ) {
-                    if (isLive) {
+                    if (isRealTime) {
                         newEose(relay, TimeUtils.now(), forFilters)
                     }
                 }

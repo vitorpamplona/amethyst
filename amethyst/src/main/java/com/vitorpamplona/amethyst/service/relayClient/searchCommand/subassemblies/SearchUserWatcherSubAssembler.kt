@@ -26,7 +26,7 @@ import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEo
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.SearchQueryState
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
@@ -45,7 +45,7 @@ import com.vitorpamplona.quartz.utils.Hex
  */
 class SearchUserWatcherSubAssembler(
     val cache: LocalCache,
-    client: INostrClient,
+    client: NostrClient,
     allKeys: () -> Set<SearchQueryState>,
 ) : PerUniqueIdEoseManager<SearchQueryState, Int>(client, allKeys) {
     override fun updateFilter(

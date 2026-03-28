@@ -25,7 +25,7 @@ import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActiviti
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.ChannelFinderQueryState
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
-import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 
 /**
@@ -33,7 +33,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
  * since they are replaceable.
  */
 class LiveActivityWatcherSubAssembly(
-    client: INostrClient,
+    client: NostrClient,
     allKeys: () -> Set<ChannelFinderQueryState>,
 ) : PerUniqueIdEoseManager<ChannelFinderQueryState, Channel>(client, allKeys) {
     override fun updateFilter(

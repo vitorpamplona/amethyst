@@ -22,8 +22,8 @@ package com.vitorpamplona.quartz.nip46RemoteSigner.signer
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.req
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.StaticSubscription
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
@@ -52,7 +52,7 @@ class NostrSignerRemote(
     val signer: NostrSignerInternal,
     val remotePubkey: HexKey,
     val relays: Set<NormalizedRelayUrl>,
-    val client: INostrClient,
+    val client: NostrClient,
     val permissions: String? = null,
     val secret: String? = null,
 ) : NostrSigner(signer.pubKey) {
@@ -67,13 +67,16 @@ class NostrSignerRemote(
         )
 
     val subscription =
-        client.req(
-            relays = relays.toList(),
-            filter =
-                Filter(
-                    kinds = listOf(NostrConnectEvent.KIND),
-                    tags = mapOf("p" to listOf(signer.pubKey)),
-                ),
+        StaticSubscription(
+            client,
+            relays.associateWith {
+                listOf(
+                    Filter(
+                        kinds = listOf(NostrConnectEvent.KIND),
+                        tags = mapOf("p" to listOf(signer.pubKey)),
+                    ),
+                )
+            },
         ) { event ->
             if (event is NostrConnectEvent) {
                 scope.launch {
@@ -83,7 +86,7 @@ class NostrSignerRemote(
         }
 
     fun openSubscription() {
-        subscription.updateFilter()
+        subscription.refresh()
     }
 
     fun closeSubscription() {
@@ -293,7 +296,7 @@ class NostrSignerRemote(
         fun fromBunkerUri(
             bunkerUri: String,
             signer: NostrSignerInternal,
-            client: INostrClient,
+            client: NostrClient,
             permissions: String? = null,
         ): NostrSignerRemote {
             if (!bunkerUri.startsWith("bunker://")) throw Exception("Invalid bunker uri")

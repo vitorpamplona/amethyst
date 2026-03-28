@@ -24,7 +24,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManager
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountFeedContentStates
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.subassemblies.VideoOutboxEventsFilterSubAssembler
-import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import kotlinx.coroutines.CoroutineScope
 
 // This allows multiple screen to be listening to tags, even the same tag
@@ -35,7 +35,7 @@ class VideoQueryState(
 )
 
 class VideoFilterAssembler(
-    client: INostrClient,
+    client: NostrClient,
 ) : ComposeSubscriptionManager<VideoQueryState>() {
     val group =
         listOf(

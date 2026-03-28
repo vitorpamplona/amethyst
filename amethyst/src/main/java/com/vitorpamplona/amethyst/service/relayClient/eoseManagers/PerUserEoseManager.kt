@@ -25,10 +25,10 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relays.EOSEAccountFast
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.groupByRelay
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -44,7 +44,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
  * the subscription disappears and comes back later.
  */
 abstract class PerUserEoseManager<T>(
-    client: INostrClient,
+    client: NostrClient,
     allKeys: () -> Set<T>,
     val invalidateAfterEose: Boolean = false,
 ) : BaseEoseManager<T>(client, allKeys) {
@@ -67,8 +67,8 @@ abstract class PerUserEoseManager<T>(
 
     open fun newSub(key: T): Subscription =
         requestNewSubscription(
-            object : IRequestListener {
-                override fun onEose(
+            object : SubscriptionListener {
+                override fun onCaughtUp(
                     relay: NormalizedRelayUrl,
                     forFilters: List<Filter>?,
                 ) {
@@ -77,11 +77,11 @@ abstract class PerUserEoseManager<T>(
 
                 override fun onEvent(
                     event: Event,
-                    isLive: Boolean,
+                    isRealTime: Boolean,
                     relay: NormalizedRelayUrl,
                     forFilters: List<Filter>?,
                 ) {
-                    if (isLive) {
+                    if (isRealTime) {
                         newEose(key, relay, TimeUtils.now(), forFilters)
                     }
                 }

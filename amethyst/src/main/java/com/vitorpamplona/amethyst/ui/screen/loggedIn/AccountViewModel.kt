@@ -98,7 +98,6 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.relay.client.EmptyNostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.EmptyIAuthStatus
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.RelayAuthenticator
@@ -220,7 +219,7 @@ class AccountViewModel(
                 val customScope = CoroutineScope(viewModelScope.coroutineContext + SupervisorJob())
 
                 // Provides a relay pool
-                val newClient = NostrClient(Amethyst.instance.websocketBuilder, customScope)
+                val newClient = DefaultNostrClient(Amethyst.instance.websocketBuilder, customScope)
 
                 // Authenticates with relays.
                 val auth =

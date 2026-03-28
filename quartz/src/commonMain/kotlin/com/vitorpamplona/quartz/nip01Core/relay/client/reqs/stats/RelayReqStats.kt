@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.client.reqs.stats
 
-import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
@@ -31,12 +31,12 @@ import com.vitorpamplona.quartz.utils.Log
  * Listens to NostrClient's onNotify messages from the relay
  */
 class RelayReqStats(
-    val client: INostrClient,
+    val client: NostrClient,
 ) {
     private val stats = ReqStatsRepository()
 
     private val clientListener =
-        object : IRelayClientListener {
+        object : RelayConnectionListener {
             override fun onIncomingMessage(
                 relay: IRelayClient,
                 msgStr: String,
@@ -56,12 +56,12 @@ class RelayReqStats(
 
     init {
         Log.d("RelaySubStats", "Init, Subscribe")
-        client.subscribe(clientListener)
+        client.addConnectionListener(clientListener)
     }
 
     fun destroy() {
         // makes sure to run
         Log.d("RelaySubStats", "Destroy, Unsubscribe")
-        client.unsubscribe(clientListener)
+        client.removeConnectionListener(clientListener)
     }
 }

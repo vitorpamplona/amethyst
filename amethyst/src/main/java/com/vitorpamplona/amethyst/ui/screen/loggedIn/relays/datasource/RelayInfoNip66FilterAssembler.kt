@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.datasource
 
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
-import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 class RelayInfoNip66QueryState(
@@ -30,7 +30,7 @@ class RelayInfoNip66QueryState(
 )
 
 class RelayInfoNip66FilterAssembler(
-    client: INostrClient,
+    client: NostrClient,
 ) : ComposeSubscriptionManager<RelayInfoNip66QueryState>() {
     val group =
         listOf(

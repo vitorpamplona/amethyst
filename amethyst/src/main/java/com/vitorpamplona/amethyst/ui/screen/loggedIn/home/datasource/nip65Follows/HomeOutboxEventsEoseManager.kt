@@ -40,7 +40,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip01Core.f
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip64Chess.filterHomePostsByChess
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip72Communities.filterHomePostsByAllCommunities
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip72Communities.filterHomePostsByCommunity
-import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
 import kotlinx.coroutines.Dispatchers
@@ -51,7 +51,7 @@ import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.launch
 
 class HomeOutboxEventsEoseManager(
-    client: INostrClient,
+    client: NostrClient,
     allKeys: () -> Set<HomeQueryState>,
 ) : PerUserAndFollowListEoseManager<HomeQueryState, TopFilter>(client, allKeys) {
     override fun updateFilter(

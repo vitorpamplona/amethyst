@@ -25,7 +25,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManager
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datasource.subassemblies.ChannelFromUserFilterSubAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datasource.subassemblies.ChannelPublicFilterSubAssembler
-import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 
 // This allows multiple screen to be listening to tags, even the same tag
 class ChannelQueryState(
@@ -34,7 +34,7 @@ class ChannelQueryState(
 )
 
 class ChannelFilterAssembler(
-    client: INostrClient,
+    client: NostrClient,
 ) : ComposeSubscriptionManager<ChannelQueryState>() {
     val group =
         listOf(

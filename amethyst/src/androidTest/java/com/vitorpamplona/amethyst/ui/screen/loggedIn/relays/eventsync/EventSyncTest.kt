@@ -24,7 +24,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.amethyst.model.Constants
 import com.vitorpamplona.amethyst.service.okhttp.DefaultContentTypeInterceptor
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayLogger
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.RelayAuthenticator
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
@@ -68,7 +67,7 @@ class EventSyncTest {
                     inboxTargets = { setOf(vitor) },
                     dmTargets = { setOf(vitor) },
                     clientBuilder = {
-                        NostrClient(socketBuilder, appScope)
+                        DefaultNostrClient(socketBuilder, appScope)
                     },
                     scope = appScope,
                 )
@@ -87,7 +86,7 @@ class EventSyncTest {
                     inboxTargets = { setOf(vitor) },
                     dmTargets = { setOf(vitor) },
                     clientBuilder = {
-                        val newClient = NostrClient(socketBuilder, appScope)
+                        val newClient = DefaultNostrClient(socketBuilder, appScope)
                         val logger = RelayLogger(newClient, debugSending = true, debugReceiving = false)
 
                         val signer = NostrSignerInternal(KeyPair())

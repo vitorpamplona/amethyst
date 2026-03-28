@@ -22,8 +22,8 @@ package com.vitorpamplona.amethyst.desktop.network
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
@@ -43,11 +43,11 @@ import kotlinx.coroutines.flow.asStateFlow
  */
 open class RelayConnectionManager(
     websocketBuilder: WebsocketBuilder,
-) : IRelayClientListener {
-    private val _client = NostrClient(websocketBuilder)
+) : RelayConnectionListener {
+    private val _client = DefaultNostrClient(websocketBuilder)
 
-    /** Exposes the underlying INostrClient for subscription coordinators */
-    val client: com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient get() = _client
+    /** Exposes the underlying NostrClient for subscription coordinators */
+    val client: com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient get() = _client
 
     private val _relayStatuses = MutableStateFlow<Map<NormalizedRelayUrl, RelayStatus>>(emptyMap())
     val relayStatuses: StateFlow<Map<NormalizedRelayUrl, RelayStatus>> = _relayStatuses.asStateFlow()
@@ -56,7 +56,7 @@ open class RelayConnectionManager(
     val availableRelays: StateFlow<Set<NormalizedRelayUrl>> = _client.availableRelaysFlow()
 
     init {
-        _client.subscribe(this)
+        _client.addConnectionListener(this)
     }
 
     fun connect() {
@@ -85,21 +85,21 @@ open class RelayConnectionManager(
         subId: String,
         filters: List<Filter>,
         relays: Set<NormalizedRelayUrl> = availableRelays.value,
-        listener: IRequestListener? = null,
+        listener: SubscriptionListener? = null,
     ) {
         val filterMap = relays.associateWith { filters }
-        _client.openReqSubscription(subId, filterMap, listener)
+        _client.subscribe(subId, filterMap, listener)
     }
 
     fun unsubscribe(subId: String) {
-        _client.close(subId)
+        _client.unsubscribe(subId)
     }
 
-    fun send(
+    fun publish(
         event: Event,
         relays: Set<NormalizedRelayUrl> = connectedRelays.value,
     ) {
-        _client.send(event, relays)
+        _client.publish(event, relays)
     }
 
     /**
@@ -107,21 +107,21 @@ open class RelayConnectionManager(
      */
     fun broadcastToAll(event: Event) {
         val connected = connectedRelays.value
-        send(event, connected)
+        publish(event, connected)
     }
 
     /**
      * Sends an event to a specific relay (for NWC).
      * Adds the relay if not already in the list.
      */
-    fun sendToRelay(
+    fun publishToRelay(
         relay: NormalizedRelayUrl,
         event: Event,
     ) {
         if (relay !in availableRelays.value) {
             updateRelayStatus(relay) { it.copy(connected = false, error = null) }
         }
-        _client.send(event, setOf(relay))
+        _client.publish(event, setOf(relay))
     }
 
     /**
@@ -138,14 +138,14 @@ open class RelayConnectionManager(
             updateRelayStatus(relay) { it.copy(connected = false, error = null) }
         }
         val filterMap = mapOf(relay to filters)
-        _client.openReqSubscription(
+        _client.subscribe(
             subId = subId,
             filters = filterMap,
             listener =
-                object : IRequestListener {
+                object : SubscriptionListener {
                     override fun onEvent(
                         event: Event,
-                        isLive: Boolean,
+                        isRealTime: Boolean,
                         relay: NormalizedRelayUrl,
                         forFilters: List<Filter>?,
                     ) {
@@ -162,7 +162,7 @@ open class RelayConnectionManager(
         relay: NormalizedRelayUrl,
         subId: String,
     ) {
-        _client.close(subId)
+        _client.unsubscribe(subId)
     }
 
     private fun updateRelayStatus(

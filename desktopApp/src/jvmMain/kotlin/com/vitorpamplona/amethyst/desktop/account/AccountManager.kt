@@ -30,8 +30,7 @@ import com.vitorpamplona.amethyst.desktop.network.DesktopHttpClient
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
@@ -132,11 +131,11 @@ class AccountManager internal constructor(
     // --- Dedicated NIP-46 client (isolated from general relay pool) ---
 
     private val nip46ClientMutex = Mutex()
-    private var nip46Client: NostrClient? = null
+    private var nip46Client: DefaultDefaultNostrClient? = null
 
-    private suspend fun getOrCreateNip46Client(): NostrClient =
+    private suspend fun getOrCreateNip46Client(): DefaultNostrClient =
         nip46ClientMutex.withLock {
-            nip46Client ?: NostrClient(
+            nip46Client ?: DefaultNostrClient(
                 BasicOkHttpWebSocket.Builder(DesktopHttpClient::getHttpClient),
             ).also {
                 nip46Client = it
@@ -156,7 +155,7 @@ class AccountManager internal constructor(
      * but we must wait for the websocket to be ready before sending requests.
      */
     private suspend fun awaitNip46RelayConnection(
-        client: NostrClient,
+        client: DefaultNostrClient,
         targetRelays: Set<NormalizedRelayUrl>,
     ) {
         withTimeout(NIP46_RELAY_CONNECT_TIMEOUT_MS) {
@@ -180,8 +179,8 @@ class AccountManager internal constructor(
             }
     }
 
-    private fun createLoginRelayListener(): IRelayClientListener =
-        object : IRelayClientListener {
+    private fun createLoginRelayListener(): RelayConnectionListener =
+        object : RelayConnectionListener {
             override fun onConnected(
                 relay: IRelayClient,
                 pingMillis: Int,
@@ -303,7 +302,7 @@ class AccountManager internal constructor(
 
     suspend fun loginWithBunker(bunkerUri: String): Result<AccountState.LoggedIn> {
         val listener = createLoginRelayListener()
-        var client: NostrClient? = null
+        var client: DefaultDefaultNostrClient? = null
         try {
             val ephemeralKeyPair = KeyPair()
             val ephemeralSigner = NostrSignerInternal(ephemeralKeyPair)
@@ -316,7 +315,7 @@ class AccountManager internal constructor(
                 LoginProgress.ConnectingToRelays(
                     relaysFromUri.associateWith { RelayLoginStatus.CONNECTING },
                 )
-            nip46Client.subscribe(listener)
+            nip46Client.addConnectionListener(listener)
 
             _loginProgress.value =
                 LoginProgress.WaitingForSigner(
@@ -356,7 +355,7 @@ class AccountManager internal constructor(
             return Result.failure(Exception("Connection failed: ${e.message}"))
         } finally {
             _loginProgress.value = null
-            client?.unsubscribe(listener)
+            client?.removeConnectionListener(listener)
         }
     }
 
@@ -364,7 +363,7 @@ class AccountManager internal constructor(
 
     suspend fun loginWithNostrConnect(onUriGenerated: (String) -> Unit): Result<AccountState.LoggedIn> {
         val listener = createLoginRelayListener()
-        var client: NostrClient? = null
+        var client: DefaultDefaultNostrClient? = null
         try {
             val ephemeralKeyPair = KeyPair()
             val uriData = NostrConnectLoginUseCase.generateUri(ephemeralKeyPair, NIP46_RELAYS, "Amethyst%20Desktop")
@@ -376,7 +375,7 @@ class AccountManager internal constructor(
                 LoginProgress.ConnectingToRelays(
                     uriData.relays.associateWith { RelayLoginStatus.CONNECTING },
                 )
-            nip46Client.subscribe(listener)
+            nip46Client.addConnectionListener(listener)
 
             onUriGenerated(uriData.uri)
 
@@ -415,7 +414,7 @@ class AccountManager internal constructor(
             return Result.failure(Exception("Connection failed: ${e.message}"))
         } finally {
             _loginProgress.value = null
-            client?.unsubscribe(listener)
+            client?.removeConnectionListener(listener)
         }
     }
 

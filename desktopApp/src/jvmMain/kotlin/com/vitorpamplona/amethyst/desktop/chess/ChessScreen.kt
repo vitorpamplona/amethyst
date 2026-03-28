@@ -140,7 +140,7 @@ fun ChessScreen(
             onEvent = { event, _, _, _ ->
                 viewModel.handleIncomingEvent(event)
             },
-            onEose = { _, _ ->
+            onCaughtUp = { _, _ ->
                 // ChessLobbyLogic handles loading state internally
             },
         )

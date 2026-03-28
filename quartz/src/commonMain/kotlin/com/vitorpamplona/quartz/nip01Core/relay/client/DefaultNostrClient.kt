@@ -22,12 +22,12 @@ package com.vitorpamplona.quartz.nip01Core.relay.client
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.PoolCounts
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.PoolEventOutbox
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.PoolRequests
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayPool
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.AuthCmd
@@ -76,11 +76,11 @@ import kotlinx.coroutines.launch
  * are connected to all necessary endpoints. It also listens to relay state changes to update
  * subscriptions and message retries when connections are re-established.
  */
-class NostrClient(
+class DefaultNostrClient(
     private val websocketBuilder: WebsocketBuilder,
     private val parentScope: CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
-) : INostrClient,
-    IRelayClientListener,
+) : NostrClient,
+    RelayConnectionListener,
     AutoCloseable {
     private val relayPool: RelayPool = RelayPool(websocketBuilder, this)
 
@@ -91,7 +91,7 @@ class NostrClient(
     private val activeCounts: PoolCounts = PoolCounts()
     private val eventOutbox: PoolEventOutbox = PoolEventOutbox()
 
-    private var listeners = setOf<IRelayClientListener>()
+    private var listeners = setOf<RelayConnectionListener>()
 
     // controls the state of the client in such a way that if it is active
     // new filters will be sent to the relays and a potential reconnect can
@@ -164,10 +164,10 @@ class NostrClient(
         refreshConnection.tryEmit(Reconnect(onlyIfChanged, ignoreRetryDelays))
     }
 
-    override fun openReqSubscription(
+    override fun subscribe(
         subId: String,
         filters: Map<NormalizedRelayUrl, List<Filter>>,
-        listener: IRequestListener?,
+        listener: SubscriptionListener?,
     ) {
         val relaysToUpdate = activeRequests.addOrUpdate(subId, filters, listener)
 
@@ -188,7 +188,7 @@ class NostrClient(
         }
     }
 
-    override fun queryCount(
+    override fun count(
         subId: String,
         filters: Map<NormalizedRelayUrl, List<Filter>>,
     ) {
@@ -208,7 +208,7 @@ class NostrClient(
         }
     }
 
-    override fun send(
+    override fun publish(
         event: Event,
         relayList: Set<NormalizedRelayUrl>,
     ) {
@@ -222,7 +222,7 @@ class NostrClient(
         }
     }
 
-    override fun close(subId: String) {
+    override fun unsubscribe(subId: String) {
         val relaysToUpdateReqs = activeRequests.remove(subId)
         val relaysToUpdateCounts = activeCounts.remove(subId)
 
@@ -232,7 +232,7 @@ class NostrClient(
         }
     }
 
-    override fun renewFilters(relay: IRelayClient) {
+    override fun syncFilters(relay: IRelayClient) {
         if (isActive) {
             scope.launch {
                 activeRequests.syncState(relay.url, relay::sendOrConnectAndSync)
@@ -259,7 +259,7 @@ class NostrClient(
         pingMillis: Int,
         compressed: Boolean,
     ) {
-        renewFilters(relay)
+        syncFilters(relay)
         listeners.forEach { it.onConnected(relay, pingMillis, compressed) }
     }
 
@@ -308,13 +308,13 @@ class NostrClient(
         listeners.forEach { it.onCannotConnect(relay, errorMessage) }
     }
 
-    override fun subscribe(listener: IRelayClientListener) {
+    override fun addConnectionListener(listener: RelayConnectionListener) {
         listeners = listeners.plus(listener)
     }
 
-    fun isSubscribed(listener: IRelayClientListener): Boolean = listeners.contains(listener)
+    fun hasConnectionListener(listener: RelayConnectionListener): Boolean = listeners.contains(listener)
 
-    override fun unsubscribe(listener: IRelayClientListener) {
+    override fun removeConnectionListener(listener: RelayConnectionListener) {
         listeners = listeners.minus(listener)
     }
 

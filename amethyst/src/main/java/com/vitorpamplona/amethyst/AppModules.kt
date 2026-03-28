@@ -68,7 +68,6 @@ import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.screen.UiSettingsState
 import com.vitorpamplona.amethyst.ui.tor.TorManager
 import com.vitorpamplona.quartz.nip01Core.core.Address
-import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayLogger
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
@@ -256,7 +255,7 @@ class AppModules(
     val cache: LocalCache = LocalCache
 
     // Provides a relay pool
-    val client: INostrClient = NostrClient(websocketBuilder, applicationIOScope)
+    val client: NostrClient = DefaultNostrClient(websocketBuilder, applicationIOScope)
 
     // Watches for changes on Tor and Relay List Settings
     val relayProxyClientConnector =

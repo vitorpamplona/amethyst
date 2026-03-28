@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.service.relayClient.authCommand.model
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.RelayAuthenticator
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.utils.Log
@@ -35,7 +35,7 @@ class ScreenAuthAccount(
 
 @Stable
 class AuthCoordinator(
-    client: INostrClient,
+    client: NostrClient,
     scope: CoroutineScope,
 ) {
     private val authWithAccounts = ListWithUniqueSetCache<ScreenAuthAccount, Account> { it.account }

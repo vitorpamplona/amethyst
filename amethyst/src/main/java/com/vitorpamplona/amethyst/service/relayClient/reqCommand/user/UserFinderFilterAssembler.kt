@@ -29,7 +29,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.loaders.Us
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.watchers.UserCardsSubAssembler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.watchers.UserReportsSubAssembler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.watchers.UserWatcherSubAssembler
-import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
 
 // This allows multiple screen to be listening to tags, even the same tag
@@ -41,7 +41,7 @@ class UserFinderQueryState(
 
 @Stable
 class UserFinderFilterAssembler(
-    client: INostrClient,
+    client: NostrClient,
     cache: LocalCache,
     failureTracker: RelayOfflineTracker,
 ) : ComposeSubscriptionManager<UserFinderQueryState>() {

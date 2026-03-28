@@ -22,13 +22,13 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.datasource
 
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
-import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.RelayDiscoveryEvent
 
 class RelayInfoNip66FilterSubAssembler(
-    client: INostrClient,
+    client: NostrClient,
     allKeys: () -> Set<RelayInfoNip66QueryState>,
 ) : PerUniqueIdEoseManager<RelayInfoNip66QueryState, String>(client, allKeys) {
     override fun updateFilter(

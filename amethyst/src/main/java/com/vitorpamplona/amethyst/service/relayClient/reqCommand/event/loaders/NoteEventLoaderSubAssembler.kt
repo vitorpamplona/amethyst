@@ -22,10 +22,10 @@ package com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders
 
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.SingleSubNoEoseCacheEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
-import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 
 class NoteEventLoaderSubAssembler(
-    client: INostrClient,
+    client: NostrClient,
     allKeys: () -> Set<EventFinderQueryState>,
 ) : SingleSubNoEoseCacheEoseManager<EventFinderQueryState>(client, allKeys, invalidateAfterEose = true) {
     override fun updateFilter(keys: List<EventFinderQueryState>) =

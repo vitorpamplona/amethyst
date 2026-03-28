@@ -20,39 +20,8 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.client.reqs
 
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+interface SubscriptionHandle {
+    fun refresh()
 
-interface IRequestListener {
-    fun onEose(
-        relay: NormalizedRelayUrl,
-        forFilters: List<Filter>?,
-    ) {}
-
-    fun onEvent(
-        event: Event,
-        isLive: Boolean,
-        relay: NormalizedRelayUrl,
-        forFilters: List<Filter>?,
-    ) {}
-
-    fun onClosed(
-        message: String,
-        relay: NormalizedRelayUrl,
-        forFilters: List<Filter>?,
-    ) {}
-
-    fun onCannotConnect(
-        relay: NormalizedRelayUrl,
-        message: String,
-        forFilters: List<Filter>?,
-    ) {}
-
-    fun onStartReq(
-        relay: String,
-        forFilters: List<Filter>,
-    ) {}
-
-    fun onCloseReq(relay: String) {}
+    fun close()
 }

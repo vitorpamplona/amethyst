@@ -22,7 +22,7 @@ package com.vitorpamplona.quartz.nip01Core.relay.client.reqs
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -37,22 +37,22 @@ import kotlinx.coroutines.flow.callbackFlow
  * 3. Closes the flow (completes) when the relay sends EOSE,
  *    cancelling the subscription automatically via [awaitClose].
  */
-fun INostrClient.reqUntilEoseAsFlow(
+fun NostrClient.fetchAsFlow(
     relay: String,
     filters: List<Filter>,
-) = reqUntilEoseAsFlow(RelayUrlNormalizer.normalize(relay), filters)
+) = fetchAsFlow(RelayUrlNormalizer.normalize(relay), filters)
 
-fun INostrClient.reqUntilEoseAsFlow(
+fun NostrClient.fetchAsFlow(
     relay: String,
     filter: Filter,
-) = reqUntilEoseAsFlow(RelayUrlNormalizer.normalize(relay), listOf(filter))
+) = fetchAsFlow(RelayUrlNormalizer.normalize(relay), listOf(filter))
 
-fun INostrClient.reqUntilEoseAsFlow(
+fun NostrClient.fetchAsFlow(
     relay: NormalizedRelayUrl,
     filter: Filter,
-) = reqUntilEoseAsFlow(relay, listOf(filter))
+) = fetchAsFlow(relay, listOf(filter))
 
-fun INostrClient.reqUntilEoseAsFlow(
+fun NostrClient.fetchAsFlow(
     relay: NormalizedRelayUrl,
     filters: List<Filter>,
 ): Flow<List<Event>> =
@@ -62,10 +62,10 @@ fun INostrClient.reqUntilEoseAsFlow(
         var currentEvents = listOf<Event>()
 
         val listener =
-            object : IRequestListener {
+            object : SubscriptionListener {
                 override fun onEvent(
                     event: Event,
-                    isLive: Boolean,
+                    isRealTime: Boolean,
                     relay: NormalizedRelayUrl,
                     forFilters: List<Filter>?,
                 ) {
@@ -76,7 +76,7 @@ fun INostrClient.reqUntilEoseAsFlow(
                     }
                 }
 
-                override fun onEose(
+                override fun onCaughtUp(
                     relay: NormalizedRelayUrl,
                     forFilters: List<Filter>?,
                 ) {
@@ -84,9 +84,9 @@ fun INostrClient.reqUntilEoseAsFlow(
                 }
             }
 
-        openReqSubscription(subId, mapOf(relay to filters), listener)
+        subscribe(subId, mapOf(relay to filters), listener)
 
         awaitClose {
-            close(subId)
+            unsubscribe(subId)
         }
     }

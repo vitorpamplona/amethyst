@@ -135,8 +135,8 @@ import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
-import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.downloadFirstEvent
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchFirst
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
@@ -244,7 +244,7 @@ class Account(
     val nwcFilterAssembler: () -> NWCPaymentFilterAssembler,
     val otsResolverBuilder: () -> OtsResolver,
     val cache: LocalCache,
-    val client: INostrClient,
+    val client: NostrClient,
     val scope: CoroutineScope,
 ) : IAccount {
     private var userProfileCache: User? = null
@@ -606,7 +606,7 @@ class Account(
         onResponse: (Response?) -> Unit,
     ) {
         val (event, relay) = nip47SignerState.sendNwcRequest(request, onResponse)
-        client.send(event, setOf(relay))
+        client.publish(event, setOf(relay))
     }
 
     suspend fun sendZapPaymentRequestFor(
@@ -615,7 +615,7 @@ class Account(
         onResponse: (Response?) -> Unit,
     ) {
         val (event, relay) = nip47SignerState.sendZapPaymentRequestFor(bolt11, zappedNote, onResponse)
-        client.send(event, setOf(relay))
+        client.publish(event, setOf(relay))
     }
 
     suspend fun createZapRequestFor(
@@ -701,7 +701,7 @@ class Account(
 
     suspend fun boost(note: Note) {
         RepostAction.repost(note, signer)?.let { event ->
-            client.send(event, computeMyReactionToNote(note, event))
+            client.publish(event, computeMyReactionToNote(note, event))
             cache.justConsumeMyOwnEvent(event)
         }
     }
@@ -723,7 +723,7 @@ class Account(
         event: Event,
         relays: Set<NormalizedRelayUrl>,
     ) {
-        client.send(event, relays)
+        client.publish(event, relays)
         cache.justConsumeMyOwnEvent(event)
     }
 
@@ -939,7 +939,7 @@ class Account(
                 // download the event and send it.
                 noteEvent.host?.let { host ->
                     client
-                        .downloadFirstEvent(
+                        .fetchFirst(
                             filters =
                                 note.relays.associateWith { relay ->
                                     listOf(
@@ -1012,7 +1012,7 @@ class Account(
     fun sendAutomatic(event: Event?) {
         if (event == null) return
         cache.justConsumeMyOwnEvent(event)
-        client.send(event, computeRelayListToBroadcast(event))
+        client.publish(event, computeRelayListToBroadcast(event))
     }
 
     suspend fun sendWebBookmark(
@@ -1043,7 +1043,7 @@ class Account(
     fun sendMyPublicAndPrivateOutbox(event: Event?) {
         if (event == null) return
         cache.justConsumeMyOwnEvent(event)
-        client.send(event, outboxRelays.flow.value)
+        client.publish(event, outboxRelays.flow.value)
     }
 
     fun sendMyPublicAndPrivateOutbox(events: List<Event>) {
@@ -1054,7 +1054,7 @@ class Account(
     }
 
     fun sendLiterallyEverywhere(event: Event) {
-        client.send(event, followPlusAllMineWithIndex.flow.value + client.availableRelaysFlow().value)
+        client.publish(event, followPlusAllMineWithIndex.flow.value + client.availableRelaysFlow().value)
         cache.justConsumeMyOwnEvent(event)
     }
 
@@ -1287,7 +1287,7 @@ class Account(
     ) {
         val event = signer.sign(template)
         cache.justConsumeMyOwnEvent(event)
-        client.send(event, relayList)
+        client.publish(event, relayList)
     }
 
     suspend fun <T : Event> signAndSendPrivatelyOrBroadcast(
@@ -1298,9 +1298,9 @@ class Account(
         cache.justConsumeMyOwnEvent(event)
         val relays = relayList(event)
         if (!relays.isNullOrEmpty()) {
-            client.send(event, relays.toSet())
+            client.publish(event, relays.toSet())
         } else {
-            client.send(event, computeRelayListToBroadcast(event))
+            client.publish(event, computeRelayListToBroadcast(event))
         }
         return event
     }
@@ -1320,7 +1320,7 @@ class Account(
 
         val relayList = computeRelayListToBroadcast(note)
 
-        client.send(event, relayList)
+        client.publish(event, relayList)
 
         broadcast.forEach { client.send(it, relayList) }
 
@@ -1344,7 +1344,7 @@ class Account(
 
         val relayList = computeRelayListToBroadcast(note)
 
-        client.send(event, relayList)
+        client.publish(event, relayList)
 
         broadcast.forEach { client.send(it, relayList) }
 
@@ -1463,9 +1463,9 @@ class Account(
 
         val relayList = privateStorageRelayList.flow.value + localRelayList.flow.value
         if (relayList.isNotEmpty()) {
-            client.send(event, relayList + noteRelays)
+            client.publish(event, relayList + noteRelays)
         } else {
-            client.send(event, outboxRelays.flow.value + noteRelays)
+            client.publish(event, outboxRelays.flow.value + noteRelays)
         }
         cache.justConsumeMyOwnEvent(event)
     }
@@ -1489,9 +1489,9 @@ class Account(
 
         val relayList = privateStorageRelayList.flow.value + localRelayList.flow.value
         if (relayList.isNotEmpty()) {
-            client.send(event, relayList + noteRelays)
+            client.publish(event, relayList + noteRelays)
         } else {
-            client.send(event, outboxRelays.flow.value + noteRelays)
+            client.publish(event, outboxRelays.flow.value + noteRelays)
         }
         cache.justConsumeMyOwnEvent(event)
     }
@@ -1652,7 +1652,7 @@ class Account(
         val note = cache.getOrCreateNote(event.id)
         val relayList = computeRelayListToBroadcast(note)
 
-        client.send(event, relayList = relayList)
+        client.publish(event, relayList = relayList)
 
         broadcast.forEach { client.send(it, relayList) }
     }

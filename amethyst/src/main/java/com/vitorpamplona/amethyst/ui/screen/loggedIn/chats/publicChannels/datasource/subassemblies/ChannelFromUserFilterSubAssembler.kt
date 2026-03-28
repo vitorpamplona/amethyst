@@ -27,11 +27,11 @@ import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActiviti
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserAndFollowListEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datasource.ChannelQueryState
-import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 
 class ChannelFromUserFilterSubAssembler(
-    client: INostrClient,
+    client: NostrClient,
     allKeys: () -> Set<ChannelQueryState>,
 ) : PerUserAndFollowListEoseManager<ChannelQueryState, Channel>(client, allKeys) {
     override fun updateFilter(

@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.client.pool
 
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.ReqSubStatus
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.RequestSubscriptionState
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EoseMessage
@@ -51,7 +51,7 @@ class PoolRequests {
      * to what the app whants to do.
      */
     private val desiredSubs = LargeCache<String, Map<NormalizedRelayUrl, List<Filter>>>()
-    private val desiredSubListeners = LargeCache<String, IRequestListener>()
+    private val desiredSubListeners = LargeCache<String, SubscriptionListener>()
     val desiredRelays = MutableStateFlow(setOf<NormalizedRelayUrl>())
 
     /**
@@ -101,7 +101,7 @@ class PoolRequests {
     fun addOrUpdate(
         subId: String,
         filters: Map<NormalizedRelayUrl, List<Filter>>,
-        listener: IRequestListener?,
+        listener: SubscriptionListener?,
     ): Set<NormalizedRelayUrl> {
         // saves old relays
         val oldRelays = desiredSubs.get(subId)?.keys ?: emptySet()
@@ -165,15 +165,15 @@ class PoolRequests {
         when (cmd) {
             is ReqCmd -> {
                 subState(cmd.subId).onOpenReq(relay, cmd.filters)
-                desiredSubListeners.get(cmd.subId)?.onStartReq(
+                desiredSubListeners.get(cmd.subId)?.onSubscriptionStarted(
                     relay = relay.url,
                     forFilters = cmd.filters,
                 )
             }
 
             is CloseCmd -> {
-                subState(cmd.subId).onCloseReq(relay)
-                desiredSubListeners.get(cmd.subId)?.onCloseReq(
+                subState(cmd.subId).onSubscriptionClosed(relay)
+                desiredSubListeners.get(cmd.subId)?.onSubscriptionClosed(
                     relay = relay.url,
                 )
             }
@@ -193,7 +193,7 @@ class PoolRequests {
                 state?.onNewEvent(relay.url)
                 desiredSubListeners.get(msg.subId)?.onEvent(
                     event = msg.event,
-                    isLive = state?.currentState(relay.url) == ReqSubStatus.LIVE,
+                    isRealTime = state?.currentState(relay.url) == ReqSubStatus.LIVE,
                     relay = relay.url,
                     forFilters = state?.lastKnownFilterStates(relay.url),
                 )
@@ -201,8 +201,8 @@ class PoolRequests {
 
             is EoseMessage -> {
                 val state = relayState.get(msg.subId)
-                state?.onEose(relay.url)
-                desiredSubListeners.get(msg.subId)?.onEose(
+                state?.onCaughtUp(relay.url)
+                desiredSubListeners.get(msg.subId)?.onCaughtUp(
                     relay = relay.url,
                     forFilters = state?.lastKnownFilterStates(relay.url),
                 )

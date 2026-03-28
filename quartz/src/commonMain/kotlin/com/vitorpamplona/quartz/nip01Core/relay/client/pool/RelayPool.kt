@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.client.pool
 
-import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.EmptyClientListener
-import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.EmptyConnectionListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.basic.BasicRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
@@ -56,8 +56,8 @@ import kotlinx.coroutines.flow.update
  */
 class RelayPool(
     val websocketBuilder: WebsocketBuilder,
-    val listener: IRelayClientListener = EmptyClientListener,
-) : IRelayClientListener {
+    val listener: RelayConnectionListener = EmptyConnectionListener,
+) : RelayConnectionListener {
     private val relays = LargeCache<NormalizedRelayUrl, IRelayClient>()
 
     private val _connectedRelays = MutableStateFlow<Set<NormalizedRelayUrl>>(emptySet())

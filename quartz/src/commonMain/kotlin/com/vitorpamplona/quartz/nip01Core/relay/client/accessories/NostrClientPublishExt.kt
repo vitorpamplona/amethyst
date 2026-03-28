@@ -21,8 +21,8 @@
 package com.vitorpamplona.quartz.nip01Core.relay.client.accessories
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
@@ -41,42 +41,42 @@ class Result(
 )
 
 @OptIn(DelicateCoroutinesApi::class)
-suspend fun INostrClient.sendAndWaitForResponse(
+suspend fun NostrClient.publishAndConfirm(
     event: Event,
     relayList: Set<NormalizedRelayUrl>,
     timeoutInSeconds: Long = 15,
-): Boolean = sendAndWaitForResponseDetailed(event, relayList, timeoutInSeconds).any { it.value }
+): Boolean = publishAndConfirmDetailed(event, relayList, timeoutInSeconds).any { it.value }
 
 /**
  * Sends an event to the given relays and waits for OK responses.
  * Returns per-relay results: relay URL -> accepted (true/false).
  */
 @OptIn(DelicateCoroutinesApi::class)
-suspend fun INostrClient.sendAndWaitForResponseDetailed(
+suspend fun NostrClient.publishAndConfirmDetailed(
     event: Event,
     relayList: Set<NormalizedRelayUrl>,
     timeoutInSeconds: Long = 15,
 ): Map<NormalizedRelayUrl, Boolean> {
     val resultChannel = Channel<Result>(UNLIMITED)
 
-    Log.d("sendAndWaitForResponse", "Waiting for ${relayList.size} responses")
+    Log.d("publishAndConfirm", "Waiting for ${relayList.size} responses")
 
     val subscription =
-        object : IRelayClientListener {
+        object : RelayConnectionListener {
             override fun onCannotConnect(
                 relay: IRelayClient,
                 errorMessage: String,
             ) {
                 if (relay.url in relayList) {
                     resultChannel.trySend(Result(relay.url, false))
-                    Log.d("sendAndWaitForResponse", "Error from relay ${relay.url}: $errorMessage")
+                    Log.d("publishAndConfirm", "Error from relay ${relay.url}: $errorMessage")
                 }
             }
 
             override fun onDisconnected(relay: IRelayClient) {
                 if (relay.url in relayList) {
                     resultChannel.trySend(Result(relay.url, false))
-                    Log.d("sendAndWaitForResponse", "Disconnected from relay ${relay.url}")
+                    Log.d("publishAndConfirm", "Disconnected from relay ${relay.url}")
                 }
             }
 
@@ -91,7 +91,7 @@ suspend fun INostrClient.sendAndWaitForResponseDetailed(
                     is OkMessage -> {
                         if (msg.eventId == event.id) {
                             resultChannel.trySend(Result(relay.url, msg.success))
-                            Log.d("sendAndWaitForResponse", "onSendResponse Received response for ${msg.eventId} from relay ${relay.url} message ${msg.message} success ${msg.success}")
+                            Log.d("publishAndConfirm", "onSendResponse Received response for ${msg.eventId} from relay ${relay.url} message ${msg.message} success ${msg.success}")
                         }
                     }
                 }
@@ -100,7 +100,7 @@ suspend fun INostrClient.sendAndWaitForResponseDetailed(
 
     val receivedResults =
         try {
-            subscribe(subscription)
+            addConnectionListener(subscription)
 
             // subscribe before sending the result.
             val resultSubscription =
@@ -123,20 +123,20 @@ suspend fun INostrClient.sendAndWaitForResponseDetailed(
                             receivedResults
                         }
 
-                    send(event, relayList)
+                    publish(event, relayList)
 
                     result
                 }
 
             resultSubscription.await()
         } finally {
-            unsubscribe(subscription)
+            removeConnectionListener(subscription)
         }
 
     // Clean up the channel
     resultChannel.close()
 
-    Log.d("sendAndWaitForResponse", "Finished with ${receivedResults.size} results")
+    Log.d("publishAndConfirm", "Finished with ${receivedResults.size} results")
 
     return receivedResults
 }

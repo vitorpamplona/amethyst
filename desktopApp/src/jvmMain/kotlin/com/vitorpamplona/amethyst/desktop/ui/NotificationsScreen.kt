@@ -228,7 +228,7 @@ fun NotificationsScreen(
 
                     notificationState.addItem(notification)
                 },
-                onEose = { _, _ ->
+                onCaughtUp = { _, _ ->
                     eoseReceivedCount++
                 },
             )

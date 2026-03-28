@@ -72,7 +72,7 @@ import com.vitorpamplona.amethyst.desktop.nwc.NwcPaymentHandler
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
@@ -436,10 +436,10 @@ private suspend fun fetchMetadataForUsers(
             filters = filters,
             relays = relays,
             listener =
-                object : IRequestListener {
+                object : SubscriptionListener {
                     override fun onEvent(
                         event: Event,
-                        isLive: Boolean,
+                        isRealTime: Boolean,
                         relay: NormalizedRelayUrl,
                         forFilters: List<Filter>?,
                     ) {
@@ -457,7 +457,7 @@ private suspend fun fetchMetadataForUsers(
                         }
                     }
 
-                    override fun onEose(
+                    override fun onCaughtUp(
                         relay: NormalizedRelayUrl,
                         forFilters: List<Filter>?,
                     ) {
@@ -1058,10 +1058,10 @@ private suspend fun fetchUserLightningAddress(
             filters = filters,
             relays = relays,
             listener =
-                object : IRequestListener {
+                object : SubscriptionListener {
                     override fun onEvent(
                         event: Event,
-                        isLive: Boolean,
+                        isRealTime: Boolean,
                         relay: NormalizedRelayUrl,
                         forFilters: List<Filter>?,
                     ) {
@@ -1078,7 +1078,7 @@ private suspend fun fetchUserLightningAddress(
                         }
                     }
 
-                    override fun onEose(
+                    override fun onCaughtUp(
                         relay: NormalizedRelayUrl,
                         forFilters: List<Filter>?,
                     ) {

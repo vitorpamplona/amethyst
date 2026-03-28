@@ -172,7 +172,7 @@ fun SearchScreen(
         }
     }
 
-    // NIP-50 people search subscription (use allRelayUrls — openReqSubscription will connect)
+    // NIP-50 people search subscription (use allRelayUrls — subscribe will connect)
     rememberSubscription(connectedRelays, debouncedQuery, relayManager = relayManager) {
         if (allRelayUrls.isEmpty() || debouncedQuery.isEmpty) {
             return@rememberSubscription null
@@ -202,7 +202,7 @@ fun SearchScreen(
                     }
                 }
             },
-            onEose = { relay, _ ->
+            onCaughtUp = { relay, _ ->
                 state.updateRelayState(relay.url, RelaySyncStatus.EOSE_RECEIVED)
                 state.stopSearching("people-search")
             },
@@ -236,7 +236,7 @@ fun SearchScreen(
                     }
                 }
             },
-            onEose = { relay, _ ->
+            onCaughtUp = { relay, _ ->
                 state.updateRelayState(relay.url, RelaySyncStatus.EOSE_RECEIVED)
                 state.stopSearching("adv-search")
             },

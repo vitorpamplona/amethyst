@@ -22,7 +22,7 @@ package com.vitorpamplona.quartz.nip01Core.relay.client.reqs
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -42,22 +42,22 @@ import kotlinx.coroutines.flow.callbackFlow
  *    - They will be ignored if they are already in the list.
  *    - They will be added to the beginning of the list if they are new.
  */
-fun INostrClient.reqAsFlow(
+fun NostrClient.subscribeAsFlow(
     relay: String,
     filters: List<Filter>,
-) = reqAsFlow(RelayUrlNormalizer.normalize(relay), filters)
+) = subscribeAsFlow(RelayUrlNormalizer.normalize(relay), filters)
 
-fun INostrClient.reqAsFlow(
+fun NostrClient.subscribeAsFlow(
     relay: String,
     filter: Filter,
-) = reqAsFlow(RelayUrlNormalizer.normalize(relay), listOf(filter))
+) = subscribeAsFlow(RelayUrlNormalizer.normalize(relay), listOf(filter))
 
-fun INostrClient.reqAsFlow(
+fun NostrClient.subscribeAsFlow(
     relay: NormalizedRelayUrl,
     filter: Filter,
-) = reqAsFlow(relay, listOf(filter))
+) = subscribeAsFlow(relay, listOf(filter))
 
-fun INostrClient.reqAsFlow(
+fun NostrClient.subscribeAsFlow(
     relay: NormalizedRelayUrl,
     filters: List<Filter>,
 ): Flow<List<Event>> =
@@ -68,10 +68,10 @@ fun INostrClient.reqAsFlow(
         var currentEvents = listOf<Event>()
 
         val listener =
-            object : IRequestListener {
+            object : SubscriptionListener {
                 override fun onEvent(
                     event: Event,
-                    isLive: Boolean,
+                    isRealTime: Boolean,
                     relay: NormalizedRelayUrl,
                     forFilters: List<Filter>?,
                 ) {
@@ -90,7 +90,7 @@ fun INostrClient.reqAsFlow(
                     }
                 }
 
-                override fun onEose(
+                override fun onCaughtUp(
                     relay: NormalizedRelayUrl,
                     forFilters: List<Filter>?,
                 ) {
@@ -98,9 +98,9 @@ fun INostrClient.reqAsFlow(
                 }
             }
 
-        openReqSubscription(subId, mapOf(relay to filters), listener)
+        subscribe(subId, mapOf(relay to filters), listener)
 
         awaitClose {
-            close(subId)
+            unsubscribe(subId)
         }
     }

@@ -27,18 +27,18 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.follows
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderQueryState
 import com.vitorpamplona.amethyst.service.relays.EOSEAccountFast
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
-import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.groupByRelay
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 class UserOutboxFinderSubAssembler(
-    client: INostrClient,
+    client: NostrClient,
     val cache: LocalCache,
     val failureTracker: RelayOfflineTracker,
     allKeys: () -> Set<UserFinderQueryState>,
@@ -68,8 +68,8 @@ class UserOutboxFinderSubAssembler(
 
     val sub =
         requestNewSubscription(
-            object : IRequestListener {
-                override fun onEose(
+            object : SubscriptionListener {
+                override fun onCaughtUp(
                     relay: NormalizedRelayUrl,
                     forFilters: List<Filter>?,
                 ) {

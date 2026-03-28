@@ -19,11 +19,10 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 package com.vitorpamplona.quartz.nip01Core.relay
-
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.reqAsFlow
+import com.vitorpamplona.quartz.nip01Core.relay.client.DefaultNostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.subscribeAsFlow
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
@@ -50,10 +49,10 @@ class NostrClientSubscriptionAsFlowTest : BaseNostrClientTest() {
     fun testNostrClientSubscriptionAsFlow() =
         runTest {
             val appScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-            val client = NostrClient(socketBuilder, appScope)
+            val client = DefaultNostrClient(socketBuilder, appScope)
 
             val flow =
-                client.reqAsFlow(
+                client.subscribeAsFlow(
                     relay = "wss://nos.lol",
                     filter =
                         Filter(
@@ -89,10 +88,10 @@ class NostrClientSubscriptionAsFlowTest : BaseNostrClientTest() {
     fun testNostrClientSubscriptionAsFlowDebouncing() =
         runTest {
             val appScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-            val client = NostrClient(socketBuilder, appScope)
+            val client = DefaultNostrClient(socketBuilder, appScope)
 
             val flow =
-                client.reqAsFlow(
+                client.subscribeAsFlow(
                     relay = "wss://nos.lol",
                     filter =
                         Filter(

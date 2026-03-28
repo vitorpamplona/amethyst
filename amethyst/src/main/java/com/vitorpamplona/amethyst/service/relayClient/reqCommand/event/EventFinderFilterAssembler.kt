@@ -26,7 +26,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders.NoteEventLoaderSubAssembler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.watchers.EventWatcherSubAssembler
-import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 
 // This allows multiple screen to be listening to tags, even the same tag
 @Stable
@@ -37,7 +37,7 @@ class EventFinderQueryState(
 
 @Stable
 class EventFinderFilterAssembler(
-    client: INostrClient,
+    client: NostrClient,
 ) : ComposeSubscriptionManager<EventFinderQueryState>() {
     val group =
         listOf(

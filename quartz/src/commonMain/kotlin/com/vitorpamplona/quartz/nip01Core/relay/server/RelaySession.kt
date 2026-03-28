@@ -146,7 +146,7 @@ class RelaySession(
                                 send(EventMessage(cmd.subId, event))
                             }
                         },
-                        onEose = { send(EoseMessage(cmd.subId)) },
+                        onCaughtUp = { send(EoseMessage(cmd.subId)) },
                     )
                 } catch (_: kotlinx.coroutines.CancellationException) {
                     // Subscription was closed – this is expected.

@@ -27,8 +27,8 @@ import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.Subscription
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
-import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -55,7 +55,7 @@ import kotlinx.coroutines.CoroutineScope
  * ```
  */
 class FeedMetadataCoordinator(
-    private val client: INostrClient,
+    private val client: NostrClient,
     private val scope: CoroutineScope,
     private val indexRelays: Set<NormalizedRelayUrl>,
     private val preloader: MetadataPreloader? = null,
@@ -79,10 +79,10 @@ class FeedMetadataCoordinator(
             // Create listener to pass events to the callback
             val listener =
                 if (onEvent != null) {
-                    object : IRequestListener {
+                    object : SubscriptionListener {
                         override fun onEvent(
                             event: Event,
-                            isLive: Boolean,
+                            isRealTime: Boolean,
                             relay: NormalizedRelayUrl,
                             forFilters: List<Filter>?,
                         ) {
@@ -93,7 +93,7 @@ class FeedMetadataCoordinator(
                     null
                 }
 
-            client.openReqSubscription(
+            client.subscribe(
                 subId = newSubId(),
                 filters = filterMap,
                 listener = listener,

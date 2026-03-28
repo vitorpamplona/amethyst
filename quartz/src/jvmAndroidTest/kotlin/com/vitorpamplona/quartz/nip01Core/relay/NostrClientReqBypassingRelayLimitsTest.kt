@@ -19,11 +19,10 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 package com.vitorpamplona.quartz.nip01Core.relay
-
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.reqBypassingRelayLimits
+import com.vitorpamplona.quartz.nip01Core.relay.client.DefaultNostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPages
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import kotlinx.coroutines.CoroutineScope
@@ -40,13 +39,13 @@ class NostrClientReqBypassingRelayLimitsTest : BaseNostrClientTest() {
     fun testDownloadFromRelayReturnsMetadataEvents() =
         runBlocking {
             val appScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-            val client = NostrClient(socketBuilder, appScope)
+            val client = DefaultNostrClient(socketBuilder, appScope)
 
             val events = mutableListOf<Event>()
 
             // nos.lol returns only 500 events per req
             val totalFound =
-                client.reqBypassingRelayLimits(
+                client.fetchAllPages(
                     relay = "wss://nos.lol",
                     filters =
                         listOf(
@@ -74,14 +73,14 @@ class NostrClientReqBypassingRelayLimitsTest : BaseNostrClientTest() {
     fun testDownloadFromRelayReturnsMetadataAndContactListEvents() =
         runBlocking {
             val appScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-            val client = NostrClient(socketBuilder, appScope)
+            val client = DefaultNostrClient(socketBuilder, appScope)
 
             val metadataEvents = mutableListOf<Event>()
             val contactListEvents = mutableListOf<Event>()
 
             // nos.lol returns only 500 events per req
             val totalFound =
-                client.reqBypassingRelayLimits(
+                client.fetchAllPages(
                     relay = "wss://nos.lol",
                     filters =
                         listOf(

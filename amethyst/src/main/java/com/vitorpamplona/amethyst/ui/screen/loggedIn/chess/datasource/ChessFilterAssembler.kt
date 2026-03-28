@@ -21,13 +21,13 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.datasource
 
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
-import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 
 /**
  * Filter assembler for chess events
  */
 class ChessFilterAssembler(
-    client: INostrClient,
+    client: NostrClient,
 ) : ComposeSubscriptionManager<ChessQueryState>() {
     val group =
         listOf(

@@ -33,7 +33,6 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip03Timestamp.EmptyOtsResolverBuilder
@@ -55,7 +54,7 @@ class ThreadDualAxisChartAssemblerTest {
         val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
         val client =
-            NostrClient(
+            DefaultNostrClient(
                 OkHttpWebSocket.Builder {
                     OkHttpClient
                         .Builder()

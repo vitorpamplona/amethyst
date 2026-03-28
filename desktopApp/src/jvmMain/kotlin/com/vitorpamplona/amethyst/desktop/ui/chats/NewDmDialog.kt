@@ -103,7 +103,7 @@ fun NewDmDialog(
                         }
                     }
                 },
-                onEose = { _, _ ->
+                onCaughtUp = { _, _ ->
                     searchState.endRelaySearch()
                 },
             )

@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.nip46RemoteSigner.signer
 
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
-import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequest
@@ -34,7 +34,7 @@ import kotlin.coroutines.resume
 
 class RemoteSignerManager(
     val timeout: Long = 30000,
-    val client: INostrClient,
+    val client: NostrClient,
     val signer: NostrSignerInternal,
     val remoteKey: String,
     val relayList: Set<NormalizedRelayUrl>,
@@ -77,7 +77,7 @@ class RemoteSignerManager(
 
                 awaitingRequests.put(request.id, continuation)
 
-                client.send(event, relayList = relayList)
+                client.publish(event, relayList = relayList)
             }
 
         return when (result) {

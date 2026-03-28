@@ -19,9 +19,8 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 package com.vitorpamplona.quartz.nip01Core.relay
-
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.queryCountSuspend
+import com.vitorpamplona.quartz.nip01Core.relay.client.DefaultNostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.count
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import junit.framework.TestCase.assertTrue
@@ -43,9 +42,9 @@ class NostrClientQueryCountTest : BaseNostrClientTest() {
     fun testQueryCountSuspend() =
         runBlocking {
             val appScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-            val client = NostrClient(socketBuilder, appScope)
+            val client = DefaultNostrClient(socketBuilder, appScope)
 
-            val result = client.queryCountSuspend(relay = fiatjaf, filter = metadata)
+            val result = client.count(fiatjaf, metadata)
 
             assertTrue((result?.count ?: 0) > 1)
 
@@ -57,9 +56,9 @@ class NostrClientQueryCountTest : BaseNostrClientTest() {
     fun testQueryCountSuspendAllEvents() =
         runBlocking {
             val appScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-            val client = NostrClient(socketBuilder, appScope)
+            val client = DefaultNostrClient(socketBuilder, appScope)
 
-            val result = client.queryCountSuspend(relay = fiatjaf, filter = Filter())
+            val result = client.count(fiatjaf, Filter())
 
             assertTrue((result?.count ?: 0) > 1)
 
@@ -71,20 +70,19 @@ class NostrClientQueryCountTest : BaseNostrClientTest() {
     fun testQueryCountSuspendMultipleRelays() =
         runBlocking {
             val appScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-            val client = NostrClient(socketBuilder, appScope)
+            val client = DefaultNostrClient(socketBuilder, appScope)
 
-            val result =
-                client.queryCountSuspend(
-                    filters =
-                        mapOf(
-                            fiatjaf to listOf(metadata, outboxRelays),
-                            utxo to listOf(metadata, outboxRelays),
-                        ),
+            val results =
+                client.count(
+                    mapOf(
+                        fiatjaf to listOf(metadata, outboxRelays),
+                        utxo to listOf(metadata, outboxRelays),
+                    ),
                 )
 
-            result.forEach { url, result ->
-                println("${url.url}: ${result.count}")
-                assertTrue(result.count > 1)
+            results.forEach { (url, countResult) ->
+                println("${url.url}: ${countResult.count}")
+                assertTrue(countResult.count > 1)
             }
 
             client.disconnect()

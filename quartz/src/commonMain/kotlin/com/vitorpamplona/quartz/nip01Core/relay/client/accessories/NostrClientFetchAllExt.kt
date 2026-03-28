@@ -21,63 +21,77 @@
 package com.vitorpamplona.quartz.nip01Core.relay.client.accessories
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.withTimeoutOrNull
 
-suspend fun INostrClient.downloadFirstEvent(
+suspend fun NostrClient.fetchAll(
     relay: String,
     filter: Filter,
-) = downloadFirstEvent(newSubId(), mapOf(RelayUrlNormalizer.normalize(relay) to listOf(filter)))
+    timeoutMs: Long = 30_000L,
+) = fetchAll(newSubId(), mapOf(RelayUrlNormalizer.normalize(relay) to listOf(filter)), timeoutMs)
 
-suspend fun INostrClient.downloadFirstEvent(
+suspend fun NostrClient.fetchAll(
     relay: String,
     filters: List<Filter>,
-) = downloadFirstEvent(newSubId(), mapOf(RelayUrlNormalizer.normalize(relay) to filters))
+    timeoutMs: Long = 30_000L,
+) = fetchAll(newSubId(), mapOf(RelayUrlNormalizer.normalize(relay) to filters), timeoutMs)
 
-suspend fun INostrClient.downloadFirstEvent(
+suspend fun NostrClient.fetchAll(
     subscriptionId: String = newSubId(),
     relay: String,
     filters: List<Filter>,
-) = downloadFirstEvent(subscriptionId, mapOf(RelayUrlNormalizer.normalize(relay) to filters))
+    timeoutMs: Long = 30_000L,
+) = fetchAll(subscriptionId, mapOf(RelayUrlNormalizer.normalize(relay) to filters), timeoutMs)
 
-suspend fun INostrClient.downloadFirstEvent(
+suspend fun NostrClient.fetchAll(
     relay: NormalizedRelayUrl,
     filter: Filter,
-) = downloadFirstEvent(newSubId(), mapOf(relay to listOf(filter)))
+    timeoutMs: Long = 30_000L,
+) = fetchAll(newSubId(), mapOf(relay to listOf(filter)), timeoutMs)
 
-suspend fun INostrClient.downloadFirstEvent(
+suspend fun NostrClient.fetchAll(
     relay: NormalizedRelayUrl,
     filters: List<Filter>,
-) = downloadFirstEvent(newSubId(), mapOf(relay to filters))
+    timeoutMs: Long = 30_000L,
+) = fetchAll(newSubId(), mapOf(relay to filters), timeoutMs)
 
-suspend fun INostrClient.downloadFirstEvent(
+suspend fun NostrClient.fetchAll(
     subscriptionId: String = newSubId(),
     relay: NormalizedRelayUrl,
     filters: List<Filter>,
-) = downloadFirstEvent(subscriptionId, mapOf(relay to filters))
+    timeoutMs: Long = 30_000L,
+) = fetchAll(subscriptionId, mapOf(relay to filters), timeoutMs)
 
-suspend fun INostrClient.downloadFirstEvent(
+suspend fun NostrClient.fetchAll(
     subscriptionId: String = newSubId(),
     filters: Map<NormalizedRelayUrl, List<Filter>>,
-): Event? {
-    val resultChannel = Channel<Event?>(UNLIMITED)
+    timeoutMs: Long = 30_000L,
+): List<Event> {
+    val doneChannel = Channel<NormalizedRelayUrl>(Channel.UNLIMITED)
+
+    val events = mutableListOf<Event>()
+    val seenIds = mutableSetOf<HexKey>()
+
+    val remaining = filters.keys.toMutableSet()
 
     val listener =
-        object : IRequestListener {
+        object : SubscriptionListener {
             override fun onEvent(
                 event: Event,
-                isLive: Boolean,
+                isRealTime: Boolean,
                 relay: NormalizedRelayUrl,
                 forFilters: List<Filter>?,
             ) {
-                resultChannel.trySend(event)
+                if (seenIds.add(event.id)) {
+                    events.add(event)
+                }
             }
 
             override fun onCannotConnect(
@@ -85,7 +99,7 @@ suspend fun INostrClient.downloadFirstEvent(
                 message: String,
                 forFilters: List<Filter>?,
             ) {
-                resultChannel.trySend(null)
+                doneChannel.trySend(relay)
             }
 
             override fun onClosed(
@@ -93,29 +107,33 @@ suspend fun INostrClient.downloadFirstEvent(
                 relay: NormalizedRelayUrl,
                 forFilters: List<Filter>?,
             ) {
-                resultChannel.trySend(null)
+                doneChannel.trySend(relay)
             }
 
-            override fun onEose(
+            override fun onCaughtUp(
                 relay: NormalizedRelayUrl,
                 forFilters: List<Filter>?,
             ) {
-                resultChannel.trySend(null)
+                doneChannel.trySend(relay)
             }
         }
 
-    val result =
-        try {
-            openReqSubscription(subscriptionId, filters, listener)
+    try {
+        subscribe(subscriptionId, filters, listener)
 
-            withTimeoutOrNull(30000) {
-                resultChannel.receive()
+        withTimeoutOrNull(timeoutMs) {
+            while (remaining.isNotEmpty()) {
+                val finished = doneChannel.receive()
+                remaining.remove(finished)
             }
-        } finally {
-            close(subscriptionId)
         }
+    } finally {
+        unsubscribe(subscriptionId)
+        doneChannel.close()
+    }
 
-    resultChannel.close()
-
-    return result
+    return events.sortedWith(DefaultFeedOrderEvent)
 }
+
+val DefaultFeedOrderEvent: Comparator<Event> =
+    compareByDescending<Event> { it.createdAt }.thenBy { it.id }

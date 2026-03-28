@@ -21,8 +21,8 @@
 package com.vitorpamplona.quartz.nip01Core.relay.client.stats
 
 import androidx.collection.LruCache
-import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
@@ -35,7 +35,7 @@ import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
 
 class RelayStats(
-    val client: INostrClient,
+    val client: NostrClient,
 ) {
     private val innerCache =
         object : LruCache<NormalizedRelayUrl, RelayStat>(1000) {
@@ -47,7 +47,7 @@ class RelayStats(
     fun get(url: NormalizedRelayUrl): RelayStat = innerCache[url] ?: throw IllegalArgumentException("Should never happen")
 
     private val clientListener =
-        object : IRelayClientListener {
+        object : RelayConnectionListener {
             override fun onConnecting(relay: IRelayClient) {
                 super.onConnecting(relay)
                 with(get(relay.url)) {
@@ -116,12 +116,12 @@ class RelayStats(
 
     init {
         Log.d("RelayStats", "Init, Subscribe")
-        client.subscribe(clientListener)
+        client.addConnectionListener(clientListener)
     }
 
     fun destroy() {
         // makes sure to run
         Log.d("RelayStats", "Destroy, Unsubscribe")
-        client.unsubscribe(clientListener)
+        client.removeConnectionListener(clientListener)
     }
 }

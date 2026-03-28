@@ -19,10 +19,9 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 package com.vitorpamplona.quartz.nip01Core.relay
-
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.sendAndWaitForResponse
+import com.vitorpamplona.quartz.nip01Core.relay.client.DefaultNostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirm
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
@@ -39,20 +38,20 @@ class NostrClientSendAndWaitTest : BaseNostrClientTest() {
     fun testSendAndWaitForResponse() =
         runBlocking {
             val appScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-            val client = NostrClient(socketBuilder, appScope)
+            val client = DefaultNostrClient(socketBuilder, appScope)
 
             val randomSigner = NostrSignerInternal(KeyPair())
 
             val event = randomSigner.sign(TextNoteEvent.build("Hello World"))
 
             val resultDamus =
-                client.sendAndWaitForResponse(
+                client.publishAndConfirm(
                     event = event,
                     relayList = setOf("wss://nostr.bitcoiner.social".normalizeRelayUrl()),
                 )
 
             val resultNos =
-                client.sendAndWaitForResponse(
+                client.publishAndConfirm(
                     event = event,
                     relayList = setOf("wss://nos.lol".normalizeRelayUrl()),
                 )

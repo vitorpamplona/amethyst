@@ -24,8 +24,8 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
-import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.req
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.StaticSubscription
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
@@ -83,7 +83,7 @@ object NostrConnectLoginUseCase {
 
     suspend fun awaitAndLogin(
         uriData: NostrConnectUri,
-        client: INostrClient,
+        client: NostrClient,
     ): BunkerLoginResult {
         val connectData =
             waitForConnectRequest(
@@ -117,19 +117,22 @@ object NostrConnectLoginUseCase {
         ephemeralPubKey: HexKey,
         relays: Set<NormalizedRelayUrl>,
         expectedSecret: String,
-        client: INostrClient,
+        client: NostrClient,
     ): ConnectRequestData {
         val deferred = CompletableDeferred<NostrConnectEvent>()
 
         val subscription =
-            client.req(
-                relays = relays.toList(),
-                filter =
-                    Filter(
-                        kinds = listOf(NostrConnectEvent.KIND),
-                        tags = mapOf("p" to listOf(ephemeralPubKey)),
-                        since = TimeUtils.now() - 60,
-                    ),
+            StaticSubscription(
+                client,
+                relays.associateWith {
+                    listOf(
+                        Filter(
+                            kinds = listOf(NostrConnectEvent.KIND),
+                            tags = mapOf("p" to listOf(ephemeralPubKey)),
+                            since = TimeUtils.now() - 60,
+                        ),
+                    )
+                },
             ) { event ->
                 if (event is NostrConnectEvent && !deferred.isCompleted) {
                     deferred.complete(event)
@@ -198,7 +201,7 @@ object NostrConnectLoginUseCase {
         ephemeralSigner: NostrSignerInternal,
         connectData: ConnectRequestData,
         relays: Set<NormalizedRelayUrl>,
-        client: INostrClient,
+        client: NostrClient,
     ) {
         val ackResponse = BunkerResponseAck(id = connectData.requestId!!)
         val ackEvent =
@@ -207,7 +210,7 @@ object NostrConnectLoginUseCase {
                 remoteKey = connectData.signerPubkey,
                 signer = ephemeralSigner,
             )
-        client.send(ackEvent, relays)
+        client.publish(ackEvent, relays)
     }
 
     private fun generateSecret(): String {

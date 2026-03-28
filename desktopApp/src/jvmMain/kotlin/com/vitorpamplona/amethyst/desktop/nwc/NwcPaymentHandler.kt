@@ -103,7 +103,7 @@ class NwcPaymentHandler(
         zappedNote?.addZapPayment(requestNote, null)
 
         // Send request to wallet's relay
-        relayManager.sendToRelay(nwcConnection.relayUri, requestEvent)
+        relayManager.publishToRelay(nwcConnection.relayUri, requestEvent)
 
         // Subscribe and wait for response with timeout
         return withTimeoutOrNull(timeoutMs) {

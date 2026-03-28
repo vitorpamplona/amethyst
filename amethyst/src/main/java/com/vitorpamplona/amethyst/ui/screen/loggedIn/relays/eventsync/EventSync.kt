@@ -27,9 +27,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync.EventSync.
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync.EventSync.LiveSyncActivity.SourceRelayInfo
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.reqBypassingRelayLimits
-import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPages
+import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
@@ -65,7 +65,7 @@ import kotlin.coroutines.cancellation.CancellationException
  * Each relay is paginated individually: after EOSE the oldest [Event.createdAt] seen on that
  * relay becomes the next `until` cursor, repeating until the relay returns no new events.
  *
- * OK (true) responses from destination relays are tracked via [IRelayClientListener] and
+ * OK (true) responses from destination relays are tracked via [RelayConnectionListener] and
  * attributed back to the source relay that contributed each event.
  *
  * Live activity is emitted via [liveActivity] so the UI can show a per-relay log of events
@@ -80,7 +80,7 @@ class EventSync(
     private val outboxTargets: () -> Set<NormalizedRelayUrl>,
     private val inboxTargets: () -> Set<NormalizedRelayUrl>,
     private val dmTargets: () -> Set<NormalizedRelayUrl>,
-    private val clientBuilder: () -> INostrClient,
+    private val clientBuilder: () -> NostrClient,
     private val scope: CoroutineScope,
 ) {
     companion object {
@@ -406,7 +406,7 @@ class EventSync(
             )
 
         val okListener =
-            object : IRelayClientListener {
+            object : RelayConnectionListener {
                 override fun onCannotConnect(
                     relay: IRelayClient,
                     errorMessage: String,
@@ -500,7 +500,7 @@ class EventSync(
         _syncState.emit(runningState)
 
         clientBuilder().use { client ->
-            client.subscribe(okListener)
+            client.addConnectionListener(okListener)
             try {
                 client.downloadFromPool(
                     relays = relaysToProcess,
@@ -523,21 +523,21 @@ class EventSync(
                         // Each routing rule is independent: an event can match more than one.
                         if (isMyEvent && outboxTargets.isNotEmpty()) {
                             if (outboxDedup.add(event.id)) {
-                                client.send(event, outboxTargets)
+                                client.publish(event, outboxTargets)
                                 newEvent = true
                             }
                             matchesAtLeastOneFilter = true
                         }
                         if (mentionsMe && isDmKind && dmTargets.isNotEmpty()) {
                             if (dmDedup.add(event.id)) {
-                                client.send(event, dmTargets)
+                                client.publish(event, dmTargets)
                                 newEvent = true
                             }
                             matchesAtLeastOneFilter = true
                         }
                         if (mentionsMe && !isDmKind && inboxTargets.isNotEmpty()) {
                             if (inboxDedup.add(event.id)) {
-                                client.send(event, inboxTargets)
+                                client.publish(event, inboxTargets)
                                 newEvent = true
                             }
                             matchesAtLeastOneFilter = true
@@ -610,7 +610,7 @@ class EventSync(
                 if (e is CancellationException) throw e
                 _syncState.value = SyncState.Error(e.message ?: "Unknown error", filterSince, filterUntil)
             } finally {
-                client.unsubscribe(okListener)
+                client.removeConnectionListener(okListener)
             }
         }
     }
@@ -622,7 +622,7 @@ class EventSync(
      *
      * [onEvent] receives the event and the URL of the relay it came from.
      */
-    private suspend fun INostrClient.downloadFromPool(
+    private suspend fun NostrClient.downloadFromPool(
         relays: List<NormalizedRelayUrl>,
         filters: Map<NormalizedRelayUrl, List<Filter>>,
         onNewPage: (Long, NormalizedRelayUrl) -> Unit,
@@ -661,10 +661,10 @@ class EventSync(
      *
      * @return total number of events received across all pages.
      */
-    private suspend fun INostrClient.downloadFromRelay(
+    private suspend fun NostrClient.downloadFromRelay(
         relay: NormalizedRelayUrl,
         filters: List<Filter>,
         onNewPage: (Long) -> Unit,
         onEvent: (Event) -> Unit,
-    ): Int = reqBypassingRelayLimits(relay, filters, RELAY_TIMEOUT_MS, onNewPage, onEvent)
+    ): Int = fetchAllPages(relay, filters, RELAY_TIMEOUT_MS, onNewPage, onEvent)
 }

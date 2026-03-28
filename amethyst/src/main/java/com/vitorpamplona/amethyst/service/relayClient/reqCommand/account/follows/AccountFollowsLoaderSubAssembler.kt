@@ -30,12 +30,12 @@ import com.vitorpamplona.amethyst.service.BundledUpdate
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountQueryState
 import com.vitorpamplona.amethyst.service.relays.EOSEAccountFast
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.IAuthStatus
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.groupByRelay
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.SubscriptionController
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -56,7 +56,7 @@ import kotlinx.coroutines.launch
  * It needs to be super fast on startup.
  */
 class AccountFollowsLoaderSubAssembler(
-    val client: INostrClient,
+    val client: NostrClient,
     val cache: LocalCache,
     val scope: CoroutineScope,
     val authStatus: IAuthStatus,
@@ -107,8 +107,8 @@ class AccountFollowsLoaderSubAssembler(
     val sub =
         orchestrator.requestNewSubscription(
             if (isDebug) logTag + newSubId() else newSubId(),
-            object : IRequestListener {
-                override fun onEose(
+            object : SubscriptionListener {
+                override fun onCaughtUp(
                     relay: NormalizedRelayUrl,
                     forFilters: List<Filter>?,
                 ) {
@@ -117,11 +117,11 @@ class AccountFollowsLoaderSubAssembler(
 
                 override fun onEvent(
                     event: Event,
-                    isLive: Boolean,
+                    isRealTime: Boolean,
                     relay: NormalizedRelayUrl,
                     forFilters: List<Filter>?,
                 ) {
-                    if (isLive) {
+                    if (isRealTime) {
                         newEose(TimeUtils.now(), relay, forFilters)
                     }
                 }
