@@ -53,22 +53,28 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.RenderFeedContentState
@@ -83,6 +89,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
+import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 import com.vitorpamplona.quartz.nipB0WebBookmarks.WebBookmarkEvent
 import kotlinx.coroutines.launch
@@ -238,6 +245,17 @@ private fun WebBookmarkCard(
         )
     }
 
+    @Suppress("ProduceStateDoesNotAssignValue")
+    val urlPreviewState by
+        produceState(
+            initialValue = UrlCachedPreviewer.cache.get(event.url()) ?: UrlPreviewState.Loading,
+            key1 = event.url(),
+        ) {
+            if (value == UrlPreviewState.Loading) {
+                accountViewModel.urlPreview(event.url()) { value = it }
+            }
+        }
+
     Column(
         modifier =
             Modifier
@@ -245,6 +263,23 @@ private fun WebBookmarkCard(
                 .clickable { uriHandler.openUri(event.url()) }
                 .padding(16.dp),
     ) {
+        val previewInfo = (urlPreviewState as? UrlPreviewState.Loaded)?.previewInfo
+
+        if (previewInfo?.imageUrlFullPath != null) {
+            AsyncImage(
+                model = previewInfo.imageUrlFullPath,
+                contentDescription = event.title() ?: previewInfo.title,
+                contentScale = ContentScale.Crop,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(180.dp)
+                        .clip(QuoteBorder),
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -252,7 +287,7 @@ private fun WebBookmarkCard(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = event.title() ?: event.url(),
+                    text = event.title() ?: previewInfo?.title?.ifBlank { null } ?: event.url(),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
@@ -260,9 +295,9 @@ private fun WebBookmarkCard(
                 )
 
                 Text(
-                    text = event.url(),
+                    text = previewInfo?.verifiedUrl?.host ?: event.url(),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = Color.Gray,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -291,10 +326,11 @@ private fun WebBookmarkCard(
             }
         }
 
-        if (event.description().isNotBlank()) {
+        val description = event.description().ifBlank { previewInfo?.description ?: "" }
+        if (description.isNotBlank()) {
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = event.description(),
+                text = description,
                 style = MaterialTheme.typography.bodyMedium,
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis,

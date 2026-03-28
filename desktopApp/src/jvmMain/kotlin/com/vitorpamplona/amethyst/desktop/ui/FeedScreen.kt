@@ -170,7 +170,7 @@ fun FeedScreen(
     val connectedRelays by relayManager.connectedRelays.collectAsState()
     val followedUsers by localCache.followedUsers.collectAsState()
 
-    // Available relay URLs — openReqSubscription triggers connection on-demand
+    // Available relay URLs — subscribe triggers connection on-demand
     val allRelayUrls = remember(relayStatuses) { relayStatuses.keys }
 
     var replyToEvent by remember { mutableStateOf<Event?>(null) }

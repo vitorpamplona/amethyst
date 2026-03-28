@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.relay.client.single.basic
 
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
-import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.basic.BasicRelayClient.Companion.DELAY_TO_RECONNECT_IN_SECS
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
@@ -55,7 +55,7 @@ import kotlin.coroutines.cancellation.CancellationException
 open class BasicRelayClient(
     override val url: NormalizedRelayUrl,
     val socketBuilder: WebsocketBuilder,
-    val listener: IRelayClientListener,
+    val listener: RelayConnectionListener,
 ) : IRelayClient {
     companion object {
         // minimum wait time to reconnect: 1 second

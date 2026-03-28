@@ -193,7 +193,7 @@ fun main() {
         }
 
         Window(
-            onCloseRequest = ::exitApplication,
+            onSubscriptionCloseduest = ::exitApplication,
             state = windowState,
             title = "Amethyst",
         ) {

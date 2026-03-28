@@ -21,13 +21,13 @@
 package com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions
 
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 
 /**
- * Manages Nostr subscriptions using a [NostrClient], allowing subscriptions to be created, modified,
+ * Manages Nostr subscriptions using a [INostrClient], allowing subscriptions to be created, modified,
  * and synchronized with relay filters. Subscriptions are stored in a cache and processed through
  * [updateRelays] to update relay filters dynamically. Also tracks event statistics and EOSE (End of
  * Stored Events) events, and provides utility methods to interact with subscriptions like dismissal.
@@ -53,7 +53,7 @@ class SubscriptionController(
 
     fun requestNewSubscription(
         subId: String,
-        listener: IRequestListener,
+        listener: SubscriptionListener,
     ): Subscription = Subscription(subId, listener).also { subscriptions.put(it.id, it) }
 
     fun dismissSubscription(subId: String) = getSub(subId)?.let { dismissSubscription(it) }
@@ -61,7 +61,7 @@ class SubscriptionController(
     fun dismissSubscription(subscription: Subscription) {
         subscription.reset()
         subscriptions.remove(subscription.id)
-        client.close(subscription.id)
+        client.unsubscribe(subscription.id)
     }
 
     fun updateRelays() {
@@ -77,23 +77,23 @@ class SubscriptionController(
 
     fun updateRelaysIfNeeded(
         subId: String,
-        listener: IRequestListener,
+        listener: SubscriptionListener,
         newFilters: Map<NormalizedRelayUrl, List<Filter>>?,
         oldFilters: Map<NormalizedRelayUrl, List<Filter>>?,
     ) {
         if (oldFilters != null) {
             if (newFilters == null) {
                 // was active and is not active anymore, just close.
-                client.close(subId)
+                client.unsubscribe(subId)
             } else {
-                client.openReqSubscription(subId, newFilters, listener)
+                client.subscribe(subId, newFilters, listener)
             }
         } else {
             if (newFilters == null) {
                 // was not active and is still not active, does nothing
             } else {
                 // was not active and becomes active, sends the entire filter.
-                client.openReqSubscription(subId, newFilters, listener)
+                client.subscribe(subId, newFilters, listener)
             }
         }
     }

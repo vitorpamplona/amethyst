@@ -24,7 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 
-interface IRelayClientListener {
+interface RelayConnectionListener {
     fun onConnecting(relay: IRelayClient) {}
 
     /**
@@ -72,4 +72,4 @@ interface IRelayClientListener {
     ) {}
 }
 
-object EmptyClientListener : IRelayClientListener
+object EmptyConnectionListener : RelayConnectionListener

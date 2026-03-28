@@ -23,8 +23,8 @@ package com.vitorpamplona.quartz.nip46RemoteSigner.signer
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -37,7 +37,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
- * INostrClient that records openReqSubscription calls for verification.
+ * INostrClient that records subscribe calls for verification.
  * Used instead of mockk since commonTest doesn't have mockk.
  */
 private class TrackingNostrClient : INostrClient {
@@ -64,33 +64,33 @@ private class TrackingNostrClient : INostrClient {
 
     override fun isActive() = false
 
-    override fun renewFilters(relay: IRelayClient) {}
+    override fun syncFilters(relay: IRelayClient) {}
 
-    override fun openReqSubscription(
+    override fun subscribe(
         subId: String,
         filters: Map<NormalizedRelayUrl, List<Filter>>,
-        listener: IRequestListener?,
+        listener: SubscriptionListener?,
     ) {
         subscriptions.add(SubscriptionRecord(subId, filters))
     }
 
-    override fun queryCount(
+    override fun count(
         subId: String,
         filters: Map<NormalizedRelayUrl, List<Filter>>,
     ) {}
 
-    override fun close(subId: String) {}
+    override fun unsubscribe(subId: String) {}
 
-    override fun send(
+    override fun publish(
         event: Event,
         relayList: Set<NormalizedRelayUrl>,
     ) {
         sentEvents.add(event to relayList)
     }
 
-    override fun subscribe(listener: IRelayClientListener) {}
+    override fun addConnectionListener(listener: RelayConnectionListener) {}
 
-    override fun unsubscribe(listener: IRelayClientListener) {}
+    override fun removeConnectionListener(listener: RelayConnectionListener) {}
 
     override fun getReqFiltersOrNull(subId: String): Map<NormalizedRelayUrl, List<Filter>>? = null
 
@@ -120,7 +120,7 @@ class NostrSignerRemoteIsolationTest {
         val trackingClient = TrackingNostrClient()
         val ephemeralSigner = NostrSignerInternal(KeyPair())
 
-        // Construction triggers client.req() which calls openReqSubscription
+        // Construction triggers client.subscribe() which calls subscribe
         NostrSignerRemote(
             signer = ephemeralSigner,
             remotePubkey = validHex,

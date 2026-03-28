@@ -77,7 +77,7 @@ class RemoteSignerManager(
 
                 awaitingRequests.put(request.id, continuation)
 
-                client.send(event, relayList = relayList)
+                client.publish(event, relayList = relayList)
             }
 
         return when (result) {

@@ -171,7 +171,7 @@ fun SearchScreen(
         }
     }
 
-    // NIP-50 people search subscription (use allRelayUrls — openReqSubscription will connect)
+    // NIP-50 people search subscription (use allRelayUrls — subscribe will connect)
     rememberSubscription(connectedRelays, debouncedQuery, relayManager = relayManager) {
         if (allRelayUrls.isEmpty() || debouncedQuery.isEmpty) {
             return@rememberSubscription null

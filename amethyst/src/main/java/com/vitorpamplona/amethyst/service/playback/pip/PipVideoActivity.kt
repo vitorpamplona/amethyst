@@ -60,14 +60,22 @@ class PipVideoActivity : ComponentActivity() {
         }
     }
 
-    override fun onStop() {
-        super.onStop()
-        finishAndRemoveTask()
+    override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode)
+        if (!isInPictureInPictureMode) {
+            // User dismissed PiP (swiped away or expanded).
+            finishAndRemoveTask()
+        }
     }
 
-    override fun finish() {
-        finishAndRemoveTask()
-        super.finish()
+    override fun onStop() {
+        super.onStop()
+        if (!isInPictureInPictureMode) {
+            // Only finish if we're not in PiP mode.
+            // When the screen locks while in PiP, we stay alive
+            // so the PlaybackService can continue audio playback.
+            finishAndRemoveTask()
+        }
     }
 
     companion object {

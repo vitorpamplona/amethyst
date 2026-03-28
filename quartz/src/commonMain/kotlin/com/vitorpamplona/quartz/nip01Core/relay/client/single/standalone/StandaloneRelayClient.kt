@@ -22,9 +22,9 @@ package com.vitorpamplona.quartz.nip01Core.relay.client.single.standalone
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.EmptyClientListener
-import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
-import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RedirectRelayClientListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.EmptyConnectionListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RedirectConnectionListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.basic.BasicRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
@@ -46,7 +46,7 @@ import com.vitorpamplona.quartz.utils.cache.LargeCache
 class StandaloneRelayClient(
     url: NormalizedRelayUrl,
     socketBuilder: WebsocketBuilder,
-    listener: IRelayClientListener = EmptyClientListener,
+    listener: RelayConnectionListener = EmptyConnectionListener,
 ) {
     private val outbox = LargeCache<HexKey, Event>()
     private val reqs = LargeCache<String, List<Filter>>()
@@ -56,14 +56,14 @@ class StandaloneRelayClient(
         BasicRelayClient(
             url,
             socketBuilder,
-            object : RedirectRelayClientListener(listener) {
+            object : RedirectConnectionListener(listener) {
                 override fun onConnected(
                     relay: IRelayClient,
                     pingMillis: Int,
                     compressed: Boolean,
                 ) {
                     super.onConnected(relay, pingMillis, compressed)
-                    renewFilters()
+                    syncFilters()
                 }
 
                 override fun onIncomingMessage(
@@ -83,7 +83,7 @@ class StandaloneRelayClient(
             },
         )
 
-    fun renewFilters() {
+    fun syncFilters() {
         outbox.forEach { id, event ->
             client.sendOrConnectAndSync(EventCmd(event))
         }

@@ -31,7 +31,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayCountResult
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.queryCountSuspend
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.count
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayInfo
@@ -131,7 +131,7 @@ class Nip65RelayListViewModel : ViewModel() {
 
         _homeRelays.value.forEach { item ->
             viewModelScope.launch(Dispatchers.IO) {
-                val result = client.queryCountSuspend(item.relay, Filter(authors = listOf(account.pubKey)))
+                val result = client.count(item.relay, Filter(authors = listOf(account.pubKey)))
                 if (result != null) {
                     val countResult =
                         RelayCountResult(
@@ -150,7 +150,7 @@ class Nip65RelayListViewModel : ViewModel() {
 
         _notificationRelays.value.forEach { item ->
             viewModelScope.launch(Dispatchers.IO) {
-                val result = client.queryCountSuspend(item.relay, Filter(tags = mapOf("p" to listOf(account.pubKey))))
+                val result = client.count(item.relay, Filter(tags = mapOf("p" to listOf(account.pubKey))))
                 if (result != null) {
                     val countResult =
                         RelayCountResult(

@@ -31,7 +31,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.CoroutineScope
@@ -153,7 +153,7 @@ class DesktopRelaySubscriptionsCoordinator(
 
         // Cancel any existing subscription with this ID
         screenSubscriptions.remove(subId)?.cancel()
-        client.close(subId)
+        client.unsubscribe(subId)
 
         if (noteIds.isEmpty() || relays.isEmpty()) return subId
 
@@ -177,7 +177,7 @@ class DesktopRelaySubscriptionsCoordinator(
             )
 
         val listener =
-            object : IRequestListener {
+            object : SubscriptionListener {
                 override fun onEvent(
                     event: Event,
                     isLive: Boolean,
@@ -190,7 +190,7 @@ class DesktopRelaySubscriptionsCoordinator(
 
         val job =
             scope.launch {
-                client.openReqSubscription(
+                client.subscribe(
                     subId = subId,
                     filters = relays.associateWith { filters },
                     listener = listener,
@@ -206,7 +206,7 @@ class DesktopRelaySubscriptionsCoordinator(
      */
     fun releaseInteractions(subId: String) {
         screenSubscriptions.remove(subId)?.cancel()
-        client.close(subId)
+        client.unsubscribe(subId)
     }
 
     /**
@@ -217,7 +217,7 @@ class DesktopRelaySubscriptionsCoordinator(
         // Start rate limiter to process queued metadata requests
         rateLimiter.start { pubkey ->
             // When rate limiter dequeues a pubkey, subscribe to its metadata
-            client.openReqSubscription(
+            client.subscribe(
                 filters =
                     indexRelays.associateWith {
                         listOf(
@@ -281,7 +281,7 @@ class DesktopRelaySubscriptionsCoordinator(
         if (inboxRelays.isEmpty() && outboxRelays.isEmpty()) return
 
         val listener =
-            object : IRequestListener {
+            object : SubscriptionListener {
                 override fun onEvent(
                     event: Event,
                     isLive: Boolean,
@@ -296,7 +296,7 @@ class DesktopRelaySubscriptionsCoordinator(
         if (inboxRelays.isNotEmpty()) {
             val inboxSubId = generateSubId("dm-inbox-${userPubKeyHex.take(8)}")
             activeDmSubIds.add(inboxSubId)
-            client.openReqSubscription(
+            client.subscribe(
                 subId = inboxSubId,
                 filters =
                     inboxRelays.associateWith {
@@ -310,7 +310,7 @@ class DesktopRelaySubscriptionsCoordinator(
         if (outboxRelays.isNotEmpty()) {
             val outboxSubId = generateSubId("dm-outbox-${userPubKeyHex.take(8)}")
             activeDmSubIds.add(outboxSubId)
-            client.openReqSubscription(
+            client.subscribe(
                 subId = outboxSubId,
                 filters =
                     outboxRelays.associateWith {
@@ -324,7 +324,7 @@ class DesktopRelaySubscriptionsCoordinator(
         if (inboxRelays.isNotEmpty()) {
             val giftWrapSubId = generateSubId("giftwrap-${userPubKeyHex.take(8)}")
             activeDmSubIds.add(giftWrapSubId)
-            client.openReqSubscription(
+            client.subscribe(
                 subId = giftWrapSubId,
                 filters =
                     inboxRelays.associateWith {
@@ -340,7 +340,7 @@ class DesktopRelaySubscriptionsCoordinator(
      */
     fun unsubscribeFromDms() {
         activeDmSubIds.forEach { subId ->
-            client.close(subId)
+            client.unsubscribe(subId)
         }
         activeDmSubIds.clear()
     }
@@ -353,7 +353,7 @@ class DesktopRelaySubscriptionsCoordinator(
         // Clean up screen-triggered subscriptions
         screenSubscriptions.forEach { (subId, job) ->
             job.cancel()
-            client.close(subId)
+            client.unsubscribe(subId)
         }
         screenSubscriptions.clear()
         _lastEventAt.value = null

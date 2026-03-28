@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.relay.client.reqs
 
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EoseMessage
@@ -41,7 +41,7 @@ class RelayActiveRequestStates(
     fun subGetOrCreate(relay: NormalizedRelayUrl): RequestSubscriptionState<String> = subStates[relay] ?: RequestSubscriptionState<String>().also { subStates.put(relay, it) }
 
     private val clientListener =
-        object : IRelayClientListener {
+        object : RelayConnectionListener {
             override fun onConnecting(relay: IRelayClient) {
                 subStates[relay.url] = RequestSubscriptionState()
             }
@@ -66,7 +66,7 @@ class RelayActiveRequestStates(
             ) {
                 when (cmd) {
                     is ReqCmd -> subGetOrCreate(relay.url).onOpenReq(cmd.subId, cmd.filters)
-                    is CloseCmd -> subGetOrCreate(relay.url).onCloseReq(cmd.subId)
+                    is CloseCmd -> subGetOrCreate(relay.url).onSubscriptionClosed(cmd.subId)
                 }
             }
 
@@ -77,12 +77,12 @@ class RelayActiveRequestStates(
 
     init {
         Log.d("RelaySubStateMachine", "Init, Subscribe")
-        client.subscribe(clientListener)
+        client.addConnectionListener(clientListener)
     }
 
     fun destroy() {
         // makes sure to run
         Log.d("RelaySubStateMachine", "Destroy, Unsubscribe")
-        client.unsubscribe(clientListener)
+        client.removeConnectionListener(clientListener)
     }
 }

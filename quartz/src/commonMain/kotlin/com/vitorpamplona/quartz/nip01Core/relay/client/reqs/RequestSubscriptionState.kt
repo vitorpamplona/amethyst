@@ -80,7 +80,7 @@ class RequestSubscriptionState<T> {
         lastKnownFilterStates[reference] = filters
     }
 
-    fun onCloseReq(reference: T) {
+    fun onSubscriptionClosed(reference: T) {
         subStates[reference] = ReqSubStatus.CLOSED
         filterStates.remove(reference)
     }
