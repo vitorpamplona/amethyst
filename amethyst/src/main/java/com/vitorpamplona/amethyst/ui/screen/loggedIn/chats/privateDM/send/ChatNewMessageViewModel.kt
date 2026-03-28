@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send
 
 import android.content.Context
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
@@ -107,7 +108,6 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onStart
@@ -204,7 +204,8 @@ class ChatNewMessageViewModel :
 
     var uploadsWaitingToBeSent by mutableStateOf<List<SuccessfulUploads>>(emptyList())
 
-    override var message by mutableStateOf(TextFieldValue(""))
+    override val messageState = TextFieldState()
+    var message by mutableStateOf(TextFieldValue(""))
 
     val urlPreviews = PreviewState()
 
@@ -217,7 +218,9 @@ class ChatNewMessageViewModel :
     var emojiSuggestions: EmojiSuggestionState? = null
 
     var toUsers by mutableStateOf(TextFieldValue(""))
+    val toUsersState = TextFieldState()
     var subject by mutableStateOf(TextFieldValue(""))
+    val subjectState = TextFieldState()
 
     // Invoices
     var canAddInvoice by mutableStateOf(false)
@@ -229,6 +232,7 @@ class ChatNewMessageViewModel :
     var wantsForwardZapTo by mutableStateOf(false)
     override val forwardZapTo = mutableStateOf<SplitBuilder<User>>(SplitBuilder())
     override val forwardZapToEditting = mutableStateOf(TextFieldValue(""))
+    override val forwardZapToEdittingState = TextFieldState()
 
     // NSFW, Sensitive
     var wantsToMarkAsSensitive by mutableStateOf(false)
@@ -671,7 +675,7 @@ class ChatNewMessageViewModel :
         updateMessage(TextFieldValue(message.text + " " + it))
     }
 
-    override fun updateMessage(newMessage: TextFieldValue) {
+    fun updateMessage(newMessage: TextFieldValue) {
         message = newMessage
         urlPreviews.update(newMessage)
 
