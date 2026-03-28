@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.FormatBold
@@ -83,7 +84,7 @@ fun MarkdownToolbar(
         Separator()
 
         // --- Lists ---
-        ToolbarIconButton(Icons.Default.FormatListBulleted, "Bullet list", state.isUnorderedList) { state.toggleUnorderedList() }
+        ToolbarIconButton(Icons.AutoMirrored.Filled.FormatListBulleted, "Bullet list", state.isUnorderedList) { state.toggleUnorderedList() }
         ToolbarIconButton(Icons.Default.FormatListNumbered, "Numbered list", state.isOrderedList) { state.toggleOrderedList() }
         ToolbarIconButton(Icons.Default.Checklist, "Task list", state.isTaskList) { state.toggleTaskList() }
 

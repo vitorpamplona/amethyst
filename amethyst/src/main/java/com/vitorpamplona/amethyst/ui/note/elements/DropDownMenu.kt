@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.note.elements
 
 import android.content.Intent
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.PlaylistAdd
 import androidx.compose.material.icons.outlined.Bookmark
 import androidx.compose.material.icons.outlined.BookmarkAdd
 import androidx.compose.material.icons.outlined.BookmarkRemove
@@ -185,7 +186,7 @@ fun NoteDropDownMenu(
                     onDismiss()
                 }
             }
-            M3ActionRow(icon = Icons.Outlined.PlaylistAdd, text = stringRes(R.string.follow_set_add_author_from_note_action)) {
+            M3ActionRow(icon = Icons.AutoMirrored.Outlined.PlaylistAdd, text = stringRes(R.string.follow_set_add_author_from_note_action)) {
                 val authorHexKey = note.author?.pubkeyHex ?: return@M3ActionRow
                 nav.nav(Route.PeopleListManagement(authorHexKey))
                 onDismiss()

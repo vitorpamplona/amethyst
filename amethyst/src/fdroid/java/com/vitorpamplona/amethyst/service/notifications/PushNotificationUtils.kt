@@ -35,7 +35,7 @@ object PushNotificationUtils {
         accounts: List<AccountInfo>,
         okHttpClient: (String) -> OkHttpClient,
     ) = with(Dispatchers.IO) {
-        if (!pushHandler.savedDistributorExists()) return
+        if (!pushHandler.savedDistributorExists()) return@with
 
         val currentDistributor = PushDistributorHandler.getSavedDistributor()
         PushDistributorHandler.saveDistributor(currentDistributor)

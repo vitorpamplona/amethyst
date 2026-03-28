@@ -42,6 +42,7 @@ open class GenericRelayListCache<T : PrivateTagArrayEvent>(
 
     suspend fun relays(event: T) = cachedPrivateLists.mergeTagList(event).relaySet()
 
+    @Suppress("UNCHECKED_CAST")
     fun fastStartValueForRelayList(note: Note): RelayListCard {
         val noteEvent = note.event as? T
         return if (noteEvent != null) {
@@ -52,6 +53,7 @@ open class GenericRelayListCache<T : PrivateTagArrayEvent>(
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
+    @Suppress("UNCHECKED_CAST")
     fun observeDecryptedRelayList(note: Note): Flow<RelayListCard> =
         note
             .flow()
