@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.quartz.utils
 
-actual class BigDecimal internal constructor(
-    private val value: String,
+actual class BigDecimal actual constructor(
+    strVal: String,
 ) : Number() {
-    actual constructor(strVal: String) : this(strVal.trim())
+    private val value: String = strVal.trim()
 
     actual constructor(doubleVal: Double) : this(doubleVal.toBigDecimalString())
 
@@ -62,7 +62,7 @@ actual class BigDecimal internal constructor(
 
     override fun toFloat(): Float = value.toFloat()
 
-    override fun equals(other: Any?): Boolean = (this === other) || value == (other as? BigDecimal)?.value
+    override fun equals(other: Any?): Boolean = (this === other) || (other is BigDecimal && value == other.value)
 
     override fun hashCode(): Int = value.hashCode()
 
