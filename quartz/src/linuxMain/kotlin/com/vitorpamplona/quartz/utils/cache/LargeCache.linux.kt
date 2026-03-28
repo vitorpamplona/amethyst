@@ -65,7 +65,7 @@ actual class LargeCache<K, V> : ICacheOperations<K, V> {
 
     actual fun getOrCreate(
         key: K,
-        builder: (K) -> V,
+        builder: (key: K) -> V,
     ): V {
         val existing = get(key)
         if (existing != null) return existing
@@ -76,7 +76,7 @@ actual class LargeCache<K, V> : ICacheOperations<K, V> {
 
     actual fun createIfAbsent(
         key: K,
-        builder: (K) -> V,
+        builder: (key: K) -> V,
     ): Boolean {
         val existing = get(key)
         if (existing != null) return false

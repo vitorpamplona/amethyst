@@ -56,7 +56,7 @@ actual class LargeCache<K, V> : ICacheOperations<K, V> {
 
     actual fun getOrCreate(
         key: K,
-        builder: (K) -> V,
+        builder: (key: K) -> V,
     ): V {
         val value = concurrentMap.get(key)
 
@@ -71,7 +71,7 @@ actual class LargeCache<K, V> : ICacheOperations<K, V> {
 
     actual fun createIfAbsent(
         key: K,
-        builder: (K) -> V,
+        builder: (key: K) -> V,
     ): Boolean =
         runBlocking {
             val value = concurrentMap.get(key)

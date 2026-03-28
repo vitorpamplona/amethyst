@@ -543,6 +543,7 @@ fun RelayInformationBody(
 // Active subscriptions + outbox display
 // ---------------------------------------------------------------------------
 
+@Suppress("DEPRECATION")
 fun kindDisplayName(kind: Int): Int =
     when (kind) {
         AdvertisedRelayListEvent.KIND -> R.string.kind_outbox_relays
