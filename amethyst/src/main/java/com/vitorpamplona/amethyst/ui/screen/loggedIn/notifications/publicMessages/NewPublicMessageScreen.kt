@@ -211,7 +211,7 @@ fun PublicMessageScreenContent(
                     }
                 }
 
-                MessageFieldRow(postViewModel, accountViewModel, postViewModel.toUsers.text.isNotBlank())
+                MessageFieldRow(postViewModel, accountViewModel, postViewModel.toUsersState.text.isNotBlank())
 
                 DisplayPreviews(postViewModel.urlPreviews, accountViewModel, nav)
 
@@ -395,7 +395,7 @@ fun SendDirectMessageTo(
     val keyboardController = LocalSoftwareKeyboardController.current
 
     LaunchedEffect(Unit) {
-        if (postViewModel.toUsers.text.isBlank()) {
+        if (postViewModel.toUsersState.text.isBlank()) {
             launch {
                 delay(200)
                 focusRequester.requestFocus()
