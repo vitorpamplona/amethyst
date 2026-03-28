@@ -54,6 +54,7 @@ class Nip86Retriever(
                 .Builder()
                 .url(client.httpUrl)
                 .header("Content-Type", "application/nostr+json+rpc")
+                .header("Accept", "application/nostr+json+rpc")
                 .header("Authorization", authToken)
                 .post(bodyBytes.toRequestBody(CONTENT_TYPE))
                 .build()
@@ -73,7 +74,7 @@ class Nip86Retriever(
                             client.parseResponse(body)
                         } catch (e: Exception) {
                             if (e is CancellationException) throw e
-                            Log.e("Nip86Retriever", "Failed to parse response: $body", e)
+                            Log.e("Nip86Retriever", "Failed to parse response ${client.httpUrl}: $body", e)
                             Nip86Response(error = "Failed to parse response: ${e.message}")
                         }
                     }

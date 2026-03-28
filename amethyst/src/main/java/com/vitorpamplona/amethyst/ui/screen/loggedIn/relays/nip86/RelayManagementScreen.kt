@@ -128,7 +128,7 @@ fun RelayManagementScreen(
         remember(relay) {
             RelayManagementViewModel(
                 relayUrl = relay,
-                signer = accountViewModel.account.signer,
+                account = accountViewModel.account,
                 retriever = retriever,
             )
         }
