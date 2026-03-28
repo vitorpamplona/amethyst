@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.datasource.subassemb
 
 import com.vitorpamplona.amethyst.model.topNavFeeds.global.GlobalTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
@@ -40,7 +41,7 @@ fun filterPollsGlobal(
             relay = it.key,
             filter =
                 Filter(
-                    kinds = listOf(PollEvent.KIND),
+                    kinds = listOf(PollEvent.KIND, ZapPollEvent.KIND),
                     limit = 200,
                     since = since,
                 ),

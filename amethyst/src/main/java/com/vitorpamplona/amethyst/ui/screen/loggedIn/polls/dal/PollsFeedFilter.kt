@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.model.filterIntoSet
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
+import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 
 class PollsFeedFilter(
@@ -52,7 +53,7 @@ class PollsFeedFilter(
         val notes =
             LocalCache.notes.filterIntoSet { _, it ->
                 val noteEvent = it.event
-                noteEvent is PollEvent && params.match(noteEvent, it.relays)
+                (noteEvent is PollEvent || noteEvent is ZapPollEvent) && params.match(noteEvent, it.relays)
             }
         return sort(notes)
     }

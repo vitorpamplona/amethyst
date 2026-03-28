@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.datasource
 
+import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountFeedContentStates
@@ -32,6 +33,7 @@ class PollsQueryState(
     val scope: CoroutineScope,
 )
 
+@Stable
 class PollsFilterAssembler(
     client: INostrClient,
 ) : ComposeSubscriptionManager<PollsQueryState>() {

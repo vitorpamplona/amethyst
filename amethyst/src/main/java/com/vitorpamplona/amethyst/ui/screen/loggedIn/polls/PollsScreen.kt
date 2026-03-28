@@ -20,9 +20,12 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.polls
 
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
@@ -74,16 +77,18 @@ fun PollsScreen(
             }
         },
         accountViewModel = accountViewModel,
-    ) {
-        RefresheableBox(pollsFeedContentState, true) {
-            SaveableFeedContentState(pollsFeedContentState, scrollStateKey = ScrollStateKeys.POLLS_SCREEN) { listState ->
-                RenderFeedContentState(
-                    feedContentState = pollsFeedContentState,
-                    accountViewModel = accountViewModel,
-                    listState = listState,
-                    nav = nav,
-                    routeForLastRead = "PollsFeed",
-                )
+    ) { paddingValues ->
+        Column(Modifier.padding(paddingValues)) {
+            RefresheableBox(pollsFeedContentState, true) {
+                SaveableFeedContentState(pollsFeedContentState, scrollStateKey = ScrollStateKeys.POLLS_SCREEN) { listState ->
+                    RenderFeedContentState(
+                        feedContentState = pollsFeedContentState,
+                        accountViewModel = accountViewModel,
+                        listState = listState,
+                        nav = nav,
+                        routeForLastRead = "PollsFeed",
+                    )
+                }
             }
         }
     }
