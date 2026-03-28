@@ -73,7 +73,7 @@ class Nip77SerializationTest {
         val kotlinJson = KotlinSerializationMapper.toJson(msg)
         val jacksonDeserialized = JacksonMapper.fromJsonToMessage(kotlinJson)
         assertTrue(jacksonDeserialized is NegMsgMessage)
-        assertEquals(msg.subId, (jacksonDeserialized as NegMsgMessage).subId)
+        assertEquals(msg.subId, jacksonDeserialized.subId)
         assertEquals(msg.message, jacksonDeserialized.message)
     }
 
@@ -116,12 +116,12 @@ class Nip77SerializationTest {
         val jacksonJson = JacksonMapper.toJson(msg)
         val kotlinDeserialized = KotlinSerializationMapper.fromJsonToMessage(jacksonJson)
         assertTrue(kotlinDeserialized is NegErrMessage)
-        assertEquals(msg.reason, (kotlinDeserialized as NegErrMessage).reason)
+        assertEquals(msg.reason, kotlinDeserialized.reason)
 
         val kotlinJson = KotlinSerializationMapper.toJson(msg)
         val jacksonDeserialized = JacksonMapper.fromJsonToMessage(kotlinJson)
         assertTrue(jacksonDeserialized is NegErrMessage)
-        assertEquals(msg.reason, (jacksonDeserialized as NegErrMessage).reason)
+        assertEquals(msg.reason, jacksonDeserialized.reason)
     }
 
     // =========================================================================
@@ -174,7 +174,7 @@ class Nip77SerializationTest {
         val kotlinJson = KotlinSerializationMapper.toJson(cmd)
         val jacksonDeserialized = JacksonMapper.fromJsonToCommand(kotlinJson)
         assertTrue(jacksonDeserialized is NegOpenCmd)
-        assertEquals(cmd.subId, (jacksonDeserialized as NegOpenCmd).subId)
+        assertEquals(cmd.subId, jacksonDeserialized.subId)
         assertEquals(cmd.initialMessage, jacksonDeserialized.initialMessage)
     }
 

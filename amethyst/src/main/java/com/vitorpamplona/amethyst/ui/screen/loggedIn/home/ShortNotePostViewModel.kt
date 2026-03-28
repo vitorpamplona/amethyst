@@ -602,7 +602,7 @@ open class ShortNotePostViewModel :
             pollOptions[index] = tag
         }
 
-        pollType = draftEvent.pollType() ?: PollType.SINGLE_CHOICE
+        pollType = draftEvent.pollType()
         closedAt = draftEvent.endsAt() ?: TimeUtils.oneDayAhead()
 
         message = TextFieldValue(draftEvent.content)
