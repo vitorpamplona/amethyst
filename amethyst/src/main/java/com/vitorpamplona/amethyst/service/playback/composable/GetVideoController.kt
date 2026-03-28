@@ -47,7 +47,7 @@ fun GetVideoController(
                 keepPlaying = mediaItem.src.keepPlaying,
                 context = context,
             ).onEach { state ->
-                Log.d("PlaybackService", "Controller instance: ${state.controller}")
+                Log.d("PlaybackService") { "Controller instance: ${state.controller}" }
 
                 if (BackgroundMedia.isPlaying()) {
                     // There is a video playing, start this one on mute.
@@ -57,7 +57,7 @@ fun GetVideoController(
                     // There is no other video playing. Use the default mute state to
                     // decide if sound is on or not.
                     state.controller.volume = if (muted) 0f else 1f
-                    Log.d("PlaybackService", "OnEach $muted")
+                    Log.d("PlaybackService") { "OnEach $muted" }
                 }
 
                 if (play) {

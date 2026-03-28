@@ -106,7 +106,7 @@ private suspend fun checkChannelIsOnline(
                 }
             }
         } catch (e: Exception) {
-            Log.d("LiveStatusIndicator", "Network error checking channel ${channel.toBestDisplayName()}: ${e.message}")
+            Log.d("LiveStatusIndicator") { "Network error checking channel ${channel.toBestDisplayName()}: ${e.message}" }
             // Return false if any network error occurs
             false
         }

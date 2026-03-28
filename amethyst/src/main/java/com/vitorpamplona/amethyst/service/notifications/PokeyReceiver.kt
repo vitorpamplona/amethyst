@@ -69,7 +69,7 @@ class PokeyReceiver : BroadcastReceiver() {
     ) {
         if (intent.action == POKEY_ACTION) { // it's best practice to verify intent action before performing any operation
             val eventStr = intent.getStringExtra("EVENT")
-            Log.d(TAG, "New Pokey Notification Arrived $eventStr")
+            Log.d(TAG) { "New Pokey Notification Arrived $eventStr" }
 
             if (eventStr == null) return
 

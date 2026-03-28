@@ -28,7 +28,7 @@ import com.vitorpamplona.quartz.utils.LogLevel
 class Amethyst : Application() {
     init {
         Log.minLevel = if (BuildConfig.DEBUG) LogLevel.DEBUG else LogLevel.ERROR
-        Log.d("AmethystApp", "Creating App $this")
+        Log.d("AmethystApp") { "Creating App $this" }
     }
 
     companion object {
@@ -38,7 +38,7 @@ class Amethyst : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        Log.d("AmethystApp", "onCreate $this")
+        Log.d("AmethystApp") { "onCreate $this" }
         instance = AppModules(this)
 
         if (isDebug) {
@@ -50,7 +50,7 @@ class Amethyst : Application() {
 
     override fun onTerminate() {
         super.onTerminate()
-        Log.d("AmethystApp", "onTerminate $this")
+        Log.d("AmethystApp") { "onTerminate $this" }
         instance.terminate(this)
     }
 
@@ -61,7 +61,7 @@ class Amethyst : Application() {
      */
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
-        Log.d("AmethystApp", "onTrimMemory $level")
+        Log.d("AmethystApp") { "onTrimMemory $level" }
         instance.trim()
     }
 }

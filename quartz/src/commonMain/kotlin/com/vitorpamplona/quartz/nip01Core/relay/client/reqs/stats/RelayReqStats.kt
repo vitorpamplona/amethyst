@@ -51,7 +51,7 @@ class RelayReqStats(
 
     fun printStats() =
         stats.printCounter { subId, kind, counter ->
-            Log.d("RelaySubStats", "$subId, kind $kind: $counter")
+            Log.d("RelaySubStats") { "$subId, kind $kind: $counter" }
         }
 
     init {

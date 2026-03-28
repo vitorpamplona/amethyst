@@ -2582,17 +2582,17 @@ object LocalCache : ILocalCache, ICacheProvider {
     }
 
     fun cleanMemory() {
-        Log.d("LargeCache", "Notes cleanup started. Current size: ${notes.size()}")
+        Log.d("LargeCache") { "Notes cleanup started. Current size: ${notes.size()}" }
         notes.cleanUp()
-        Log.d("LargeCache", "Notes cleanup completed. Remaining size: ${notes.size()}")
+        Log.d("LargeCache") { "Notes cleanup completed. Remaining size: ${notes.size()}" }
 
-        Log.d("LargeCache", "Addressables cleanup started. Current size: ${addressables.size()}")
+        Log.d("LargeCache") { "Addressables cleanup started. Current size: ${addressables.size()}" }
         addressables.cleanUp()
-        Log.d("LargeCache", "Addressables cleanup completed. Remaining size: ${addressables.size()}")
+        Log.d("LargeCache") { "Addressables cleanup completed. Remaining size: ${addressables.size()}" }
 
-        Log.d("LargeCache", "Users cleanup started. Current size: ${users.size()}")
+        Log.d("LargeCache") { "Users cleanup started. Current size: ${users.size()}" }
         users.cleanUp()
-        Log.d("LargeCache", "Users cleanup completed. Remaining size: ${users.size()}")
+        Log.d("LargeCache") { "Users cleanup completed. Remaining size: ${users.size()}" }
     }
 
     fun cleanObservers() {
@@ -2998,7 +2998,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                     getNoteIfExists(deletionEvent.id)?.let { note ->
                         if (!note.hasRelay(relay.url)) {
                             if (isDebug) {
-                                Log.d("LocalCache", "Updating ${relay.url.url} with a Deletion Event ${event.id} ${deletionEvent.id} because of ${event.toJson()} with ${deletionEvent.toJson()}")
+                                Log.d("LocalCache") { "Updating ${relay.url.url} with a Deletion Event ${event.id} ${deletionEvent.id} because of ${event.toJson()} with ${deletionEvent.toJson()}" }
                             }
                             relay.sendIfConnected(EventCmd(deletionEvent))
                             note.addRelay(relay.url)
@@ -3015,7 +3015,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                 note.event?.let { existingEvent ->
                     if (existingEvent.createdAt > event.createdAt && !note.hasRelay(relay.url) && !deletionIndex.hasBeenDeleted(event) && !event.isExpired()) {
                         if (isDebug) {
-                            Log.d("LocalCache", "Updating ${relay.url.url} with a new version of ${event.kind} ${event.id} to ${existingEvent.id}")
+                            Log.d("LocalCache") { "Updating ${relay.url.url} with a new version of ${event.kind} ${event.id} to ${existingEvent.id}" }
                         }
 
                         relay.sendIfConnected(EventCmd(existingEvent))

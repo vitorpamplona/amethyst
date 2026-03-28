@@ -53,7 +53,7 @@ class PushMessageReceiver : MessagingReceiver() {
         instance: String,
     ) {
         val messageStr = message.content.decodeToString()
-        Log.d(TAG, "New message $messageStr for Instance: $instance")
+        Log.d(TAG) { "New message $messageStr for Instance: $instance" }
         scope.launch {
             try {
                 parseMessage(messageStr)?.let {
@@ -61,7 +61,7 @@ class PushMessageReceiver : MessagingReceiver() {
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                Log.d(TAG, "Message could not be parsed: ${e.message}")
+                Log.d(TAG) { "Message could not be parsed: ${e.message}" }
             }
         }
     }
@@ -87,7 +87,7 @@ class PushMessageReceiver : MessagingReceiver() {
     ) {
         val sanitizedEndpoint = if (endpoint.url.endsWith("?up=1")) endpoint.url.dropLast(5) else endpoint.url
         if (sanitizedEndpoint != pushHandler.getSavedEndpoint()) {
-            Log.d(TAG, "New endpoint provided:- $endpoint for Instance: $instance ${pushHandler.getSavedEndpoint()} $sanitizedEndpoint")
+            Log.d(TAG) { "New endpoint provided:- $endpoint for Instance: $instance ${pushHandler.getSavedEndpoint()} $sanitizedEndpoint" }
             pushHandler.setEndpoint(sanitizedEndpoint)
             scope.launch(Dispatchers.IO) {
                 PushNotificationUtils.checkAndInit(sanitizedEndpoint, LocalPreferences.allSavedAccounts()) {
@@ -97,7 +97,7 @@ class PushMessageReceiver : MessagingReceiver() {
                 NotificationUtils.getOrCreateDMChannel(appContext)
             }
         } else {
-            Log.d(TAG, "Same endpoint provided:- $endpoint for Instance: $instance $sanitizedEndpoint")
+            Log.d(TAG) { "Same endpoint provided:- $endpoint for Instance: $instance $sanitizedEndpoint" }
         }
     }
 
@@ -106,7 +106,7 @@ class PushMessageReceiver : MessagingReceiver() {
         reason: FailedReason,
         instance: String,
     ) {
-        Log.d(TAG, "Registration failed for Instance: $instance")
+        Log.d(TAG) { "Registration failed for Instance: $instance" }
         pushHandler.forceRemoveDistributor(context)
     }
 
@@ -115,7 +115,7 @@ class PushMessageReceiver : MessagingReceiver() {
         instance: String,
     ) {
         val removedEndpoint = pushHandler.getSavedEndpoint()
-        Log.d(TAG, "Endpoint: $removedEndpoint removed for Instance: $instance")
+        Log.d(TAG) { "Endpoint: $removedEndpoint removed for Instance: $instance" }
         Log.d(TAG, "App is unregistered. ")
         pushHandler.forceRemoveDistributor(context)
         pushHandler.removeEndpoint()

@@ -64,7 +64,7 @@ class NostrClientSubscriptionUntilEoseAsFlowTest : BaseNostrClientTest() {
             val job =
                 launch {
                     flow.collect {
-                        Log.d("ZZ", "List timestamp deltas ${it.printDates()}")
+                        Log.d("ZZ") { "List timestamp deltas ${it.printDates()}" }
                         feedStates = it
                     }
                 }
@@ -103,7 +103,7 @@ class NostrClientSubscriptionUntilEoseAsFlowTest : BaseNostrClientTest() {
             val job =
                 launch {
                     flow.debounce(100).collect {
-                        Log.d("ZZ", "List timestamp deltas ${it.printDates()}")
+                        Log.d("ZZ") { "List timestamp deltas ${it.printDates()}" }
                         feedStates = it
                     }
                 }

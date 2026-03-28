@@ -93,7 +93,7 @@ class BlockedRelayListState(
 
     init {
         settings.backupBlockedRelayList?.let {
-            Log.d("AccountRegisterObservers", "Loading saved Blocked relay list ${it.toJson()}")
+            Log.d("AccountRegisterObservers") { "Loading saved Blocked relay list ${it.toJson()}" }
             @OptIn(DelicateCoroutinesApi::class)
             scope.launch(Dispatchers.IO) { LocalCache.justConsumeMyOwnEvent(it) }
         }
@@ -101,7 +101,7 @@ class BlockedRelayListState(
         scope.launch(Dispatchers.IO) {
             Log.d("AccountRegisterObservers", "Blocked Relay List Collector Start")
             getBlockedRelayListFlow().collect {
-                Log.d("AccountRegisterObservers", "Updating Blocked Relay List for ${signer.pubKey}")
+                Log.d("AccountRegisterObservers") { "Updating Blocked Relay List for ${signer.pubKey}" }
                 (it.note.event as? BlockedRelayListEvent)?.let {
                     settings.updateBlockedRelayList(it)
                 }

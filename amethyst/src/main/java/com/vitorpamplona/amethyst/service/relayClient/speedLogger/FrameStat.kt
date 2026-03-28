@@ -57,10 +57,10 @@ class FrameStat {
     }
 
     fun log() {
-        Log.d(TAG, "Events Per Second: ${eventCount.get()}")
+        Log.d(TAG) { "Events Per Second: ${eventCount.get()}" }
         kinds.forEach { key, value ->
             if (value.count.get() > 0) {
-                Log.d(TAG, "-- Kind $key $value")
+                Log.d(TAG) { "-- Kind $key $value" }
             }
         }
     }

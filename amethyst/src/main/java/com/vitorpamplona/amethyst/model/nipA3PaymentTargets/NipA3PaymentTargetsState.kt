@@ -46,7 +46,7 @@ class NipA3PaymentTargetsState(
 
     init {
         settings.backupNipA3PaymentTargets?.let {
-            Log.d("AccountRegisterObservers", "Loading saved nipA3 Payment targets ${it.toJson()}")
+            Log.d("AccountRegisterObservers") { "Loading saved nipA3 Payment targets ${it.toJson()}" }
             @OptIn(DelicateCoroutinesApi::class)
             scope.launch(Dispatchers.IO) { cache.justConsumeMyOwnEvent(it) }
         }
@@ -54,7 +54,7 @@ class NipA3PaymentTargetsState(
         scope.launch(Dispatchers.IO) {
             Log.d("AccountRegisterObservers", "nipA3 Payment targets Collector Start")
             getNipA3PaymentTargetsFlow().collect {
-                Log.d("AccountRegisterObservers", "Updating nipA3 Payment targets for ${signer.pubKey}")
+                Log.d("AccountRegisterObservers") { "Updating nipA3 Payment targets for ${signer.pubKey}" }
                 (it.note.event as? PaymentTargetsEvent)?.let { paymentTargetsEvent ->
                     settings.updateNIPA3PaymentTargets(paymentTargetsEvent)
                 }

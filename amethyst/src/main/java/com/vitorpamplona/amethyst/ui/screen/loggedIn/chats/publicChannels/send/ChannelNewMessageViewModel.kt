@@ -663,7 +663,7 @@ open class ChannelNewMessageViewModel :
 
     override fun onCleared() {
         super.onCleared()
-        Log.d("Init", "OnCleared: ${this.javaClass.simpleName}")
+        Log.d("Init") { "OnCleared: ${this.javaClass.simpleName}" }
     }
 
     fun updateZapPercentage(

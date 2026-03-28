@@ -65,7 +65,7 @@ class AppSpecificState(
     init {
         if (settings.isWriteable()) {
             settings.backupAppSpecificData?.let { event ->
-                Log.d("AccountRegisterObservers", "Loading saved app specific data ${event.toJson()}")
+                Log.d("AccountRegisterObservers") { "Loading saved app specific data ${event.toJson()}" }
                 @OptIn(DelicateCoroutinesApi::class)
                 scope.launch(Dispatchers.IO) {
                     LocalCache.justConsumeMyOwnEvent(event)
@@ -84,7 +84,7 @@ class AppSpecificState(
                 Log.d("AccountRegisterObservers", "AppSpecificData Collector Start")
                 getAppSpecificDataFlow().collect {
                     try {
-                        Log.d("AccountRegisterObservers", "Updating AppSpecificData for ${signer.pubKey}")
+                        Log.d("AccountRegisterObservers") { "Updating AppSpecificData for ${signer.pubKey}" }
                         (it.note.event as? AppSpecificDataEvent)?.let {
                             val decrypted = signer.decrypt(it.content, it.pubKey)
                             try {

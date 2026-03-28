@@ -57,13 +57,13 @@ class RelayLogger(
                 val logTag = logTag(relay.url)
 
                 when (msg) {
-                    is EventMessage -> if (debugReceiving) Log.d(logTag, "Received: $msgStr")
-                    is EoseMessage -> if (debugReceiving) Log.d(logTag, "EOSE: ${msg.subId}")
+                    is EventMessage -> if (debugReceiving) Log.d(logTag) { "Received: $msgStr" }
+                    is EoseMessage -> if (debugReceiving) Log.d(logTag) { "EOSE: ${msg.subId}" }
                     is NoticeMessage -> Log.w(logTag, "Notice: ${msg.message}")
-                    is OkMessage -> if (debugReceiving) Log.d(logTag, "OK: ${msg.eventId} ${msg.success} ${msg.message}")
-                    is AuthMessage -> if (debugReceiving) Log.d(logTag, "Auth: ${msg.challenge}")
-                    is NotifyMessage -> if (debugReceiving) Log.d(logTag, "Notify: ${msg.message}")
-                    is CountMessage -> if (debugReceiving) Log.d(logTag, "Count: ${msg.result.count} approx: ${msg.result.approximate} hll: ${msg.result.hll != null}")
+                    is OkMessage -> if (debugReceiving) Log.d(logTag) { "OK: ${msg.eventId} ${msg.success} ${msg.message}" }
+                    is AuthMessage -> if (debugReceiving) Log.d(logTag) { "Auth: ${msg.challenge}" }
+                    is NotifyMessage -> if (debugReceiving) Log.d(logTag) { "Notify: ${msg.message}" }
+                    is CountMessage -> if (debugReceiving) Log.d(logTag) { "Count: ${msg.result.count} approx: ${msg.result.approximate} hll: ${msg.result.hll != null}" }
                     is ClosedMessage -> Log.w(logTag, "Closed: ${msg.subId} ${msg.message}")
                 }
             }
@@ -76,7 +76,7 @@ class RelayLogger(
             ) {
                 if (success) {
                     if (debugSending) {
-                        Log.d(logTag(relay.url), "Sent (${cmdStr.length} chars): $cmdStr")
+                        Log.d(logTag(relay.url)) { "Sent (${cmdStr.length} chars): $cmdStr" }
                     }
                 } else {
                     Log.e(logTag(relay.url), "Failure sending (${cmdStr.length} chars): $cmdStr")
@@ -92,7 +92,7 @@ class RelayLogger(
                 pingMillis: Int,
                 compressed: Boolean,
             ) {
-                Log.d(logTag(relay.url), "OnOpen (ping: ${pingMillis}ms${if (compressed) ", using compression" else ""})")
+                Log.d(logTag(relay.url)) { "OnOpen (ping: ${pingMillis}ms${if (compressed) ", using compression" else ""})" }
             }
 
             override fun onDisconnected(relay: IRelayClient) {

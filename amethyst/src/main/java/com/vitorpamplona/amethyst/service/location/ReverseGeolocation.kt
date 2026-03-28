@@ -53,7 +53,7 @@ class ReverseGeolocation {
             val locationCallback =
                 object : Geocoder.GeocodeListener {
                     override fun onGeocode(addresses: List<Address>) {
-                        Log.d("ReverseGeoLocation", "Found ${addresses.size} new addresses")
+                        Log.d("ReverseGeoLocation") { "Found ${addresses.size} new addresses" }
                         onReady(addresses)
                     }
 
@@ -64,7 +64,7 @@ class ReverseGeolocation {
                     }
                 }
 
-            Log.d("ReverseGeoLocation", "Execute Async $location")
+            Log.d("ReverseGeoLocation") { "Execute Async $location" }
             Geocoder(context).getFromLocation(
                 location.latitude,
                 location.longitude,
@@ -77,7 +77,7 @@ class ReverseGeolocation {
             location: Location,
             context: Context,
         ): List<Address>? {
-            Log.d("ReverseGeoLocation", "Execute Sync $location")
+            Log.d("ReverseGeoLocation") { "Execute Sync $location" }
             return try {
                 Geocoder(context).getFromLocation(
                     location.latitude,

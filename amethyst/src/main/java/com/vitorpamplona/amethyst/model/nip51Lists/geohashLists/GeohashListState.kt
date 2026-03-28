@@ -106,7 +106,7 @@ class GeohashListState(
 
     init {
         settings.backupGeohashList?.let { event ->
-            Log.d("AccountRegisterObservers", "Loading saved Geohash list ${event.toJson()}")
+            Log.d("AccountRegisterObservers") { "Loading saved Geohash list ${event.toJson()}" }
             @OptIn(DelicateCoroutinesApi::class)
             scope.launch(Dispatchers.IO) {
                 LocalCache.justConsumeMyOwnEvent(event)
@@ -116,7 +116,7 @@ class GeohashListState(
         scope.launch(Dispatchers.IO) {
             Log.d("AccountRegisterObservers", "Geohash List Collector Start")
             getGeohashListFlow().collect { noteState ->
-                Log.d("AccountRegisterObservers", "Geohash List for ${signer.pubKey}")
+                Log.d("AccountRegisterObservers") { "Geohash List for ${signer.pubKey}" }
                 (noteState.note.event as? GeohashListEvent)?.let {
                     settings.updateGeohashListTo(it)
                 }

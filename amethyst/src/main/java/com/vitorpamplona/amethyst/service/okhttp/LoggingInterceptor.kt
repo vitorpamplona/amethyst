@@ -41,7 +41,7 @@ class LoggingInterceptor : Interceptor {
         val response: Response = chain.proceed(request)
         val t2 = System.nanoTime()
 
-        Log.d("OkHttpLog", "Req $port ${request.url} in ${(t2 - t1) / 1e6}ms")
+        Log.d("OkHttpLog") { "Req $port ${request.url} in ${(t2 - t1) / 1e6}ms" }
 
         return response
     }

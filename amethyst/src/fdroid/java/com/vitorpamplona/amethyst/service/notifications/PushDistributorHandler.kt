@@ -46,7 +46,7 @@ object PushDistributorHandler : PushDistributorActions {
 
     fun setEndpoint(newEndpoint: String) {
         endpointInternal = newEndpoint
-        Log.d("PushHandler", "New endpoint saved : $endpointInternal")
+        Log.d("PushHandler") { "New endpoint saved : $endpointInternal" }
     }
 
     fun removeEndpoint() {

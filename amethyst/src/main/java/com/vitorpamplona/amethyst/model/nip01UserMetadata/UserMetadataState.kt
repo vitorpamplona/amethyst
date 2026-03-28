@@ -132,7 +132,7 @@ class UserMetadataState(
 
     init {
         settings.backupUserMetadata?.let {
-            Log.d("AccountRegisterObservers", "Loading saved user metadata ${it.toJson()}")
+            Log.d("AccountRegisterObservers") { "Loading saved user metadata ${it.toJson()}" }
 
             @OptIn(DelicateCoroutinesApi::class)
             scope.launch(Dispatchers.IO) { LocalCache.justConsumeMyOwnEvent(it) }
@@ -142,7 +142,7 @@ class UserMetadataState(
         scope.launch(Dispatchers.IO) {
             Log.d("AccountRegisterObservers", "Kind 0 Collector Start")
             getUserMetadataFlow().collect {
-                Log.d("AccountRegisterObservers", "Updating Kind 0 ${user.toBestDisplayName()}")
+                Log.d("AccountRegisterObservers") { "Updating Kind 0 ${user.toBestDisplayName()}" }
                 (it.note.event as? MetadataEvent)?.let {
                     settings.updateUserMetadata(it)
                 }

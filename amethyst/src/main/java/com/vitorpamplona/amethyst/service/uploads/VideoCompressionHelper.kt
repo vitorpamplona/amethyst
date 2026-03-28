@@ -98,7 +98,7 @@ data class CompressionRule(
         val codecMultiplier = if (useH265) 0.75f else 1.0f
         val finalMultiplier = framerateMultiplier * codecMultiplier
 
-        Log.d("VideoCompressionHelper", "framerate: $framerate, useH265: $useH265, Bitrate multiplier: $finalMultiplier")
+        Log.d("VideoCompressionHelper") { "framerate: $framerate, useH265: $useH265, Bitrate multiplier: $finalMultiplier" }
 
         return (bitrateMbps * finalMultiplier * MBPS_TO_BPS_MULTIPLIER).toInt()
     }
@@ -162,13 +162,12 @@ object VideoCompressionHelper {
                         .getValue(info.resolution.getStandard())
 
                 val bitrateBps = rule.getBitrateBps(info.framerate, useH265)
-                Log.d(LOG_TAG, "Bitrate: ${bitrateBps}bps for ${info.resolution.getStandard()} quality=$mediaQuality framerate=${info.framerate}fps useH265=$useH265.")
+                Log.d(LOG_TAG) { "Bitrate: ${bitrateBps}bps for ${info.resolution.getStandard()} quality=$mediaQuality framerate=${info.framerate}fps useH265=$useH265." }
 
-                Log.d(
-                    LOG_TAG,
+                Log.d(LOG_TAG) {
                     "Resizer: ${info.resolution.width}x${info.resolution.height} -> " +
-                        "shortSide=${rule.shortSide} (${rule.description})",
-                )
+                        "shortSide=${rule.shortSide} (${rule.description})"
+                }
                 val resizer = VideoResizer.limitShortSide(rule.shortSide.toDouble())
 
                 Pair(bitrateBps, resizer)
@@ -258,11 +257,10 @@ object VideoCompressionHelper {
                                         )
                                     }
 
-                                    Log.d(
-                                        LOG_TAG,
+                                    Log.d(LOG_TAG) {
                                         "Compression success: Original [$originalSize] -> " +
-                                            "Compressed [$size] ($reductionPercent% reduction)",
-                                    )
+                                            "Compressed [$size] ($reductionPercent% reduction)"
+                                    }
 
                                     if (continuation.isActive) {
                                         continuation.resume(

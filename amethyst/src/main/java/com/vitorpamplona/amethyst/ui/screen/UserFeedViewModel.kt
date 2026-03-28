@@ -99,24 +99,24 @@ open class UserFeedViewModel(
     }
 
     init {
-        Log.d("Init", "${this.javaClass.simpleName}")
+        Log.d("Init") { "${this.javaClass.simpleName}" }
         viewModelScope.launch(Dispatchers.IO) {
             LocalCache.live.newEventBundles.collect { newNotes ->
-                Log.d("Rendering Metrics", "Update feeds: ${this@UserFeedViewModel.javaClass.simpleName} with ${newNotes.size}")
+                Log.d("Rendering Metrics") { "Update feeds: ${this@UserFeedViewModel.javaClass.simpleName} with ${newNotes.size}" }
                 invalidateData()
             }
         }
 
         viewModelScope.launch(Dispatchers.IO) {
             LocalCache.live.deletedEventBundles.collect { newNotes ->
-                Log.d("Rendering Metrics", "Delete from feeds: ${this@UserFeedViewModel.javaClass.simpleName} with ${newNotes.size}")
+                Log.d("Rendering Metrics") { "Delete from feeds: ${this@UserFeedViewModel.javaClass.simpleName} with ${newNotes.size}" }
                 invalidateData()
             }
         }
     }
 
     override fun onCleared() {
-        Log.d("Init", "OnCleared: ${this.javaClass.simpleName}")
+        Log.d("Init") { "OnCleared: ${this.javaClass.simpleName}" }
         bundler.cancel()
         super.onCleared()
     }

@@ -174,5 +174,5 @@ private fun speak(
         .speak(message)
         .highlight()
         .onDone { Log.d("TextToSpeak", "speak: done") }
-        .onError { Log.d("TextToSpeak", "speak error: $it") }
+        .onError { Log.d("TextToSpeak") { "speak error: $it" } }
 }
