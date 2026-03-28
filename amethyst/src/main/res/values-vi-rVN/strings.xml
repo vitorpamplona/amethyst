@@ -13,4 +13,6 @@
     <string name="thank_you_so_much">Cảm ơn rất nhiều!</string>
     <!-- Kind display names for relay subscription filter chips -->
     <!-- M3 Action Dialog titles -->
+    <!-- NIP-75 Zap Goals -->
+    <!-- NIP-86 Relay Management -->
 </resources>

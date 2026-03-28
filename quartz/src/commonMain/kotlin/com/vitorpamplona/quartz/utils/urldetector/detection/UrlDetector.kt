@@ -253,6 +253,7 @@ class UrlDetector(
                 }
 
                 val backtrackOnFail: Int = reader.position - buffer.length + length
+
                 if (!readDomainName(buffer.substring(length))) {
                     // go back to length location and restart search
                     reader.seek(backtrackOnFail)
@@ -430,7 +431,7 @@ class UrlDetector(
             }
         }
 
-        if (rollback) {
+        if (rollback || !done) {
             // got to here, so there is no username and password. (We didn't find a @)
             val distance: Int = buffer.length - start
             buffer.deleteRange(start, buffer.length)
