@@ -37,15 +37,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.autofill.AutofillNode
-import androidx.compose.ui.autofill.AutofillType
-import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.layout.boundsInWindow
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalAutofill
-import androidx.compose.ui.platform.LocalAutofillTree
+import androidx.compose.ui.autofill.ContentType
+import androidx.compose.ui.semantics.contentType
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -58,7 +53,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.SimpleQrCodeScanner
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
-@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun KeyTextField(
     value: TextFieldValue,
@@ -69,36 +63,10 @@ fun KeyTextField(
 
     var showCharsKey by remember { mutableStateOf(false) }
 
-    val autofillNodeKey =
-        AutofillNode(
-            autofillTypes = listOf(AutofillType.Password),
-            onFill = { onValueChange(TextFieldValue(it), false) },
-        )
-
-    val autofillNodePassword =
-        AutofillNode(
-            autofillTypes = listOf(AutofillType.Password),
-            onFill = { onValueChange(TextFieldValue(it), false) },
-        )
-
-    val autofill = LocalAutofill.current
-    LocalAutofillTree.current += autofillNodeKey
-    LocalAutofillTree.current += autofillNodePassword
-
     OutlinedTextField(
         modifier =
             Modifier
-                .onGloballyPositioned { coordinates ->
-                    autofillNodeKey.boundingBox = coordinates.boundsInWindow()
-                }.onFocusChanged { focusState ->
-                    autofill?.run {
-                        if (focusState.isFocused) {
-                            requestAutofillForNode(autofillNodeKey)
-                        } else {
-                            cancelAutofillForNode(autofillNodeKey)
-                        }
-                    }
-                },
+                .semantics { contentType = ContentType.Password },
         value = value,
         onValueChange = { onValueChange(it, false) },
         keyboardOptions =

@@ -53,19 +53,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.autofill.AutofillNode
-import androidx.compose.ui.autofill.AutofillType
+import androidx.compose.ui.autofill.ContentType
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.boundsInWindow
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalAutofill
-import androidx.compose.ui.platform.LocalAutofillTree
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentType
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -285,7 +280,6 @@ private fun PasswordField(loginViewModel: LoginViewModel) {
     }
 }
 
-@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun PasswordField(
     value: TextFieldValue,
@@ -293,38 +287,12 @@ fun PasswordField(
     passwordFocusRequester: FocusRequester,
     onGo: () -> Unit,
 ) {
-    val autofillNodeKey =
-        AutofillNode(
-            autofillTypes = listOf(AutofillType.Password),
-            onFill = { onValueChange(TextFieldValue(it)) },
-        )
-
-    val autofillNodePassword =
-        AutofillNode(
-            autofillTypes = listOf(AutofillType.Password),
-            onFill = { onValueChange(TextFieldValue(it)) },
-        )
-
-    val autofill = LocalAutofill.current
-    LocalAutofillTree.current += autofillNodeKey
-    LocalAutofillTree.current += autofillNodePassword
-
     var showCharsPassword by remember { mutableStateOf(false) }
     OutlinedTextField(
         modifier =
             Modifier
                 .focusRequester(passwordFocusRequester)
-                .onGloballyPositioned { coordinates ->
-                    autofillNodePassword.boundingBox = coordinates.boundsInWindow()
-                }.onFocusChanged { focusState ->
-                    autofill?.run {
-                        if (focusState.isFocused) {
-                            requestAutofillForNode(autofillNodePassword)
-                        } else {
-                            cancelAutofillForNode(autofillNodePassword)
-                        }
-                    }
-                },
+                .semantics { contentType = ContentType.Password },
         value = value,
         onValueChange = onValueChange,
         keyboardOptions =

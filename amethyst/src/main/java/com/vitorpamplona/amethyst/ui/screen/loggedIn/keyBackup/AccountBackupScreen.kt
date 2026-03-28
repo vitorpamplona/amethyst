@@ -61,18 +61,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.autofill.AutofillNode
-import androidx.compose.ui.autofill.AutofillType
-import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.layout.boundsInWindow
-import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.autofill.ContentType
 import androidx.compose.ui.platform.ClipboardManager
-import androidx.compose.ui.platform.LocalAutofill
-import androidx.compose.ui.platform.LocalAutofillTree
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentType
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -112,7 +107,6 @@ import com.vitorpamplona.quartz.nip49PrivKeyEnc.Nip49
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun AccountBackupScreen(
     accountViewModel: AccountViewModel,
@@ -131,7 +125,7 @@ fun AccountBackupScreenPreview() {
     }
 }
 
-@OptIn(ExperimentalComposeUiApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AccountBackupScreenContent(
     accountViewModel: AccountViewModel,
@@ -199,30 +193,12 @@ private fun AccountBackupScreenContent(
             var errorMessage by remember { mutableStateOf("") }
             var showCharsPassword by remember { mutableStateOf(false) }
 
-            val autofillNode =
-                AutofillNode(
-                    autofillTypes = listOf(AutofillType.Password),
-                    onFill = { password.value = TextFieldValue(it) },
-                )
-            val autofill = LocalAutofill.current
-            LocalAutofillTree.current += autofillNode
-
             Spacer(modifier = Modifier.height(20.dp))
 
             OutlinedTextField(
                 modifier =
                     Modifier
-                        .onGloballyPositioned { coordinates ->
-                            autofillNode.boundingBox = coordinates.boundsInWindow()
-                        }.onFocusChanged { focusState ->
-                            autofill?.run {
-                                if (focusState.isFocused) {
-                                    requestAutofillForNode(autofillNode)
-                                } else {
-                                    cancelAutofillForNode(autofillNode)
-                                }
-                            }
-                        },
+                        .semantics { contentType = ContentType.Password },
                 value = password.value,
                 onValueChange = {
                     password.value = it
