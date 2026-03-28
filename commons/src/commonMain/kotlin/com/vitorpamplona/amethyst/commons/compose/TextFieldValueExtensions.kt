@@ -20,10 +20,90 @@
  */
 package com.vitorpamplona.amethyst.commons.compose
 
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import kotlin.math.max
 import kotlin.math.min
+
+// ── TextFieldState extensions (new BasicTextField) ──────────────────────────────────────────
+
+fun TextFieldState.updateText(newText: String) {
+    edit {
+        replace(0, length, newText)
+        placeCursorBeforeCharAt(length)
+    }
+}
+
+fun TextFieldState.insertUrlAtCursor(url: String) {
+    edit {
+        var toInsert = url.trim()
+        val text = toString()
+        val selStart = selection.start
+        val selEnd = selection.end
+
+        if (selStart > 0 && text[selStart - 1] != ' ' && text[selStart - 1] != '\n') {
+            toInsert = " $toInsert"
+        }
+
+        val endOfUrlIndex = selStart + toInsert.length
+
+        if (selEnd < text.length && text[selEnd] != ' ' && text[selEnd] != '\n') {
+            toInsert = "$toInsert "
+        }
+
+        replace(selStart, selEnd, toInsert)
+        placeCursorBeforeCharAt(endOfUrlIndex)
+    }
+}
+
+fun TextFieldState.replaceCurrentWord(wordToInsert: String) {
+    edit {
+        val text = toString()
+        val lastWordStart = currentWordStartIdx(text, selection.start)
+        val lastWordEnd = currentWordEndIdx(text, selection.start, selection.end)
+        val cursor = lastWordStart + wordToInsert.length
+        replace(lastWordStart, lastWordEnd, wordToInsert)
+        placeCursorBeforeCharAt(cursor)
+    }
+}
+
+fun TextFieldState.currentWord(): String {
+    var result = ""
+    edit {
+        if (selection.end != selection.start) return@edit
+        val str = toString()
+        val start = currentWordStartIdx(str, selection.start)
+        val end = currentWordEndIdx(str, selection.start, selection.end)
+        result = if (start < end) str.substring(start, end) else ""
+    }
+    return result
+}
+
+private fun currentWordStartIdx(
+    text: String,
+    selectionStart: Int,
+): Int {
+    val previousNewLine = text.lastIndexOf('\n', selectionStart - 1)
+    val previousSpace = text.lastIndexOf(' ', selectionStart - 1)
+    return max(previousNewLine, previousSpace) + 1
+}
+
+private fun currentWordEndIdx(
+    text: String,
+    selectionStart: Int,
+    selectionEnd: Int,
+): Int {
+    val nextNewLine = text.indexOf('\n', selectionEnd)
+    val nextSpace = text.indexOf(' ', selectionEnd)
+
+    if (nextSpace < 0 && nextNewLine < 0) return selectionEnd
+    if (nextSpace > 0 && nextNewLine > 0) return min(nextNewLine, nextSpace)
+    if (nextSpace > 0) return nextSpace
+    return nextNewLine
+}
+
+// ── TextFieldValue extensions (legacy) ──────────────────────────────────────────────
 
 fun TextFieldValue.insertUrlAtCursor(url: String): TextFieldValue {
     var toInsert = url.trim()

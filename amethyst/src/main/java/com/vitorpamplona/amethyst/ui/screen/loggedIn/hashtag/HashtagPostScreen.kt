@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
@@ -67,7 +66,7 @@ fun HashtagPostScreen(
             postViewModel.quote(it)
         }
         message?.ifBlank { null }?.let {
-            postViewModel.updateMessage(TextFieldValue(it))
+            postViewModel.updateMessage(it)
         }
         attachment?.ifBlank { null }?.toUri()?.let {
             withContext(Dispatchers.IO) {
