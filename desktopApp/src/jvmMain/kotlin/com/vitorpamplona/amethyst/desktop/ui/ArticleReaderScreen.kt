@@ -80,6 +80,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
+import com.vitorpamplona.amethyst.desktop.getText
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.service.highlights.DesktopHighlightStore
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
@@ -99,6 +100,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import kotlinx.coroutines.launch
+import java.awt.SystemColor.text
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -573,19 +575,26 @@ fun ArticleReaderScreen(
                                     ) {
                                         HighlightContextMenuRepresentation(
                                             delegate = defaultRepresentation,
-                                            clipboardManager = clipboardManager,
-                                            onHighlight = { text ->
+                                            onHighlight = {
                                                 scope.launch {
-                                                    highlightStore?.addHighlight(
-                                                        articleAddressTag = addressTag,
-                                                        text = text,
-                                                        note = null,
-                                                        articleTitle = title,
-                                                    )
+                                                    val text = clipboardManager.getText()
+                                                    if (!text.isNullOrBlank()) {
+                                                        highlightStore?.addHighlight(
+                                                            articleAddressTag = addressTag,
+                                                            text = text,
+                                                            note = null,
+                                                            articleTitle = title,
+                                                        )
+                                                    }
                                                 }
                                             },
-                                            onHighlightWithNote = { text ->
-                                                showAnnotationDialog = text
+                                            onHighlightWithNote = {
+                                                scope.launch {
+                                                    val text = clipboardManager.getText()
+                                                    if (!text.isNullOrBlank()) {
+                                                        showAnnotationDialog = text
+                                                    }
+                                                }
                                             },
                                         )
                                     }
@@ -695,9 +704,8 @@ fun ArticleReaderScreen(
  */
 private class HighlightContextMenuRepresentation(
     private val delegate: ContextMenuRepresentation,
-    private val clipboardManager: androidx.compose.ui.platform.ClipboardManager,
-    private val onHighlight: (String) -> Unit,
-    private val onHighlightWithNote: (String) -> Unit,
+    private val onHighlight: () -> Unit,
+    private val onHighlightWithNote: () -> Unit,
 ) : ContextMenuRepresentation {
     @Composable
     override fun Representation(
@@ -713,17 +721,11 @@ private class HighlightContextMenuRepresentation(
                     listOf(
                         ContextMenuItem("Highlight") {
                             copyItem.onClick()
-                            val text = clipboardManager.getText()?.text
-                            if (!text.isNullOrBlank()) {
-                                onHighlight(text)
-                            }
+                            onHighlight()
                         },
                         ContextMenuItem("Highlight with Note") {
                             copyItem.onClick()
-                            val text = clipboardManager.getText()?.text
-                            if (!text.isNullOrBlank()) {
-                                onHighlightWithNote(text)
-                            }
+                            onHighlightWithNote()
                         },
                     )
             } else {

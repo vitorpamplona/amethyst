@@ -25,12 +25,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboard
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
+import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import kotlinx.coroutines.launch
 
 @Composable
 fun ClickableRelayUrl(
@@ -38,11 +40,16 @@ fun ClickableRelayUrl(
     nav: INav,
 ) {
     val clipboardManager = LocalClipboard.current
+    val scope = rememberCoroutineScope()
     val clickableModifier =
         remember(relayUrl) {
             Modifier
                 .combinedClickable(
-                    onLongClick = { clipboardManager.setText(AnnotatedString(relayUrl)) },
+                    onLongClick = {
+                        scope.launch {
+                            clipboardManager.setText(relayUrl)
+                        }
+                    },
                     onClick = { nav.nav(Route.RelayInfo(relayUrl)) },
                 )
         }

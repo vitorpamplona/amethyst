@@ -70,7 +70,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.vectorResource
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -80,6 +79,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeEditDraftTo
 import com.vitorpamplona.amethyst.ui.painterRes
@@ -289,8 +289,10 @@ fun CardBody(
                 label = stringRes(R.string.quick_action_copy_text),
             ) {
                 accountViewModel.decrypt(note) {
-                    clipboardManager.setText(AnnotatedString(it))
-                    showToast(R.string.copied_note_text_to_clipboard)
+                    scope.launch {
+                        clipboardManager.setText(it)
+                        showToast(R.string.copied_note_text_to_clipboard)
+                    }
                 }
 
                 onDismiss()
@@ -302,7 +304,7 @@ fun CardBody(
             ) {
                 note.author?.let {
                     scope.launch {
-                        clipboardManager.setText(AnnotatedString(it.toNostrUri()))
+                        clipboardManager.setText(it.toNostrUri())
                         showToast(R.string.copied_user_id_to_clipboard)
                         onDismiss()
                     }
@@ -314,7 +316,7 @@ fun CardBody(
                 stringRes(R.string.quick_action_copy_note_id),
             ) {
                 scope.launch {
-                    clipboardManager.setText(AnnotatedString(note.toNostrUri()))
+                    clipboardManager.setText(note.toNostrUri())
                     showToast(R.string.copied_note_id_to_clipboard)
                     onDismiss()
                 }

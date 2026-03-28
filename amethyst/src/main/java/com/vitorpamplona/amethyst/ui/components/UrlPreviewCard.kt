@@ -31,20 +31,22 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.preview.UrlInfoItem
+import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.MaxWidthWithHorzPadding
 import com.vitorpamplona.amethyst.ui.theme.innerPostModifier
 import com.vitorpamplona.amethyst.ui.theme.previewCardImageModifier
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -60,6 +62,7 @@ fun UrlPreviewCard(
 
     if (popupExpanded.value) {
         val clipboardManager = LocalClipboard.current
+        val scope = rememberCoroutineScope()
         M3ActionDialog(
             title = stringRes(R.string.link_actions_dialog_title),
             onDismiss = { popupExpanded.value = false },
@@ -69,8 +72,10 @@ fun UrlPreviewCard(
                     icon = Icons.Outlined.ContentCopy,
                     text = stringRes(R.string.copy_url_to_clipboard),
                 ) {
-                    clipboardManager.setText(AnnotatedString(url))
-                    popupExpanded.value = false
+                    scope.launch {
+                        clipboardManager.setText(url)
+                        popupExpanded.value = false
+                    }
                 }
             }
         }

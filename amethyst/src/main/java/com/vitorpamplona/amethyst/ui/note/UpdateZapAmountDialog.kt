@@ -84,6 +84,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -102,6 +103,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.ui.components.TitleExplainer
+import com.vitorpamplona.amethyst.ui.components.util.getText
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.keyBackup.getFragmentActivity
@@ -120,6 +122,7 @@ import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -149,6 +152,7 @@ fun UpdateZapAmountContent(
     val context = LocalContext.current
     val clipboardManager = LocalClipboard.current
     val uri = LocalUriHandler.current
+    val scope = rememberCoroutineScope()
 
     val zapTypes =
         listOf(
@@ -443,15 +447,17 @@ fun UpdateZapAmountContent(
             // Paste from clipboard
             IconButton(
                 onClick = {
-                    val clipText = clipboardManager.getText()?.text
-                    try {
-                        clipText?.let { postViewModel.copyFromClipboard(it) }
-                    } catch (e: IllegalArgumentException) {
-                        accountViewModel.toastManager.toast(
-                            R.string.invalid_nip47_uri_title,
-                            R.string.invalid_nip47_uri_description,
-                            clipText ?: "",
-                        )
+                    scope.launch {
+                        val clipText = clipboardManager.getText()
+                        try {
+                            clipText?.let { postViewModel.copyFromClipboard(it) }
+                        } catch (e: IllegalArgumentException) {
+                            accountViewModel.toastManager.toast(
+                                R.string.invalid_nip47_uri_title,
+                                R.string.invalid_nip47_uri_description,
+                                clipText ?: "",
+                            )
+                        }
                     }
                 },
             ) {

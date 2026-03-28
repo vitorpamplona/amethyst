@@ -63,12 +63,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.autofill.ContentType
-import androidx.compose.ui.platform.ClipboardManager
+import androidx.compose.ui.platform.Clipboard
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentType
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -87,6 +86,7 @@ import com.halilibo.richtext.ui.material3.RichText
 import com.halilibo.richtext.ui.resolveDefaults
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.note.authenticate
@@ -366,11 +366,11 @@ private fun copyNSec(
     context: Context,
     scope: CoroutineScope,
     account: Account,
-    clipboardManager: ClipboardManager,
+    clipboardManager: Clipboard,
 ) {
     account.settings.keyPair.privKey?.let {
-        clipboardManager.setText(AnnotatedString(it.toNsec()))
         scope.launch {
+            clipboardManager.setText(it.toNsec())
             Toast
                 .makeText(
                     context,
@@ -386,7 +386,7 @@ private fun encryptCopyNSec(
     context: Context,
     scope: CoroutineScope,
     accountViewModel: AccountViewModel,
-    clipboardManager: ClipboardManager,
+    clipboardManager: Clipboard,
 ) {
     if (password.value.text.isBlank()) {
         scope.launch {
@@ -401,8 +401,8 @@ private fun encryptCopyNSec(
         accountViewModel.account.settings.keyPair.privKey?.let {
             val key = runCatching { Nip49().encrypt(it.toHexKey(), password.value.text) }.getOrNull()
             if (key != null) {
-                clipboardManager.setText(AnnotatedString(key))
                 scope.launch {
+                    clipboardManager.setText(key)
                     Toast
                         .makeText(
                             context,

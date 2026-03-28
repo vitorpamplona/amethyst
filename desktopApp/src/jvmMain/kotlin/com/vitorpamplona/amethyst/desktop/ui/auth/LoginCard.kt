@@ -50,7 +50,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalClipboard
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -63,6 +62,7 @@ import com.vitorpamplona.amethyst.commons.resources.login_card_title
 import com.vitorpamplona.amethyst.commons.resources.login_generate_button
 import com.vitorpamplona.amethyst.desktop.account.LoginProgress
 import com.vitorpamplona.amethyst.desktop.account.validateBunkerUri
+import com.vitorpamplona.amethyst.desktop.setText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -318,7 +318,11 @@ private fun NostrConnectContent(
             Spacer(Modifier.height(8.dp))
 
             OutlinedButton(
-                onClick = { clipboardManager.setText(AnnotatedString(uri)) },
+                onClick = {
+                    scope.launch {
+                        clipboardManager.setText(uri)
+                    }
+                },
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text("Copy URI")
