@@ -59,7 +59,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.AnnotatedString
@@ -771,7 +771,7 @@ fun ShareMediaAction(
             title = stringRes(R.string.media_actions_dialog_title),
             onDismiss = { if (!isDownloadingVideo.value) onDismiss() },
         ) {
-            val clipboardManager = LocalClipboardManager.current
+            val clipboardManager = LocalClipboard.current
 
             // Copy & Gallery section
             if ((videoUri != null && !videoUri.startsWith("file")) || postNostrUri != null) {
