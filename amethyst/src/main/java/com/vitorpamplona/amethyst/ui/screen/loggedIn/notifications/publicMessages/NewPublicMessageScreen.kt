@@ -147,8 +147,6 @@ fun NewPublicMessageScreen(
                 titleRes = R.string.public_message,
                 isActive = postViewModel::canPost,
                 onCancel = {
-                    // uses the accountViewModel scope to avoid cancelling this
-                    // function when the postViewModel is released
                     accountViewModel.launchSigner {
                         postViewModel.sendDraftSync()
                         postViewModel.cancel()
@@ -156,8 +154,6 @@ fun NewPublicMessageScreen(
                     nav.popBack()
                 },
                 onPost = {
-                    // uses the accountViewModel scope to avoid cancelling this
-                    // function when the postViewModel is released
                     accountViewModel.launchSigner {
                         postViewModel.sendPostSync()
                         nav.popBack()
