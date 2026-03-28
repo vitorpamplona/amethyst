@@ -385,6 +385,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="bookmarks_title">Standard-Lesezeichen</string>
     <string name="bookmarks_explainer">Deine Standard-Lesezeichen, die viele Clients unterstützen</string>
     <string name="drafts">Entwürfe</string>
+    <string name="polls">Umfragen</string>
     <string name="private_bookmarks">Private Lesezeichen</string>
     <string name="public_bookmarks">Öffentliche Lesezeichen</string>
     <string name="add_to_private_bookmarks">Zu den privaten Lesezeichen hinzufügen</string>
@@ -1666,8 +1667,12 @@ anz der Bedingungen ist erforderlich</string>
     <string name="event_sync_no_events">keine Ereignisse</string>
     <string name="ots_explorer_settings">Bitcoin Explorer (OTS)</string>
     <string name="events">ereignisse</string>
+    <string name="events_from_you">Ereignisse von dir</string>
+    <string name="events_to_you">Ereignisse an dich</string>
+    <string name="searchable_events">durchsuchbare Ereignisse</string>
     <string name="dms">DMs</string>
     <string name="profiles">profile</string>
+    <string name="relay_settings_lower2">Ausgangs-Listen</string>
     <string name="relay_settings_lower">relaiseinstellungen</string>
     <string name="last_seen">Zuletzt gesehen vor %1$s</string>
     <string name="event_sync_less_than_until">&lt;%1$s</string>
@@ -1805,6 +1810,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="relay_management_ban_event">Ereignis sperren</string>
     <string name="relay_management_allow_kind">Art erlauben</string>
     <string name="relay_management_block_ip">IP blockieren</string>
+    <string name="relay_management_pubkey_hex">Öffentlicher Schlüssel (hex)</string>
     <string name="relay_management_event_id_hex">Ereignis-ID (hex)</string>
     <string name="relay_management_kind_number">Art-Nummer</string>
     <string name="relay_management_ip_address">IP-Adresse</string>

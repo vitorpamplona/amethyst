@@ -379,6 +379,7 @@
     <string name="bookmarks_title">Marcadores padrão</string>
     <string name="bookmarks_explainer">Seus marcadores padrão que muitos clientes suportam</string>
     <string name="drafts">Rascunhos</string>
+    <string name="polls">Enquetes</string>
     <string name="private_bookmarks">Itens Salvos Privados</string>
     <string name="public_bookmarks">Itens Salvos Públicos</string>
     <string name="add_to_private_bookmarks">Adicionar aos Itens Salvos Privados</string>
@@ -1661,8 +1662,12 @@
     <string name="event_sync_no_events">nenhum evento</string>
     <string name="ots_explorer_settings">Explorador Bitcoin (OTS)</string>
     <string name="events">eventos</string>
+    <string name="events_from_you">eventos de você</string>
+    <string name="events_to_you">eventos para você</string>
+    <string name="searchable_events">eventos pesquisáveis</string>
     <string name="dms">DMs</string>
     <string name="profiles">perfils</string>
+    <string name="relay_settings_lower2">listas de saída</string>
     <string name="relay_settings_lower">configurações de Relay</string>
     <string name="last_seen">Visto pela última vez há %1$s</string>
     <string name="event_sync_less_than_until">&lt;%1$s</string>
@@ -1800,6 +1805,7 @@
     <string name="relay_management_ban_event">Banir Evento</string>
     <string name="relay_management_allow_kind">Permitir Tipo</string>
     <string name="relay_management_block_ip">Bloquear IP</string>
+    <string name="relay_management_pubkey_hex">Chave pública (hex)</string>
     <string name="relay_management_event_id_hex">ID do Evento (hex)</string>
     <string name="relay_management_kind_number">Número do tipo</string>
     <string name="relay_management_ip_address">Endereço IP</string>

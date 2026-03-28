@@ -379,6 +379,7 @@
     <string name="bookmarks_title">Standardbokmärken</string>
     <string name="bookmarks_explainer">Dina standardbokmärken som många klienter stödjer</string>
     <string name="drafts">Utkast</string>
+    <string name="polls">Omröstningar</string>
     <string name="private_bookmarks">Privata Bokmärken</string>
     <string name="public_bookmarks">Publika Bokmärken</string>
     <string name="add_to_private_bookmarks">Lägg till i Privata Bokmärken</string>
@@ -1660,8 +1661,12 @@
     <string name="event_sync_no_events">inga händelser</string>
     <string name="ots_explorer_settings">Bitcoin Explorer (OTS)</string>
     <string name="events">händelser</string>
+    <string name="events_from_you">händelser från dig</string>
+    <string name="events_to_you">händelser till dig</string>
+    <string name="searchable_events">sökbara händelser</string>
     <string name="dms">DMs</string>
     <string name="profiles">profiler</string>
+    <string name="relay_settings_lower2">utgående listor</string>
     <string name="relay_settings_lower">relä inställningar</string>
     <string name="last_seen">Senast sedd för %1$s sedan</string>
     <string name="event_sync_less_than_until">&lt;%1$s</string>
@@ -1800,6 +1805,7 @@
     <string name="relay_management_ban_event">Bannlys händelse</string>
     <string name="relay_management_allow_kind">Tillåt typ</string>
     <string name="relay_management_block_ip">Blockera IP</string>
+    <string name="relay_management_pubkey_hex">Publik nyckel (hex)</string>
     <string name="relay_management_event_id_hex">Händelse-ID (hex)</string>
     <string name="relay_management_kind_number">Typnummer</string>
     <string name="relay_management_ip_address">IP-adress</string>

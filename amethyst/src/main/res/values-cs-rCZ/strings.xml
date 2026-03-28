@@ -379,6 +379,7 @@
     <string name="bookmarks_title">Výchozí záložky</string>
     <string name="bookmarks_explainer">Vaše výchozí záložky, které mnoho klientů podporuje</string>
     <string name="drafts">Koncepty</string>
+    <string name="polls">Ankety</string>
     <string name="private_bookmarks">Soukromé záložky</string>
     <string name="public_bookmarks">Veřejné záložky</string>
     <string name="add_to_private_bookmarks">Přidat do soukromých záložek</string>
@@ -1661,8 +1662,12 @@
     <string name="event_sync_no_events">žádné události</string>
     <string name="ots_explorer_settings">Průzkumník Bitcoin (OTS)</string>
     <string name="events">události</string>
+    <string name="events_from_you">události od vás</string>
+    <string name="events_to_you">události pro vás</string>
+    <string name="searchable_events">vyhledatelné události</string>
     <string name="dms">DMs</string>
     <string name="profiles">profily</string>
+    <string name="relay_settings_lower2">odchozí seznamy</string>
     <string name="relay_settings_lower">nastavení relé</string>
     <string name="last_seen">Naposledy viděn před %1$s</string>
     <string name="event_sync_less_than_until">&lt;%1$s</string>
@@ -1800,6 +1805,7 @@
     <string name="relay_management_ban_event">Zakázat událost</string>
     <string name="relay_management_allow_kind">Povolit druh</string>
     <string name="relay_management_block_ip">Blokovat IP</string>
+    <string name="relay_management_pubkey_hex">Veřejný klíč (hex)</string>
     <string name="relay_management_event_id_hex">ID události (hex)</string>
     <string name="relay_management_kind_number">Číslo druhu</string>
     <string name="relay_management_ip_address">IP adresa</string>
