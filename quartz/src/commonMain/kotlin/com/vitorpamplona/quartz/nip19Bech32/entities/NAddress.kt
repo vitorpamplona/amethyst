@@ -55,7 +55,7 @@ data class NAddress(
                     return parse(key.bechToBytes())
                 }
             } catch (e: Throwable) {
-                Log.w("NAddress", "Issue trying to Decode NIP19 $this: ${e.message}")
+                Log.w("NAddress") { "Issue trying to Decode NIP19 $this: ${e.message}" }
             }
 
             return null

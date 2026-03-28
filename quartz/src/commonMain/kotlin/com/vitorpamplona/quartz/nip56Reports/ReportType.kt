@@ -90,7 +90,7 @@ enum class ReportType(
                 "スパム \uD83D\uDCE3" -> SPAM
                 "Pourriel \uD83D\uDCE3" -> SPAM
                 "violence" -> VIOLENCE
-                else -> Log.w("ReportedEventTag", "Report type not supported: `$code` ${tag.joinToString(", ")}").let { OTHER }
+                else -> Log.w("ReportedEventTag") { "Report type not supported: `$code` ${tag.joinToString(", ")}" }.let { OTHER }
             }
     }
 }

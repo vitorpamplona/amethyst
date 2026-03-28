@@ -1931,7 +1931,7 @@ object LocalCache : ILocalCache, ICacheProvider {
         if (new) {
             val channel = checkGetOrCreatePublicChatChannel(channelId)
             if (channel == null) {
-                Log.w("LocalCache", "Unable to create public chat channel for event ${event.toJson()}")
+                Log.w("LocalCache") { "Unable to create public chat channel for event ${event.toJson()}" }
                 return false
             }
 
@@ -2019,7 +2019,7 @@ object LocalCache : ILocalCache, ICacheProvider {
             val zapRequest = event.zapRequest?.id?.let { getNoteIfExists(it) }
 
             if (zapRequest == null || zapRequest.event !is LnZapRequestEvent) {
-                Log.e("ZP", "Zap Request not found. Unable to process Zap {${event.toJson()}}")
+                Log.e("ZP") { "Zap Request not found. Unable to process Zap {${event.toJson()}}" }
                 return false
             }
 
@@ -2924,7 +2924,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                 event.checkSignature()
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                Log.w("Event Verification Failed", "Kind: ${event.kind} from ${dateFormatter(event.createdAt, "", "")} with message ${e.message}")
+                Log.w("Event Verification Failed") { "Kind: ${event.kind} from ${dateFormatter(event.createdAt, "", "")} with message ${e.message}" }
             }
             false
         } else {
@@ -3247,7 +3247,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is WebBookmarkEvent -> consume(event, relay, wasVerified)
                 is WikiNoteEvent -> consume(event, relay, wasVerified)
                 is PaymentTargetsEvent -> consume(event, relay, wasVerified)
-                else -> Log.w("Event Not Supported", "From ${relay?.url}: ${event.toJson()}").let { false }
+                else -> Log.w("Event Not Supported") { "From ${relay?.url}: ${event.toJson()}" }.let { false }
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e

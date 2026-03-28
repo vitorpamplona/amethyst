@@ -134,7 +134,7 @@ class EventProcessor(
             }
 
         if (deletedDrafts.isNotEmpty()) {
-            Log.w("EventProcessor", "Deleting ${deletedDrafts.size} draft notes")
+            Log.w("EventProcessor") { "Deleting ${deletedDrafts.size} draft notes" }
             account.delete(deletedDrafts)
         }
     }

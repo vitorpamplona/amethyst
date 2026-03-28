@@ -23,51 +23,40 @@ package com.vitorpamplona.quartz.utils
 import platform.Foundation.NSLog
 
 actual object PlatformLog {
-    actual fun w(
+    private fun log(
+        level: String,
         tag: String,
         message: String,
         throwable: Throwable?,
     ) {
         if (throwable != null) {
-            NSLog("WARN: [$tag] $message. Throwable: $throwable CAUSE ${throwable.cause}")
+            NSLog("$level: [$tag] $message. Throwable: $throwable CAUSE ${throwable.cause}")
         } else {
-            NSLog("WARN: [$tag] $message")
+            NSLog("$level: [$tag] $message")
         }
     }
+
+    actual fun w(
+        tag: String,
+        message: String,
+        throwable: Throwable?,
+    ) = log("WARN", tag, message, throwable)
 
     actual fun e(
         tag: String,
         message: String,
         throwable: Throwable?,
-    ) {
-        if (throwable != null) {
-            NSLog("ERROR: [$tag] $message. Throwable: $throwable CAUSE ${throwable.cause}")
-        } else {
-            NSLog("ERROR: [$tag] $message")
-        }
-    }
+    ) = log("ERROR", tag, message, throwable)
 
     actual fun d(
         tag: String,
         message: String,
         throwable: Throwable?,
-    ) {
-        if (throwable != null) {
-            NSLog("DEBUG: [$tag] $message. Throwable: $throwable CAUSE ${throwable.cause}")
-        } else {
-            NSLog("DEBUG: [$tag] $message")
-        }
-    }
+    ) = log("DEBUG", tag, message, throwable)
 
     actual fun i(
         tag: String,
         message: String,
         throwable: Throwable?,
-    ) {
-        if (throwable != null) {
-            NSLog("INFO: [$tag] $message. Throwable: $throwable CAUSE ${throwable.cause}")
-        } else {
-            NSLog("INFO: [$tag] $message")
-        }
-    }
+    ) = log("INFO", tag, message, throwable)
 }

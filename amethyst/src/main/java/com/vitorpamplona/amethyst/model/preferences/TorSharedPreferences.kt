@@ -106,7 +106,7 @@ class TorSharedPreferences(
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             // Log any errors that occur while reading the DataStore.
-            Log.e("SharedPreferences", "Error reading DataStore preferences: ${e.message}")
+            Log.e("SharedPreferences") { "Error reading DataStore preferences: ${e.message}" }
             null
         }
 
@@ -130,7 +130,7 @@ class TorSharedPreferences(
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             // Log any errors that occur while reading the DataStore.
-            Log.e("SharedPreferences", "Error saving DataStore preferences: ${e.message}")
+            Log.e("SharedPreferences") { "Error saving DataStore preferences: ${e.message}" }
         }
     }
 }

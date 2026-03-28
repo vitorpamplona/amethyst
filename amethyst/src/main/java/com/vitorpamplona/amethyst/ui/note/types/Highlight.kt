@@ -361,7 +361,7 @@ fun DisplayEntryForAUrl(
             try {
                 URL(url)
             } catch (_: Exception) {
-                Log.w("Note Compose", "Invalid URI: $url")
+                Log.w("Note Compose") { "Invalid URI: $url" }
                 null
             }
         }

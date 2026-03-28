@@ -58,7 +58,7 @@ class FileHeader(
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                Log.e("ImageDownload", "Couldn't download image from server: ${e.message}")
+                Log.e("ImageDownload") { "Couldn't download image from server: ${e.message}" }
                 Result.failure(e)
             }
 
@@ -76,7 +76,7 @@ class FileHeader(
                 Result.success(FileHeader(mimeType, hash, size, dim, blurHash))
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                Log.e("ImageDownload", "Couldn't convert image in to File Header: ${e.message}")
+                Log.e("ImageDownload") { "Couldn't convert image in to File Header: ${e.message}" }
                 Result.failure(e)
             }
     }

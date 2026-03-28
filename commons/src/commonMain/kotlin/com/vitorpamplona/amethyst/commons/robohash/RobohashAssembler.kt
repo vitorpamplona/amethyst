@@ -167,7 +167,7 @@ class RobohashAssembler {
             if (Hex.isHex(msg) && msg.length > 10) {
                 Hex.decode(msg)
             } else {
-                Log.w("Robohash", "$msg is not a hex")
+                Log.w("Robohash") { "$msg is not a hex" }
                 sha256(msg.toByteArray())
             }
 

@@ -96,7 +96,7 @@ object PlaybackServiceClient {
             try {
                 MediaController.releaseFuture(controllerFuture)
             } catch (e: Exception) {
-                Log.e("Playback Client", "Failed to release Playback Client for $id $videoUri ${e.message}")
+                Log.e("Playback Client") { "Failed to release Playback Client for $id $videoUri ${e.message}" }
             }
         }
     }

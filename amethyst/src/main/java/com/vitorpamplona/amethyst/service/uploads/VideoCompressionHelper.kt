@@ -233,7 +233,7 @@ object VideoCompressionHelper {
                                     // Sanity check: compression not smaller than original
                                     if (originalSize in 1..size) {
                                         if (!File(path).delete()) {
-                                            Log.w("VideoCompressionHelper", "Failed to delete compressed file: $path")
+                                            Log.w("VideoCompressionHelper") { "Failed to delete compressed file: $path" }
                                         }
                                         applicationContext.notifyUser(
                                             "Compressed file larger than original. Using original.",

@@ -59,7 +59,7 @@ class ReverseGeolocation {
 
                     override fun onError(errorMessage: String?) {
                         super.onError(errorMessage)
-                        Log.w("ReverseGeoLocation", "Failure $errorMessage")
+                        Log.w("ReverseGeoLocation") { "Failure $errorMessage" }
                         onReady(null)
                     }
                 }

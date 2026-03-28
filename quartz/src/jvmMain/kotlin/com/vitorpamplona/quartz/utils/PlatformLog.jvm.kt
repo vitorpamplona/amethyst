@@ -24,56 +24,44 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
 actual object PlatformLog {
-    // Define a formatter for the desired output format (e.g., HH:mm:ss)
-    val formatter: DateTimeFormatter? = DateTimeFormatter.ofPattern("HH:mm:ss.SSS")
+    private val formatter = DateTimeFormatter.ofPattern("HH:mm:ss.SSS")
 
-    fun time() = LocalTime.now().format(formatter)
+    private fun time() = LocalTime.now().format(formatter)
+
+    private fun log(
+        level: String,
+        tag: String,
+        message: String,
+        throwable: Throwable?,
+    ) {
+        if (throwable != null) {
+            println("${time()} $level: [$tag] $message. Throwable: ${throwable.message}")
+        } else {
+            println("${time()} $level: [$tag] $message")
+        }
+    }
 
     actual fun w(
         tag: String,
         message: String,
         throwable: Throwable?,
-    ) {
-        if (throwable != null) {
-            println("${time()} WARN : [$tag] $message. Throwable: ${throwable.message}")
-        } else {
-            println("${time()} WARN : [$tag] $message")
-        }
-    }
+    ) = log("WARN ", tag, message, throwable)
 
     actual fun e(
         tag: String,
         message: String,
         throwable: Throwable?,
-    ) {
-        if (throwable != null) {
-            println("${time()} ERROR: [$tag] $message. Throwable: ${throwable.message}")
-        } else {
-            println("${time()} ERROR: [$tag] $message")
-        }
-    }
+    ) = log("ERROR", tag, message, throwable)
 
     actual fun d(
         tag: String,
         message: String,
         throwable: Throwable?,
-    ) {
-        if (throwable != null) {
-            println("${time()} DEBUG: [$tag] $message. Throwable: ${throwable.message}")
-        } else {
-            println("${time()} DEBUG: [$tag] $message")
-        }
-    }
+    ) = log("DEBUG", tag, message, throwable)
 
     actual fun i(
         tag: String,
         message: String,
         throwable: Throwable?,
-    ) {
-        if (throwable != null) {
-            println("${time()} INFO : [$tag] $message. Throwable: ${throwable.message}")
-        } else {
-            println("${time()} INFO : [$tag] $message")
-        }
-    }
+    ) = log("INFO ", tag, message, throwable)
 }
