@@ -856,22 +856,16 @@ open class ShortNotePostViewModel :
             }
         } else if (wantsZapPoll) {
             val options = zapPollOptions.map { PollOptionTag(it.key, it.value) }
-
             if (options.isEmpty()) return null
 
-            val quotes = findNostrUris(tagger.message)
-            val relays =
-                accountViewModel.account.nip65RelayList.outboxFlow.value
-                    .toList()
-
             ZapPollEvent.build(tagger.message, options) {
+                closedAt(zapPollClosedAt)
                 zapPollValueMinimum?.let { minAmount(it) }
                 zapPollValueMaximum?.let { maxAmount(it) }
-                zapPollClosedAt?.let { closedAt(it) }
                 zapPollConsensusThreshold?.let { consensusThreshold(it / 100.0) }
 
                 pTags(tagger.directMentionsUsers.map { it.toPTag() })
-                quotes(quotes)
+                quotes(findNostrUris(tagger.message))
                 hashtags(findHashtags(tagger.message))
 
                 geoHash?.let { geohash(it) }
