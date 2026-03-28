@@ -75,6 +75,8 @@ kotlin {
         }
     }
 
+    linuxX64()
+
     // This makes sure that the resource file directory is visible for iOS tests.
     val rootDir = "${rootProject.rootDir.path}/quartz/src/commonTest/resources"
 
@@ -222,15 +224,37 @@ kotlin {
             }
         }
 
-        iosMain {
-            dependsOn(commonMain.get())
-            dependencies {
-                implementation(libs.charlietap.cachemap)
-                implementation(libs.net.thauvin.erik.urlencoder.lib)
-                implementation(libs.dev.whyoleg.cryptography.provider.apple.optimal)
-                implementation("io.github.andreypfau:kotlinx-crypto-hmac:0.0.4")
-                implementation("io.github.andreypfau:kotlinx-crypto-sha2:0.0.4")
+        // Must be defined before appleMain, linuxMain, etc.
+        val nativeMain =
+            create("nativeMain") {
+                dependsOn(commonMain.get())
             }
+
+        val nativeTest =
+            create("nativeTest") {
+                dependsOn(commonTest.get())
+            }
+
+        // Must be defined before iosMain and macosMain
+        val appleMain =
+            create("appleMain") {
+                dependsOn(nativeMain)
+                dependencies {
+                    implementation(libs.charlietap.cachemap)
+                    implementation(libs.net.thauvin.erik.urlencoder.lib)
+                    implementation(libs.dev.whyoleg.cryptography.provider.apple.optimal)
+                    implementation("io.github.andreypfau:kotlinx-crypto-hmac:0.0.4")
+                    implementation("io.github.andreypfau:kotlinx-crypto-sha2:0.0.4")
+                }
+            }
+
+        val appleTest =
+            create("appleTest") {
+                dependsOn(nativeTest)
+            }
+
+        iosMain {
+            dependsOn(appleMain)
         }
 
         val iosArm64Main by getting {
@@ -242,9 +266,7 @@ kotlin {
         }
 
         iosTest {
-            dependsOn(commonTest.get())
-            dependencies {
-            }
+            dependsOn(appleTest)
         }
 
         val iosArm64Test by getting {
@@ -253,6 +275,30 @@ kotlin {
 
         val iosSimulatorArm64Test by getting {
             dependsOn(iosTest.get())
+        }
+
+        val linuxMain =
+            create("linuxMain") {
+                dependsOn(nativeMain)
+                dependencies {
+                    implementation(libs.net.thauvin.erik.urlencoder.lib)
+                    implementation(libs.dev.whyoleg.cryptography.provider.apple.optimal)
+                    implementation("io.github.andreypfau:kotlinx-crypto-hmac:0.0.4")
+                    implementation("io.github.andreypfau:kotlinx-crypto-sha2:0.0.4")
+                }
+            }
+
+        val linuxTest =
+            create("linuxTest") {
+                dependsOn(nativeTest)
+            }
+
+        val linuxX64Main by getting {
+            dependsOn(linuxMain)
+        }
+
+        val linuxX64Test by getting {
+            dependsOn(linuxTest)
         }
     }
 }
