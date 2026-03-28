@@ -275,7 +275,7 @@ private fun ManageMediaPlayer(
             try {
                 player?.stop()
             } catch (e: IllegalStateException) {
-                Log.d("VoiceMessagePreview", "MediaPlayer stop failed (already stopped): ${e.message}")
+                Log.d("VoiceMessagePreview", "MediaPlayer stop failed (already stopped)", e)
             }
             player?.release()
             onPlayerChanged(null)

@@ -56,14 +56,24 @@ actual object PlatformLog {
     actual fun d(
         tag: String,
         message: String,
+        throwable: Throwable?,
     ) {
-        println("${time()} DEBUG: [$tag] $message")
+        if (throwable != null) {
+            println("${time()} DEBUG: [$tag] $message. Throwable: ${throwable.message}")
+        } else {
+            println("${time()} DEBUG: [$tag] $message")
+        }
     }
 
     actual fun i(
         tag: String,
         message: String,
+        throwable: Throwable?,
     ) {
-        println("${time()} INFO : [$tag] $message")
+        if (throwable != null) {
+            println("${time()} INFO : [$tag] $message. Throwable: ${throwable.message}")
+        } else {
+            println("${time()} INFO : [$tag] $message")
+        }
     }
 }

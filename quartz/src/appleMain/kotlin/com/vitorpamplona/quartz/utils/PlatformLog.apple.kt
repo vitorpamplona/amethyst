@@ -50,14 +50,24 @@ actual object PlatformLog {
     actual fun d(
         tag: String,
         message: String,
+        throwable: Throwable?,
     ) {
-        NSLog("DEBUG: [$tag] $message")
+        if (throwable != null) {
+            NSLog("DEBUG: [$tag] $message. Throwable: $throwable CAUSE ${throwable.cause}")
+        } else {
+            NSLog("DEBUG: [$tag] $message")
+        }
     }
 
     actual fun i(
         tag: String,
         message: String,
+        throwable: Throwable?,
     ) {
-        NSLog("INFO: [$tag] $message")
+        if (throwable != null) {
+            NSLog("INFO: [$tag] $message. Throwable: $throwable CAUSE ${throwable.cause}")
+        } else {
+            NSLog("INFO: [$tag] $message")
+        }
     }
 }

@@ -26,15 +26,31 @@ object Log {
     fun d(
         tag: String,
         message: String,
+        throwable: Throwable? = null,
     ) {
-        if (minLevel <= LogLevel.DEBUG) PlatformLog.d(tag, message)
+        if (minLevel <= LogLevel.DEBUG) PlatformLog.d(tag, message, throwable)
+    }
+
+    inline fun d(
+        tag: String,
+        message: () -> String,
+    ) {
+        if (minLevel <= LogLevel.DEBUG) PlatformLog.d(tag, message())
     }
 
     fun i(
         tag: String,
         message: String,
+        throwable: Throwable? = null,
     ) {
-        if (minLevel <= LogLevel.INFO) PlatformLog.i(tag, message)
+        if (minLevel <= LogLevel.INFO) PlatformLog.i(tag, message, throwable)
+    }
+
+    inline fun i(
+        tag: String,
+        message: () -> String,
+    ) {
+        if (minLevel <= LogLevel.INFO) PlatformLog.i(tag, message())
     }
 
     fun w(
@@ -45,11 +61,25 @@ object Log {
         if (minLevel <= LogLevel.WARN) PlatformLog.w(tag, message, throwable)
     }
 
+    inline fun w(
+        tag: String,
+        message: () -> String,
+    ) {
+        if (minLevel <= LogLevel.WARN) PlatformLog.w(tag, message())
+    }
+
     fun e(
         tag: String,
         message: String,
         throwable: Throwable? = null,
     ) {
         if (minLevel <= LogLevel.ERROR) PlatformLog.e(tag, message, throwable)
+    }
+
+    inline fun e(
+        tag: String,
+        message: () -> String,
+    ) {
+        if (minLevel <= LogLevel.ERROR) PlatformLog.e(tag, message())
     }
 }
