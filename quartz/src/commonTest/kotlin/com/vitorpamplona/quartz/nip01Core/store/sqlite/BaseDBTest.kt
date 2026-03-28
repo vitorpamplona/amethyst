@@ -20,8 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip01Core.store.sqlite
 
-import com.vitorpamplona.quartz.nip01Core.store.sqlite.DefaultIndexingStrategy
-import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
+import com.vitorpamplona.quartz.utils.Secp256k1Instance
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 
@@ -38,6 +37,9 @@ open class BaseDBTest {
 
     @BeforeTest
     fun setup() {
+        // Load our crypto libs
+        Secp256k1Instance
+
         val booleans = listOf(true, false)
 
         dbs = mutableMapOf<String, EventStore>()
