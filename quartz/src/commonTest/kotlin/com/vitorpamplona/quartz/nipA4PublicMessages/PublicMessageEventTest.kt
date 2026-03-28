@@ -18,11 +18,11 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.experimental.publicMessages
+package com.vitorpamplona.quartz.nipA4PublicMessages
 
-import com.vitorpamplona.quartz.experimental.publicMessages.tags.ReceiverTag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.eTag
+import com.vitorpamplona.quartz.nipA4PublicMessages.tags.ReceiverTag
 import com.vitorpamplona.quartz.utils.DeterministicSigner
 import com.vitorpamplona.quartz.utils.nsecToKeyPair
 import kotlin.test.Test

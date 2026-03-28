@@ -20,11 +20,11 @@
  */
 package com.vitorpamplona.quartz.nip57Zaps
 
-import com.vitorpamplona.quartz.experimental.publicMessages.PublicMessageEvent
-import com.vitorpamplona.quartz.experimental.publicMessages.tags.ReceiverTag
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
+import com.vitorpamplona.quartz.nipA4PublicMessages.tags.ReceiverTag
 import com.vitorpamplona.quartz.utils.DeterministicSigner
 import com.vitorpamplona.quartz.utils.nsecToKeyPair
 import kotlinx.coroutines.test.runTest
