@@ -233,8 +233,10 @@ class SearchBarViewModel(
                 val lower = term.lowercase()
 
                 val relays =
-                    listOfNotNull(relayUrl) +
-                        LocalCache.relayHints.relayDB.filter { _, relay -> relay.url.contains(lower) }
+                    (
+                        listOfNotNull(relayUrl) +
+                            LocalCache.relayHints.relayDB.filter { _, relay -> relay.url.contains(lower) }
+                    ).distinctBy { it.url }
 
                 relays
                     .map { relaySetupInfoBuilder(it) }
