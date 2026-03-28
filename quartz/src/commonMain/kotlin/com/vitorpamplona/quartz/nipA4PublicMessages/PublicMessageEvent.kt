@@ -83,6 +83,7 @@ class PublicMessageEvent(
         ) = eventTemplate(KIND, "", createdAt) {
             alt(ALT_DESCRIPTION)
             initializer()
+            remove("e") // NIP-A4: e tags must not be used
         }
 
         fun build(
@@ -94,6 +95,7 @@ class PublicMessageEvent(
             alt(ALT_DESCRIPTION)
             toUser(to)
             initializer()
+            remove("e") // NIP-A4: e tags must not be used
         }
 
         fun build(
@@ -105,6 +107,7 @@ class PublicMessageEvent(
             alt(ALT_DESCRIPTION)
             toGroup(to)
             initializer()
+            remove("e") // NIP-A4: e tags must not be used
         }
     }
 }

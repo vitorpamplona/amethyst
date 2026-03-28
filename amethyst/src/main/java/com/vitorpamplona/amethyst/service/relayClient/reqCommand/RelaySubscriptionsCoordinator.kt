@@ -37,6 +37,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.feed.datasource
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.datasource.GeoHashFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.datasource.HashtagFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.HomeFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.datasource.PollsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.datasource.UserProfileFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relay.datasource.RelayFeedFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.datasource.RelayInfoNip66FilterAssembler
@@ -62,6 +63,7 @@ class RelaySubscriptionsCoordinator(
     val chatroomList = ChatroomListFilterAssembler(client)
     val video = VideoFilterAssembler(client)
     val discovery = DiscoveryFilterAssembler(client)
+    val polls = PollsFilterAssembler(client)
 
     // loaders of content that is not yet in the device.
     // they are active when looking at events, users, channels.
@@ -95,6 +97,7 @@ class RelaySubscriptionsCoordinator(
             chatroomList,
             video,
             discovery,
+            polls,
             channelFinder,
             eventFinder,
             userFinder,

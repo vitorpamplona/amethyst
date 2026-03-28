@@ -41,6 +41,8 @@ sealed class Route {
 
     @Serializable object Notification : Route()
 
+    @Serializable object Polls : Route()
+
     @Serializable object Chess : Route()
 
     @Serializable object Wallet : Route()
