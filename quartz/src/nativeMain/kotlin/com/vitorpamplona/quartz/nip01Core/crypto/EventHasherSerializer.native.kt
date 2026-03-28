@@ -45,7 +45,6 @@ actual object EventHasherSerializer {
                 add(kind)
                 addJsonArray {
                     tags.fastForEach { tag ->
-                        // add(JsonArray(content = tag.map { JsonPrimitive(it) }))
                         addJsonArray { tag.fastForEach { add(it) } }
                     }
                 }
@@ -68,10 +67,7 @@ actual object EventHasherSerializer {
         kind: Int,
         tags: Array<Array<String>>,
         content: String,
-    ): ByteArray {
-        // Also use makeJsonObjectForId(...) above. May change this if needed(for performance).
-        return makeJsonObjectForId(pubKey, createdAt, kind, tags, content).toString().encodeToByteArray()
-    }
+    ): ByteArray = makeJsonObjectForId(pubKey, createdAt, kind, tags, content).toString().encodeToByteArray()
 
     actual fun makeJsonForIdHashAndCheck(
         id: HexKey,
@@ -81,7 +77,6 @@ actual object EventHasherSerializer {
         tags: Array<Array<String>>,
         content: String,
     ): Boolean {
-        // Also use makeJsonObjectForId(...) above. May change byteArray encode method if needed.
         val eventIdHash = sha256(makeJsonObjectForId(pubKey, createdAt, kind, tags, content).toString().encodeToByteArray())
         return Hex.isEqual(id, eventIdHash)
     }
