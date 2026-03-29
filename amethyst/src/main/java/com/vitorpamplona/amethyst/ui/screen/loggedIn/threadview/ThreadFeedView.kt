@@ -147,10 +147,12 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderAttestorProficiency
 import com.vitorpamplona.amethyst.ui.note.types.RenderAttestorRecommendation
 import com.vitorpamplona.amethyst.ui.note.types.RenderCalendarDateSlotEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderCalendarTimeSlotEvent
+import com.vitorpamplona.amethyst.ui.note.types.RenderCashuMint
 import com.vitorpamplona.amethyst.ui.note.types.RenderChannelMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderChatMessageEncryptedFile
 import com.vitorpamplona.amethyst.ui.note.types.RenderCodeSnippetHeaderForThread
 import com.vitorpamplona.amethyst.ui.note.types.RenderEmojiPack
+import com.vitorpamplona.amethyst.ui.note.types.RenderFedimint
 import com.vitorpamplona.amethyst.ui.note.types.RenderFhirResource
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitIssueEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitPatchEvent
@@ -160,6 +162,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderHighlight
 import com.vitorpamplona.amethyst.ui.note.types.RenderInteractiveStory
 import com.vitorpamplona.amethyst.ui.note.types.RenderLiveActivityChatMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderLnZap
+import com.vitorpamplona.amethyst.ui.note.types.RenderMintRecommendation
 import com.vitorpamplona.amethyst.ui.note.types.RenderPinListEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderPoll
 import com.vitorpamplona.amethyst.ui.note.types.RenderPostApproval
@@ -268,6 +271,9 @@ import com.vitorpamplona.quartz.nip72ModCommunities.communityAddress
 import com.vitorpamplona.quartz.nip72ModCommunities.isACommunityPost
 import com.vitorpamplona.quartz.nip75ZapGoals.GoalEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
+import com.vitorpamplona.quartz.nip87Ecash.cashu.CashuMintEvent
+import com.vitorpamplona.quartz.nip87Ecash.fedimint.FedimintEvent
+import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
@@ -753,6 +759,12 @@ private fun FullBleedNoteCompose(
                         accountViewModel,
                         nav,
                     )
+                } else if (noteEvent is CashuMintEvent) {
+                    RenderCashuMint(noteEvent)
+                } else if (noteEvent is FedimintEvent) {
+                    RenderFedimint(noteEvent)
+                } else if (noteEvent is MintRecommendationEvent) {
+                    RenderMintRecommendation(noteEvent)
                 } else if (noteEvent is PollEvent) {
                     RenderPoll(
                         note = baseNote,

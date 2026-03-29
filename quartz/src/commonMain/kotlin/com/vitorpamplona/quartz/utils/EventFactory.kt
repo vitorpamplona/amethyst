@@ -160,6 +160,9 @@ import com.vitorpamplona.quartz.nip85TrustedAssertions.events.EventAssertionEven
 import com.vitorpamplona.quartz.nip85TrustedAssertions.externalIds.ExternalIdAssertionEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
+import com.vitorpamplona.quartz.nip87Ecash.cashu.CashuMintEvent
+import com.vitorpamplona.quartz.nip87Ecash.fedimint.FedimintEvent
+import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
@@ -228,6 +231,7 @@ class EventFactory {
                 CalendarEvent.KIND -> CalendarEvent(id, pubKey, createdAt, tags, content, sig)
                 CalendarTimeSlotEvent.KIND -> CalendarTimeSlotEvent(id, pubKey, createdAt, tags, content, sig)
                 CalendarRSVPEvent.KIND -> CalendarRSVPEvent(id, pubKey, createdAt, tags, content, sig)
+                CashuMintEvent.KIND -> CashuMintEvent(id, pubKey, createdAt, tags, content, sig)
                 CashuMintQuoteEvent.KIND -> CashuMintQuoteEvent(id, pubKey, createdAt, tags, content, sig)
                 CashuTokenEvent.KIND -> CashuTokenEvent(id, pubKey, createdAt, tags, content, sig)
                 CashuSpendingHistoryEvent.KIND -> CashuSpendingHistoryEvent(id, pubKey, createdAt, tags, content, sig)
@@ -263,6 +267,7 @@ class EventFactory {
                 EphemeralChatEvent.KIND -> EphemeralChatEvent(id, pubKey, createdAt, tags, content, sig)
                 EphemeralChatListEvent.KIND -> EphemeralChatListEvent(id, pubKey, createdAt, tags, content, sig)
                 ExternalIdentitiesEvent.KIND -> ExternalIdentitiesEvent(id, pubKey, createdAt, tags, content, sig)
+                FedimintEvent.KIND -> FedimintEvent(id, pubKey, createdAt, tags, content, sig)
                 FileHeaderEvent.KIND -> FileHeaderEvent(id, pubKey, createdAt, tags, content, sig)
                 ProfileGalleryEntryEvent.KIND -> ProfileGalleryEntryEvent(id, pubKey, createdAt, tags, content, sig)
                 FileServersEvent.KIND -> FileServersEvent(id, pubKey, createdAt, tags, content, sig)
@@ -301,6 +306,7 @@ class EventFactory {
                 MeetingRoomEvent.KIND -> MeetingRoomEvent(id, pubKey, createdAt, tags, content, sig)
                 MeetingRoomPresenceEvent.KIND -> MeetingRoomPresenceEvent(id, pubKey, createdAt, tags, content, sig)
                 MeetingSpaceEvent.KIND -> MeetingSpaceEvent(id, pubKey, createdAt, tags, content, sig)
+                MintRecommendationEvent.KIND -> MintRecommendationEvent(id, pubKey, createdAt, tags, content, sig)
                 MetadataEvent.KIND -> MetadataEvent(id, pubKey, createdAt, tags, content, sig)
                 MuteListEvent.KIND -> MuteListEvent(id, pubKey, createdAt, tags, content, sig)
                 NNSEvent.KIND -> NNSEvent(id, pubKey, createdAt, tags, content, sig)
