@@ -49,6 +49,7 @@ fun DisappearingScaffold(
             canScroll = {
                 topBar != null && isActive() && accountViewModel.settings.isImmersiveScrollingActive()
             },
+            snapAnimationSpec = null,
             reverseLayout = isInvertedLayout,
         )
     val bottomBehavior =
@@ -56,6 +57,7 @@ fun DisappearingScaffold(
             canScroll = {
                 (bottomBar != null || floatingButton != null) && isActive() && accountViewModel.settings.isImmersiveScrollingActive()
             },
+            snapAnimationSpec = null,
         )
 
     Scaffold(
