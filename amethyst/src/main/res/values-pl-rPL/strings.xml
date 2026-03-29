@@ -1836,4 +1836,11 @@
     <string name="relay_members_join_sent">Wysłano prośbę o dołączenie</string>
     <string name="relay_members_leave_sent">Wysłano prośbę o opuszczenie</string>
     <string name="relay_members_you_are_member">Jesteś członkiem</string>
+    <string name="relay_membership_list">Lista użytkowników transmitera</string>
+    <string name="relay_member_added">Użytkownik dodany do transmitera</string>
+    <string name="relay_members_added">%1$d użytkowników dodanych do transmitera</string>
+    <string name="relay_member_removed">Użytkownik usunięty z transmitera</string>
+    <string name="relay_members_removed">%1$d użytkowników usuniętych z transmitera</string>
+    <string name="relay_join_request">Prośba o dołączenie do transmitera</string>
+    <string name="relay_leave_request">Żądanie opuszczenia transmitera</string>
 </resources>

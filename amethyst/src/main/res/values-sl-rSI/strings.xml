@@ -125,7 +125,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="description">Opis</string>
     <string name="no_description">Ne najdem opisa</string>
     <string name="about_us">"O nas… "</string>
-    <string name="what_s_on_your_mind">Kaj imaš v mislih?</string>
+    <string name="what_s_on_your_mind">O čem razmišljaš?</string>
     <string name="write_a_message">Napiši sporočilo…</string>
     <string name="post">Pošlji</string>
     <string name="save">Shrani</string>
@@ -1844,4 +1844,21 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="relay_management_relay_icon_url">URL ikone releja</string>
     <string name="relay_management_button">Upravljanje releja</string>
     <string name="manage">Upravljanje</string>
+    <string name="relay_members">Člani</string>
+    <string name="relay_members_title">Člani %1$s</string>
+    <string name="relay_members_count">%1$d člani</string>
+    <string name="relay_members_loading">Nalagam člane…</string>
+    <string name="relay_members_empty">Ne najdem članov</string>
+    <string name="relay_members_request_join">Prošnja za pridružitev</string>
+    <string name="relay_members_request_leave">Prošnja za izstop</string>
+    <string name="relay_members_join_sent">Prošnja za pridružitev je poslana</string>
+    <string name="relay_members_leave_sent">Prošnja za izstop je poslana</string>
+    <string name="relay_members_you_are_member">Vi ste član</string>
+    <string name="relay_membership_list">Članski seznam releja</string>
+    <string name="relay_member_added">Član je dodan v rele</string>
+    <string name="relay_members_added">%1$d članov dodanih v rele</string>
+    <string name="relay_member_removed">Član odstranjen iz releja</string>
+    <string name="relay_members_removed">%1$d članov odstranjenih iz releja</string>
+    <string name="relay_join_request">Prošnja za dostop do releja</string>
+    <string name="relay_leave_request">Prošnja za izstop z releja</string>
 </resources>
