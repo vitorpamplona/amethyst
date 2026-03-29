@@ -79,6 +79,12 @@ import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayList
 import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
 import com.vitorpamplona.quartz.nip39ExtIdentities.ExternalIdentitiesEvent
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
+import com.vitorpamplona.quartz.nip43RelayMembers.addMember.RelayAddMemberEvent
+import com.vitorpamplona.quartz.nip43RelayMembers.inviteRequest.RelayInviteRequestEvent
+import com.vitorpamplona.quartz.nip43RelayMembers.joinRequest.RelayJoinRequestEvent
+import com.vitorpamplona.quartz.nip43RelayMembers.leaveRequest.RelayLeaveRequestEvent
+import com.vitorpamplona.quartz.nip43RelayMembers.list.RelayMembershipListEvent
+import com.vitorpamplona.quartz.nip43RelayMembers.removeMember.RelayRemoveMemberEvent
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentRequestEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
@@ -310,6 +316,12 @@ class EventFactory {
                 EventAssertionEvent.KIND -> EventAssertionEvent(id, pubKey, createdAt, tags, content, sig)
                 AddressableAssertionEvent.KIND -> AddressableAssertionEvent(id, pubKey, createdAt, tags, content, sig)
                 ExternalIdAssertionEvent.KIND -> ExternalIdAssertionEvent(id, pubKey, createdAt, tags, content, sig)
+                RelayAddMemberEvent.KIND -> RelayAddMemberEvent(id, pubKey, createdAt, tags, content, sig)
+                RelayRemoveMemberEvent.KIND -> RelayRemoveMemberEvent(id, pubKey, createdAt, tags, content, sig)
+                RelayMembershipListEvent.KIND -> RelayMembershipListEvent(id, pubKey, createdAt, tags, content, sig)
+                RelayJoinRequestEvent.KIND -> RelayJoinRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                RelayInviteRequestEvent.KIND -> RelayInviteRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                RelayLeaveRequestEvent.KIND -> RelayLeaveRequestEvent(id, pubKey, createdAt, tags, content, sig)
                 RelayAuthEvent.KIND -> RelayAuthEvent(id, pubKey, createdAt, tags, content, sig)
                 RelayDiscoveryEvent.KIND -> RelayDiscoveryEvent(id, pubKey, createdAt, tags, content, sig)
                 RelayMonitorEvent.KIND -> RelayMonitorEvent(id, pubKey, createdAt, tags, content, sig)

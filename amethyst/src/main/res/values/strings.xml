@@ -2084,4 +2084,19 @@
     <string name="relay_management_relay_icon_url">Relay Icon URL</string>
     <string name="relay_management_button">Manage Relay</string>
     <string name="manage">Manage</string>
+    <string name="relay_members">Members</string>
+    <string name="relay_members_title">Members of %1$s</string>
+    <string name="relay_members_count">%1$d members</string>
+    <string name="relay_members_loading">Loading members…</string>
+    <string name="relay_members_empty">No members found</string>
+    <string name="relay_members_request_join">Request to Join</string>
+    <string name="relay_members_request_leave">Request to Leave</string>
+    <string name="relay_members_join_sent">Join request sent</string>
+    <string name="relay_members_leave_sent">Leave request sent</string>
+    <string name="relay_members_you_are_member">You are a member</string>
+    <string name="relay_membership_list">Relay membership list</string>
+    <string name="relay_member_added">Member added to relay</string>
+    <string name="relay_member_removed">Member removed from relay</string>
+    <string name="relay_join_request">Relay join request</string>
+    <string name="relay_leave_request">Relay leave request</string>
 </resources>

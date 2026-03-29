@@ -63,6 +63,7 @@ import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Payment
+import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Storage
@@ -1143,6 +1144,21 @@ private fun RelayHeader(
                 Text(text = stringRes(R.string.see_relay_feed))
             }
 
+            if (supportsNip43(relayInfo.supported_nips)) {
+                OutlinedButton(
+                    onClick = { nav.nav(Route.RelayMembers(relay.url)) },
+                    shape = ButtonBorder,
+                ) {
+                    Icon(
+                        Icons.Default.People,
+                        contentDescription = stringRes(R.string.relay_members),
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(text = stringRes(R.string.relay_members))
+                }
+            }
+
             if (Nip86Client.supportsNip86(relayInfo.supported_nips)) {
                 OutlinedButton(
                     onClick = { nav.nav(Route.RelayManagement(relay.url)) },
@@ -1158,6 +1174,8 @@ private fun RelayHeader(
         }
     }
 }
+
+fun supportsNip43(supportedNips: List<String>?): Boolean = supportedNips?.any { it == "43" } == true
 
 @Composable
 fun FeesCard(
