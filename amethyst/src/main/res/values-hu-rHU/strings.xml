@@ -381,6 +381,7 @@
     <string name="bookmarks_title">Alapértelmezett könyvjelzők</string>
     <string name="bookmarks_explainer">Az alapértelmezett könyvjelzők, amelyeket sok kliens támogat</string>
     <string name="drafts">Piszkozatok</string>
+    <string name="polls">Szavazások</string>
     <string name="private_bookmarks">Privát könyvjelzők</string>
     <string name="public_bookmarks">Nyilvános könyvjelzők</string>
     <string name="add_to_private_bookmarks">Hozzáadás a privát könyvjelzőkhöz</string>
@@ -733,6 +734,8 @@
     <string name="relay_monitor_requirements">Követelmények</string>
     <string name="relay_monitor_last_check">Utoljára ellenőrizve</string>
     <string name="relay_monitor_ms">%1$d ms</string>
+    <string name="relay_discovery_accepted_kinds">Elfogadott típusok</string>
+    <string name="relay_discovery_geohash">Helyszín</string>
     <string name="relay_active_subscriptions">Aktív előfizetések</string>
     <string name="relay_active_outbox">Függőben lévő kimenő események</string>
     <string name="relay_req_subscriptions">Szükséges előfizetések (%1$d)</string>
