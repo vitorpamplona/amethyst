@@ -245,95 +245,74 @@ class Url(
     }
 
     /**
-     * Removes dot segments from the given path as stated in
-     * ["RFC 3986, 5.2.4. Remove Dot Segments"](https://www.rfc-editor.org/rfc/rfc3986#section-5.2.4).
-     *
-     * @param path
-     * The path from which dot segments are to be removed.
-     *
-     * @return
-     * The path from which dot segments are removed.
+     * Removes dot segments from the given path per
+     * [RFC 3986 §5.2.4](https://www.rfc-editor.org/rfc/rfc3986#section-5.2.4).
      */
     fun removeDotSegments(path: String): String {
-        // Initialize the input with the no-appended path components and the output
-        // with the empty string.
         var input = path
-        var output = ""
+        val output = StringBuilder()
 
-        // While the input is not empty, loop the following steps.
         while (input.isNotEmpty()) {
-            // If the input begins with a prefix of "../" or "./", then
-            // remove that prefix from the input;
-            if (DOT_DOT_SLASH.find(input) != null) {
-                input = DOT_DOT_SLASH.replaceFirst(input, "")
-                continue
-            }
+            when {
+                // A: Remove leading "../" or "./"
+                input.startsWith("../") -> {
+                    input = input.substring(3)
+                }
 
-            // If the input begins with a prefix of "/./" or "/.", where
-            // "." is a complete path segment, then replace that prefix
-            // with "/" in the input.
-            if (SLASH_DOT_SLASH.find(input) != null) {
-                input = SLASH_DOT_SLASH.replaceFirst(input, "/")
-                continue
-            }
+                input.startsWith("./") -> {
+                    input = input.substring(2)
+                }
 
-            // If the input begins with a prefix of "/../" or "/..",
-            // where ".." is a complete path segment, then replace that
-            // prefix with "/" in the input and remove the last segment
-            // and its preceding "/" (if any) from the output.
-            if (SLASH_DOT_DOT_SLASH.find(input) != null) {
-                input = SLASH_DOT_DOT_SLASH.replaceFirst(input, "/")
-                output = dropLastSegment(output, true)
-                continue
-            }
+                // B: Replace leading "/./" or "/." (end) with "/"
+                input.startsWith("/./") -> {
+                    input = "/" + input.substring(3)
+                }
 
-            // If the input consists only of "." or "..", then remove
-            // that from the input.
-            if (DOT_OR_DOT_DOT.find(input) != null) {
-                input = DOT_OR_DOT_DOT.replaceFirst(input, "")
-                continue
-            }
+                input == "/." -> {
+                    input = "/"
+                }
 
-            // Move the first path segment in the input buffer to the
-            // end of the output, including the initial "/" character
-            // (if any) and any subsequent characters up to, but not
-            // including, the next "/" character or the end of the input.
-            val matchResult = MOVE_REGEX.find(input)
-            if (matchResult != null) {
-                input = matchResult.groups["remaining"]!!.value
-                output += matchResult.groups["firstsegment"]!!.value
-                continue
+                // C: Replace leading "/../" or "/.." (end) with "/" and drop last output segment
+                input.startsWith("/../") -> {
+                    input = "/" + input.substring(4)
+                    dropLastSegment(output)
+                }
+
+                input == "/.." -> {
+                    input = "/"
+                    dropLastSegment(output)
+                }
+
+                // D: Input is just "." or ".."
+                input == "." || input == ".." -> {
+                    input = ""
+                }
+
+                // E: Move the first path segment to output
+                else -> {
+                    val startIdx = if (input.startsWith("/")) 1 else 0
+                    val idx = input.indexOf('/', startIdx)
+                    val segEnd = if (idx == -1) input.length else idx
+                    output.append(input, 0, segEnd)
+                    input = input.substring(segEnd)
+                }
             }
         }
 
-        return output
+        return output.toString()
     }
 
     /**
-     * Drops the last segment (= characters after the last slash) of a path and
-     * optionally the last slash. If the path doesn't contain slash, an empty string
-     * is returned.
-     *
-     * @param path
-     * The path.
-     *
-     * @param dropLastSlash
-     * Whether or not to drop the last slash if present.
-     *
-     * @return The path from which the last segment is removed.
+     * Removes the last segment and its preceding "/" from the output buffer.
+     * For example, "/a/b" becomes "/a" and "/a" becomes "".
      */
-    fun dropLastSegment(
-        path: String,
-        dropLastSlash: Boolean,
-    ): String {
-        // The regular expression for the target.
-        val m = if (dropLastSlash) DROP_LAST_SLASH_REGEX else DROP_LAST_SEGMENT_REGEX
-
-        // Find the target. (Any inputs matches the pattern.)
-        m.find(path)
-
-        // Drop the target.
-        return m.replaceFirst(path, "")
+    private fun dropLastSegment(output: StringBuilder) {
+        val lastSlash = output.lastIndexOf('/')
+        if (lastSlash >= 0) {
+            output.delete(lastSlash, output.length)
+        } else {
+            output.clear()
+        }
     }
 
     /**
@@ -416,34 +395,6 @@ class Url(
     }
 
     companion object {
-        val DROP_LAST_SLASH_REGEX = Regex("\\/?[^/]*$")
-        val DROP_LAST_SEGMENT_REGEX = Regex("[^/]*$")
-
-        // If the input begins with a prefix of "../" or "./", then
-        // remove that prefix from the input;
-        val DOT_DOT_SLASH = Regex("^\\.?\\./")
-
-        // If the input begins with a prefix of "/./" or "/.", where
-        // "." is a complete path segment, then replace that prefix
-        // with "/" in the input.
-        val SLASH_DOT_SLASH = Regex("^\\/\\.(\\/|$)")
-
-        // If the input begins with a prefix of "/../" or "/..",
-        // where ".." is a complete path segment, then replace that
-        // prefix with "/" in the input and remove the last segment
-        // and its preceding "/" (if any) from the output.
-        val SLASH_DOT_DOT_SLASH = Regex("^\\/\\.\\.(\\/|$)")
-
-        // If the input consists only of "." or "..", then remove
-        // that from the input.
-        val DOT_OR_DOT_DOT = Regex("^\\.?\\.$")
-
-        // Move the first path segment in the input buffer to the
-        // end of the output, including the initial "/" character
-        // (if any) and any subsequent characters up to, but not
-        // including, the next "/" character or the end of the input.
-        val MOVE_REGEX = Regex("^(?<firstsegment>\\/?[^/]*)(?<remaining>.*)$")
-
         private const val DEFAULT_SCHEME = "https"
         private val SCHEME_PORT_MAP: Map<String, Int> =
             mapOf(
