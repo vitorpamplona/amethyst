@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.robohash.CachedRobohash
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.UiSettings
 import com.vitorpamplona.amethyst.model.accountsCache.AccountCacheState
 import com.vitorpamplona.amethyst.model.nip03Timestamp.IncomingOtsEventVerifier
 import com.vitorpamplona.amethyst.model.nip03Timestamp.TorAwareOkHttpOtsResolverBuilder
@@ -67,6 +68,7 @@ import com.vitorpamplona.amethyst.ui.resourceCacheInit
 import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.screen.UiSettingsState
 import com.vitorpamplona.amethyst.ui.tor.TorManager
+import com.vitorpamplona.amethyst.ui.tor.TorSettings
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
@@ -117,12 +119,14 @@ class AppModules(
     // reduces total blocking time from (torPrefs + uiPrefs) to ~max(torPrefs, uiPrefs).
     private val uiPrefsDeferred =
         applicationIOScope.async {
-            UiSharedPreferences(appContext, applicationIOScope)
+            val prefs = UiSharedPreferences.uiPreferences(appContext) ?: UiSettings()
+            UiSharedPreferences(prefs, appContext, applicationIOScope)
         }
 
     private val torPrefsDeferred =
         applicationIOScope.async {
-            TorSharedPreferences(appContext, applicationIOScope)
+            val prefs = TorSharedPreferences.torPreferences(appContext) ?: TorSettings()
+            TorSharedPreferences(prefs, appContext, applicationIOScope)
         }
 
     // Blocking load of UI Preferences to avoid theme/language blinking
