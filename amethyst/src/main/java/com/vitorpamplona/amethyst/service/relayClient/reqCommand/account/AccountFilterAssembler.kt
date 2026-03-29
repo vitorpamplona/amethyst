@@ -56,11 +56,13 @@ class AccountFilterAssembler(
     failureTracker: RelayOfflineTracker,
     scope: CoroutineScope,
 ) : ComposeSubscriptionManager<AccountQueryState>() {
+    val giftWraps = AccountGiftWrapsEoseManager(client, ::allKeys)
+
     val group =
         listOf(
             AccountMetadataEoseManager(client, ::allKeys),
             AccountFollowsLoaderSubAssembler(client, cache, scope, authenticator, failureTracker, ::allKeys),
-            AccountGiftWrapsEoseManager(client, ::allKeys),
+            giftWraps,
             AccountDraftsEoseManager(client, ::allKeys),
             AccountNotificationsEoseFromInboxRelaysManager(client, ::allKeys),
             AccountNotificationsEoseFromRandomRelaysManager(client, ::allKeys),

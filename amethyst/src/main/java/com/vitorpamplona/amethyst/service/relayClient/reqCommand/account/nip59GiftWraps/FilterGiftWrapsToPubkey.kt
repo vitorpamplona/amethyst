@@ -46,3 +46,25 @@ fun filterGiftWrapsToPubkey(
         ),
     )
 }
+
+fun filterGiftWrapsToPubkeyPaginated(
+    relay: NormalizedRelayUrl,
+    pubkey: HexKey?,
+    until: Long?,
+    limit: Int,
+): List<RelayBasedFilter> {
+    if (pubkey.isNullOrEmpty()) return emptyList()
+
+    return listOf(
+        RelayBasedFilter(
+            relay = relay,
+            filter =
+                Filter(
+                    kinds = listOf(GiftWrapEvent.KIND),
+                    tags = mapOf("p" to listOf(pubkey)),
+                    until = until,
+                    limit = limit,
+                ),
+        ),
+    )
+}
