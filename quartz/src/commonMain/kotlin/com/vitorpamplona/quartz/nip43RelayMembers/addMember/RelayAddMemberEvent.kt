@@ -39,20 +39,20 @@ class RelayAddMemberEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
-    fun memberPubKey() = tags.firstNotNullOfOrNull(PTag::parseKey)
+    fun memberPubKeys() = tags.mapNotNull(PTag::parseKey)
 
     companion object {
         const val KIND = 8000
         const val ALT_DESCRIPTION = "Relay member added"
 
         fun build(
-            memberPubKey: HexKey,
+            memberPubKeys: List<HexKey>,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<RelayAddMemberEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
             alt(ALT_DESCRIPTION)
             protect()
-            add(PTag.assemble(memberPubKey, null))
+            memberPubKeys.forEach { add(PTag.assemble(it, null)) }
             initializer()
         }
     }

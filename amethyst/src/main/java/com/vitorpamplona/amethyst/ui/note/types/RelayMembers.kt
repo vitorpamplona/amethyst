@@ -77,13 +77,19 @@ fun RenderRelayAddMember(
     nav: INav,
 ) {
     val noteEvent = baseNote.event as? RelayAddMemberEvent ?: return
-    val memberKey = remember(noteEvent) { noteEvent.memberPubKey() }
+    val memberKeys = remember(noteEvent) { noteEvent.memberPubKeys() }
+    val title =
+        if (memberKeys.size == 1) {
+            stringRes(R.string.relay_member_added)
+        } else {
+            stringRes(R.string.relay_members_added, memberKeys.size)
+        }
+    val subtitle = remember(memberKeys) { memberKeys.joinToString(", ") { it.take(16) + "..." } }
 
     RelayMemberEventCard(
         icon = Icons.Default.PersonAdd,
-        title = stringRes(R.string.relay_member_added),
-        subtitle = memberKey?.take(16)?.let { "$it..." },
-        nav = nav,
+        title = title,
+        subtitle = subtitle,
         relayPubKey = noteEvent.pubKey,
     )
 }
@@ -95,13 +101,19 @@ fun RenderRelayRemoveMember(
     nav: INav,
 ) {
     val noteEvent = baseNote.event as? RelayRemoveMemberEvent ?: return
-    val memberKey = remember(noteEvent) { noteEvent.memberPubKey() }
+    val memberKeys = remember(noteEvent) { noteEvent.memberPubKeys() }
+    val title =
+        if (memberKeys.size == 1) {
+            stringRes(R.string.relay_member_removed)
+        } else {
+            stringRes(R.string.relay_members_removed, memberKeys.size)
+        }
+    val subtitle = remember(memberKeys) { memberKeys.joinToString(", ") { it.take(16) + "..." } }
 
     RelayMemberEventCard(
         icon = Icons.Default.PersonRemove,
-        title = stringRes(R.string.relay_member_removed),
-        subtitle = memberKey?.take(16)?.let { "$it..." },
-        nav = nav,
+        title = title,
+        subtitle = subtitle,
         relayPubKey = noteEvent.pubKey,
     )
 }

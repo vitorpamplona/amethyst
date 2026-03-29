@@ -2096,7 +2096,9 @@
     <string name="relay_members_you_are_member">You are a member</string>
     <string name="relay_membership_list">Relay membership list</string>
     <string name="relay_member_added">Member added to relay</string>
+    <string name="relay_members_added">%1$d members added to relay</string>
     <string name="relay_member_removed">Member removed from relay</string>
+    <string name="relay_members_removed">%1$d members removed from relay</string>
     <string name="relay_join_request">Relay join request</string>
     <string name="relay_leave_request">Relay leave request</string>
 </resources>
