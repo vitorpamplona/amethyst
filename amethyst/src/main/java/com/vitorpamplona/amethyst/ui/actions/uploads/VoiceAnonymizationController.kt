@@ -61,7 +61,7 @@ class VoiceAnonymizationController(
         preset: VoicePreset,
         originalFile: File?,
     ) {
-        Log.d(logTag, "selectPreset called with: ${preset.name}, pitchFactor: ${preset.pitchFactor}")
+        Log.d(logTag) { "selectPreset called with: ${preset.name}, pitchFactor: ${preset.pitchFactor}" }
         if (processingPreset != null || preset == selectedPreset) return
 
         if (preset == VoicePreset.NONE) {
@@ -110,9 +110,9 @@ class VoiceAnonymizationController(
             try {
                 if (result.file.exists()) {
                     if (result.file.delete()) {
-                        Log.d(logTag, "Deleted distorted file: ${result.file.absolutePath}")
+                        Log.d(logTag) { "Deleted distorted file: ${result.file.absolutePath}" }
                     } else {
-                        Log.w(logTag, "Failed to delete distorted file: ${result.file.absolutePath}")
+                        Log.w(logTag) { "Failed to delete distorted file: ${result.file.absolutePath}" }
                     }
                 }
             } catch (e: Exception) {

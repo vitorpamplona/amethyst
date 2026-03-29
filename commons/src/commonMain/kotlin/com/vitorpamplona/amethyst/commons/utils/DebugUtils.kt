@@ -39,7 +39,7 @@ inline fun <T> logTime(
     if (isDebug) {
         val (result, elapsed) = measureTimedValue(block)
         if (elapsed.inWholeMilliseconds > minToReportMs) {
-            Log.d("DEBUG-TIME", "${elapsed.toString(DurationUnit.MILLISECONDS, 3).padStart(12)}: $debugMessage")
+            Log.d("DEBUG-TIME") { "${elapsed.toString(DurationUnit.MILLISECONDS, 3).padStart(12)}: $debugMessage" }
         }
         result
     } else {
@@ -54,7 +54,7 @@ inline fun <T> logTime(
     if (isDebug) {
         val (result, elapsed) = measureTimedValue(block)
         if (elapsed.inWholeMilliseconds > minToReportMs) {
-            Log.d("DEBUG-TIME", "${elapsed.toString(DurationUnit.MILLISECONDS, 3).padStart(12)}: ${debugMessage(result)}")
+            Log.d("DEBUG-TIME") { "${elapsed.toString(DurationUnit.MILLISECONDS, 3).padStart(12)}: ${debugMessage(result)}" }
         }
         result
     } else {

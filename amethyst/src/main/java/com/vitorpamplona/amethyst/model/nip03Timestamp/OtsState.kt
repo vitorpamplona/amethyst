@@ -55,7 +55,7 @@ class OtsState(
     }
 
     suspend fun updateAttestations(): List<OtsEvent> {
-        Log.d("Pending Attestations", "Updating ${settings.pendingAttestations.value.size} pending attestations")
+        Log.d("Pending Attestations") { "Updating ${settings.pendingAttestations.value.size} pending attestations" }
 
         return settings.pendingAttestations.value.toList().mapNotNull { (key, value) ->
             val otsState = OtsEvent.upgrade(Base64.getDecoder().decode(value), key, otsResolver())

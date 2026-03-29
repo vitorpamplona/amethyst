@@ -61,7 +61,7 @@ class LargeDBTests {
             try {
                 db.insert(event)
             } catch (e: SQLiteException) {
-                Log.w("LargeDBTests", "Error inserting event: ${e.message} for event: ${event.toJson()}")
+                Log.w("LargeDBTests") { "Error inserting event: ${e.message} for event: ${event.toJson()}" }
             }
         }
     }
@@ -72,7 +72,7 @@ class LargeDBTests {
             try {
                 db.insert(event)
             } catch (e: SQLiteException) {
-                Log.w("LargeDBTests", "Error inserting event: ${e.message} for event: ${event.toJson()}")
+                Log.w("LargeDBTests") { "Error inserting event: ${e.message} for event: ${event.toJson()}" }
             }
         }
     }

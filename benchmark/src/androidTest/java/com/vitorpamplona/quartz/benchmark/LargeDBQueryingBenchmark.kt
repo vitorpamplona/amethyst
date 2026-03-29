@@ -61,7 +61,7 @@ class LargeDBQueryingBenchmark : BaseLargeCacheBenchmark() {
             try {
                 db.insert(event)
             } catch (e: SQLiteException) {
-                Log.w("LargeDBQueryingBenchmark", "Error inserting event: ${e.message} for event: ${event.toJson()}")
+                Log.w("LargeDBQueryingBenchmark") { "Error inserting event: ${e.message} for event: ${event.toJson()}" }
             }
         }
     }

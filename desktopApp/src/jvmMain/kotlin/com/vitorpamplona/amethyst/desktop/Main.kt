@@ -101,6 +101,8 @@ import com.vitorpamplona.amethyst.desktop.ui.relay.RelayStatusCard
 import com.vitorpamplona.amethyst.desktop.ui.settings.MediaServerSettings
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
+import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.LogLevel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -158,6 +160,7 @@ sealed class DesktopScreen {
 }
 
 fun main() {
+    Log.minLevel = LogLevel.DEBUG
     DesktopImageLoaderSetup.setup()
     Runtime.getRuntime().addShutdownHook(
         Thread {

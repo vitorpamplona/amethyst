@@ -78,7 +78,7 @@ object Nip19Parser {
 
             return type!! + key
         } catch (e: Throwable) {
-            Log.e("NIP19 Parser", "Issue trying to Decode NIP19 $uri: ${e.message}")
+            Log.e("NIP19 Parser") { "Issue trying to Decode NIP19 $uri: ${e.message}" }
         }
 
         return null
@@ -98,7 +98,7 @@ object Nip19Parser {
 
             return parseComponents(type, key, additionalChars?.ifEmpty { null })
         } catch (e: Throwable) {
-            Log.e("NIP19 Parser", "Issue trying to Decode NIP19 $uri: ${e.message}")
+            Log.e("NIP19 Parser") { "Issue trying to Decode NIP19 $uri: ${e.message}" }
         }
 
         return null
@@ -127,7 +127,7 @@ object Nip19Parser {
                 ParseReturn(it, nip19, additionalChars)
             }
         } catch (e: Throwable) {
-            Log.w("NIP19 Parser", "Issue trying to Decode NIP19 $key: ${e.message}")
+            Log.w("NIP19 Parser") { "Issue trying to Decode NIP19 $key: ${e.message}" }
             null
         }
 

@@ -463,7 +463,7 @@ class CardFeedContentState(
     }
 
     fun destroy() {
-        Log.d("Init", "OnCleared: ${this.javaClass.simpleName}")
+        Log.d("Init") { "OnCleared: ${this.javaClass.simpleName}" }
         clear()
         bundlerInsert.cancel()
         bundler.cancel()

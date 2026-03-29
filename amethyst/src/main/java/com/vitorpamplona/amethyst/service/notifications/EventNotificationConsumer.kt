@@ -67,14 +67,14 @@ class EventNotificationConsumer(
         LocalPreferences.allSavedAccounts().forEach {
             if (!matchAccount && (it.hasPrivKey || it.loggedInWithExternalSigner)) {
                 LocalPreferences.loadAccountConfigFromEncryptedStorage(it.npub)?.let { acc ->
-                    Log.d(TAG, "New Notification Testing if for ${it.npub}")
+                    Log.d(TAG) { "New Notification Testing if for ${it.npub}" }
                     try {
                         val account = Amethyst.instance.accountsCache.loadAccount(acc)
                         consumeIfMatchesAccount(event, account)
                         matchAccount = true
                     } catch (e: Exception) {
                         if (e is CancellationException) throw e
-                        Log.d(TAG, "Message was not for user ${it.npub}: ${e.message}")
+                        Log.d(TAG) { "Message was not for user ${it.npub}: ${e.message}" }
                     }
                 }
             }
@@ -94,14 +94,14 @@ class EventNotificationConsumer(
         account: Account,
     ) {
         val consumed = LocalCache.hasConsumed(notificationEvent)
-        Log.d(TAG, "New Notification ${notificationEvent.kind} ${notificationEvent.id} Arrived for ${account.signer.pubKey} consumed= $consumed")
+        Log.d(TAG) { "New Notification ${notificationEvent.kind} ${notificationEvent.id} Arrived for ${account.signer.pubKey} consumed= $consumed" }
         if (!consumed) {
             Log.d(TAG, "New Notification was verified")
             if (!notificationManager().areNotificationsEnabled()) return
             Log.d(TAG, "Notifications are enabled")
 
             unwrapAndConsume(notificationEvent, account.signer)?.let { innerEvent ->
-                Log.d(TAG, "Unwrapped consume ${innerEvent.javaClass.simpleName}")
+                Log.d(TAG) { "Unwrapped consume ${innerEvent.javaClass.simpleName}" }
 
                 when (innerEvent) {
                     is PrivateDmEvent -> notify(innerEvent, account)
@@ -124,14 +124,14 @@ class EventNotificationConsumer(
         LocalPreferences.allSavedAccounts().forEach {
             if (!matchAccount && (it.hasPrivKey || it.loggedInWithExternalSigner) && it.npub in npubs) {
                 LocalPreferences.loadAccountConfigFromEncryptedStorage(it.npub)?.let { accountSettings ->
-                    Log.d(TAG, "New Notification Testing if for ${it.npub}")
+                    Log.d(TAG) { "New Notification Testing if for ${it.npub}" }
                     try {
                         val account = Amethyst.instance.accountsCache.loadAccount(accountSettings)
                         consumeNotificationEvent(event, account)
                         matchAccount = true
                     } catch (e: Exception) {
                         if (e is CancellationException) throw e
-                        Log.d(TAG, "Message was not for user ${it.npub}: ${e.message}")
+                        Log.d(TAG) { "Message was not for user ${it.npub}: ${e.message}" }
                     }
                 }
             }
@@ -365,7 +365,7 @@ class EventNotificationConsumer(
         account: Account,
     ) {
         Log.d(TAG, "New Zap to Notify")
-        Log.d(TAG, "Notify Start ${event.toNostrUri()}")
+        Log.d(TAG) { "Notify Start ${event.toNostrUri()}" }
         LocalCache.getNoteIfExists(event.id) ?: return
 
         Log.d(TAG, "Notify Not Notified Yet")
@@ -378,7 +378,7 @@ class EventNotificationConsumer(
         val noteZapRequest = event.zapRequest?.id?.let { LocalCache.checkGetOrCreateNote(it) } ?: return
         val noteZapped = event.zappedPost().firstOrNull()?.let { LocalCache.checkGetOrCreateNote(it) } ?: return
 
-        Log.d(TAG, "Notify ZapRequest $noteZapRequest zapped $noteZapped")
+        Log.d(TAG) { "Notify ZapRequest $noteZapRequest zapped $noteZapped" }
 
         if ((event.amount ?: BigDecimal.ZERO) < BigDecimal.TEN) return
 
@@ -387,11 +387,11 @@ class EventNotificationConsumer(
         if (event.isTaggedUser(account.signer.pubKey)) {
             val amount = showAmount(event.amount)
 
-            Log.d(TAG, "Notify Amount $amount")
+            Log.d(TAG) { "Notify Amount $amount" }
 
             (noteZapRequest.event as? LnZapRequestEvent)?.let { event ->
                 decryptZapContentAuthor(event, account.signer)?.let { decryptedEvent ->
-                    Log.d(TAG, "Notify Decrypted if Private Zap ${event.id}")
+                    Log.d(TAG) { "Notify Decrypted if Private Zap ${event.id}" }
 
                     val author = LocalCache.getOrCreateUser(decryptedEvent.pubKey)
                     val senderInfo = Pair(author, decryptedEvent.content.ifBlank { null })
@@ -428,7 +428,7 @@ class EventNotificationConsumer(
                                         .hexToByteArray()
                                         .toNpub()
 
-                            Log.d(TAG, "Notify ${event.id} $content $title $noteUri")
+                            Log.d(TAG) { "Notify ${event.id} $content $title $noteUri" }
 
                             notificationManager()
                                 .sendZapNotification(
@@ -463,7 +463,7 @@ class EventNotificationConsumer(
                                     .hexToByteArray()
                                     .toNpub()
 
-                        Log.d(TAG, "Notify ${event.id} $title $noteUri")
+                        Log.d(TAG) { "Notify ${event.id} $title $noteUri" }
 
                         notificationManager()
                             .sendZapNotification(

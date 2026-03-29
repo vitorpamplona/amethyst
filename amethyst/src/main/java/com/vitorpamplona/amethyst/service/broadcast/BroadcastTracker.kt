@@ -85,7 +85,7 @@ class BroadcastTracker {
         // Add to active broadcasts and cache event for retries
         _activeBroadcasts.update { (it + broadcast).toImmutableList() }
 
-        Log.d(TAG, "Starting broadcast $trackingId (kind ${event.kind}) to ${relays.size} relays")
+        Log.d(TAG) { "Starting broadcast $trackingId (kind ${event.kind}) to ${relays.size} relays" }
 
         val resultChannel = Channel<RelayResponse>(UNLIMITED)
 
@@ -102,7 +102,7 @@ class BroadcastTracker {
                                 result = RelayResult.Error(errorMessage),
                             ),
                         )
-                        Log.d(TAG, "[$trackingId] Cannot connect to ${relay.url}: $errorMessage")
+                        Log.d(TAG) { "[$trackingId] Cannot connect to ${relay.url}: $errorMessage" }
                     }
                 }
 
@@ -114,7 +114,7 @@ class BroadcastTracker {
                                 result = RelayResult.Error("Relay disconnected before completion"),
                             ),
                         )
-                        Log.d(TAG, "[$trackingId] Disconnected from ${relay.url}")
+                        Log.d(TAG) { "[$trackingId] Disconnected from ${relay.url}" }
                     }
                 }
 
@@ -135,7 +135,7 @@ class BroadcastTracker {
                                         RelayResult.Error(msg.message)
                                     }
                                 resultChannel.trySend(RelayResponse(relay.url, result))
-                                Log.d(TAG, "[$trackingId] Response from ${relay.url}: success=${msg.success} message=${msg.message}")
+                                Log.d(TAG) { "[$trackingId] Response from ${relay.url}: success=${msg.success} message=${msg.message}" }
                             }
                         }
                     }
@@ -190,7 +190,7 @@ class BroadcastTracker {
                 list.map { if (it.id == trackingId) finalBroadcast else it }.toImmutableList()
             }
 
-            Log.d(TAG, "Broadcast $trackingId complete: ${finalBroadcast.successCount}/${finalBroadcast.totalRelays} success")
+            Log.d(TAG) { "Broadcast $trackingId complete: ${finalBroadcast.successCount}/${finalBroadcast.totalRelays} success" }
         } finally {
             client.removeConnectionListener(subscription)
         }
@@ -278,7 +278,7 @@ class BroadcastTracker {
                                 result = RelayResult.Error(errorMessage),
                             ),
                         )
-                        Log.d(TAG, "[${broadcast.id}] Retry cannot connect to ${relay.url}: $errorMessage")
+                        Log.d(TAG) { "[${broadcast.id}] Retry cannot connect to ${relay.url}: $errorMessage" }
                     }
                 }
 
@@ -290,7 +290,7 @@ class BroadcastTracker {
                                 result = RelayResult.Error("Relay disconnected before completion"),
                             ),
                         )
-                        Log.d(TAG, "[${broadcast.id}] Retry disconnected from ${relay.url}")
+                        Log.d(TAG) { "[${broadcast.id}] Retry disconnected from ${relay.url}" }
                     }
                 }
 
@@ -311,7 +311,7 @@ class BroadcastTracker {
                                         RelayResult.Error(msg.message)
                                     }
                                 resultChannel.trySend(RelayResponse(relay.url, result))
-                                Log.d(TAG, "[${broadcast.id}] Retry response from ${relay.url}: success=${msg.success}")
+                                Log.d(TAG) { "[${broadcast.id}] Retry response from ${relay.url}: success=${msg.success}" }
                             }
                         }
                     }
@@ -383,7 +383,7 @@ class BroadcastTracker {
             list.map { if (it.id == broadcast.id) finalBroadcast else it }.toImmutableList()
         }
 
-        Log.d(TAG, "Retry complete for ${broadcast.id}: ${finalBroadcast.successCount}/${finalBroadcast.totalRelays} success")
+        Log.d(TAG) { "Retry complete for ${broadcast.id}: ${finalBroadcast.successCount}/${finalBroadcast.totalRelays} success" }
 
         return finalBroadcast
     }

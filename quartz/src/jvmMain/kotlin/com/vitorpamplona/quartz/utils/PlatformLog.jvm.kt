@@ -18,28 +18,50 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip01Core.relay.client.pool
+package com.vitorpamplona.quartz.utils
 
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.utils.Log
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 
-/**
- * Represents a filter that should only be sent to a given relay.
- */
-class RelayBasedFilter(
-    val relay: NormalizedRelayUrl,
-    val filter: Filter,
-)
+actual object PlatformLog {
+    private val formatter = DateTimeFormatter.ofPattern("HH:mm:ss.SSS")
 
-fun List<RelayBasedFilter>.groupByRelay(): Map<NormalizedRelayUrl, List<Filter>> {
-    val result = mutableMapOf<NormalizedRelayUrl, MutableList<Filter>>()
-    for (relayBasedFilter in this) {
-        if (relayBasedFilter.filter.isEmpty()) {
-            Log.e("FilterError") { "Ignoring empty filter for ${relayBasedFilter.relay}" }
+    private fun time() = LocalTime.now().format(formatter)
+
+    private fun log(
+        level: String,
+        tag: String,
+        message: String,
+        throwable: Throwable?,
+    ) {
+        if (throwable != null) {
+            println("${time()} $level: [$tag] $message. Throwable: ${throwable.message}")
         } else {
-            result.getOrPut(relayBasedFilter.relay) { mutableListOf() }.add(relayBasedFilter.filter)
+            println("${time()} $level: [$tag] $message")
         }
     }
-    return result
+
+    actual fun w(
+        tag: String,
+        message: String,
+        throwable: Throwable?,
+    ) = log("WARN ", tag, message, throwable)
+
+    actual fun e(
+        tag: String,
+        message: String,
+        throwable: Throwable?,
+    ) = log("ERROR", tag, message, throwable)
+
+    actual fun d(
+        tag: String,
+        message: String,
+        throwable: Throwable?,
+    ) = log("DEBUG", tag, message, throwable)
+
+    actual fun i(
+        tag: String,
+        message: String,
+        throwable: Throwable?,
+    ) = log("INFO ", tag, message, throwable)
 }

@@ -157,7 +157,7 @@ class VoiceReplyViewModel : ViewModel() {
             try {
                 if (file.exists()) {
                     file.delete()
-                    Log.d("VoiceReplyViewModel", "Deleted voice file: ${file.absolutePath}")
+                    Log.d("VoiceReplyViewModel") { "Deleted voice file: ${file.absolutePath}" }
                 }
             } catch (e: Exception) {
                 Log.w("VoiceReplyViewModel", "Failed to delete voice file: ${file.absolutePath}", e)
@@ -315,6 +315,6 @@ class VoiceReplyViewModel : ViewModel() {
     override fun onCleared() {
         cancel()
         super.onCleared()
-        Log.d("Init", "OnCleared: ${this.javaClass.simpleName}")
+        Log.d("Init") { "OnCleared: ${this.javaClass.simpleName}" }
     }
 }

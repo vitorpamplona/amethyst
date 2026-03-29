@@ -254,7 +254,7 @@ object LocalPreferences {
             val prefsDir = File(prefsDirPath)
             prefsDir.list()?.forEach {
                 if (it.contains(npub) && !File(prefsDir, it).delete()) {
-                    Log.w("LocalPreferences", "Failed to delete preference file: $it")
+                    Log.w("LocalPreferences") { "Failed to delete preference file: $it" }
                 }
             }
         }
@@ -282,7 +282,7 @@ object LocalPreferences {
      */
     @SuppressLint("ApplySharedPref")
     suspend fun deleteAccount(accountInfo: AccountInfo) {
-        Log.d("LocalPreferences", "Saving to encrypted storage updatePrefsForLogout ${accountInfo.npub}")
+        Log.d("LocalPreferences") { "Saving to encrypted storage updatePrefsForLogout ${accountInfo.npub}" }
         withContext(Dispatchers.IO) {
             encryptedPreferences(accountInfo.npub).edit(commit = true) { clear() }
             removeAccount(accountInfo)
@@ -446,18 +446,18 @@ object LocalPreferences {
     }
 
     private suspend fun innerLoadCurrentAccountFromEncryptedStorage(npub: String?): AccountSettings? {
-        Log.d("LocalPreferences", "Load account from file $npub")
+        Log.d("LocalPreferences") { "Load account from file $npub" }
         val result =
             withContext(Dispatchers.IO) {
                 return@withContext with(encryptedPreferences(npub)) {
-                    Log.d("LocalPreferences", "Load account from file $npub - opened file")
+                    Log.d("LocalPreferences") { "Load account from file $npub - opened file" }
                     val privKey = getString(PrefKeys.NOSTR_PRIVKEY, null)
                     val pubKey = getString(PrefKeys.NOSTR_PUBKEY, null) ?: return@with null
                     val externalSignerPackageName = getString(PrefKeys.SIGNER_PACKAGE_NAME, null) ?: if (getBoolean(PrefKeys.LOGIN_WITH_EXTERNAL_SIGNER, false)) "com.greenart7c3.nostrsigner" else null
 
                     val keyPair = KeyPair(privKey = privKey?.hexToByteArray(), pubKey = pubKey.hexToByteArray())
 
-                    Log.d("LocalPreferences", "Load account from file $npub - keys ready")
+                    Log.d("LocalPreferences") { "Load account from file $npub - keys ready" }
 
                     val stripLocationOnUpload = getBoolean(PrefKeys.STRIP_LOCATION_ON_UPLOAD, true)
                     val hideDeleteRequestDialog = getBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, false)
@@ -495,7 +495,7 @@ object LocalPreferences {
                     val latestPaymentTargetsStr = getString(PrefKeys.LATEST_PAYMENT_TARGETS, null)
                     val lastReadPerRouteStr = getString(PrefKeys.LAST_READ_PER_ROUTE, null)
 
-                    Log.d("LocalPreferences", "Load account from file $npub - before parsing events")
+                    Log.d("LocalPreferences") { "Load account from file $npub - before parsing events" }
 
                     val defaultHomeFollowList = async { parseOrNull<TopFilter>(defaultHomeFollowListStr) ?: TopFilter.AllFollows }
                     val defaultStoriesFollowList = async { parseOrNull<TopFilter>(defaultStoriesFollowListStr) ?: TopFilter.Global }
@@ -532,7 +532,7 @@ object LocalPreferences {
                             } ?: mapOf()
                         }
 
-                    Log.d("LocalPreferences", "Load account from file $npub - asyncs created")
+                    Log.d("LocalPreferences") { "Load account from file $npub - asyncs created" }
 
                     return@with AccountSettings(
                         keyPair = keyPair,
@@ -574,7 +574,7 @@ object LocalPreferences {
                     )
                 }
             }
-        Log.d("LocalPreferences", "Loaded account from file $npub")
+        Log.d("LocalPreferences") { "Loaded account from file $npub" }
         return result
     }
 

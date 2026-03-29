@@ -124,7 +124,7 @@ class TrustProviderListState(
         scope.launch(Dispatchers.IO) {
             Log.d("AccountRegisterObservers", "TrustProviderList Collector Start")
             getTrustProviderListFlow().collect { noteState ->
-                Log.d("AccountRegisterObservers", "TrustProviderList List for ${signer.pubKey}")
+                Log.d("AccountRegisterObservers") { "TrustProviderList List for ${signer.pubKey}" }
                 (noteState.note.event as? TrustProviderListEvent)?.let {
                     settings.updateTrustProviderListTo(it)
                 }

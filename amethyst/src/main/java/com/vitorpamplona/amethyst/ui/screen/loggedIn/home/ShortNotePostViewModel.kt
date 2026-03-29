@@ -1271,7 +1271,7 @@ open class ShortNotePostViewModel :
         voiceLocalFile?.let { file ->
             try {
                 if (file.delete()) {
-                    Log.d("ShortNotePostViewModel", "Deleted voice file: ${file.absolutePath}")
+                    Log.d("ShortNotePostViewModel") { "Deleted voice file: ${file.absolutePath}" }
                 }
             } catch (e: Exception) {
                 Log.w("ShortNotePostViewModel", "Failed to delete voice file: ${file.absolutePath}", e)
@@ -1365,7 +1365,7 @@ open class ShortNotePostViewModel :
 
     override fun onCleared() {
         super.onCleared()
-        Log.d("Init", "OnCleared: ${this.javaClass.simpleName}")
+        Log.d("Init") { "OnCleared: ${this.javaClass.simpleName}" }
     }
 
     override fun updateZapPercentage(

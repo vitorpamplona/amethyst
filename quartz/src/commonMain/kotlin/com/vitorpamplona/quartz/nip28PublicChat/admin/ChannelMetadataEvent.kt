@@ -74,7 +74,7 @@ class ChannelMetadataEvent(
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                Log.w("ChannelCreateEvent", "Failure to parse ${this.toJson()}")
+                Log.w("ChannelCreateEvent") { "Failure to parse ${this.toJson()}" }
                 ChannelDataNorm()
             }
 

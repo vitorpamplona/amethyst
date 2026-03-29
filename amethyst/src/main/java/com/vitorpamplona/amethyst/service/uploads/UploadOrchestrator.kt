@@ -339,7 +339,7 @@ class UploadOrchestrator {
             val path = tempUri.path ?: return
             val file = File(path)
             if (file.delete()) {
-                Log.d("UploadOrchestrator", "Deleted temp file: $path")
+                Log.d("UploadOrchestrator") { "Deleted temp file: $path" }
             }
         } catch (e: Exception) {
             Log.w("UploadOrchestrator", "Failed to delete temp file: ${tempUri.path}", e)

@@ -46,19 +46,19 @@ fun debugState(context: Context) {
 
     val jvmHeapAllocatedMb = totalMemoryMb - freeMemoryMb
 
-    Log.d(STATE_DUMP_TAG, "Total Heap Allocated: $jvmHeapAllocatedMb/$maxMemoryMb MB")
+    Log.d(STATE_DUMP_TAG) { "Total Heap Allocated: $jvmHeapAllocatedMb/$maxMemoryMb MB" }
 
     val nativeHeap = Debug.getNativeHeapAllocatedSize() / (1024 * 1024)
     val maxNative = Debug.getNativeHeapSize() / (1024 * 1024)
 
-    Log.d(STATE_DUMP_TAG, "Total Native Heap Allocated: $nativeHeap/$maxNative MB")
+    Log.d(STATE_DUMP_TAG) { "Total Native Heap Allocated: $nativeHeap/$maxNative MB" }
 
     val activityManager: ActivityManager? = context.getSystemService()
     if (activityManager != null) {
         val isLargeHeap = (context.applicationInfo.flags and ApplicationInfo.FLAG_LARGE_HEAP) != 0
         val memClass = if (isLargeHeap) activityManager.largeMemoryClass else activityManager.memoryClass
 
-        Log.d(STATE_DUMP_TAG, "Memory Class $memClass MB (largeHeap $isLargeHeap)")
+        Log.d(STATE_DUMP_TAG) { "Memory Class $memClass MB (largeHeap $isLargeHeap)" }
     }
 
     Log.d(
@@ -68,14 +68,8 @@ fun debugState(context: Context) {
                 .size() + "/" + normalizedUrls.size(),
     )
 
-    Log.d(
-        STATE_DUMP_TAG,
-        "Image Disk Cache ${(Amethyst.instance.diskCache.size) / (1024 * 1024)}/${(Amethyst.instance.diskCache.maxSize) / (1024 * 1024)} MB",
-    )
-    Log.d(
-        STATE_DUMP_TAG,
-        "Image Memory Cache ${(Amethyst.instance.memoryCache.size) / (1024 * 1024)}/${(Amethyst.instance.memoryCache.maxSize) / (1024 * 1024)} MB",
-    )
+    Log.d(STATE_DUMP_TAG) { "Image Disk Cache ${(Amethyst.instance.diskCache.size) / (1024 * 1024)}/${(Amethyst.instance.diskCache.maxSize) / (1024 * 1024)} MB" }
+    Log.d(STATE_DUMP_TAG) { "Image Memory Cache ${(Amethyst.instance.memoryCache.size) / (1024 * 1024)}/${(Amethyst.instance.memoryCache.maxSize) / (1024 * 1024)} MB" }
 
     Log.d(
         STATE_DUMP_TAG,
@@ -130,13 +124,12 @@ fun debugState(context: Context) {
             LocalCache.ephemeralChannels.values().sumOf { it.notes.size() },
     )
     LocalCache.chatroomList.forEach { key, room ->
-        Log.d(
-            STATE_DUMP_TAG,
+        Log.d(STATE_DUMP_TAG) {
             "Private Chats $key: " +
                 room.rooms.size() +
                 " / " +
-                room.rooms.sumOf { key, value -> value.messages.size },
-        )
+                room.rooms.sumOf { key, value -> value.messages.size }
+        }
     }
     Log.d(
         STATE_DUMP_TAG,
@@ -173,10 +166,10 @@ fun debugState(context: Context) {
             .sumByGroup(groupMap = { _, it -> it.event?.kind }, sumOf = { _, it -> it.event?.countMemory()?.toLong() ?: 0L })
 
     qttNotes.toList().sortedByDescending { bytesNotes[it.first] }.forEach { (kind, qtt) ->
-        Log.d(STATE_DUMP_TAG, "Kind ${kind.toString().padStart(5,' ')}:\t${qtt.toString().padStart(6,' ')} elements\t${bytesNotes[kind]?.div((1024 * 1024))}MB ")
+        Log.d(STATE_DUMP_TAG) { "Kind ${kind.toString().padStart(5,' ')}:\t${qtt.toString().padStart(6,' ')} elements\t${bytesNotes[kind]?.div((1024 * 1024))}MB " }
     }
     qttAddressables.toList().sortedByDescending { bytesNotes[it.first] }.forEach { (kind, qtt) ->
-        Log.d(STATE_DUMP_TAG, "Kind ${kind.toString().padStart(5,' ')}:\t${qtt.toString().padStart(6,' ')} elements\t${bytesAddressables[kind]?.div((1024 * 1024))}MB ")
+        Log.d(STATE_DUMP_TAG) { "Kind ${kind.toString().padStart(5,' ')}:\t${qtt.toString().padStart(6,' ')} elements\t${bytesAddressables[kind]?.div((1024 * 1024))}MB " }
     }
 }
 
@@ -188,7 +181,7 @@ inline fun <T> logTime(
     if (isDebug) {
         val (result, elapsed) = measureTimedValue(block)
         if (elapsed.inWholeMilliseconds > minToReportMs) {
-            Log.d("DEBUG-TIME", "${elapsed.toString(DurationUnit.MILLISECONDS, 3).padStart(12)}: $debugMessage")
+            Log.d("DEBUG-TIME") { "${elapsed.toString(DurationUnit.MILLISECONDS, 3).padStart(12)}: $debugMessage" }
         }
         result
     } else {
@@ -203,7 +196,7 @@ inline fun <T> logTime(
     if (isDebug) {
         val (result, elapsed) = measureTimedValue(block)
         if (elapsed.inWholeMilliseconds > minToReportMs) {
-            Log.d("DEBUG-TIME", "${elapsed.toString(DurationUnit.MILLISECONDS, 3).padStart(12)}: ${debugMessage(result)}")
+            Log.d("DEBUG-TIME") { "${elapsed.toString(DurationUnit.MILLISECONDS, 3).padStart(12)}: ${debugMessage(result)}" }
         }
         result
     } else {

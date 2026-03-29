@@ -26,7 +26,6 @@ import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.text.format.Formatter.formatFileSize
-import android.util.Log
 import android.widget.Toast
 import com.abedelazizshe.lightcompressorlibrary.CompressionListener
 import com.abedelazizshe.lightcompressorlibrary.VideoCodec
@@ -34,6 +33,8 @@ import com.abedelazizshe.lightcompressorlibrary.VideoCompressor
 import com.abedelazizshe.lightcompressorlibrary.config.AppSpecificStorageConfiguration
 import com.abedelazizshe.lightcompressorlibrary.config.Configuration
 import com.abedelazizshe.lightcompressorlibrary.config.VideoResizer
+import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.LogLevel
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.File
@@ -97,7 +98,7 @@ data class CompressionRule(
         val codecMultiplier = if (useH265) 0.75f else 1.0f
         val finalMultiplier = framerateMultiplier * codecMultiplier
 
-        Log.d("VideoCompressionHelper", "framerate: $framerate, useH265: $useH265, Bitrate multiplier: $finalMultiplier")
+        Log.d("VideoCompressionHelper") { "framerate: $framerate, useH265: $useH265, Bitrate multiplier: $finalMultiplier" }
 
         return (bitrateMbps * finalMultiplier * MBPS_TO_BPS_MULTIPLIER).toInt()
     }
@@ -161,13 +162,12 @@ object VideoCompressionHelper {
                         .getValue(info.resolution.getStandard())
 
                 val bitrateBps = rule.getBitrateBps(info.framerate, useH265)
-                Log.d(LOG_TAG, "Bitrate: ${bitrateBps}bps for ${info.resolution.getStandard()} quality=$mediaQuality framerate=${info.framerate}fps useH265=$useH265.")
+                Log.d(LOG_TAG) { "Bitrate: ${bitrateBps}bps for ${info.resolution.getStandard()} quality=$mediaQuality framerate=${info.framerate}fps useH265=$useH265." }
 
-                Log.d(
-                    LOG_TAG,
+                Log.d(LOG_TAG) {
                     "Resizer: ${info.resolution.width}x${info.resolution.height} -> " +
-                        "shortSide=${rule.shortSide} (${rule.description})",
-                )
+                        "shortSide=${rule.shortSide} (${rule.description})"
+                }
                 val resizer = VideoResizer.limitShortSide(rule.shortSide.toDouble())
 
                 Pair(bitrateBps, resizer)
@@ -217,7 +217,7 @@ object VideoCompressionHelper {
                                     if (path == null) {
                                         applicationContext.notifyUser(
                                             "Video compression succeeded, but path was null",
-                                            Log.WARN,
+                                            LogLevel.WARN,
                                         )
                                         if (continuation.isActive) continuation.resume(null)
                                         return
@@ -233,11 +233,11 @@ object VideoCompressionHelper {
                                     // Sanity check: compression not smaller than original
                                     if (originalSize in 1..size) {
                                         if (!File(path).delete()) {
-                                            Log.w("VideoCompressionHelper", "Failed to delete compressed file: $path")
+                                            Log.w("VideoCompressionHelper") { "Failed to delete compressed file: $path" }
                                         }
                                         applicationContext.notifyUser(
                                             "Compressed file larger than original. Using original.",
-                                            Log.WARN,
+                                            LogLevel.WARN,
                                         )
                                         if (continuation.isActive) {
                                             continuation.resume(
@@ -257,11 +257,10 @@ object VideoCompressionHelper {
                                         )
                                     }
 
-                                    Log.d(
-                                        LOG_TAG,
+                                    Log.d(LOG_TAG) {
                                         "Compression success: Original [$originalSize] -> " +
-                                            "Compressed [$size] ($reductionPercent% reduction)",
-                                    )
+                                            "Compressed [$size] ($reductionPercent% reduction)"
+                                    }
 
                                     if (continuation.isActive) {
                                         continuation.resume(
@@ -276,7 +275,7 @@ object VideoCompressionHelper {
                                 ) {
                                     applicationContext.notifyUser(
                                         "Video compression failed: $failureMessage",
-                                        Log.ERROR,
+                                        LogLevel.ERROR,
                                     )
                                     if (continuation.isActive) continuation.resume(null)
                                 }
@@ -300,22 +299,23 @@ object VideoCompressionHelper {
                 if (cursor.moveToFirst()) cursor.getLong(sizeIndex) else 0L
             } ?: 0L
         } catch (e: Exception) {
-            Log.w(LOG_TAG, "Failed to get file size: ${e.message}")
+            Log.w(LOG_TAG) { "Failed to get file size: ${e.message}" }
             0L
         }
 
     private fun Context.notifyUser(
         message: String,
-        logLevel: Int = Log.DEBUG,
+        logLevel: LogLevel = LogLevel.DEBUG,
         duration: Int = Toast.LENGTH_LONG,
     ) {
         Handler(Looper.getMainLooper()).post {
             Toast.makeText(this, message, duration).show()
         }
         when (logLevel) {
-            Log.ERROR -> Log.e(LOG_TAG, message)
-            Log.WARN -> Log.w(LOG_TAG, message)
-            else -> Log.d(LOG_TAG, message)
+            LogLevel.ERROR -> Log.e(LOG_TAG, message)
+            LogLevel.WARN -> Log.w(LOG_TAG, message)
+            LogLevel.INFO -> Log.i(LOG_TAG, message)
+            LogLevel.DEBUG -> Log.d(LOG_TAG, message)
         }
     }
 
@@ -348,13 +348,13 @@ object VideoCompressionHelper {
                 null
             }
         } catch (e: Exception) {
-            Log.w(LOG_TAG, "Failed to get video resolution: ${e.message}")
+            Log.w(LOG_TAG) { "Failed to get video resolution: ${e.message}" }
             null
         } finally {
             try {
                 retriever?.release()
             } catch (e: Exception) {
-                Log.w(LOG_TAG, "Failed to release MediaMetadataRetriever: ${e.message}")
+                Log.w(LOG_TAG) { "Failed to release MediaMetadataRetriever: ${e.message}" }
             }
         }
     }

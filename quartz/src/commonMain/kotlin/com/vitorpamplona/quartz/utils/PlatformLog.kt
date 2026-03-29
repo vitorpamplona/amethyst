@@ -18,48 +18,30 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip03Timestamp.ots.op
+package com.vitorpamplona.quartz.utils
 
-import com.vitorpamplona.quartz.nip03Timestamp.ots.StreamDeserializationContext
-import com.vitorpamplona.quartz.utils.Log
+expect object PlatformLog {
+    fun w(
+        tag: String,
+        message: String,
+        throwable: Throwable? = null,
+    )
 
-/**
- * Operations that act on a single message.
- *
- * @see Op
- */
-abstract class OpUnary : Op() {
-    override fun tagName(): String = ""
+    fun e(
+        tag: String,
+        message: String,
+        throwable: Throwable? = null,
+    )
 
-    override fun toString(): String = tagName()
+    fun d(
+        tag: String,
+        message: String,
+        throwable: Throwable? = null,
+    )
 
-    companion object {
-        fun deserializeFromTag(
-            ctx: StreamDeserializationContext,
-            tag: Byte,
-        ): Op? =
-            when (tag) {
-                OpSHA1.TAG -> {
-                    OpSHA1()
-                }
-
-                OpSHA256.TAG -> {
-                    OpSHA256()
-                }
-
-                OpRIPEMD160.TAG -> {
-                    OpRIPEMD160()
-                }
-
-                OpKECCAK256.TAG -> {
-                    OpKECCAK256()
-                }
-
-                else -> {
-                    Log.e("OpenTimestamp") { "Unknown operation tag: $tag" }
-
-                    null // TODO: Is this OK? Won't it blow up later? Better to throw?
-                }
-            }
-    }
+    fun i(
+        tag: String,
+        message: String,
+        throwable: Throwable? = null,
+    )
 }

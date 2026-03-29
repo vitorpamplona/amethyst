@@ -73,7 +73,7 @@ class RelaySession(
         try {
             onSend(OptimizedJsonMapper.toJson(message))
         } catch (e: Exception) {
-            Log.w("ClientSession", "Failed to send to ${e.message}")
+            Log.w("ClientSession") { "Failed to send to ${e.message}" }
         }
     }
 

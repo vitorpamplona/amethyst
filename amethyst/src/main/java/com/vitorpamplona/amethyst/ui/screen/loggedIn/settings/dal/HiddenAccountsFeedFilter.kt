@@ -40,7 +40,7 @@ class HiddenAccountsFeedFilter(
                 LocalCache.getOrCreateUser(it)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                Log.e("HiddenAccountsFeedFilter", "Failed to parse key $it")
+                Log.e("HiddenAccountsFeedFilter") { "Failed to parse key $it" }
                 null
             }
         }

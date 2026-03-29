@@ -92,22 +92,22 @@ class MediaCompressor {
 
         var tempFile: File? = null
         return try {
-            Log.d("MediaCompressor", "Using image compression $mediaQuality")
+            Log.d("MediaCompressor") { "Using image compression $mediaQuality" }
             tempFile = MediaCompressorFileUtils.from(uri, context)
             val compressedImageFile =
                 Compressor.compress(context, tempFile) {
                     default(width = 640, format = Bitmap.CompressFormat.JPEG, quality = imageQuality)
                 }
             if (tempFile != compressedImageFile && !tempFile.delete()) {
-                Log.w("MediaCompressor", "Failed to delete temp file: ${tempFile.absolutePath}")
+                Log.w("MediaCompressor") { "Failed to delete temp file: ${tempFile.absolutePath}" }
             }
-            Log.d("MediaCompressor", "Image compression success. New size [${compressedImageFile.length()}]")
+            Log.d("MediaCompressor") { "Image compression success. New size [${compressedImageFile.length()}]" }
             MediaCompressorResult(compressedImageFile.toUri(), MimeTypes.IMAGE_JPEG, compressedImageFile.length())
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.d("MediaCompressor", "Image compression failed: ${e.message}")
+            Log.d("MediaCompressor") { "Image compression failed: ${e.message}" }
             if (tempFile?.delete() == false) {
-                Log.w("MediaCompressor", "Failed to delete temp file: ${tempFile.absolutePath}")
+                Log.w("MediaCompressor") { "Failed to delete temp file: ${tempFile.absolutePath}" }
             }
             MediaCompressorResult(uri, contentType, null)
         }

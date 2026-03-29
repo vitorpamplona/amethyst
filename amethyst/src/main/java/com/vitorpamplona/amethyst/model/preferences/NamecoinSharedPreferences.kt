@@ -127,7 +127,7 @@ class NamecoinSharedPreferences(
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.e("NamecoinPrefs", "Error writing pinned certs: ${e.message}")
+            Log.e("NamecoinPrefs") { "Error writing pinned certs: ${e.message}" }
         }
     }
 
@@ -158,7 +158,7 @@ class NamecoinSharedPreferences(
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.e("NamecoinPrefs", "Error writing DataStore: ${e.message}")
+            Log.e("NamecoinPrefs") { "Error writing DataStore: ${e.message}" }
         }
     }
 
@@ -180,7 +180,7 @@ class NamecoinSharedPreferences(
             NamecoinSettings(enabled = enabled, customServers = servers)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.e("NamecoinPrefs", "Error reading DataStore: ${e.message}")
+            Log.e("NamecoinPrefs") { "Error reading DataStore: ${e.message}" }
             null
         }
 }

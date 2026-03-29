@@ -46,7 +46,7 @@ class AddressSerializer {
                 if (parts.size > 2 && parts[1].length == 64 && Hex.isHex(parts[1])) {
                     if (parts[0].length > 5) {
                         // invalid kind
-                        Log.w("AddressableId", "Error parsing. invalid kind $addressId")
+                        Log.w("AddressableId") { "Error parsing. invalid kind $addressId" }
                         null
                     } else {
                         Address(parts[0].toInt(), parts[1], parts.getOrNull(2) ?: "")
@@ -57,11 +57,11 @@ class AddressSerializer {
                         if (addr is NAddress) {
                             addr.address()
                         } else {
-                            Log.w("AddressableId", "Error parsing. naddr1 seems invalid: $addressId")
+                            Log.w("AddressableId") { "Error parsing. naddr1 seems invalid: $addressId" }
                             null
                         }
                     } else {
-                        Log.w("AddressableId", "Error parsing. Not a valid address: $addressId")
+                        Log.w("AddressableId") { "Error parsing. Not a valid address: $addressId" }
                         null
                     }
                 }

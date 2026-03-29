@@ -103,7 +103,7 @@ class IndexerRelayListState(
 
     init {
         settings.backupIndexRelayList?.let {
-            Log.d("AccountRegisterObservers", "Loading saved index relay list ${it.toJson()}")
+            Log.d("AccountRegisterObservers") { "Loading saved index relay list ${it.toJson()}" }
             @OptIn(DelicateCoroutinesApi::class)
             scope.launch(Dispatchers.IO) { LocalCache.justConsumeMyOwnEvent(it) }
         }
@@ -111,7 +111,7 @@ class IndexerRelayListState(
         scope.launch(Dispatchers.IO) {
             Log.d("AccountRegisterObservers", "Index Relay List Collector Start")
             getIndexerRelayListFlow().collect {
-                Log.d("AccountRegisterObservers", "Updating Index Relay List for ${signer.pubKey}")
+                Log.d("AccountRegisterObservers") { "Updating Index Relay List for ${signer.pubKey}" }
                 (it.note.event as? IndexerRelayListEvent)?.let {
                     settings.updateIndexRelayList(it)
                 }

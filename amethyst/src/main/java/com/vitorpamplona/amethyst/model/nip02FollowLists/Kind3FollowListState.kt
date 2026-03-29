@@ -162,7 +162,7 @@ class Kind3FollowListState(
 
     init {
         settings.backupContactList?.let {
-            Log.d("AccountRegisterObservers", "Loading saved ${it.tags.size} contacts")
+            Log.d("AccountRegisterObservers") { "Loading saved ${it.tags.size} contacts" }
 
             @OptIn(DelicateCoroutinesApi::class)
             scope.launch(Dispatchers.IO) { LocalCache.justConsumeMyOwnEvent(it) }
@@ -172,7 +172,7 @@ class Kind3FollowListState(
         scope.launch(Dispatchers.IO) {
             Log.d("AccountRegisterObservers", "Kind 3 Collector Start")
             getFollowListFlow().collect {
-                Log.d("AccountRegisterObservers", "Updating Kind 3 ${signer.pubKey}")
+                Log.d("AccountRegisterObservers") { "Updating Kind 3 ${signer.pubKey}" }
                 (it.note.event as? ContactListEvent)?.let {
                     settings.updateContactListTo(it)
                 }

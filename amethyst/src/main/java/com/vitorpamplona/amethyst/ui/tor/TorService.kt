@@ -65,7 +65,7 @@ class TorService(
                             active.torControlConnection = torService.torControlConnection
 
                             trySend(active)
-                            Log.d("TorService", "Tor Service Connected ${torService.socksPort}")
+                            Log.d("TorService") { "Tor Service Connected ${torService.socksPort}" }
                         }
                     }
 
@@ -86,7 +86,7 @@ class TorService(
                 try {
                     context.unbindService(serviceConnection)
                 } catch (e: Exception) {
-                    Log.d("TorService", "Failed to unbind Tor Service: ${e.message}")
+                    Log.d("TorService") { "Failed to unbind Tor Service: ${e.message}" }
                 }
                 launch {
                     context.stopService(currentIntent)
