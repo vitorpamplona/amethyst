@@ -66,7 +66,7 @@ data class NamecoinSettings(
          * TLS is the default protocol.  Append `:tcp` for plaintext
          * (useful for `.onion` addresses and local servers).
          *
-         * `.onion` addresses automatically get `trustAllCerts = true`
+         * `.onion` addresses automatically get `usePinnedTrustStore = true`
          * since certificate verification is meaningless over Tor.
          */
         fun parseServerString(s: String): ElectrumxServer? {
@@ -81,7 +81,7 @@ data class NamecoinSettings(
                 host = host,
                 port = port,
                 useSsl = useSsl,
-                trustAllCerts = isOnion || !useSsl,
+                usePinnedTrustStore = true,
             )
         }
 
