@@ -31,7 +31,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,7 +43,6 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
-import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
@@ -81,43 +79,41 @@ fun VideoDisplay(
 
     val imeta = videoEvent.imetaTags().firstOrNull() ?: return
 
-    val title = videoEvent.title()
-    val summary = videoEvent.content.ifBlank { null }?.takeIf { title != it }
-    val image = imeta.image.firstOrNull()
-    val isYouTube = imeta.url.contains("youtube.com") || imeta.url.contains("youtu.be")
+    val title = remember(videoEvent) { videoEvent.title() }
+    val summary = remember(videoEvent) { videoEvent.content.ifBlank { null }?.takeIf { title != it } }
+    val image = remember(imeta) { imeta.image.firstOrNull() }
+    val isYouTube = remember(imeta) { imeta.url.contains("youtube.com") || imeta.url.contains("youtu.be") }
     val tags = remember(note) { note.event?.tags?.toImmutableListOfLists() ?: EmptyTagList }
 
-    val content by
+    val content =
         remember(note) {
             val description = videoEvent.content.ifBlank { null } ?: event.alt()
             val isImage = imeta.mimeType?.startsWith("image/") == true || RichTextParser.isImageUrl(imeta.url)
             val uri = note.toNostrUri()
 
-            mutableStateOf<BaseMediaContent>(
-                if (isImage) {
-                    MediaUrlImage(
-                        url = imeta.url,
-                        description = description,
-                        hash = imeta.hash,
-                        blurhash = imeta.blurhash,
-                        dim = imeta.dimension,
-                        uri = uri,
-                        mimeType = imeta.mimeType,
-                    )
-                } else {
-                    MediaUrlVideo(
-                        url = imeta.url,
-                        description = description,
-                        hash = imeta.hash,
-                        dim = imeta.dimension,
-                        uri = uri,
-                        authorName = note.author?.toBestDisplayName(),
-                        artworkUri = imeta.image.firstOrNull(),
-                        mimeType = imeta.mimeType,
-                        blurhash = imeta.blurhash,
-                    )
-                },
-            )
+            if (isImage) {
+                MediaUrlImage(
+                    url = imeta.url,
+                    description = description,
+                    hash = imeta.hash,
+                    blurhash = imeta.blurhash,
+                    dim = imeta.dimension,
+                    uri = uri,
+                    mimeType = imeta.mimeType,
+                )
+            } else {
+                MediaUrlVideo(
+                    url = imeta.url,
+                    description = description,
+                    hash = imeta.hash,
+                    dim = imeta.dimension,
+                    uri = uri,
+                    authorName = note.author?.toBestDisplayName(),
+                    artworkUri = imeta.image.firstOrNull(),
+                    mimeType = imeta.mimeType,
+                    blurhash = imeta.blurhash,
+                )
+            }
         }
 
     SensitivityWarning(note = note, accountViewModel = accountViewModel) {

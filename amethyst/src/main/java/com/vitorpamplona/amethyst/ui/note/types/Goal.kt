@@ -80,15 +80,15 @@ fun GoalHeader(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val image = noteEvent.image()
+    val image = remember(noteEvent) { noteEvent.image() }
     val summary =
         remember(noteEvent) {
             noteEvent.summary()?.ifBlank { null } ?: noteEvent.content.take(200).ifBlank { null }
         }
-    val goalAmountMillisats = noteEvent.amount() ?: 0L
-    val goalAmountSats = goalAmountMillisats / 1000
-    val closedAt = noteEvent.closedAt()
-    val isClosed = closedAt != null && closedAt < TimeUtils.now()
+    val goalAmountMillisats = remember(noteEvent) { noteEvent.amount() ?: 0L }
+    val goalAmountSats = remember(goalAmountMillisats) { goalAmountMillisats / 1000 }
+    val closedAt = remember(noteEvent) { noteEvent.closedAt() }
+    val isClosed = remember(closedAt) { closedAt != null && closedAt < TimeUtils.now() }
 
     Column(MaterialTheme.colorScheme.replyModifier) {
         image?.let {

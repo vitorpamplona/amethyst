@@ -21,11 +21,8 @@
 package com.vitorpamplona.amethyst.ui.note.types
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.layout.ContentScale
-import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
@@ -46,7 +43,7 @@ fun FileHeaderDisplay(
     val event = (note.event as? FileHeaderEvent) ?: return
     val fullUrl = event.url() ?: return
 
-    val content by
+    val content =
         remember(note) {
             val blurHash = event.blurhash()
             val hash = event.hash()
@@ -56,30 +53,28 @@ fun FileHeaderDisplay(
             val uri = note.toNostrUri()
             val mimeType = event.mimeType()
 
-            mutableStateOf<BaseMediaContent>(
-                if (isImage) {
-                    MediaUrlImage(
-                        url = fullUrl,
-                        description = description,
-                        hash = hash,
-                        blurhash = blurHash,
-                        dim = dimensions,
-                        uri = uri,
-                        mimeType = mimeType,
-                    )
-                } else {
-                    MediaUrlVideo(
-                        url = fullUrl,
-                        description = description,
-                        hash = hash,
-                        blurhash = blurHash,
-                        dim = dimensions,
-                        uri = uri,
-                        authorName = note.author?.toBestDisplayName(),
-                        mimeType = mimeType,
-                    )
-                },
-            )
+            if (isImage) {
+                MediaUrlImage(
+                    url = fullUrl,
+                    description = description,
+                    hash = hash,
+                    blurhash = blurHash,
+                    dim = dimensions,
+                    uri = uri,
+                    mimeType = mimeType,
+                )
+            } else {
+                MediaUrlVideo(
+                    url = fullUrl,
+                    description = description,
+                    hash = hash,
+                    blurhash = blurHash,
+                    dim = dimensions,
+                    uri = uri,
+                    authorName = note.author?.toBestDisplayName(),
+                    mimeType = mimeType,
+                )
+            }
         }
 
     SensitivityWarning(note = note, accountViewModel = accountViewModel) {

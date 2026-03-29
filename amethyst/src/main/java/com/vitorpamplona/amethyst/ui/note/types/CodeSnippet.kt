@@ -127,17 +127,25 @@ fun RenderCodeSnippetEvent(baseNote: Note) {
         ) {
             Text(
                 text = codePreview,
-                style =
-                    TextStyle(
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 12.sp,
-                    ),
+                style = CodePreviewStyle,
                 maxLines = 5,
                 overflow = TextOverflow.Ellipsis,
             )
         }
     }
 }
+
+private val CodePreviewStyle =
+    TextStyle(
+        fontFamily = FontFamily.Monospace,
+        fontSize = 12.sp,
+    )
+
+private val CodeThreadStyle =
+    TextStyle(
+        fontFamily = FontFamily.Monospace,
+        fontSize = 13.sp,
+    )
 
 @Composable
 fun RenderCodeSnippetHeaderForThread(noteEvent: CodeSnippetEvent) {
@@ -206,11 +214,7 @@ fun RenderCodeSnippetHeaderForThread(noteEvent: CodeSnippetEvent) {
         ) {
             Text(
                 text = noteEvent.content,
-                style =
-                    TextStyle(
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 13.sp,
-                    ),
+                style = CodeThreadStyle,
             )
         }
 

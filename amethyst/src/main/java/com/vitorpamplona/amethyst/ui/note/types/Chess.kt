@@ -36,6 +36,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -56,6 +57,9 @@ import com.vitorpamplona.quartz.nip64Chess.challenge.offer.LiveChessGameChalleng
 import com.vitorpamplona.quartz.nip64Chess.end.LiveChessGameEndEvent
 import com.vitorpamplona.quartz.nip64Chess.game.ChessGameEvent
 import com.vitorpamplona.quartz.nip64Chess.Color as ChessColor
+
+private val OpenChallengeColor = Color(0xFF4CAF50)
+private val IncomingChallengeColor = Color(0xFFFFA726)
 
 /**
  * Render NIP-64 Chess Game event (Kind 64)
@@ -104,32 +108,32 @@ fun RenderLiveChessChallenge(
             factory = ChessViewModelFactory(accountViewModel.account),
         )
 
-    val isOpenChallenge = event.opponentPubkey() == null
-    val isIncomingChallenge = event.opponentPubkey() == accountViewModel.account.userProfile().pubkeyHex
+    val isOpenChallenge = remember(event) { event.opponentPubkey() == null }
+    val isIncomingChallenge = remember(event) { event.opponentPubkey() == accountViewModel.account.userProfile().pubkeyHex }
 
     val borderColor =
         when {
-            isOpenChallenge -> Color(0xFF4CAF50)
-
-            // Green for open
-            isIncomingChallenge -> Color(0xFFFFA726)
-
-            // Orange for incoming
-            else -> MaterialTheme.colorScheme.outline // Gray for sent
+            isOpenChallenge -> OpenChallengeColor
+            isIncomingChallenge -> IncomingChallengeColor
+            else -> MaterialTheme.colorScheme.outline
         }
 
     val icon =
-        when {
-            isOpenChallenge -> "🔓"
-            isIncomingChallenge -> "💌"
-            else -> "⏳"
+        remember(isOpenChallenge, isIncomingChallenge) {
+            when {
+                isOpenChallenge -> "🔓"
+                isIncomingChallenge -> "💌"
+                else -> "⏳"
+            }
         }
 
     val title =
-        when {
-            isOpenChallenge -> "Open Challenge"
-            isIncomingChallenge -> "Challenge from ${note.author?.toBestDisplayName()}"
-            else -> "Challenge sent to ${event.opponentPubkey()?.take(8)}"
+        remember(isOpenChallenge, isIncomingChallenge, note.author, event) {
+            when {
+                isOpenChallenge -> "Open Challenge"
+                isIncomingChallenge -> "Challenge from ${note.author?.toBestDisplayName()}"
+                else -> "Challenge sent to ${event.opponentPubkey()?.take(8)}"
+            }
         }
 
     Card(

@@ -169,7 +169,7 @@ fun RenderFollowSetThumbEmbed(
                     canPreview = true,
                     quotesLeft = 2,
                     modifier = Modifier.fillMaxWidth(),
-                    tags = baseNote.event?.tags?.toImmutableListOfLists() ?: EmptyTagList,
+                    tags = remember(baseNote) { baseNote.event?.tags?.toImmutableListOfLists() ?: EmptyTagList },
                     backgroundColor = background,
                     id = it,
                     callbackUri = null,
