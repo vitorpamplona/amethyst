@@ -71,7 +71,7 @@ import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.service.namecoin.LocalNamecoinService
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
@@ -209,7 +209,7 @@ fun ImportFollowListDialog(
                     ),
                 ),
                 relays = relays,
-                listener = object : IRequestListener {
+                listener = object : SubscriptionListener {
                     override fun onEvent(
                         event: Event,
                         isLive: Boolean,
@@ -257,7 +257,7 @@ fun ImportFollowListDialog(
                                             limit = follows.size,
                                         ),
                                     ),
-                                    listener = object : IRequestListener {
+                                    listener = object : SubscriptionListener {
                                         override fun onEvent(
                                             event: Event,
                                             isLive: Boolean,
