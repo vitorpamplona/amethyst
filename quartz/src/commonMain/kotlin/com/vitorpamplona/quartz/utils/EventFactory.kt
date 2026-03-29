@@ -154,6 +154,7 @@ import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefiniti
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
 import com.vitorpamplona.quartz.nip75ZapGoals.GoalEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
+import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.addressables.AddressableAssertionEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.events.EventAssertionEvent
@@ -348,6 +349,7 @@ class EventFactory {
                 SearchRelayListEvent.KIND -> SearchRelayListEvent(id, pubKey, createdAt, tags, content, sig)
                 StatusEvent.KIND -> StatusEvent(id, pubKey, createdAt, tags, content, sig)
                 TextNoteEvent.KIND -> TextNoteEvent(id, pubKey, createdAt, tags, content, sig)
+                ThreadEvent.KIND -> ThreadEvent(id, pubKey, createdAt, tags, content, sig)
                 TextNoteModificationEvent.KIND -> TextNoteModificationEvent(id, pubKey, createdAt, tags, content, sig)
                 TokenEvent.KIND -> TokenEvent(id, pubKey, createdAt, tags, content, sig)
                 TorrentEvent.KIND -> TorrentEvent(id, pubKey, createdAt, tags, content, sig)

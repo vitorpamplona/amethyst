@@ -267,6 +267,7 @@ import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprov
 import com.vitorpamplona.quartz.nip72ModCommunities.communityAddress
 import com.vitorpamplona.quartz.nip72ModCommunities.isACommunityPost
 import com.vitorpamplona.quartz.nip75ZapGoals.GoalEvent
+import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
@@ -563,6 +564,7 @@ private fun FullBleedNoteCompose(
         when (noteEvent) {
             is BadgeDefinitionEvent -> BadgeDisplay(baseNote = baseNote, accountViewModel)
             is LongTextNoteEvent -> RenderLongFormHeaderForThread(noteEvent, baseNote, accountViewModel)
+            is ThreadEvent -> RenderThreadHeaderForThread(noteEvent)
             is WikiNoteEvent -> RenderWikiHeaderForThread(noteEvent, accountViewModel, nav)
             is ClassifiedsEvent -> RenderClassifiedsReaderForThread(noteEvent, baseNote, accountViewModel, nav)
             is CodeSnippetEvent -> RenderCodeSnippetHeaderForThread(noteEvent)
@@ -1121,6 +1123,20 @@ private fun RenderLongFormHeaderForThread(
                     color = MaterialTheme.colorScheme.grayText,
                 )
             }
+    }
+}
+
+@Composable
+private fun RenderThreadHeaderForThread(noteEvent: ThreadEvent) {
+    noteEvent.title()?.let {
+        Column(modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp)) {
+            Text(
+                text = it,
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
     }
 }
 
