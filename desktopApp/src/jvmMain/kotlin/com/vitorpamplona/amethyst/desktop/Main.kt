@@ -467,10 +467,6 @@ fun App(
 ) {
     val relayManager = remember { DesktopRelayConnectionManager() }
     val localCache = remember { DesktopLocalCache() }
-    val namecoinPreferences = remember { DesktopNamecoinPreferences() }
-    val namecoinService = remember {
-        DesktopNamecoinNameService(preferencesProvider = { namecoinPreferences.current })
-    }
     val accountState by accountManager.accountState.collectAsState()
     val scope = remember { CoroutineScope(SupervisorJob() + Dispatchers.Main) }
 
@@ -533,10 +529,6 @@ fun App(
     MaterialTheme(
         colorScheme = darkColorScheme(),
     ) {
-        CompositionLocalProvider(
-            LocalNamecoinPreferences provides namecoinPreferences,
-            LocalNamecoinService provides namecoinService,
-        ) {
         Surface(
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background,
@@ -567,11 +559,22 @@ fun App(
                     val account = accountState as AccountState.LoggedIn
                     val nwcConnection by accountManager.nwcConnection.collectAsState()
 
+                    // Lazy-load Namecoin services — almost never used,
+                    // no need to keep in memory from the start (matches Android lazy pattern)
+                    val namecoinPreferences = remember { DesktopNamecoinPreferences() }
+                    val namecoinService = remember {
+                        DesktopNamecoinNameService(preferencesProvider = { namecoinPreferences.current })
+                    }
+
                     // Load NWC connection on first composition
                     LaunchedEffect(Unit) {
                         accountManager.loadNwcConnection()
                     }
 
+                    CompositionLocalProvider(
+                        LocalNamecoinPreferences provides namecoinPreferences,
+                        LocalNamecoinService provides namecoinService,
+                    ) {
                     MainContent(
                         layoutMode = layoutMode,
                         deckState = deckState,
@@ -617,6 +620,7 @@ fun App(
                             localCache = localCache,
                         )
                     }
+                    } // end CompositionLocalProvider
                 }
             }
 
@@ -629,7 +633,6 @@ fun App(
                 )
             }
         }
-        } // end CompositionLocalProvider
     }
 }
 
