@@ -1826,4 +1826,14 @@
     <string name="relay_management_relay_icon_url">Adres ikony transmitera</string>
     <string name="relay_management_button">Zarządzaj Transmiterem</string>
     <string name="manage">Zarządzaj</string>
+    <string name="relay_members">Członkowie</string>
+    <string name="relay_members_title">Członkowie %1$s</string>
+    <string name="relay_members_count">Członków: %1$d</string>
+    <string name="relay_members_loading">Wczytywanie członków…</string>
+    <string name="relay_members_empty">Nie znaleziono członków</string>
+    <string name="relay_members_request_join">Poproś o dołączenie</string>
+    <string name="relay_members_request_leave">Żądanie opuszczenia</string>
+    <string name="relay_members_join_sent">Wysłano prośbę o dołączenie</string>
+    <string name="relay_members_leave_sent">Wysłano prośbę o opuszczenie</string>
+    <string name="relay_members_you_are_member">Jesteś członkiem</string>
 </resources>
