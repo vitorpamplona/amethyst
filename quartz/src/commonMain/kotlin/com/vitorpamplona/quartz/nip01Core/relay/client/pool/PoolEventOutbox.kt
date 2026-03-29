@@ -29,7 +29,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
-import kotlin.compareTo
 
 class PoolEventOutbox {
     private var eventOutbox = mapOf<HexKey, PoolEventOutboxState>()

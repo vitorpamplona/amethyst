@@ -25,7 +25,6 @@ import com.vitorpamplona.quartz.utils.urldetector.UrlMarker
 import com.vitorpamplona.quartz.utils.urldetector.UrlPart
 import com.vitorpamplona.quartz.utils.urldetector.detection.DomainNameReader.Companion.INTERNATIONAL_CHAR_START
 import kotlin.math.max
-import kotlin.text.deleteRange
 
 class UrlDetector(
     content: String,

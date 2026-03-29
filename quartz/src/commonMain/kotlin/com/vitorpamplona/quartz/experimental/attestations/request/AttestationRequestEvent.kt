@@ -21,8 +21,6 @@
 package com.vitorpamplona.quartz.experimental.attestations.request
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.experimental.attestations.request.attestorPubKeys
-import com.vitorpamplona.quartz.experimental.attestations.request.cashuToken
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -41,7 +39,6 @@ import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlin.let
 
 @Immutable
 class AttestationRequestEvent(

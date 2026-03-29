@@ -30,7 +30,6 @@ import com.vitorpamplona.quartz.nip64Chess.baseEvent.BaseChessEvent
 import com.vitorpamplona.quartz.nip64Chess.baseEvent.opponent
 import com.vitorpamplona.quartz.nip64Chess.baseEvent.tags.OpponentTag
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlinx.serialization.json.JsonNull.content
 
 /**
  * Live Chess Move Event (Kind 30066)

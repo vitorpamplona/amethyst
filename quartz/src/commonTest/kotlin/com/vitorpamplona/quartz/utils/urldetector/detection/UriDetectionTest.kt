@@ -21,7 +21,6 @@
 package com.vitorpamplona.quartz.utils.urldetector.detection
 
 import com.vitorpamplona.quartz.utils.urldetector.Url
-import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

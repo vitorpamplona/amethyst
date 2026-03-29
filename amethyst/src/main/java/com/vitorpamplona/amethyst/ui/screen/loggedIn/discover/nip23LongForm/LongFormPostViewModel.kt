@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip23LongForm
 
-import android.R.attr.version
 import android.content.Context
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
