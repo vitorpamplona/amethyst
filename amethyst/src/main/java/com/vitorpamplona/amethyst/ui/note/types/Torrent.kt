@@ -153,18 +153,21 @@ fun RenderTorrent(
 ) {
     val noteEvent = note.event as? TorrentEvent ?: return
 
-    val name = (noteEvent.title() ?: TorrentEvent.ALT_DESCRIPTION)
-    val size = " (" + countToHumanReadableBytes(noteEvent.totalSizeBytes()) + ")"
+    val name = remember(noteEvent) { noteEvent.title() ?: TorrentEvent.ALT_DESCRIPTION }
+    val size = remember(noteEvent) { " (" + countToHumanReadableBytes(noteEvent.totalSizeBytes()) + ")" }
 
     val description =
-        if (noteEvent.content != name) {
-            noteEvent.content
-        } else {
-            null
+        remember(noteEvent) {
+            if (noteEvent.content != name) {
+                noteEvent.content
+            } else {
+                null
+            }
         }
 
+    val files = remember(noteEvent) { noteEvent.files().toImmutableList() }
     DisplayFileList(
-        noteEvent.files().toImmutableList(),
+        files,
         name + size,
         description,
         noteEvent::toMagnetLink,
@@ -187,10 +190,12 @@ fun DisplayFileList(
     var expanded by remember { mutableStateOf(false) }
 
     val toMembersShow =
-        if (expanded) {
-            files
-        } else {
-            files.take(6)
+        remember(expanded, files) {
+            if (expanded) {
+                files
+            } else {
+                files.take(6)
+            }
         }
 
     Column {

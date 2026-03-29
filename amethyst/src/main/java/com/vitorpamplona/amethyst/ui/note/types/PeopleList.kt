@@ -75,13 +75,15 @@ fun DisplayPeopleList(
     var expanded by rememberSaveable { mutableStateOf(false) }
 
     val toMembersShow =
-        if (expanded) {
-            members
-        } else {
-            members.take(3)
+        remember(expanded, members) {
+            if (expanded) {
+                members
+            } else {
+                members.take(3)
+            }
         }
 
-    val name by remember { derivedStateOf { "#${noteEvent.titleOrName() ?: noteEvent.dTag()}" } }
+    val name by remember(noteEvent) { derivedStateOf { "#${noteEvent.titleOrName() ?: noteEvent.dTag()}" } }
 
     Text(
         text = name,
@@ -95,7 +97,7 @@ fun DisplayPeopleList(
         textAlign = TextAlign.Center,
     )
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(noteEvent) {
         accountViewModel.loadUsers(noteEvent.taggedUserIds()) {
             members = it
         }

@@ -75,12 +75,10 @@ fun DisplayRelaySet(
 ) {
     val noteEvent = baseNote.event as? RelaySetEvent ?: return
 
-    val relays by
+    val relays =
         remember(noteEvent) {
-            mutableStateOf(
-                RelayListCard(
-                    noteEvent.relays().toImmutableList(),
-                ),
+            RelayListCard(
+                noteEvent.relays().toImmutableList(),
             )
         }
 
@@ -108,21 +106,17 @@ fun DisplayNIP65RelayList(
 ) {
     val noteEvent = baseNote.event as? AdvertisedRelayListEvent ?: return
 
-    val writeRelays by
+    val writeRelays =
         remember(baseNote) {
-            mutableStateOf(
-                RelayListCard(
-                    noteEvent.writeRelaysNorm() ?: emptyList(),
-                ),
+            RelayListCard(
+                noteEvent.writeRelaysNorm() ?: emptyList(),
             )
         }
 
-    val readRelays by
+    val readRelays =
         remember(baseNote) {
-            mutableStateOf(
-                RelayListCard(
-                    noteEvent.readRelaysNorm() ?: emptyList(),
-                ),
+            RelayListCard(
+                noteEvent.readRelaysNorm() ?: emptyList(),
             )
         }
 
@@ -154,12 +148,10 @@ fun DisplayDMRelayList(
 ) {
     val noteEvent = baseNote.event as? ChatMessageRelayListEvent ?: return
 
-    val relays by
+    val relays =
         remember(baseNote) {
-            mutableStateOf(
-                RelayListCard(
-                    noteEvent.relays(),
-                ),
+            RelayListCard(
+                noteEvent.relays(),
             )
         }
 
@@ -332,10 +324,12 @@ fun DisplayRelaySet(
     var expanded by remember { mutableStateOf(false) }
 
     val toMembersShow =
-        if (expanded) {
-            relay.relays
-        } else {
-            relay.relays.take(3)
+        remember(expanded, relay.relays) {
+            if (expanded) {
+                relay.relays
+            } else {
+                relay.relays.take(3)
+            }
         }
 
     Text(

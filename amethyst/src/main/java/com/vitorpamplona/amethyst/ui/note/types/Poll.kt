@@ -335,9 +335,7 @@ private fun ColumnScope.RenderSingleChoiceOptions(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 val hasSpaceToClick =
-                    remember {
-                        it.label.contains(' ') || it.label.contains('\n')
-                    }
+                    it.label.contains(' ') || it.label.contains('\n')
 
                 Column(
                     modifier = if (hasSpaceToClick) Modifier.fillMaxWidth() else Modifier.fillMaxWidth(0.9f),
@@ -550,7 +548,8 @@ fun UserGallery(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy((-10).dp),
         ) {
-            tally.users.take(4).forEach {
+            val topUsers = remember(tally.users) { tally.users.take(4) }
+            topUsers.forEach {
                 key(it.pubkeyHex) {
                     galleryUser(it)
                 }

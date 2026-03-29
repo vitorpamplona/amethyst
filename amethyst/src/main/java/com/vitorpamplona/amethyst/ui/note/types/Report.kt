@@ -48,7 +48,7 @@ fun RenderReport(
 ) {
     val noteEvent = note.event as? ReportEvent ?: return
 
-    val base = remember { (noteEvent.reportedPost() + noteEvent.reportedAuthor()) }
+    val base = remember(noteEvent) { (noteEvent.reportedPost() + noteEvent.reportedAuthor()) }
 
     val reportType =
         base
@@ -70,7 +70,7 @@ fun RenderReport(
             .joinToString(", ")
 
     val content =
-        remember {
+        remember(reportType, note.event) {
             reportType + (
                 note.event
                     ?.content

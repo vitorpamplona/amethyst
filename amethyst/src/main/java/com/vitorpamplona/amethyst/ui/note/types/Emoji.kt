@@ -99,10 +99,12 @@ fun RenderEmojiPack(
     val allEmojis = remember(noteEvent) { noteEvent.taggedEmojis() }
 
     val emojisToShow =
-        if (expanded) {
-            allEmojis
-        } else {
-            allEmojis.take(60)
+        remember(expanded, allEmojis) {
+            if (expanded) {
+                allEmojis
+            } else {
+                allEmojis.take(60)
+            }
         }
 
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 10.dp)) {

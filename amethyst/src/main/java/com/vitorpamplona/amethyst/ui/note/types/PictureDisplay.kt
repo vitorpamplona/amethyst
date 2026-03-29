@@ -28,8 +28,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -61,29 +59,27 @@ fun PictureDisplay(
     val event = (note.event as? PictureEvent) ?: return
     val uri = note.toNostrUri()
 
-    val images by
+    val images =
         remember(note) {
-            mutableStateOf(
-                event
-                    .imetaTags()
-                    .map {
-                        MediaUrlImage(
-                            url = it.url,
-                            description = it.alt,
-                            hash = it.hash,
-                            blurhash = it.blurhash,
-                            dim = it.dimension,
-                            uri = uri,
-                            mimeType = it.mimeType,
-                        )
-                    }.toImmutableList(),
-            )
+            event
+                .imetaTags()
+                .map {
+                    MediaUrlImage(
+                        url = it.url,
+                        description = it.alt,
+                        hash = it.hash,
+                        blurhash = it.blurhash,
+                        dim = it.dimension,
+                        uri = uri,
+                        mimeType = it.mimeType,
+                    )
+                }.toImmutableList()
         }
 
     val first = images.firstOrNull()
 
     if (first != null) {
-        val title = event.title()
+        val title = remember(event) { event.title() }
 
         SensitivityWarning(note = note, accountViewModel = accountViewModel) {
             Column {

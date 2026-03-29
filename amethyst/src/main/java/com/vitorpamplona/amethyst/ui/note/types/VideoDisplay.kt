@@ -21,11 +21,8 @@
 package com.vitorpamplona.amethyst.ui.note.types
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.layout.ContentScale
-import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
@@ -49,35 +46,33 @@ fun JustVideoDisplay(
 
     val imeta = videoEvent.imetaTags().getOrNull(0) ?: return
 
-    val content by
+    val content =
         remember(note) {
             val description = event.content.ifEmpty { null } ?: imeta.alt ?: event.alt()
             val isImage = imeta.mimeType?.startsWith("image/") == true || RichTextParser.isImageUrl(imeta.url)
 
-            mutableStateOf<BaseMediaContent>(
-                if (isImage) {
-                    MediaUrlImage(
-                        url = imeta.url,
-                        description = description,
-                        hash = imeta.hash,
-                        blurhash = imeta.blurhash,
-                        dim = imeta.dimension,
-                        uri = note.toNostrUri(),
-                        mimeType = imeta.mimeType,
-                    )
-                } else {
-                    MediaUrlVideo(
-                        url = imeta.url,
-                        description = description,
-                        hash = imeta.hash,
-                        blurhash = imeta.blurhash,
-                        dim = imeta.dimension,
-                        uri = note.toNostrUri(),
-                        authorName = note.author?.toBestDisplayName(),
-                        mimeType = imeta.mimeType,
-                    )
-                },
-            )
+            if (isImage) {
+                MediaUrlImage(
+                    url = imeta.url,
+                    description = description,
+                    hash = imeta.hash,
+                    blurhash = imeta.blurhash,
+                    dim = imeta.dimension,
+                    uri = note.toNostrUri(),
+                    mimeType = imeta.mimeType,
+                )
+            } else {
+                MediaUrlVideo(
+                    url = imeta.url,
+                    description = description,
+                    hash = imeta.hash,
+                    blurhash = imeta.blurhash,
+                    dim = imeta.dimension,
+                    uri = note.toNostrUri(),
+                    authorName = note.author?.toBestDisplayName(),
+                    mimeType = imeta.mimeType,
+                )
+            }
         }
 
     SensitivityWarning(note = note, accountViewModel = accountViewModel) {

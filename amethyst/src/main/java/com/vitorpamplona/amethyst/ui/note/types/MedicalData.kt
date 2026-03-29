@@ -34,6 +34,7 @@ import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -353,9 +354,9 @@ fun RenderEyeGlassesPrescriptionHeaderRow() {
 
 @Composable
 fun RenderEyeGlassesPrescriptionRow(data: LensSpecification) {
-    val numberFormat = DecimalFormat("##.00")
-    val pdFormat = DecimalFormat("##.0")
-    val integerFormat = DecimalFormat("###")
+    val numberFormat = remember { DecimalFormat("##.00") }
+    val pdFormat = remember { DecimalFormat("##.0") }
+    val integerFormat = remember { DecimalFormat("###") }
 
     Row(
         modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
@@ -513,8 +514,8 @@ fun RenderEyeContactsPrescriptionHeaderRow() {
 
 @Composable
 fun RenderEyeContactsPrescriptionRow(data: LensSpecification) {
-    val numberFormat = DecimalFormat("##.00")
-    val integerFormat = DecimalFormat("###")
+    val numberFormat = remember { DecimalFormat("##.00") }
+    val integerFormat = remember { DecimalFormat("###") }
 
     Row(
         modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),

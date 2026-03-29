@@ -61,21 +61,23 @@ fun RenderClassifieds(
     nav: INav,
 ) {
     val imageSet =
-        noteEvent.imageMetas().ifEmpty { null }?.map {
-            MediaUrlImage(
-                url = it.url,
-                description = it.alt,
-                hash = it.hash,
-                blurhash = it.blurhash,
-                dim = it.dimension,
-                uri = note.toNostrUri(),
-                mimeType = it.mimeType,
-            )
+        remember(noteEvent) {
+            noteEvent.imageMetas().ifEmpty { null }?.map {
+                MediaUrlImage(
+                    url = it.url,
+                    description = it.alt,
+                    hash = it.hash,
+                    blurhash = it.blurhash,
+                    dim = it.dimension,
+                    uri = note.toNostrUri(),
+                    mimeType = it.mimeType,
+                )
+            }
         }
-    val title = noteEvent.title()
-    val summary = noteEvent.summary() ?: noteEvent.content.take(200).ifBlank { null }
-    val price = noteEvent.price()
-    val location = noteEvent.location()
+    val title = remember(noteEvent) { noteEvent.title() }
+    val summary = remember(noteEvent) { noteEvent.summary() ?: noteEvent.content.take(200).ifBlank { null } }
+    val price = remember(noteEvent) { noteEvent.price() }
+    val location = remember(noteEvent) { noteEvent.location() }
 
     Row(
         modifier =
@@ -90,10 +92,11 @@ fun RenderClassifieds(
         Column {
             Row {
                 imageSet?.let { images ->
+                    val immutableImages = remember(images) { images.toImmutableList() }
                     AutoNonlazyGrid(images.size) {
                         ZoomableContentView(
                             content = images[it],
-                            images = images.toImmutableList(),
+                            images = immutableImages,
                             roundedCorner = false,
                             contentScale = ContentScale.Crop,
                             accountViewModel = accountViewModel,

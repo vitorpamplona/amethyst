@@ -101,7 +101,7 @@ fun DisplayUncitedUsers(
     nav: INav,
 ) {
     @Suppress("ProduceStateDoesNotAssignValue")
-    val uncitedUsers by produceState(initialValue = emptyList()) {
+    val uncitedUsers by produceState(initialValue = emptyList(), key1 = event) {
         val users = event.groupKeySetWithoutOwner() - event.citedUsers()
         if (users.isNotEmpty()) {
             val newUsers = accountViewModel.loadUsersSync(users.toList())

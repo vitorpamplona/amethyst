@@ -159,10 +159,11 @@ fun RenderBadgeAward(
 
     Text(text = stringRes(R.string.award_granted_to))
 
-    LaunchedEffect(key1 = note) { accountViewModel.loadUsers(noteEvent.awardeeIds()) { awardees = it } }
+    LaunchedEffect(note, noteEvent) { accountViewModel.loadUsers(noteEvent.awardeeIds()) { awardees = it } }
 
+    val awardeesToShow = remember(awardees) { awardees.take(100) }
     FlowRow(modifier = Modifier.padding(top = 5.dp)) {
-        awardees.take(100).forEach { user ->
+        awardeesToShow.forEach { user ->
             UserPicture(
                 user = user,
                 size = Size35dp,
