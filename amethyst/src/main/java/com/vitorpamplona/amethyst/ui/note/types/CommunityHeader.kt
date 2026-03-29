@@ -148,10 +148,10 @@ fun LongCommunityHeader(
     val defaultBackground = MaterialTheme.colorScheme.background
     val background = remember { mutableStateOf(defaultBackground) }
 
-    val description = noteEvent?.description()?.ifBlank { null }
-    val guidelines = noteEvent?.rules()?.ifBlank { null }
-    val image = noteEvent?.image()?.imageUrl
-    val tagList = noteEvent?.tags?.toImmutableListOfLists() ?: EmptyTagList
+    val description = remember(noteEvent) { noteEvent?.description()?.ifBlank { null } }
+    val guidelines = remember(noteEvent) { noteEvent?.rules()?.ifBlank { null } }
+    val image = remember(noteEvent) { noteEvent?.image()?.imageUrl }
+    val tagList = remember(noteEvent) { noteEvent?.tags?.toImmutableListOfLists() ?: EmptyTagList }
 
     Column(Modifier.verticalScroll(rememberScrollState())) {
         Box(contentAlignment = Alignment.TopEnd) {

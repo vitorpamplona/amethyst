@@ -103,11 +103,7 @@ fun RenderTextModificationEvent(
         Column(Modifier.fillMaxWidth().padding(Size10dp)) {
             Text(
                 text = stringRes(id = R.string.proposal_to_edit),
-                style =
-                    TextStyle(
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                    ),
+                style = ProposalHeaderStyle,
             )
 
             Spacer(modifier = StdVertSpacer)
@@ -224,6 +220,12 @@ fun RenderTextModificationEvent(
         }
     }
 }
+
+private val ProposalHeaderStyle =
+    TextStyle(
+        fontSize = 18.sp,
+        fontWeight = FontWeight.Bold,
+    )
 
 val EmptyState = mutableStateOf<GenericLoadable<EditState>>(GenericLoadable.Empty())
 

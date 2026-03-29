@@ -54,7 +54,7 @@ fun RenderNIP90ContentDiscoveryResponse(
         note = note,
         accountViewModel = accountViewModel,
     ) {
-        val modifier = remember(note) { Modifier.fillMaxWidth() }
+        val modifier = Modifier.fillMaxWidth()
         val tags =
             remember(note) { note.event?.tags?.toImmutableListOfLists() ?: EmptyTagList }
 
