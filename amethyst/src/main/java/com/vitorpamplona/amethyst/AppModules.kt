@@ -88,6 +88,7 @@ import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -95,6 +96,7 @@ import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.transform
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import java.io.File
 
 class AppModules(
@@ -110,16 +112,29 @@ class AppModules(
 
     val applicationIOScope = CoroutineScope(Dispatchers.IO + SupervisorJob() + exceptionHandler)
 
+    // Pre-load both preference DataStores in parallel on IO threads.
+    // Both constructors use runBlocking internally, so starting them concurrently
+    // reduces total blocking time from (torPrefs + uiPrefs) to ~max(torPrefs, uiPrefs).
+    private val uiPrefsDeferred =
+        applicationIOScope.async {
+            UiSharedPreferences(appContext, applicationIOScope)
+        }
+
+    private val torPrefsDeferred =
+        applicationIOScope.async {
+            TorSharedPreferences(appContext, applicationIOScope)
+        }
+
     // Blocking load of UI Preferences to avoid theme/language blinking
     val uiPrefs by lazy {
         Log.d("AppModules", "UiSharedPreferences Init")
-        UiSharedPreferences(appContext, applicationIOScope)
+        runBlocking { uiPrefsDeferred.await() }
     }
 
     // Blocking load of Tor Settings to avoid connection leaks
     val torPrefs by lazy {
         Log.d("AppModules", "TorSharedPreferences Init")
-        TorSharedPreferences(appContext, applicationIOScope)
+        runBlocking { torPrefsDeferred.await() }
     }
 
     // Namecoin ElectrumX server preferences (global, like Tor settings)
@@ -368,7 +383,10 @@ class AppModules(
     }
 
     // Organizes cache clearing
-    val trimmingService = MemoryTrimmingService(cache)
+    val trimmingService =
+        lazy {
+            MemoryTrimmingService(cache)
+        }
 
     // as new accounts are loaded, updates the state of the TorRelaySettings, which produces new TorRelayEvaluator
     // and reconnects relays if the configuration has been changed.
