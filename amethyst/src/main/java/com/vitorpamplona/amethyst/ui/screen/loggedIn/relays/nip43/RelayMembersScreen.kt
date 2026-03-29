@@ -62,12 +62,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.fetchAsFlow
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -298,6 +300,66 @@ fun MembershipActions(
                 }
             }
         }
+    }
+}
+
+@Preview
+@Composable
+private fun MembershipActionsNotMemberPreview() {
+    ThemeComparisonColumn {
+        MembershipActions(
+            isMember = false,
+            isLoading = false,
+            joinRequestSent = false,
+            leaveRequestSent = false,
+            onJoinRequest = {},
+            onLeaveRequest = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun MembershipActionsIsMemberPreview() {
+    ThemeComparisonColumn {
+        MembershipActions(
+            isMember = true,
+            isLoading = false,
+            joinRequestSent = false,
+            leaveRequestSent = false,
+            onJoinRequest = {},
+            onLeaveRequest = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun MembershipActionsJoinSentPreview() {
+    ThemeComparisonColumn {
+        MembershipActions(
+            isMember = false,
+            isLoading = false,
+            joinRequestSent = true,
+            leaveRequestSent = false,
+            onJoinRequest = {},
+            onLeaveRequest = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun MembershipActionsLeaveSentPreview() {
+    ThemeComparisonColumn {
+        MembershipActions(
+            isMember = true,
+            isLoading = false,
+            joinRequestSent = false,
+            leaveRequestSent = true,
+            onJoinRequest = {},
+            onLeaveRequest = {},
+        )
     }
 }
 

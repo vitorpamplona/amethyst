@@ -40,12 +40,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.quartz.nip43RelayMembers.addMember.RelayAddMemberEvent
 import com.vitorpamplona.quartz.nip43RelayMembers.list.RelayMembershipListEvent
 import com.vitorpamplona.quartz.nip43RelayMembers.removeMember.RelayRemoveMemberEvent
@@ -139,8 +141,8 @@ private fun RelayMemberEventCard(
     icon: ImageVector,
     title: String,
     subtitle: String?,
-    nav: INav,
-    relayPubKey: String?,
+    nav: INav? = null,
+    relayPubKey: String? = null,
 ) {
     Column(
         modifier =
@@ -173,5 +175,65 @@ private fun RelayMemberEventCard(
                 }
             }
         }
+    }
+}
+
+@Preview
+@Composable
+private fun RelayMembershipListCardPreview() {
+    ThemeComparisonColumn {
+        RelayMemberEventCard(
+            icon = Icons.Default.People,
+            title = "Relay membership list",
+            subtitle = "42 members",
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun RelayAddMemberCardPreview() {
+    ThemeComparisonColumn {
+        RelayMemberEventCard(
+            icon = Icons.Default.PersonAdd,
+            title = "Member added to relay",
+            subtitle = "a1b2c3d4e5f6a7b8...",
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun RelayRemoveMemberCardPreview() {
+    ThemeComparisonColumn {
+        RelayMemberEventCard(
+            icon = Icons.Default.PersonRemove,
+            title = "Member removed from relay",
+            subtitle = "a1b2c3d4e5f6a7b8...",
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun RelayJoinRequestCardPreview() {
+    ThemeComparisonColumn {
+        RelayMemberEventCard(
+            icon = Icons.Default.PersonAdd,
+            title = "Relay join request",
+            subtitle = null,
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun RelayLeaveRequestCardPreview() {
+    ThemeComparisonColumn {
+        RelayMemberEventCard(
+            icon = Icons.AutoMirrored.Filled.ExitToApp,
+            title = "Relay leave request",
+            subtitle = null,
+        )
     }
 }
