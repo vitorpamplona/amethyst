@@ -248,7 +248,9 @@ class CustomEnterAlwaysScrollBehavior(
                 // Note that when the content was set with a revered layout, we always return a
                 // zero offset.
                 return if (!reverseLayout && prevHeightOffset != state.heightOffset) {
-                    available.copy(x = 0f)
+                    // Only report the actually consumed scroll (after clamping),
+                    // so the remaining delta flows through to the bottom bar.
+                    Offset(x = 0f, y = state.heightOffset - prevHeightOffset)
                 } else {
                     Offset.Zero
                 }
