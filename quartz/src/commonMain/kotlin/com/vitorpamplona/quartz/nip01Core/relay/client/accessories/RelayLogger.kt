@@ -59,12 +59,12 @@ class RelayLogger(
                 when (msg) {
                     is EventMessage -> if (debugReceiving) Log.d(logTag) { "Received: $msgStr" }
                     is EoseMessage -> if (debugReceiving) Log.d(logTag) { "EOSE: ${msg.subId}" }
-                    is NoticeMessage -> Log.w(logTag, "Notice: ${msg.message}")
+                    is NoticeMessage -> Log.w(logTag) { "Notice: ${msg.message}" }
                     is OkMessage -> if (debugReceiving) Log.d(logTag) { "OK: ${msg.eventId} ${msg.success} ${msg.message}" }
                     is AuthMessage -> if (debugReceiving) Log.d(logTag) { "Auth: ${msg.challenge}" }
                     is NotifyMessage -> if (debugReceiving) Log.d(logTag) { "Notify: ${msg.message}" }
                     is CountMessage -> if (debugReceiving) Log.d(logTag) { "Count: ${msg.result.count} approx: ${msg.result.approximate} hll: ${msg.result.hll != null}" }
-                    is ClosedMessage -> Log.w(logTag, "Closed: ${msg.subId} ${msg.message}")
+                    is ClosedMessage -> Log.w(logTag) { "Closed: ${msg.subId} ${msg.message}" }
                 }
             }
 

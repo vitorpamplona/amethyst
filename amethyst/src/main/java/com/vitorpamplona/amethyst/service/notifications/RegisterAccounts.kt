@@ -132,7 +132,7 @@ class RegisterAccounts(
         val client = client(url)
 
         client.newCall(request).executeAsync().use { response ->
-            Log.i(tag, "Server registration ${response.isSuccessful}")
+            Log.i(tag) { "Server registration ${response.isSuccessful}" }
         }
     }
 

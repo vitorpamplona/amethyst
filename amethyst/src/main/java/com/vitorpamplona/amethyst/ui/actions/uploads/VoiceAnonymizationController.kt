@@ -112,7 +112,7 @@ class VoiceAnonymizationController(
                     if (result.file.delete()) {
                         Log.d(logTag) { "Deleted distorted file: ${result.file.absolutePath}" }
                     } else {
-                        Log.w(logTag, "Failed to delete distorted file: ${result.file.absolutePath}")
+                        Log.w(logTag) { "Failed to delete distorted file: ${result.file.absolutePath}" }
                     }
                 }
             } catch (e: Exception) {

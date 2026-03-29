@@ -299,7 +299,7 @@ object VideoCompressionHelper {
                 if (cursor.moveToFirst()) cursor.getLong(sizeIndex) else 0L
             } ?: 0L
         } catch (e: Exception) {
-            Log.w(LOG_TAG, "Failed to get file size: ${e.message}")
+            Log.w(LOG_TAG) { "Failed to get file size: ${e.message}" }
             0L
         }
 
@@ -348,13 +348,13 @@ object VideoCompressionHelper {
                 null
             }
         } catch (e: Exception) {
-            Log.w(LOG_TAG, "Failed to get video resolution: ${e.message}")
+            Log.w(LOG_TAG) { "Failed to get video resolution: ${e.message}" }
             null
         } finally {
             try {
                 retriever?.release()
             } catch (e: Exception) {
-                Log.w(LOG_TAG, "Failed to release MediaMetadataRetriever: ${e.message}")
+                Log.w(LOG_TAG) { "Failed to release MediaMetadataRetriever: ${e.message}" }
             }
         }
     }
