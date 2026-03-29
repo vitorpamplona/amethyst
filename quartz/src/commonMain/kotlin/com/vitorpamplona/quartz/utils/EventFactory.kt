@@ -119,6 +119,10 @@ import com.vitorpamplona.quartz.nip58Badges.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.nip58Badges.BadgeProfilesEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent
+import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
+import com.vitorpamplona.quartz.nip61Nutzaps.redemption.NutzapRedemptionEvent
+import com.vitorpamplona.quartz.nip61Nutzaps.token.TokenEvent
 import com.vitorpamplona.quartz.nip60Cashu.history.CashuSpendingHistoryEvent
 import com.vitorpamplona.quartz.nip60Cashu.quote.CashuMintQuoteEvent
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuTokenEvent
@@ -295,6 +299,9 @@ class EventFactory {
                 MuteListEvent.KIND -> MuteListEvent(id, pubKey, createdAt, tags, content, sig)
                 NNSEvent.KIND -> NNSEvent(id, pubKey, createdAt, tags, content, sig)
                 NipTextEvent.KIND -> NipTextEvent(id, pubKey, createdAt, tags, content, sig)
+                NutzapEvent.KIND -> NutzapEvent(id, pubKey, createdAt, tags, content, sig)
+                NutzapInfoEvent.KIND -> NutzapInfoEvent(id, pubKey, createdAt, tags, content, sig)
+                NutzapRedemptionEvent.KIND -> NutzapRedemptionEvent(id, pubKey, createdAt, tags, content, sig)
                 NostrConnectEvent.KIND -> NostrConnectEvent(id, pubKey, createdAt, tags, content, sig)
                 NIP90StatusEvent.KIND -> NIP90StatusEvent(id, pubKey, createdAt, tags, content, sig)
                 NIP90ContentDiscoveryRequestEvent.KIND -> NIP90ContentDiscoveryRequestEvent(id, pubKey, createdAt, tags, content, sig)
@@ -330,6 +337,7 @@ class EventFactory {
                 StatusEvent.KIND -> StatusEvent(id, pubKey, createdAt, tags, content, sig)
                 TextNoteEvent.KIND -> TextNoteEvent(id, pubKey, createdAt, tags, content, sig)
                 TextNoteModificationEvent.KIND -> TextNoteModificationEvent(id, pubKey, createdAt, tags, content, sig)
+                TokenEvent.KIND -> TokenEvent(id, pubKey, createdAt, tags, content, sig)
                 TorrentEvent.KIND -> TorrentEvent(id, pubKey, createdAt, tags, content, sig)
                 TorrentCommentEvent.KIND -> TorrentCommentEvent(id, pubKey, createdAt, tags, content, sig)
                 TrustedRelayListEvent.KIND -> TrustedRelayListEvent(id, pubKey, createdAt, tags, content, sig)
