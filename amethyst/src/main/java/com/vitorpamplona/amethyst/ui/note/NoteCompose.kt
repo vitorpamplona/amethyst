@@ -144,7 +144,12 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderPostApproval
 import com.vitorpamplona.amethyst.ui.note.types.RenderPrivateMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderPublicMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderReaction
+import com.vitorpamplona.amethyst.ui.note.types.RenderRelayAddMember
 import com.vitorpamplona.amethyst.ui.note.types.RenderRelayDiscovery
+import com.vitorpamplona.amethyst.ui.note.types.RenderRelayJoinRequest
+import com.vitorpamplona.amethyst.ui.note.types.RenderRelayLeaveRequest
+import com.vitorpamplona.amethyst.ui.note.types.RenderRelayMembershipList
+import com.vitorpamplona.amethyst.ui.note.types.RenderRelayRemoveMember
 import com.vitorpamplona.amethyst.ui.note.types.RenderReport
 import com.vitorpamplona.amethyst.ui.note.types.RenderTextEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderTextModificationEvent
@@ -220,6 +225,11 @@ import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip40Expiration.expiration
+import com.vitorpamplona.quartz.nip43RelayMembers.addMember.RelayAddMemberEvent
+import com.vitorpamplona.quartz.nip43RelayMembers.joinRequest.RelayJoinRequestEvent
+import com.vitorpamplona.quartz.nip43RelayMembers.leaveRequest.RelayLeaveRequestEvent
+import com.vitorpamplona.quartz.nip43RelayMembers.list.RelayMembershipListEvent
+import com.vitorpamplona.quartz.nip43RelayMembers.removeMember.RelayRemoveMemberEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
@@ -915,6 +925,26 @@ private fun RenderNoteRow(
 
         is RelayDiscoveryEvent -> {
             RenderRelayDiscovery(baseNote, accountViewModel, nav)
+        }
+
+        is RelayMembershipListEvent -> {
+            RenderRelayMembershipList(baseNote, accountViewModel, nav)
+        }
+
+        is RelayAddMemberEvent -> {
+            RenderRelayAddMember(baseNote, accountViewModel, nav)
+        }
+
+        is RelayRemoveMemberEvent -> {
+            RenderRelayRemoveMember(baseNote, accountViewModel, nav)
+        }
+
+        is RelayJoinRequestEvent -> {
+            RenderRelayJoinRequest(baseNote, accountViewModel, nav)
+        }
+
+        is RelayLeaveRequestEvent -> {
+            RenderRelayLeaveRequest(baseNote, accountViewModel, nav)
         }
 
         is PinListEvent -> {
