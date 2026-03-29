@@ -173,6 +173,8 @@ import com.vitorpamplona.quartz.nip58Badges.BadgeProfilesEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
+import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
 import com.vitorpamplona.quartz.nip64Chess.challenge.accept.LiveChessGameAcceptEvent
 import com.vitorpamplona.quartz.nip64Chess.challenge.offer.LiveChessGameChallengeEvent
@@ -1167,6 +1169,18 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     fun consume(
         event: GitRepositoryEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
+
+    fun consume(
+        event: RootSiteEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
+
+    fun consume(
+        event: NamedSiteEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
@@ -3178,6 +3192,8 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is GitReplyEvent -> consume(event, relay, wasVerified)
                 is GitPatchEvent -> consume(event, relay, wasVerified)
                 is GitRepositoryEvent -> consume(event, relay, wasVerified)
+                is RootSiteEvent -> consume(event, relay, wasVerified)
+                is NamedSiteEvent -> consume(event, relay, wasVerified)
                 is ChessGameEvent -> consume(event, relay, wasVerified)
                 is RelayFeedsListEvent -> consume(event, relay, wasVerified)
                 is JesterEvent -> consume(event, relay, wasVerified)

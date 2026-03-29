@@ -160,6 +160,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderHighlight
 import com.vitorpamplona.amethyst.ui.note.types.RenderInteractiveStory
 import com.vitorpamplona.amethyst.ui.note.types.RenderLiveActivityChatMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderLnZap
+import com.vitorpamplona.amethyst.ui.note.types.RenderNamedSiteEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderPinListEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderPoll
 import com.vitorpamplona.amethyst.ui.note.types.RenderPostApproval
@@ -171,6 +172,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderRelayJoinRequest
 import com.vitorpamplona.amethyst.ui.note.types.RenderRelayLeaveRequest
 import com.vitorpamplona.amethyst.ui.note.types.RenderRelayMembershipList
 import com.vitorpamplona.amethyst.ui.note.types.RenderRelayRemoveMember
+import com.vitorpamplona.amethyst.ui.note.types.RenderRootSiteEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderTextEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderTextModificationEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderTorrent
@@ -259,6 +261,8 @@ import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.splits.hasZapSplitSetup
 import com.vitorpamplona.quartz.nip58Badges.BadgeDefinitionEvent
+import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
+import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.RelayDiscoveryEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
@@ -678,6 +682,10 @@ private fun FullBleedNoteCompose(
                     RenderFhirResource(baseNote, accountViewModel, nav)
                 } else if (noteEvent is GitRepositoryEvent) {
                     RenderGitRepositoryEvent(baseNote, accountViewModel, nav)
+                } else if (noteEvent is RootSiteEvent) {
+                    RenderRootSiteEvent(baseNote, accountViewModel, nav)
+                } else if (noteEvent is NamedSiteEvent) {
+                    RenderNamedSiteEvent(baseNote, accountViewModel, nav)
                 } else if (noteEvent is InteractiveStoryBaseEvent) {
                     RenderInteractiveStory(
                         baseNote,
