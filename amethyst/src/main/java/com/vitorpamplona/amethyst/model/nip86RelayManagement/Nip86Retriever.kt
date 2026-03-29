@@ -34,13 +34,12 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.coroutines.executeAsync
 
+private const val CONTENT_TYPE_STRING = "application/nostr+json+rpc"
+private val CONTENT_TYPE = CONTENT_TYPE_STRING.toMediaType()
+
 class Nip86Retriever(
     val okHttpClient: (NormalizedRelayUrl) -> OkHttpClient,
 ) {
-    companion object {
-        val CONTENT_TYPE = "application/nostr+json+rpc".toMediaType()
-    }
-
     suspend fun execute(
         client: Nip86Client,
         request: Nip86Request,
@@ -53,8 +52,8 @@ class Nip86Retriever(
             Request
                 .Builder()
                 .url(client.httpUrl)
-                .header("Content-Type", "application/nostr+json+rpc")
-                .header("Accept", "application/nostr+json+rpc")
+                .header("Content-Type", CONTENT_TYPE_STRING)
+                .header("Accept", CONTENT_TYPE_STRING)
                 .header("Authorization", authToken)
                 .post(bodyBytes.toRequestBody(CONTENT_TYPE))
                 .build()
