@@ -38,6 +38,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 
@@ -87,6 +88,10 @@ class BlossomServerListState(
                 mergeServerList(blossoms)
             }.onStart {
                 emit(mergeServerList(flow.value))
+            }.onEach { servers ->
+                if (servers.none { it == settings.defaultFileServer }) {
+                    settings.changeDefaultFileServer(servers.firstOrNull() ?: DEFAULT_MEDIA_SERVERS[0])
+                }
             }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,

@@ -207,7 +207,7 @@ private fun ImageVideoPostChat(
             label = "",
             placeholder =
                 fileServers
-                    .firstOrNull { it == accountViewModel.account.settings.defaultFileServer }
+                    .firstOrNull { it.baseUrl == accountViewModel.account.settings.defaultFileServer.baseUrl }
                     ?.name
                     ?: fileServers.firstOrNull()?.name
                     ?: DEFAULT_MEDIA_SERVERS[0].name,
