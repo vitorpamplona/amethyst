@@ -146,126 +146,130 @@ class DomainNameReader(
         private set
 
     /**
-     * Reads and parses the current string to make sure the domain name started where it was supposed to,
-     * and the current domain name is correct.
-     * @return The next state to use after reading the current.
+     * Validates the buffered domain-name prefix ([current]) that was accumulated before
+     * the caller started reading from the stream. Updates label/dot counters, detects
+     * hex-numeric IPs, brackets for IPv6, and ASCII/international char boundaries.
+     *
+     * If an invalid character is found mid-string the domain is restarted from that
+     * position (e.g. `asdf%asdf.google.com` → restart at `asdf.google.com`).
+     *
+     * @return [ReaderNextState.ValidDomainName] when the prefix is acceptable,
+     *         [ReaderNextState.InvalidDomainName] otherwise.
      */
     private fun readCurrent(): ReaderNextState {
-        if (current != null) {
-            // Handles the case where the string is ".hello"
-            if (current.length == 1 && isDot(current[0])) {
-                return ReaderNextState.InvalidDomainName
-            } else if (current.length == 3 && current.isDotPercent()) {
+        if (current == null) {
+            startDomainName = buffer.length
+            return ReaderNextState.ValidDomainName
+        }
+
+        // A lone dot or percent-encoded dot is never a valid domain start.
+        if ((current.length == 1 && isDot(current[0])) ||
+            (current.length == 3 && current.isDotPercent())
+        ) {
+            return ReaderNextState.InvalidDomainName
+        }
+
+        startDomainName = buffer.length - current.length
+        numeric = true
+
+        // Index into `current` where we'd restart the domain if we hit an invalid char.
+        var newStart = 0
+
+        val chars = current.toCharArray()
+        val length = chars.size
+
+        // Detect hex literal prefix (0x...)
+        var isAllHexSoFar = length > 2 && chars[0] == '0' && (chars[1] == 'x' || chars[1] == 'X')
+        var lastWasAscii = length > 0 && chars[0].code < INTERNATIONAL_CHAR_START
+
+        var index = if (isAllHexSoFar) 2 else 0
+
+        while (index < length) {
+            val ch = chars[index]
+            val isAscii = ch.code < INTERNATIONAL_CHAR_START
+
+            currentLabelLength++
+            topLevelLength = currentLabelLength
+
+            if (currentLabelLength > MAX_LABEL_LENGTH) {
                 return ReaderNextState.InvalidDomainName
             }
 
-            // The location where the domain name started.
-            startDomainName = buffer.length - current.length
-
-            // flag that the domain is currently all numbers and/or dots.
-            numeric = true
-
-            // If an invalid char is found, we can just restart the domain from there.
-            var newStart = 0
-
-            val currArray = current.toCharArray()
-            val length = currArray.size
-
-            // hex special case
-            var isAllHexSoFar =
-                length > 2 && (currArray[0] == '0' && (currArray[1] == 'x' || currArray[1] == 'X'))
-
-            var lastWasAscii = length > 0 && currArray[0].code < INTERNATIONAL_CHAR_START
-
-            var index = if (isAllHexSoFar) 2 else 0
-            var done = false
-            var isAscii = false
-
-            while (index < length && !done) {
-                // get the current character and update length counts.
-                val curr = currArray[index]
-                isAscii = curr.code < INTERNATIONAL_CHAR_START
-
-                currentLabelLength++
-                topLevelLength = currentLabelLength
-
-                // Is the length of the last part > 64 (plus one since we just incremented)
-                if (currentLabelLength > MAX_LABEL_LENGTH) {
-                    return ReaderNextState.InvalidDomainName
-                } else if (isDot(curr)) {
-                    // found a dot. Increment dot count, and reset last length
+            when {
+                isDot(ch) -> {
                     dots++
                     currentLabelLength = 0
-                } else if (curr == '[') {
+                }
+
+                ch == '[' -> {
                     seenBracket = true
                     numeric = false
-                } else if (curr == '%' && index + 2 < length && isHex(currArray[index + 1]) && isHex(currArray[index + 2])) {
-                    // handle url encoded dot
-                    if (currArray[index + 1] == '2' && currArray[index + 2] == 'e') {
+                }
+
+                ch == '%' && index + 2 < length && isHex(chars[index + 1]) && isHex(chars[index + 2]) -> {
+                    // Percent-encoded byte; check for encoded dot (%2e)
+                    if (chars[index + 1] == '2' && chars[index + 2] == 'e') {
                         dots++
                         currentLabelLength = 0
                     } else {
                         numeric = false
                     }
                     index += 2
-                } else if (isAllHexSoFar) {
-                    // if it's a valid character in the domain that is not numeric
-                    if (!isHex(curr)) {
-                        numeric = false
-                        isAllHexSoFar = false
-                        index-- // backtrack to rerun last character knowing it isn't hex.
-                    }
-                } else if (isAscii == lastWasAscii && (isAlpha(curr) || curr == '-' || !isAscii)) {
-                    // we don't  allow mixed domains: doesn't come here if it changed form ascii to not ascii.
+                }
+
+                isAllHexSoFar && !isHex(ch) -> {
+                    // Thought it was hex but this char isn't — reprocess as non-hex
+                    numeric = false
+                    isAllHexSoFar = false
+                    index-- // backtrack to re-evaluate this char
+                }
+
+                isAscii == lastWasAscii && (isAlpha(ch) || ch == '-' || !isAscii) -> {
+                    // Valid domain character (same script as previous)
                     numeric = false
                     lastWasAscii = isAscii
-                } else if (isAscii != lastWasAscii) {
-                    // if its not _numeric and not alphabetical, then restart searching for a domain from this point.
+                }
+
+                isAscii != lastWasAscii -> {
+                    // Script boundary (ASCII ↔ international) — restart domain from here
                     newStart = index
-                    currentLabelLength = 0
-                    topLevelLength = 0
-                    numeric = true
-                    dots = 0
-                    // done = true
-
+                    resetDomainCounters()
                     lastWasAscii = isAscii
-                } else if (index == 0) {
-                    if (curr in UrlDetector.CANNOT_BEGIN_URLS_WITH) {
-                        newStart = index + 1
-                        currentLabelLength = 0
-                        topLevelLength = 0
-                        numeric = true
-                        dots = 0
-                    }
-                }
-                index++
-            }
-
-            // An invalid character for the domain was found somewhere in the current buffer.
-            // cut the first part of the domain out. For example:
-            // http://asdf%asdf.google.com <- asdf.google.com is still valid, so restart from the %
-            if (newStart > 0) {
-                // make sure the location is not at the end. Otherwise the thing is just invalid.
-
-                if (newStart < current.length) {
-                    buffer.clear()
-                    buffer.append(current.substring(newStart))
-
-                    // cut out the previous part, so now the domain name has to be from here.
-                    startDomainName = 0
                 }
 
-                // now after cutting if the buffer is just "." newStart > current (last character in current is invalid)
-                if (newStart >= current.length || buffer.toString() == ".") {
-                    return ReaderNextState.InvalidDomainName
+                index == 0 && ch in UrlDetector.CANNOT_BEGIN_URLS_WITH -> {
+                    // Invalid leading char — restart after it
+                    newStart = index + 1
+                    resetDomainCounters()
                 }
             }
-        } else {
-            startDomainName = buffer.length
+            index++
         }
 
-        // all else is good, return OK
+        // If we found an invalid region, trim the buffer to start after it.
+        if (newStart > 0) {
+            if (newStart < current.length) {
+                buffer.clear()
+                buffer.append(current.substring(newStart))
+                startDomainName = 0
+            }
+
+            if (newStart >= current.length || buffer.toString() == ".") {
+                return ReaderNextState.InvalidDomainName
+            }
+        }
+
         return ReaderNextState.ValidDomainName
+    }
+
+    /**
+     * Resets domain tracking counters when the domain start is being moved forward.
+     */
+    private fun resetDomainCounters() {
+        currentLabelLength = 0
+        topLevelLength = 0
+        numeric = true
+        dots = 0
     }
 
     /**
@@ -527,111 +531,66 @@ class DomainNameReader(
      * @return Returns true if it's a valid ipv4 address
      */
     private fun isValidIpv4(testDomain: String): Boolean {
-        var valid = false
-        val length: Int = testDomain.length
-        if (length > 0) {
-            // handling format without dots. Ex: http://2123123123123/path/a, http://0x8242343/aksdjf
-            if (dots == 0) {
-                try {
-                    val value: Long
-                    if (length > 2 && testDomain[0] == '0' && testDomain[1] == 'x') { // hex
-                        // digit must be within ['0', '9'] or ['A', 'F'] or ['a', 'f']
-                        for (c in 2..<length) {
-                            val d: Char = testDomain[c]
-                            if ((d < '0' || (d in ':'..<'A') || (d in 'G'..<'a') || d > 'f')) {
-                                return false
-                            }
-                        }
-                        value = testDomain.substring(2).toLong(16)
-                    } else if (testDomain[0] == '0') { // octal
-                        // digit must be within ['0', '7']
-                        for (c in 1..<length) {
-                            val d: Char = testDomain[c]
-                            if (d !in '0'..'7') {
-                                return false
-                            }
-                        }
-                        value = testDomain.substring(1).toLong(8)
-                    } else { // decimal
-                        // digit must be within ['0', '9']
-                        for (c in 0..<length) {
-                            val d: Char = testDomain[c]
-                            if (d !in '0'..'9') {
-                                return false
-                            }
-                        }
-                        value = testDomain.toLong()
-                    }
-                    valid = value in MIN_NUMERIC_DOMAIN_VALUE..MAX_NUMERIC_DOMAIN_VALUE
-                } catch (_: NumberFormatException) {
-                    valid = false
-                }
-            } else if (dots == 3) {
-                // Dotted decimal/hex/octal format
-                val parts: List<String> = splitByDot(testDomain)
-                valid = true
+        if (testDomain.isEmpty()) return false
 
-                // check each part of the ip and make sure its valid.
-                var i = 0
-                while (i < parts.size && valid) {
-                    val part = parts[i]
-                    val partLen: Int = part.length
-                    if (partLen > 0) {
-                        val parsedNum: String
-                        val base: Int
-                        if (partLen > 2 && part[0] == '0' && part[1] == 'x') { // dotted hex
-                            // digit must be within ['0', '9'] or ['A', 'F'] or ['a', 'f']
-                            for (c in 2..<partLen) {
-                                val d: Char = part[c]
-                                if ((d < '0' || (d in ':'..<'A') || (d in 'G'..<'a') || d > 'f')) {
-                                    return false
-                                }
-                            }
-                            parsedNum = part.substring(2)
-                            base = 16
-                        } else if (part[0] == '0') { // dotted octal
-                            // digit must be within ['0', '7']
-                            for (c in 1..<partLen) {
-                                val d: Char = part[c]
-                                if (d !in '0'..'7') {
-                                    return false
-                                }
-                            }
-                            parsedNum = part.substring(1)
-                            base = 8
-                        } else { // dotted decimal
-                            // digit must be within ['0', '9']
-                            for (c in 0..<partLen) {
-                                val d: Char = part[c]
-                                if (d !in '0'..'9') {
-                                    return false
-                                }
-                            }
-                            parsedNum = part
-                            base = 10
-                        }
+        // Dotless format: http://2123123123123/path, http://0x8242343/aksdjf
+        if (dots == 0) {
+            val value = parseNumericLiteral(testDomain) ?: return false
+            return value in MIN_NUMERIC_DOMAIN_VALUE..MAX_NUMERIC_DOMAIN_VALUE
+        }
 
-                        val section =
-                            if (parsedNum.isEmpty()) {
-                                0
-                            } else {
-                                try {
-                                    parsedNum.toInt(base)
-                                } catch (_: NumberFormatException) {
-                                    return false
-                                }
-                            }
-                        if (section !in MIN_IP_PART..MAX_IP_PART) {
-                            valid = false
-                        }
-                    } else {
-                        valid = false
-                    }
-                    i++
-                }
+        // Dotted format: must have exactly 4 parts (3 dots)
+        if (dots != 3) return false
+
+        val parts = splitByDot(testDomain)
+        for (part in parts) {
+            if (part.isEmpty()) return false
+            val section = parseNumericLiteral(part) ?: return false
+            if (section !in MIN_IP_PART..MAX_IP_PART) return false
+        }
+        return true
+    }
+
+    /**
+     * Parses a numeric literal that may be decimal, hexadecimal (0x prefix), or octal (0 prefix).
+     * Validates digit ranges before parsing to avoid exceptions.
+     * @return The parsed value as a Long, or null if the string is not a valid numeric literal.
+     */
+    private fun parseNumericLiteral(s: String): Long? {
+        if (s.isEmpty()) return 0L
+
+        val digits: String
+        val base: Int
+
+        if (s.length > 2 && s[0] == '0' && (s[1] == 'x' || s[1] == 'X')) {
+            // Hexadecimal
+            digits = s.substring(2)
+            base = 16
+            for (c in digits) {
+                if (!isHex(c)) return null
+            }
+        } else if (s[0] == '0') {
+            // Octal
+            digits = s.substring(1)
+            base = 8
+            for (c in digits) {
+                if (c !in '0'..'7') return null
+            }
+        } else {
+            // Decimal
+            digits = s
+            base = 10
+            for (c in digits) {
+                if (c !in '0'..'9') return null
             }
         }
-        return valid
+
+        if (digits.isEmpty()) return 0L
+        return try {
+            digits.toLong(base)
+        } catch (_: NumberFormatException) {
+            null
+        }
     }
 
     /**
