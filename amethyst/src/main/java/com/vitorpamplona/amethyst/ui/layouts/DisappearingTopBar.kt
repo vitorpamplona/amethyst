@@ -38,6 +38,7 @@ import androidx.compose.material3.TopAppBarState
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
@@ -217,6 +218,7 @@ fun enterAlwaysScrollBehavior(
  * Custom copy of EnterAlwaysScrollBehavior that correctly handles reversed layouts
  */
 @OptIn(ExperimentalMaterial3Api::class)
+@Stable
 class CustomEnterAlwaysScrollBehavior(
     override val state: TopAppBarState,
     override val snapAnimationSpec: AnimationSpec<Float>?,
