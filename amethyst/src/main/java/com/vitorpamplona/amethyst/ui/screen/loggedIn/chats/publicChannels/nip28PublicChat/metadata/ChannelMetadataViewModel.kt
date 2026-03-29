@@ -33,7 +33,6 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.MetadataStripper
@@ -121,7 +120,7 @@ class ChannelMetadataViewModel : ViewModel() {
                             template,
                             relayList = { it.channelInfo().relays },
                         )
-                    val channel = LocalCache.getOrCreatePublicChatChannel(signedResult.id)
+                    val channel = account.cache.getOrCreatePublicChatChannel(signedResult.id)
                     // follows the channel
                     account.follow(channel)
                     onDone(channel)
@@ -156,7 +155,7 @@ class ChannelMetadataViewModel : ViewModel() {
                             template,
                             relayList = { it.channelInfo().relays },
                         )
-                    val channel = LocalCache.getOrCreatePublicChatChannel(signedResult.id)
+                    val channel = account.cache.getOrCreatePublicChatChannel(signedResult.id)
                     onDone(channel)
                 }
             }

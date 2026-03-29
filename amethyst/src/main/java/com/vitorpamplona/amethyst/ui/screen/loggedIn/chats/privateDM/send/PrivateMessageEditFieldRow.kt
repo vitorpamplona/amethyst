@@ -239,8 +239,9 @@ fun EditField(
 @Preview
 @Composable
 fun RecipientMissingRelaysWarningPreview() {
-    val user1 = LocalCache.getOrCreateUser("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c")
-    val user2 = LocalCache.getOrCreateUser("ca89cb11f1c75d5b6622268ff43d2288ea8b2cb5b9aa996ff9ff704fc904b78b")
+    val cache = LocalCache()
+    val user1 = cache.getOrCreateUser("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c")
+    val user2 = cache.getOrCreateUser("ca89cb11f1c75d5b6622268ff43d2288ea8b2cb5b9aa996ff9ff704fc904b78b")
 
     ThemeComparisonColumn {
         RecipientMissingRelaysWarning(

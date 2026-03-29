@@ -32,7 +32,6 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.ui.feeds.InvalidatableContent
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.SearchQueryState
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
@@ -163,7 +162,7 @@ class SearchBarViewModel(
             }
 
             if (term.isNotBlank()) {
-                LocalCache.findUsersStartingWith(term, account)
+                account.cache.findUsersStartingWith(term, account)
             } else {
                 emptyList()
             }
@@ -175,7 +174,7 @@ class SearchBarViewModel(
             searchValueFlow.debounce(100),
             invalidations,
         ) { term, version ->
-            LocalCache
+            account.cache
                 .findNotesStartingWith(term, account.hiddenUsers)
                 .sortedWith(DefaultFeedOrder)
         }.flowOn(Dispatchers.IO)
@@ -186,7 +185,7 @@ class SearchBarViewModel(
             searchValueFlow.debounce(100),
             invalidations,
         ) { term, version ->
-            LocalCache.findPublicChatChannelsStartingWith(term)
+            account.cache.findPublicChatChannelsStartingWith(term)
         }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 
@@ -195,7 +194,7 @@ class SearchBarViewModel(
             searchValueFlow.debounce(100),
             invalidations,
         ) { term, version ->
-            LocalCache.findEphemeralChatChannelsStartingWith(term)
+            account.cache.findEphemeralChatChannelsStartingWith(term)
         }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 
@@ -204,7 +203,7 @@ class SearchBarViewModel(
             searchValueFlow.debounce(100),
             invalidations,
         ) { term, version ->
-            LocalCache.findLiveActivityChannelsStartingWith(term)
+            account.cache.findLiveActivityChannelsStartingWith(term)
         }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 
@@ -235,7 +234,8 @@ class SearchBarViewModel(
                 val relays =
                     (
                         listOfNotNull(relayUrl) +
-                            LocalCache.relayHints.relayDB.filter { _, relay -> relay.url.contains(lower) }
+                            account.cache.relayHints.relayDB
+                                .filter { _, relay -> relay.url.contains(lower) }
                     ).distinctBy { it.url }
 
                 relays

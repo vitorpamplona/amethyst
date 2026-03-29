@@ -144,7 +144,7 @@ class MuteListState(
             Log.d("AccountRegisterObservers", "Loading saved mute list ${event.toJson()}")
             @OptIn(DelicateCoroutinesApi::class)
             scope.launch(Dispatchers.IO) {
-                LocalCache.justConsumeMyOwnEvent(event)
+                cache.justConsumeMyOwnEvent(event)
             }
         }
 

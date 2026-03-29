@@ -37,7 +37,6 @@ import com.vitorpamplona.amethyst.commons.compose.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.compose.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState.EmojiMedia
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.location.LocationState
@@ -276,7 +275,7 @@ class LongFormPostViewModel :
         val localForwardZapTo = draftEvent.tags.filter { it.size > 1 && it[0] == "zap" }
         forwardZapTo.value = SplitBuilder()
         localForwardZapTo.forEach {
-            val user = LocalCache.getOrCreateUser(it[1])
+            val user = account.cache.getOrCreateUser(it[1])
             val value = it.last().toFloatOrNull() ?: 0f
             forwardZapTo.value.addItem(user, value)
         }

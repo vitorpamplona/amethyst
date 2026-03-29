@@ -32,13 +32,14 @@ import com.vitorpamplona.quartz.utils.mapOfSet
 fun filterByEvent(
     eventId: HexKey,
     default: Set<NormalizedRelayUrl>,
+    cache: LocalCache,
 ): List<RelayBasedFilter> {
-    val note = LocalCache.checkGetOrCreateNote(eventId) ?: return emptyList()
+    val note = cache.checkGetOrCreateNote(eventId) ?: return emptyList()
 
     val list =
         mapOfSet {
             if (note !is AddressableNote && note.event == null) {
-                potentialRelaysToFindEvent(note).ifEmpty { default }.forEach { relayUrl ->
+                potentialRelaysToFindEvent(note, cache).ifEmpty { default }.forEach { relayUrl ->
                     add(relayUrl, note.idHex)
                 }
             }
@@ -46,7 +47,7 @@ fun filterByEvent(
             // loads threading that is event-based
             note.replyTo?.forEach { parentNote ->
                 if (parentNote !is AddressableNote && note.event == null) {
-                    potentialRelaysToFindEvent(note).ifEmpty { default }.forEach { relayUrl ->
+                    potentialRelaysToFindEvent(note, cache).ifEmpty { default }.forEach { relayUrl ->
                         add(relayUrl, note.idHex)
                     }
                 }

@@ -339,7 +339,7 @@ fun RelayInformationScreen(
 
         val relayInfo by loadRelayInfo(relay)
 
-        val discoveryEvents by loadRelayDiscoveryEvents(relay)
+        val discoveryEvents by loadRelayDiscoveryEvents(relay, accountViewModel.account.cache)
 
         val messages =
             remember(relay) {
@@ -374,7 +374,7 @@ fun RelayInformationBody(
     val usedBy =
         remember(relay) {
             accountViewModel.account.declaredFollowsPerUsingRelay.value[relay]?.mapNotNull { hex ->
-                LocalCache.checkGetOrCreateUser(hex)
+                accountViewModel.account.cache.checkGetOrCreateUser(hex)
             } ?: emptyList()
         }
 
@@ -1576,9 +1576,12 @@ fun PoliciesCard(relay: Nip11RelayInformation) {
 }
 
 @Composable
-fun loadRelayDiscoveryEvents(relay: NormalizedRelayUrl): State<ImmutableList<RelayDiscoveryEvent>> =
+fun loadRelayDiscoveryEvents(
+    relay: NormalizedRelayUrl,
+    cache: LocalCache,
+): State<ImmutableList<RelayDiscoveryEvent>> =
     remember(relay) {
-        LocalCache
+        cache
             .observeEvents<RelayDiscoveryEvent>(
                 Filter(
                     kinds = listOf(RelayDiscoveryEvent.KIND),

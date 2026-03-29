@@ -44,7 +44,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.Nip05State
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.UserSearchDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.layouts.listItem.SlimListItem
@@ -76,12 +75,12 @@ fun ShowUserSuggestionList(
 
     LaunchedEffect(Unit) {
         launch(Dispatchers.IO) {
-            LocalCache.live.newEventBundles.collect {
+            accountViewModel.account.cache.live.newEventBundles.collect {
                 userSuggestions.invalidateData()
             }
         }
         launch(Dispatchers.IO) {
-            LocalCache.live.deletedEventBundles.collect {
+            accountViewModel.account.cache.live.deletedEventBundles.collect {
                 userSuggestions.invalidateData()
             }
         }

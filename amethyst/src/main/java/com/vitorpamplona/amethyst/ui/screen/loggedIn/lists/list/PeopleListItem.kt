@@ -55,8 +55,8 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.nip51Lists.peopleList.PeopleList
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
@@ -82,9 +82,9 @@ private const val PREVIEW_LIST_IMAGE = "http://some.com/image.png"
 @Preview()
 @Composable
 private fun PeopleListItemPreview() {
-    val user1: User = LocalCache.getOrCreateUser("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c")
-    val user2: User = LocalCache.getOrCreateUser("ca89cb11f1c75d5b6622268ff43d2288ea8b2cb5b9aa996ff9ff704fc904b78b")
-    val user3: User = LocalCache.getOrCreateUser("7eb29c126b3628077e2e3d863b917a56b74293aa9d8a9abc26a40ba3f2866baf")
+    val user1: User = Amethyst.instance.cache.getOrCreateUser("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c")
+    val user2: User = Amethyst.instance.cache.getOrCreateUser("ca89cb11f1c75d5b6622268ff43d2288ea8b2cb5b9aa996ff9ff704fc904b78b")
+    val user3: User = Amethyst.instance.cache.getOrCreateUser("7eb29c126b3628077e2e3d863b917a56b74293aa9d8a9abc26a40ba3f2866baf")
 
     val samplePeopleList1 =
         PeopleList(

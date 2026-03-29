@@ -74,7 +74,7 @@ class UrlUserTagTransformationTest {
     @Test
     fun testKeepTransformedIndexFullyInsideTransformedText() {
         val user =
-            LocalCache.getOrCreateUser(
+            LocalCache().getOrCreateUser(
                 decodePublicKey("npub1gcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqlfnj5z")
                     .toHexKey(),
             )
@@ -193,7 +193,7 @@ class UrlUserTagTransformationTest {
     @Test
     fun transformationText() {
         val user =
-            LocalCache.getOrCreateUser(
+            LocalCache().getOrCreateUser(
                 decodePublicKey("npub1gcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqlfnj5z")
                     .toHexKey(),
             )
@@ -243,7 +243,7 @@ class UrlUserTagTransformationTest {
     @Test
     fun transformationTextTwoKeys() {
         val user =
-            LocalCache.getOrCreateUser(
+            LocalCache().getOrCreateUser(
                 decodePublicKey("npub1gcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqlfnj5z")
                     .toHexKey(),
             )

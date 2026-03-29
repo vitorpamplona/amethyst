@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.apps
 
-import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
@@ -35,7 +35,7 @@ class UserProfileAppRecommendationsFeedFilter(
 
     override fun feed(): List<Note> {
         val recommendations =
-            LocalCache.addressables.mapFlattenIntoSet { _, note ->
+            Amethyst.instance.cache.addressables.mapFlattenIntoSet { _, note ->
                 filterMap(note)
             }
 
@@ -50,7 +50,7 @@ class UserProfileAppRecommendationsFeedFilter(
         val noteEvent = it.event
         if (noteEvent is AppRecommendationEvent) {
             if (noteEvent.pubKey == user.pubkeyHex) {
-                return noteEvent.recommendations().map { LocalCache.getOrCreateAddressableNote(it.address) }
+                return noteEvent.recommendations().map { Amethyst.instance.cache.getOrCreateAddressableNote(it.address) }
             }
         }
 

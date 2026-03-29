@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.utils.mapOfSet
 class CommunityFeedFilterSubAssembler(
     client: INostrClient,
     allKeys: () -> Set<CommunityQueryState>,
+    private val cache: LocalCache,
 ) : SingleSubEoseManager<CommunityQueryState>(client, allKeys) {
     override fun updateFilter(
         keys: List<CommunityQueryState>,
@@ -44,7 +45,7 @@ class CommunityFeedFilterSubAssembler(
                 val communityRelays =
                     (
                         commEvent.relayUrls().ifEmpty {
-                            LocalCache.relayHints.hintsForAddress(commEvent.addressTag())
+                            cache.relayHints.hintsForAddress(commEvent.addressTag())
                         } + it.community.relayUrls()
                     ).toSet()
 
@@ -52,7 +53,7 @@ class CommunityFeedFilterSubAssembler(
                     mapOfSet {
                         commEvent.moderatorKeys().forEach { modKey ->
                             // hits the relay of each moderator for approvals
-                            LocalCache.checkGetOrCreateUser(modKey)?.outboxRelays()?.forEach { relay ->
+                            cache.checkGetOrCreateUser(modKey)?.outboxRelays()?.forEach { relay ->
                                 add(relay, modKey)
                             }
 

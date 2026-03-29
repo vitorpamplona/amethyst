@@ -58,7 +58,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.observeAccountIsHiddenUser
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
@@ -109,11 +108,11 @@ fun ProfileScreen(
 ) {
     if (userId == null) return
 
-    var userBase by remember { mutableStateOf(LocalCache.getUserIfExists(userId)) }
+    var userBase by remember { mutableStateOf(accountViewModel.account.cache.getUserIfExists(userId)) }
 
     if (userBase == null) {
         LaunchedEffect(userId) {
-            val newUserBase = LocalCache.checkGetOrCreateUser(userId)
+            val newUserBase = accountViewModel.account.cache.checkGetOrCreateUser(userId)
             if (newUserBase != userBase) {
                 userBase = newUserBase
             }

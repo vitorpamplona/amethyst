@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.dal
 
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
 import com.vitorpamplona.quartz.utils.Log
@@ -37,7 +36,7 @@ class HiddenAccountsFeedFilter(
     override fun feed(): List<User> =
         account.hiddenUsers.flow.value.hiddenUsers.reversed().mapNotNull {
             try {
-                LocalCache.getOrCreateUser(it)
+                account.cache.getOrCreateUser(it)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 Log.e("HiddenAccountsFeedFilter", "Failed to parse key $it")

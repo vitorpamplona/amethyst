@@ -68,7 +68,7 @@ class AppSpecificState(
                 Log.d("AccountRegisterObservers", "Loading saved app specific data ${event.toJson()}")
                 @OptIn(DelicateCoroutinesApi::class)
                 scope.launch(Dispatchers.IO) {
-                    LocalCache.justConsumeMyOwnEvent(event)
+                    cache.justConsumeMyOwnEvent(event)
                     try {
                         val decrypted = signer.decrypt(event.content, event.pubKey)
                         val syncedSettings = JsonMapper.fromJson<AccountSyncedSettingsInternal>(decrypted)

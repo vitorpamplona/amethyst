@@ -54,7 +54,7 @@ class CacheClientConnector(
         eventId: HexKey,
         info: NormalizedRelayUrl,
     ) {
-        val note = LocalCache.getNoteIfExists(eventId)
+        val note = cache.getNoteIfExists(eventId)
         if (note != null) {
             note.addRelay(info)
             markAsSeenInner(note, info)

@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip28Chats
 
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
@@ -50,8 +49,8 @@ open class DiscoverChatFeedFilter(
         val params = buildFilterParams(account)
 
         val allChannelNotes =
-            LocalCache.publicChatChannels.mapNotNullIntoSet { _, channel ->
-                val note = LocalCache.getNoteIfExists(channel.idHex)
+            account.cache.publicChatChannels.mapNotNullIntoSet { _, channel ->
+                val note = account.cache.getNoteIfExists(channel.idHex)
                 val noteEvent = note?.event
 
                 if (noteEvent == null || params.match(noteEvent, note.relays)) {
@@ -79,19 +78,31 @@ open class DiscoverChatFeedFilter(
             // note event here will never be null
             val noteEvent = note.event
             if (noteEvent is ChannelCreateEvent && params.match(noteEvent, note.relays)) {
-                if ((LocalCache.getPublicChatChannelIfExists(noteEvent.id)?.notes?.size() ?: 0) > 0) {
+                if ((
+                        account.cache
+                            .getPublicChatChannelIfExists(noteEvent.id)
+                            ?.notes
+                            ?.size() ?: 0
+                    ) > 0
+                ) {
                     note
                 } else {
                     null
                 }
             } else if (noteEvent is IsInPublicChatChannel) {
-                val channel = noteEvent.channelId()?.let { LocalCache.checkGetOrCreateNote(it) }
+                val channel = noteEvent.channelId()?.let { account.cache.checkGetOrCreateNote(it) }
                 val channelEvent = channel?.event
 
                 if (channel != null &&
                     (channelEvent == null || (channelEvent is ChannelCreateEvent && params.match(channelEvent, note.relays)))
                 ) {
-                    if ((LocalCache.getPublicChatChannelIfExists(channel.idHex)?.notes?.size() ?: 0) > 0) {
+                    if ((
+                            account.cache
+                                .getPublicChatChannelIfExists(channel.idHex)
+                                ?.notes
+                                ?.size() ?: 0
+                        ) > 0
+                    ) {
                         channel
                     } else {
                         null
@@ -109,7 +120,10 @@ open class DiscoverChatFeedFilter(
         // precache to avoid breaking the contract
         val lastNote =
             items.associateWith { note ->
-                LocalCache.getPublicChatChannelIfExists(note.idHex)?.lastNote?.createdAt() ?: 0L
+                account.cache
+                    .getPublicChatChannelIfExists(note.idHex)
+                    ?.lastNote
+                    ?.createdAt() ?: 0L
             }
 
         val createdNote =

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.datasource
 
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -28,11 +29,12 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 class UserProfileMediaFilterSubAssembler(
     client: INostrClient,
     allKeys: () -> Set<UserProfileQueryState>,
+    private val cache: LocalCache,
 ) : PerUserEoseManager<UserProfileQueryState>(client, allKeys) {
     override fun updateFilter(
         key: UserProfileQueryState,
         since: SincePerRelayMap?,
-    ): List<RelayBasedFilter> = filterUserProfileMedia(user(key), since)
+    ): List<RelayBasedFilter> = filterUserProfileMedia(user(key), since, cache)
 
     override fun user(key: UserProfileQueryState) = key.user
 }

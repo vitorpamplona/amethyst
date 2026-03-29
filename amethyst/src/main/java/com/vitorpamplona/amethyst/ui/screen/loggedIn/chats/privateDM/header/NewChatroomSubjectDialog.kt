@@ -47,7 +47,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.note.buttons.CloseButton
 import com.vitorpamplona.amethyst.ui.note.buttons.PostButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -102,7 +101,11 @@ fun NewChatroomSubjectDialog(
                                 val template =
                                     ChatMessageEvent.build(
                                         message.value,
-                                        room.users.map { LocalCache.getOrCreateUser(it).toPTag() },
+                                        room.users.map {
+                                            accountViewModel.account.cache
+                                                .getOrCreateUser(it)
+                                                .toPTag()
+                                        },
                                     ) {
                                         groupName.value.ifBlank { null }?.let { changeSubject(it) }
                                     }

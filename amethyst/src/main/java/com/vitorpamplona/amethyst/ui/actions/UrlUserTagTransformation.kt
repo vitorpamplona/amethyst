@@ -30,7 +30,7 @@ import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextDecoration
-import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKey
 import kotlin.coroutines.cancellation.CancellationException
@@ -73,7 +73,7 @@ fun buildAnnotatedStringWithUrlHighlighting(
                                 val endIndex = startIndex + keyB32.length
 
                                 val key = decodePublicKey(keyB32.removePrefix("@"))
-                                val user = LocalCache.getOrCreateUser(key.toHexKey())
+                                val user = Amethyst.instance.cache.getOrCreateUser(key.toHexKey())
 
                                 val newWord = "@${user.toBestDisplayName()}"
                                 val startNew = builderAfter.toString().length

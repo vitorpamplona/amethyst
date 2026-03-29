@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip90DVMs
 
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ParticipantListBuilder
 import com.vitorpamplona.amethyst.model.TopFilter
@@ -60,7 +59,7 @@ open class DiscoverNIP89FeedFilter(
 
     override fun feed(): List<Note> {
         val notes =
-            LocalCache.addressables.filterIntoSet(AppDefinitionEvent.KIND) { _, it ->
+            account.cache.addressables.filterIntoSet(AppDefinitionEvent.KIND) { _, it ->
                 acceptDVM(it)
             }
 
@@ -117,7 +116,7 @@ open class DiscoverNIP89FeedFilter(
         val followingKeySet =
             discoveryTopFilterAuthors ?: account.kind3FollowList.flow.value.authors
 
-        val counter = ParticipantListBuilder()
+        val counter = ParticipantListBuilder(account.cache)
         val participantCounts =
             items.associateWith { counter.countFollowsThatParticipateOn(it, followingKeySet) }
 

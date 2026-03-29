@@ -24,7 +24,6 @@ import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.nip86RelayManagement.Nip86Retriever
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -82,7 +81,7 @@ class RelayManagementViewModel(
         _bannedPubkeys.map { list ->
             list
                 .mapNotNull { entry ->
-                    LocalCache.checkGetOrCreateUser(entry.pubkey)?.let { PubkeyUser(it, entry.reason) }
+                    account.cache.checkGetOrCreateUser(entry.pubkey)?.let { PubkeyUser(it, entry.reason) }
                 }.sortedByDescending { account.isKnown(it.user) }
         }
 
@@ -90,7 +89,7 @@ class RelayManagementViewModel(
         _allowedPubkeys.map { list ->
             list
                 .mapNotNull { entry ->
-                    LocalCache.checkGetOrCreateUser(entry.pubkey)?.let { PubkeyUser(it, entry.reason) }
+                    account.cache.checkGetOrCreateUser(entry.pubkey)?.let { PubkeyUser(it, entry.reason) }
                 }.sortedByDescending { account.isKnown(it.user) }
         }
 

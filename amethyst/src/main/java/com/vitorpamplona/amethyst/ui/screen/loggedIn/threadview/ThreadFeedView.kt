@@ -76,7 +76,6 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.ui.thread.drawReplyLevel
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeCommunityApprovalNeedStatus
 import com.vitorpamplona.amethyst.ui.components.AutoNonlazyGrid
@@ -1117,7 +1116,7 @@ private fun RenderWikiHeaderForThreadPreview() {
 
     runBlocking {
         withContext(Dispatchers.IO) {
-            LocalCache.justConsume(event, null, false)
+            accountViewModel.account.cache.justConsume(event, null, false)
         }
     }
 

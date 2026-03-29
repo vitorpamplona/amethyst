@@ -157,8 +157,9 @@ fun NipNoteHeaderPreview() {
                 ),
         )
 
-    LocalCache.justConsume(event, null, true)
-    val note = LocalCache.getOrCreateNote(event.id)
+    val cache = LocalCache()
+    cache.justConsume(event, null, true)
+    val note = cache.getOrCreateNote(event.id)
 
     ThemeComparisonColumn(
         toPreview = {

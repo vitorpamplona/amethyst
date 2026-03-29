@@ -393,6 +393,7 @@ class Account(
             proxyRelays = proxyRelayList.flow,
             caches = feedDecryptionCaches,
             signer = signer,
+            cache = cache,
             scope = scope,
         ).flow
 
@@ -409,6 +410,7 @@ class Account(
             proxyRelays = proxyRelayList.flow,
             caches = feedDecryptionCaches,
             signer = signer,
+            cache = cache,
             scope = scope,
         ).flow
 
@@ -425,6 +427,7 @@ class Account(
             proxyRelays = proxyRelayList.flow,
             caches = feedDecryptionCaches,
             signer = signer,
+            cache = cache,
             scope = scope,
         ).flow
 
@@ -441,6 +444,7 @@ class Account(
             proxyRelays = proxyRelayList.flow,
             caches = feedDecryptionCaches,
             signer = signer,
+            cache = cache,
             scope = scope,
         ).flow
 

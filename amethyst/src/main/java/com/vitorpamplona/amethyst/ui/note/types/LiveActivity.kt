@@ -45,7 +45,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
@@ -94,8 +93,8 @@ fun RenderLiveActivityEventPreview() {
 
     runBlocking {
         withContext(Dispatchers.IO) {
-            LocalCache.justConsume(event, null, false)
-            baseNote = LocalCache.getOrCreateNote("19406ad34ce3c653d62eb73c1816ac27dcf473c2ccdccf5af7d90d2633c62561")
+            accountViewModel.account.cache.justConsume(event, null, false)
+            baseNote = accountViewModel.account.cache.getOrCreateNote("19406ad34ce3c653d62eb73c1816ac27dcf473c2ccdccf5af7d90d2633c62561")
         }
     }
 

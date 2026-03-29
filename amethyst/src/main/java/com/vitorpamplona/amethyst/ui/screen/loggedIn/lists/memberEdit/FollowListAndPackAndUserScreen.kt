@@ -36,7 +36,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -52,11 +51,11 @@ fun FollowListAndPackAndUserScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    var userBase by remember { mutableStateOf(LocalCache.getUserIfExists(userToAddOrRemove)) }
+    var userBase by remember { mutableStateOf(accountViewModel.account.cache.getUserIfExists(userToAddOrRemove)) }
 
     if (userBase == null) {
         LaunchedEffect(userToAddOrRemove) {
-            val newUserBase = LocalCache.checkGetOrCreateUser(userToAddOrRemove)
+            val newUserBase = accountViewModel.account.cache.checkGetOrCreateUser(userToAddOrRemove)
             if (newUserBase != userBase) {
                 userBase = newUserBase
             }

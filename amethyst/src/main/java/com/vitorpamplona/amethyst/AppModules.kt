@@ -253,7 +253,7 @@ class AppModules(
         }
 
     // Caches all events in Memory
-    val cache: LocalCache = LocalCache
+    val cache: LocalCache = LocalCache()
 
     // Provides a relay pool
     val client: INostrClient = NostrClient(websocketBuilder, applicationIOScope)
@@ -300,7 +300,7 @@ class AppModules(
     // Coordinates all subscriptions for the Nostr Client
     val sources: RelaySubscriptionsCoordinator =
         RelaySubscriptionsCoordinator(
-            LocalCache,
+            cache,
             client,
             authCoordinator.receiver,
             failureTracker,

@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.upload
 
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.IMetaAttachments
 import com.vitorpamplona.quartz.nip01Core.tags.references.references
@@ -56,7 +55,7 @@ class ChatFileSender(
         account.sendNip17EncryptedFile(
             ChatMessageEncryptedFileHeaderEvent.build(
                 url = result.url,
-                to = chatroom.users.map { LocalCache.getOrCreateUser(it).toPTag() },
+                to = chatroom.users.map { account.cache.getOrCreateUser(it).toPTag() },
                 cipher = cipher,
                 mimeType = result.mimeTypeBeforeEncryption,
                 originalHash = result.hashBeforeEncryption,
@@ -82,7 +81,7 @@ class ChatFileSender(
         val iMetaAttachments = IMetaAttachments()
         iMetaAttachments.add(result, caption, contentWarningReason)
 
-        val toUsers = chatroom.users.map { LocalCache.getOrCreateUser(it).toPTag() }
+        val toUsers = chatroom.users.map { account.cache.getOrCreateUser(it).toPTag() }
 
         val template =
             ChatMessageEvent.build(result.url, toUsers) {

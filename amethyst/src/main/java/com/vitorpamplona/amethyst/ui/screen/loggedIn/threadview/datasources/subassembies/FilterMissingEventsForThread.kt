@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.datasources.sub
 
 import com.vitorpamplona.amethyst.commons.model.ThreadAssembler
 import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders.filterMissingAddressables
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders.filterMissingEvents
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders.potentialRelaysToFindAddress
@@ -33,18 +34,19 @@ import com.vitorpamplona.quartz.utils.mapOfSet
 fun filterMissingEventsForThread(
     threadInfo: ThreadAssembler.ThreadInfo,
     defaultRelays: Set<NormalizedRelayUrl>,
+    cache: LocalCache,
 ): List<RelayBasedFilter> {
     val missingEvents =
         mapOfSet {
             if (threadInfo.root.event == null && threadInfo.root !is AddressableNote) {
-                potentialRelaysToFindEvent(threadInfo.root).ifEmpty { defaultRelays }.forEach { relayUrl ->
+                potentialRelaysToFindEvent(threadInfo.root, cache).ifEmpty { defaultRelays }.forEach { relayUrl ->
                     add(relayUrl, threadInfo.root.idHex)
                 }
             }
 
             threadInfo.allNotes.forEach {
                 if (it !is AddressableNote && it.event == null) {
-                    potentialRelaysToFindEvent(it).ifEmpty { defaultRelays }.forEach { relayUrl ->
+                    potentialRelaysToFindEvent(it, cache).ifEmpty { defaultRelays }.forEach { relayUrl ->
                         add(relayUrl, it.idHex)
                     }
                 }
@@ -55,14 +57,14 @@ fun filterMissingEventsForThread(
         mapOfSet {
             val rootNote = threadInfo.root
             if (rootNote.event == null && rootNote is AddressableNote) {
-                potentialRelaysToFindEvent(rootNote).ifEmpty { defaultRelays }.forEach { relayUrl ->
+                potentialRelaysToFindAddress(rootNote, cache).ifEmpty { defaultRelays }.forEach { relayUrl ->
                     add(relayUrl, rootNote.address)
                 }
             }
 
             threadInfo.allNotes.forEach {
                 if (it is AddressableNote && it.event == null) {
-                    potentialRelaysToFindAddress(it).ifEmpty { defaultRelays }.forEach { relayUrl ->
+                    potentialRelaysToFindAddress(it, cache).ifEmpty { defaultRelays }.forEach { relayUrl ->
                         add(relayUrl, it.address)
                     }
                 }

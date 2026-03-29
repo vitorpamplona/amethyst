@@ -68,7 +68,7 @@ class RelaySubscriptionsCoordinator(
     // loaders of content that is not yet in the device.
     // they are active when looking at events, users, channels.
     val channelFinder = ChannelFinderFilterAssemblyGroup(client)
-    val eventFinder = EventFinderFilterAssembler(client)
+    val eventFinder = EventFinderFilterAssembler(client, cache)
     val userFinder = UserFinderFilterAssembler(client, cache, failureTracker)
 
     // active when searching or tagging users.
@@ -77,9 +77,9 @@ class RelaySubscriptionsCoordinator(
     // active depending on the screen.
     val channel = ChannelFilterAssembler(client)
     val chatroom = ChatroomFilterAssembler(client)
-    val community = CommunityFilterAssembler(client)
+    val community = CommunityFilterAssembler(client, cache)
     val thread = ThreadFilterAssembler(client)
-    val profile = UserProfileFilterAssembler(client)
+    val profile = UserProfileFilterAssembler(client, cache)
     val hashtags = HashtagFilterAssembler(client)
     val geohashes = GeoHashFilterAssembler(client)
     val relayFeed = RelayFeedFilterAssembler(client)

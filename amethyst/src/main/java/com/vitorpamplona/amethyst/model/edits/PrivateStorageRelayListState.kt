@@ -94,7 +94,7 @@ class PrivateStorageRelayListState(
             Log.d("AccountRegisterObservers", "Loading saved private home relay list ${event.toJson()}")
             @OptIn(DelicateCoroutinesApi::class)
             scope.launch(Dispatchers.IO) {
-                LocalCache.justConsumeMyOwnEvent(event)
+                cache.justConsumeMyOwnEvent(event)
             }
         }
 

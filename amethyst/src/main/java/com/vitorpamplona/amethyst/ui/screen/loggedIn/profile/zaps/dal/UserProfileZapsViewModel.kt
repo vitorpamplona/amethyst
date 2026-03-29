@@ -26,7 +26,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
@@ -62,7 +61,7 @@ class UserProfileZapsViewModel(
     suspend fun mapRequest(zapEvent: LnZapEvent): ZapAmount? {
         val zapRequest =
             zapEvent.zapRequest ?: return ZapAmount(
-                LocalCache.getOrCreateUser(zapEvent.pubKey),
+                account.cache.getOrCreateUser(zapEvent.pubKey),
                 zapEvent.amount ?: BigDecimal.ZERO,
             )
 
@@ -72,24 +71,24 @@ class UserProfileZapsViewModel(
                 val cachedPrivateRequest = account.privateZapsDecryptionCache.decryptPrivateZap(zapRequest)
                 if (cachedPrivateRequest != null) {
                     ZapAmount(
-                        LocalCache.getOrCreateUser(cachedPrivateRequest.pubKey),
+                        account.cache.getOrCreateUser(cachedPrivateRequest.pubKey),
                         zapEvent.amount ?: BigDecimal.ZERO,
                     )
                 } else {
                     ZapAmount(
-                        LocalCache.getOrCreateUser(zapRequest.pubKey),
+                        account.cache.getOrCreateUser(zapRequest.pubKey),
                         zapEvent.amount ?: BigDecimal.ZERO,
                     )
                 }
             } else {
                 ZapAmount(
-                    LocalCache.getOrCreateUser(zapRequest.pubKey),
+                    account.cache.getOrCreateUser(zapRequest.pubKey),
                     zapEvent.amount ?: BigDecimal.ZERO,
                 )
             }
         } else {
             ZapAmount(
-                LocalCache.getOrCreateUser(zapRequest.pubKey),
+                account.cache.getOrCreateUser(zapRequest.pubKey),
                 zapEvent.amount ?: BigDecimal.ZERO,
             )
         }

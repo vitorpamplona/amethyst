@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.utils.mapOfSet
 
 fun filterFollowingPublicChatsCreationEvent(
+    cache: LocalCache,
     followingChannels: Set<HexKey>,
     since: SincePerRelayMap?,
 ): List<RelayBasedFilter>? {
@@ -38,11 +39,11 @@ fun filterFollowingPublicChatsCreationEvent(
     val relayRoomDTags =
         mapOfSet {
             followingChannels.forEach { channelId ->
-                val channel = LocalCache.getPublicChatChannelIfExists(channelId)
+                val channel = cache.getPublicChatChannelIfExists(channelId)
                 if (channel?.event == null) {
                     val relays =
                         channel?.relays()?.ifEmpty { null }
-                            ?: LocalCache.relayHints.hintsForEvent(channelId).ifEmpty { null }
+                            ?: cache.relayHints.hintsForEvent(channelId).ifEmpty { null }
                             ?: Constants.eventFinderRelays
 
                     relays.forEach { relayUrl ->

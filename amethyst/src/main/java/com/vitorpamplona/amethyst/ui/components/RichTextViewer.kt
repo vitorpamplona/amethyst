@@ -947,8 +947,9 @@ fun DisplayNoteFromTagPreview() {
             sig = "ec39e60722a083cccbd2d82d2827e13f5499fa7cbcedac5b76011a844c077473adb629d50d01fab147835ac6c8a3d5ba9aaddd87d6723f0c3c864b9119fc4356",
         )
 
-    LocalCache.justConsume(dummyPost, null, true)
-    val note = LocalCache.getOrCreateNote(dummyPost.id)
+    val cache = LocalCache()
+    cache.justConsume(dummyPost, null, true)
+    val note = cache.getOrCreateNote(dummyPost.id)
 
     ThemeComparisonColumn(
         toPreview = {

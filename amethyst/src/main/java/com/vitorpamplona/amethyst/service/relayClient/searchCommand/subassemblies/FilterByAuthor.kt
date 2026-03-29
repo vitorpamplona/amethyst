@@ -34,12 +34,13 @@ fun filterByAuthor(
     pubKey: HexKey,
     indexRelays: Set<NormalizedRelayUrl>,
     defaultRelays: Set<NormalizedRelayUrl>,
-) = LocalCache.checkGetOrCreateUser(pubKey)?.let { key ->
+    cache: LocalCache,
+) = cache.checkGetOrCreateUser(pubKey)?.let { key ->
     val perRelay =
         mapOfSet {
             val relays =
                 key.authorRelayList()?.writeRelaysNorm()
-                    ?: (key.allUsedRelays() + LocalCache.relayHints.hintsForKey(key.pubkeyHex) + indexRelays).ifEmpty { null }
+                    ?: (key.allUsedRelays() + cache.relayHints.hintsForKey(key.pubkeyHex) + indexRelays).ifEmpty { null }
                     ?: defaultRelays.toList()
 
             relays.forEach {

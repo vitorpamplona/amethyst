@@ -27,7 +27,6 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendDMNotification
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendZapNotification
@@ -93,7 +92,7 @@ class EventNotificationConsumer(
         notificationEvent: Event,
         account: Account,
     ) {
-        val consumed = LocalCache.hasConsumed(notificationEvent)
+        val consumed = account.cache.hasConsumed(notificationEvent)
         Log.d(TAG, "New Notification ${notificationEvent.kind} ${notificationEvent.id} Arrived for ${account.signer.pubKey} consumed= $consumed")
         if (!consumed) {
             Log.d(TAG, "New Notification was verified")
@@ -115,7 +114,7 @@ class EventNotificationConsumer(
 
     suspend fun findAccountAndConsume(event: Event) {
         Log.d(TAG, "New Notification Arrived")
-        val users = event.taggedUserIds().map { LocalCache.getOrCreateUser(it) }
+        val users = event.taggedUserIds().map { Amethyst.instance.cache.getOrCreateUser(it) }
         val npubs = users.map { it.pubkeyNpub() }.toSet()
 
         // PushNotification Wraps don't include a receiver.
@@ -142,15 +141,17 @@ class EventNotificationConsumer(
         event: Event,
         signer: NostrSigner,
     ): Event? {
-        if (LocalCache.hasConsumed(event)) return null
+        if (Amethyst.instance.cache.hasConsumed(event)) return null
 
         return when (event) {
             is GiftWrapEvent -> {
-                if (LocalCache.justConsume(event, null, false)) {
+                if (Amethyst.instance.cache.justConsume(event, null, false)) {
                     // new event
                     val inner = event.unwrapThrowing(signer)
                     // clear the encrypted payload to save memory
-                    LocalCache.getOrCreateNote(event.id).event = event.copyNoContent()
+                    Amethyst.instance.cache
+                        .getOrCreateNote(event.id)
+                        .event = event.copyNoContent()
 
                     unwrapAndConsume(inner, signer)
                 } else {
@@ -159,14 +160,16 @@ class EventNotificationConsumer(
             }
 
             is SealedRumorEvent -> {
-                if (LocalCache.justConsume(event, null, false)) {
+                if (Amethyst.instance.cache.justConsume(event, null, false)) {
                     // new event
                     val inner = event.unsealThrowing(signer)
                     // clear the encrypted payload to save memory
-                    LocalCache.getOrCreateNote(event.id).event = event.copyNoContent()
+                    Amethyst.instance.cache
+                        .getOrCreateNote(event.id)
+                        .event = event.copyNoContent()
 
                     // this is not verifiable
-                    if (LocalCache.justConsume(inner, null, true)) {
+                    if (Amethyst.instance.cache.justConsume(inner, null, true)) {
                         inner
                     } else {
                         null
@@ -177,7 +180,7 @@ class EventNotificationConsumer(
             }
 
             else -> {
-                LocalCache.justConsume(event, null, false)
+                Amethyst.instance.cache.justConsume(event, null, false)
                 event
             }
         }
@@ -195,8 +198,8 @@ class EventNotificationConsumer(
             event.pubKey != account.signer.pubKey
         ) { // from the user
             Log.d(TAG, "Notifying")
-            val chatroomList = LocalCache.getOrCreateChatroomList(account.signer.pubKey)
-            val chatNote = LocalCache.getNoteIfExists(event.id) ?: return
+            val chatroomList = account.cache.getOrCreateChatroomList(account.signer.pubKey)
+            val chatNote = account.cache.getNoteIfExists(event.id) ?: return
             val chatRoom = event.chatroomKey(account.signer.pubKey)
 
             val followingKeySet = account.followingKeySet()
@@ -246,8 +249,8 @@ class EventNotificationConsumer(
             event.pubKey != account.signer.pubKey
         ) { // from the user
             Log.d(TAG, "Notifying")
-            val chatroomList = LocalCache.getOrCreateChatroomList(account.signer.pubKey)
-            val chatNote = LocalCache.getNoteIfExists(event.id) ?: return
+            val chatroomList = account.cache.getOrCreateChatroomList(account.signer.pubKey)
+            val chatNote = account.cache.getNoteIfExists(event.id) ?: return
             val chatRoom = event.chatroomKey(account.signer.pubKey)
 
             val followingKeySet = account.followingKeySet()
@@ -291,8 +294,8 @@ class EventNotificationConsumer(
         if (event.createdAt < TimeUtils.fifteenMinutesAgo()) return
 
         if (account.signer.pubKey == event.verifiedRecipientPubKey()) {
-            val note = LocalCache.getNoteIfExists(event.id) ?: return
-            val chatroomList = LocalCache.getOrCreateChatroomList(account.signer.pubKey)
+            val note = account.cache.getNoteIfExists(event.id) ?: return
+            val chatroomList = account.cache.getOrCreateChatroomList(account.signer.pubKey)
 
             val followingKeySet = account.followingKeySet()
 
@@ -366,7 +369,7 @@ class EventNotificationConsumer(
     ) {
         Log.d(TAG, "New Zap to Notify")
         Log.d(TAG, "Notify Start ${event.toNostrUri()}")
-        LocalCache.getNoteIfExists(event.id) ?: return
+        account.cache.getNoteIfExists(event.id) ?: return
 
         Log.d(TAG, "Notify Not Notified Yet")
 
@@ -375,8 +378,8 @@ class EventNotificationConsumer(
 
         Log.d(TAG, "Notify Not an old event")
 
-        val noteZapRequest = event.zapRequest?.id?.let { LocalCache.checkGetOrCreateNote(it) } ?: return
-        val noteZapped = event.zappedPost().firstOrNull()?.let { LocalCache.checkGetOrCreateNote(it) } ?: return
+        val noteZapRequest = event.zapRequest?.id?.let { account.cache.checkGetOrCreateNote(it) } ?: return
+        val noteZapped = event.zappedPost().firstOrNull()?.let { account.cache.checkGetOrCreateNote(it) } ?: return
 
         Log.d(TAG, "Notify ZapRequest $noteZapRequest zapped $noteZapped")
 
@@ -393,7 +396,7 @@ class EventNotificationConsumer(
                 decryptZapContentAuthor(event, account.signer)?.let { decryptedEvent ->
                     Log.d(TAG, "Notify Decrypted if Private Zap ${event.id}")
 
-                    val author = LocalCache.getOrCreateUser(decryptedEvent.pubKey)
+                    val author = account.cache.getOrCreateUser(decryptedEvent.pubKey)
                     val senderInfo = Pair(author, decryptedEvent.content.ifBlank { null })
 
                     if (noteZapped.event?.content != null) {

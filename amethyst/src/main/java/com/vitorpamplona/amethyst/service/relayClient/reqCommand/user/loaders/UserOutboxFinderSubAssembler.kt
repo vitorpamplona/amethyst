@@ -105,6 +105,7 @@ class UserOutboxFinderSubAssembler(
                 connectedRelays,
                 failureTracker.cannotConnectRelays,
                 hasTried,
+                cache,
             )
 
         return perRelayKeysBoth.mapNotNull {

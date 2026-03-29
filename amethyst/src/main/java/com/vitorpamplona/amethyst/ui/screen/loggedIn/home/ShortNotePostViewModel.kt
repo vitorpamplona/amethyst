@@ -38,7 +38,6 @@ import com.vitorpamplona.amethyst.commons.compose.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.compose.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState.EmojiMedia
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.location.LocationState
@@ -342,7 +341,7 @@ open class ShortNotePostViewModel :
                             (replyNote.event as? TextNoteEvent)
                                 ?.mentions()
                                 ?.toSet()
-                                ?.map { LocalCache.getOrCreateUser(it.pubKey) }
+                                ?.map { account.cache.getOrCreateUser(it.pubKey) }
                                 ?: emptyList()
 
                         if (currentMentions.contains(replyUser)) {
@@ -400,7 +399,7 @@ open class ShortNotePostViewModel :
 
                     setup.forEach {
                         if (it is ZapSplitSetup) {
-                            forwardZapTo.value.addItem(LocalCache.getOrCreateUser(it.pubKeyHex), (it.weight / totalWeight).toFloat())
+                            forwardZapTo.value.addItem(account.cache.getOrCreateUser(it.pubKeyHex), (it.weight / totalWeight).toFloat())
                         }
                     }
                 }
@@ -462,7 +461,7 @@ open class ShortNotePostViewModel :
         val localForwardZapTo = draftEvent.tags.filter { it.size > 1 && it[0] == "zap" }
         forwardZapTo.value = SplitBuilder()
         localForwardZapTo.forEach {
-            val user = LocalCache.getOrCreateUser(it[1])
+            val user = account.cache.getOrCreateUser(it[1])
             val value = it.last().toFloatOrNull() ?: 0f
             forwardZapTo.value.addItem(user, value)
         }
@@ -491,17 +490,17 @@ open class ShortNotePostViewModel :
 
         eTags =
             draftEvent.tags.filter { it.size > 1 && (it[0] == "e" || it[0] == "a") && it.getOrNull(3) != "fork" }.mapNotNull {
-                val note = LocalCache.checkGetOrCreateNote(it[1])
+                val note = account.cache.checkGetOrCreateNote(it[1])
                 note
             }
 
         pTags =
             draftEvent.tags.filter { it.size > 1 && it[0] == "p" }.mapNotNull {
-                LocalCache.checkGetOrCreateUser(it[1])
+                account.cache.checkGetOrCreateUser(it[1])
             }
 
         draftEvent.tags.filter { it.size > 3 && (it[0] == "e" || it[0] == "a") && it[3] == "fork" }.forEach {
-            val note = LocalCache.checkGetOrCreateNote(it[1])
+            val note = account.cache.checkGetOrCreateNote(it[1])
             forkedFromNote = note
         }
 
@@ -510,7 +509,7 @@ open class ShortNotePostViewModel :
                 .tags
                 .filter { it.size > 1 && (it[0] == "e" || it[0] == "a") && it.getOrNull(3) == "reply" }
                 .map {
-                    LocalCache.checkGetOrCreateNote(it[1])
+                    account.cache.checkGetOrCreateNote(it[1])
                 }.firstOrNull()
 
         if (originalNote == null) {
@@ -519,7 +518,7 @@ open class ShortNotePostViewModel :
                     .tags
                     .filter { it.size > 1 && (it[0] == "e" || it[0] == "a") && it.getOrNull(3) == "root" }
                     .map {
-                        LocalCache.checkGetOrCreateNote(it[1])
+                        account.cache.checkGetOrCreateNote(it[1])
                     }.firstOrNull()
         }
 
@@ -548,7 +547,7 @@ open class ShortNotePostViewModel :
         val localForwardZapTo = draftEvent.tags.filter { it.size > 1 && it[0] == "zap" }
         forwardZapTo.value = SplitBuilder()
         localForwardZapTo.forEach {
-            val user = LocalCache.getOrCreateUser(it[1])
+            val user = account.cache.getOrCreateUser(it[1])
             val value = it.last().toFloatOrNull() ?: 0f
             forwardZapTo.value.addItem(user, value)
         }
@@ -577,13 +576,13 @@ open class ShortNotePostViewModel :
 
         eTags =
             draftEvent.tags.filter { it.size > 1 && (it[0] == "e" || it[0] == "a") && it.getOrNull(3) != "fork" }.mapNotNull {
-                val note = LocalCache.checkGetOrCreateNote(it[1])
+                val note = account.cache.checkGetOrCreateNote(it[1])
                 note
             }
 
         pTags =
             draftEvent.tags.filter { it.size > 1 && it[0] == "p" }.mapNotNull {
-                LocalCache.checkGetOrCreateUser(it[1])
+                account.cache.checkGetOrCreateUser(it[1])
             }
 
         canUsePoll = originalNote == null
@@ -620,7 +619,7 @@ open class ShortNotePostViewModel :
         val localForwardZapTo = draftEvent.tags.filter { it.size > 1 && it[0] == "zap" }
         forwardZapTo.value = SplitBuilder()
         localForwardZapTo.forEach {
-            val user = LocalCache.getOrCreateUser(it[1])
+            val user = account.cache.getOrCreateUser(it[1])
             val value = it.last().toFloatOrNull() ?: 0f
             forwardZapTo.value.addItem(user, value)
         }
@@ -649,13 +648,13 @@ open class ShortNotePostViewModel :
 
         eTags =
             draftEvent.tags.filter { it.size > 1 && (it[0] == "e" || it[0] == "a") && it.getOrNull(3) != "fork" }.mapNotNull {
-                val note = LocalCache.checkGetOrCreateNote(it[1])
+                val note = account.cache.checkGetOrCreateNote(it[1])
                 note
             }
 
         pTags =
             draftEvent.tags.filter { it.size > 1 && it[0] == "p" }.mapNotNull {
-                LocalCache.checkGetOrCreateUser(it[1])
+                account.cache.checkGetOrCreateUser(it[1])
             }
 
         canUsePoll = originalNote == null
@@ -797,7 +796,12 @@ open class ShortNotePostViewModel :
                         userList.map {
                             val tag = it.toPTag()
                             if (tag.relayHint == null) {
-                                tag.copy(relayHint = LocalCache.relayHints.hintsForKey(it.pubkeyHex).firstOrNull())
+                                tag.copy(
+                                    relayHint =
+                                        account.cache.relayHints
+                                            .hintsForKey(it.pubkeyHex)
+                                            .firstOrNull(),
+                                )
                             } else {
                                 tag
                             }
@@ -912,7 +916,12 @@ open class ShortNotePostViewModel :
                         userList.map {
                             val tag = it.toPTag()
                             if (tag.relayHint == null) {
-                                tag.copy(relayHint = LocalCache.relayHints.hintsForKey(it.pubkeyHex).firstOrNull())
+                                tag.copy(
+                                    relayHint =
+                                        account.cache.relayHints
+                                            .hintsForKey(it.pubkeyHex)
+                                            .firstOrNull(),
+                                )
                             } else {
                                 tag
                             }

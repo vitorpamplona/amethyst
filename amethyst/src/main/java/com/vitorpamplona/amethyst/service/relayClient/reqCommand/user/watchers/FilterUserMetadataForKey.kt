@@ -47,13 +47,14 @@ fun filterUserMetadataForKey(
     authors: Set<User>,
     indexRelays: Set<NormalizedRelayUrl>,
     since: EOSEAccountFast<User>,
+    cache: LocalCache,
 ): List<RelayBasedFilter> {
     val perRelayUsers =
         mapOfSet {
             authors.forEach { key ->
                 val relays =
                     key.outboxRelays()
-                        ?: (key.allUsedRelays() + LocalCache.relayHints.hintsForKey(key.pubkeyHex) + indexRelays)
+                        ?: (key.allUsedRelays() + cache.relayHints.hintsForKey(key.pubkeyHex) + indexRelays)
 
                 relays.forEach {
                     add(it, key)

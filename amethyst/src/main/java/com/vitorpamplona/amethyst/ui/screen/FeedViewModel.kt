@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen
 
-import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
 
@@ -33,4 +33,4 @@ typealias FeedViewModel = com.vitorpamplona.amethyst.commons.viewmodels.FeedView
  */
 abstract class AndroidFeedViewModel(
     localFilter: FeedFilter<Note>,
-) : FeedViewModel(localFilter, LocalCache)
+) : FeedViewModel(localFilter, Amethyst.instance.cache)

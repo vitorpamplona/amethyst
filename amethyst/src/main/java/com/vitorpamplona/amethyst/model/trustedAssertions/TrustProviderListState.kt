@@ -117,7 +117,7 @@ class TrustProviderListState(
             Log.d("AccountRegisterObservers", "Loading saved ephemeral chat list")
             @OptIn(DelicateCoroutinesApi::class)
             scope.launch(Dispatchers.IO) {
-                LocalCache.justConsumeMyOwnEvent(event)
+                cache.justConsumeMyOwnEvent(event)
             }
         }
 

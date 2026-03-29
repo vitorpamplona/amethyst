@@ -41,7 +41,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ParticipantListBuilder
 import com.vitorpamplona.amethyst.model.User
@@ -232,7 +231,7 @@ fun LoadParticipants(
             val hosts =
                 participants.mapNotNull { part ->
                     if (part.pubKey != baseNote.author?.pubkeyHex) {
-                        LocalCache.checkGetOrCreateUser(part.pubKey)
+                        accountViewModel.account.cache.checkGetOrCreateUser(part.pubKey)
                     } else {
                         null
                     }
@@ -255,7 +254,7 @@ fun LoadParticipants(
                 }
 
             val allParticipants =
-                ParticipantListBuilder()
+                ParticipantListBuilder(accountViewModel.account.cache)
                     .followsThatParticipateOn(baseNote, followingKeySet)
                     .minus(hostsAuthor)
 
@@ -263,7 +262,7 @@ fun LoadParticipants(
                 if (followingKeySet == null) {
                     val allFollows = accountViewModel.account.kind3FollowList.flow.value.authors
                     val followingParticipants =
-                        ParticipantListBuilder()
+                        ParticipantListBuilder(accountViewModel.account.cache)
                             .followsThatParticipateOn(baseNote, allFollows)
                             .minus(hostsAuthor)
 

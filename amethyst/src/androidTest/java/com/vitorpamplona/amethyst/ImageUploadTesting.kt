@@ -61,7 +61,7 @@ class ImageUploadTesting {
         val accountSettings = AccountSettings(KeyPair())
         val signer = NostrSignerInternal(accountSettings.keyPair)
         val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-        val cache = LocalCache
+        val cache = LocalCache()
 
         val blossomServerListState =
             BlossomServerListState(

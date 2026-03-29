@@ -73,7 +73,7 @@ class ThreadDualAxisChartAssemblerTest {
                 geolocationFlow = { MutableStateFlow<LocationState.LocationResult>(LocationState.LocationResult.Loading) },
                 nwcFilterAssembler = { NWCPaymentFilterAssembler(client) },
                 otsResolverBuilder = { EmptyOtsResolverBuilder.build() },
-                cache = LocalCache,
+                cache = LocalCache(),
                 client = client,
                 scope = scope,
             )
@@ -162,7 +162,7 @@ class ThreadDualAxisChartAssemblerTest {
             var counter = 0
             eventArray.forEach {
                 TestCase.assertTrue("${it.id} failed signature check", it.verify())
-                LocalCache.justConsume(it, null, false)
+                cache.justConsume(it, null, false)
                 counter++
             }
 
@@ -174,7 +174,7 @@ class ThreadDualAxisChartAssemblerTest {
                     null,
                 )
 
-            val filter = ThreadFeedFilter(account, naddr.toTag(), LocalCache)
+            val filter = ThreadFeedFilter(account, naddr.toTag(), cache)
             val calculatedFeed = filter.feed()
 
             val expectedOrder =

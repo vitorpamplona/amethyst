@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.drafts.dal
 
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.filterIntoSet
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
@@ -40,7 +39,7 @@ class DraftEventsFeedFilter(
 
     override fun feed(): List<Note> {
         val drafts =
-            LocalCache.addressables.filterIntoSet(DraftWrapEvent.KIND, account.userProfile().pubkeyHex) { _, note ->
+            account.cache.addressables.filterIntoSet(DraftWrapEvent.KIND, account.userProfile().pubkeyHex) { _, note ->
                 acceptableEvent(note)
             }
 

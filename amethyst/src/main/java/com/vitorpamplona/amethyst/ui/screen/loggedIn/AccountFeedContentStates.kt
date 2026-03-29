@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.feeds.ChannelFeedContentState
@@ -54,23 +53,23 @@ class AccountFeedContentStates(
     val scope: CoroutineScope,
 ) {
     val homeLive = ChannelFeedContentState(HomeLiveFilter(account), scope)
-    val homeNewThreads = FeedContentState(HomeNewThreadFeedFilter(account), scope, LocalCache)
-    val homeReplies = FeedContentState(HomeConversationsFeedFilter(account), scope, LocalCache)
+    val homeNewThreads = FeedContentState(HomeNewThreadFeedFilter(account), scope, account.cache)
+    val homeReplies = FeedContentState(HomeConversationsFeedFilter(account), scope, account.cache)
 
-    val dmKnown = FeedContentState(ChatroomListKnownFeedFilter(account), scope, LocalCache)
-    val dmNew = FeedContentState(ChatroomListNewFeedFilter(account), scope, LocalCache)
+    val dmKnown = FeedContentState(ChatroomListKnownFeedFilter(account), scope, account.cache)
+    val dmNew = FeedContentState(ChatroomListNewFeedFilter(account), scope, account.cache)
 
-    val videoFeed = FeedContentState(VideoFeedFilter(account), scope, LocalCache)
+    val videoFeed = FeedContentState(VideoFeedFilter(account), scope, account.cache)
 
-    val discoverFollowSets = FeedContentState(DiscoverFollowSetsFeedFilter(account), scope, LocalCache)
-    val discoverReads = FeedContentState(DiscoverLongFormFeedFilter(account), scope, LocalCache)
-    val discoverMarketplace = FeedContentState(DiscoverMarketplaceFeedFilter(account), scope, LocalCache)
-    val discoverDVMs = FeedContentState(DiscoverNIP89FeedFilter(account), scope, LocalCache)
-    val discoverLive = FeedContentState(DiscoverLiveFeedFilter(account), scope, LocalCache)
-    val discoverCommunities = FeedContentState(DiscoverCommunityFeedFilter(account), scope, LocalCache)
-    val discoverPublicChats = FeedContentState(DiscoverChatFeedFilter(account), scope, LocalCache)
+    val discoverFollowSets = FeedContentState(DiscoverFollowSetsFeedFilter(account), scope, account.cache)
+    val discoverReads = FeedContentState(DiscoverLongFormFeedFilter(account), scope, account.cache)
+    val discoverMarketplace = FeedContentState(DiscoverMarketplaceFeedFilter(account), scope, account.cache)
+    val discoverDVMs = FeedContentState(DiscoverNIP89FeedFilter(account), scope, account.cache)
+    val discoverLive = FeedContentState(DiscoverLiveFeedFilter(account), scope, account.cache)
+    val discoverCommunities = FeedContentState(DiscoverCommunityFeedFilter(account), scope, account.cache)
+    val discoverPublicChats = FeedContentState(DiscoverChatFeedFilter(account), scope, account.cache)
 
-    val pollsFeed = FeedContentState(PollsFeedFilter(account), scope, LocalCache)
+    val pollsFeed = FeedContentState(PollsFeedFilter(account), scope, account.cache)
 
     val notifications = CardFeedContentState(NotificationFeedFilter(account), scope)
     val notificationsOpenPolls = OpenPollsState(account, scope)
@@ -78,9 +77,9 @@ class AccountFeedContentStates(
 
     val feedListOptions = TopNavFilterState(account, scope)
 
-    val drafts = FeedContentState(DraftEventsFeedFilter(account), scope, LocalCache)
+    val drafts = FeedContentState(DraftEventsFeedFilter(account), scope, account.cache)
 
-    val webBookmarks = FeedContentState(WebBookmarkFeedFilter(account), scope, LocalCache)
+    val webBookmarks = FeedContentState(WebBookmarkFeedFilter(account), scope, account.cache)
 
     suspend fun init() {
         notificationSummary.initializeSuspend()

@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.dal
 
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
@@ -45,7 +44,7 @@ class ChessFeedFilter(
         val params = buildFilterParams(account)
 
         val notes =
-            LocalCache.notes.filterIntoSet { _, it ->
+            account.cache.notes.filterIntoSet { _, it ->
                 acceptableEvent(it, params)
             }
 

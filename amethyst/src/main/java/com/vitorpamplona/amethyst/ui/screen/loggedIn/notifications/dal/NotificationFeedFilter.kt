@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.dal
 
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.model.filterIntoSet
@@ -140,10 +139,10 @@ class NotificationFeedFilter(
         val filterParams = buildFilterParams(account)
 
         val notifications =
-            LocalCache.notes.filterIntoSet { _, note ->
+            account.cache.notes.filterIntoSet { _, note ->
                 note.event !is AddressableEvent && acceptableEvent(note, filterParams)
             } +
-                LocalCache.addressables.filterIntoSet(ADDRESSABLE_KINDS) { _, note ->
+                account.cache.addressables.filterIntoSet(ADDRESSABLE_KINDS) { _, note ->
                     acceptableEvent(note, filterParams)
                 }
 
@@ -220,7 +219,7 @@ class NotificationFeedFilter(
                     event
                         .communityAddress()
                         ?.let {
-                            LocalCache.getAddressableNoteIfExists(it)
+                            account.cache.getAddressableNoteIfExists(it)
                         }?.event as? CommunityDefinitionEvent
                 if (community != null) {
                     val moderators = community.moderatorKeys().toSet()
@@ -232,7 +231,13 @@ class NotificationFeedFilter(
                 }
             }
 
-            val isAuthoredPostCited = event.findCitations().any { LocalCache.getNoteIfExists(it)?.author?.pubkeyHex == authorHex }
+            val isAuthoredPostCited =
+                event.findCitations().any {
+                    account.cache
+                        .getNoteIfExists(it)
+                        ?.author
+                        ?.pubkeyHex == authorHex
+                }
 
             if (isAuthoredPostCited) return true
 
@@ -246,7 +251,14 @@ class NotificationFeedFilter(
 
                 // Displays notifications about forks
                 address?.pubKeyHex == authorHex ||
-                    (version?.let { LocalCache.getNoteIfExists(it)?.author?.pubkeyHex == authorHex } == true)
+                    (
+                        version?.let {
+                            account.cache
+                                .getNoteIfExists(it)
+                                ?.author
+                                ?.pubkeyHex == authorHex
+                        } == true
+                    )
             } else {
                 false
             }

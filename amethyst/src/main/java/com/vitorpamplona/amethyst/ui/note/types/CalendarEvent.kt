@@ -277,8 +277,9 @@ fun RenderCalendarTimeSlotEventPreview() {
             sig = "a63bdfc5d33432ef6a1454c7b395586430f5602b822ccd07b9d1ccd9608ecda8508b58374bff28ab87d9b9c92c9cd5a7e95bfe67587ccc852e3fea78c0c682c3",
         )
 
-    LocalCache.justConsume(event, null, true)
-    val note = LocalCache.getOrCreateNote(event.id)
+    val cache = LocalCache()
+    cache.justConsume(event, null, true)
+    val note = cache.getOrCreateNote(event.id)
 
     ThemeComparisonColumn {
         RenderCalendarTimeSlotEvent(
@@ -309,8 +310,9 @@ fun RenderCalendarDateSlotEventPreview() {
                 ),
         )
 
-    LocalCache.justConsume(event, null, true)
-    val note = LocalCache.getOrCreateNote(event.id)
+    val cache = LocalCache()
+    cache.justConsume(event, null, true)
+    val note = cache.getOrCreateNote(event.id)
 
     ThemeComparisonColumn {
         RenderCalendarDateSlotEvent(

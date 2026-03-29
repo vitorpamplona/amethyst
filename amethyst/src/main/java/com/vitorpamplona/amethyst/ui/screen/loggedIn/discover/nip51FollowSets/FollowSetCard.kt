@@ -38,7 +38,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteAndMap
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
@@ -132,7 +131,7 @@ fun RenderFollowSetThumbPreview() {
             sig = "3aa388edafad151e81cb0228fe04e115dbbcaa851c666bfe3c8740b6cd99575f0fc3ba2d47acda86f7626564a05e9dbc05ef452a7bd0ac00f828dbad0e1bae6c",
         )
 
-    LocalCache.justConsume(followCard, null, false)
+    accountViewModel.account.cache.justConsume(followCard, null, false)
 
     val card =
         FollowSetCard(
@@ -145,7 +144,7 @@ fun RenderFollowSetThumbPreview() {
     ThemeComparisonColumn {
         RenderFollowSetThumb(
             card = card,
-            baseNote = LocalCache.getOrCreateNote(followCard.id),
+            baseNote = accountViewModel.account.cache.getOrCreateNote(followCard.id),
             accountViewModel = accountViewModel,
             nav = nav,
         )

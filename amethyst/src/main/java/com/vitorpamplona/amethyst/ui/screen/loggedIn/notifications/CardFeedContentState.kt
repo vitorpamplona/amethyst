@@ -24,14 +24,13 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateOf
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.ui.feeds.InvalidatableContent
 import com.vitorpamplona.amethyst.commons.ui.feeds.LoadedFeedState
 import com.vitorpamplona.amethyst.commons.ui.notifications.Card
 import com.vitorpamplona.amethyst.commons.ui.notifications.CardFeedState
 import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.LocalCache.getNoteIfExists
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.BundledInsert
@@ -199,20 +198,20 @@ class CardFeedContentState(
                     val event = (zapEvent.event as LnZapEvent)
                     val author =
                         event.zappedAuthor().firstNotNullOfOrNull {
-                            LocalCache.getUserIfExists(it) // don't create user if it doesn't exist
+                            Amethyst.instance.cache.getUserIfExists(it) // don't create user if it doesn't exist
                         }
                     if (author != null) {
-                        val existingZapRequest = event.zapRequest?.id?.let { getNoteIfExists(it) }
+                        val existingZapRequest = event.zapRequest?.id?.let { Amethyst.instance.cache.getNoteIfExists(it) }
                         if (existingZapRequest == null || existingZapRequest.event == null) {
                             // tries to add it
                             event.zapRequest?.let {
-                                LocalCache.checkDeletionAndConsume(it, null, false)
+                                Amethyst.instance.cache.checkDeletionAndConsume(it, null, false)
                             }
                         }
 
                         val zapRequest = event.zapRequest
                         if (zapRequest != null) {
-                            val zapRequestNote = getNoteIfExists(zapRequest.id)
+                            val zapRequestNote = Amethyst.instance.cache.getNoteIfExists(zapRequest.id)
                             if (zapRequestNote != null) {
                                 zapsPerUser
                                     .getOrPut(author) { mutableListOf() }

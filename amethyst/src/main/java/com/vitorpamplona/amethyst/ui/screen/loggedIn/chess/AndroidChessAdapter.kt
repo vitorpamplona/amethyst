@@ -393,16 +393,18 @@ class AndroidRelayFetcher(
 
 /**
  * Android implementation of IUserMetadataProvider.
- * Wraps LocalCache.getOrCreateUser() for user metadata lookup.
+ * Wraps account.cache.getOrCreateUser() for user metadata lookup.
  */
-class AndroidMetadataProvider : IUserMetadataProvider {
+class AndroidMetadataProvider(
+    val cache: LocalCache,
+) : IUserMetadataProvider {
     override fun getDisplayName(pubkey: String): String {
-        val user = LocalCache.getOrCreateUser(pubkey)
+        val user = cache.getOrCreateUser(pubkey)
         return user.toBestDisplayName()
     }
 
     override fun getPictureUrl(pubkey: String): String? {
-        val user = LocalCache.getOrCreateUser(pubkey)
+        val user = cache.getOrCreateUser(pubkey)
         return user.profilePicture()
     }
 }

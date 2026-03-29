@@ -61,7 +61,7 @@ class SearchPostWatcherSubAssembler(
             runCatching {
                 if (Hex.isHex(mySearchString)) {
                     val hexKey = Hex.decode(mySearchString).toHexKey()
-                    filterByEvent(hexKey, defaultRelaysWithSearch)
+                    filterByEvent(hexKey, defaultRelaysWithSearch, cache)
                 } else {
                     val parsed = Nip19Parser.uriToRoute(mySearchString)?.entity
                     if (parsed != null) {
@@ -71,11 +71,11 @@ class SearchPostWatcherSubAssembler(
                             is NSec -> emptyList()
                             is NPub -> emptyList()
                             is NProfile -> emptyList()
-                            is NNote -> filterByEvent(parsed.hex, defaultRelaysWithSearch)
-                            is NEvent -> filterByEvent(parsed.hex, defaultRelaysWithSearch)
+                            is NNote -> filterByEvent(parsed.hex, defaultRelaysWithSearch, cache)
+                            is NEvent -> filterByEvent(parsed.hex, defaultRelaysWithSearch, cache)
                             is NEmbed -> emptyList()
                             is NRelay -> emptyList()
-                            is NAddress -> filterByAddress(parsed, defaultRelaysWithSearch)
+                            is NAddress -> filterByAddress(parsed, defaultRelaysWithSearch, cache)
                             else -> emptyList()
                         }
                     } else {

@@ -29,7 +29,6 @@ import androidx.appcompat.app.AppCompatActivity
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.debugState
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
 import com.vitorpamplona.amethyst.service.playback.composable.DEFAULT_MUTED_SETTING
 import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
@@ -137,7 +136,7 @@ fun uriToRoute(
 
     val nip19 = Nip19Parser.uriToRoute(uri)?.entity
     if (nip19 != null) {
-        LocalCache.consume(nip19)
+        account.cache.consume(nip19)
 
         val route =
             when (nip19) {
@@ -155,14 +154,14 @@ fun uriToRoute(
 
                 is NEvent -> {
                     routeFor(
-                        note = LocalCache.getOrCreateNote(nip19.hex),
+                        note = account.cache.getOrCreateNote(nip19.hex),
                         loggedIn = account,
                     ) ?: Route.EventRedirect(nip19.hex)
                 }
 
                 is NAddress -> {
                     routeFor(
-                        note = LocalCache.getOrCreateAddressableNote(nip19.address()),
+                        note = account.cache.getOrCreateAddressableNote(nip19.address()),
                         loggedIn = account,
                     ) ?: Route.EventRedirect(nip19.aTag())
                 }
@@ -171,12 +170,12 @@ fun uriToRoute(
                     val noteEvent = nip19.event
                     if (noteEvent is AddressableEvent) {
                         routeFor(
-                            note = LocalCache.getOrCreateAddressableNote(noteEvent.address()),
+                            note = account.cache.getOrCreateAddressableNote(noteEvent.address()),
                             loggedIn = account,
                         ) ?: Route.EventRedirect(noteEvent.addressTag())
                     } else {
                         routeFor(
-                            note = LocalCache.getOrCreateNote(nip19.event.id),
+                            note = account.cache.getOrCreateNote(nip19.event.id),
                             loggedIn = account,
                         ) ?: Route.EventRedirect(nip19.event.id)
                     }

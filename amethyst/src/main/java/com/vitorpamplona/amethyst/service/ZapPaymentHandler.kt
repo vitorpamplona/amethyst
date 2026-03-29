@@ -24,7 +24,6 @@ import android.content.Context
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
@@ -99,7 +98,7 @@ class ZapPaymentHandler(
                         }
 
                         is ZapSplitSetup -> {
-                            val user = LocalCache.checkGetOrCreateUser(setup.pubKeyHex)
+                            val user = account.cache.checkGetOrCreateUser(setup.pubKeyHex)
                             UnverifiedZapSplitSetup(
                                 lnAddress = user?.lnAddress(),
                                 weight = setup.weight,
@@ -111,7 +110,7 @@ class ZapPaymentHandler(
                 }
             } else if (noteEvent is LiveActivitiesEvent && noteEvent.hasHost()) {
                 noteEvent.hosts().map {
-                    val user = LocalCache.checkGetOrCreateUser(it.pubKey)
+                    val user = account.cache.checkGetOrCreateUser(it.pubKey)
                     val lnAddress = user?.lnAddress()
                     UnverifiedZapSplitSetup(lnAddress, relay = it.relayHint, user = user)
                 }

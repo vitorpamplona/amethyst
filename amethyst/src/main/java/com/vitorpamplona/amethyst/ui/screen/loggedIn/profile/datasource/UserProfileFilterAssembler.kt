@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.datasource
 
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 
@@ -31,15 +32,16 @@ class UserProfileQueryState(
 
 class UserProfileFilterAssembler(
     client: INostrClient,
+    cache: LocalCache,
 ) : ComposeSubscriptionManager<UserProfileQueryState>() {
     val group =
         listOf(
             // 5 subs per visible user profile screen.
-            UserProfileMetadataFilterSubAssembler(client, ::allKeys),
-            UserProfilePostsFilterSubAssembler(client, ::allKeys),
-            UserProfileMediaFilterSubAssembler(client, ::allKeys),
-            UserProfileFollowersFilterSubAssembler(client, ::allKeys),
-            UserProfileZapsFilterSubAssembler(client, ::allKeys),
+            UserProfileMetadataFilterSubAssembler(client, ::allKeys, cache),
+            UserProfilePostsFilterSubAssembler(client, ::allKeys, cache),
+            UserProfileMediaFilterSubAssembler(client, ::allKeys, cache),
+            UserProfileFollowersFilterSubAssembler(client, ::allKeys, cache),
+            UserProfileZapsFilterSubAssembler(client, ::allKeys, cache),
         )
 
     override fun invalidateFilters() = group.forEach { it.invalidateFilters() }

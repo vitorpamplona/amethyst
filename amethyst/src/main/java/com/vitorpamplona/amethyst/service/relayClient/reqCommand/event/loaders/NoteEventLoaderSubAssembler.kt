@@ -20,18 +20,20 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders
 
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.SingleSubNoEoseCacheEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 
 class NoteEventLoaderSubAssembler(
     client: INostrClient,
+    val cache: LocalCache,
     allKeys: () -> Set<EventFinderQueryState>,
 ) : SingleSubNoEoseCacheEoseManager<EventFinderQueryState>(client, allKeys, invalidateAfterEose = true) {
     override fun updateFilter(keys: List<EventFinderQueryState>) =
         listOfNotNull(
-            filterMissingEvents(keys),
-            filterMissingAddressables(keys),
+            filterMissingEvents(keys, cache),
+            filterMissingAddressables(keys, cache),
         ).flatten()
 
     override fun distinct(key: EventFinderQueryState) = key.note

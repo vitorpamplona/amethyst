@@ -24,7 +24,6 @@ import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsByOutboxTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsByProxyTopNavFilter
@@ -61,10 +60,10 @@ class HomeLiveFilter(
         val fifteenMinsAgo = limitTime()
 
         val list =
-            LocalCache.ephemeralChannels.filter { id, channel ->
+            account.cache.ephemeralChannels.filter { id, channel ->
                 shouldIncludeChannel(channel, filterParams, fifteenMinsAgo)
             } +
-                LocalCache.liveChatChannels.filter { id, channel ->
+                account.cache.liveChatChannels.filter { id, channel ->
                     shouldIncludeChannel(channel, filterParams, fifteenMinsAgo)
                 }
 
@@ -125,11 +124,11 @@ class HomeLiveFilter(
                     .mapNotNull {
                         val room = (it.event as? EphemeralChatEvent)?.roomId()
                         if (room != null) {
-                            LocalCache.getEphemeralChatChannelIfExists(room)
+                            account.cache.getEphemeralChatChannelIfExists(room)
                         } else {
                             val liveStream = (it.event as? LiveActivitiesChatMessageEvent)?.activityAddress()
                             if (liveStream != null) {
-                                LocalCache.getLiveActivityChannelIfExists(liveStream)
+                                account.cache.getLiveActivityChannelIfExists(liveStream)
                             } else {
                                 null
                             }
@@ -161,7 +160,7 @@ class HomeLiveFilter(
 
         if (noteEvent is LiveActivitiesChatMessageEvent) {
             val stream = noteEvent.activityAddress() ?: return false
-            val streamChannel = LocalCache.getLiveActivityChannelIfExists(stream) ?: return false
+            val streamChannel = account.cache.getLiveActivityChannelIfExists(stream) ?: return false
 
             if (streamChannel.info?.status() != StatusTag.STATUS.LIVE) return false
         }

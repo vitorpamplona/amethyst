@@ -95,7 +95,7 @@ class BlockedRelayListState(
         settings.backupBlockedRelayList?.let {
             Log.d("AccountRegisterObservers", "Loading saved Blocked relay list ${it.toJson()}")
             @OptIn(DelicateCoroutinesApi::class)
-            scope.launch(Dispatchers.IO) { LocalCache.justConsumeMyOwnEvent(it) }
+            scope.launch(Dispatchers.IO) { cache.justConsumeMyOwnEvent(it) }
         }
 
         scope.launch(Dispatchers.IO) {

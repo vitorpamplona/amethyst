@@ -95,7 +95,8 @@ fun ZapTheDevsCardPreview() {
                 sig = "e036ecce534e22efd47634c56328af62576ab3a36c565f7c8c5fbea67f48cd46d4041ecfc0ca01dafa0ebe8a0b119d125527a28f88aa30356b80c26dd0953aed",
             )
 
-        LocalCache.consume(releaseNotes, null, true)
+        val cache = LocalCache()
+        cache.consume(releaseNotes, null, true)
     }
 
     val accountViewModel = mockAccountViewModel()

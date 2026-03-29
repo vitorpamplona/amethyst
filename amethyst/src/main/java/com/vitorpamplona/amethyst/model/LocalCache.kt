@@ -247,7 +247,9 @@ interface ILocalCache {
     }
 }
 
-object LocalCache : ILocalCache, ICacheProvider {
+class LocalCache :
+    ILocalCache,
+    ICacheProvider {
     val antiSpam = AntiSpamFilter()
 
     val users = LargeSoftCache<HexKey, User>()

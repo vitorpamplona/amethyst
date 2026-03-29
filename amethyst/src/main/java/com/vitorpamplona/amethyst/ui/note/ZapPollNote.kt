@@ -78,7 +78,6 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
@@ -162,10 +161,10 @@ fun ZapZapPollNotePreview() {
 
     runBlocking {
         withContext(Dispatchers.IO) {
-            LocalCache.justConsume(event, null, false)
-            LocalCache.consume(zapVote.zapRequest!!, null, false)
-            LocalCache.justConsume(zapVote, null, false)
-            baseNote = LocalCache.getOrCreateNote("6ff9bc13d27490f6e3953325260bd996901a143de89886a0608c39e7d0160a72")
+            accountViewModel.account.cache.justConsume(event, null, false)
+            accountViewModel.account.cache.consume(zapVote.zapRequest!!, null, false)
+            accountViewModel.account.cache.justConsume(zapVote, null, false)
+            baseNote = accountViewModel.account.cache.getOrCreateNote("6ff9bc13d27490f6e3953325260bd996901a143de89886a0608c39e7d0160a72")
         }
     }
 
@@ -216,8 +215,8 @@ fun ZapZapPollNotePreview2() {
 
     runBlocking {
         withContext(Dispatchers.IO) {
-            LocalCache.justConsume(event, null, false)
-            baseNote = LocalCache.getOrCreateNote("3064bf97800a4b04b612fc0fd498936eae75fffbdca5bbd09d19a6dc598530ab")
+            accountViewModel.account.cache.justConsume(event, null, false)
+            baseNote = accountViewModel.account.cache.getOrCreateNote("3064bf97800a4b04b612fc0fd498936eae75fffbdca5bbd09d19a6dc598530ab")
         }
     }
 

@@ -91,7 +91,7 @@ class DmRelayListState(
             Log.d("AccountRegisterObservers", "Loading saved DM Relay List ${it.toJson()}")
             @OptIn(DelicateCoroutinesApi::class)
             scope.launch(Dispatchers.IO) {
-                LocalCache.justConsumeMyOwnEvent(it)
+                cache.justConsumeMyOwnEvent(it)
             }
         }
 

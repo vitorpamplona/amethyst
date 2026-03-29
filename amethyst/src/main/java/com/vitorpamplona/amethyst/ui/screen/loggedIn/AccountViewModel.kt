@@ -610,7 +610,7 @@ class AccountViewModel(
                     val cachedPrivateRequest = account.privateZapsDecryptionCache.cachedPrivateZap(request)
                     if (cachedPrivateRequest != null) {
                         ZapAmountCommentNotification(
-                            LocalCache.getUserIfExists(cachedPrivateRequest.pubKey) ?: it.request.author,
+                            account.cache.getUserIfExists(cachedPrivateRequest.pubKey) ?: it.request.author,
                             cachedPrivateRequest.content.ifBlank { null },
                             showAmountInteger((it.response.event as? LnZapEvent)?.amount),
                         )
@@ -644,7 +644,7 @@ class AccountViewModel(
                     val cachedPrivateRequest = account.privateZapsDecryptionCache.cachedPrivateZap(request)
                     if (cachedPrivateRequest != null) {
                         ZapAmountCommentNotification(
-                            LocalCache.getUserIfExists(cachedPrivateRequest.pubKey) ?: it.first.author,
+                            account.cache.getUserIfExists(cachedPrivateRequest.pubKey) ?: it.first.author,
                             cachedPrivateRequest.content.ifBlank { null },
                             showAmountInteger((it.second?.event as? LnZapEvent)?.amount),
                         )
@@ -745,7 +745,7 @@ class AccountViewModel(
             val decryptedContent = account.decryptZapOrNull(zapRequestEvent)
             if (decryptedContent != null) {
                 ZapAmountCommentNotification(
-                    LocalCache.checkGetOrCreateUser(decryptedContent.pubKey),
+                    account.cache.checkGetOrCreateUser(decryptedContent.pubKey),
                     decryptedContent.content.ifBlank { null },
                     amount,
                 )
@@ -844,13 +844,13 @@ class AccountViewModel(
 
     fun removeFromMediaGallery(note: Note) = launchSigner { account.removeFromGallery(note) }
 
-    fun follows(user: User): Note = LocalCache.getOrCreateAddressableNote(ContactListEvent.createAddress(user.pubkeyHex))
+    fun follows(user: User): Note = account.cache.getOrCreateAddressableNote(ContactListEvent.createAddress(user.pubkeyHex))
 
-    fun hashtagFollows(user: User): Note = LocalCache.getOrCreateAddressableNote(HashtagListEvent.createAddress(user.pubkeyHex))
+    fun hashtagFollows(user: User): Note = account.cache.getOrCreateAddressableNote(HashtagListEvent.createAddress(user.pubkeyHex))
 
-    fun bookmarks(user: User): Note = LocalCache.getOrCreateAddressableNote(BookmarkListEvent.createBookmarkAddress(user.pubkeyHex))
+    fun bookmarks(user: User): Note = account.cache.getOrCreateAddressableNote(BookmarkListEvent.createBookmarkAddress(user.pubkeyHex))
 
-    fun pinnedNotes(user: User): Note = LocalCache.getOrCreateAddressableNote(PinListEvent.createPinAddress(user.pubkeyHex))
+    fun pinnedNotes(user: User): Note = account.cache.getOrCreateAddressableNote(PinListEvent.createPinAddress(user.pubkeyHex))
 
     fun addPin(note: Note) {
         if (settings.isCompleteUIMode()) {
@@ -1099,7 +1099,7 @@ class AccountViewModel(
     fun updateFilterSpam(filterSpam: Boolean) =
         launchSigner {
             if (account.updateFilterSpam(filterSpam)) {
-                LocalCache.antiSpam.active = filterSpamFromStrangers().value
+                account.cache.antiSpam.active = filterSpamFromStrangers().value
             }
         }
 
@@ -1154,12 +1154,12 @@ class AccountViewModel(
         address: Address,
         newStatus: String,
     ) = launchSigner {
-        account.updateStatus(LocalCache.getOrCreateAddressableNote(address), newStatus)
+        account.updateStatus(account.cache.getOrCreateAddressableNote(address), newStatus)
     }
 
     fun deleteStatus(address: Address) =
         launchSigner {
-            account.deleteStatus(LocalCache.getOrCreateAddressableNote(address))
+            account.deleteStatus(account.cache.getOrCreateAddressableNote(address))
         }
 
     fun urlPreview(
@@ -1181,28 +1181,28 @@ class AccountViewModel(
         viewModelScope.launch(Dispatchers.IO) { runOnIO() }
     }
 
-    fun checkGetOrCreateUser(key: HexKey): User? = LocalCache.checkGetOrCreateUser(key)
+    fun checkGetOrCreateUser(key: HexKey): User? = account.cache.checkGetOrCreateUser(key)
 
-    override suspend fun getOrCreateUser(hex: HexKey): User = LocalCache.getOrCreateUser(hex)
+    override suspend fun getOrCreateUser(hex: HexKey): User = account.cache.getOrCreateUser(hex)
 
-    fun getUserIfExists(hex: HexKey): User? = LocalCache.getUserIfExists(hex)
+    fun getUserIfExists(hex: HexKey): User? = account.cache.getUserIfExists(hex)
 
-    fun checkGetOrCreateNote(key: HexKey): Note? = LocalCache.checkGetOrCreateNote(key)
+    fun checkGetOrCreateNote(key: HexKey): Note? = account.cache.checkGetOrCreateNote(key)
 
-    override suspend fun getOrCreateNote(hex: HexKey): Note = LocalCache.getOrCreateNote(hex)
+    override suspend fun getOrCreateNote(hex: HexKey): Note = account.cache.getOrCreateNote(hex)
 
     fun noteFromEvent(event: Event): Note? {
         var note = checkGetOrCreateNote(event.id)
 
         if (note == null) {
-            LocalCache.justConsume(event, null, false)
+            account.cache.justConsume(event, null, false)
             note = checkGetOrCreateNote(event.id)
         }
 
         return note
     }
 
-    fun getNoteIfExists(hex: HexKey): Note? = LocalCache.getNoteIfExists(hex)
+    fun getNoteIfExists(hex: HexKey): Note? = account.cache.getNoteIfExists(hex)
 
     /**
      * Fixes author and relay hints in MarkedETag list by looking up notes from cache.
@@ -1230,30 +1230,30 @@ class AccountViewModel(
         }
     }
 
-    override fun getOrCreateAddressableNote(address: Address): AddressableNote = LocalCache.getOrCreateAddressableNote(address)
+    override fun getOrCreateAddressableNote(address: Address): AddressableNote = account.cache.getOrCreateAddressableNote(address)
 
-    fun getAddressableNoteIfExists(key: String): AddressableNote? = LocalCache.getAddressableNoteIfExists(key)
+    fun getAddressableNoteIfExists(key: String): AddressableNote? = account.cache.getAddressableNoteIfExists(key)
 
-    fun getAddressableNoteIfExists(key: Address): AddressableNote? = LocalCache.getAddressableNoteIfExists(key)
+    fun getAddressableNoteIfExists(key: Address): AddressableNote? = account.cache.getAddressableNoteIfExists(key)
 
-    fun cachedModificationEventsForNote(note: Note) = LocalCache.cachedModificationEventsForNote(note)
+    fun cachedModificationEventsForNote(note: Note) = account.cache.cachedModificationEventsForNote(note)
 
     suspend fun findModificationEventsForNote(note: Note): List<Note> =
         withContext(Dispatchers.IO) {
-            LocalCache.findLatestModificationForNote(note)
+            account.cache.findLatestModificationForNote(note)
         }
 
-    fun checkGetOrCreatePublicChatChannel(key: HexKey): PublicChatChannel = LocalCache.getOrCreatePublicChatChannel(key)
+    fun checkGetOrCreatePublicChatChannel(key: HexKey): PublicChatChannel = account.cache.getOrCreatePublicChatChannel(key)
 
-    fun checkGetOrCreateLiveActivityChannel(key: Address): LiveActivitiesChannel = LocalCache.getOrCreateLiveChannel(key)
+    fun checkGetOrCreateLiveActivityChannel(key: Address): LiveActivitiesChannel = account.cache.getOrCreateLiveChannel(key)
 
-    fun checkGetOrCreateEphemeralChatChannel(key: RoomId): EphemeralChatChannel = LocalCache.getOrCreateEphemeralChannel(key)
+    fun checkGetOrCreateEphemeralChatChannel(key: RoomId): EphemeralChatChannel = account.cache.getOrCreateEphemeralChannel(key)
 
-    fun getPublicChatChannelIfExists(hex: HexKey) = LocalCache.getPublicChatChannelIfExists(hex)
+    fun getPublicChatChannelIfExists(hex: HexKey) = account.cache.getPublicChatChannelIfExists(hex)
 
-    fun getEphemeralChatChannelIfExists(key: RoomId) = LocalCache.getEphemeralChatChannelIfExists(key)
+    fun getEphemeralChatChannelIfExists(key: RoomId) = account.cache.getEphemeralChatChannelIfExists(key)
 
-    fun getLiveActivityChannelIfExists(key: Address) = LocalCache.getLiveActivityChannelIfExists(key)
+    fun getLiveActivityChannelIfExists(key: Address) = account.cache.getLiveActivityChannelIfExists(key)
 
     fun <T : PubKeyReferenceTag> loadParticipants(
         participants: List<T>,
@@ -1360,7 +1360,7 @@ class AccountViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             feedStates.init()
             // awaits for init to finish before starting to capture new events.
-            LocalCache.live.newEventBundles.collect { newNotes ->
+            account.cache.live.newEventBundles.collect { newNotes ->
                 logTime("AccountViewModel newEventBundle Update with ${newNotes.size} new notes") {
                     feedStates.updateFeedsWith(newNotes)
                 }
@@ -1368,7 +1368,7 @@ class AccountViewModel(
         }
 
         viewModelScope.launch(Dispatchers.IO) {
-            LocalCache.live.deletedEventBundles.collect { newNotes ->
+            account.cache.live.deletedEventBundles.collect { newNotes ->
                 logTime("AccountViewModel deletedEventBundle Update with ${newNotes.size} new notes") {
                     feedStates.deleteNotes(newNotes)
                 }
@@ -1412,7 +1412,7 @@ class AccountViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             val newSortedMentions =
                 mentions
-                    .mapNotNull { LocalCache.checkGetOrCreateUser(it) }
+                    .mapNotNull { account.cache.checkGetOrCreateUser(it) }
                     .toSet()
                     .sortedBy { account.isFollowing(it) }
                     .toImmutableList()
@@ -1501,30 +1501,30 @@ class AccountViewModel(
     private suspend fun unwrapGiftWrap(event: GiftWrapEvent): Note? {
         val cacheInnerEventId = event.innerEventId
         return if (cacheInnerEventId != null) {
-            val existingNoteEvent = LocalCache.getNoteIfExists(cacheInnerEventId)?.event
+            val existingNoteEvent = account.cache.getNoteIfExists(cacheInnerEventId)?.event
             if (existingNoteEvent != null) {
                 unwrapIfNeeded(existingNoteEvent)
             } else {
                 val newEvent = event.unwrapOrNull(account.signer) ?: return null
 
                 // clear the encrypted payload to save memory
-                LocalCache.getOrCreateNote(event.id).event = event.copyNoContent()
+                account.cache.getOrCreateNote(event.id).event = event.copyNoContent()
 
-                LocalCache.justConsume(newEvent, null, false)
+                account.cache.justConsume(newEvent, null, false)
 
                 unwrapIfNeeded(newEvent)
             }
         } else {
             val newEvent = event.unwrapThrowing(account.signer)
             // clear the encrypted payload to save memory
-            LocalCache.getOrCreateNote(event.id).event = event.copyNoContent()
+            account.cache.getOrCreateNote(event.id).event = event.copyNoContent()
 
-            val existingNoteEvent = LocalCache.getNoteIfExists(newEvent.id)?.event
+            val existingNoteEvent = account.cache.getNoteIfExists(newEvent.id)?.event
 
             if (existingNoteEvent != null) {
                 unwrapIfNeeded(existingNoteEvent)
             } else {
-                LocalCache.justConsume(newEvent, null, false)
+                account.cache.justConsume(newEvent, null, false)
                 unwrapIfNeeded(newEvent)
             }
         }
@@ -1533,29 +1533,29 @@ class AccountViewModel(
     private suspend fun unwrapSeal(event: SealedRumorEvent): Note? {
         val cacheInnerEventId = event.innerEventId
         return if (cacheInnerEventId != null) {
-            val existingNoteEvent = LocalCache.getNoteIfExists(cacheInnerEventId)?.event
+            val existingNoteEvent = account.cache.getNoteIfExists(cacheInnerEventId)?.event
             if (existingNoteEvent != null) {
                 unwrapIfNeeded(existingNoteEvent)
             } else {
                 val newEvent = event.unsealThrowing(account.signer)
                 // clear the encrypted payload to save memory
-                LocalCache.getOrCreateNote(event.id).event = event.copyNoContent()
+                account.cache.getOrCreateNote(event.id).event = event.copyNoContent()
 
                 // this is not verifiable
-                LocalCache.justConsume(newEvent, null, true)
+                account.cache.justConsume(newEvent, null, true)
                 unwrapIfNeeded(newEvent)
             }
         } else {
             val newEvent = event.unsealThrowing(account.signer)
             // clear the encrypted payload to save memory
-            LocalCache.getOrCreateNote(event.id).event = event.copyNoContent()
+            account.cache.getOrCreateNote(event.id).event = event.copyNoContent()
 
-            val existingNoteEvent = LocalCache.getNoteIfExists(newEvent.id)?.event
+            val existingNoteEvent = account.cache.getNoteIfExists(newEvent.id)?.event
             if (existingNoteEvent != null) {
                 unwrapIfNeeded(existingNoteEvent)
             } else {
                 // this is not verifiable
-                LocalCache.justConsume(newEvent, null, true)
+                account.cache.justConsume(newEvent, null, true)
                 unwrapIfNeeded(newEvent)
             }
         }
@@ -1565,7 +1565,7 @@ class AccountViewModel(
         when (event) {
             is GiftWrapEvent -> unwrapGiftWrap(event)
             is SealedRumorEvent -> unwrapSeal(event)
-            else -> LocalCache.getNoteIfExists(event.id)
+            else -> account.cache.getNoteIfExists(event.id)
         }
 
     fun unwrapIfNeeded(
@@ -1595,7 +1595,7 @@ class AccountViewModel(
             } else {
                 Note(innerEvent.id)
             }
-        note.loadEvent(innerEvent, author, LocalCache.computeReplyTo(innerEvent))
+        note.loadEvent(innerEvent, author, account.cache.computeReplyTo(innerEvent))
         return note
     }
 
@@ -1605,7 +1605,7 @@ class AccountViewModel(
     ) {
         launchSigner {
             account.requestDVMContentDiscovery(dvmPublicKey) {
-                onReady(LocalCache.getOrCreateNote(it.id))
+                onReady(account.cache.getOrCreateNote(it.id))
             }
         }
     }
@@ -1615,7 +1615,7 @@ class AccountViewModel(
             val fifteenMinsAgo = TimeUtils.fifteenMinutesAgo()
             // First check if we have an actual response from the DVM in LocalCache
             val response =
-                LocalCache.notes.maxOrNullOf(
+                account.cache.notes.maxOrNullOf(
                     filter = { _, note ->
                         val noteEvent = note.event
                         noteEvent is NIP90ContentDiscoveryResponseEvent &&
@@ -1628,7 +1628,7 @@ class AccountViewModel(
 
             // If we have a response, get the tagged Request Event otherwise null
             return@withContext response?.event?.tags?.firstOrNull { it.size > 1 && it[0] == "e" }?.get(1)?.let {
-                LocalCache.getOrCreateNote(it)
+                account.cache.getOrCreateNote(it)
             }
         }
 
@@ -1642,7 +1642,7 @@ class AccountViewModel(
         onSent()
     }
 
-    fun getInteractiveStoryReadingState(dATag: String): AddressableNote = LocalCache.getOrCreateAddressableNote(InteractiveStoryReadingStateEvent.createAddress(account.signer.pubKey, dATag))
+    fun getInteractiveStoryReadingState(dATag: String): AddressableNote = account.cache.getOrCreateAddressableNote(InteractiveStoryReadingStateEvent.createAddress(account.signer.pubKey, dATag))
 
     fun updateInteractiveStoryReadingState(
         rootHint: EventHintBundle<InteractiveStoryBaseEvent>,
@@ -1758,7 +1758,7 @@ class AccountViewModel(
             withContext(Dispatchers.IO) {
                 val decrypted = accountViewModel.account.draftsDecryptionCache.cachedDraft(key)
                 if (decrypted != null) {
-                    val author = LocalCache.getOrCreateUser(key.pubKey)
+                    val author = accountViewModel.account.cache.getOrCreateUser(key.pubKey)
                     accountViewModel.createTempDraftNote(decrypted, author)
                 } else {
                     null
@@ -1784,23 +1784,23 @@ class AccountViewModel(
                         is NProfile -> {}
 
                         is NNote -> {
-                            LocalCache.checkGetOrCreateNote(parsed.hex)?.let { note ->
+                            accountViewModel.account.cache.checkGetOrCreateNote(parsed.hex)?.let { note ->
                                 returningNote = note
                             }
                         }
 
                         is NEvent -> {
-                            LocalCache.checkGetOrCreateNote(parsed.hex)?.let { note ->
+                            accountViewModel.account.cache.checkGetOrCreateNote(parsed.hex)?.let { note ->
                                 returningNote = note
                             }
                         }
 
                         is NEmbed -> {
                             withContext(Dispatchers.IO) {
-                                val baseNote = LocalCache.getOrCreateNote(parsed.event)
+                                val baseNote = accountViewModel.account.cache.getOrCreateNote(parsed.event)
                                 if (baseNote.event == null) {
                                     launch(Dispatchers.IO) {
-                                        LocalCache.justConsume(parsed.event, null, false)
+                                        accountViewModel.account.cache.justConsume(parsed.event, null, false)
                                     }
                                 }
 
@@ -1811,7 +1811,7 @@ class AccountViewModel(
                         is NRelay -> {}
 
                         is NAddress -> {
-                            LocalCache.checkGetOrCreateNote(parsed.aTag())?.let { note ->
+                            accountViewModel.account.cache.checkGetOrCreateNote(parsed.aTag())?.let { note ->
                                 returningNote = note
                             }
                         }
@@ -1866,7 +1866,7 @@ fun mockAccountViewModel(): AccountViewModel {
             geolocationFlow = { MutableStateFlow<LocationState.LocationResult>(LocationState.LocationResult.Loading) },
             nwcFilterAssembler = { nwcFilters },
             otsResolverBuilder = { EmptyOtsResolverBuilder.build() },
-            cache = LocalCache,
+            cache = LocalCache(),
             client = client,
             scope = scope,
         )
@@ -1876,7 +1876,7 @@ fun mockAccountViewModel(): AccountViewModel {
         settings = uiState,
         torSettings = TorSettingsFlow(torType = MutableStateFlow(TorType.OFF)),
         httpClientBuilder = EmptyRoleBasedHttpClientBuilder(),
-        dataSources = RelaySubscriptionsCoordinator(LocalCache, client, authenticator, failureTracker, scope),
+        dataSources = RelaySubscriptionsCoordinator(account.cache, client, authenticator, failureTracker, scope),
         nip05ClientBuilder = { EmptyNip05Client() },
     ).also {
         mockedCache = it
@@ -1917,7 +1917,7 @@ fun mockVitorAccountViewModel(): AccountViewModel {
             geolocationFlow = { MutableStateFlow<LocationState.LocationResult>(LocationState.LocationResult.Loading) },
             nwcFilterAssembler = { nwcFilters },
             otsResolverBuilder = { EmptyOtsResolverBuilder.build() },
-            cache = LocalCache,
+            cache = LocalCache(),
             client = EmptyNostrClient(),
             scope = scope,
         )
@@ -1927,7 +1927,7 @@ fun mockVitorAccountViewModel(): AccountViewModel {
         settings = uiState,
         torSettings = TorSettingsFlow(torType = MutableStateFlow(TorType.OFF)),
         httpClientBuilder = EmptyRoleBasedHttpClientBuilder(),
-        dataSources = RelaySubscriptionsCoordinator(LocalCache, client, authenticator, failureTracker, scope),
+        dataSources = RelaySubscriptionsCoordinator(account.cache, client, authenticator, failureTracker, scope),
         nip05ClientBuilder = { EmptyNip05Client() },
     ).also {
         vitorCache = it

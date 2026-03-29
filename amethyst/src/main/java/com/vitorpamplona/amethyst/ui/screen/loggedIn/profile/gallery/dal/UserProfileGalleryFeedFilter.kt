@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.gallery.dal
 
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.filter
@@ -45,12 +44,12 @@ class UserProfileGalleryFeedFilter(
         val params = buildFilterParams(account)
 
         val notes =
-            LocalCache.notes.filterIntoSet { _, it ->
+            account.cache.notes.filterIntoSet { _, it ->
                 acceptableEvent(it, params, user)
             }
 
         val addressableNotes =
-            LocalCache.addressables
+            account.cache.addressables
                 .filter(
                     listOf(VideoVerticalEvent.KIND, VideoVerticalEvent.KIND),
                     user.pubkeyHex,

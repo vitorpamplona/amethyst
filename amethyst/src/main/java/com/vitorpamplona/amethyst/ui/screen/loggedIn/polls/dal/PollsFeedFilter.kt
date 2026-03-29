@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.dal
 
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.model.filterIntoSet
@@ -51,7 +50,7 @@ class PollsFeedFilter(
     override fun feed(): List<Note> {
         val params = buildFilterParams(account)
         val notes =
-            LocalCache.notes.filterIntoSet { _, it ->
+            account.cache.notes.filterIntoSet { _, it ->
                 val noteEvent = it.event
                 (noteEvent is PollEvent || noteEvent is ZapPollEvent) && params.match(noteEvent, it.relays)
             }

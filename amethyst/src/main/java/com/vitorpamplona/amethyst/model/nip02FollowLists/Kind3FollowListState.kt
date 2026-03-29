@@ -165,7 +165,7 @@ class Kind3FollowListState(
             Log.d("AccountRegisterObservers", "Loading saved ${it.tags.size} contacts")
 
             @OptIn(DelicateCoroutinesApi::class)
-            scope.launch(Dispatchers.IO) { LocalCache.justConsumeMyOwnEvent(it) }
+            scope.launch(Dispatchers.IO) { cache.justConsumeMyOwnEvent(it) }
         }
 
         // saves contact list for the next time.

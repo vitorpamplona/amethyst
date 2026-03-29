@@ -35,7 +35,6 @@ import com.vitorpamplona.amethyst.commons.compose.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.compose.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.location.LocationState
@@ -146,12 +145,12 @@ class ChatNewMessageViewModel :
     val roomUsers: StateFlow<List<User>> =
         room
             .mapNotNull {
-                it?.users?.mapNotNull { userHex -> LocalCache.checkGetOrCreateUser(userHex) } ?: emptyList()
+                it?.users?.mapNotNull { userHex -> account.cache.checkGetOrCreateUser(userHex) } ?: emptyList()
             }.flowOn(Dispatchers.IO)
             .stateIn(
                 viewModelScope,
                 SharingStarted.Eagerly,
-                room.value?.users?.mapNotNull { userHex -> LocalCache.checkGetOrCreateUser(userHex) } ?: emptyList(),
+                room.value?.users?.mapNotNull { userHex -> account.cache.checkGetOrCreateUser(userHex) } ?: emptyList(),
             )
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -342,7 +341,7 @@ class ChatNewMessageViewModel :
         forwardZapTo.value = SplitBuilder()
         localForwardZapTo.forEach {
             if (it is ZapSplitSetup) {
-                val user = LocalCache.getOrCreateUser(it.pubKeyHex)
+                val user = account.cache.getOrCreateUser(it.pubKeyHex)
                 forwardZapTo.value.addItem(user, (it.weight / totalWeight).toFloat())
             }
             // don't support editing old-style splits.
@@ -579,7 +578,7 @@ class ChatNewMessageViewModel :
 
         val template =
             if (replyHint == null) {
-                ChatMessageEvent.build(message, room.users.map { LocalCache.getOrCreateUser(it).toPTag() }) {
+                ChatMessageEvent.build(message, room.users.map { account.cache.getOrCreateUser(it).toPTag() }) {
                     hashtags(findHashtags(message))
                     references(findURLs(message))
                     quotes(findNostrEventUris(message))

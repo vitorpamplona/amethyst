@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip53LiveActivities
 
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ParticipantListBuilder
 import com.vitorpamplona.amethyst.model.TopFilter
@@ -56,8 +55,11 @@ open class DiscoverLiveFeedFilter(
     override fun showHiddenKey(): Boolean = followList().wantsToSeeNegativeStuff()
 
     override fun feed(): List<Note> {
-        val allChannelNotes = LocalCache.liveChatChannels.mapNotNull { _, channel -> LocalCache.getAddressableNoteIfExists(channel.address) }
-        val allMessageNotes = LocalCache.liveChatChannels.map { _, channel -> channel.notes.filter { key, it -> it.event is LiveActivitiesEvent } }.flatten()
+        val allChannelNotes = account.cache.liveChatChannels.mapNotNull { _, channel -> account.cache.getAddressableNoteIfExists(channel.address) }
+        val allMessageNotes =
+            account.cache.liveChatChannels
+                .map { _, channel -> channel.notes.filter { key, it -> it.event is LiveActivitiesEvent } }
+                .flatten()
 
         val notes = innerApplyFilter(allChannelNotes + allMessageNotes)
 
@@ -96,7 +98,7 @@ open class DiscoverLiveFeedFilter(
         val followingKeySet =
             discoveryTopFilterAuthors ?: account.kind3FollowList.flow.value.authors
 
-        val counter = ParticipantListBuilder()
+        val counter = ParticipantListBuilder(account.cache)
         val participantCounts =
             items.associate { it to counter.countFollowsThatParticipateOn(it, followingKeySet) }
 

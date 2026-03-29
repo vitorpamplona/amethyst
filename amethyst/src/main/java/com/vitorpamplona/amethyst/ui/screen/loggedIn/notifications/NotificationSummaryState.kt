@@ -26,7 +26,6 @@ import com.patrykandpatrick.vico.compose.cartesian.data.LineCartesianLayerModel
 import com.patrykandpatrick.vico.compose.common.data.ExtraStore
 import com.patrykandpatrick.vico.compose.common.data.MutableExtraStore
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.BundledInsert
@@ -95,7 +94,7 @@ class NotificationSummaryState(
         val replies = mutableMapOf<String, Int>()
         val takenIntoAccount = mutableSetOf<HexKey>()
 
-        LocalCache.notes.forEach { _, it ->
+        account.cache.notes.forEach { _, it ->
             val noteEvent = it.event
             if (noteEvent != null && !takenIntoAccount.contains(noteEvent.id)) {
                 if (noteEvent is ReactionEvent) {
@@ -121,7 +120,10 @@ class NotificationSummaryState(
                     if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey != currentUser) {
                         val isCitation =
                             noteEvent.findCitations().any {
-                                LocalCache.getNoteIfExists(it)?.author?.pubkeyHex == currentUser
+                                account.cache
+                                    .getNoteIfExists(it)
+                                    ?.author
+                                    ?.pubkeyHex == currentUser
                             }
 
                         val netDate = formatDate(noteEvent.createdAt)
@@ -187,7 +189,10 @@ class NotificationSummaryState(
                         if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey != currentUser) {
                             val isCitation =
                                 noteEvent.findCitations().any {
-                                    LocalCache.getNoteIfExists(it)?.author?.pubkeyHex == currentUser
+                                    account.cache
+                                        .getNoteIfExists(it)
+                                        ?.author
+                                        ?.pubkeyHex == currentUser
                                 }
 
                             val netDate = formatDate(noteEvent.createdAt)

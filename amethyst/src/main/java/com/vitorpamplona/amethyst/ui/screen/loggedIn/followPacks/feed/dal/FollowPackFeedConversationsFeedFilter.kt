@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.feed.dal
 
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.topNavFeeds.allUserFollows.AllUserFollowsByOutboxTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.allUserFollows.AllUserFollowsByProxyTopNavFilter
@@ -56,7 +55,7 @@ class FollowPackFeedConversationsFeedFilter(
         val filterParams = buildFilterParams(account)
 
         return sort(
-            LocalCache.notes.filterIntoSet { _, it ->
+            account.cache.notes.filterIntoSet { _, it ->
                 acceptableEvent(it, filterParams)
             },
         )

@@ -41,7 +41,6 @@ import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.richtext.UrlParser
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.location.LocationState
@@ -233,7 +232,7 @@ open class ChannelNewMessageViewModel :
         forwardZapTo = SplitBuilder()
         localForwardZapTo.forEach {
             if (it is ZapSplitSetup) {
-                val user = LocalCache.getOrCreateUser(it.pubKeyHex)
+                val user = account.cache.getOrCreateUser(it.pubKeyHex)
                 forwardZapTo.addItem(user, (it.weight / totalWeight).toFloat())
             }
             // don't support edditing old-style splits.

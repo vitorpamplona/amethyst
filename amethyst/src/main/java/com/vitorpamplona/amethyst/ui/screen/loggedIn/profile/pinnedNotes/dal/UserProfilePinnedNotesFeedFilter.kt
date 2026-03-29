@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.pinnedNotes.dal
 
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
@@ -34,13 +33,13 @@ class UserProfilePinnedNotesFeedFilter(
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + user.pubkeyHex
 
     override fun feed(): List<Note> {
-        val note = LocalCache.getOrCreateAddressableNote(PinListEvent.createPinAddress(user.pubkeyHex))
+        val note = account.cache.getOrCreateAddressableNote(PinListEvent.createPinAddress(user.pubkeyHex))
         val noteEvent = note.event as? PinListEvent ?: return emptyList()
 
         return noteEvent
             .pinnedEvents()
             .mapNotNull {
-                LocalCache.checkGetOrCreateNote(it.eventId)
+                account.cache.checkGetOrCreateNote(it.eventId)
             }.reversed()
     }
 }

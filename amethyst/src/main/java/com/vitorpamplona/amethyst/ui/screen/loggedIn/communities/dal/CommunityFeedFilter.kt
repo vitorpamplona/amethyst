@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.dal
 
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
@@ -45,7 +44,7 @@ class CommunityFeedFilter(
         if (communityDefEvent == null) return emptyList()
 
         val result =
-            LocalCache.notes.mapFlattenIntoSet { _, it ->
+            account.cache.notes.mapFlattenIntoSet { _, it ->
                 filterMap(it)
             }
 

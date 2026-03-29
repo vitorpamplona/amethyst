@@ -31,13 +31,14 @@ import com.vitorpamplona.quartz.utils.mapOfSet
 fun filterByAddress(
     address: NAddress,
     default: Set<NormalizedRelayUrl>,
+    cache: LocalCache,
 ): List<RelayBasedFilter> {
-    val note = LocalCache.getOrCreateAddressableNote(address.address())
+    val note = cache.getOrCreateAddressableNote(address.address())
 
     val list =
         mapOfSet {
             if (note.event == null) {
-                potentialRelaysToFindAddress(note).ifEmpty { default }.forEach { relayUrl ->
+                potentialRelaysToFindAddress(note, cache).ifEmpty { default }.forEach { relayUrl ->
                     add(relayUrl, note.address)
                 }
             }

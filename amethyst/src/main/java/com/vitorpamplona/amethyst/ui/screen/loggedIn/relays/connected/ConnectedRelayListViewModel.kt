@@ -22,8 +22,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.connected
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.LocalCache.users
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoModel
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -60,7 +58,7 @@ class ConnectedRelayListViewModel : BasicRelaySetupInfoModel() {
                     forcesTor =
                         Amethyst.instance.torEvaluatorFlow.flow.value
                             .useTor(it),
-                    users = users.mapNotNull { hex -> LocalCache.checkGetOrCreateUser(hex) },
+                    users = users.mapNotNull { hex -> account.cache.checkGetOrCreateUser(hex) },
                 )
             }.distinctBy { it.relay }
             .sortedBy { it.relayStat.receivedBytes }

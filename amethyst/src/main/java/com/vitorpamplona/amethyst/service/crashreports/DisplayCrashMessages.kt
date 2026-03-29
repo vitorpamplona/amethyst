@@ -39,7 +39,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.res.stringResource
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeToMessage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -81,7 +80,7 @@ fun DisplayCrashMessages(
                     onClick = {
                         nav.nav {
                             routeToMessage(
-                                user = LocalCache.getOrCreateUser("aa9047325603dacd4f8142093567973566de3b1e20a89557b728c3be4c6a844b"),
+                                user = accountViewModel.account.cache.getOrCreateUser("aa9047325603dacd4f8142093567973566de3b1e20a89557b728c3be4c6a844b"),
                                 draftMessage = stack,
                                 accountViewModel = accountViewModel,
                                 expiresDays = 30,

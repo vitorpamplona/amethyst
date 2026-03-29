@@ -99,7 +99,7 @@ class UserWatcherSubAssembler(
             )
         }
 
-        val newFilters = filterUserMetadataForKey(users, indexRelays, latestEOSEs).ifEmpty { null }
+        val newFilters = filterUserMetadataForKey(users, indexRelays, latestEOSEs, cache).ifEmpty { null }
 
         sub.updateFilters(newFilters?.groupByRelay())
     }

@@ -29,21 +29,24 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.mapOfSet
 
-fun potentialRelaysToFindAddress(note: AddressableNote): Set<NormalizedRelayUrl> {
+fun potentialRelaysToFindAddress(
+    note: AddressableNote,
+    cache: LocalCache,
+): Set<NormalizedRelayUrl> {
     val set = mutableSetOf<NormalizedRelayUrl>()
 
-    LocalCache.getOrCreateUser(note.address.pubKeyHex).outboxRelays()?.let {
+    cache.getOrCreateUser(note.address.pubKeyHex).outboxRelays()?.let {
         set.addAll(it)
     }
 
-    set.addAll(LocalCache.relayHints.hintsForAddress(note.idHex))
+    set.addAll(cache.relayHints.hintsForAddress(note.idHex))
 
-    LocalCache.getAnyChannel(note)?.relays()?.let { set.addAll(it) }
+    cache.getAnyChannel(note)?.relays()?.let { set.addAll(it) }
 
     note.replyTo?.forEach { parentNote ->
         set.addAll(parentNote.relays)
 
-        LocalCache.getAnyChannel(parentNote)?.relays()?.let { set.addAll(it) }
+        cache.getAnyChannel(parentNote)?.relays()?.let { set.addAll(it) }
 
         parentNote.author?.inboxRelays()?.let { set.addAll(it) }
     }
@@ -51,7 +54,7 @@ fun potentialRelaysToFindAddress(note: AddressableNote): Set<NormalizedRelayUrl>
     note.replies.forEach { childNote ->
         set.addAll(childNote.relays)
 
-        LocalCache.getAnyChannel(childNote)?.relays()?.let { set.addAll(it) }
+        cache.getAnyChannel(childNote)?.relays()?.let { set.addAll(it) }
 
         childNote.author?.outboxRelays()?.let { set.addAll(it) }
     }
@@ -71,13 +74,16 @@ fun potentialRelaysToFindAddress(note: AddressableNote): Set<NormalizedRelayUrl>
     return set
 }
 
-fun filterMissingAddressables(keys: List<EventFinderQueryState>): List<RelayBasedFilter> {
+fun filterMissingAddressables(
+    keys: List<EventFinderQueryState>,
+    cache: LocalCache,
+): List<RelayBasedFilter> {
     val addressesPerRelay =
         mapOfSet {
             keys.forEach { key ->
                 val default = key.account.followPlusAllMineWithSearch.flow.value
                 if (key.note is AddressableNote && key.note.event == null) {
-                    potentialRelaysToFindAddress(key.note).ifEmpty { default }.forEach { relayUrl ->
+                    potentialRelaysToFindAddress(key.note, cache).ifEmpty { default }.forEach { relayUrl ->
                         add(relayUrl, key.note.address)
                     }
                 }
@@ -85,7 +91,7 @@ fun filterMissingAddressables(keys: List<EventFinderQueryState>): List<RelayBase
                 // loads threading that is event-based
                 key.note.replyTo?.forEach { note ->
                     if (note is AddressableNote && note.event == null) {
-                        potentialRelaysToFindAddress(note).ifEmpty { default }.forEach { relayUrl ->
+                        potentialRelaysToFindAddress(note, cache).ifEmpty { default }.forEach { relayUrl ->
                             add(relayUrl, note.address)
                         }
                     }

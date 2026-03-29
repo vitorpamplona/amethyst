@@ -126,7 +126,7 @@ fun RenderPublicChatChannelThumb(
 
             val followingKeySet = topFilterAuthors
             val allParticipants =
-                ParticipantListBuilder()
+                ParticipantListBuilder(accountViewModel.account.cache)
                     .followsThatParticipateOn(baseNote, followingKeySet)
                     .toImmutableList()
 
@@ -134,7 +134,7 @@ fun RenderPublicChatChannelThumb(
                 if (followingKeySet == null) {
                     val allFollows = accountViewModel.account.kind3FollowList.flow.value.authors
                     val followingParticipants =
-                        ParticipantListBuilder().followsThatParticipateOn(baseNote, allFollows).toList()
+                        ParticipantListBuilder(accountViewModel.account.cache).followsThatParticipateOn(baseNote, allFollows).toList()
 
                     (followingParticipants + (allParticipants - followingParticipants)).toImmutableList()
                 } else {

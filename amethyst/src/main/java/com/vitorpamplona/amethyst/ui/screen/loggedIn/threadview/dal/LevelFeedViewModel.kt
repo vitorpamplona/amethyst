@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.dal
 
-import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
 
@@ -33,4 +33,4 @@ typealias LevelFeedViewModel = com.vitorpamplona.amethyst.commons.viewmodels.thr
  */
 abstract class AndroidLevelFeedViewModel(
     localFilter: FeedFilter<Note>,
-) : LevelFeedViewModel(localFilter, LocalCache)
+) : LevelFeedViewModel(localFilter, Amethyst.instance.cache)

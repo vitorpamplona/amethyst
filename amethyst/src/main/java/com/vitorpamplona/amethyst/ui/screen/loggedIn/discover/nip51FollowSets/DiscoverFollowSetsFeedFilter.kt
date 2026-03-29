@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip51FollowSets
 
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.model.filterIntoSet
@@ -49,7 +48,7 @@ open class DiscoverFollowSetsFeedFilter(
         val params = buildFilterParams(account)
 
         val notes =
-            LocalCache.addressables.filterIntoSet(FollowListEvent.KIND) { _, it ->
+            account.cache.addressables.filterIntoSet(FollowListEvent.KIND) { _, it ->
                 val noteEvent = it.event
                 noteEvent is FollowListEvent && params.match(noteEvent, it.relays)
             }

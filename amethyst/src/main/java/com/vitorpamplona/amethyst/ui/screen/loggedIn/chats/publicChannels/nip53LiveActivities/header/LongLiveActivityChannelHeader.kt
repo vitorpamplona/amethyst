@@ -42,7 +42,6 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
@@ -134,7 +133,9 @@ fun LongLiveActivityChannelHeader(
                 channel.info
                     ?.participants()
                     ?.mapNotNull { part ->
-                        LocalCache.checkGetOrCreateUser(part.pubKey)?.let { Pair(part, it) }
+                        accountViewModel.account.cache
+                            .checkGetOrCreateUser(part.pubKey)
+                            ?.let { Pair(part, it) }
                     }?.toImmutableList()
 
             if (

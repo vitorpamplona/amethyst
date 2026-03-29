@@ -32,11 +32,12 @@ val UserProfileZapReceiverKinds = listOf(LnZapEvent.KIND)
 fun filterUserProfileZapsReceived(
     user: User,
     since: SincePerRelayMap?,
+    cache: LocalCache,
 ): List<RelayBasedFilter> {
     val relays =
         user.inboxRelays()?.ifEmpty { null }
             ?: user.allUsedRelaysOrNull()
-            ?: LocalCache.relayHints.hintsForKey(user.pubkeyHex)
+            ?: cache.relayHints.hintsForKey(user.pubkeyHex)
 
     return relays.map { relay ->
         RelayBasedFilter(

@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.utils.mapOfSet
 
 fun filterLastMessageFollowingPublicChats(
+    cache: LocalCache,
     followingChannels: Set<HexKey>,
     since: SincePerRelayMap?,
 ): List<RelayBasedFilter>? {
@@ -40,8 +41,8 @@ fun filterLastMessageFollowingPublicChats(
         mapOfSet {
             followingChannels.forEach { channelId ->
                 val relays =
-                    LocalCache.getPublicChatChannelIfExists(channelId)?.relays()?.ifEmpty { null }
-                        ?: LocalCache.relayHints.hintsForEvent(channelId).ifEmpty { null }
+                    cache.getPublicChatChannelIfExists(channelId)?.relays()?.ifEmpty { null }
+                        ?: cache.relayHints.hintsForEvent(channelId).ifEmpty { null }
                         ?: Constants.eventFinderRelays
 
                 relays.forEach { relayUrl ->

@@ -65,16 +65,16 @@ class SearchUserWatcherSubAssembler(
             runCatching {
                 if (Hex.isHex(mySearchString)) {
                     val hexKey = Hex.decode(mySearchString).toHexKey()
-                    filterByAuthor(hexKey, indexRelays, defaultRelaysWithSearch)
+                    filterByAuthor(hexKey, indexRelays, defaultRelaysWithSearch, cache)
                 } else {
                     val parsed = Nip19Parser.uriToRoute(mySearchString)?.entity
                     if (parsed != null) {
                         cache.consume(parsed)
 
                         when (parsed) {
-                            is NSec -> filterByAuthor(parsed.toPubKeyHex(), indexRelays, defaultRelaysWithSearch)
-                            is NPub -> filterByAuthor(parsed.hex, indexRelays, defaultRelaysWithSearch)
-                            is NProfile -> filterByAuthor(parsed.hex, indexRelays, defaultRelaysWithSearch)
+                            is NSec -> filterByAuthor(parsed.toPubKeyHex(), indexRelays, defaultRelaysWithSearch, cache)
+                            is NPub -> filterByAuthor(parsed.hex, indexRelays, defaultRelaysWithSearch, cache)
+                            is NProfile -> filterByAuthor(parsed.hex, indexRelays, defaultRelaysWithSearch, cache)
                             is NNote -> emptyList()
                             is NEvent -> emptyList()
                             is NEmbed -> emptyList()

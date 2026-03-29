@@ -158,7 +158,7 @@ class CommunityListState(
             Log.d("AccountRegisterObservers", "Loading saved Community list ${event.toJson()}")
             @OptIn(DelicateCoroutinesApi::class)
             scope.launch(Dispatchers.IO) {
-                LocalCache.justConsumeMyOwnEvent(event)
+                cache.justConsumeMyOwnEvent(event)
             }
         }
 

@@ -46,7 +46,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.countToHumanReadableBytes
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
@@ -131,9 +130,9 @@ fun TorrentCommentPreview() {
                         sig = "014391c310b1eebb807da4c9b11563126f2b795c9372a9432cae4dd2c0695b88584bb1c68814554c9b1a47626e3d60983e3653c29d0fdbc3a474277c140b95c3",
                     )
 
-                LocalCache.justConsume(torrent, null, false)
-                LocalCache.justConsume(comment, null, false)
-                LocalCache.getOrCreateNote("040aba32010b5adf7cb917054e894e86c8ea7a2bcee448b2266c493f3140e9a0")
+                accountViewModel.account.cache.justConsume(torrent, null, false)
+                accountViewModel.account.cache.justConsume(comment, null, false)
+                accountViewModel.account.cache.getOrCreateNote("040aba32010b5adf7cb917054e894e86c8ea7a2bcee448b2266c493f3140e9a0")
             }
         }
 

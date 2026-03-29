@@ -109,7 +109,7 @@ class GeohashListState(
             Log.d("AccountRegisterObservers", "Loading saved Geohash list ${event.toJson()}")
             @OptIn(DelicateCoroutinesApi::class)
             scope.launch(Dispatchers.IO) {
-                LocalCache.justConsumeMyOwnEvent(event)
+                cache.justConsumeMyOwnEvent(event)
             }
         }
 

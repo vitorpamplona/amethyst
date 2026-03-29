@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.webBookmarks.dal
 
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.filterIntoSet
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
@@ -40,7 +39,7 @@ class WebBookmarkFeedFilter(
 
     override fun feed(): List<Note> {
         val bookmarks =
-            LocalCache.addressables.filterIntoSet(WebBookmarkEvent.KIND, account.userProfile().pubkeyHex) { _, note ->
+            account.cache.addressables.filterIntoSet(WebBookmarkEvent.KIND, account.userProfile().pubkeyHex) { _, note ->
                 acceptableEvent(note)
             }
 

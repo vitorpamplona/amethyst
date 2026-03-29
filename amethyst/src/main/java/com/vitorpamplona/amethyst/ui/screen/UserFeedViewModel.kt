@@ -25,8 +25,8 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.ui.feeds.InvalidatableContent
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.BundledUpdate
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
@@ -101,14 +101,14 @@ open class UserFeedViewModel(
     init {
         Log.d("Init", "${this.javaClass.simpleName}")
         viewModelScope.launch(Dispatchers.IO) {
-            LocalCache.live.newEventBundles.collect { newNotes ->
+            Amethyst.instance.cache.live.newEventBundles.collect { newNotes ->
                 Log.d("Rendering Metrics", "Update feeds: ${this@UserFeedViewModel.javaClass.simpleName} with ${newNotes.size}")
                 invalidateData()
             }
         }
 
         viewModelScope.launch(Dispatchers.IO) {
-            LocalCache.live.deletedEventBundles.collect { newNotes ->
+            Amethyst.instance.cache.live.deletedEventBundles.collect { newNotes ->
                 Log.d("Rendering Metrics", "Delete from feeds: ${this@UserFeedViewModel.javaClass.simpleName} with ${newNotes.size}")
                 invalidateData()
             }

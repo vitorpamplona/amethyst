@@ -43,7 +43,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ParticipantListBuilder
 import com.vitorpamplona.amethyst.model.User
@@ -198,7 +197,7 @@ fun LoadModerators(
             val hosts =
                 moderators.mapNotNull { part ->
                     if (part != baseNote.author?.pubkeyHex) {
-                        LocalCache.checkGetOrCreateUser(part)
+                        accountViewModel.account.cache.checkGetOrCreateUser(part)
                     } else {
                         null
                     }
@@ -219,13 +218,13 @@ fun LoadModerators(
 
             val followingKeySet = discoveryTopFilterAuthors
             val allParticipants =
-                ParticipantListBuilder().followsThatParticipateOn(baseNote, followingKeySet).minus(hosts)
+                ParticipantListBuilder(accountViewModel.account.cache).followsThatParticipateOn(baseNote, followingKeySet).minus(hosts)
 
             val newParticipantUsers =
                 if (followingKeySet == null) {
                     val allFollows = accountViewModel.account.kind3FollowList.flow.value.authors
                     val followingParticipants =
-                        ParticipantListBuilder().followsThatParticipateOn(baseNote, allFollows).minus(hosts)
+                        ParticipantListBuilder(accountViewModel.account.cache).followsThatParticipateOn(baseNote, allFollows).minus(hosts)
 
                     (hosts + followingParticipants + (allParticipants - followingParticipants))
                         .toImmutableList()

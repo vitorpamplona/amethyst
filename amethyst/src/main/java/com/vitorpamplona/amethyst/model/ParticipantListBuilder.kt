@@ -22,7 +22,9 @@ package com.vitorpamplona.amethyst.model
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
-class ParticipantListBuilder {
+class ParticipantListBuilder(
+    private val cache: LocalCache,
+) {
     private fun addFollowsThatDirectlyParticipateOnToSet(
         baseNote: Note,
         followingSet: Set<HexKey>?,
@@ -96,7 +98,7 @@ class ParticipantListBuilder {
             it.replyTo?.forEach { addFollowsThatDirectlyParticipateOnToSet(it, followingSet, mySet) }
         }
 
-        LocalCache.getPublicChatChannelIfExists(baseNote.idHex)?.notes?.forEach { key, it ->
+        cache.getPublicChatChannelIfExists(baseNote.idHex)?.notes?.forEach { key, it ->
             addFollowsThatDirectlyParticipateOnToSet(it, followingSet, mySet)
         }
 

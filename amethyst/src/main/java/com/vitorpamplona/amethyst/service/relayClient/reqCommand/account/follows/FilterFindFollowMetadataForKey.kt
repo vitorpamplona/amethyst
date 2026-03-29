@@ -37,6 +37,7 @@ fun pickRelaysToLoadUsers(
     connected: Set<NormalizedRelayUrl>,
     cannotConnectRelays: Set<NormalizedRelayUrl>,
     hasTried: EOSEAccountFast<User>,
+    cache: LocalCache,
 ): Map<NormalizedRelayUrl, Set<HexKey>> {
     val indexRelays = mutableSetOf<NormalizedRelayUrl>()
     val homeRelays = mutableSetOf<NormalizedRelayUrl>()
@@ -75,6 +76,7 @@ fun pickRelaysToLoadUsers(
         commonRelays - cannotConnectRelays,
         cannotConnectRelays,
         hasTried,
+        cache,
     )
 }
 
@@ -87,6 +89,7 @@ fun pickRelaysToLoadUsers(
     commonRelays: Set<NormalizedRelayUrl>,
     cannotConnectRelays: Set<NormalizedRelayUrl>,
     hasTried: EOSEAccountFast<User>,
+    cache: LocalCache,
 ): Map<NormalizedRelayUrl, Set<HexKey>> =
     mapOfSet {
         users.forEachIndexed { idx, key ->
@@ -105,7 +108,7 @@ fun pickRelaysToLoadUsers(
                 }
             } else {
                 // if not, tries hints first.
-                val hints = key.allUsedRelays() + LocalCache.relayHints.hintsForKey(key.pubkeyHex)
+                val hints = key.allUsedRelays() + cache.relayHints.hintsForKey(key.pubkeyHex)
 
                 val leftToTryOnHints = hints - tried
 

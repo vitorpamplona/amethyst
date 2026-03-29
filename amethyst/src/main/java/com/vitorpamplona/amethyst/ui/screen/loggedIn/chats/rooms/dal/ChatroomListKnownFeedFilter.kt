@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal
 
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.replace
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
@@ -57,7 +56,7 @@ class ChatroomListKnownFeedFilter(
             account
                 .publicChatList.flow.value
                 .mapNotNull { it ->
-                    LocalCache
+                    account.cache
                         .getOrCreatePublicChatChannel(it.eventId)
                         .notes
                         .filter { key, it -> account.isAcceptable(it) && it.event != null }
@@ -69,7 +68,7 @@ class ChatroomListKnownFeedFilter(
             account
                 .ephemeralChatList.liveEphemeralChatList.value
                 .mapNotNull { it ->
-                    LocalCache
+                    account.cache
                         .getOrCreateEphemeralChannel(it)
                         .notes
                         .filter { key, it -> account.isAcceptable(it) && it.event != null }

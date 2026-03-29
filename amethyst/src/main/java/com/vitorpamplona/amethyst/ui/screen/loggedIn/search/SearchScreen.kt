@@ -54,7 +54,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.TextSearchDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
@@ -144,7 +143,7 @@ private fun SearchBar(
 
     LaunchedEffect(Unit) {
         launch(Dispatchers.IO) {
-            LocalCache.live.newEventBundles.collect {
+            accountViewModel.account.cache.live.newEventBundles.collect {
                 if (searchBarViewModel.isSearchingFun()) {
                     searchBarViewModel.invalidateData()
                 }
@@ -152,7 +151,7 @@ private fun SearchBar(
         }
 
         launch(Dispatchers.IO) {
-            LocalCache.live.deletedEventBundles.collect {
+            accountViewModel.account.cache.live.deletedEventBundles.collect {
                 if (searchBarViewModel.isSearchingFun()) {
                     searchBarViewModel.invalidateData()
                 }

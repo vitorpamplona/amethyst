@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.service.relayClient.reqCommand.event
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders.NoteEventLoaderSubAssembler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.watchers.EventWatcherSubAssembler
@@ -38,10 +39,11 @@ class EventFinderQueryState(
 @Stable
 class EventFinderFilterAssembler(
     client: INostrClient,
+    cache: LocalCache,
 ) : ComposeSubscriptionManager<EventFinderQueryState>() {
     val group =
         listOf(
-            NoteEventLoaderSubAssembler(client, ::allKeys),
+            NoteEventLoaderSubAssembler(client, cache, ::allKeys),
             EventWatcherSubAssembler(client, ::allKeys),
         )
 

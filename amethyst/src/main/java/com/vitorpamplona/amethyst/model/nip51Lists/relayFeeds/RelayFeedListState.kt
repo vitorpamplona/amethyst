@@ -117,7 +117,7 @@ class RelayFeedListState(
         settings.backupRelayFeedsList?.let {
             Log.d("AccountRegisterObservers", "Loading saved relay feeds list ${it.toJson()}")
             @OptIn(DelicateCoroutinesApi::class)
-            scope.launch(Dispatchers.IO) { LocalCache.justConsumeMyOwnEvent(it) }
+            scope.launch(Dispatchers.IO) { cache.justConsumeMyOwnEvent(it) }
         }
 
         scope.launch(Dispatchers.IO) {

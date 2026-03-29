@@ -61,7 +61,6 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.UserSearchDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -222,12 +221,12 @@ private fun CustomShowUserSuggestionList(
 
     LaunchedEffect(Unit) {
         launch(Dispatchers.IO) {
-            LocalCache.live.newEventBundles.collect {
+            accountViewModel.account.cache.live.newEventBundles.collect {
                 viewModel.userSuggestions.invalidateData()
             }
         }
         launch(Dispatchers.IO) {
-            LocalCache.live.deletedEventBundles.collect {
+            accountViewModel.account.cache.live.deletedEventBundles.collect {
                 viewModel.userSuggestions.invalidateData()
             }
         }

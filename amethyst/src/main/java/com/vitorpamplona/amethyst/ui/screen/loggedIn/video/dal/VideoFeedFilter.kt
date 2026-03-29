@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.video.dal
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.model.filterIntoSet
@@ -70,13 +69,13 @@ class VideoFeedFilter(
         val params = buildFilterParams(account)
 
         val notes =
-            LocalCache.notes.filterIntoSet { _, it ->
+            account.cache.notes.filterIntoSet { _, it ->
                 acceptableEvent(it, params)
             } +
-                LocalCache.addressables.filterIntoSet(VideoHorizontalEvent.KIND) { _, it ->
+                account.cache.addressables.filterIntoSet(VideoHorizontalEvent.KIND) { _, it ->
                     acceptableEvent(it, params)
                 } +
-                LocalCache.addressables.filterIntoSet(VideoVerticalEvent.KIND) { _, it ->
+                account.cache.addressables.filterIntoSet(VideoVerticalEvent.KIND) { _, it ->
                     acceptableEvent(it, params)
                 }
 

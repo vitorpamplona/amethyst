@@ -57,6 +57,7 @@ class FeedTopNavFilterState(
     val proxyRelays: StateFlow<Set<NormalizedRelayUrl>>,
     val caches: FeedDecryptionCaches,
     val signer: NostrSigner,
+    val cache: LocalCache,
     val scope: CoroutineScope,
 ) {
     fun loadFlowsFor(listName: TopFilter): IFeedFlowsType =
@@ -87,7 +88,7 @@ class FeedTopNavFilterState(
 
             is TopFilter.Community -> {
                 NoteFeedFlow(
-                    LocalCache
+                    cache
                         .getOrCreateAddressableNote(listName.address)
                         .flow()
                         .metadata.stateFlow,
@@ -101,7 +102,7 @@ class FeedTopNavFilterState(
 
             is TopFilter.PeopleList -> {
                 NoteFeedFlow(
-                    LocalCache
+                    cache
                         .getOrCreateAddressableNote(listName.address)
                         .flow()
                         .metadata.stateFlow,
@@ -115,7 +116,7 @@ class FeedTopNavFilterState(
 
             is TopFilter.MuteList -> {
                 NoteFeedFlow(
-                    LocalCache
+                    cache
                         .getOrCreateAddressableNote(listName.address)
                         .flow()
                         .metadata.stateFlow,

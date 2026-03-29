@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst
 
-import com.vitorpamplona.amethyst.model.LocalCache.getOrCreateAddressableNoteInternal
+import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.actions.Dao
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
@@ -44,8 +44,8 @@ class NewMessageTaggerKeyParseTest {
             override suspend fun getOrCreateUser(hex: String): User =
                 User(
                     hex,
-                    getOrCreateAddressableNoteInternal(AdvertisedRelayListEvent.createAddress(hex)),
-                    getOrCreateAddressableNoteInternal(ChatMessageRelayListEvent.createAddress(hex)),
+                    AddressableNote(AdvertisedRelayListEvent.createAddress(hex)),
+                    AddressableNote(ChatMessageRelayListEvent.createAddress(hex)),
                 )
 
             override suspend fun getOrCreateNote(hex: String) =

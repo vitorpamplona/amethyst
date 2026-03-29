@@ -698,9 +698,10 @@ fun RenderPollGameResultsPreview() {
             sig = "7263d7e98348474c9f6670a98225e3594bffa813ff9c9084b7045126562dc352744450b5e667b0069e0276a63d3b9e14df3b1e1a3e6d5e958c3a7c74390345f5",
         )
 
-    val note = LocalCache.getOrCreateNote("1fae24bb7e1673afc94da3878d051c0f4fd65599960aeb8a9a90642f8cad6299")
+    val cache = LocalCache()
+    val note = cache.getOrCreateNote("1fae24bb7e1673afc94da3878d051c0f4fd65599960aeb8a9a90642f8cad6299")
 
-    LocalCache.justConsume(event, null, true)
+    cache.justConsume(event, null, true)
 
     val response1 =
         PollResponseEvent(
@@ -730,8 +731,8 @@ fun RenderPollGameResultsPreview() {
             sig = "3efa83a899e1038fde76b8130f99881ab88c330adcd7d9f2578fa3c3e346eba05d627bd75ddb5780ffd460fcefb07839d0b379ba20db30772fa4d847b1dcfa6f",
         )
 
-    LocalCache.justConsume(response1, null, true)
-    LocalCache.justConsume(response2, null, true)
+    cache.justConsume(response1, null, true)
+    cache.justConsume(response2, null, true)
 
     ThemeComparisonColumn {
         Column(Modifier.padding(10.dp)) {
@@ -776,9 +777,10 @@ fun RenderPollColorResultsPreview() {
             sig = "d65af73c3b652ea06df3dc00b05a6f155cf8936d645ca002d2c1a5d59b45e9b072e5217d3339711ad62f5b105859d8da95eb636681bd12ad04063d19359f48b5",
         )
 
-    val note = LocalCache.getOrCreateNote(event)
+    val cache = LocalCache()
+    val note = cache.getOrCreateNote(event)
 
-    LocalCache.justConsume(event, null, true)
+    cache.justConsume(event, null, true)
 
     val response1 =
         PollResponseEvent(
@@ -837,10 +839,10 @@ fun RenderPollColorResultsPreview() {
             sig = "d2feee481c0e84306fcb0815c7c671ab697948148b18307f864fe6c96a09485c12bf8f843d406b231914d60bd2735d3f3ed0b4e89377794bccd66e2e0acf2eb5",
         )
 
-    LocalCache.justConsume(response1, null, true)
-    LocalCache.justConsume(response2, null, true)
-    LocalCache.justConsume(response3, null, true)
-    LocalCache.justConsume(response4, null, true)
+    cache.justConsume(response1, null, true)
+    cache.justConsume(response2, null, true)
+    cache.justConsume(response3, null, true)
+    cache.justConsume(response4, null, true)
 
     ThemeComparisonColumn {
         Column(Modifier.padding(10.dp)) {
@@ -883,9 +885,10 @@ fun RenderPollMultiChoicePreview() {
             sig = "aaddf12bc4b7947d8c57dd0fb4378c5f0daab6844cc3205bf1480e2a10e077b1abca67d071530e9fecac517fd6d052e49630a32596d9ecfb862967d0b2b2d899",
         )
 
-    val note = LocalCache.getOrCreateNote(event)
+    val cache = LocalCache()
+    val note = cache.getOrCreateNote(event)
 
-    LocalCache.justConsume(event, null, true)
+    cache.justConsume(event, null, true)
 
     ThemeComparisonColumn {
         Column(Modifier.padding(10.dp)) {

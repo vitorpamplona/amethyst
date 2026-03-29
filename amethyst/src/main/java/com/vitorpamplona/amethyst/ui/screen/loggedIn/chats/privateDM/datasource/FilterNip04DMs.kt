@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.datasource
 
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
@@ -45,20 +44,24 @@ fun filterNip04DMs(
 
     group.forEach {
         val authorHomeRelayEventAddress = AdvertisedRelayListEvent.createAddressTag(it)
-        val authorHomeRelayEvent = (LocalCache.getAddressableNoteIfExists(authorHomeRelayEventAddress)?.event as? AdvertisedRelayListEvent)
+        val authorHomeRelayEvent = (account.cache.getAddressableNoteIfExists(authorHomeRelayEventAddress)?.event as? AdvertisedRelayListEvent)
 
         val outbox =
             authorHomeRelayEvent?.writeRelaysNorm()
-                ?: LocalCache.getUserIfExists(it)?.allUsedRelaysOrNull()
-                ?: LocalCache.relayHints.hintsForKey(it).ifEmpty { null }
+                ?: account.cache.getUserIfExists(it)?.allUsedRelaysOrNull()
+                ?: account.cache.relayHints
+                    .hintsForKey(it)
+                    .ifEmpty { null }
                 ?: emptyList()
 
         groupOutboxRelays.addAll(outbox)
 
         val inbox =
             authorHomeRelayEvent?.readRelaysNorm()?.ifEmpty { null }
-                ?: LocalCache.getUserIfExists(it)?.allUsedRelaysOrNull()
-                ?: LocalCache.relayHints.hintsForKey(it).ifEmpty { null }
+                ?: account.cache.getUserIfExists(it)?.allUsedRelaysOrNull()
+                ?: account.cache.relayHints
+                    .hintsForKey(it)
+                    .ifEmpty { null }
                 ?: emptyList()
 
         groupInboxRelays.addAll(inbox)

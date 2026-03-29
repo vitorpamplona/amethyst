@@ -37,7 +37,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -145,7 +144,7 @@ fun LiveChannelActionOptions(
         Spacer(modifier = StdHorzSpacer)
     }
 
-    val note = remember(activity) { LocalCache.getAddressableNoteIfExists(activity.address()) }
+    val note = remember(activity) { accountViewModel.account.cache.getAddressableNoteIfExists(activity.address()) }
     note?.let {
         Row(
             verticalAlignment = Alignment.CenterVertically,

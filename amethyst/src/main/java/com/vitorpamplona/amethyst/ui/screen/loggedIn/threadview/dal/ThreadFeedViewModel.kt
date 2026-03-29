@@ -24,12 +24,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.vitorpamplona.amethyst.commons.viewmodels.thread.ThreadFeedFilter
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
 
 class ThreadFeedViewModel(
     account: Account,
     noteId: String,
-) : com.vitorpamplona.amethyst.commons.viewmodels.thread.LevelFeedViewModel(ThreadFeedFilter(account, noteId, LocalCache), LocalCache) {
+) : com.vitorpamplona.amethyst.commons.viewmodels.thread.LevelFeedViewModel(ThreadFeedFilter(account, noteId, account.cache), account.cache) {
     class Factory(
         val account: Account,
         val noteId: String,

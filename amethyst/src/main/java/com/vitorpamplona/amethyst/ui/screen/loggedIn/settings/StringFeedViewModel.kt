@@ -25,8 +25,8 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.ui.feeds.InvalidatableContent
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.BundledUpdate
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
@@ -100,13 +100,13 @@ open class StringFeedViewModel(
     init {
         Log.d("Init", this.javaClass.simpleName)
         viewModelScope.launch(Dispatchers.IO) {
-            LocalCache.live.newEventBundles.collect { newNotes ->
+            Amethyst.instance.cache.live.newEventBundles.collect { newNotes ->
                 Log.d("Rendering Metrics", "Update feeds: ${this@StringFeedViewModel.javaClass.simpleName} with ${newNotes.size}")
                 invalidateData()
             }
         }
         viewModelScope.launch(Dispatchers.IO) {
-            LocalCache.live.deletedEventBundles.collect { newNotes ->
+            Amethyst.instance.cache.live.deletedEventBundles.collect { newNotes ->
                 Log.d("Rendering Metrics", "Delete feeds: ${this@StringFeedViewModel.javaClass.simpleName} with ${newNotes.size}")
                 invalidateData()
             }

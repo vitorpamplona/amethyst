@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.dal
 
 import com.vitorpamplona.amethyst.commons.model.observables.CreatedAtComparator
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
@@ -47,7 +46,7 @@ open class NIP90ContentDiscoveryResponseFilter(
         val params = buildFilterParams(account)
 
         latestNote =
-            LocalCache.notes.maxOrNullOf(
+            account.cache.notes.maxOrNullOf(
                 filter = { idHex: String, note: Note ->
                     acceptableEvent(note)
                 },
@@ -57,7 +56,7 @@ open class NIP90ContentDiscoveryResponseFilter(
         val noteEvent = latestNote?.event as? NIP90ContentDiscoveryResponseEvent ?: return listOf()
 
         return noteEvent.innerTags().mapNotNull {
-            LocalCache.checkGetOrCreateNote(it)
+            account.cache.checkGetOrCreateNote(it)
         }
     }
 
@@ -83,7 +82,7 @@ open class NIP90ContentDiscoveryResponseFilter(
         return noteEvent
             .innerTags()
             .mapNotNull {
-                LocalCache.checkGetOrCreateNote(it)
+                account.cache.checkGetOrCreateNote(it)
             }.toSet()
     }
 

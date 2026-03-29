@@ -75,10 +75,11 @@ val UserProfilePostKinds2 =
 fun filterUserProfilePosts(
     user: User,
     since: SincePerRelayMap?,
+    cache: LocalCache,
 ): List<RelayBasedFilter> {
     val relays =
         user.outboxRelays()?.ifEmpty { null }
-            ?: (user.allUsedRelays() + LocalCache.relayHints.hintsForKey(user.pubkeyHex))
+            ?: (user.allUsedRelays() + cache.relayHints.hintsForKey(user.pubkeyHex))
 
     return relays.flatMap { relay ->
         listOf(

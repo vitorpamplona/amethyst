@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.bookmarks.dal
 
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
@@ -36,14 +35,14 @@ class UserProfileBookmarksFeedFilter(
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + user.pubkeyHex
 
     override fun feed(): List<Note> {
-        val note = LocalCache.getOrCreateAddressableNote(BookmarkListEvent.createBookmarkAddress(user.pubkeyHex))
+        val note = account.cache.getOrCreateAddressableNote(BookmarkListEvent.createBookmarkAddress(user.pubkeyHex))
         val noteEvent = note.event as? BookmarkListEvent ?: return emptyList()
 
         val notes =
             noteEvent.publicBookmarks().mapNotNull {
                 when (it) {
-                    is AddressBookmark -> LocalCache.getOrCreateAddressableNote(it.address)
-                    is EventBookmark -> LocalCache.checkGetOrCreateNote(it.eventId)
+                    is AddressBookmark -> account.cache.getOrCreateAddressableNote(it.address)
+                    is EventBookmark -> account.cache.checkGetOrCreateNote(it.eventId)
                 }
             }
 

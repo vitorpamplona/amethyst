@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common
 
 import android.R.id.input
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.Amethyst
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
@@ -44,7 +44,7 @@ class RelaySuggestionState : IRelaySuggestionState {
             .map { input ->
                 if (input.length > 1) {
                     val lower = input.lowercase()
-                    LocalCache.relayHints.relayDB
+                    Amethyst.instance.cache.relayHints.relayDB
                         .filter { _, relay -> relay.url.contains(lower) }
                         .map { relaySetupInfoBuilder(it) }
                         .sortedByDescending { it.relayStat.receivedBytes }

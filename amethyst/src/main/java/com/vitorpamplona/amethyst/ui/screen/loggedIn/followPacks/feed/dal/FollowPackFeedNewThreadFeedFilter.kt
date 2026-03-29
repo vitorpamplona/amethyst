@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.feed.dal
 
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.filterIntoSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.allUserFollows.AllUserFollowsByOutboxTopNavFilter
@@ -93,13 +92,13 @@ class FollowPackFeedNewThreadFeedFilter(
         val filterParams = buildFilterParams(account)
 
         val notes =
-            LocalCache.notes.filterIntoSet { _, note ->
+            account.cache.notes.filterIntoSet { _, note ->
                 // Avoids processing addressables twice.
                 (note.event?.kind ?: 99999) < 10000 && acceptableEvent(note, filterParams)
             }
 
         val longFormNotes =
-            LocalCache.addressables.filterIntoSet(
+            account.cache.addressables.filterIntoSet(
                 kinds = ADDRESSABLE_KINDS,
             ) { _, note ->
                 acceptableEvent(note, filterParams)

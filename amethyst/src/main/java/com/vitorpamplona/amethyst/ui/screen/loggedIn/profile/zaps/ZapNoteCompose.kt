@@ -32,7 +32,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.layouts.listItem.SlimListItem
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
@@ -72,7 +71,7 @@ fun ZapNoteCompose(
 fun RenderZapNoteSlimPreview() {
     val accountViewModel = mockAccountViewModel()
 
-    val user1: User = LocalCache.getOrCreateUser("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c")
+    val user1: User = accountViewModel.account.cache.getOrCreateUser("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c")
 
     ThemeComparisonColumn {
         RenderZapNoteSlim(

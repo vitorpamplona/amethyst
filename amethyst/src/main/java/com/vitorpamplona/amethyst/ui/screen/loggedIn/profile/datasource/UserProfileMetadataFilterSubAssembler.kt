@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.utils.mapOfSet
 class UserProfileMetadataFilterSubAssembler(
     client: INostrClient,
     allKeys: () -> Set<UserProfileQueryState>,
+    private val cache: LocalCache,
 ) : SingleSubEoseManager<UserProfileQueryState>(client, allKeys) {
     override fun updateFilter(
         keys: List<UserProfileQueryState>,
@@ -41,7 +42,7 @@ class UserProfileMetadataFilterSubAssembler(
                     val relays =
                         user.outboxRelays()?.ifEmpty { null }
                             ?: user.allUsedRelaysOrNull()
-                            ?: LocalCache.relayHints.hintsForKey(user.pubkeyHex)
+                            ?: cache.relayHints.hintsForKey(user.pubkeyHex)
 
                     relays.forEach { relay ->
                         add(relay, user.pubkeyHex)

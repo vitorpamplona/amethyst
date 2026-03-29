@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.datasources.subassembies
 
 import com.vitorpamplona.amethyst.commons.model.ThreadAssembler
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.datasources.ThreadQueryState
@@ -43,7 +42,7 @@ class ThreadFilterSubAssembler(
         key: ThreadQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter>? {
-        val root = ThreadAssembler(LocalCache).findRoot(key.eventId) ?: return null
+        val root = ThreadAssembler(key.account.cache).findRoot(key.eventId) ?: return null
 
         return filterEventsInThreadForRoot(root, since)
     }

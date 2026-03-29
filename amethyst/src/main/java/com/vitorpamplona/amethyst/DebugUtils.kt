@@ -25,7 +25,6 @@ import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.os.Debug
 import androidx.core.content.getSystemService
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizedUrls
 import com.vitorpamplona.quartz.utils.Log
@@ -80,56 +79,84 @@ fun debugState(context: Context) {
     Log.d(
         STATE_DUMP_TAG,
         "Notes: " +
-            LocalCache.notes.filter { _, it -> it.flowSet != null }.size +
+            Amethyst.instance.cache.notes
+                .filter { _, it -> it.flowSet != null }
+                .size +
             " / " +
-            LocalCache.notes.filter { _, it -> it.event != null }.size +
+            Amethyst.instance.cache.notes
+                .filter { _, it -> it.event != null }
+                .size +
             " / " +
-            LocalCache.notes.size(),
+            Amethyst.instance.cache.notes
+                .size(),
     )
     Log.d(
         STATE_DUMP_TAG,
         "Addressables: " +
-            LocalCache.addressables.filter { _, it -> it.flowSet != null }.size +
+            Amethyst.instance.cache.addressables
+                .filter { _, it -> it.flowSet != null }
+                .size +
             " / " +
-            LocalCache.addressables.filter { _, it -> it.event != null }.size +
+            Amethyst.instance.cache.addressables
+                .filter { _, it -> it.event != null }
+                .size +
             " / " +
-            LocalCache.addressables.size(),
+            Amethyst.instance.cache.addressables
+                .size(),
     )
     Log.d(
         STATE_DUMP_TAG,
         "Users: " +
-            LocalCache.users.filter { _, it -> it.metadataOrNull() != null }.size +
+            Amethyst.instance.cache.users
+                .filter { _, it -> it.metadataOrNull() != null }
+                .size +
             " / " +
-            LocalCache.users.size(),
+            Amethyst.instance.cache.users
+                .size(),
     )
     Log.d(
         STATE_DUMP_TAG,
         "Public Chat Channels: " +
-            LocalCache.publicChatChannels.filter { _, it -> it.flowSet != null }.size +
+            Amethyst.instance.cache.publicChatChannels
+                .filter { _, it -> it.flowSet != null }
+                .size +
             " / " +
-            LocalCache.publicChatChannels.size() +
+            Amethyst.instance.cache.publicChatChannels
+                .size() +
             " / " +
-            LocalCache.publicChatChannels.values().sumOf { it.notes.size() },
+            Amethyst.instance.cache.publicChatChannels
+                .values()
+                .sumOf { it.notes.size() },
     )
     Log.d(
         STATE_DUMP_TAG,
         "Live Chat Channels: " +
-            LocalCache.liveChatChannels.filter { _, it -> it.flowSet != null }.size +
+            Amethyst.instance.cache.liveChatChannels
+                .filter { _, it -> it.flowSet != null }
+                .size +
             " / " +
-            LocalCache.liveChatChannels.size() +
+            Amethyst.instance.cache.liveChatChannels
+                .size() +
             " / " +
-            LocalCache.liveChatChannels.values().sumOf { it.notes.size() },
+            Amethyst.instance.cache.liveChatChannels
+                .values()
+                .sumOf { it.notes.size() },
     )
     Log.d(
         STATE_DUMP_TAG,
         "Ephemeral Chat Channels: " +
-            LocalCache.ephemeralChannels.filter { _, it -> it.flowSet != null }.size +
+            Amethyst.instance.cache.ephemeralChannels
+                .filter { _, it -> it.flowSet != null }
+                .size +
             " / " +
-            LocalCache.ephemeralChannels.size() +
+            Amethyst.instance.cache.ephemeralChannels
+                .size() +
             " / " +
-            LocalCache.ephemeralChannels.values().sumOf { it.notes.size() },
+            Amethyst.instance.cache.ephemeralChannels
+                .values()
+                .sumOf { it.notes.size() },
     )
-    LocalCache.chatroomList.forEach { key, room ->
+    Amethyst.instance.cache.chatroomList.forEach { key, room ->
         Log.d(
             STATE_DUMP_TAG,
             "Private Chats $key: " +
@@ -141,35 +168,46 @@ fun debugState(context: Context) {
     Log.d(
         STATE_DUMP_TAG,
         "Deletion Events: " +
-            LocalCache.deletionIndex.size(),
+            Amethyst.instance.cache.deletionIndex
+                .size(),
     )
     Log.d(
         STATE_DUMP_TAG,
         "Observables: " +
-            LocalCache.observables.size,
+            Amethyst.instance.cache.observables.size,
     )
 
     Log.d(
         STATE_DUMP_TAG,
         "Spam: " +
-            LocalCache.antiSpam.spamMessages.size() + " / " + LocalCache.antiSpam.recentEventIds.size() + " / " + LocalCache.antiSpam.recentAddressables.size(),
+            Amethyst.instance.cache.antiSpam.spamMessages
+                .size() + " / " +
+            Amethyst.instance.cache.antiSpam.recentEventIds
+                .size() + " / " +
+            Amethyst.instance.cache.antiSpam.recentAddressables
+                .size(),
     )
 
     Log.d(
         STATE_DUMP_TAG,
         "Memory used by Events: " +
-            LocalCache.notes.sumOf { _, note -> note.event?.countMemory() ?: 0 } / (1024 * 1024) +
+            Amethyst.instance.cache.notes
+                .sumOf { _, note -> note.event?.countMemory() ?: 0 } / (1024 * 1024) +
             " MB",
     )
 
-    val qttNotes = LocalCache.notes.countByGroup { _, it -> it.event?.kind }
-    val qttAddressables = LocalCache.addressables.countByGroup { _, it -> it.event?.kind }
+    val qttNotes =
+        Amethyst.instance.cache.notes
+            .countByGroup { _, it -> it.event?.kind }
+    val qttAddressables =
+        Amethyst.instance.cache.addressables
+            .countByGroup { _, it -> it.event?.kind }
 
     val bytesNotes =
-        LocalCache.notes
+        Amethyst.instance.cache.notes
             .sumByGroup(groupMap = { _, it -> it.event?.kind }, sumOf = { _, it -> it.event?.countMemory()?.toLong() ?: 0L })
     val bytesAddressables =
-        LocalCache.addressables
+        Amethyst.instance.cache.addressables
             .sumByGroup(groupMap = { _, it -> it.event?.kind }, sumOf = { _, it -> it.event?.countMemory()?.toLong() ?: 0L })
 
     qttNotes.toList().sortedByDescending { bytesNotes[it.first] }.forEach { (kind, qtt) ->
