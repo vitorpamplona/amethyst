@@ -719,10 +719,6 @@ fun App(
     }
 
     val localCache = remember { DesktopLocalCache() }
-    val namecoinPreferences = remember { DesktopNamecoinPreferences() }
-    val namecoinService = remember {
-        DesktopNamecoinNameService(preferencesProvider = { namecoinPreferences.current })
-    }
     val accountState by accountManager.accountState.collectAsState()
     val scope = remember { CoroutineScope(SupervisorJob() + Dispatchers.Main) }
 
@@ -900,10 +896,6 @@ fun App(
         ProvideMaterialSymbols(
             weight = com.vitorpamplona.amethyst.desktop.platform.PlatformIconWeight.current,
         ) {
-            CompositionLocalProvider(
-                LocalNamecoinPreferences provides namecoinPreferences,
-                LocalNamecoinService provides namecoinService,
-            ) {
             Surface(
                 modifier = Modifier.fillMaxSize(),
                 color = MaterialTheme.colorScheme.background,
@@ -1068,7 +1060,6 @@ fun App(
                 }
             }
         }
-        } // end CompositionLocalProvider
     }
 }
 
