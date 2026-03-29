@@ -26,6 +26,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.CloudUpload
@@ -86,7 +88,7 @@ fun AllSettingsScreen(
             TopBarWithBackButton(stringRes(id = R.string.settings), nav::popBack)
         },
     ) { padding ->
-        Column(Modifier.padding(padding)) {
+        Column(Modifier.padding(padding).verticalScroll(rememberScrollState())) {
             SettingsSectionHeader(R.string.account_settings)
             SettingsNavigationRow(
                 title = R.string.relay_setup,
