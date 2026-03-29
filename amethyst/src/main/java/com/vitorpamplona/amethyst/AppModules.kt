@@ -383,7 +383,7 @@ class AppModules(
     }
 
     // Organizes cache clearing
-    val trimmingService =
+    val trimmingService by
         lazy {
             MemoryTrimmingService(cache)
         }
