@@ -115,7 +115,7 @@ class RelayFeedListState(
 
     init {
         settings.backupRelayFeedsList?.let {
-            Log.d("AccountRegisterObservers", "Loading saved relay feeds list ${it.toJson()}")
+            Log.d("AccountRegisterObservers") { "Loading saved relay feeds list ${it.toJson()}" }
             @OptIn(DelicateCoroutinesApi::class)
             scope.launch(Dispatchers.IO) { LocalCache.justConsumeMyOwnEvent(it) }
         }
@@ -123,7 +123,7 @@ class RelayFeedListState(
         scope.launch(Dispatchers.IO) {
             Log.d("AccountRegisterObservers", "Relay feeds list Collector Start")
             getRelayFeedsListFlow().collect {
-                Log.d("AccountRegisterObservers", "Updating Relay feeds list for ${signer.pubKey}")
+                Log.d("AccountRegisterObservers") { "Updating Relay feeds list for ${signer.pubKey}" }
                 (it.note.event as? RelayFeedsListEvent)?.let {
                     settings.updateRelayFeedList(it)
                 }

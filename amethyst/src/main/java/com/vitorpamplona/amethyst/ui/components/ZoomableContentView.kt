@@ -960,7 +960,7 @@ private suspend fun shareVideoFile(
             delay(SHARED_VIDEO_CLEANUP_DELAY_MS)
             sharedFile?.let { file ->
                 if (!file.delete()) {
-                    Log.w("ZoomableContentView", "Failed to delete shared file: ${file.path}")
+                    Log.w("ZoomableContentView") { "Failed to delete shared file: ${file.path}" }
                 }
             }
         }
@@ -974,11 +974,11 @@ private suspend fun shareVideoFile(
 
         // Clean up temp file on error
         if (!tempFile.delete()) {
-            Log.w("ZoomableContentView", "Failed to delete temp file: ${tempFile.path}")
+            Log.w("ZoomableContentView") { "Failed to delete temp file: ${tempFile.path}" }
         }
         sharedFile?.let { file ->
             if (!file.delete()) {
-                Log.w("ZoomableContentView", "Failed to delete shared file: ${file.path}")
+                Log.w("ZoomableContentView") { "Failed to delete shared file: ${file.path}" }
             }
         }
 

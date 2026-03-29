@@ -85,7 +85,7 @@ class NotificationReplyReceiver : BroadcastReceiver() {
                         notificationManager.cancel(notificationId)
                     } catch (e: Exception) {
                         if (e is CancellationException) throw e
-                        Log.e("NotificationReply", "Failed to send reply: ${e.message}")
+                        Log.e("NotificationReply") { "Failed to send reply: ${e.message}" }
                     } finally {
                         pendingResult.finish()
 

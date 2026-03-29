@@ -731,6 +731,8 @@
     <string name="relay_monitor_requirements">Wymagania</string>
     <string name="relay_monitor_last_check">Ostatnie sprawdzenie</string>
     <string name="relay_monitor_ms">%1$d ms</string>
+    <string name="relay_discovery_accepted_kinds">Dopuszczalne typy</string>
+    <string name="relay_discovery_geohash">Lokalizacja</string>
     <string name="relay_active_subscriptions">Aktywne subskrypcje</string>
     <string name="relay_active_outbox">Wydarzenia oczekujące na wysłanie</string>
     <string name="relay_req_subscriptions">REQ Subskrypcje (%1$d)</string>

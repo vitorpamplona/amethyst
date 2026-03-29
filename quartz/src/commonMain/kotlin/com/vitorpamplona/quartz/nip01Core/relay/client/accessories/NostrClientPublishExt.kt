@@ -59,7 +59,7 @@ suspend fun INostrClient.publishAndConfirmDetailed(
 ): Map<NormalizedRelayUrl, Boolean> {
     val resultChannel = Channel<Result>(UNLIMITED)
 
-    Log.d("publishAndConfirm", "Waiting for ${relayList.size} responses")
+    Log.d("publishAndConfirm") { "Waiting for ${relayList.size} responses" }
 
     val subscription =
         object : RelayConnectionListener {
@@ -69,14 +69,14 @@ suspend fun INostrClient.publishAndConfirmDetailed(
             ) {
                 if (relay.url in relayList) {
                     resultChannel.trySend(Result(relay.url, false))
-                    Log.d("publishAndConfirm", "Error from relay ${relay.url}: $errorMessage")
+                    Log.d("publishAndConfirm") { "Error from relay ${relay.url}: $errorMessage" }
                 }
             }
 
             override fun onDisconnected(relay: IRelayClient) {
                 if (relay.url in relayList) {
                     resultChannel.trySend(Result(relay.url, false))
-                    Log.d("publishAndConfirm", "Disconnected from relay ${relay.url}")
+                    Log.d("publishAndConfirm") { "Disconnected from relay ${relay.url}" }
                 }
             }
 
@@ -91,7 +91,7 @@ suspend fun INostrClient.publishAndConfirmDetailed(
                     is OkMessage -> {
                         if (msg.eventId == event.id) {
                             resultChannel.trySend(Result(relay.url, msg.success))
-                            Log.d("publishAndConfirm", "onSendResponse Received response for ${msg.eventId} from relay ${relay.url} message ${msg.message} success ${msg.success}")
+                            Log.d("publishAndConfirm") { "onSendResponse Received response for ${msg.eventId} from relay ${relay.url} message ${msg.message} success ${msg.success}" }
                         }
                     }
                 }
@@ -136,7 +136,7 @@ suspend fun INostrClient.publishAndConfirmDetailed(
     // Clean up the channel
     resultChannel.close()
 
-    Log.d("publishAndConfirm", "Finished with ${receivedResults.size} results")
+    Log.d("publishAndConfirm") { "Finished with ${receivedResults.size} results" }
 
     return receivedResults
 }

@@ -103,7 +103,7 @@ class SearchRelayListState(
 
     init {
         settings.backupSearchRelayList?.let {
-            Log.d("AccountRegisterObservers", "Loading saved search relay list ${it.toJson()}")
+            Log.d("AccountRegisterObservers") { "Loading saved search relay list ${it.toJson()}" }
             @OptIn(DelicateCoroutinesApi::class)
             scope.launch(Dispatchers.IO) { LocalCache.justConsumeMyOwnEvent(it) }
         }
@@ -111,7 +111,7 @@ class SearchRelayListState(
         scope.launch(Dispatchers.IO) {
             Log.d("AccountRegisterObservers", "Search Relay List Collector Start")
             getSearchRelayListFlow().collect {
-                Log.d("AccountRegisterObservers", "Updating Search Relay List for ${signer.pubKey}")
+                Log.d("AccountRegisterObservers") { "Updating Search Relay List for ${signer.pubKey}" }
                 (it.note.event as? SearchRelayListEvent)?.let {
                     settings.updateSearchRelayList(it)
                 }

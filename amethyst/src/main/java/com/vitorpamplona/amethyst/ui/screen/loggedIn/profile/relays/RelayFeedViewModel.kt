@@ -195,7 +195,7 @@ class RelayFeedViewModel :
     }
 
     override fun onCleared() {
-        Log.d("Init", "OnCleared: ${this.javaClass.simpleName}")
+        Log.d("Init") { "OnCleared: ${this.javaClass.simpleName}" }
         super.onCleared()
     }
 }

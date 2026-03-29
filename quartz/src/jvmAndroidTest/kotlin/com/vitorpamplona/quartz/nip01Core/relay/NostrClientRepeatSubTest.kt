@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EoseMessage
@@ -60,7 +61,7 @@ class NostrClientRepeatSubTest : BaseNostrClientTest() {
                         msgStr: String,
                         msg: Message,
                     ) {
-                        Log.d("Test", "Receiving message: $msgStr")
+                        Log.d("Test") { "Receiving message: $msgStr" }
                         when (msg) {
                             is EventMessage -> {
                                 if (mySubId == msg.subId) {
@@ -116,7 +117,7 @@ class NostrClientRepeatSubTest : BaseNostrClientTest() {
                 launch {
                     withTimeoutOrNull(30000) {
                         while (events.size < 112) {
-                            Log.d("Test", "Processing message ${events.size}")
+                            Log.d("Test") { "Processing message ${events.size}" }
                             // simulates an update in the middle of the sub
                             if (events.size == 1) {
                                 client.subscribe(mySubId, filtersShouldIgnore)

@@ -156,7 +156,7 @@ class OpenTimestamps(
     ): Timestamp {
         val responses =
             mapNotNullAsync(calendarUrls) { calendarUrl ->
-                Log.i("OpenTimestamps", "Submitting to remote calendar $calendarUrl")
+                Log.i("OpenTimestamps") { "Submitting to remote calendar $calendarUrl" }
                 calendar.submit(calendarUrl, timestamp.digest)
             }
 
@@ -361,7 +361,7 @@ class OpenTimestamps(
         val attsFromRemote: MutableSet<TimeAttestation> = upgradedStamp.getAttestations()
 
         if (attsFromRemote.isNotEmpty()) {
-            Log.i("OpenTimestamps", "Got 1 attestation(s) from $calendarUrl")
+            Log.i("OpenTimestamps") { "Got 1 attestation(s) from $calendarUrl" }
         }
 
         // Set difference from remote attestations & existing attestations

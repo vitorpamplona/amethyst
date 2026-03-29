@@ -61,7 +61,7 @@ class NIP90ContentDiscoveryResponseEvent(
                     }
                 }
         } catch (e: Throwable) {
-            Log.w("NIP90ContentDiscoveryResponseEvent", "Error parsing the JSON ${e.message}")
+            Log.w("NIP90ContentDiscoveryResponseEvent") { "Error parsing the JSON ${e.message}" }
         }
 
         return events ?: listOf()

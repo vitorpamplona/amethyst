@@ -49,24 +49,24 @@ abstract class FeedViewModel(
     override fun invalidateData(ignoreIfDoing: Boolean) = feedState.invalidateData(ignoreIfDoing)
 
     init {
-        Log.d("Init", "Starting new Model: ${this::class.simpleName}")
+        Log.d("Init") { "Starting new Model: ${this::class.simpleName}" }
         viewModelScope.launch(Dispatchers.IO) {
             cacheProvider.getEventStream().newEventBundles.collect { newNotes ->
-                Log.d("Rendering Metrics", "Update feeds: ${this@FeedViewModel::class.simpleName} with ${newNotes.size}")
+                Log.d("Rendering Metrics") { "Update feeds: ${this@FeedViewModel::class.simpleName} with ${newNotes.size}" }
                 feedState.updateFeedWith(newNotes)
             }
         }
 
         viewModelScope.launch(Dispatchers.IO) {
             cacheProvider.getEventStream().deletedEventBundles.collect { newNotes ->
-                Log.d("Rendering Metrics", "Delete from feeds: ${this@FeedViewModel::class.simpleName} with ${newNotes.size}")
+                Log.d("Rendering Metrics") { "Delete from feeds: ${this@FeedViewModel::class.simpleName} with ${newNotes.size}" }
                 feedState.deleteFromFeed(newNotes)
             }
         }
     }
 
     override fun onCleared() {
-        Log.d("Init", "OnCleared: ${this::class.simpleName}")
+        Log.d("Init") { "OnCleared: ${this::class.simpleName}" }
         super.onCleared()
     }
 }

@@ -176,7 +176,7 @@ class ChannelFeedContentState(
     }
 
     fun destroy() {
-        Log.d("Init", "OnCleared: ${this.javaClass.simpleName}")
+        Log.d("Init") { "OnCleared: ${this.javaClass.simpleName}" }
         bundlerInsert.cancel()
         bundler.cancel()
     }

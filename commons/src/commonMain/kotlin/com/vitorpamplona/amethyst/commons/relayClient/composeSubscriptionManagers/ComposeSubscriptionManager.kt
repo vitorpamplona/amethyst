@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManage
 
 import androidx.compose.runtime.Stable
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.collections.forEach
 
 /**
  *  This allows composables to directly register their queries

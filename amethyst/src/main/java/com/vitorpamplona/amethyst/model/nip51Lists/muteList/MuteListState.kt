@@ -141,7 +141,7 @@ class MuteListState(
 
     init {
         settings.backupMuteList?.let { event ->
-            Log.d("AccountRegisterObservers", "Loading saved mute list ${event.toJson()}")
+            Log.d("AccountRegisterObservers") { "Loading saved mute list ${event.toJson()}" }
             @OptIn(DelicateCoroutinesApi::class)
             scope.launch(Dispatchers.IO) {
                 LocalCache.justConsumeMyOwnEvent(event)
@@ -151,7 +151,7 @@ class MuteListState(
         scope.launch(Dispatchers.IO) {
             Log.d("AccountRegisterObservers", "Mute List Collector Start")
             getMuteListFlow().collect {
-                Log.d("AccountRegisterObservers", "Updating Mute List for ${signer.pubKey}")
+                Log.d("AccountRegisterObservers") { "Updating Mute List for ${signer.pubKey}" }
                 (it.note.event as? MuteListEvent)?.let {
                     settings.updateMuteList(it)
                 }

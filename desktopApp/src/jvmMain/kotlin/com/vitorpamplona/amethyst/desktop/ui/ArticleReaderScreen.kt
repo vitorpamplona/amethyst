@@ -100,7 +100,6 @@ import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import kotlinx.coroutines.launch
-import java.awt.SystemColor.text
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter

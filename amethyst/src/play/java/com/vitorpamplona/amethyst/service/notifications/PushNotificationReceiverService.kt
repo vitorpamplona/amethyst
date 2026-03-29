@@ -49,7 +49,7 @@ class PushNotificationReceiverService : FirebaseMessagingService() {
 
     // this is called when a message is received
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
-        Log.d("PushNotificationService", "Notification received $remoteMessage")
+        Log.d("PushNotificationService") { "Notification received $remoteMessage" }
         scope.launch(Dispatchers.IO) {
             parseMessage(remoteMessage.data)?.let { receiveIfNew(it) }
         }

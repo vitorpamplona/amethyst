@@ -250,7 +250,7 @@ object ShareHelper {
         if (!renamed) {
             tempFile.copyTo(sharableFile, overwrite = true)
             if (!tempFile.delete()) {
-                Log.w(TAG, "Failed to delete temp file ${tempFile.path} after copy")
+                Log.w(TAG) { "Failed to delete temp file ${tempFile.path} after copy" }
             }
         }
     }

@@ -20,44 +20,5 @@
  */
 package com.vitorpamplona.quartz.utils
 
-import platform.Foundation.NSLog
-
-actual object Log {
-    actual fun w(
-        tag: String,
-        message: String,
-        throwable: Throwable?,
-    ) {
-        if (throwable != null) {
-            NSLog("WARN: [$tag] $message. Throwable: $throwable CAUSE ${throwable.cause}")
-        } else {
-            NSLog("WARN: [$tag] $message")
-        }
-    }
-
-    actual fun e(
-        tag: String,
-        message: String,
-        throwable: Throwable?,
-    ) {
-        if (throwable != null) {
-            NSLog("ERROR: [$tag] $message. Throwable: $throwable CAUSE ${throwable.cause}")
-        } else {
-            NSLog("ERROR: [$tag] $message")
-        }
-    }
-
-    actual fun d(
-        tag: String,
-        message: String,
-    ) {
-        NSLog("DEBUG: [$tag] $message")
-    }
-
-    actual fun i(
-        tag: String,
-        message: String,
-    ) {
-        NSLog("INFO: [$tag] $message")
-    }
-}
+/** Ordered by severity -- do not reorder. Filtering uses ordinal comparison. */
+enum class LogLevel { DEBUG, INFO, WARN, ERROR }

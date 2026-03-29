@@ -62,7 +62,7 @@ class EncryptedInfo(
                     nonce = Base64.decode(parts[1]),
                 )
             } catch (e: Exception) {
-                Log.w("NIP04", "Unable to Parse encrypted payload: $payload")
+                Log.w("NIP04") { "Unable to Parse encrypted payload: $payload" }
                 null
             }
     }

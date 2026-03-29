@@ -20,50 +20,43 @@
  */
 package com.vitorpamplona.quartz.utils
 
-import java.time.LocalTime
-import java.time.format.DateTimeFormatter
+import platform.Foundation.NSLog
 
-actual object Log {
-    // Define a formatter for the desired output format (e.g., HH:mm:ss)
-    val formatter: DateTimeFormatter? = DateTimeFormatter.ofPattern("HH:mm:ss.SSS")
-
-    fun time() = LocalTime.now().format(formatter)
+actual object PlatformLog {
+    private fun log(
+        level: String,
+        tag: String,
+        message: String,
+        throwable: Throwable?,
+    ) {
+        if (throwable != null) {
+            NSLog("$level: [$tag] $message. Throwable: $throwable CAUSE ${throwable.cause}")
+        } else {
+            NSLog("$level: [$tag] $message")
+        }
+    }
 
     actual fun w(
         tag: String,
         message: String,
         throwable: Throwable?,
-    ) {
-        if (throwable != null) {
-            println("${time()} WARN : [$tag] $message. Throwable: ${throwable.message}")
-        } else {
-            println("${time()} WARN : [$tag] $message")
-        }
-    }
+    ) = log("WARN", tag, message, throwable)
 
     actual fun e(
         tag: String,
         message: String,
         throwable: Throwable?,
-    ) {
-        if (throwable != null) {
-            println("${time()} ERROR: [$tag] $message. Throwable: ${throwable.message}")
-        } else {
-            println("${time()} ERROR: [$tag] $message")
-        }
-    }
+    ) = log("ERROR", tag, message, throwable)
 
     actual fun d(
         tag: String,
         message: String,
-    ) {
-        println("${time()} DEBUG: [$tag] $message")
-    }
+        throwable: Throwable?,
+    ) = log("DEBUG", tag, message, throwable)
 
     actual fun i(
         tag: String,
         message: String,
-    ) {
-        println("${time()} INFO : [$tag] $message")
-    }
+        throwable: Throwable?,
+    ) = log("INFO", tag, message, throwable)
 }

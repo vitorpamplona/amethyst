@@ -78,7 +78,7 @@ class RegisterAccounts(
             accounts
                 .mapNotNull { account ->
                     if (account.hasPrivKey || account.loggedInWithExternalSigner) {
-                        Log.d(tag, "Register Account ${account.npub}")
+                        Log.d(tag) { "Register Account ${account.npub}" }
 
                         val acc = LocalPreferences.loadAccountConfigFromEncryptedStorage(account.npub)
                         if (acc != null && acc.isWriteable()) {
@@ -87,10 +87,10 @@ class RegisterAccounts(
 
                             if (isDebug) {
                                 val readRelays = nip65Read.joinToString(", ") { it.url }
-                                Log.d(tag, "Register Account ${account.npub} NIP65 Reads $readRelays")
+                                Log.d(tag) { "Register Account ${account.npub} NIP65 Reads $readRelays" }
 
                                 val dmRelays = nip17Read.joinToString(", ") { it.url }
-                                Log.d(tag, "Register Account ${account.npub} NIP17 Reads $dmRelays")
+                                Log.d(tag) { "Register Account ${account.npub} NIP17 Reads $dmRelays" }
                             }
 
                             val relays = (nip65Read + nip17Read)
@@ -132,7 +132,7 @@ class RegisterAccounts(
         val client = client(url)
 
         client.newCall(request).executeAsync().use { response ->
-            Log.i(tag, "Server registration ${response.isSuccessful}")
+            Log.i(tag) { "Server registration ${response.isSuccessful}" }
         }
     }
 

@@ -48,7 +48,7 @@ class ConnectivityFlow(
                 object : ConnectivityManager.NetworkCallback() {
                     override fun onAvailable(network: Network) {
                         super.onAvailable(network)
-                        Log.d("ConnectivityFlow", "onAvailable ${network.networkHandle}")
+                        Log.d("ConnectivityFlow") { "onAvailable ${network.networkHandle}" }
                         connectivityManager.getNetworkCapabilities(network)?.let {
                             trySend(ConnectivityStatus.Active(network.networkHandle, it.isMeteredOrMobileData()))
                         }
@@ -60,13 +60,13 @@ class ConnectivityFlow(
                     ) {
                         super.onCapabilitiesChanged(network, networkCapabilities)
                         val isMobile = networkCapabilities.isMeteredOrMobileData()
-                        Log.d("ConnectivityFlow", "onCapabilitiesChanged ${network.networkHandle} $isMobile")
+                        Log.d("ConnectivityFlow") { "onCapabilitiesChanged ${network.networkHandle} $isMobile" }
                         trySend(ConnectivityStatus.Active(network.networkHandle, isMobile))
                     }
 
                     override fun onLost(network: Network) {
                         super.onLost(network)
-                        Log.d("ConnectivityFlow", "onLost ${network.networkHandle} ")
+                        Log.d("ConnectivityFlow") { "onLost ${network.networkHandle} " }
                         trySend(ConnectivityStatus.Off)
                     }
                 }

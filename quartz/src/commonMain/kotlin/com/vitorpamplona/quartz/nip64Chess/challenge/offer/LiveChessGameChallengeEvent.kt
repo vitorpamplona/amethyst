@@ -31,7 +31,6 @@ import com.vitorpamplona.quartz.nip64Chess.baseEvent.BaseChessEvent
 import com.vitorpamplona.quartz.nip64Chess.baseEvent.opponent
 import com.vitorpamplona.quartz.nip64Chess.baseEvent.tags.OpponentTag
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlin.let
 
 /**
  * Live Chess Game Challenge Event (Kind 30064)

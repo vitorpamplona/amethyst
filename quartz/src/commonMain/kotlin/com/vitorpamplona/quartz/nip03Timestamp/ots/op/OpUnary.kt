@@ -56,7 +56,7 @@ abstract class OpUnary : Op() {
                 }
 
                 else -> {
-                    Log.e("OpenTimestamp", "Unknown operation tag: $tag")
+                    Log.e("OpenTimestamp") { "Unknown operation tag: $tag" }
 
                     null // TODO: Is this OK? Won't it blow up later? Better to throw?
                 }

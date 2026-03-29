@@ -74,7 +74,7 @@ class RelayProxyClientConnector(
                 if (it.connectivity is ConnectivityStatus.StartingService) {
                     // ignore
                 } else if (it.connectivity is ConnectivityStatus.Off) {
-                    Log.d("ManageRelayServices", "Connectivity Off: Pausing Relay Services ${it.connectivity}")
+                    Log.d("ManageRelayServices") { "Connectivity Off: Pausing Relay Services ${it.connectivity}" }
                     if (client.isActive()) {
                         client.disconnect()
                     }

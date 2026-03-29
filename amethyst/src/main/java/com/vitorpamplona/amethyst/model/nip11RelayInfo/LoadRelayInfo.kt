@@ -46,7 +46,7 @@ fun loadRelayInfo(
                 value = it
             },
             onError = { url, errorCode, exceptionMessage ->
-                Log.e("RelayInfo", "Error loading relay info for ${relay.url}: $errorCode - $exceptionMessage")
+                Log.e("RelayInfo") { "Error loading relay info for ${relay.url}: $errorCode - $exceptionMessage" }
             },
         )
     }

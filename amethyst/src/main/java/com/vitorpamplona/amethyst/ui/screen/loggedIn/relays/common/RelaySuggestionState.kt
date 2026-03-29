@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common
 
-import android.R.id.input
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.model.LocalCache
 import kotlinx.coroutines.Dispatchers

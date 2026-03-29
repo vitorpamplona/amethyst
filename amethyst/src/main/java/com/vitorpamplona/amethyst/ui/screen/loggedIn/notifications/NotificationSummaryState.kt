@@ -271,6 +271,6 @@ class NotificationSummaryState(
 
     fun destroy() {
         bundlerInsert.cancel()
-        Log.d("Init", "OnCleared: ${this.javaClass.simpleName}")
+        Log.d("Init") { "OnCleared: ${this.javaClass.simpleName}" }
     }
 }

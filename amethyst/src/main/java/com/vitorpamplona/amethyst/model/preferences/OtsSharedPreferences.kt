@@ -86,7 +86,7 @@ class OtsSharedPreferences(
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.e("OtsPrefs", "Error writing DataStore: ${e.message}")
+            Log.e("OtsPrefs") { "Error writing DataStore: ${e.message}" }
         }
     }
 
@@ -97,7 +97,7 @@ class OtsSharedPreferences(
             OtsSettings(customExplorerUrl = url)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.e("OtsPrefs", "Error reading DataStore: ${e.message}")
+            Log.e("OtsPrefs") { "Error reading DataStore: ${e.message}" }
             null
         }
 }

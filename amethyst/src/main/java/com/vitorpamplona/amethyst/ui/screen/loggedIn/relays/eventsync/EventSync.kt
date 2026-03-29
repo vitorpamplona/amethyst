@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync.EventSync.Companion.MAX_ACTIVITY_LOG
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync.EventSync.Companion.MAX_CONCURRENT_RELAYS
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync.EventSync.Companion.RELAY_TIMEOUT_MS
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync.EventSync.LiveSyncActivity.SourceRelayInfo
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey

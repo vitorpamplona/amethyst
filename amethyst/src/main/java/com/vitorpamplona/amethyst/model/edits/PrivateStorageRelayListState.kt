@@ -91,7 +91,7 @@ class PrivateStorageRelayListState(
 
     init {
         settings.backupPrivateHomeRelayList?.let { event ->
-            Log.d("AccountRegisterObservers", "Loading saved private home relay list ${event.toJson()}")
+            Log.d("AccountRegisterObservers") { "Loading saved private home relay list ${event.toJson()}" }
             @OptIn(DelicateCoroutinesApi::class)
             scope.launch(Dispatchers.IO) {
                 LocalCache.justConsumeMyOwnEvent(event)
@@ -101,7 +101,7 @@ class PrivateStorageRelayListState(
         scope.launch(Dispatchers.IO) {
             Log.d("AccountRegisterObservers", "Private Home Relay List Collector Start")
             getPrivateOutboxRelayListFlow().collect { noteState ->
-                Log.d("AccountRegisterObservers", "Updating Private Home Relay List for ${signer.pubKey}")
+                Log.d("AccountRegisterObservers") { "Updating Private Home Relay List for ${signer.pubKey}" }
                 (noteState.note.event as? PrivateOutboxRelayListEvent)?.let {
                     settings.updatePrivateHomeRelayList(it)
                 }

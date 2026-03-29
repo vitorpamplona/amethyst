@@ -36,8 +36,6 @@ import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.OkHttpClient
-import kotlin.collections.toTypedArray
-import kotlin.let
 
 class BlossomServerResolver(
     val loggedInUsers: () -> List<HexKey>,

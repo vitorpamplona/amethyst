@@ -23,8 +23,6 @@ package com.vitorpamplona.quartz.utils.cache
 import io.github.charlietap.cachemap.CacheMap
 import io.github.charlietap.cachemap.cacheMapOf
 import kotlinx.coroutines.runBlocking
-import kotlin.collections.plus
-import kotlin.collections.set
 
 // An implementation of a Threadsafe map, using CacheMap.
 // Investigating a Swift-based alternative(for now)

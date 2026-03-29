@@ -144,7 +144,7 @@ class Nip65RelayListState(
 
     init {
         settings.backupNIP65RelayList?.let {
-            Log.d("AccountRegisterObservers", "Loading saved nip65 relay list ${it.toJson()}")
+            Log.d("AccountRegisterObservers") { "Loading saved nip65 relay list ${it.toJson()}" }
             @OptIn(DelicateCoroutinesApi::class)
             scope.launch(Dispatchers.IO) { cache.justConsumeMyOwnEvent(it) }
         }
@@ -152,7 +152,7 @@ class Nip65RelayListState(
         scope.launch(Dispatchers.IO) {
             Log.d("AccountRegisterObservers", "NIP-65 Relay List Collector Start")
             getNIP65RelayListFlow().collect {
-                Log.d("AccountRegisterObservers", "Updating NIP-65 List for ${signer.pubKey}")
+                Log.d("AccountRegisterObservers") { "Updating NIP-65 List for ${signer.pubKey}" }
                 (it.note.event as? AdvertisedRelayListEvent)?.let {
                     settings.updateNIP65RelayList(it)
                 }

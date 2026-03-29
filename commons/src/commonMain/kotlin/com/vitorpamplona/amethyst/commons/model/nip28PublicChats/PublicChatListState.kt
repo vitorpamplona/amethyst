@@ -129,7 +129,7 @@ class PublicChatListState(
 
     init {
         settings.channelList()?.let { event ->
-            Log.d("AccountRegisterObservers", "Loading saved channel list ${event.toJson()}")
+            Log.d("AccountRegisterObservers") { "Loading saved channel list ${event.toJson()}" }
             @OptIn(DelicateCoroutinesApi::class)
             scope.launch(Dispatchers.IO) {
                 cache.justConsumeMyOwnEvent(event)
@@ -139,7 +139,7 @@ class PublicChatListState(
         scope.launch(Dispatchers.IO) {
             Log.d("AccountRegisterObservers", "Channel List Collector Start")
             getChannelListFlow().collect {
-                Log.d("AccountRegisterObservers", "Channel List for ${signer.pubKey}")
+                Log.d("AccountRegisterObservers") { "Channel List for ${signer.pubKey}" }
                 (it.note.event as? ChannelListEvent)?.let {
                     settings.updateChannelListTo(it)
                 }

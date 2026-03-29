@@ -124,7 +124,7 @@ class EphemeralChatListState(
         scope.launch(Dispatchers.IO) {
             Log.d("AccountRegisterObservers", "EphemeralChatList Collector Start")
             getEphemeralChatListFlow().collect { noteState ->
-                Log.d("AccountRegisterObservers", "EphemeralChatList List for ${signer.pubKey}")
+                Log.d("AccountRegisterObservers") { "EphemeralChatList List for ${signer.pubKey}" }
                 (noteState.note.event as? EphemeralChatListEvent)?.let {
                     settings.updateEphemeralChatListTo(it)
                 }

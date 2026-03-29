@@ -90,7 +90,7 @@ class TrustedRelayListState(
 
     init {
         settings.backupTrustedRelayList?.let {
-            Log.d("AccountRegisterObservers", "Loading saved Trusted relay list ${it.toJson()}")
+            Log.d("AccountRegisterObservers") { "Loading saved Trusted relay list ${it.toJson()}" }
             @OptIn(DelicateCoroutinesApi::class)
             scope.launch(Dispatchers.IO) { cache.justConsumeMyOwnEvent(it) }
         }
@@ -98,7 +98,7 @@ class TrustedRelayListState(
         scope.launch(Dispatchers.IO) {
             Log.d("AccountRegisterObservers", "Trusted Relay List Collector Start")
             getTrustedRelayListFlow().collect {
-                Log.d("AccountRegisterObservers", "Updating Trusted Relay List for ${signer.pubKey}")
+                Log.d("AccountRegisterObservers") { "Updating Trusted Relay List for ${signer.pubKey}" }
                 (it.note.event as? TrustedRelayListEvent)?.let {
                     settings.updateTrustedRelayList(it)
                 }

@@ -1931,7 +1931,7 @@ object LocalCache : ILocalCache, ICacheProvider {
         if (new) {
             val channel = checkGetOrCreatePublicChatChannel(channelId)
             if (channel == null) {
-                Log.w("LocalCache", "Unable to create public chat channel for event ${event.toJson()}")
+                Log.w("LocalCache") { "Unable to create public chat channel for event ${event.toJson()}" }
                 return false
             }
 
@@ -2019,7 +2019,7 @@ object LocalCache : ILocalCache, ICacheProvider {
             val zapRequest = event.zapRequest?.id?.let { getNoteIfExists(it) }
 
             if (zapRequest == null || zapRequest.event !is LnZapRequestEvent) {
-                Log.e("ZP", "Zap Request not found. Unable to process Zap {${event.toJson()}}")
+                Log.e("ZP") { "Zap Request not found. Unable to process Zap {${event.toJson()}}" }
                 return false
             }
 
@@ -2582,17 +2582,17 @@ object LocalCache : ILocalCache, ICacheProvider {
     }
 
     fun cleanMemory() {
-        Log.d("LargeCache", "Notes cleanup started. Current size: ${notes.size()}")
+        Log.d("LargeCache") { "Notes cleanup started. Current size: ${notes.size()}" }
         notes.cleanUp()
-        Log.d("LargeCache", "Notes cleanup completed. Remaining size: ${notes.size()}")
+        Log.d("LargeCache") { "Notes cleanup completed. Remaining size: ${notes.size()}" }
 
-        Log.d("LargeCache", "Addressables cleanup started. Current size: ${addressables.size()}")
+        Log.d("LargeCache") { "Addressables cleanup started. Current size: ${addressables.size()}" }
         addressables.cleanUp()
-        Log.d("LargeCache", "Addressables cleanup completed. Remaining size: ${addressables.size()}")
+        Log.d("LargeCache") { "Addressables cleanup completed. Remaining size: ${addressables.size()}" }
 
-        Log.d("LargeCache", "Users cleanup started. Current size: ${users.size()}")
+        Log.d("LargeCache") { "Users cleanup started. Current size: ${users.size()}" }
         users.cleanUp()
-        Log.d("LargeCache", "Users cleanup completed. Remaining size: ${users.size()}")
+        Log.d("LargeCache") { "Users cleanup completed. Remaining size: ${users.size()}" }
     }
 
     fun cleanObservers() {
@@ -2924,7 +2924,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                 event.checkSignature()
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                Log.w("Event Verification Failed", "Kind: ${event.kind} from ${dateFormatter(event.createdAt, "", "")} with message ${e.message}")
+                Log.w("Event Verification Failed") { "Kind: ${event.kind} from ${dateFormatter(event.createdAt, "", "")} with message ${e.message}" }
             }
             false
         } else {
@@ -2998,7 +2998,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                     getNoteIfExists(deletionEvent.id)?.let { note ->
                         if (!note.hasRelay(relay.url)) {
                             if (isDebug) {
-                                Log.d("LocalCache", "Updating ${relay.url.url} with a Deletion Event ${event.id} ${deletionEvent.id} because of ${event.toJson()} with ${deletionEvent.toJson()}")
+                                Log.d("LocalCache") { "Updating ${relay.url.url} with a Deletion Event ${event.id} ${deletionEvent.id} because of ${event.toJson()} with ${deletionEvent.toJson()}" }
                             }
                             relay.sendIfConnected(EventCmd(deletionEvent))
                             note.addRelay(relay.url)
@@ -3015,7 +3015,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                 note.event?.let { existingEvent ->
                     if (existingEvent.createdAt > event.createdAt && !note.hasRelay(relay.url) && !deletionIndex.hasBeenDeleted(event) && !event.isExpired()) {
                         if (isDebug) {
-                            Log.d("LocalCache", "Updating ${relay.url.url} with a new version of ${event.kind} ${event.id} to ${existingEvent.id}")
+                            Log.d("LocalCache") { "Updating ${relay.url.url} with a new version of ${event.kind} ${event.id} to ${existingEvent.id}" }
                         }
 
                         relay.sendIfConnected(EventCmd(existingEvent))
@@ -3247,7 +3247,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is WebBookmarkEvent -> consume(event, relay, wasVerified)
                 is WikiNoteEvent -> consume(event, relay, wasVerified)
                 is PaymentTargetsEvent -> consume(event, relay, wasVerified)
-                else -> Log.w("Event Not Supported", "From ${relay?.url}: ${event.toJson()}").let { false }
+                else -> Log.w("Event Not Supported") { "From ${relay?.url}: ${event.toJson()}" }.let { false }
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e

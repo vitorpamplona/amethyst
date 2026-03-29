@@ -60,7 +60,7 @@ class MainActivity : AppCompatActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
-        Log.d("ActivityLifecycle", "MainActivity.onCreate $this")
+        Log.d("ActivityLifecycle") { "MainActivity.onCreate $this" }
 
         setContent {
             StringResSetup()
@@ -74,14 +74,14 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
 
-        Log.d("ActivityLifecycle", "MainActivity.onResume $this")
+        Log.d("ActivityLifecycle") { "MainActivity.onResume $this" }
 
         // starts muted every time
         DEFAULT_MUTED_SETTING.value = true
     }
 
     override fun onPause() {
-        Log.d("ActivityLifecycle", "MainActivity.onPause $this")
+        Log.d("ActivityLifecycle") { "MainActivity.onPause $this" }
 
         @OptIn(DelicateCoroutinesApi::class)
         GlobalScope.launch(Dispatchers.IO) {
@@ -106,11 +106,11 @@ class MainActivity : AppCompatActivity() {
         //    serviceManager.trimMemory()
         // }
 
-        Log.d("ActivityLifecycle", "MainActivity.onStop $this")
+        Log.d("ActivityLifecycle") { "MainActivity.onStop $this" }
     }
 
     override fun onDestroy() {
-        Log.d("ActivityLifecycle", "MainActivity.onDestroy $this")
+        Log.d("ActivityLifecycle") { "MainActivity.onDestroy $this" }
 
         BackgroundMedia.removeBackgroundControllerAndReleaseIt()
 

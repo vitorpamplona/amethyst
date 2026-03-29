@@ -188,7 +188,7 @@ class LightningAddressResolver {
             }
 
         if (errorMessage == null) {
-            Log.d("LightningAddressResolver", "Error parsing LNResponse: $body")
+            Log.d("LightningAddressResolver") { "Error parsing LNResponse: $body" }
         }
 
         return errorMessage

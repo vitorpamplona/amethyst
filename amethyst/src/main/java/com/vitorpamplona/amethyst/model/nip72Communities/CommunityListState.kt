@@ -155,7 +155,7 @@ class CommunityListState(
 
     init {
         settings.backupCommunityList?.let { event ->
-            Log.d("AccountRegisterObservers", "Loading saved Community list ${event.toJson()}")
+            Log.d("AccountRegisterObservers") { "Loading saved Community list ${event.toJson()}" }
             @OptIn(DelicateCoroutinesApi::class)
             scope.launch(Dispatchers.IO) {
                 LocalCache.justConsumeMyOwnEvent(event)
@@ -165,7 +165,7 @@ class CommunityListState(
         scope.launch(Dispatchers.IO) {
             Log.d("AccountRegisterObservers", "Community List Collector Start")
             getCommunityListFlow().collect {
-                Log.d("AccountRegisterObservers", "Community List for ${signer.pubKey}")
+                Log.d("AccountRegisterObservers") { "Community List for ${signer.pubKey}" }
                 (it.note.event as? CommunityListEvent)?.let {
                     settings.updateCommunityListTo(it)
                 }

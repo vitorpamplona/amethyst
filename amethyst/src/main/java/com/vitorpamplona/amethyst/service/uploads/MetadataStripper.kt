@@ -172,7 +172,7 @@ object MetadataStripper {
             muxer?.release()
             extractor.release()
             if (!succeeded && !outputFile.delete()) {
-                Log.w("MetadataStripper", "Failed to delete temp file: ${outputFile.absolutePath}")
+                Log.w("MetadataStripper") { "Failed to delete temp file: ${outputFile.absolutePath}" }
             }
         }
         return succeeded
@@ -202,7 +202,7 @@ object MetadataStripper {
                 context.contentResolver.openInputStream(uri)
                     ?: run {
                         if (!tempFile.delete()) {
-                            Log.w("MetadataStripper", "Failed to delete temp file: ${tempFile.absolutePath}")
+                            Log.w("MetadataStripper") { "Failed to delete temp file: ${tempFile.absolutePath}" }
                         }
                         return StrippingResult(uri, false)
                     }
@@ -223,9 +223,9 @@ object MetadataStripper {
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             if (tempFile?.delete() == false) {
-                Log.w("MetadataStripper", "Failed to delete temp file: ${tempFile.absolutePath}")
+                Log.w("MetadataStripper") { "Failed to delete temp file: ${tempFile.absolutePath}" }
             }
-            Log.d("MetadataStripper", "Failed to strip image metadata: ${e.message}")
+            Log.d("MetadataStripper") { "Failed to strip image metadata: ${e.message}" }
             StrippingResult(uri, false)
         }
     }
@@ -260,7 +260,7 @@ object MetadataStripper {
             StrippingResult(tempOutputFile.toUri(), true)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.d("MetadataStripper", "Failed to strip video metadata: ${e.message}")
+            Log.d("MetadataStripper") { "Failed to strip video metadata: ${e.message}" }
             StrippingResult(uri, false)
         }
     }
@@ -293,7 +293,7 @@ object MetadataStripper {
             StrippingResult(tempOutputFile.toUri(), true)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.d("MetadataStripper", "Failed to strip audio metadata: ${e.message}")
+            Log.d("MetadataStripper") { "Failed to strip audio metadata: ${e.message}" }
             StrippingResult(uri, false)
         }
     }
@@ -311,7 +311,7 @@ object MetadataStripper {
                 }
             } ?: run {
                 if (!tempInputFile.delete()) {
-                    Log.w("MetadataStripper", "Failed to delete temp file: ${tempInputFile.absolutePath}")
+                    Log.w("MetadataStripper") { "Failed to delete temp file: ${tempInputFile.absolutePath}" }
                 }
                 return StrippingResult(uri, false)
             }
@@ -354,7 +354,7 @@ object MetadataStripper {
 
             if (startOffset == 0L && endOffset == fileSize) {
                 if (!tempInputFile.delete()) {
-                    Log.w("MetadataStripper", "Failed to delete temp file: ${tempInputFile.absolutePath}")
+                    Log.w("MetadataStripper") { "Failed to delete temp file: ${tempInputFile.absolutePath}" }
                 }
                 tempInputFile = null
                 return StrippingResult(uri, true) // no tags found, already clean
@@ -376,7 +376,7 @@ object MetadataStripper {
                 }
             }
             if (!tempInputFile.delete()) {
-                Log.w("MetadataStripper", "Failed to delete temp file: ${tempInputFile.absolutePath}")
+                Log.w("MetadataStripper") { "Failed to delete temp file: ${tempInputFile.absolutePath}" }
             }
             tempInputFile = null
 
@@ -385,9 +385,9 @@ object MetadataStripper {
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             if (tempInputFile?.delete() == false) {
-                Log.w("MetadataStripper", "Failed to delete temp file: ${tempInputFile.absolutePath}")
+                Log.w("MetadataStripper") { "Failed to delete temp file: ${tempInputFile.absolutePath}" }
             }
-            Log.d("MetadataStripper", "Failed to strip MP3 metadata: ${e.message}")
+            Log.d("MetadataStripper") { "Failed to strip MP3 metadata: ${e.message}" }
             StrippingResult(uri, false)
         }
     }
