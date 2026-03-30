@@ -1774,5 +1774,13 @@
     <string name="vanish_reason_placeholder">कारण अथवा न्यायिक संदेश पुनःप्रसारक के परिचालक के लिए</string>
     <string name="vanish_send_request">अदृश्यीकरण अनुरोध भेजें</string>
     <string name="vanish_confirm_title">अदृश्यीकरण अनुरोध की पुष्टि करें</string>
+    <string name="vanish_confirm_single_relay">आप %1$s को अनुरोध करनेवाले हैं कि स्थायी रूप से चयनित दिनांक के पूर्व के आपकी सभी जानकारी मिटा दें। इसे पूर्ववत नहीं किया जा सकता।</string>
+    <string name="vanish_confirm_all_relays">आप ॰सभी॰ पुनःप्रसारकों को अनुरोध करनेवाले हैं कि स्थायी रूप से चयनित दिनांक के पूर्व के आपकी सभी जानकारी मिटा दें। इसे सर्वत्र प्रसारित किया जाएगा तथा पूर्ववत नहीं किया जा सकता।</string>
+    <string name="vanish_request_sent">अदृश्यीकरण अनुरोध भेजा गया</string>
+    <string name="vanish_select_date">दिनांक का चयन करें</string>
+    <string name="vanish_select_time">समय का चयन करें</string>
+    <string name="vanish_events_title">अदृश्यीकरण इतिहास</string>
+    <string name="vanish_events_refresh">नवीकरण</string>
+    <string name="vanish_events_description">ये आपके पूर्वकाल के अदृश्यीकरण अनुरोध घटनाएँ है जो संयोजित पुनःप्रसारकों में से प्राप्त हुए। इन घटनाओं में सूचित पुनःप्रसारकों में घटना दिनांक के पूर्व की आपकी कोई जानकारी नहीं रखनी चाहिए।</string>
     <!-- NIP-86 Relay Management -->
 </resources>
