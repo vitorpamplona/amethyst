@@ -140,6 +140,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderLongFormContent
 import com.vitorpamplona.amethyst.ui.note.types.RenderMintRecommendation
 import com.vitorpamplona.amethyst.ui.note.types.RenderNIP90ContentDiscoveryResponse
 import com.vitorpamplona.amethyst.ui.note.types.RenderNIP90Status
+import com.vitorpamplona.amethyst.ui.note.types.RenderNamedSiteEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderNipContent
 import com.vitorpamplona.amethyst.ui.note.types.RenderPinListEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderPoll
@@ -154,6 +155,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderRelayLeaveRequest
 import com.vitorpamplona.amethyst.ui.note.types.RenderRelayMembershipList
 import com.vitorpamplona.amethyst.ui.note.types.RenderRelayRemoveMember
 import com.vitorpamplona.amethyst.ui.note.types.RenderReport
+import com.vitorpamplona.amethyst.ui.note.types.RenderRootSiteEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderTextEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderTextModificationEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderThread
@@ -255,6 +257,8 @@ import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.splits.hasZapSplitSetup
 import com.vitorpamplona.quartz.nip58Badges.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip58Badges.BadgeDefinitionEvent
+import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
+import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
 import com.vitorpamplona.quartz.nip64Chess.challenge.offer.LiveChessGameChallengeEvent
 import com.vitorpamplona.quartz.nip64Chess.end.LiveChessGameEndEvent
 import com.vitorpamplona.quartz.nip64Chess.game.ChessGameEvent
@@ -983,6 +987,14 @@ private fun RenderNoteRow(
 
         is GitRepositoryEvent -> {
             RenderGitRepositoryEvent(baseNote, accountViewModel, nav)
+        }
+
+        is RootSiteEvent -> {
+            RenderRootSiteEvent(baseNote, accountViewModel, nav)
+        }
+
+        is NamedSiteEvent -> {
+            RenderNamedSiteEvent(baseNote, accountViewModel, nav)
         }
 
         is GitPatchEvent -> {

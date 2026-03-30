@@ -125,6 +125,8 @@ import com.vitorpamplona.quartz.nip58Badges.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.nip58Badges.BadgeProfilesEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
+import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
 import com.vitorpamplona.quartz.nip60Cashu.history.CashuSpendingHistoryEvent
 import com.vitorpamplona.quartz.nip60Cashu.quote.CashuMintQuoteEvent
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuTokenEvent
@@ -310,6 +312,7 @@ class EventFactory {
                 MintRecommendationEvent.KIND -> MintRecommendationEvent(id, pubKey, createdAt, tags, content, sig)
                 MetadataEvent.KIND -> MetadataEvent(id, pubKey, createdAt, tags, content, sig)
                 MuteListEvent.KIND -> MuteListEvent(id, pubKey, createdAt, tags, content, sig)
+                NamedSiteEvent.KIND -> NamedSiteEvent(id, pubKey, createdAt, tags, content, sig)
                 NNSEvent.KIND -> NNSEvent(id, pubKey, createdAt, tags, content, sig)
                 NipTextEvent.KIND -> NipTextEvent(id, pubKey, createdAt, tags, content, sig)
                 NutzapEvent.KIND -> NutzapEvent(id, pubKey, createdAt, tags, content, sig)
@@ -349,6 +352,7 @@ class EventFactory {
                 RelayMonitorEvent.KIND -> RelayMonitorEvent(id, pubKey, createdAt, tags, content, sig)
                 RelaySetEvent.KIND -> RelaySetEvent(id, pubKey, createdAt, tags, content, sig)
                 ReportEvent.KIND -> ReportEvent(id, pubKey, createdAt, tags, content, sig)
+                RootSiteEvent.KIND -> RootSiteEvent(id, pubKey, createdAt, tags, content, sig)
                 RepostEvent.KIND -> RepostEvent(id, pubKey, createdAt, tags, content, sig)
                 RequestToVanishEvent.KIND -> RequestToVanishEvent(id, pubKey, createdAt, tags, content, sig)
                 SealedRumorEvent.KIND -> SealedRumorEvent(id, pubKey, createdAt, tags, content, sig)
