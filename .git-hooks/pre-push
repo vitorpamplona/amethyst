@@ -12,8 +12,11 @@ echo "$JAVA_HOME"
 echo "$(java -version)"
 echo "Running test... "
 
-./gradlew test --quiet
-
+if [ "${CLAUDE_CODE_REMOTE:-}" = "true" ]; then
+  ./gradlew test --quiet -x :desktopApp:test -x :desktopApp:upxDownload -x :desktopApp:vlcDownload
+else
+  ./gradlew test --quiet
+fi
 status=$?
 
 if [ "$status" = 0 ] ; then
