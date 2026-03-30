@@ -751,6 +751,13 @@
     <string name="app_notification_dms_summary">New messages</string>
     <string name="app_notification_zaps_summary">New zaps</string>
 
+    <string name="app_notification_reactions_channel_id" translatable="false">ReactionsID</string>
+    <string name="app_notification_reactions_channel_name">Reactions</string>
+    <string name="app_notification_reactions_channel_description">Notifies you when somebody reacts to your post</string>
+    <string name="app_notification_reactions_channel_message">%1$s reacted to your post</string>
+    <string name="app_notification_reactions_channel_message_for">for %1$s</string>
+    <string name="app_notification_reactions_summary">New reactions</string>
+
     <string name="reply_notify">Notify: </string>
 
     <string name="channel_list_join_conversation">Join Conversation</string>
