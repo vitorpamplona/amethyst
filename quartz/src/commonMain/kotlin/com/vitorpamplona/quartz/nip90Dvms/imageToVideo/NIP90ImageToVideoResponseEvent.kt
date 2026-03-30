@@ -18,20 +18,18 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse
+package com.vitorpamplona.quartz.nip90Dvms.imageToVideo
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip31Alts.alt
-import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
-class NIP90ContentDiscoveryResponseEvent(
+class NIP90ImageToVideoResponseEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
@@ -39,42 +37,13 @@ class NIP90ContentDiscoveryResponseEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
-    @kotlinx.serialization.Transient
-    @kotlin.jvm.Transient
-    var events: List<HexKey>? = null
-
-    fun innerTags(): List<HexKey> {
-        if (content.isEmpty()) {
-            return listOf()
-        }
-
-        events?.let {
-            return it
-        }
-
-        try {
-            events =
-                OptimizedJsonMapper.fromJsonToTagArray(content).mapNotNull {
-                    if (it.size > 1 && (it[0] == "e" || it[0] == "a")) {
-                        it[1]
-                    } else {
-                        null
-                    }
-                }
-        } catch (e: Throwable) {
-            Log.w("NIP90ContentDiscoveryResponseEvent") { "Error parsing the JSON ${e.message}" }
-        }
-
-        return events ?: listOf()
-    }
-
     companion object {
-        const val KIND = 6300
-        const val ALT = "NIP90 Content Discovery reply"
+        const val KIND = 6202
+        const val ALT = "NIP90 Image-to-Video response"
 
         fun build(
             createdAt: Long = TimeUtils.now(),
-            initializer: TagArrayBuilder<NIP90ContentDiscoveryResponseEvent>.() -> Unit = {},
+            initializer: TagArrayBuilder<NIP90ImageToVideoResponseEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
             alt(ALT)
             initializer()

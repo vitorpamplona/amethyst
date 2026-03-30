@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse
+package com.vitorpamplona.quartz.nip90Dvms.contentSearch
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -31,7 +31,7 @@ import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
-class NIP90ContentDiscoveryResponseEvent(
+class NIP90ContentSearchResponseEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
@@ -62,19 +62,19 @@ class NIP90ContentDiscoveryResponseEvent(
                     }
                 }
         } catch (e: Throwable) {
-            Log.w("NIP90ContentDiscoveryResponseEvent") { "Error parsing the JSON ${e.message}" }
+            Log.w("NIP90ContentSearchResponseEvent") { "Error parsing the JSON ${e.message}" }
         }
 
         return events ?: listOf()
     }
 
     companion object {
-        const val KIND = 6300
-        const val ALT = "NIP90 Content Discovery reply"
+        const val KIND = 6302
+        const val ALT = "NIP90 Content Search response"
 
         fun build(
             createdAt: Long = TimeUtils.now(),
-            initializer: TagArrayBuilder<NIP90ContentDiscoveryResponseEvent>.() -> Unit = {},
+            initializer: TagArrayBuilder<NIP90ContentSearchResponseEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
             alt(ALT)
             initializer()
