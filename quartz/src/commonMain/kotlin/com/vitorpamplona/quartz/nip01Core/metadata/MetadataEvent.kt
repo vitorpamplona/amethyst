@@ -71,7 +71,7 @@ class MetadataEvent(
             Json.parseToJsonElement(content) as JsonObject
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.w("MetadataEvent", "Content Parse Error: ${toNostrUri()} ${e.message}")
+            Log.w("MetadataEvent") { "Content Parse Error: ${toNostrUri()} ${e.message}" }
             null
         }
 
@@ -80,7 +80,7 @@ class MetadataEvent(
             JsonMapper.fromJson<UserMetadata>(content)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.w("MetadataEvent", "Content Parse Error: ${toNostrUri()} ${e.message}")
+            Log.w("MetadataEvent") { "Content Parse Error: ${toNostrUri()} ${e.message}" }
             null
         }
 

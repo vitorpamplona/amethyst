@@ -71,7 +71,7 @@
     <string name="following">" অনুসরণ"</string>
     <string name="followers">" অনুসারী"</string>
     <string name="number_following">"%1$s অনুসরণ"</string>
-    <string name="number_followers">""</string>
+    <string name="number_followers">"%1$s অনুসারী"</string>
     <string name="profile">প্রোফাইল</string>
     <string name="security_filters">নিরাপত্তা-ফিল্টার</string>
     <string name="log_out">লগ আউট</string>
@@ -574,4 +574,6 @@
     <string name="accessibility_scan_qr_code">QR কোড স্ক্যান করুন</string>
     <!-- Kind display names for relay subscription filter chips -->
     <!-- M3 Action Dialog titles -->
+    <!-- NIP-75 Zap Goals -->
+    <!-- NIP-86 Relay Management -->
 </resources>

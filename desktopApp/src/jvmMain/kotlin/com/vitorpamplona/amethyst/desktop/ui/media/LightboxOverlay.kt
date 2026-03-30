@@ -78,7 +78,6 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.WindowState
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch

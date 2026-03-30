@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.relay.client.accessories
 
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.AuthMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage
@@ -38,7 +38,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.utils.Log
 
 /**
- * Listens to NostrClient's onNotify messages from the relay
+ * Listens to INostrClient's onNotify messages from the relay
  */
 class RelayLogger(
     val client: INostrClient,
@@ -48,7 +48,7 @@ class RelayLogger(
     fun logTag(url: NormalizedRelayUrl) = "Relay ${url.displayUrl()}"
 
     private val clientListener =
-        object : IRelayClientListener {
+        object : RelayConnectionListener {
             override fun onIncomingMessage(
                 relay: IRelayClient,
                 msgStr: String,
@@ -57,14 +57,14 @@ class RelayLogger(
                 val logTag = logTag(relay.url)
 
                 when (msg) {
-                    is EventMessage -> if (debugReceiving) Log.d(logTag, "Received: $msgStr")
-                    is EoseMessage -> if (debugReceiving) Log.d(logTag, "EOSE: ${msg.subId}")
-                    is NoticeMessage -> Log.w(logTag, "Notice: ${msg.message}")
-                    is OkMessage -> if (debugReceiving) Log.d(logTag, "OK: ${msg.eventId} ${msg.success} ${msg.message}")
-                    is AuthMessage -> if (debugReceiving) Log.d(logTag, "Auth: ${msg.challenge}")
-                    is NotifyMessage -> if (debugReceiving) Log.d(logTag, "Notify: ${msg.message}")
-                    is CountMessage -> if (debugReceiving) Log.d(logTag, "Count: ${msg.result.count} approx: ${msg.result.approximate}")
-                    is ClosedMessage -> Log.w(logTag, "Closed: ${msg.subId} ${msg.message}")
+                    is EventMessage -> if (debugReceiving) Log.d(logTag) { "Received: $msgStr" }
+                    is EoseMessage -> if (debugReceiving) Log.d(logTag) { "EOSE: ${msg.subId}" }
+                    is NoticeMessage -> Log.w(logTag) { "Notice: ${msg.message}" }
+                    is OkMessage -> if (debugReceiving) Log.d(logTag) { "OK: ${msg.eventId} ${msg.success} ${msg.message}" }
+                    is AuthMessage -> if (debugReceiving) Log.d(logTag) { "Auth: ${msg.challenge}" }
+                    is NotifyMessage -> if (debugReceiving) Log.d(logTag) { "Notify: ${msg.message}" }
+                    is CountMessage -> if (debugReceiving) Log.d(logTag) { "Count: ${msg.result.count} approx: ${msg.result.approximate} hll: ${msg.result.hll != null}" }
+                    is ClosedMessage -> Log.w(logTag) { "Closed: ${msg.subId} ${msg.message}" }
                 }
             }
 
@@ -76,7 +76,7 @@ class RelayLogger(
             ) {
                 if (success) {
                     if (debugSending) {
-                        Log.d(logTag(relay.url), "Sent (${cmdStr.length} chars): $cmdStr")
+                        Log.d(logTag(relay.url)) { "Sent (${cmdStr.length} chars): $cmdStr" }
                     }
                 } else {
                     Log.e(logTag(relay.url), "Failure sending (${cmdStr.length} chars): $cmdStr")
@@ -92,7 +92,7 @@ class RelayLogger(
                 pingMillis: Int,
                 compressed: Boolean,
             ) {
-                Log.d(logTag(relay.url), "OnOpen (ping: ${pingMillis}ms${if (compressed) ", using compression" else ""})")
+                Log.d(logTag(relay.url)) { "OnOpen (ping: ${pingMillis}ms${if (compressed) ", using compression" else ""})" }
             }
 
             override fun onDisconnected(relay: IRelayClient) {
@@ -110,12 +110,12 @@ class RelayLogger(
 
     init {
         Log.d("RelayLogger", "Init, Subscribe")
-        client.subscribe(clientListener)
+        client.addConnectionListener(clientListener)
     }
 
     fun destroy() {
         // makes sure to run
         Log.d("RelayLogger", "Destroy, Unsubscribe")
-        client.unsubscribe(clientListener)
+        client.removeConnectionListener(clientListener)
     }
 }

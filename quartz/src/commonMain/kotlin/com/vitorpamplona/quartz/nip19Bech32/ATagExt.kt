@@ -51,7 +51,7 @@ fun ATag.Companion.parseAtag(
 
         ATag(parts[0].toInt(), parts[1], parts[2], relayHint)
     } catch (t: Throwable) {
-        Log.w("ATag", "Error parsing A Tag: $atag: ${t.message}")
+        Log.w("ATag") { "Error parsing A Tag: $atag: ${t.message}" }
         null
     }
 

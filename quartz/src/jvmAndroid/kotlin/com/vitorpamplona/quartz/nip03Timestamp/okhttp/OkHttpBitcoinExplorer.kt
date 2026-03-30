@@ -60,7 +60,7 @@ class OkHttpBitcoinExplorer(
 
         return client.newCall(request).execute().use {
             if (it.isSuccessful) {
-                Log.d("OkHttpBlockstreamExplorer", "$baseAPI/block/$hash")
+                Log.d("OkHttpBlockstreamExplorer") { "$baseAPI/block/$hash" }
 
                 val jsonObject = JacksonMapper.mapper.readTree(it.body.string())
 
@@ -104,7 +104,7 @@ class OkHttpBitcoinExplorer(
             if (it.isSuccessful) {
                 val blockHash = it.body.string()
 
-                Log.d("OkHttpBlockstreamExplorer", "$url $blockHash")
+                Log.d("OkHttpBlockstreamExplorer") { "$url $blockHash" }
 
                 cache.putHeight(height, blockHash)
                 blockHash

@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.model.trustedAssertions
 
-import com.vitorpamplona.quartz.experimental.trustedAssertions.list.tags.ServiceProviderTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceProviderTag
 import kotlinx.coroutines.flow.StateFlow
 
 /**

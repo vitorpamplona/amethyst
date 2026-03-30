@@ -24,6 +24,11 @@ import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.INwcSignerState
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.nip02FollowList.Kind3FollowListRepository
+import com.vitorpamplona.amethyst.commons.model.nip02FollowList.Kind3FollowListState
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.BookmarkListState
+import com.vitorpamplona.amethyst.commons.model.nip65RelayList.Nip65RelayListRepository
+import com.vitorpamplona.amethyst.commons.model.nip65RelayList.Nip65RelayListState
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
@@ -31,6 +36,7 @@ import com.vitorpamplona.amethyst.desktop.network.RelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.ui.chats.DmSendTracker
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip17Dm.NIP17Factory
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
@@ -42,6 +48,8 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.nip57Zaps.IPrivateZapsDecryptionCache
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.NostrSignerWithClientTag
 import com.vitorpamplona.quartz.utils.DualCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -62,9 +70,42 @@ class DesktopIAccount(
     val dmSendTracker: DmSendTracker,
     private val scope: CoroutineScope,
 ) : IAccount {
-    override val signer: NostrSigner = accountState.signer
+    override val signer: NostrSigner = NostrSignerWithClientTag(accountState.signer, CLIENT_TAG_NAME)
 
     override val pubKey: String = accountState.pubKeyHex
+
+    // ----- State Classes (pin important notes via strong refs for GC retention) -----
+
+    val bookmarkState = BookmarkListState(signer, localCache, scope)
+
+    val kind3FollowList =
+        Kind3FollowListState(
+            signer,
+            localCache,
+            scope,
+            object : Kind3FollowListRepository {
+                override val backupContactList: ContactListEvent? = null
+
+                override fun updateContactListTo(event: ContactListEvent) { /* no persistence yet */ }
+            },
+        )
+
+    val nip65RelayList =
+        Nip65RelayListState(
+            signer,
+            localCache,
+            scope,
+            object : Nip65RelayListRepository {
+                override val backupNIP65RelayList: AdvertisedRelayListEvent? = null
+
+                override fun updateNIP65RelayList(event: AdvertisedRelayListEvent) { /* no persistence yet */ }
+
+                override val defaultOutboxRelays = relayManager.connectedRelays.value
+                override val defaultInboxRelays = relayManager.connectedRelays.value
+            },
+        )
+
+    // ---------------------------------------------------------------------------------
 
     override val showSensitiveContent: Boolean? = null
 
@@ -96,7 +137,7 @@ class DesktopIAccount(
 
     override fun isWriteable(): Boolean = !accountState.isReadOnly
 
-    override fun followingKeySet(): Set<String> = emptySet()
+    override fun followingKeySet(): Set<String> = kind3FollowList.flow.value.authors
 
     override fun isHidden(user: User): Boolean = false
 
@@ -220,5 +261,9 @@ class DesktopIAccount(
             note.loadEvent(event, author, emptyList())
         }
         chatroomList.addMessage(roomKey, note)
+    }
+
+    companion object {
+        const val CLIENT_TAG_NAME = "Amethyst"
     }
 }

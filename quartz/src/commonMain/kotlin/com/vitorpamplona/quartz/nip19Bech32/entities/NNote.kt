@@ -36,6 +36,7 @@ data class NNote(
             return NNote(bytes.toHexKey())
         }
 
+        @Suppress("DEPRECATION")
         fun create(eventId: HexKey): String = eventId.hexToByteArray().toNote()
     }
 }

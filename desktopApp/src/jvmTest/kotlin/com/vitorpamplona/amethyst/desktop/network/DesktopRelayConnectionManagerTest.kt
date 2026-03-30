@@ -39,13 +39,4 @@ class DesktopRelayConnectionManagerTest {
         assertTrue(connectedRelays.isEmpty(), "Should have no connected relays on initialization")
         assertTrue(availableRelays.isEmpty(), "Should have no available relays on initialization")
     }
-
-    @Test
-    fun testRelayConnectionManagerInheritsFromBaseClass() {
-        val manager = DesktopRelayConnectionManager()
-        assertTrue(
-            manager is RelayConnectionManager,
-            "DesktopRelayConnectionManager should extend RelayConnectionManager",
-        )
-    }
 }

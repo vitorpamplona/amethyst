@@ -60,7 +60,7 @@ class LogMonitor : Printer {
             val endTime = System.currentTimeMillis()
 
             if (x.indexOf("com.vitorpamplona.amethyst") > 0) {
-                Log.d("block-canary", "Looper ${endTime - mStartTimestamp}ms for $x")
+                Log.d("block-canary") { "Looper ${endTime - mStartTimestamp}ms for $x" }
             }
 
             mPrintingStarted = false

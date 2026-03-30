@@ -46,14 +46,14 @@ abstract class ListChangeFeedViewModel(
     override fun invalidateData(ignoreIfDoing: Boolean) = feedState.invalidateData(ignoreIfDoing)
 
     init {
-        Log.d("Init", "Starting new Model: ${this::class.simpleName}")
+        Log.d("Init") { "Starting new Model: ${this::class.simpleName}" }
         // Trigger initial load so empty rooms show Empty instead of Loading
         viewModelScope.launch(Dispatchers.IO) {
             feedState.invalidateData(ignoreIfDoing = false)
         }
         viewModelScope.launch(Dispatchers.IO) {
             localFilter.changesFlow().collect {
-                Log.d("Init", "Collecting changes to: ${this@ListChangeFeedViewModel::class.simpleName}")
+                Log.d("Init") { "Collecting changes to: ${this@ListChangeFeedViewModel::class.simpleName}" }
                 when (it) {
                     is ListChange.Addition -> feedState.updateFeedWith(setOf(it.item))
                     is ListChange.Deletion -> feedState.deleteFromFeed(setOf(it.item))

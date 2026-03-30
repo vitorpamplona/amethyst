@@ -18,6 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+@file:Suppress("DEPRECATION")
+
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip01Notifications
 
 import com.vitorpamplona.quartz.experimental.attestations.recommendation.AttestorRecommendationEvent
@@ -25,7 +27,6 @@ import com.vitorpamplona.quartz.experimental.attestations.request.AttestationReq
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStorySceneEvent
-import com.vitorpamplona.quartz.experimental.publicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
@@ -52,6 +53,7 @@ import com.vitorpamplona.quartz.nip64Chess.move.LiveChessMoveEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
+import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
 
 val SummaryKinds =
     listOf(

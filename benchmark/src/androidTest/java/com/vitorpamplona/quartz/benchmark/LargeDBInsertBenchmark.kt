@@ -57,7 +57,7 @@ class LargeDBInsertBenchmark : BaseLargeCacheBenchmark() {
                 try {
                     db.insert(event)
                 } catch (e: SQLiteException) {
-                    Log.w("LargeDBInsertBenchmark", "Error inserting event: ${e.message} for event: ${event.toJson()}")
+                    Log.w("LargeDBInsertBenchmark") { "Error inserting event: ${e.message} for event: ${event.toJson()}" }
                 }
             }
             runWithMeasurementDisabled {
@@ -87,7 +87,7 @@ class LargeDBInsertBenchmark : BaseLargeCacheBenchmark() {
                         try {
                             db.insert(event)
                         } catch (e: SQLiteException) {
-                            Log.w("LargeDBInsertBenchmark", "Error inserting event: ${e.message} for event: ${event.toJson()}")
+                            Log.w("LargeDBInsertBenchmark") { "Error inserting event: ${e.message} for event: ${event.toJson()}" }
                         }
                     }
                     db
@@ -97,7 +97,7 @@ class LargeDBInsertBenchmark : BaseLargeCacheBenchmark() {
                 try {
                     db.insert(event)
                 } catch (e: SQLiteException) {
-                    Log.w("LargeDBInsertBenchmark", "Error inserting event: ${e.message} for event: $event")
+                    Log.w("LargeDBInsertBenchmark") { "Error inserting event: ${e.message} for event: $event" }
                 }
             }
 

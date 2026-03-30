@@ -301,7 +301,7 @@ open class ShortNotePostViewModel :
         this.canAddZapRaiser = hasLnAddress()
 
         this.userSuggestions?.reset()
-        this.userSuggestions = UserSuggestionState(accountVM.account, accountVM.nip05Client)
+        this.userSuggestions = UserSuggestionState(accountVM.account, accountVM.nip05ClientBuilder())
 
         this.emojiSuggestions?.reset()
         this.emojiSuggestions = EmojiSuggestionState(accountVM.account)
@@ -602,7 +602,7 @@ open class ShortNotePostViewModel :
             pollOptions[index] = tag
         }
 
-        pollType = draftEvent.pollType() ?: PollType.SINGLE_CHOICE
+        pollType = draftEvent.pollType()
         closedAt = draftEvent.endsAt() ?: TimeUtils.oneDayAhead()
 
         message = TextFieldValue(draftEvent.content)
@@ -697,6 +697,8 @@ open class ShortNotePostViewModel :
             // Abort if upload failed - don't post without voice data
             if (voiceMetadata == null) {
                 Log.w("ShortNotePostViewModel", "Voice upload failed, aborting post")
+                deleteVoiceLocalFile()
+                voiceAnonymization.deleteDistortedFiles()
                 return
             }
             // Update default server if voice message was successfully uploaded
@@ -854,22 +856,16 @@ open class ShortNotePostViewModel :
             }
         } else if (wantsZapPoll) {
             val options = zapPollOptions.map { PollOptionTag(it.key, it.value) }
-
             if (options.isEmpty()) return null
 
-            val quotes = findNostrUris(tagger.message)
-            val relays =
-                accountViewModel.account.nip65RelayList.outboxFlow.value
-                    .toList()
-
             ZapPollEvent.build(tagger.message, options) {
+                closedAt(zapPollClosedAt)
                 zapPollValueMinimum?.let { minAmount(it) }
                 zapPollValueMaximum?.let { maxAmount(it) }
-                zapPollClosedAt?.let { closedAt(it) }
                 zapPollConsensusThreshold?.let { consensusThreshold(it / 100.0) }
 
                 pTags(tagger.directMentionsUsers.map { it.toPTag() })
-                quotes(quotes)
+                quotes(findNostrUris(tagger.message))
                 hashtags(findHashtags(tagger.message))
 
                 geoHash?.let { geohash(it) }
@@ -1274,9 +1270,8 @@ open class ShortNotePostViewModel :
     private fun deleteVoiceLocalFile() {
         voiceLocalFile?.let { file ->
             try {
-                if (file.exists()) {
-                    file.delete()
-                    Log.d("ShortNotePostViewModel", "Deleted voice file: ${file.absolutePath}")
+                if (file.delete()) {
+                    Log.d("ShortNotePostViewModel") { "Deleted voice file: ${file.absolutePath}" }
                 }
             } catch (e: Exception) {
                 Log.w("ShortNotePostViewModel", "Failed to delete voice file: ${file.absolutePath}", e)
@@ -1370,7 +1365,7 @@ open class ShortNotePostViewModel :
 
     override fun onCleared() {
         super.onCleared()
-        Log.d("Init", "OnCleared: ${this.javaClass.simpleName}")
+        Log.d("Init") { "OnCleared: ${this.javaClass.simpleName}" }
     }
 
     override fun updateZapPercentage(

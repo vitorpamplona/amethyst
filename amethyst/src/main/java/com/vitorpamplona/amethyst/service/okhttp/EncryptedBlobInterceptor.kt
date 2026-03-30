@@ -33,9 +33,9 @@ class EncryptedBlobInterceptor(
         val body = peekBody(Long.MAX_VALUE)
 
         // Only tries to decrypt if the content-type is a byte array
-        if (body.contentType().toString() != "application/octet-stream") {
-            return null
-        }
+        // if (body.contentType().toString() != "application/octet-stream") {
+        //    return null
+        // }
 
         val bytes = body.bytes()
 

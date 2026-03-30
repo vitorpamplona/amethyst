@@ -46,7 +46,7 @@ class IndexerRelayListViewModel : BasicRelaySetupInfoModel() {
                 filter = Filter(kinds = listOf(MetadataEvent.KIND)),
             ),
             CountFilter(
-                label = R.string.relay_settings_lower,
+                label = R.string.relay_settings_lower2,
                 filter = Filter(kinds = listOf(AdvertisedRelayListEvent.KIND)),
             ),
         )

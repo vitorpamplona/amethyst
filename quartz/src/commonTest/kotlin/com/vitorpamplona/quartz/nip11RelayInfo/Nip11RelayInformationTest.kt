@@ -206,4 +206,81 @@ class Nip11RelayInformationTest {
         assertEquals("test relay", info.name)
         assertEquals((1..100).map { it.toString() }, info.supported_nips)
     }
+
+    @Test()
+    fun testNostr1Com() {
+        val json =
+            """
+            {
+                "description": "Vitor's read relay",
+                "name": "vitor.nostr1.com",
+                "pubkey": "460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c",
+                "software": "git+https://github.com/hoytech/strfry.git",
+                "supported_nips": [
+                    1,
+                    2,
+                    4,
+                    9,
+                    11,
+                    12,
+                    16,
+                    20,
+                    22,
+                    28,
+                    33,
+                    40,
+                    17,
+                    86,
+                    77
+                ],
+                "version": "strfry v315-3cff8c9",
+                "posting_policy": "https://vitor.nostr1.com#policy",
+                "limitation": {
+                    "payment_required": false,
+                    "max_message_length": 262200,
+                    "max_subscriptions": 80,
+                    "max_filters": 1000,
+                    "max_limit": 10000,
+                    "max_event_tags": 10000,
+                    "max_content_length": 262140,
+                    "min_pow_difficulty": 0,
+                    "auth_required": false,
+                    "created_at_lower_limit": 94608000,
+                    "created_at_upper_limit": 900
+                },
+                "icon": "https://image.nostr.build/6e291df3474cab17a7c079b35e704fde319fa7cd44086684a27cddcc53c3ba07.png"
+            }
+            """.trimIndent()
+
+        val info = Nip11RelayInformation.fromJson(json)
+
+        assertNotNull(info)
+        assertEquals("vitor.nostr1.com", info.name)
+        assertEquals("Vitor's read relay", info.description)
+        assertEquals("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c", info.pubkey)
+        assertEquals(
+            listOf(
+                "1",
+                "2",
+                "4",
+                "9",
+                "11",
+                "12",
+                "16",
+                "20",
+                "22",
+                "28",
+                "33",
+                "40",
+                "17",
+                "86",
+                "77",
+            ),
+            info.supported_nips,
+        )
+        assertEquals("strfry v315-3cff8c9", info.version)
+        assertEquals("git+https://github.com/hoytech/strfry.git", info.software)
+        assertEquals("https://vitor.nostr1.com#policy", info.posting_policy)
+        assertEquals("https://image.nostr.build/6e291df3474cab17a7c079b35e704fde319fa7cd44086684a27cddcc53c3ba07.png", info.icon)
+    }
 }

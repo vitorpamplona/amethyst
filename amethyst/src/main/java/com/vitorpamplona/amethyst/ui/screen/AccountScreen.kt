@@ -48,7 +48,7 @@ fun AccountScreen(accountSessionManager: AccountSessionManager) {
 
     val accountState by accountSessionManager.accountContent.collectAsStateWithLifecycle()
 
-    Log.d("ActivityLifecycle", "AccountScreen $accountState $accountSessionManager")
+    Log.d("ActivityLifecycle") { "AccountScreen $accountState $accountSessionManager" }
 
     Crossfade(
         targetState = accountState,

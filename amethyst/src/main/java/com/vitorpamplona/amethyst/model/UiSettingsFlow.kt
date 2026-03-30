@@ -151,19 +151,19 @@ class UiSettingsFlow(
     }
 
     companion object {
-        fun build(torSettings: UiSettings): UiSettingsFlow =
+        fun build(uiSettings: UiSettings): UiSettingsFlow =
             UiSettingsFlow(
-                MutableStateFlow(torSettings.theme),
-                MutableStateFlow(torSettings.preferredLanguage),
-                MutableStateFlow(torSettings.automaticallyShowImages),
-                MutableStateFlow(torSettings.automaticallyStartPlayback),
-                MutableStateFlow(torSettings.automaticallyShowUrlPreview),
-                MutableStateFlow(torSettings.automaticallyHideNavigationBars),
-                MutableStateFlow(torSettings.automaticallyShowProfilePictures),
-                MutableStateFlow(torSettings.dontShowPushNotificationSelector),
-                MutableStateFlow(torSettings.dontAskForNotificationPermissions),
-                MutableStateFlow(torSettings.featureSet),
-                MutableStateFlow(torSettings.gallerySet),
+                MutableStateFlow(uiSettings.theme),
+                MutableStateFlow(uiSettings.preferredLanguage),
+                MutableStateFlow(uiSettings.automaticallyShowImages),
+                MutableStateFlow(uiSettings.automaticallyStartPlayback),
+                MutableStateFlow(uiSettings.automaticallyShowUrlPreview),
+                MutableStateFlow(uiSettings.automaticallyHideNavigationBars),
+                MutableStateFlow(uiSettings.automaticallyShowProfilePictures),
+                MutableStateFlow(uiSettings.dontShowPushNotificationSelector),
+                MutableStateFlow(uiSettings.dontAskForNotificationPermissions),
+                MutableStateFlow(uiSettings.featureSet),
+                MutableStateFlow(uiSettings.gallerySet),
             )
     }
 }

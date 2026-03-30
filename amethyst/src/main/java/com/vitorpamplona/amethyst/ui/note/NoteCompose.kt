@@ -18,6 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+@file:Suppress("DEPRECATION")
+
 package com.vitorpamplona.amethyst.ui.note
 
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -33,6 +35,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -111,7 +114,9 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderAudioTrack
 import com.vitorpamplona.amethyst.ui.note.types.RenderBadgeAward
 import com.vitorpamplona.amethyst.ui.note.types.RenderCalendarDateSlotEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderCalendarTimeSlotEvent
+import com.vitorpamplona.amethyst.ui.note.types.RenderCashuMint
 import com.vitorpamplona.amethyst.ui.note.types.RenderChannelMessage
+import com.vitorpamplona.amethyst.ui.note.types.RenderChat
 import com.vitorpamplona.amethyst.ui.note.types.RenderChatMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderChatMessageEncryptedFile
 import com.vitorpamplona.amethyst.ui.note.types.RenderChessGame
@@ -119,10 +124,12 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderClassifieds
 import com.vitorpamplona.amethyst.ui.note.types.RenderCodeSnippetEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderCommunity
 import com.vitorpamplona.amethyst.ui.note.types.RenderEmojiPack
+import com.vitorpamplona.amethyst.ui.note.types.RenderFedimint
 import com.vitorpamplona.amethyst.ui.note.types.RenderFhirResource
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitIssueEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitPatchEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitRepositoryEvent
+import com.vitorpamplona.amethyst.ui.note.types.RenderGoal
 import com.vitorpamplona.amethyst.ui.note.types.RenderHighlight
 import com.vitorpamplona.amethyst.ui.note.types.RenderInteractiveStory
 import com.vitorpamplona.amethyst.ui.note.types.RenderLiveActivityChatMessage
@@ -131,8 +138,10 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderLiveChessChallenge
 import com.vitorpamplona.amethyst.ui.note.types.RenderLiveChessGameEnd
 import com.vitorpamplona.amethyst.ui.note.types.RenderLnZap
 import com.vitorpamplona.amethyst.ui.note.types.RenderLongFormContent
+import com.vitorpamplona.amethyst.ui.note.types.RenderMintRecommendation
 import com.vitorpamplona.amethyst.ui.note.types.RenderNIP90ContentDiscoveryResponse
 import com.vitorpamplona.amethyst.ui.note.types.RenderNIP90Status
+import com.vitorpamplona.amethyst.ui.note.types.RenderNamedSiteEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderNipContent
 import com.vitorpamplona.amethyst.ui.note.types.RenderPinListEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderPoll
@@ -140,9 +149,17 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderPostApproval
 import com.vitorpamplona.amethyst.ui.note.types.RenderPrivateMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderPublicMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderReaction
+import com.vitorpamplona.amethyst.ui.note.types.RenderRelayAddMember
+import com.vitorpamplona.amethyst.ui.note.types.RenderRelayDiscovery
+import com.vitorpamplona.amethyst.ui.note.types.RenderRelayJoinRequest
+import com.vitorpamplona.amethyst.ui.note.types.RenderRelayLeaveRequest
+import com.vitorpamplona.amethyst.ui.note.types.RenderRelayMembershipList
+import com.vitorpamplona.amethyst.ui.note.types.RenderRelayRemoveMember
 import com.vitorpamplona.amethyst.ui.note.types.RenderReport
+import com.vitorpamplona.amethyst.ui.note.types.RenderRootSiteEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderTextEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderTextModificationEvent
+import com.vitorpamplona.amethyst.ui.note.types.RenderThread
 import com.vitorpamplona.amethyst.ui.note.types.RenderTorrent
 import com.vitorpamplona.amethyst.ui.note.types.RenderTorrentComment
 import com.vitorpamplona.amethyst.ui.note.types.RenderVoiceTrack
@@ -191,7 +208,6 @@ import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStory
 import com.vitorpamplona.quartz.experimental.medical.FhirResourceEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
-import com.vitorpamplona.quartz.experimental.publicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geoHashOrScope
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
@@ -216,6 +232,11 @@ import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip40Expiration.expiration
+import com.vitorpamplona.quartz.nip43RelayMembers.addMember.RelayAddMemberEvent
+import com.vitorpamplona.quartz.nip43RelayMembers.joinRequest.RelayJoinRequestEvent
+import com.vitorpamplona.quartz.nip43RelayMembers.leaveRequest.RelayLeaveRequestEvent
+import com.vitorpamplona.quartz.nip43RelayMembers.list.RelayMembershipListEvent
+import com.vitorpamplona.quartz.nip43RelayMembers.removeMember.RelayRemoveMemberEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
@@ -237,10 +258,13 @@ import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.splits.hasZapSplitSetup
 import com.vitorpamplona.quartz.nip58Badges.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip58Badges.BadgeDefinitionEvent
+import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
+import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
 import com.vitorpamplona.quartz.nip64Chess.challenge.offer.LiveChessGameChallengeEvent
 import com.vitorpamplona.quartz.nip64Chess.end.LiveChessGameEndEvent
 import com.vitorpamplona.quartz.nip64Chess.game.ChessGameEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.RelayDiscoveryEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
@@ -250,15 +274,22 @@ import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprov
 import com.vitorpamplona.quartz.nip72ModCommunities.communityAddress
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.isACommunityPost
+import com.vitorpamplona.quartz.nip75ZapGoals.GoalEvent
+import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
+import com.vitorpamplona.quartz.nip87Ecash.cashu.CashuMintEvent
+import com.vitorpamplona.quartz.nip87Ecash.fedimint.FedimintEvent
+import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
-import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryResponseEvent
-import com.vitorpamplona.quartz.nip90Dvms.NIP90StatusEvent
+import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.NIP90ContentDiscoveryResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.status.NIP90StatusEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
+import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
+import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -273,6 +304,7 @@ fun NoteCompose(
     unPackReply: ReplyRenderType = ReplyRenderType.FULL,
     makeItShort: Boolean = false,
     isHiddenFeed: Boolean = false,
+    isPinned: Boolean = false,
     quotesLeft: Int,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
@@ -302,6 +334,7 @@ fun NoteCompose(
                 unPackReply = unPackReply,
                 makeItShort = makeItShort,
                 canPreview = canPreview,
+                isPinned = isPinned,
                 quotesLeft = quotesLeft,
                 parentBackgroundColor = parentBackgroundColor,
                 accountViewModel = accountViewModel,
@@ -322,6 +355,7 @@ fun AcceptableNote(
     unPackReply: ReplyRenderType = ReplyRenderType.FULL,
     makeItShort: Boolean = false,
     canPreview: Boolean = true,
+    isPinned: Boolean = false,
     quotesLeft: Int,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
@@ -377,6 +411,7 @@ fun AcceptableNote(
                         makeItShort = makeItShort,
                         canPreview = canPreview,
                         quotesLeft = quotesLeft,
+                        isPinned = isPinned,
                         parentBackgroundColor = parentBackgroundColor,
                         accountViewModel = accountViewModel,
                         showPopup = showPopup,
@@ -433,6 +468,7 @@ fun AcceptableNote(
                         unPackReply = unPackReply,
                         makeItShort = makeItShort,
                         canPreview = canPreview,
+                        isPinned = isPinned,
                         quotesLeft = quotesLeft,
                         parentBackgroundColor = parentBackgroundColor,
                         accountViewModel = accountViewModel,
@@ -494,6 +530,7 @@ private fun CheckNewAndRenderNote(
     unPackReply: ReplyRenderType = ReplyRenderType.FULL,
     makeItShort: Boolean = false,
     canPreview: Boolean = true,
+    isPinned: Boolean = false,
     quotesLeft: Int,
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
@@ -525,6 +562,7 @@ private fun CheckNewAndRenderNote(
             unPackReply = unPackReply,
             makeItShort = makeItShort,
             canPreview = canPreview,
+            isPinned = isPinned,
             quotesLeft = quotesLeft,
             accountViewModel = accountViewModel,
             nav = nav,
@@ -582,6 +620,7 @@ fun InnerNoteWithReactions(
     unPackReply: ReplyRenderType,
     makeItShort: Boolean,
     canPreview: Boolean,
+    isPinned: Boolean,
     quotesLeft: Int,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -624,6 +663,7 @@ fun InnerNoteWithReactions(
                 makeItShort = makeItShort,
                 canPreview = canPreview,
                 showSecondRow = showSecondRow,
+                isPinned = isPinned,
                 quotesLeft = quotesLeft,
                 backgroundColor = backgroundColor,
                 editState = editState,
@@ -707,6 +747,7 @@ fun NoteBody(
     makeItShort: Boolean = false,
     canPreview: Boolean = true,
     showSecondRow: Boolean,
+    isPinned: Boolean = false,
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     editState: State<GenericLoadable<EditState>>,
@@ -717,6 +758,7 @@ fun NoteBody(
     FirstUserInfoRow(
         baseNote = baseNote,
         showAuthorPicture = showAuthorPicture,
+        isPinned = isPinned,
         editState = editState,
         accountViewModel = accountViewModel,
         nav = nav,
@@ -823,6 +865,20 @@ private fun RenderNoteRow(
             RenderLongFormContent(baseNote, accountViewModel, nav)
         }
 
+        is ThreadEvent -> {
+            RenderThread(
+                baseNote,
+                makeItShort,
+                canPreview,
+                quotesLeft,
+                unPackReply,
+                backgroundColor,
+                editState,
+                accountViewModel,
+                nav,
+            )
+        }
+
         is CodeSnippetEvent -> {
             RenderCodeSnippetEvent(baseNote)
         }
@@ -895,6 +951,30 @@ private fun RenderNoteRow(
             DisplayBroadcastRelayList(baseNote, backgroundColor, accountViewModel, nav)
         }
 
+        is RelayDiscoveryEvent -> {
+            RenderRelayDiscovery(baseNote, accountViewModel, nav)
+        }
+
+        is RelayMembershipListEvent -> {
+            RenderRelayMembershipList(baseNote, accountViewModel, nav)
+        }
+
+        is RelayAddMemberEvent -> {
+            RenderRelayAddMember(baseNote, accountViewModel, nav)
+        }
+
+        is RelayRemoveMemberEvent -> {
+            RenderRelayRemoveMember(baseNote, accountViewModel, nav)
+        }
+
+        is RelayJoinRequestEvent -> {
+            RenderRelayJoinRequest(baseNote, accountViewModel, nav)
+        }
+
+        is RelayLeaveRequestEvent -> {
+            RenderRelayLeaveRequest(baseNote, accountViewModel, nav)
+        }
+
         is PinListEvent -> {
             RenderPinListEvent(baseNote, backgroundColor, accountViewModel, nav)
         }
@@ -909,6 +989,14 @@ private fun RenderNoteRow(
 
         is GitRepositoryEvent -> {
             RenderGitRepositoryEvent(baseNote, accountViewModel, nav)
+        }
+
+        is RootSiteEvent -> {
+            RenderRootSiteEvent(baseNote, accountViewModel, nav)
+        }
+
+        is NamedSiteEvent -> {
+            RenderNamedSiteEvent(baseNote, accountViewModel, nav)
         }
 
         is GitPatchEvent -> {
@@ -1000,6 +1088,18 @@ private fun RenderNoteRow(
             )
         }
 
+        is CashuMintEvent -> {
+            RenderCashuMint(noteEvent)
+        }
+
+        is FedimintEvent -> {
+            RenderFedimint(noteEvent)
+        }
+
+        is MintRecommendationEvent -> {
+            RenderMintRecommendation(noteEvent)
+        }
+
         is ClassifiedsEvent -> {
             RenderClassifieds(
                 noteEvent,
@@ -1015,6 +1115,10 @@ private fun RenderNoteRow(
 
         is CalendarDateSlotEvent -> {
             RenderCalendarDateSlotEvent(baseNote, accountViewModel, nav)
+        }
+
+        is GoalEvent -> {
+            RenderGoal(baseNote, accountViewModel, nav)
         }
 
         is HighlightEvent -> {
@@ -1070,6 +1174,18 @@ private fun RenderNoteRow(
                 canPreview,
                 quotesLeft,
                 unPackReply,
+                backgroundColor,
+                accountViewModel,
+                nav,
+            )
+        }
+
+        is ChatEvent -> {
+            RenderChat(
+                baseNote,
+                makeItShort,
+                canPreview,
+                quotesLeft,
                 backgroundColor,
                 accountViewModel,
                 nav,
@@ -1438,6 +1554,7 @@ fun DisplayDraftChat() {
 fun FirstUserInfoRow(
     baseNote: Note,
     showAuthorPicture: Boolean,
+    isPinned: Boolean,
     editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -1492,6 +1609,10 @@ fun FirstUserInfoRow(
             DisplayDraft()
         }
 
+        if (isPinned) {
+            PinnedMark()
+        }
+
         Expiration(baseNote)
 
         TimeAgo(baseNote)
@@ -1502,6 +1623,16 @@ fun FirstUserInfoRow(
             moreOptions()
         }
     }
+}
+
+@Composable
+fun PinnedMark() {
+    Icon(
+        imageVector = Icons.Default.PushPin,
+        contentDescription = stringRes(R.string.pinned_notes),
+        modifier = Modifier.padding(start = 5.dp).size(16.dp),
+        tint = MaterialTheme.colorScheme.placeholderText,
+    )
 }
 
 @Composable

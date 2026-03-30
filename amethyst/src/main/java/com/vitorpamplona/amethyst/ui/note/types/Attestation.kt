@@ -34,16 +34,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Approval
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ErrorOutline
-import androidx.compose.material.icons.filled.HourglassEmpty
 import androidx.compose.material.icons.filled.HourglassTop
 import androidx.compose.material.icons.filled.Recommend
 import androidx.compose.material.icons.filled.RemoveDone
-import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -84,7 +81,6 @@ import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
 import com.vitorpamplona.quartz.experimental.attestations.attestation.tags.AttestationStatus
-import com.vitorpamplona.quartz.experimental.attestations.attestation.tags.Validity
 import com.vitorpamplona.quartz.experimental.attestations.proficiency.AttestorProficiencyEvent
 import com.vitorpamplona.quartz.experimental.attestations.recommendation.AttestorRecommendationEvent
 import com.vitorpamplona.quartz.experimental.attestations.request.AttestationRequestEvent
@@ -106,8 +102,7 @@ fun RenderAttestationPreview() {
                 arrayOf(
                     arrayOf("d", "af5aa898:fe108febb997:1773941524"),
                     arrayOf("e", "fe108febb99796c4091775e00aa1fc3ffc489ad22fdf1f8c559b2472815c09c7"),
-                    arrayOf("s", "verified"),
-                    arrayOf("v", "valid"),
+                    arrayOf("s", "valid"),
                     arrayOf("client", "attestr.xyz"),
                 ),
         )
@@ -161,19 +156,17 @@ fun RenderAttestation(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val validity = remember(noteEvent) { noteEvent.validity() }
     val status = remember(noteEvent) { noteEvent.status() }
     val validFrom = remember(noteEvent) { noteEvent.validFrom() }
     val validTo = remember(noteEvent) { noteEvent.validTo() }
     val content = remember(noteEvent) { noteEvent.content.ifBlank { null } }
 
-    val statusColor = remember(status, validity) { attestationColor(status, validity) }
-    val statusIcon = remember(status, validity) { attestationIcon(status, validity) }
-    val statusLabel = attestationStatusLabel(status, validity)
+    val statusColor = remember(status) { attestationColor(status) }
+    val statusIcon = remember(status) { attestationIcon(status) }
+    val statusLabel = attestationStatusLabel(status)
 
     val aboutAddress = remember(noteEvent) { noteEvent.assertionAddress() }
     val aboutEvent = remember(noteEvent) { noteEvent.assertionEventId() }
-    val aboutPubkey = remember(noteEvent) { noteEvent.assertionPubkey() }
 
     Column(
         modifier =
@@ -257,13 +250,6 @@ fun RenderAttestation(
                         )
                     }
                 }
-            } else if (aboutPubkey != null) {
-                LoadUser(aboutPubkey, accountViewModel) {
-                    if (it != null) {
-                        Spacer(modifier = DoubleVertSpacer)
-                        UserCompose(it, accountViewModel = accountViewModel, nav = nav)
-                    }
-                }
             }
         }
 
@@ -322,7 +308,7 @@ fun RenderAttestationRequest(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Icon(
-                imageVector = Icons.Default.Send,
+                imageVector = Icons.AutoMirrored.Filled.Send,
                 contentDescription = stringRes(R.string.attestation_request),
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(24.dp),
@@ -590,49 +576,31 @@ fun RenderAttestorProficiency(
     }
 }
 
-private fun attestationColor(
-    status: AttestationStatus?,
-    validity: Validity?,
-): Color =
+private fun attestationColor(status: AttestationStatus?): Color =
     when {
-        validity == Validity.INVALID -> Color(0xFFB71C1C)
-        validity == Validity.VALID -> Color(0xFF2E7D32)
+        status == AttestationStatus.INVALID -> Color(0xFFB71C1C)
+        status == AttestationStatus.VALID -> Color(0xFF2E7D32)
         status == AttestationStatus.REVOKED -> Color(0xFFB21CB7)
-        status == AttestationStatus.REJECTED -> Color(0xFFB71C1C)
-        status == AttestationStatus.VERIFIED -> Color(0xFF2E7D32)
         status == AttestationStatus.VERIFYING -> Color(0xFF173CF5)
-        status == AttestationStatus.ACCEPTED -> Color(0xFF15C0C0)
         else -> Color(0xFF757575)
     }
 
-private fun attestationIcon(
-    status: AttestationStatus?,
-    validity: Validity?,
-): ImageVector =
+private fun attestationIcon(status: AttestationStatus?): ImageVector =
     when {
-        validity == Validity.INVALID -> Icons.Default.Close
-        validity == Validity.VALID -> Icons.Default.CheckCircle
+        status == AttestationStatus.INVALID -> Icons.Default.Close
+        status == AttestationStatus.VALID -> Icons.Default.CheckCircle
         status == AttestationStatus.REVOKED -> Icons.Default.RemoveDone
-        status == AttestationStatus.REJECTED -> Icons.Default.Delete
-        status == AttestationStatus.VERIFIED -> Icons.Default.Approval
         status == AttestationStatus.VERIFYING -> Icons.Default.HourglassTop
-        status == AttestationStatus.ACCEPTED -> Icons.Default.HourglassEmpty
         else -> Icons.Default.ErrorOutline
     }
 
 @Composable
-private fun attestationStatusLabel(
-    status: AttestationStatus?,
-    validity: Validity?,
-): String =
+private fun attestationStatusLabel(status: AttestationStatus?): String =
     when {
-        validity == Validity.INVALID -> stringRes(R.string.attestation_invalid)
-        validity == Validity.VALID -> stringRes(R.string.attestation_valid)
+        status == AttestationStatus.INVALID -> stringRes(R.string.attestation_invalid)
+        status == AttestationStatus.VALID -> stringRes(R.string.attestation_valid)
         status == AttestationStatus.REVOKED -> stringRes(R.string.attestation_status_revoked)
-        status == AttestationStatus.REJECTED -> stringRes(R.string.attestation_status_rejected)
-        status == AttestationStatus.VERIFIED -> stringRes(R.string.attestation_status_verified)
         status == AttestationStatus.VERIFYING -> stringRes(R.string.attestation_status_verifying)
-        status == AttestationStatus.ACCEPTED -> stringRes(R.string.attestation_status_accepted)
         else -> stringRes(R.string.attestation)
     }
 

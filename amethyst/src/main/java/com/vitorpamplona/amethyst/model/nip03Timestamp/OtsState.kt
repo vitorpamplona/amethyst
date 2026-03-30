@@ -26,7 +26,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
-import com.vitorpamplona.quartz.nip03Timestamp.OtsResolverBuilder
+import com.vitorpamplona.quartz.nip03Timestamp.OtsResolver
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineScope
@@ -37,7 +37,7 @@ import java.util.Base64
 class OtsState(
     val signer: NostrSigner,
     val cache: LocalCache,
-    val otsResolver: OtsResolverBuilder,
+    val otsResolver: () -> OtsResolver,
     val scope: CoroutineScope,
     val settings: AccountSettings,
 ) {
@@ -55,10 +55,10 @@ class OtsState(
     }
 
     suspend fun updateAttestations(): List<OtsEvent> {
-        Log.d("Pending Attestations", "Updating ${settings.pendingAttestations.value.size} pending attestations")
+        Log.d("Pending Attestations") { "Updating ${settings.pendingAttestations.value.size} pending attestations" }
 
         return settings.pendingAttestations.value.toList().mapNotNull { (key, value) ->
-            val otsState = OtsEvent.upgrade(Base64.getDecoder().decode(value), key, otsResolver.build())
+            val otsState = OtsEvent.upgrade(Base64.getDecoder().decode(value), key, otsResolver())
 
             if (otsState != null) {
                 val hint = cache.getNoteIfExists(key)?.toEventHint<Event>()
@@ -96,7 +96,7 @@ class OtsState(
                 Base64.getEncoder().encodeToString(
                     OtsEvent.stamp(
                         id,
-                        otsResolver.build(),
+                        otsResolver(),
                     ),
                 ),
         )

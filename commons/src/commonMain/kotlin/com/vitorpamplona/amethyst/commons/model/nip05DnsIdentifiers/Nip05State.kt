@@ -49,11 +49,11 @@ sealed interface Nip05State {
 
         fun reset() = verificationState.tryEmit(Nip05VerifState.NotStarted)
 
-        suspend fun checkAndUpdate(nip05Client: INip05Client) {
+        suspend fun checkAndUpdate(nip05ClientBuilder: () -> INip05Client) {
             if (verificationState.value.isExpired()) {
                 markAsVerifying()
                 try {
-                    if (nip05Client.verify(nip05, hexKey)) {
+                    if (nip05ClientBuilder().verify(nip05, hexKey)) {
                         markAsVerified()
                     } else {
                         markAsInvalid()

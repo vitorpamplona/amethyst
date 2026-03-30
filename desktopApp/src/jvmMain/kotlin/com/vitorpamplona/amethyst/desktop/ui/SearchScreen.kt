@@ -83,7 +83,6 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.chess.RelaySyncStatus
-import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.search.AdvancedSearchBarState
 import com.vitorpamplona.amethyst.commons.search.QuerySerializer
 import com.vitorpamplona.amethyst.commons.search.SavedSearch
@@ -172,7 +171,7 @@ fun SearchScreen(
         }
     }
 
-    // NIP-50 people search subscription (use allRelayUrls — openReqSubscription will connect)
+    // NIP-50 people search subscription (use allRelayUrls — subscribe will connect)
     rememberSubscription(connectedRelays, debouncedQuery, relayManager = relayManager) {
         if (allRelayUrls.isEmpty() || debouncedQuery.isEmpty) {
             return@rememberSubscription null
@@ -195,7 +194,7 @@ fun SearchScreen(
                     if (event is MetadataEvent) {
                         localCache.consumeMetadata(event)
                         @Suppress("UNCHECKED_CAST")
-                        val user = localCache.getUserIfExists(event.pubKey) as? User
+                        val user = localCache.getUserIfExists(event.pubKey)
                         if (user != null) {
                             state.addPeopleResult(user)
                         }

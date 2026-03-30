@@ -13,6 +13,10 @@ plugins {
 }
 
 allprojects {
+    configurations.configureEach {
+        resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
+    }
+
     apply plugin: 'com.diffplug.spotless'
 
     if (project === rootProject) {
@@ -30,7 +34,7 @@ allprojects {
                 target 'src/**/*.kt'
 
                 ktlint()
-                licenseHeaderFile rootProject.file('.spotless/copyright.kt'), "package|import|class|object|sealed|open|interface|abstract "
+                licenseHeaderFile rootProject.file('.spotless/copyright.kt'), "@file:|package|import|class|object|sealed|open|interface|abstract "
             }
 
             groovyGradle {
@@ -58,9 +62,18 @@ subprojects {
 }
 
 tasks.register('installGitHook', Copy) {
+    def dotGit = new File(rootProject.rootDir, '.git')
+    def hooksDir
+    if (dotGit.isFile()) {
+        // Git worktree: .git is a file with "gitdir: <path>"
+        def gitDir = new File(dotGit.text.trim().replace('gitdir: ', ''))
+        hooksDir = new File(gitDir, 'hooks')
+    } else {
+        hooksDir = new File(dotGit, 'hooks')
+    }
     from new File(rootProject.rootDir, '.git-hooks/pre-commit')
     from new File(rootProject.rootDir, '.git-hooks/pre-push')
-    into { new File(rootProject.rootDir, '.git/hooks') }
+    into { hooksDir }
     filePermissions { unix(0777) }
 }
 tasks.getByPath(':amethyst:preBuild').dependsOn installGitHook

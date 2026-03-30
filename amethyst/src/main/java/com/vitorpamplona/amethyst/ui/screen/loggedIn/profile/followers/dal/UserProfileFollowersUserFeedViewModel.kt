@@ -66,7 +66,7 @@ class UserProfileFollowersUserFeedViewModel(
     @OptIn(kotlinx.coroutines.FlowPreview::class)
     val followersFlow: StateFlow<List<User>> =
         account.cache
-            .observeEvents(followerFilter)
+            .observeEvents<Event>(followerFilter)
             .sample(500)
             .map { followerContactLists ->
                 followerContactLists.toNonHiddenOwners().sortedWith(sortingModel)

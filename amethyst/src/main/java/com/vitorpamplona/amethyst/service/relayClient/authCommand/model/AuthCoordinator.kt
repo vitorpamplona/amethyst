@@ -80,7 +80,7 @@ class AuthCoordinator(
         if (account == null) return
 
         if (isDebug) {
-            Log.d("AuthCoordinator", "Watch $account")
+            Log.d("AuthCoordinator") { "Watch $account" }
         }
 
         authWithAccounts.add(account)
@@ -91,7 +91,7 @@ class AuthCoordinator(
         if (account == null) return
 
         if (isDebug) {
-            Log.d("AuthCoordinator", "Unwatch $account")
+            Log.d("AuthCoordinator") { "Unwatch $account" }
         }
 
         authWithAccounts.remove(account)

@@ -5,6 +5,10 @@ on:
     # paths: ["app/src/main/res/**/strings.xml"] // removes filter to allow downloads at any moment.
     branches: [ main ]
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   synchronize-with-crowdin:
     runs-on: ubuntu-latest

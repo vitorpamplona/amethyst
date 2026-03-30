@@ -22,7 +22,6 @@ package com.vitorpamplona.quartz.experimental.attestations.attestation
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.experimental.attestations.attestation.tags.AttestationStatus
-import com.vitorpamplona.quartz.experimental.attestations.attestation.tags.Validity
 import com.vitorpamplona.quartz.experimental.attestations.request.AttestationRequestEvent
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
@@ -32,17 +31,14 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
-import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
-import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlinx.serialization.json.JsonNull.content
 
 @Immutable
 class AttestationEvent(
@@ -54,8 +50,7 @@ class AttestationEvent(
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     EventHintProvider,
-    AddressHintProvider,
-    PubKeyHintProvider {
+    AddressHintProvider {
     override fun eventHints(): List<EventIdHint> = tags.mapNotNull(ETag::parseAsHint)
 
     override fun linkedEventIds(): List<HexKey> = tags.mapNotNull(ETag::parseId)
@@ -63,12 +58,6 @@ class AttestationEvent(
     override fun addressHints(): List<AddressHint> = tags.mapNotNull(ATag::parseAsHint)
 
     override fun linkedAddressIds(): List<String> = tags.mapNotNull(ATag::parseAddressId)
-
-    override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
-
-    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
-
-    fun validity() = tags.validity()
 
     fun status() = tags.status()
 
@@ -94,10 +83,6 @@ class AttestationEvent(
 
     fun assertionETag() = tags.firstNotNullOfOrNull(ETag::parse)
 
-    fun assertionPubkey() = tags.firstNotNullOfOrNull(PTag::parseKey)
-
-    fun assertionPTag() = tags.firstNotNullOfOrNull(PTag::parse)
-
     companion object {
         const val KIND = 31871
         const val ALT_DESCRIPTION = "Attestation"
@@ -106,7 +91,6 @@ class AttestationEvent(
             dTagId: String,
             about: EventHintBundle<Event>,
             content: String = "",
-            validity: Validity? = null,
             status: AttestationStatus? = null,
             validFrom: Long? = null,
             validTo: Long? = null,
@@ -117,7 +101,6 @@ class AttestationEvent(
             alt(ALT_DESCRIPTION)
             dTag(dTagId)
             about(about)
-            validity?.let { validity(it) }
             status?.let { status(it) }
             validFrom?.let { validFrom(it) }
             validTo?.let { validTo(it) }
@@ -129,7 +112,6 @@ class AttestationEvent(
             dTagId: String,
             about: EventHintBundle<BaseReplaceableEvent>,
             content: String = "",
-            validity: Validity? = null,
             status: AttestationStatus? = null,
             validFrom: Long? = null,
             validTo: Long? = null,
@@ -140,7 +122,6 @@ class AttestationEvent(
             alt(ALT_DESCRIPTION)
             dTag(dTagId)
             aboutReplaceable(about)
-            validity?.let { validity(it) }
             status?.let { status(it) }
             validFrom?.let { validFrom(it) }
             validTo?.let { validTo(it) }
@@ -152,7 +133,6 @@ class AttestationEvent(
             dTagId: String,
             about: EventHintBundle<BaseAddressableEvent>,
             content: String = "",
-            validity: Validity? = null,
             status: AttestationStatus? = null,
             validFrom: Long? = null,
             validTo: Long? = null,
@@ -163,7 +143,6 @@ class AttestationEvent(
             alt(ALT_DESCRIPTION)
             dTag(dTagId)
             aboutAddressable(about)
-            validity?.let { validity(it) }
             status?.let { status(it) }
             validFrom?.let { validFrom(it) }
             validTo?.let { validTo(it) }

@@ -21,10 +21,15 @@
 package com.vitorpamplona.quartz.nip51Lists
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
+import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip01Core.core.fastAny
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip31Alts.AltTag
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -35,23 +40,70 @@ class PinListEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-    fun pins() = tags.filter { it.size > 1 && it[0] == "pin" }.map { it[1] }
+) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    EventHintProvider {
+    override fun eventHints() = tags.mapNotNull(EventBookmark::parseAsHint)
+
+    override fun linkedEventIds() = tags.mapNotNull(EventBookmark::parseId)
+
+    fun countPins() = tags.count(EventBookmark::isTagged)
+
+    fun pinnedEvents(): List<EventBookmark> = tags.mapNotNull(EventBookmark::parse)
+
+    fun isPinned(eventId: HexKey): Boolean = tags.any { EventBookmark.isTagged(it, eventId) }
 
     companion object {
-        const val KIND = 33888
-        const val ALT = "Pinned Posts"
+        const val KIND = 10001
+        const val ALT = "Pinned Notes"
+
+        fun createPinAddress(pubKey: HexKey) = Address(KIND, pubKey, "")
 
         suspend fun create(
-            pins: List<String>,
+            pin: EventBookmark,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
         ): PinListEvent {
-            val tags = mutableListOf<Array<String>>()
-            pins.forEach { tags.add(arrayOf("pin", it)) }
-            tags.add(AltTag.assemble(ALT))
+            val tags = arrayOf(pin.toTagArray(), AltTag.assemble(ALT))
+            return signer.sign(createdAt, KIND, tags, "")
+        }
 
-            return signer.sign(createdAt, KIND, tags.toTypedArray(), "")
+        suspend fun add(
+            earlierVersion: PinListEvent,
+            pin: EventBookmark,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+        ): PinListEvent =
+            resign(
+                tags = earlierVersion.tags.plus(pin.toTagArray()),
+                signer = signer,
+                createdAt = createdAt,
+            )
+
+        suspend fun remove(
+            earlierVersion: PinListEvent,
+            pin: EventBookmark,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+        ): PinListEvent =
+            resign(
+                tags = earlierVersion.tags.remove(pin.toTagIdOnly()),
+                signer = signer,
+                createdAt = createdAt,
+            )
+
+        suspend fun resign(
+            tags: TagArray,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+        ): PinListEvent {
+            val newTags =
+                if (tags.fastAny(AltTag::match)) {
+                    tags
+                } else {
+                    tags + AltTag.assemble(ALT)
+                }
+
+            return signer.sign(createdAt, KIND, newTags, "")
         }
     }
 }

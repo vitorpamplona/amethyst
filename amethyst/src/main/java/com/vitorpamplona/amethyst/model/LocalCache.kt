@@ -18,6 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+@file:Suppress("DEPRECATION")
+
 package com.vitorpamplona.amethyst.model
 
 import android.util.LruCache
@@ -25,6 +27,7 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
+import com.vitorpamplona.amethyst.commons.model.cache.LargeSoftCache
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
@@ -59,9 +62,6 @@ import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.nns.NNSEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
-import com.vitorpamplona.quartz.experimental.publicMessages.PublicMessageEvent
-import com.vitorpamplona.quartz.experimental.relationshipStatus.ContactCardEvent
-import com.vitorpamplona.quartz.experimental.trustedAssertions.list.TrustProviderListEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
@@ -173,6 +173,9 @@ import com.vitorpamplona.quartz.nip58Badges.BadgeProfilesEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
+import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
+import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
 import com.vitorpamplona.quartz.nip64Chess.challenge.accept.LiveChessGameAcceptEvent
 import com.vitorpamplona.quartz.nip64Chess.challenge.offer.LiveChessGameChallengeEvent
 import com.vitorpamplona.quartz.nip64Chess.draw.LiveChessDrawOfferEvent
@@ -181,6 +184,8 @@ import com.vitorpamplona.quartz.nip64Chess.game.ChessGameEvent
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterEvent
 import com.vitorpamplona.quartz.nip64Chess.move.LiveChessMoveEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.RelayDiscoveryEvent
+import com.vitorpamplona.quartz.nip66RelayMonitor.monitor.RelayMonitorEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
@@ -192,22 +197,27 @@ import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
 import com.vitorpamplona.quartz.nip75ZapGoals.GoalEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendationEvent
-import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryRequestEvent
-import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryResponseEvent
-import com.vitorpamplona.quartz.nip90Dvms.NIP90StatusEvent
-import com.vitorpamplona.quartz.nip90Dvms.NIP90UserDiscoveryRequestEvent
-import com.vitorpamplona.quartz.nip90Dvms.NIP90UserDiscoveryResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.NIP90ContentDiscoveryRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.NIP90ContentDiscoveryResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.status.NIP90StatusEvent
+import com.vitorpamplona.quartz.nip90Dvms.userDiscoveryRequest.NIP90UserDiscoveryRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.userDiscoveryResponse.NIP90UserDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
 import com.vitorpamplona.quartz.nip96FileStorage.config.FileServersEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
+import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
+import com.vitorpamplona.quartz.nipB0WebBookmarks.WebBookmarkEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
+import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.utils.DualCase
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
@@ -336,10 +346,10 @@ object LocalCache : ILocalCache, ICacheProvider {
             }
         }.buffer(kotlinx.coroutines.channels.Channel.CONFLATED)
 
-    fun observeEvents(filter: Filter): Flow<List<Event>> =
+    fun <T : Event> observeEvents(filter: Filter): Flow<List<T>> =
         callbackFlow {
             val cachedFilter =
-                EventListMatchingFilter(filter, this@LocalCache::filter) {
+                EventListMatchingFilter<T>(filter, this@LocalCache::filter) {
                     trySend(it)
                 }
 
@@ -352,7 +362,8 @@ object LocalCache : ILocalCache, ICacheProvider {
             }
         }.buffer(kotlinx.coroutines.channels.Channel.CONFLATED)
 
-    fun <T : Event> observeLatestEvent(filter: Filter) = observeEvents(filter).map { it.firstNotNullOfOrNull { it as? T } }
+    @Suppress("UNCHECKED_CAST")
+    fun <T : Event> observeLatestEvent(filter: Filter) = observeEvents<T>(filter).map { it.firstOrNull() }
 
     fun observeLatestNote(filter: Filter) = observeNotes(filter).map { it.firstOrNull() }
 
@@ -728,6 +739,12 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     fun consume(
         event: NIP90UserDiscoveryResponseEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: RequestToVanishEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeRegularEvent(event, relay, wasVerified)
@@ -1158,6 +1175,18 @@ object LocalCache : ILocalCache, ICacheProvider {
     ) = consumeBaseReplaceable(event, relay, wasVerified)
 
     fun consume(
+        event: RootSiteEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
+
+    fun consume(
+        event: NamedSiteEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
+
+    fun consume(
         event: ChannelListEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
@@ -1337,6 +1366,18 @@ object LocalCache : ILocalCache, ICacheProvider {
         wasVerified: Boolean,
     ) = consumeRegularEvent(event, relay, wasVerified)
 
+    private fun consume(
+        event: RelayDiscoveryEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
+
+    private fun consume(
+        event: RelayMonitorEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
+
     fun consume(
         event: StatusEvent,
         relay: NormalizedRelayUrl?,
@@ -1429,6 +1470,12 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     private fun consume(
         event: CalendarEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
+
+    fun consume(
+        event: WebBookmarkEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
@@ -1899,7 +1946,7 @@ object LocalCache : ILocalCache, ICacheProvider {
         if (new) {
             val channel = checkGetOrCreatePublicChatChannel(channelId)
             if (channel == null) {
-                Log.w("LocalCache", "Unable to create public chat channel for event ${event.toJson()}")
+                Log.w("LocalCache") { "Unable to create public chat channel for event ${event.toJson()}" }
                 return false
             }
 
@@ -1987,7 +2034,7 @@ object LocalCache : ILocalCache, ICacheProvider {
             val zapRequest = event.zapRequest?.id?.let { getNoteIfExists(it) }
 
             if (zapRequest == null || zapRequest.event !is LnZapRequestEvent) {
-                Log.e("ZP", "Zap Request not found. Unable to process Zap {${event.toJson()}}")
+                Log.e("ZP") { "Zap Request not found. Unable to process Zap {${event.toJson()}}" }
                 return false
             }
 
@@ -2106,6 +2153,12 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     fun consume(
         event: CodeSnippetEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: ChatEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeRegularEvent(event, relay, wasVerified)
@@ -2484,7 +2537,7 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     suspend fun findEarliestOtsForNote(
         note: Note,
-        otsVerifCache: VerificationStateCache,
+        otsVerifCacheBuilder: () -> VerificationStateCache,
     ): Long? {
         checkNotInMainThread()
 
@@ -2495,7 +2548,7 @@ object LocalCache : ILocalCache, ICacheProvider {
             notes.mapNotNull { _, item ->
                 val noteEvent = item.event
                 if ((noteEvent is OtsEvent && noteEvent.isTaggedEvent(note.idHex) && !noteEvent.isExpirationBefore(time))) {
-                    val cachedTime = (otsVerifCache.justCache(noteEvent) as? VerificationState.Verified)?.verifiedTime
+                    val cachedTime = (otsVerifCacheBuilder().justCache(noteEvent) as? VerificationState.Verified)?.verifiedTime
                     if (cachedTime != null) {
                         if (minTime == null || cachedTime < (minTime ?: Long.MAX_VALUE)) {
                             minTime = cachedTime
@@ -2511,7 +2564,7 @@ object LocalCache : ILocalCache, ICacheProvider {
             }
 
         candidates.forEach { noteEvent ->
-            (otsVerifCache.cacheVerify(noteEvent) as? VerificationState.Verified)?.verifiedTime?.let { stampedTime ->
+            (otsVerifCacheBuilder().cacheVerify(noteEvent) as? VerificationState.Verified)?.verifiedTime?.let { stampedTime ->
                 if (minTime == null || stampedTime < (minTime ?: Long.MAX_VALUE)) {
                     minTime = stampedTime
                 }
@@ -2550,17 +2603,17 @@ object LocalCache : ILocalCache, ICacheProvider {
     }
 
     fun cleanMemory() {
-        Log.d("LargeCache", "Notes cleanup started. Current size: ${notes.size()}")
+        Log.d("LargeCache") { "Notes cleanup started. Current size: ${notes.size()}" }
         notes.cleanUp()
-        Log.d("LargeCache", "Notes cleanup completed. Remaining size: ${notes.size()}")
+        Log.d("LargeCache") { "Notes cleanup completed. Remaining size: ${notes.size()}" }
 
-        Log.d("LargeCache", "Addressables cleanup started. Current size: ${addressables.size()}")
+        Log.d("LargeCache") { "Addressables cleanup started. Current size: ${addressables.size()}" }
         addressables.cleanUp()
-        Log.d("LargeCache", "Addressables cleanup completed. Remaining size: ${addressables.size()}")
+        Log.d("LargeCache") { "Addressables cleanup completed. Remaining size: ${addressables.size()}" }
 
-        Log.d("LargeCache", "Users cleanup started. Current size: ${users.size()}")
+        Log.d("LargeCache") { "Users cleanup started. Current size: ${users.size()}" }
         users.cleanUp()
-        Log.d("LargeCache", "Users cleanup completed. Remaining size: ${users.size()}")
+        Log.d("LargeCache") { "Users cleanup completed. Remaining size: ${users.size()}" }
     }
 
     fun cleanObservers() {
@@ -2892,7 +2945,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                 event.checkSignature()
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                Log.w("Event Verification Failed", "Kind: ${event.kind} from ${dateFormatter(event.createdAt, "", "")} with message ${e.message}")
+                Log.w("Event Verification Failed") { "Kind: ${event.kind} from ${dateFormatter(event.createdAt, "", "")} with message ${e.message}" }
             }
             false
         } else {
@@ -2966,7 +3019,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                     getNoteIfExists(deletionEvent.id)?.let { note ->
                         if (!note.hasRelay(relay.url)) {
                             if (isDebug) {
-                                Log.d("LocalCache", "Updating ${relay.url.url} with a Deletion Event ${event.id} ${deletionEvent.id} because of ${event.toJson()} with ${deletionEvent.toJson()}")
+                                Log.d("LocalCache") { "Updating ${relay.url.url} with a Deletion Event ${event.id} ${deletionEvent.id} because of ${event.toJson()} with ${deletionEvent.toJson()}" }
                             }
                             relay.sendIfConnected(EventCmd(deletionEvent))
                             note.addRelay(relay.url)
@@ -2983,7 +3036,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                 note.event?.let { existingEvent ->
                     if (existingEvent.createdAt > event.createdAt && !note.hasRelay(relay.url) && !deletionIndex.hasBeenDeleted(event) && !event.isExpired()) {
                         if (isDebug) {
-                            Log.d("LocalCache", "Updating ${relay.url.url} with a new version of ${event.kind} ${event.id} to ${existingEvent.id}")
+                            Log.d("LocalCache") { "Updating ${relay.url.url} with a new version of ${event.kind} ${event.id} to ${existingEvent.id}" }
                         }
 
                         relay.sendIfConnected(EventCmd(existingEvent))
@@ -3146,6 +3199,8 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is GitReplyEvent -> consume(event, relay, wasVerified)
                 is GitPatchEvent -> consume(event, relay, wasVerified)
                 is GitRepositoryEvent -> consume(event, relay, wasVerified)
+                is RootSiteEvent -> consume(event, relay, wasVerified)
+                is NamedSiteEvent -> consume(event, relay, wasVerified)
                 is ChessGameEvent -> consume(event, relay, wasVerified)
                 is RelayFeedsListEvent -> consume(event, relay, wasVerified)
                 is JesterEvent -> consume(event, relay, wasVerified)
@@ -3185,10 +3240,14 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is PinListEvent -> consume(event, relay, wasVerified)
                 is PublicMessageEvent -> consume(event, relay, wasVerified)
                 is PeopleListEvent -> consume(event, relay, wasVerified)
+                is RequestToVanishEvent -> consume(event, relay, wasVerified)
                 is CodeSnippetEvent -> consume(event, relay, wasVerified)
                 is ZapPollEvent -> consume(event, relay, wasVerified)
+                is ChatEvent -> consume(event, relay, wasVerified)
                 is PollEvent -> consume(event, relay, wasVerified)
                 is PollResponseEvent -> consume(event, relay, wasVerified)
+                is RelayDiscoveryEvent -> consume(event, relay, wasVerified)
+                is RelayMonitorEvent -> consume(event, relay, wasVerified)
                 is ReactionEvent -> consume(event, relay, wasVerified)
                 is ContactCardEvent -> consume(event, relay, wasVerified)
                 is RelaySetEvent -> consume(event, relay, wasVerified)
@@ -3209,9 +3268,10 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is VideoShortEvent -> consume(event, relay, wasVerified)
                 is VoiceEvent -> consume(event, relay, wasVerified)
                 is VoiceReplyEvent -> consume(event, relay, wasVerified)
+                is WebBookmarkEvent -> consume(event, relay, wasVerified)
                 is WikiNoteEvent -> consume(event, relay, wasVerified)
                 is PaymentTargetsEvent -> consume(event, relay, wasVerified)
-                else -> Log.w("Event Not Supported", "From ${relay?.url}: ${event.toJson()}").let { false }
+                else -> Log.w("Event Not Supported") { "From ${relay?.url}: ${event.toJson()}" }.let { false }
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e

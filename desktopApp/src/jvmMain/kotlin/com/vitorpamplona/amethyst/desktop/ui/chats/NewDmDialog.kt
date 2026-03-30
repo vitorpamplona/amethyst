@@ -51,7 +51,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.search.SearchResult
 import com.vitorpamplona.amethyst.commons.ui.components.UserSearchCard
@@ -80,7 +79,8 @@ fun NewDmDialog(
     val cachedUsers by searchState.cachedUserResults.collectAsState()
     val relaySearchResults by searchState.relaySearchResults.collectAsState()
     val isSearchingRelays by searchState.isSearchingRelays.collectAsState()
-    val connectedRelays by relayManager.connectedRelays.collectAsState()
+    val relayStatuses by relayManager.relayStatuses.collectAsState()
+    val connectedRelays = remember(relayStatuses) { relayStatuses.keys }
     val focusRequester = remember { FocusRequester() }
 
     // NIP-50 relay search when local cache has few/no results
@@ -182,7 +182,7 @@ fun NewDmDialog(
                         bech32Results.filterIsInstance<SearchResult.UserResult>()
                     items(userResults) { result ->
                         val user =
-                            cacheProvider.getUserIfExists(result.pubKeyHex) as? User
+                            cacheProvider.getUserIfExists(result.pubKeyHex)
                         if (user != null) {
                             UserSearchCard(
                                 user = user,

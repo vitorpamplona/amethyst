@@ -29,7 +29,7 @@ import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.network.RelayConnectionManager
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
@@ -161,7 +161,7 @@ class ChatroomListState(
             )
 
         val listener =
-            object : IRequestListener {
+            object : SubscriptionListener {
                 override fun onEvent(
                     event: Event,
                     isLive: Boolean,
@@ -199,11 +199,11 @@ class ChatroomListState(
             // Skip rooms with no messages
             if (chatroom.messages.isEmpty()) continue
 
-            val users = key.users.mapNotNull { cacheProvider.getUserIfExists(it) as? User }
+            val users = key.users.mapNotNull { cacheProvider.getUserIfExists(it) }
 
             // Collect pubkeys without profile info
             for (pubkey in key.users) {
-                val user = cacheProvider.getUserIfExists(pubkey) as? User
+                val user = cacheProvider.getUserIfExists(pubkey)
                 if (user == null || user.metadataOrNull() == null) {
                     pubkeysNeedingMetadata.add(pubkey)
                 }

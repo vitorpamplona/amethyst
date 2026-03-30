@@ -41,6 +41,7 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.stateIn
 
+@Suppress("UNCHECKED_CAST")
 class MergedFollowListsState(
     val kind3List: Kind3FollowListState,
     val peopleList: PeopleListsState,

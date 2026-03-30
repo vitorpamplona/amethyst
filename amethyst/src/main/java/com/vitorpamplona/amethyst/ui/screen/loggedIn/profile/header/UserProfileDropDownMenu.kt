@@ -28,18 +28,20 @@ import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Report
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.AnnotatedString
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection
+import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.note.externalLinkForUser
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip56Reports.ReportType
+import kotlinx.coroutines.launch
 
 @Composable
 fun UserProfileDropDownMenu(
@@ -54,7 +56,8 @@ fun UserProfileDropDownMenu(
         title = stringRes(R.string.profile_actions_dialog_title),
         onDismiss = onDismiss,
     ) {
-        val clipboardManager = LocalClipboardManager.current
+        val clipboardManager = LocalClipboard.current
+        val scope = rememberCoroutineScope()
         val context = LocalContext.current
 
         // Share section
@@ -63,8 +66,10 @@ fun UserProfileDropDownMenu(
                 icon = Icons.Outlined.ContentCopy,
                 text = stringRes(R.string.copy_user_id),
             ) {
-                clipboardManager.setText(AnnotatedString(user.pubkeyNpub()))
-                onDismiss()
+                scope.launch {
+                    clipboardManager.setText(user.pubkeyNpub())
+                    onDismiss()
+                }
             }
             M3ActionRow(
                 icon = Icons.Outlined.Share,

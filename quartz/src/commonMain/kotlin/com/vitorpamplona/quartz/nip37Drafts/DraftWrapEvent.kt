@@ -60,7 +60,7 @@ class DraftWrapEvent(
             fromJson(json)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.w("DraftEvent", "Unable to parse inner event of a draft: $json")
+            Log.w("DraftEvent") { "Unable to parse inner event of a draft: $json" }
             throw e
         }
     }

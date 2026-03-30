@@ -32,8 +32,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
-import kotlinx.serialization.encodeToString
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -58,16 +57,20 @@ class NamecoinSharedPreferences(
     companion object {
         val KEY_ENABLED = booleanPreferencesKey("namecoin.enabled")
         val KEY_CUSTOM_SERVERS = stringPreferencesKey("namecoin.customServers")
+        val KEY_PINNED_CERTS = stringPreferencesKey("namecoin.pinnedCerts")
     }
 
     /**
      * Current settings, loaded synchronously at init to avoid races.
      */
-    private val _settings =
-        MutableStateFlow(
-            runBlocking { loadFromDisk() ?: NamecoinSettings.DEFAULT },
-        )
+    private val _settings = MutableStateFlow(NamecoinSettings.DEFAULT)
     val settings: StateFlow<NamecoinSettings> = _settings
+
+    init {
+        scope.launch {
+            _settings.tryEmit(loadFromDisk() ?: NamecoinSettings.DEFAULT)
+        }
+    }
 
     /** Synchronous snapshot — safe to call from `serverListProvider` lambdas. */
     val current: NamecoinSettings get() = _settings.value
@@ -99,7 +102,47 @@ class NamecoinSharedPreferences(
 
     suspend fun reset() {
         persist(NamecoinSettings.DEFAULT)
+        clearPinnedCerts()
     }
+
+    /**
+     * Store a PEM-encoded certificate that the user accepted via Test Connection.
+     * The cert is appended to the existing list and synced to the ElectrumXClient.
+     */
+    suspend fun addPinnedCert(pem: String) {
+        val existing = loadPinnedCertsFromDisk()
+        val updated = (existing + pem).distinct()
+        savePinnedCerts(updated)
+    }
+
+    /** Load all user-pinned certs from disk (for startup sync). */
+    suspend fun loadPinnedCerts(): List<String> = loadPinnedCertsFromDisk()
+
+    private suspend fun clearPinnedCerts() = savePinnedCerts(emptyList())
+
+    private suspend fun savePinnedCerts(certs: List<String>) {
+        try {
+            context.sharedPreferencesDataStore.edit { prefs ->
+                prefs[KEY_PINNED_CERTS] = json.encodeToString(certs)
+            }
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.e("NamecoinPrefs") { "Error writing pinned certs: ${e.message}" }
+        }
+    }
+
+    private suspend fun loadPinnedCertsFromDisk(): List<String> =
+        try {
+            val prefs = context.sharedPreferencesDataStore.data.first()
+            val certsJson = prefs[KEY_PINNED_CERTS]
+            if (certsJson != null) {
+                json.decodeFromString<List<String>>(certsJson)
+            } else {
+                emptyList()
+            }
+        } catch (_: Exception) {
+            emptyList()
+        }
 
     // ── Internal ───────────────────────────────────────────────────────
 
@@ -115,7 +158,7 @@ class NamecoinSharedPreferences(
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.e("NamecoinPrefs", "Error writing DataStore: ${e.message}")
+            Log.e("NamecoinPrefs") { "Error writing DataStore: ${e.message}" }
         }
     }
 
@@ -137,7 +180,7 @@ class NamecoinSharedPreferences(
             NamecoinSettings(enabled = enabled, customServers = servers)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.e("NamecoinPrefs", "Error reading DataStore: ${e.message}")
+            Log.e("NamecoinPrefs") { "Error reading DataStore: ${e.message}" }
             null
         }
 }

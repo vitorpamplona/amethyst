@@ -37,8 +37,8 @@ import androidx.compose.foundation.pager.PagerState
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.SecondaryTabRow
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
@@ -178,7 +178,7 @@ private fun HomePages(
         topBar = {
             Column {
                 HomeTopBar(accountViewModel, nav)
-                TabRow(
+                SecondaryTabRow(
                     containerColor = Color.Transparent,
                     contentColor = MaterialTheme.colorScheme.onBackground,
                     modifier = TabRowHeight,

@@ -23,6 +23,7 @@
 /.idea/deviceManager.xml
 /.idea/inspectionProfiles/
 /.idea/migrations.xml
+/desktopApp/vlc-temp/
 /commons/.idea/gradle.xml
 /commons/.idea/misc.xml
 /commons/.idea/workspace.xml

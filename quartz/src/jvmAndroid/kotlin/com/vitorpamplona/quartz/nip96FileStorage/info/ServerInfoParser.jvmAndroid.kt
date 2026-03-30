@@ -21,7 +21,6 @@
 package com.vitorpamplona.quartz.nip96FileStorage.info
 
 import java.net.URI
-import java.net.URL
 
 actual fun makeAbsoluteIfRelativeUrl(
     baseUrl: String,
@@ -32,7 +31,7 @@ actual fun makeAbsoluteIfRelativeUrl(
         if (apiUrl.isAbsolute) {
             potentiallyRelativeUrl
         } else {
-            URL(URL(baseUrl), potentiallyRelativeUrl).toString()
+            URI(baseUrl).resolve(potentiallyRelativeUrl).toString()
         }
     } catch (e: Exception) {
         potentiallyRelativeUrl

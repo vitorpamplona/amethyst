@@ -44,7 +44,6 @@ fun SetDialogToEdgeToEdge() {
             attributes.copyFrom(activityWindow.attributes)
             attributes.type = dialogWindow.attributes.type
             dialogWindow.attributes = attributes
-            dialogWindow.statusBarColor
             parentView.layoutParams =
                 FrameLayout.LayoutParams(
                     activityWindow.decorView.width,

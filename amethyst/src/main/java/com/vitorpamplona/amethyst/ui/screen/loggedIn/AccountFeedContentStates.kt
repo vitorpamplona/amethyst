@@ -44,7 +44,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CardFeedConte
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NotificationSummaryState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.OpenPollsState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.dal.NotificationFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.dal.PollsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.dal.VideoFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.webBookmarks.dal.WebBookmarkFeedFilter
 import kotlinx.coroutines.CoroutineScope
 
 class AccountFeedContentStates(
@@ -68,6 +70,8 @@ class AccountFeedContentStates(
     val discoverCommunities = FeedContentState(DiscoverCommunityFeedFilter(account), scope, LocalCache)
     val discoverPublicChats = FeedContentState(DiscoverChatFeedFilter(account), scope, LocalCache)
 
+    val pollsFeed = FeedContentState(PollsFeedFilter(account), scope, LocalCache)
+
     val notifications = CardFeedContentState(NotificationFeedFilter(account), scope)
     val notificationsOpenPolls = OpenPollsState(account, scope)
     val notificationSummary = NotificationSummaryState(account)
@@ -75,6 +79,8 @@ class AccountFeedContentStates(
     val feedListOptions = TopNavFilterState(account, scope)
 
     val drafts = FeedContentState(DraftEventsFeedFilter(account), scope, LocalCache)
+
+    val webBookmarks = FeedContentState(WebBookmarkFeedFilter(account), scope, LocalCache)
 
     suspend fun init() {
         notificationSummary.initializeSuspend()
@@ -100,10 +106,14 @@ class AccountFeedContentStates(
         discoverCommunities.updateFeedWith(newNotes)
         discoverPublicChats.updateFeedWith(newNotes)
 
+        pollsFeed.updateFeedWith(newNotes)
+
         notifications.updateFeedWith(newNotes)
         notificationSummary.invalidateInsertData(newNotes)
 
         drafts.updateFeedWith(newNotes)
+
+        webBookmarks.updateFeedWith(newNotes)
     }
 
     fun deleteNotes(newNotes: Set<Note>) {
@@ -126,10 +136,14 @@ class AccountFeedContentStates(
         discoverCommunities.deleteFromFeed(newNotes)
         discoverPublicChats.deleteFromFeed(newNotes)
 
+        pollsFeed.deleteFromFeed(newNotes)
+
         notifications.deleteFromFeed(newNotes)
         notificationSummary.invalidateInsertData(newNotes)
 
         drafts.deleteFromFeed(newNotes)
+
+        webBookmarks.deleteFromFeed(newNotes)
     }
 
     fun destroy() {

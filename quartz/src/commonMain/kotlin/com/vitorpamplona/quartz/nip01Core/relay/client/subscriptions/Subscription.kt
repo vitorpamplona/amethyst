@@ -20,14 +20,14 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions
 
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 data class Subscription(
     val id: String = newSubId(),
-    val listener: IRequestListener,
+    val listener: SubscriptionListener,
 ) {
     private var currentVersion: Map<NormalizedRelayUrl, List<Filter>>? = null // Inactive when null
 

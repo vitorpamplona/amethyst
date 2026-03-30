@@ -24,10 +24,10 @@ import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
-import com.vitorpamplona.quartz.experimental.trustedAssertions.list.TrustProviderListEvent
-import com.vitorpamplona.quartz.experimental.trustedAssertions.list.tags.ProviderTypes
-import com.vitorpamplona.quartz.experimental.trustedAssertions.list.tags.ServiceProviderTag
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ProviderTypes
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceProviderTag
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -124,7 +124,7 @@ class TrustProviderListState(
         scope.launch(Dispatchers.IO) {
             Log.d("AccountRegisterObservers", "TrustProviderList Collector Start")
             getTrustProviderListFlow().collect { noteState ->
-                Log.d("AccountRegisterObservers", "TrustProviderList List for ${signer.pubKey}")
+                Log.d("AccountRegisterObservers") { "TrustProviderList List for ${signer.pubKey}" }
                 (noteState.note.event as? TrustProviderListEvent)?.let {
                     settings.updateTrustProviderListTo(it)
                 }

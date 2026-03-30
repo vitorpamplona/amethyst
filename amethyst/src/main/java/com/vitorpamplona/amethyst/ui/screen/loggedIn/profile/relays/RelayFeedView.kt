@@ -28,18 +28,20 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.RelayCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.SettingsCategory
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
+import kotlinx.coroutines.launch
 
 @Composable
 fun RelayFeedView(
@@ -94,13 +96,16 @@ private fun RenderRelayRow(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val clipboardManager = LocalClipboardManager.current
+    val clipboardManager = LocalClipboard.current
+    val scope = rememberCoroutineScope()
     RelayCompose(
         relay,
         accountViewModel = accountViewModel,
         onAddRelay = {
-            clipboardManager.setText(AnnotatedString(relay.url.url))
-            nav.nav(Route.EditRelays)
+            scope.launch {
+                clipboardManager.setText(relay.url.url)
+                nav.nav(Route.EditRelays)
+            }
         },
         onRemoveRelay = {
             nav.nav(Route.EditRelays)

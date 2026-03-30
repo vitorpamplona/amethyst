@@ -26,7 +26,7 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.replace
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.queryCountSuspend
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.count
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -99,7 +99,7 @@ abstract class BasicRelaySetupInfoModel : ViewModel() {
 
             filters.forEach { countFilter ->
                 viewModelScope.launch(Dispatchers.IO) {
-                    val result = client.queryCountSuspend(item.relay, countFilter.filter)
+                    val result = client.count(item.relay, countFilter.filter)
                     if (result != null) {
                         _countResults.update { currentMap ->
                             val current = currentMap[item.relay] ?: RelayCountResult()

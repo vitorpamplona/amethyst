@@ -40,7 +40,7 @@ class SearchRelayListViewModel : BasicRelaySetupInfoModel() {
     override fun countFilters(relayUrl: NormalizedRelayUrl): List<CountFilter> =
         listOf(
             CountFilter(
-                label = R.string.events,
+                label = R.string.searchable_events,
                 filter = Filter(),
             ),
         )

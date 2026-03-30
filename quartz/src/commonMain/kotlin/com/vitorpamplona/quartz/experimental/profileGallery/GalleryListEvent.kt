@@ -38,6 +38,7 @@ class GalleryListEvent(
     content: String,
     sig: HexKey,
 ) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+    @Suppress("DEPRECATION")
     companion object {
         const val KIND = 10011
         const val ALT = "Profile Gallery"

@@ -33,9 +33,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Forward
+import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.Forward
-import androidx.compose.material.icons.filled.InsertDriveFile
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -92,7 +92,7 @@ fun ChatFileAttachment(
 
     // Auto-decrypt images
     LaunchedEffect(url) {
-        if (keyBytes != null && nonce != null && url != null) {
+        if (keyBytes != null && nonce != null) {
             isLoading = true
             try {
                 val bytes = EncryptedMediaService.downloadAndDecrypt(url, keyBytes, nonce)
@@ -191,7 +191,7 @@ fun ChatFileAttachment(
                         // Non-image file
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
-                                Icons.Default.InsertDriveFile,
+                                Icons.AutoMirrored.Filled.InsertDriveFile,
                                 contentDescription = "File",
                                 modifier = Modifier.size(32.dp),
                             )
@@ -237,7 +237,7 @@ fun ChatFileAttachment(
                 DropdownMenuItem(
                     text = { Text("Forward") },
                     leadingIcon = {
-                        Icon(Icons.Default.Forward, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Icon(Icons.AutoMirrored.Filled.Forward, contentDescription = null, modifier = Modifier.size(18.dp))
                     },
                     onClick = {
                         showContextMenu = false

@@ -169,18 +169,17 @@ fun GalleryContentView(
     accountViewModel: AccountViewModel,
 ) {
     AutoNonlazyGrid(contentList.size, modifier = Modifier.fillMaxSize()) { contentIndex ->
-        when (val content = contentList[contentIndex]) {
-            is MediaUrlContent -> {
-                val sensitivityReason =
-                    when (content) {
-                        is MediaUrlVideo -> content.contentWarning
-                        is MediaUrlImage -> content.contentWarning
-                        else -> null
-                    }
-                SensitivityWarning(sensitivityReason, accountViewModel) {
-                    UrlImageView(content, accountViewModel)
-                }
+        val content = contentList[contentIndex]
+
+        val sensitivityReason =
+            when (content) {
+                is MediaUrlVideo -> content.contentWarning
+                is MediaUrlImage -> content.contentWarning
+                else -> null
             }
+
+        SensitivityWarning(sensitivityReason, accountViewModel) {
+            UrlImageView(content, accountViewModel)
         }
     }
 }

@@ -155,6 +155,7 @@ class BookmarkGroupViewModel(
         )
     }
 
+    @Suppress("UNCHECKED_CAST")
     class Initializer(
         val account: Account,
         val bookmarkGroupIdentifier: String,

@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.relay.client.auth
 
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.AuthMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
@@ -53,7 +53,7 @@ class RelayAuthenticator(
     private val authStatus = mutableMapOf<NormalizedRelayUrl, RelayAuthStatus>()
 
     private val clientListener =
-        object : IRelayClientListener {
+        object : RelayConnectionListener {
             override fun onIncomingMessage(
                 relay: IRelayClient,
                 msgStr: String,
@@ -95,7 +95,7 @@ class RelayAuthenticator(
     ) {
         // if this is the OK of an auth event, renew all subscriptions and resend all outgoing events.
         if (authStatus[relay.url]?.checkAuthResults(msg.eventId, msg.success) == true) {
-            client.renewFilters(relay)
+            client.syncFilters(relay)
         }
     }
 
@@ -103,12 +103,12 @@ class RelayAuthenticator(
 
     init {
         Log.d("RelayAuthenticator", "Init, Subscribe")
-        client.subscribe(clientListener)
+        client.addConnectionListener(clientListener)
     }
 
     fun destroy() {
         // makes sure to run
         Log.d("RelayAuthenticator", "Destroy, Unsubscribe")
-        client.unsubscribe(clientListener)
+        client.removeConnectionListener(clientListener)
     }
 }

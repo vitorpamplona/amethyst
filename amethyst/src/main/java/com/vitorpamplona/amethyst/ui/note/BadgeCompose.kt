@@ -66,71 +66,67 @@ fun BadgeCompose(
 
     val context = LocalContext.current.applicationContext
 
-    if (note == null) {
-        BlankNote(Modifier)
-    } else {
-        val backgroundColor =
-            calculateBackgroundColor(
-                createdAt = likeSetCard.createdAt(),
-                routeForLastRead = routeForLastRead,
-                accountViewModel = accountViewModel,
-            )
+    val backgroundColor =
+        calculateBackgroundColor(
+            createdAt = likeSetCard.createdAt(),
+            routeForLastRead = routeForLastRead,
+            accountViewModel = accountViewModel,
+        )
 
-        Column(
+    Column(
+        modifier =
+            Modifier
+                .background(backgroundColor.value)
+                .clickable(
+                    onClick = {
+                        routeFor(
+                            note,
+                            accountViewModel.account,
+                        )?.let { nav.nav(it) }
+                    },
+                ),
+    ) {
+        Row(
             modifier =
-                Modifier
-                    .background(backgroundColor.value)
-                    .clickable(
-                        onClick = {
-                            routeFor(
-                                note,
-                                accountViewModel.account,
-                            )?.let { nav.nav(it) }
-                        },
-                    ),
+                Modifier.padding(
+                    start = if (!isInnerNote) 12.dp else 0.dp,
+                    end = if (!isInnerNote) 12.dp else 0.dp,
+                    top = 10.dp,
+                ),
         ) {
-            Row(
-                modifier =
-                    Modifier.padding(
-                        start = if (!isInnerNote) 12.dp else 0.dp,
-                        end = if (!isInnerNote) 12.dp else 0.dp,
-                        top = 10.dp,
-                    ),
-            ) {
-                // Draws the like picture outside the boosted card.
-                if (!isInnerNote) {
-                    Box(
-                        modifier = Modifier.width(55.dp).padding(0.dp),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.MilitaryTech,
-                            null,
-                            modifier = Modifier.size(25.dp).align(Alignment.TopEnd),
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                    }
+            // Draws the like picture outside the boosted card.
+            if (!isInnerNote) {
+                Box(
+                    modifier = Modifier.width(55.dp).padding(0.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.MilitaryTech,
+                        null,
+                        modifier = Modifier.size(25.dp).align(Alignment.TopEnd),
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            }
+
+            Column(modifier = Modifier.padding(start = if (!isInnerNote) 10.dp else 0.dp)) {
+                Row {
+                    Text(
+                        stringRes(R.string.new_badge_award_notif),
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(bottom = 5.dp).weight(1f),
+                    )
+
+                    Text(
+                        timeAgo(note.createdAt(), context = context),
+                        color = MaterialTheme.colorScheme.placeholderText,
+                        maxLines = 1,
+                    )
+
+                    MoreOptionsButton(note, null, accountViewModel, nav)
                 }
 
-                Column(modifier = Modifier.padding(start = if (!isInnerNote) 10.dp else 0.dp)) {
-                    Row {
-                        Text(
-                            stringRes(R.string.new_badge_award_notif),
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(bottom = 5.dp).weight(1f),
-                        )
-
-                        Text(
-                            timeAgo(note.createdAt(), context = context),
-                            color = MaterialTheme.colorScheme.placeholderText,
-                            maxLines = 1,
-                        )
-
-                        MoreOptionsButton(note, null, accountViewModel, nav)
-                    }
-
-                    note.replyTo?.firstOrNull()?.let {
-                        BadgeDisplay(baseNote = it, accountViewModel)
-                    }
+                note.replyTo?.firstOrNull()?.let {
+                    BadgeDisplay(baseNote = it, accountViewModel)
                 }
             }
         }

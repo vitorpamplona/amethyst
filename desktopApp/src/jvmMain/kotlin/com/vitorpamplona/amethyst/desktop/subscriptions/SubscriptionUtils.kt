@@ -25,7 +25,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.desktop.network.RelayConnectionManager
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
@@ -80,7 +80,7 @@ fun rememberSubscription(
                     filters = cfg.filters,
                     relays = cfg.relays,
                     listener =
-                        object : IRequestListener {
+                        object : SubscriptionListener {
                             override fun onEvent(
                                 event: Event,
                                 isLive: Boolean,

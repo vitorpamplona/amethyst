@@ -67,14 +67,14 @@ object PlaybackServiceClient {
                 .setConnectionHints(bundle)
                 .buildAsync()
 
-        Log.d("PlaybackService", "Preparing Controller $id $videoUri")
+        Log.d("PlaybackService") { "Preparing Controller $id $videoUri" }
 
         controllerFuture.addListener(
             {
                 try {
                     val controller = controllerFuture.get(5, TimeUnit.SECONDS)
 
-                    Log.d("PlaybackService", "Controller Ready $id $videoUri")
+                    Log.d("PlaybackService") { "Controller Ready $id $videoUri" }
 
                     // checks if the player is still active before engaging further
                     trySend(
@@ -92,11 +92,11 @@ object PlaybackServiceClient {
         )
 
         awaitClose {
-            Log.d("PlaybackService", "Releasing Controller $id $videoUri")
+            Log.d("PlaybackService") { "Releasing Controller $id $videoUri" }
             try {
                 MediaController.releaseFuture(controllerFuture)
             } catch (e: Exception) {
-                Log.e("Playback Client", "Failed to release Playback Client for $id $videoUri ${e.message}")
+                Log.e("Playback Client") { "Failed to release Playback Client for $id $videoUri ${e.message}" }
             }
         }
     }

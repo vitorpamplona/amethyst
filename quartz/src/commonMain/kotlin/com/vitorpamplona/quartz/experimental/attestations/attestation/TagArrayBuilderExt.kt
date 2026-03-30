@@ -25,8 +25,6 @@ import com.vitorpamplona.quartz.experimental.attestations.attestation.tags.Reque
 import com.vitorpamplona.quartz.experimental.attestations.attestation.tags.StatusTag
 import com.vitorpamplona.quartz.experimental.attestations.attestation.tags.ValidFromTag
 import com.vitorpamplona.quartz.experimental.attestations.attestation.tags.ValidToTag
-import com.vitorpamplona.quartz.experimental.attestations.attestation.tags.Validity
-import com.vitorpamplona.quartz.experimental.attestations.attestation.tags.ValidityTag
 import com.vitorpamplona.quartz.experimental.attestations.request.AttestationRequestEvent
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
@@ -35,8 +33,6 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
-
-fun TagArrayBuilder<AttestationEvent>.validity(validity: Validity) = addUnique(ValidityTag.assemble(validity))
 
 fun TagArrayBuilder<AttestationEvent>.status(status: AttestationStatus) = addUnique(StatusTag.assemble(status))
 

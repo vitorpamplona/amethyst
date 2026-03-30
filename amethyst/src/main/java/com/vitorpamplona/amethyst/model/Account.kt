@@ -56,6 +56,7 @@ import com.vitorpamplona.amethyst.model.nip17Dms.DmRelayListState
 import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcSignerState
 import com.vitorpamplona.amethyst.model.nip51Lists.BookmarkListState
 import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
+import com.vitorpamplona.amethyst.model.nip51Lists.PinListState
 import com.vitorpamplona.amethyst.model.nip51Lists.blockPeopleList.BlockPeopleListState
 import com.vitorpamplona.amethyst.model.nip51Lists.blockedRelays.BlockedRelayListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.blockedRelays.BlockedRelayListState
@@ -81,6 +82,7 @@ import com.vitorpamplona.amethyst.model.nip51Lists.searchRelays.SearchRelayListD
 import com.vitorpamplona.amethyst.model.nip51Lists.searchRelays.SearchRelayListState
 import com.vitorpamplona.amethyst.model.nip51Lists.trustedRelays.TrustedRelayListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.trustedRelays.TrustedRelayListState
+import com.vitorpamplona.amethyst.model.nip62Vanish.VanishRequestsState
 import com.vitorpamplona.amethyst.model.nip65RelayList.Nip65RelayListState
 import com.vitorpamplona.amethyst.model.nip72Communities.CommunityListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip72Communities.CommunityListState
@@ -134,7 +136,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.downloadFirstEvent
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchFirst
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
@@ -143,7 +145,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 import com.vitorpamplona.quartz.nip01Core.tags.references.references
-import com.vitorpamplona.quartz.nip03Timestamp.OtsResolverBuilder
+import com.vitorpamplona.quartz.nip03Timestamp.OtsResolver
 import com.vitorpamplona.quartz.nip04Dm.PrivateDMCache
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
@@ -185,6 +187,7 @@ import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiser
 import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayInfo
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
@@ -197,7 +200,7 @@ import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprov
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
-import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.NIP90ContentDiscoveryRequestEvent
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nip92IMeta.imetas
 import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
@@ -213,6 +216,7 @@ import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
+import com.vitorpamplona.quartz.nipB0WebBookmarks.WebBookmarkEvent
 import com.vitorpamplona.quartz.utils.DualCase
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.containsAny
@@ -234,9 +238,9 @@ import kotlin.coroutines.cancellation.CancellationException
 class Account(
     val settings: AccountSettings = AccountSettings(KeyPair()),
     override val signer: NostrSigner,
-    val geolocationFlow: StateFlow<LocationState.LocationResult>,
-    val nwcFilterAssembler: NWCPaymentFilterAssembler,
-    val otsResolverBuilder: OtsResolverBuilder,
+    val geolocationFlow: () -> StateFlow<LocationState.LocationResult>,
+    val nwcFilterAssembler: () -> NWCPaymentFilterAssembler,
+    val otsResolverBuilder: () -> OtsResolver,
     val cache: LocalCache,
     val client: INostrClient,
     val scope: CoroutineScope,
@@ -317,7 +321,10 @@ class Account(
 
     val labeledBookmarkLists = LabeledBookmarkListsState(signer, cache, scope)
     val bookmarkState = BookmarkListState(signer, cache, scope)
+    val pinState = PinListState(signer, cache, scope)
     val emoji = EmojiPackState(signer, cache, scope)
+
+    val vanish = VanishRequestsState(signer, cache, client, scope)
 
     val appSpecific = AppSpecificState(signer, cache, scope, settings)
 
@@ -597,7 +604,7 @@ class Account(
         onResponse: (Response?) -> Unit,
     ) {
         val (event, relay) = nip47SignerState.sendNwcRequest(request, onResponse)
-        client.send(event, setOf(relay))
+        client.publish(event, setOf(relay))
     }
 
     suspend fun sendZapPaymentRequestFor(
@@ -606,7 +613,7 @@ class Account(
         onResponse: (Response?) -> Unit,
     ) {
         val (event, relay) = nip47SignerState.sendZapPaymentRequestFor(bolt11, zappedNote, onResponse)
-        client.send(event, setOf(relay))
+        client.publish(event, setOf(relay))
     }
 
     suspend fun createZapRequestFor(
@@ -655,7 +662,7 @@ class Account(
                     myRelayList.addAll(it.relays)
                 }
 
-                client.send(deletionEvent, myRelayList)
+                client.publish(deletionEvent, myRelayList)
                 cache.justConsumeMyOwnEvent(deletionEvent)
             }
         }
@@ -669,7 +676,7 @@ class Account(
         if (event.pubKey != signer.pubKey) return
 
         val deletionEvent = signer.sign(DeletionEvent.build(listOf(event)))
-        client.send(deletionEvent, outboxRelays.flow.value + additionalRelays)
+        client.publish(deletionEvent, outboxRelays.flow.value + additionalRelays)
         cache.justConsumeMyOwnEvent(deletionEvent)
     }
 
@@ -692,7 +699,7 @@ class Account(
 
     suspend fun boost(note: Note) {
         RepostAction.repost(note, signer)?.let { event ->
-            client.send(event, computeMyReactionToNote(note, event))
+            client.publish(event, computeMyReactionToNote(note, event))
             cache.justConsumeMyOwnEvent(event)
         }
     }
@@ -714,7 +721,7 @@ class Account(
         event: Event,
         relays: Set<NormalizedRelayUrl>,
     ) {
-        client.send(event, relays)
+        client.publish(event, relays)
         cache.justConsumeMyOwnEvent(event)
     }
 
@@ -930,7 +937,7 @@ class Account(
                 // download the event and send it.
                 noteEvent.host?.let { host ->
                     client
-                        .downloadFirstEvent(
+                        .fetchFirst(
                             filters =
                                 note.relays.associateWith { relay ->
                                     listOf(
@@ -943,11 +950,11 @@ class Account(
                                 },
                         )?.let { downloadedEvent ->
                             val toRelays = computeRelayListToBroadcast(downloadedEvent)
-                            client.send(downloadedEvent, toRelays)
+                            client.publish(downloadedEvent, toRelays)
                         }
                 }
             } else {
-                client.send(noteEvent, computeRelayListToBroadcast(note))
+                client.publish(noteEvent, computeRelayListToBroadcast(note))
             }
         }
     }
@@ -995,7 +1002,7 @@ class Account(
         val relays = outboxRelays.flow.value + commEvent.relayUrls() + community.relays + (post.author?.inboxRelays() ?: emptyList())
 
         cache.justConsumeMyOwnEvent(signedEvent)
-        client.send(signedEvent, relays)
+        client.publish(signedEvent, relays)
     }
 
     fun sendAutomatic(events: List<Event>) = events.forEach { sendAutomatic(it) }
@@ -1003,24 +1010,49 @@ class Account(
     fun sendAutomatic(event: Event?) {
         if (event == null) return
         cache.justConsumeMyOwnEvent(event)
-        client.send(event, computeRelayListToBroadcast(event))
+        client.publish(event, computeRelayListToBroadcast(event))
+    }
+
+    suspend fun sendWebBookmark(
+        url: String,
+        title: String?,
+        description: String,
+        hashtags: List<String> = emptyList(),
+    ) {
+        if (!isWriteable()) return
+
+        val template = WebBookmarkEvent.build(url, title, description, tags = hashtags)
+        val signedEvent = signer.sign(template)
+
+        cache.justConsumeMyOwnEvent(signedEvent)
+        client.publish(signedEvent, computeRelayListToBroadcast(signedEvent))
+    }
+
+    suspend fun deleteWebBookmark(event: WebBookmarkEvent) {
+        if (!isWriteable()) return
+
+        val template = DeletionEvent.build(listOf(event))
+        val signedEvent = signer.sign(template)
+
+        cache.justConsumeMyOwnEvent(signedEvent)
+        client.publish(signedEvent, computeRelayListToBroadcast(signedEvent))
     }
 
     fun sendMyPublicAndPrivateOutbox(event: Event?) {
         if (event == null) return
         cache.justConsumeMyOwnEvent(event)
-        client.send(event, outboxRelays.flow.value)
+        client.publish(event, outboxRelays.flow.value)
     }
 
     fun sendMyPublicAndPrivateOutbox(events: List<Event>) {
         events.forEach {
-            client.send(it, outboxRelays.flow.value)
+            client.publish(it, outboxRelays.flow.value)
             cache.justConsumeMyOwnEvent(it)
         }
     }
 
     fun sendLiterallyEverywhere(event: Event) {
-        client.send(event, followPlusAllMineWithIndex.flow.value + client.availableRelaysFlow().value)
+        client.publish(event, followPlusAllMineWithIndex.flow.value + client.availableRelaysFlow().value)
         cache.justConsumeMyOwnEvent(event)
     }
 
@@ -1037,7 +1069,7 @@ class Account(
 
             cache.justConsumeMyOwnEvent(signedEvent)
 
-            client.send(signedEvent, computeRelayListToBroadcast(signedEvent))
+            client.publish(signedEvent, computeRelayListToBroadcast(signedEvent))
         }
     }
 
@@ -1073,10 +1105,10 @@ class Account(
 
         val relayList = computeRelayListToBroadcast(signedEvent)
 
-        client.send(data, relayList = relayList)
+        client.publish(data, relayList = relayList)
         cache.justConsumeMyOwnEvent(data)
 
-        client.send(signedEvent, relayList = relayList)
+        client.publish(signedEvent, relayList = relayList)
         cache.justConsumeMyOwnEvent(signedEvent)
 
         return cache.getNoteIfExists(signedEvent.id)
@@ -1097,8 +1129,8 @@ class Account(
         signedEvent: FileStorageHeaderEvent,
         relayList: Set<NormalizedRelayUrl>,
     ) {
-        client.send(data, relayList = relayList)
-        client.send(signedEvent, relayList = relayList)
+        client.publish(data, relayList = relayList)
+        client.publish(signedEvent, relayList = relayList)
     }
 
     fun sendHeader(
@@ -1106,7 +1138,7 @@ class Account(
         relayList: Set<NormalizedRelayUrl>,
         onReady: (Note) -> Unit,
     ) {
-        client.send(signedEvent, relayList = relayList)
+        client.publish(signedEvent, relayList = relayList)
         cache.justConsumeMyOwnEvent(signedEvent)
 
         cache.getNoteIfExists(signedEvent.id)?.let { onReady(it) }
@@ -1253,7 +1285,7 @@ class Account(
     ) {
         val event = signer.sign(template)
         cache.justConsumeMyOwnEvent(event)
-        client.send(event, relayList)
+        client.publish(event, relayList)
     }
 
     suspend fun <T : Event> signAndSendPrivatelyOrBroadcast(
@@ -1264,9 +1296,9 @@ class Account(
         cache.justConsumeMyOwnEvent(event)
         val relays = relayList(event)
         if (!relays.isNullOrEmpty()) {
-            client.send(event, relays.toSet())
+            client.publish(event, relays.toSet())
         } else {
-            client.send(event, computeRelayListToBroadcast(event))
+            client.publish(event, computeRelayListToBroadcast(event))
         }
         return event
     }
@@ -1286,9 +1318,9 @@ class Account(
 
         val relayList = computeRelayListToBroadcast(note)
 
-        client.send(event, relayList)
+        client.publish(event, relayList)
 
-        broadcast.forEach { client.send(it, relayList) }
+        broadcast.forEach { client.publish(it, relayList) }
 
         return event
     }
@@ -1310,9 +1342,9 @@ class Account(
 
         val relayList = computeRelayListToBroadcast(note)
 
-        client.send(event, relayList)
+        client.publish(event, relayList)
 
-        broadcast.forEach { client.send(it, relayList) }
+        broadcast.forEach { client.publish(it, relayList) }
 
         return event
     }
@@ -1344,7 +1376,7 @@ class Account(
         extraNotesToBroadcast: List<Event>,
     ) {
         cache.justConsumeMyOwnEvent(event)
-        extraNotesToBroadcast.forEach { client.send(it, relays) }
+        extraNotesToBroadcast.forEach { client.publish(it, relays) }
     }
 
     suspend fun createAndSendDraftIgnoreErrors(
@@ -1376,9 +1408,9 @@ class Account(
 
         val relayList = (privateStorageRelayList.flow.value + localRelayList.flow.value + extraRelays).toSet()
         if (relayList.isNotEmpty()) {
-            client.send(draftEvent, relayList)
+            client.publish(draftEvent, relayList)
             broadcast.forEach {
-                client.send(it, relayList.toSet())
+                client.publish(it, relayList.toSet())
             }
         }
     }
@@ -1405,8 +1437,8 @@ class Account(
         cache.justConsumeMyOwnEvent(deletionEvent)
 
         if (relayList.isNotEmpty()) {
-            client.send(deletedDraft, relayList)
-            client.send(deletionEvent, relayList)
+            client.publish(deletedDraft, relayList)
+            client.publish(deletionEvent, relayList)
         }
     }
 
@@ -1429,9 +1461,9 @@ class Account(
 
         val relayList = privateStorageRelayList.flow.value + localRelayList.flow.value
         if (relayList.isNotEmpty()) {
-            client.send(event, relayList + noteRelays)
+            client.publish(event, relayList + noteRelays)
         } else {
-            client.send(event, outboxRelays.flow.value + noteRelays)
+            client.publish(event, outboxRelays.flow.value + noteRelays)
         }
         cache.justConsumeMyOwnEvent(event)
     }
@@ -1455,9 +1487,9 @@ class Account(
 
         val relayList = privateStorageRelayList.flow.value + localRelayList.flow.value
         if (relayList.isNotEmpty()) {
-            client.send(event, relayList + noteRelays)
+            client.publish(event, relayList + noteRelays)
         } else {
-            client.send(event, outboxRelays.flow.value + noteRelays)
+            client.publish(event, outboxRelays.flow.value + noteRelays)
         }
         cache.justConsumeMyOwnEvent(event)
     }
@@ -1518,9 +1550,9 @@ class Account(
         } else {
             val it = signer.sign(template)
             cache.justConsumeMyOwnEvent(it)
-            client.send(it, relayList = relayList)
+            client.publish(it, relayList = relayList)
 
-            mapEntitiesToNotes(quotes).forEach { it.event?.let { client.send(it, relayList = relayList) } }
+            mapEntitiesToNotes(quotes).forEach { it.event?.let { client.publish(it, relayList = relayList) } }
         }
     }
 
@@ -1563,9 +1595,9 @@ class Account(
         } else {
             val it = signer.sign(template)
             cache.justConsumeMyOwnEvent(it)
-            client.send(it, relayList = relayList)
+            client.publish(it, relayList = relayList)
 
-            broadcastNotes.forEach { it.event?.let { client.send(it, relayList = relayList) } }
+            broadcastNotes.forEach { it.event?.let { client.publish(it, relayList = relayList) } }
         }
     }
 
@@ -1590,8 +1622,8 @@ class Account(
         val newEvent = signer.sign(template)
         cache.justConsumeMyOwnEvent(newEvent)
 
-        client.send(newEvent, relayList = relays)
-        client.send(bountyEvent, relayList = relays)
+        client.publish(newEvent, relayList = relays)
+        client.publish(bountyEvent, relayList = relays)
     }
 
     suspend fun sendEdit(
@@ -1618,9 +1650,9 @@ class Account(
         val note = cache.getOrCreateNote(event.id)
         val relayList = computeRelayListToBroadcast(note)
 
-        client.send(event, relayList = relayList)
+        client.publish(event, relayList = relayList)
 
-        broadcast.forEach { client.send(it, relayList) }
+        broadcast.forEach { client.publish(it, relayList) }
     }
 
     override suspend fun sendNip04PrivateMessage(eventTemplate: EventTemplate<PrivateDmEvent>) {
@@ -1631,7 +1663,7 @@ class Account(
         val destinationRelays = recipient?.let { cache.getOrCreateUser(it).dmInboxRelays() } ?: emptyList()
 
         cache.justConsumeMyOwnEvent(newEvent)
-        client.send(newEvent, outboxRelays.flow.value + destinationRelays)
+        client.publish(newEvent, outboxRelays.flow.value + destinationRelays)
     }
 
     override suspend fun sendNip17EncryptedFile(template: EventTemplate<ChatMessageEncryptedFileHeaderEvent>) {
@@ -1649,7 +1681,7 @@ class Account(
     override suspend fun sendGiftWraps(wraps: List<GiftWrapEvent>) {
         wraps.forEach { wrap ->
             val relayList = computeRelayListToBroadcast(wrap)
-            client.send(wrap, relayList)
+            client.publish(wrap, relayList)
         }
     }
 
@@ -1670,7 +1702,7 @@ class Account(
             }
 
             val relayList = computeRelayListToBroadcast(wrap)
-            client.send(wrap, relayList)
+            client.publish(wrap, relayList)
         }
     }
 
@@ -1783,6 +1815,43 @@ class Account(
         cache.justConsumeMyOwnEvent(event)
     }
 
+    suspend fun addPin(note: Note) {
+        if (!isWriteable() || note.isDraft()) return
+
+        sendMyPublicAndPrivateOutbox(pinState.addPin(note))
+    }
+
+    suspend fun removePin(note: Note) {
+        if (!isWriteable() || note.isDraft()) return
+
+        val event = pinState.removePin(note)
+        if (event != null) {
+            sendMyPublicAndPrivateOutbox(event)
+        }
+    }
+
+    suspend fun createAddPinEvent(note: Note): Pair<Event, Set<NormalizedRelayUrl>>? {
+        if (!isWriteable() || note.isDraft()) return null
+
+        val event = pinState.addPin(note)
+        val relays = outboxRelays.flow.value
+
+        return event to relays
+    }
+
+    suspend fun createRemovePinEvent(note: Note): Pair<Event, Set<NormalizedRelayUrl>>? {
+        if (!isWriteable() || note.isDraft()) return null
+
+        val event = pinState.removePin(note) ?: return null
+        val relays = outboxRelays.flow.value
+
+        return event to relays
+    }
+
+    fun consumePinEvent(event: Event) {
+        cache.justConsumeMyOwnEvent(event)
+    }
+
     suspend fun createAuthEvent(
         relay: NormalizedRelayUrl,
         challenge: String,
@@ -1812,7 +1881,7 @@ class Account(
         onReady: (event: NIP90ContentDiscoveryRequestEvent) -> Unit,
     ) {
         val relays = nip65RelayList.inboxFlow.value.toSet()
-        val request = NIP90ContentDiscoveryRequestEvent.create(dvmPublicKey.pubkeyHex, signer.pubKey, relays, signer)
+        val request = signer.sign<NIP90ContentDiscoveryRequestEvent>(NIP90ContentDiscoveryRequestEvent.build(dvmPublicKey.pubkeyHex, signer.pubKey, relays))
 
         val relayList =
             dvmPublicKey.inboxRelays()?.toSet()?.ifEmpty { null }
@@ -1821,7 +1890,7 @@ class Account(
         cache.justConsumeMyOwnEvent(request)
         onReady(request)
         delay(100)
-        client.send(request, relayList)
+        client.publish(request, relayList)
     }
 
     fun cachedDecryptContent(note: Note): String? = cachedDecryptContent(note.event)
@@ -1978,6 +2047,31 @@ class Account(
     suspend fun unfollowRelayFeed(url: NormalizedRelayUrl) = sendMyPublicAndPrivateOutbox(relayFeedsList.removeRelay(url))
 
     suspend fun saveBlockedRelayList(blockedRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(blockedRelayList.saveRelayList(blockedRelays))
+
+    suspend fun requestToVanish(
+        relays: List<NormalizedRelayUrl>,
+        reason: String,
+        createdAt: Long,
+    ) {
+        if (!isWriteable() || relays.isEmpty()) return
+
+        val template = RequestToVanishEvent.build(relays, reason, createdAt)
+        val signedEvent = signer.sign(template)
+        cache.justConsumeMyOwnEvent(signedEvent)
+        client.publish(signedEvent, outboxRelays.flow.value + relays.toSet())
+    }
+
+    suspend fun requestToVanishFromEverywhere(
+        reason: String,
+        createdAt: Long,
+    ) {
+        if (!isWriteable()) return
+
+        val template = RequestToVanishEvent.buildVanishFromEverywhere(reason, createdAt)
+        val signedEvent = signer.sign(template)
+        cache.justConsumeMyOwnEvent(signedEvent)
+        client.publish(signedEvent, followPlusAllMineWithIndex.flow.value + client.availableRelaysFlow().value)
+    }
 
     suspend fun sendNip65RelayList(relays: List<AdvertisedRelayInfo>) = sendLiterallyEverywhere(nip65RelayList.saveRelayList(relays))
 

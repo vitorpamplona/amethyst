@@ -106,7 +106,7 @@ class HashtagListState(
 
     init {
         settings.backupHashtagList?.let { event ->
-            Log.d("AccountRegisterObservers", "Loading saved Hashtag list ${event.toJson()}")
+            Log.d("AccountRegisterObservers") { "Loading saved Hashtag list ${event.toJson()}" }
             @OptIn(DelicateCoroutinesApi::class)
             scope.launch(Dispatchers.IO) {
                 LocalCache.justConsumeMyOwnEvent(event)
@@ -116,7 +116,7 @@ class HashtagListState(
         scope.launch(Dispatchers.IO) {
             Log.d("AccountRegisterObservers", "Hashtag List Collector Start")
             getHashtagListFlow().collect {
-                Log.d("AccountRegisterObservers", "Hashtag List for ${signer.pubKey}")
+                Log.d("AccountRegisterObservers") { "Hashtag List for ${signer.pubKey}" }
                 (it.note.event as? HashtagListEvent)?.let {
                     settings.updateHashtagListTo(it)
                 }

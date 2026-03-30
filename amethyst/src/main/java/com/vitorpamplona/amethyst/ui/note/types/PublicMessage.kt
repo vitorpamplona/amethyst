@@ -43,8 +43,8 @@ import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.HalfHalfTopPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.quartz.experimental.publicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
+import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
 
 @Composable
 fun RenderPublicMessage(

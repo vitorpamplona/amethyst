@@ -19,11 +19,10 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 package com.vitorpamplona.quartz.nip01Core.relay
-
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -50,7 +49,7 @@ class NostrClientManualSubTest : BaseNostrClientTest() {
             val mySubId = "test-sub-id-1"
 
             val listener =
-                object : IRequestListener {
+                object : SubscriptionListener {
                     override fun onEvent(
                         event: Event,
                         isLive: Boolean,
@@ -79,7 +78,7 @@ class NostrClientManualSubTest : BaseNostrClientTest() {
                         ),
                 )
 
-            client.openReqSubscription(mySubId, filters, listener)
+            client.subscribe(mySubId, filters, listener)
 
             withTimeoutOrNull(10000) {
                 while (events.size < 101) {
@@ -90,7 +89,7 @@ class NostrClientManualSubTest : BaseNostrClientTest() {
 
             resultChannel.close()
 
-            client.close(mySubId)
+            client.unsubscribe(mySubId)
             client.disconnect()
 
             appScope.cancel()

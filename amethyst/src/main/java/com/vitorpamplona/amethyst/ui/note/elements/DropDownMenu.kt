@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.note.elements
 
 import android.content.Intent
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.PlaylistAdd
 import androidx.compose.material.icons.outlined.Bookmark
 import androidx.compose.material.icons.outlined.BookmarkAdd
 import androidx.compose.material.icons.outlined.BookmarkRemove
@@ -33,7 +34,7 @@ import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.LockOpen
 import androidx.compose.material.icons.outlined.PersonAdd
 import androidx.compose.material.icons.outlined.PersonRemove
-import androidx.compose.material.icons.outlined.PlaylistAdd
+import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material.icons.outlined.Report
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Share
@@ -45,10 +46,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.AnnotatedString
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AddressableNote
@@ -59,6 +58,7 @@ import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection
+import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeEditDraftTo
@@ -110,6 +110,7 @@ data class DropDownParams(
     val isFollowingAuthor: Boolean,
     val isPrivateBookmarkNote: Boolean,
     val isPublicBookmarkNote: Boolean,
+    val isPinnedNote: Boolean,
     val isLoggedUser: Boolean,
     val isSensitive: Boolean,
     val showSensitiveContent: Boolean?,
@@ -130,6 +131,7 @@ fun NoteDropDownMenu(
             isFollowingAuthor = false,
             isPrivateBookmarkNote = false,
             isPublicBookmarkNote = false,
+            isPinnedNote = false,
             isLoggedUser = false,
             isSensitive = false,
             showSensitiveContent = null,
@@ -164,7 +166,7 @@ fun NoteDropDownMenu(
         title = stringRes(R.string.note_actions_dialog_title),
         onDismiss = onDismiss,
     ) {
-        val clipboardManager = LocalClipboardManager.current
+        val clipboardManager = LocalClipboard.current
         val actContext = LocalContext.current
         val scope = rememberCoroutineScope()
 
@@ -183,7 +185,7 @@ fun NoteDropDownMenu(
                     onDismiss()
                 }
             }
-            M3ActionRow(icon = Icons.Outlined.PlaylistAdd, text = stringRes(R.string.follow_set_add_author_from_note_action)) {
+            M3ActionRow(icon = Icons.AutoMirrored.Outlined.PlaylistAdd, text = stringRes(R.string.follow_set_add_author_from_note_action)) {
                 val authorHexKey = note.author?.pubkeyHex ?: return@M3ActionRow
                 nav.nav(Route.PeopleListManagement(authorHexKey))
                 onDismiss()
@@ -194,20 +196,24 @@ fun NoteDropDownMenu(
         M3ActionSection {
             M3ActionRow(icon = Icons.Outlined.ContentCopy, text = stringRes(R.string.copy_text)) {
                 val lastNoteVersion = (editState?.value as? GenericLoadable.Loaded)?.loaded?.modificationToShow?.value ?: note
-                accountViewModel.decrypt(lastNoteVersion) { clipboardManager.setText(AnnotatedString(it)) }
+                accountViewModel.decrypt(lastNoteVersion) {
+                    scope.launch {
+                        clipboardManager.setText(it)
+                    }
+                }
                 onDismiss()
             }
             M3ActionRow(icon = Icons.Outlined.ContentCopy, text = stringRes(R.string.copy_user_pubkey)) {
                 note.author?.let {
                     scope.launch(Dispatchers.IO) {
-                        clipboardManager.setText(AnnotatedString("nostr:${it.pubkeyNpub()}"))
+                        clipboardManager.setText("nostr:${it.pubkeyNpub()}")
                         onDismiss()
                     }
                 }
             }
             M3ActionRow(icon = Icons.Outlined.ContentCopy, text = stringRes(R.string.copy_note_id)) {
                 scope.launch(Dispatchers.IO) {
-                    clipboardManager.setText(AnnotatedString(note.toNostrUri()))
+                    clipboardManager.setText(note.toNostrUri())
                     onDismiss()
                 }
             }
@@ -220,7 +226,7 @@ fun NoteDropDownMenu(
                         putExtra(Intent.EXTRA_TITLE, stringRes(actContext, R.string.quick_action_share_browser_link))
                     }
                 val shareIntent = Intent.createChooser(sendIntent, stringRes(actContext, R.string.quick_action_share))
-                ContextCompat.startActivity(actContext, shareIntent, null)
+                actContext.startActivity(shareIntent)
                 onDismiss()
             }
         }
@@ -263,6 +269,19 @@ fun NoteDropDownMenu(
                 M3ActionRow(icon = Icons.Outlined.Schedule, text = stringRes(R.string.timestamp_it)) {
                     accountViewModel.timestamp(note)
                     onDismiss()
+                }
+            }
+            if (state.isLoggedUser) {
+                if (state.isPinnedNote) {
+                    M3ActionRow(icon = Icons.Outlined.PushPin, text = stringRes(R.string.unpin_from_profile)) {
+                        accountViewModel.removePin(note)
+                        onDismiss()
+                    }
+                } else {
+                    M3ActionRow(icon = Icons.Outlined.PushPin, text = stringRes(R.string.pin_to_profile)) {
+                        accountViewModel.addPin(note)
+                        onDismiss()
+                    }
                 }
             }
             val noteBookmarkType = if (note.event is LongTextNoteEvent) stringRes(R.string.article) else stringRes(R.string.post)
@@ -329,12 +348,14 @@ fun observeBookmarksFollowsAndAccount(
     combine(
         accountViewModel.account.kind3FollowList.flow,
         accountViewModel.account.bookmarkState.bookmarks,
+        accountViewModel.account.pinState.pinnedEventIdSet,
         accountViewModel.showSensitiveContent(),
-    ) { follows, bookmarks, showSensitiveContent ->
+    ) { follows, bookmarks, pinnedIds, showSensitiveContent ->
         DropDownParams(
             isFollowingAuthor = note.author?.pubkeyHex in follows.authors,
             isPrivateBookmarkNote = note in bookmarks.private,
             isPublicBookmarkNote = note in bookmarks.public,
+            isPinnedNote = note.idHex in pinnedIds,
             isLoggedUser = accountViewModel.isLoggedUser(note.author),
             isSensitive = note.event?.isSensitiveOrNSFW() ?: false,
             showSensitiveContent = showSensitiveContent,
@@ -345,6 +366,7 @@ fun observeBookmarksFollowsAndAccount(
                 isFollowingAuthor = note.author?.pubkeyHex?.let { accountViewModel.account.isFollowing(it) } ?: false,
                 isPrivateBookmarkNote = note in accountViewModel.account.bookmarkState.bookmarks.value.private,
                 isPublicBookmarkNote = note in accountViewModel.account.bookmarkState.bookmarks.value.public,
+                isPinnedNote = accountViewModel.account.pinState.isPinned(note),
                 isLoggedUser = accountViewModel.isLoggedUser(note.author),
                 isSensitive = note.event?.isSensitiveOrNSFW() ?: false,
                 showSensitiveContent = accountViewModel.showSensitiveContent().value,

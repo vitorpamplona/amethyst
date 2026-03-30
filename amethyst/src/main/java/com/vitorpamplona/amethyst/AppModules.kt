@@ -20,14 +20,15 @@
  */
 package com.vitorpamplona.amethyst
 
-import android.content.ContentResolver
 import android.content.Context
 import androidx.security.crypto.EncryptedSharedPreferences
 import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
 import com.vitorpamplona.amethyst.commons.model.NoteState
+import com.vitorpamplona.amethyst.commons.robohash.CachedRobohash
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.UiSettings
 import com.vitorpamplona.amethyst.model.accountsCache.AccountCacheState
 import com.vitorpamplona.amethyst.model.nip03Timestamp.IncomingOtsEventVerifier
 import com.vitorpamplona.amethyst.model.nip03Timestamp.TorAwareOkHttpOtsResolverBuilder
@@ -63,9 +64,11 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinder
 import com.vitorpamplona.amethyst.service.relayClient.speedLogger.RelaySpeedLogger
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.BlossomServerResolver
 import com.vitorpamplona.amethyst.service.uploads.nip95.Nip95CacheFactory
+import com.vitorpamplona.amethyst.ui.resourceCacheInit
 import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.screen.UiSettingsState
 import com.vitorpamplona.amethyst.ui.tor.TorManager
+import com.vitorpamplona.amethyst.ui.tor.TorSettings
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
@@ -87,6 +90,7 @@ import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -94,6 +98,7 @@ import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.transform
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import java.io.File
 
 class AppModules(
@@ -109,31 +114,54 @@ class AppModules(
 
     val applicationIOScope = CoroutineScope(Dispatchers.IO + SupervisorJob() + exceptionHandler)
 
+    // Pre-load both preference DataStores in parallel on IO threads.
+    // Both constructors use runBlocking internally, so starting them concurrently
+    // reduces total blocking time from (torPrefs + uiPrefs) to ~max(torPrefs, uiPrefs).
+    private val uiPrefsDeferred =
+        applicationIOScope.async {
+            val prefs = UiSharedPreferences.uiPreferences(appContext) ?: UiSettings()
+            UiSharedPreferences(prefs, appContext, applicationIOScope)
+        }
+
+    private val torPrefsDeferred =
+        applicationIOScope.async {
+            val prefs = TorSharedPreferences.torPreferences(appContext) ?: TorSettings()
+            TorSharedPreferences(prefs, appContext, applicationIOScope)
+        }
+
     // Blocking load of UI Preferences to avoid theme/language blinking
     val uiPrefs by lazy {
-        UiSharedPreferences(appContext, applicationIOScope)
+        Log.d("AppModules", "UiSharedPreferences Init")
+        runBlocking { uiPrefsDeferred.await() }
     }
 
     // Blocking load of Tor Settings to avoid connection leaks
     val torPrefs by lazy {
-        TorSharedPreferences(appContext, applicationIOScope)
+        Log.d("AppModules", "TorSharedPreferences Init")
+        runBlocking { torPrefsDeferred.await() }
     }
 
     // Namecoin ElectrumX server preferences (global, like Tor settings)
     val namecoinPrefs by lazy {
+        Log.d("AppModules", "NamecoinSharedPreferences Init")
         NamecoinSharedPreferences(appContext, applicationIOScope)
     }
 
     // OTS blockchain explorer preferences (global, like Tor settings)
     val otsPrefs by lazy {
+        Log.d("AppModules", "OtsSharedPreferences Init")
         OtsSharedPreferences(appContext, applicationIOScope)
     }
 
     // App services that should be run as soon as there are subscribers to their flows
-    val locationManager = LocationState(appContext, applicationIOScope)
+    val locationManager by lazy {
+        Log.d("AppModules", "LocationManager Init")
+        LocationState(appContext, applicationIOScope)
+    }
     val connManager = ConnectivityManager(appContext, applicationIOScope)
 
     val uiState by lazy {
+        Log.d("AppModules", "UiSettingsState Init")
         UiSettingsState(uiPrefs.value, connManager.isMobileOrFalse, applicationIOScope)
     }
 
@@ -158,40 +186,67 @@ class AppModules(
     // Offers easy methods to know when connections are happening through Tor or not
     val roleBasedHttpClientBuilder = RoleBasedHttpClientBuilder(okHttpClients, torPrefs.value)
 
-    // Custom fetcher that considers tor settings and avoids forwarding.
-    val nip05Fetcher = OkHttpNip05Fetcher(roleBasedHttpClientBuilder::okHttpClientForNip05)
+    val electrumXClient by lazy {
+        Log.d("AppModules", "ElectrumXClient Init")
+        val client =
+            ElectrumXClient(
+                socketFactory = { roleBasedHttpClientBuilder.socketFactoryForNip05() },
+            )
+        applicationIOScope.launch {
+            try {
+                val pinnedCerts = namecoinPrefs.loadPinnedCerts()
+                if (pinnedCerts.isNotEmpty()) {
+                    client.setDynamicCerts(pinnedCerts)
+                }
+            } catch (_: Exception) {
+                // Non-fatal — defaults will still work
+            }
+        }
+        client
+    }
 
-    val namecoinResolver =
-        NamecoinNameResolver(
-            electrumxClient =
-                ElectrumXClient(
-                    socketFactory = { roleBasedHttpClientBuilder.socketFactoryForNip05() },
-                ),
-            serverListProvider = {
-                // User-configured custom servers take priority
-                namecoinPrefs.customServersOrNull
-                    ?: if (roleBasedHttpClientBuilder.shouldUseTorForNIP05("https://electrumx.example.com")) {
-                        TOR_ELECTRUMX_SERVERS
-                    } else {
-                        DEFAULT_ELECTRUMX_SERVERS
-                    }
-            },
-        )
-    val nip05Client = Nip05Client(nip05Fetcher, namecoinResolver)
+    val namecoinResolver by
+        lazy {
+            Log.d("AppModules", "Namecoin Resolver Init")
+            NamecoinNameResolver(
+                electrumxClient = electrumXClient,
+                serverListProvider = {
+                    // User-configured custom servers take priority
+                    namecoinPrefs.customServersOrNull
+                        ?: if (roleBasedHttpClientBuilder.shouldUseTorForNIP05("https://electrumx.example.com")) {
+                            TOR_ELECTRUMX_SERVERS
+                        } else {
+                            DEFAULT_ELECTRUMX_SERVERS
+                        }
+                },
+            )
+        }
 
-    // Application-wide block height request cache
-    val otsBlockHeightCache by lazy { OtsBlockHeightCache() }
+    val nip05Client by
+        lazy {
+            Log.d("AppModules", "NIP05Client Init")
+            Nip05Client(
+                fetcher = OkHttpNip05Fetcher(roleBasedHttpClientBuilder::okHttpClientForNip05),
+                namecoinResolverBuilder = { namecoinResolver },
+            )
+        }
 
-    val otsResolverBuilder: TorAwareOkHttpOtsResolverBuilder =
-        TorAwareOkHttpOtsResolverBuilder(
-            roleBasedHttpClientBuilder::okHttpClientForMoney,
-            roleBasedHttpClientBuilder::shouldUseTorForMoneyOperations,
-            otsBlockHeightCache,
-            customExplorerUrl = { otsPrefs.current.normalizedUrl() },
-        )
+    val otsResolverBuilder by
+        lazy {
+            Log.d("AppModules", "OtsResolverBuilder Init")
+            TorAwareOkHttpOtsResolverBuilder(
+                roleBasedHttpClientBuilder::okHttpClientForMoney,
+                roleBasedHttpClientBuilder::shouldUseTorForMoneyOperations,
+                OtsBlockHeightCache(),
+                customExplorerUrl = { otsPrefs.current.normalizedUrl() },
+            )
+        }
 
     // Application-wide ots verification cache
-    val otsVerifCache by lazy { VerificationStateCache(otsResolverBuilder) }
+    val otsVerifCache by lazy {
+        Log.d("AppModules", "OtsCache Init")
+        VerificationStateCache(otsResolverBuilder)
+    }
 
     val torEvaluatorFlow =
         TorRelayState(
@@ -209,7 +264,7 @@ class AppModules(
             scope = applicationIOScope,
         )
 
-    // Connects the NostrClient class with okHttp
+    // Connects the INostrClient class with okHttp
     val websocketBuilder =
         OkHttpWebSocket.Builder { url ->
             val useTor = torEvaluatorFlow.flow.value.useTor(url)
@@ -243,7 +298,12 @@ class AppModules(
     val authCoordinator = AuthCoordinator(client, applicationIOScope)
 
     // Tries to verify new OTS events when they arrive.
-    val otsEventVerifier = IncomingOtsEventVerifier(otsVerifCache, cache, applicationIOScope)
+    val otsEventVerifier =
+        IncomingOtsEventVerifier(
+            otsVerifCache = { otsVerifCache },
+            cache = cache,
+            scope = applicationIOScope,
+        )
 
     // Tracks if it is possible to connect to relays.
     val failureTracker = RelayOfflineTracker(client)
@@ -269,10 +329,10 @@ class AppModules(
     // keeps all accounts live
     val accountsCache =
         AccountCacheState(
-            geolocationFlow = locationManager.geohashStateFlow,
-            nwcFilterAssembler = sources.nwc,
-            contentResolverFn = ::contentResolverFn,
-            otsResolverBuilder = otsResolverBuilder,
+            geolocationFlow = { locationManager.geohashStateFlow },
+            nwcFilterAssembler = { sources.nwc },
+            contentResolverFn = { appContext.contentResolver },
+            otsResolverBuilder = { otsResolverBuilder.build() },
             cache = cache,
             client = client,
         )
@@ -280,8 +340,8 @@ class AppModules(
     val sessionManager =
         AccountSessionManager(
             accountsCache = accountsCache,
-            nip05Client = nip05Client,
-            client = client,
+            nip05ClientBuilder = { nip05Client },
+            clientBuilder = { client },
             localPreferences = LocalPreferences,
             scope = applicationIOScope,
         )
@@ -307,7 +367,8 @@ class AppModules(
             }
     }
 
-    val blossomResolver =
+    val blossomResolver by lazy {
+        Log.d("AppModules", "BlossomServerResolver Init")
         BlossomServerResolver(
             loggedInUsers = { listOfNotNull(sessionManager.loggedInAccount()?.pubKey) },
             blossomServers = { addressesToSubscribe ->
@@ -323,45 +384,60 @@ class AppModules(
             },
             httpClientBuilder = roleBasedHttpClientBuilder,
         )
+    }
 
     // Organizes cache clearing
-    val trimmingService = MemoryTrimmingService(cache)
+    val trimmingService by
+        lazy {
+            MemoryTrimmingService(cache)
+        }
 
     // as new accounts are loaded, updates the state of the TorRelaySettings, which produces new TorRelayEvaluator
     // and reconnects relays if the configuration has been changed.
     val accountsTorStateConnector = AccountsTorStateConnector(accountsCache, torEvaluatorFlow, applicationIOScope)
 
     // saves the .content of NIP-95 blobs in disk to save memory
-    val nip95cache: File by lazy { Nip95CacheFactory.new(appContext) }
+    val nip95cache: File by lazy {
+        Log.d("AppModules", "NIP95 Cache Init")
+        Nip95CacheFactory.new(appContext)
+    }
 
     // local video cache with disk + memory
-    val videoCache: VideoCache by lazy { VideoCacheFactory.new(appContext) }
+    val videoCache: VideoCache by lazy {
+        Log.d("AppModules", "VideoCache Init")
+        VideoCacheFactory.new(appContext)
+    }
 
     // image cache in disk for coil
-    val diskCache: DiskCache by lazy { ImageCacheFactory.newDisk(appContext) }
+    val diskCache: DiskCache by lazy {
+        Log.d("AppModules", "ImageCacheFactory Init")
+        ImageCacheFactory.newDisk(appContext)
+    }
 
     // image cache in memory for coil
-    val memoryCache: MemoryCache by lazy { ImageCacheFactory.newMemory(appContext) }
+    val memoryCache: MemoryCache by lazy {
+        Log.d("AppModules", "MemoryCache Init")
+        ImageCacheFactory.newMemory(appContext)
+    }
 
     // crash report storage
-    val crashReportCache: CrashReportCache by lazy { CrashReportCache(appContext) }
+    val crashReportCache = CrashReportCache(appContext)
 
     // cache for NIP-11 documents
     val nip11Cache: Nip11CachedRetriever by lazy {
+        Log.d("AppModules", "Nip11CachedRetriever Init")
         Nip11CachedRetriever(torEvaluatorFlow::okHttpClientForRelay)
     }
 
-    fun contentResolverFn(): ContentResolver = appContext.contentResolver
-
     fun setImageLoader() {
+        Log.d("AppModules", "ImageLoaderSetup Init")
         ImageLoaderSetup.setup(
             app = appContext,
             diskCache = { diskCache },
             memoryCache = { memoryCache },
-            blossomServerResolver = blossomResolver,
-        ) { url ->
-            okHttpClients.getHttpClient(roleBasedHttpClientBuilder.shouldUseTorForImageDownload(url))
-        }
+            blossomServerResolver = { blossomResolver },
+            callFactory = { okHttpClients.getHttpClient(roleBasedHttpClientBuilder.shouldUseTorForImageDownload(it)) },
+        )
     }
 
     fun encryptedStorage(npub: String? = null): EncryptedSharedPreferences = EncryptedStorage.preferences(appContext, npub)
@@ -380,14 +456,20 @@ class AppModules(
 
         // initializes diskcache on an IO thread.
         applicationIOScope.launch {
-            // preloads tor preferences
-            torPrefs
+            // Sets Coil - Tor - OkHttp link
+            setImageLoader()
         }
 
         // initializes diskcache on an IO thread.
         applicationIOScope.launch {
             // Sets Coil - Tor - OkHttp link
-            setImageLoader()
+            uiState
+        }
+
+        // LRUCache should not be instanciated in the Main thread due to blocking
+        applicationIOScope.launch {
+            CachedRobohash
+            resourceCacheInit()
         }
 
         // registers to receive events
@@ -395,14 +477,9 @@ class AppModules(
 
         // initializes diskcache on an IO thread.
         applicationIOScope.launch {
-            // Sets Coil - Tor - OkHttp link
-            delay(3000)
+            // Prepares video cache later
+            delay(10_000)
             videoCache
-        }
-
-        applicationIOScope.launch {
-            // Eagerly initialize OtsSharedPreferences off the main thread
-            otsPrefs
         }
     }
 

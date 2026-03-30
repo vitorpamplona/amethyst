@@ -36,7 +36,7 @@ fun List<RelayBasedFilter>.groupByRelay(): Map<NormalizedRelayUrl, List<Filter>>
     val result = mutableMapOf<NormalizedRelayUrl, MutableList<Filter>>()
     for (relayBasedFilter in this) {
         if (relayBasedFilter.filter.isEmpty()) {
-            Log.e("FilterError", "Ignoring empty filter for ${relayBasedFilter.relay}")
+            Log.e("FilterError") { "Ignoring empty filter for ${relayBasedFilter.relay}" }
         } else {
             result.getOrPut(relayBasedFilter.relay) { mutableListOf() }.add(relayBasedFilter.filter)
         }

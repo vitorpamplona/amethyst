@@ -20,10 +20,13 @@
  */
 package com.vitorpamplona.quartz.nip01Core.metadata
 
+import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.utils.nsecToSigner
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 
 class UpdateMetadataTest {
     val signer = "nsec10g0wheggqn9dawlc0yuv6adnat6n09anr7eyykevw2dm8xa5fffs0wsdsr".nsecToSigner()
@@ -192,5 +195,44 @@ class UpdateMetadataTest {
             )
 
         assertEquals(expected3, test3)
+    }
+
+    @Test
+    fun parseBirthdayFull() {
+        val json = """{"name":"Test","birthday":{"year":1990,"month":6,"day":15}}"""
+        val metadata = JsonMapper.fromJson<UserMetadata>(json)
+        assertNotNull(metadata.birthday)
+        assertEquals(1990, metadata.birthday!!.year)
+        assertEquals(6, metadata.birthday!!.month)
+        assertEquals(15, metadata.birthday!!.day)
+    }
+
+    @Test
+    fun parseBirthdayPartial() {
+        val json = """{"name":"Test","birthday":{"month":6,"day":15}}"""
+        val metadata = JsonMapper.fromJson<UserMetadata>(json)
+        assertNotNull(metadata.birthday)
+        assertNull(metadata.birthday!!.year)
+        assertEquals(6, metadata.birthday!!.month)
+        assertEquals(15, metadata.birthday!!.day)
+    }
+
+    @Test
+    fun parseBirthdayAbsent() {
+        val json = """{"name":"Test"}"""
+        val metadata = JsonMapper.fromJson<UserMetadata>(json)
+        assertNull(metadata.birthday)
+    }
+
+    @Test
+    fun birthdayRoundTrip() {
+        val json = """{"name":"Test","birthday":{"year":1990,"month":6,"day":15}}"""
+        val metadata = JsonMapper.fromJson<UserMetadata>(json)
+        val serialized = JsonMapper.toJson(metadata)
+        val reparsed = JsonMapper.fromJson<UserMetadata>(serialized)
+        assertNotNull(reparsed.birthday)
+        assertEquals(1990, reparsed.birthday!!.year)
+        assertEquals(6, reparsed.birthday!!.month)
+        assertEquals(15, reparsed.birthday!!.day)
     }
 }

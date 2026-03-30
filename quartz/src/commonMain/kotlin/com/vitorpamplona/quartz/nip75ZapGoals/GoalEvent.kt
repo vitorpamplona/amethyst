@@ -22,7 +22,6 @@ package com.vitorpamplona.quartz.nip75ZapGoals
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
-import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
@@ -30,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.toATag
@@ -54,7 +54,7 @@ class GoalEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     EventHintProvider,
     AddressHintProvider,
     PubKeyHintProvider {
@@ -89,7 +89,7 @@ class GoalEvent(
         fun build(
             description: String,
             amount: Long,
-            relays: List<String>,
+            relays: List<NormalizedRelayUrl>,
             closedAt: Long? = null,
             image: String? = null,
             summary: String? = null,

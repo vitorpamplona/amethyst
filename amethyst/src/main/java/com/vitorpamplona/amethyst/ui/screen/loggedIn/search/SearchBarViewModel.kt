@@ -95,20 +95,28 @@ class SearchBarViewModel(
         searchTerm
             .debounce(400)
             .mapLatest { term ->
-                if (term.contains('@')) {
+                // NIP-05 resolution: user@domain or bare .bit domain
+                val nip05 =
+                    if (term.contains('@')) {
+                        Nip05Id.parse(term)
+                    } else if (term.endsWith(".bit", ignoreCase = true)) {
+                        // Bare .bit domain → synthesize _@domain.bit
+                        Nip05Id("_", term.lowercase())
+                    } else {
+                        null
+                    }
+                if (nip05 != null) {
                     runCatching {
-                        Nip05Id.parse(term)?.let { nip05 ->
-                            nip05Client.get(nip05)?.let { info ->
-                                val user = account.cache.checkGetOrCreateUser(info.pubkey)
-                                if (user != null) {
-                                    info.relays.forEach {
-                                        it.normalizeRelayUrlOrNull()?.let { relay ->
-                                            account.cache.relayHints.addKey(user.pubkey(), relay)
-                                        }
+                        nip05Client.get(nip05)?.let { info ->
+                            val user = account.cache.checkGetOrCreateUser(info.pubkey)
+                            if (user != null) {
+                                info.relays.forEach {
+                                    it.normalizeRelayUrlOrNull()?.let { relay ->
+                                        account.cache.relayHints.addKey(user.pubkey(), relay)
                                     }
                                 }
-                                user
                             }
+                            user
                         }
                     }.getOrNull()
                 } else if (term.startsWithAny(userUriPrefixes)) {
@@ -225,8 +233,10 @@ class SearchBarViewModel(
                 val lower = term.lowercase()
 
                 val relays =
-                    listOfNotNull(relayUrl) +
-                        LocalCache.relayHints.relayDB.filter { _, relay -> relay.url.contains(lower) }
+                    (
+                        listOfNotNull(relayUrl) +
+                            LocalCache.relayHints.relayDB.filter { _, relay -> relay.url.contains(lower) }
+                    ).distinctBy { it.url }
 
                 relays
                     .map { relaySetupInfoBuilder(it) }

@@ -200,7 +200,7 @@ open class NewProductViewModel :
         this.canAddZapRaiser = hasLnAddress()
 
         this.userSuggestions?.reset()
-        this.userSuggestions = UserSuggestionState(accountVM.account, accountVM.nip05Client)
+        this.userSuggestions = UserSuggestionState(accountVM.account, accountVM.nip05ClientBuilder())
 
         this.emojiSuggestions?.reset()
         this.emojiSuggestions = EmojiSuggestionState(accountVM.account)
@@ -608,7 +608,7 @@ open class NewProductViewModel :
 
     override fun onCleared() {
         super.onCleared()
-        Log.d("Init", "OnCleared: ${this.javaClass.simpleName}")
+        Log.d("Init") { "OnCleared: ${this.javaClass.simpleName}" }
     }
 
     override fun updateZapPercentage(

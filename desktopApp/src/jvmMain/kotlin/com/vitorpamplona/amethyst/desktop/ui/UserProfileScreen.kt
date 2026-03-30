@@ -59,6 +59,7 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -74,29 +75,31 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.nip02FollowList.FollowAction
 import com.vitorpamplona.amethyst.commons.profile.ProfileBroadcastBanner
 import com.vitorpamplona.amethyst.commons.profile.ProfileBroadcastStatus
-import com.vitorpamplona.amethyst.commons.state.EventCollectionState
 import com.vitorpamplona.amethyst.commons.state.FollowState
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
 import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
+import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
+import com.vitorpamplona.amethyst.desktop.feeds.DesktopProfileFeedFilter
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.desktop.subscriptions.FilterBuilders
 import com.vitorpamplona.amethyst.desktop.subscriptions.SubscriptionConfig
 import com.vitorpamplona.amethyst.desktop.subscriptions.createContactListSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.createMetadataSubscription
-import com.vitorpamplona.amethyst.desktop.subscriptions.createUserPostsSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.generateSubId
 import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
 import com.vitorpamplona.amethyst.desktop.ui.media.LightboxOverlay
 import com.vitorpamplona.amethyst.desktop.ui.profile.GalleryTab
-import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.amethyst.desktop.viewmodels.DesktopFeedViewModel
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArrayOrNull
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
+import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
+import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -118,16 +121,28 @@ fun UserProfileScreen(
     onBack: () -> Unit,
     onCompose: () -> Unit = {},
     onNavigateToProfile: (String) -> Unit = {},
+    onNavigateToArticle: (String) -> Unit = {},
     onZapFeedback: (ZapFeedback) -> Unit = {},
 ) {
-    val connectedRelays by relayManager.connectedRelays.collectAsState()
+    val relayStatuses by relayManager.relayStatuses.collectAsState()
+    val connectedRelays = remember(relayStatuses) { relayStatuses.keys }
 
-    // User metadata
-    var displayName by remember { mutableStateOf<String?>(null) }
-    var about by remember { mutableStateOf<String?>(null) }
-    var picture by remember { mutableStateOf<String?>(null) }
-    var followersCount by remember { mutableStateOf(0) }
-    var followingCount by remember { mutableStateOf(0) }
+    // User metadata — seed from cache so returning to profile is instant
+    val cachedUser = remember(pubKeyHex) { localCache.getUserIfExists(pubKeyHex) }
+    val cachedMetadata = remember(pubKeyHex) { cachedUser?.metadataOrNull() }
+    var displayName by remember { mutableStateOf(cachedMetadata?.bestName()) }
+    var about by remember {
+        mutableStateOf(
+            cachedMetadata
+                ?.flow
+                ?.value
+                ?.info
+                ?.about,
+        )
+    }
+    var picture by remember { mutableStateOf(cachedMetadata?.profilePicture()) }
+    var followersCount by remember { mutableStateOf(localCache.getCachedFollowerCount(pubKeyHex)) }
+    var followingCount by remember { mutableStateOf(localCache.getCachedFollowingCount(pubKeyHex)) }
 
     // Profile editing state (only for own profile)
     val isOwnProfile = account != null && pubKeyHex == account.pubKeyHex
@@ -138,25 +153,56 @@ fun UserProfileScreen(
 
     val scope = rememberCoroutineScope()
 
-    // User's posts
-    val eventState =
-        remember {
-            EventCollectionState<Event>(
-                getId = { it.id },
-                sortComparator = compareByDescending { it.createdAt },
-                maxSize = 200,
-                scope = scope,
+    // User's posts — cache-backed via DesktopFeedViewModel
+    val profileViewModel =
+        remember(pubKeyHex) {
+            DesktopFeedViewModel(
+                DesktopProfileFeedFilter(pubKeyHex, localCache),
+                localCache,
             )
         }
-    val events by eventState.items.collectAsState()
-    var postsLoading by remember { mutableStateOf(true) }
-    var postsError by remember { mutableStateOf<String?>(null) }
+    DisposableEffect(profileViewModel) {
+        onDispose { profileViewModel.destroy() }
+    }
+    val profileFeedState by profileViewModel.feedState.feedContent.collectAsState()
+    val profileLoadedNotes =
+        if (profileFeedState is FeedState.Loaded) {
+            val loaded by (profileFeedState as FeedState.Loaded).feed.collectAsState()
+            loaded.list
+        } else {
+            kotlinx.collections.immutable.persistentListOf()
+        }
     var retryTrigger by remember { mutableStateOf(0) }
+
+    // Subscribe to profile user's text notes (kind 1) — populates cache for DesktopFeedViewModel
+    rememberSubscription(connectedRelays, pubKeyHex, retryTrigger, relayManager = relayManager) {
+        if (connectedRelays.isNotEmpty()) {
+            SubscriptionConfig(
+                subId = generateSubId("profile-notes-${pubKeyHex.take(8)}"),
+                filters =
+                    listOf(
+                        FilterBuilders.textNotesFromAuthors(
+                            authors = listOf(pubKeyHex),
+                            limit = 200,
+                        ),
+                    ),
+                relays = connectedRelays,
+                onEvent = { event, _, relay, _ ->
+                    subscriptionsCoordinator?.consumeEvent(event, relay)
+                },
+                onEose = { _, _ -> },
+            )
+        } else {
+            null
+        }
+    }
 
     // Tab and gallery state
     var selectedTab by remember { mutableStateOf(0) }
     var lightboxState by remember { mutableStateOf<LightboxState?>(null) }
     val pictureEvents = remember { mutableStateListOf<PictureEvent>() }
+    val articleEvents = remember { mutableStateListOf<LongTextNoteEvent>() }
+    val highlightEvents = remember { mutableStateListOf<HighlightEvent>() }
 
     // Follow state
     val followState =
@@ -201,13 +247,6 @@ fun UserProfileScreen(
         }
     }
 
-    // Clear posts when profile changes
-    remember(pubKeyHex, retryTrigger) {
-        eventState.clear()
-        postsLoading = true
-        postsError = null
-    }
-
     // Subscribe to user metadata
     rememberSubscription(connectedRelays, pubKeyHex, retryTrigger, relayManager = relayManager) {
         if (connectedRelays.isNotEmpty()) {
@@ -250,8 +289,9 @@ fun UserProfileScreen(
                 pubKeyHex = pubKeyHex,
                 onEvent = { event, _, _, _ ->
                     if (event is ContactListEvent) {
-                        // Count the number of people this user follows
-                        followingCount = event.verifiedFollowKeySet().size
+                        val count = event.verifiedFollowKeySet().size
+                        followingCount = count
+                        localCache.cacheFollowingCount(pubKeyHex, count)
                     }
                 },
                 onEose = { _, _ -> },
@@ -267,9 +307,8 @@ fun UserProfileScreen(
     // Subscribe to followers (contact lists that tag this user)
     rememberSubscription(connectedRelays, pubKeyHex, retryTrigger, relayManager = relayManager) {
         if (connectedRelays.isNotEmpty()) {
-            // Clear previous followers when subscription restarts
+            // Clear dedup set but keep cached followersCount visible until new data arrives
             followerAuthors.clear()
-            followersCount = 0
 
             SubscriptionConfig(
                 subId = "followers-${pubKeyHex.take(8)}-${System.currentTimeMillis()}",
@@ -285,34 +324,14 @@ fun UserProfileScreen(
                 onEvent = { event, _, _, _ ->
                     // Count unique authors who follow this user
                     if (followerAuthors.add(event.pubKey)) {
-                        followersCount = followerAuthors.size
+                        val count = followerAuthors.size
+                        followersCount = count
+                        localCache.cacheFollowerCount(pubKeyHex, count)
                     }
                 },
                 onEose = { _, _ -> },
             )
         } else {
-            null
-        }
-    }
-
-    // Subscribe to user posts
-    rememberSubscription(connectedRelays, pubKeyHex, retryTrigger, relayManager = relayManager) {
-        if (connectedRelays.isNotEmpty()) {
-            postsLoading = true
-            postsError = null
-            createUserPostsSubscription(
-                relays = connectedRelays,
-                pubKeyHex = pubKeyHex,
-                onEvent = { event, _, _, _ ->
-                    eventState.addItem(event)
-                },
-                onEose = { _, _ ->
-                    postsLoading = false
-                },
-            )
-        } else {
-            postsLoading = false
-            postsError = "No relays configured"
             null
         }
     }
@@ -335,6 +354,60 @@ fun UserProfileScreen(
                 onEvent = { event, _, _, _ ->
                     if (event is PictureEvent && pictureEvents.none { it.id == event.id }) {
                         pictureEvents.add(event)
+                    }
+                },
+                onEose = { _, _ -> },
+            )
+        } else {
+            null
+        }
+    }
+
+    // Subscribe to long-form articles (kind 30023) for reads tab
+    rememberSubscription(connectedRelays, pubKeyHex, retryTrigger, relayManager = relayManager) {
+        if (connectedRelays.isNotEmpty()) {
+            articleEvents.clear()
+            SubscriptionConfig(
+                subId = generateSubId("articles-${pubKeyHex.take(8)}"),
+                filters =
+                    listOf(
+                        FilterBuilders.byAuthors(
+                            authors = listOf(pubKeyHex),
+                            kinds = listOf(LongTextNoteEvent.KIND),
+                            limit = 50,
+                        ),
+                    ),
+                relays = connectedRelays,
+                onEvent = { event, _, _, _ ->
+                    if (event is LongTextNoteEvent && articleEvents.none { it.id == event.id }) {
+                        articleEvents.add(event)
+                    }
+                },
+                onEose = { _, _ -> },
+            )
+        } else {
+            null
+        }
+    }
+
+    // Subscribe to highlight events (kind 9802) for highlights tab
+    rememberSubscription(connectedRelays, pubKeyHex, retryTrigger, relayManager = relayManager) {
+        if (connectedRelays.isNotEmpty()) {
+            highlightEvents.clear()
+            SubscriptionConfig(
+                subId = generateSubId("hl-${pubKeyHex.take(8)}"),
+                filters =
+                    listOf(
+                        FilterBuilders.byAuthors(
+                            authors = listOf(pubKeyHex),
+                            kinds = listOf(HighlightEvent.KIND),
+                            limit = 100,
+                        ),
+                    ),
+                relays = connectedRelays,
+                onEvent = { event, _, _, _ ->
+                    if (event is HighlightEvent && highlightEvents.none { it.id == event.id }) {
+                        highlightEvents.add(event)
                     }
                 },
                 onEose = { _, _ -> },
@@ -629,7 +702,19 @@ fun UserProfileScreen(
                             Text("Notes", modifier = Modifier.padding(12.dp))
                         }
                         Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }) {
+                            Text(
+                                "Reads${if (articleEvents.isNotEmpty()) " (${articleEvents.size})" else ""}",
+                                modifier = Modifier.padding(12.dp),
+                            )
+                        }
+                        Tab(selected = selectedTab == 2, onClick = { selectedTab = 2 }) {
                             Text("Gallery", modifier = Modifier.padding(12.dp))
+                        }
+                        Tab(selected = selectedTab == 3, onClick = { selectedTab = 3 }) {
+                            Text(
+                                "Highlights${if (highlightEvents.isNotEmpty()) " (${highlightEvents.size})" else ""}",
+                                modifier = Modifier.padding(12.dp),
+                            )
                         }
                     }
                 }
@@ -637,35 +722,8 @@ fun UserProfileScreen(
                 // Tab content
                 when (selectedTab) {
                     0 -> {
-                        when {
-                            postsError != null -> {
-                                item(key = "error") {
-                                    Box(
-                                        modifier = Modifier.fillMaxWidth().padding(32.dp),
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                            Text(
-                                                "Failed to load posts",
-                                                style = MaterialTheme.typography.titleMedium,
-                                                color = MaterialTheme.colorScheme.error,
-                                            )
-                                            Spacer(Modifier.height(8.dp))
-                                            Text(
-                                                postsError!!,
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            )
-                                            Spacer(Modifier.height(16.dp))
-                                            OutlinedButton(onClick = { retryTrigger++ }) {
-                                                Text("Retry")
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
-                            postsLoading -> {
+                        when (profileFeedState) {
+                            is FeedState.Loading -> {
                                 item(key = "loading") {
                                     Box(
                                         modifier = Modifier.fillMaxWidth().padding(32.dp),
@@ -684,7 +742,7 @@ fun UserProfileScreen(
                                 }
                             }
 
-                            events.isEmpty() -> {
+                            is FeedState.Empty -> {
                                 item(key = "empty") {
                                     Box(
                                         modifier = Modifier.fillMaxWidth().padding(32.dp),
@@ -699,10 +757,38 @@ fun UserProfileScreen(
                                 }
                             }
 
-                            else -> {
-                                items(events.distinctBy { it.id }, key = { it.id }) { event ->
+                            is FeedState.FeedError -> {
+                                item(key = "error") {
+                                    Box(
+                                        modifier = Modifier.fillMaxWidth().padding(32.dp),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                            Text(
+                                                "Failed to load posts",
+                                                style = MaterialTheme.typography.titleMedium,
+                                                color = MaterialTheme.colorScheme.error,
+                                            )
+                                            Spacer(Modifier.height(8.dp))
+                                            Text(
+                                                (profileFeedState as FeedState.FeedError).errorMessage,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                            Spacer(Modifier.height(16.dp))
+                                            OutlinedButton(onClick = { retryTrigger++ }) {
+                                                Text("Retry")
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            is FeedState.Loaded -> {
+                                // loadedNotes collected outside LazyColumn in profileLoadedNotes
+                                items(profileLoadedNotes, key = { it.idHex }) { note ->
                                     FeedNoteCard(
-                                        event = event,
+                                        note = note,
                                         relayManager = relayManager,
                                         localCache = localCache,
                                         account = account,
@@ -726,12 +812,71 @@ fun UserProfileScreen(
                     }
 
                     1 -> {
+                        if (articleEvents.isEmpty()) {
+                            item(key = "no-articles") {
+                                Box(
+                                    modifier = Modifier.fillMaxWidth().padding(32.dp),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Text(
+                                        "No long-form articles",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                        } else {
+                            items(
+                                articleEvents.sortedByDescending { it.publishedAt() ?: it.createdAt },
+                                key = { "art-${it.id}" },
+                            ) { article ->
+                                LongFormCard(
+                                    event = article,
+                                    localCache = localCache,
+                                    onAuthorClick = { onNavigateToProfile(article.pubKey) },
+                                    onClick = {
+                                        val addressTag = "${LongTextNoteEvent.KIND}:${article.pubKey}:${article.dTag()}"
+                                        onNavigateToArticle(addressTag)
+                                    },
+                                )
+                            }
+                        }
+                    }
+
+                    2 -> {
                         item(key = "gallery") {
                             GalleryTab(
                                 pictureEvents = pictureEvents,
                                 onImageClick = { urls, index -> lightboxState = LightboxState(urls, index) },
                                 modifier = Modifier.fillParentMaxHeight(),
                             )
+                        }
+                    }
+
+                    3 -> {
+                        if (highlightEvents.isEmpty()) {
+                            item(key = "no-highlights") {
+                                Box(
+                                    modifier = Modifier.fillMaxWidth().padding(32.dp),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Text(
+                                        "No published highlights",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                        } else {
+                            items(
+                                highlightEvents.sortedByDescending { it.createdAt },
+                                key = { "hl-${it.id}" },
+                            ) { highlight ->
+                                PublishedHighlightCard(
+                                    highlight = highlight,
+                                    localCache = localCache,
+                                )
+                            }
                         }
                     }
                 }
@@ -938,5 +1083,66 @@ private suspend fun updateProfileDisplayName(
         onStatusUpdate(ProfileBroadcastStatus.Idle)
     } catch (e: Exception) {
         onStatusUpdate(ProfileBroadcastStatus.Failed("display name", e.message ?: "Unknown error"))
+    }
+}
+
+@Composable
+private fun PublishedHighlightCard(
+    highlight: HighlightEvent,
+    localCache: DesktopLocalCache,
+) {
+    val articleAddress = highlight.inPostAddress()
+    val articleTitle = articleAddress?.let { "Article" } ?: "Unknown source"
+
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface,
+            ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            // Quoted highlight text
+            Text(
+                text = "\u201C${highlight.quote()}\u201D",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Normal,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+
+            // Note/comment
+            val comment = highlight.comment()
+            if (!comment.isNullOrBlank()) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = comment,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            // Context (surrounding paragraph)
+            val context = highlight.context()
+            if (!context.isNullOrBlank() && context != highlight.quote()) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = context.take(200) + if (context.length > 200) "\u2026" else "",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                )
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            // Source article reference
+            if (articleAddress != null) {
+                Text(
+                    text = "from ${articleAddress.dTag.ifBlank { "article" }}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+        }
     }
 }

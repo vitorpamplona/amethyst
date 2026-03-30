@@ -48,13 +48,13 @@ class LocationFlow(
 
             val locationCallback =
                 LocationListener { location ->
-                    Log.d("LocationFlow", "onLocationChanged $location")
+                    Log.d("LocationFlow") { "onLocationChanged $location" }
                     launch { send(location) }
                 }
 
             locationManager.allProviders.forEach {
                 val location = locationManager.getLastKnownLocation(it)
-                Log.d("LocationFlow", "Last Known location is $location")
+                Log.d("LocationFlow") { "Last Known location is $location" }
                 if (location != null) {
                     send(location)
                 }

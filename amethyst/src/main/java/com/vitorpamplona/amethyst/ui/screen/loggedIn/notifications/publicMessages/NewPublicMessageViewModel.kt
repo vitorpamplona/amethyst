@@ -66,8 +66,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.UserSuggestionAnchor
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
-import com.vitorpamplona.quartz.experimental.publicMessages.PublicMessageEvent
-import com.vitorpamplona.quartz.experimental.publicMessages.tags.ReceiverTag
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -107,6 +105,8 @@ import com.vitorpamplona.quartz.nip94FileMetadata.mimeType
 import com.vitorpamplona.quartz.nip94FileMetadata.originalHash
 import com.vitorpamplona.quartz.nip94FileMetadata.sensitiveContent
 import com.vitorpamplona.quartz.nip94FileMetadata.size
+import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
+import com.vitorpamplona.quartz.nipA4PublicMessages.tags.ReceiverTag
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -209,7 +209,7 @@ class NewPublicMessageViewModel :
         this.canAddZapRaiser = hasLnAddress()
 
         this.userSuggestions?.reset()
-        this.userSuggestions = UserSuggestionState(accountVM.account, accountVM.nip05Client)
+        this.userSuggestions = UserSuggestionState(accountVM.account, accountVM.nip05ClientBuilder())
 
         this.emojiSuggestions?.reset()
         this.emojiSuggestions = EmojiSuggestionState(accountVM.account)
@@ -657,7 +657,7 @@ class NewPublicMessageViewModel :
 
     override fun onCleared() {
         super.onCleared()
-        Log.d("Init", "OnCleared: ${this.javaClass.simpleName}")
+        Log.d("Init") { "OnCleared: ${this.javaClass.simpleName}" }
     }
 
     override fun updateZapPercentage(

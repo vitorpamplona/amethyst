@@ -93,8 +93,8 @@ sealed class AccountState {
 @Stable
 class AccountSessionManager(
     val accountsCache: AccountCacheState,
-    val nip05Client: Nip05Client,
-    val client: INostrClient,
+    val nip05ClientBuilder: () -> Nip05Client,
+    val clientBuilder: () -> INostrClient,
     val localPreferences: LocalPreferences,
     val scope: CoroutineScope,
 ) {
@@ -227,7 +227,7 @@ class AccountSessionManager(
                     onError("Could not parse nip05 address: $nip05")
                 } else {
                     try {
-                        val pubkeyInfo = nip05Client.get(nip05)
+                        val pubkeyInfo = nip05ClientBuilder().get(nip05)
                         if (pubkeyInfo == null) {
                             onError("User not found in the nip05 server: $nip05")
                         } else {
@@ -287,13 +287,15 @@ class AccountSessionManager(
 
                 val toPost = accountSettings.backupNIP65RelayList?.writeRelaysNorm()?.toSet() ?: DefaultNIP65RelaySet
 
-                accountSettings.backupUserMetadata?.let { client.send(it, toPost) }
-                accountSettings.backupContactList?.let { client.send(it, toPost) }
-                accountSettings.backupNIP65RelayList?.let { client.send(it, toPost) }
-                accountSettings.backupDMRelayList?.let { client.send(it, toPost) }
-                accountSettings.backupSearchRelayList?.let { client.send(it, toPost) }
-                accountSettings.backupIndexRelayList?.let { client.send(it, toPost) }
-                accountSettings.backupRelayFeedsList?.let { client.send(it, toPost) }
+                val client = clientBuilder()
+
+                accountSettings.backupUserMetadata?.let { client.publish(it, toPost) }
+                accountSettings.backupContactList?.let { client.publish(it, toPost) }
+                accountSettings.backupNIP65RelayList?.let { client.publish(it, toPost) }
+                accountSettings.backupDMRelayList?.let { client.publish(it, toPost) }
+                accountSettings.backupSearchRelayList?.let { client.publish(it, toPost) }
+                accountSettings.backupIndexRelayList?.let { client.publish(it, toPost) }
+                accountSettings.backupRelayFeedsList?.let { client.publish(it, toPost) }
             }
         }
     }

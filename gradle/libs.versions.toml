@@ -11,11 +11,11 @@ androidKotlinGeohash = "b481c6a64e"
 androidxJunit = "1.3.0"
 appcompat = "1.7.1"
 audiowaveform = "1.1.2"
-benchmark = "1.5.0-alpha04"
+benchmark = "1.5.0-alpha05"
 biometricKtx = "1.2.0-alpha05"
 coil = "3.4.0"
-composeBom = "2026.03.00"
-composeRuntimeAnnotation = "1.10.5"
+composeBom = "2026.03.01"
+composeRuntimeAnnotation = "1.10.6"
 coreKtx = "1.18.0"
 datastore = "1.2.1"
 devWhyolegCryptography = "0.5.0"
@@ -23,9 +23,8 @@ espressoCore = "3.7.0"
 firebaseBom = "34.11.0"
 fragmentKtx = "1.8.9"
 gms = "4.4.4"
-jacksonModuleKotlin = "2.21.1"
+jacksonModuleKotlin = "2.21.2"
 javaKeyring = "1.0.4"
-jna = "5.18.1"
 jtorctl = "0.4.5.7"
 junit = "4.13.2"
 kchesslib = "1.0.5"
@@ -34,16 +33,15 @@ kotlinxCollectionsImmutable = "0.4.0"
 kotlinxCoroutinesCore = "1.10.2"
 kotlinxSerialization = "1.10.0"
 languageId = "17.0.6"
-lazysodiumAndroid = "5.2.0"
-lazysodiumJava = "5.2.0"
 lifecycleRuntimeKtx = "2.10.0"
-lightcompressor-enhanced = "1.6.0"
+lightcompressor-enhanced = "1.8.1"
 markdown = "f92ef49c9d"
 material3 = "1.9.0"
 materialIconsExtended = "1.7.3"
-media3 = "1.9.3"
+media3 = "1.10.0"
 mockk = "1.14.9"
 kotlinx-coroutines-test = "1.10.2"
+negentropyKmp = "1.0.1"
 netUrlencoderLibVersion = "1.6.0"
 navigationCompose = "2.9.7"
 okhttp = "5.3.2"
@@ -57,7 +55,6 @@ torAndroid = "0.4.9.5.1"
 translate = "17.0.3"
 jetbrainsCompose = "1.10.3"
 unifiedpush = "3.0.10"
-uriReferenceKmp = "1.0"
 vico-charts-compose = "3.0.3"
 zelory = "3.0.1"
 zoomable = "2.11.1"
@@ -66,7 +63,7 @@ commonsImaging = "1.0.0-alpha6"
 zxing = "3.5.4"
 zxingAndroidEmbedded = "4.3.0"
 windowCoreAndroid = "1.5.1"
-androidxCamera = "1.5.3"
+androidxCamera = "1.6.0"
 androidxCollection = "1.6.0"
 androidxExifinterface = "1.4.2"
 kotlinTest = "2.3.0"
@@ -127,7 +124,6 @@ coil-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", versio
 coil-video = { group = "io.coil-kt.coil3", name = "coil-video", version.ref = "coil" }
 commons-imaging = { group = "org.apache.commons", name = "commons-imaging", version.ref = "commonsImaging" }
 slf4j-nop = { module = "org.slf4j:slf4j-nop", version.ref = "slf4j" }
-uri-reference-kmp = { module = "io.github.kotlingeekdev:uri-reference-kmp", version.ref = "uriReferenceKmp" }
 vlcj = { group = "uk.co.caprica", name = "vlcj", version.ref = "vlcj" }
 dev-whyoleg-cryptography-provider-apple-optimal = { module = "dev.whyoleg.cryptography:cryptography-provider-optimal", version.ref = "devWhyolegCryptography" }
 drfonfon-geohash = { group = "com.github.drfonfon", name = "android-kotlin-geohash", version.ref = "androidKotlinGeohash" }
@@ -145,7 +141,6 @@ google-mlkit-language-id = { group = "com.google.mlkit", name = "language-id", v
 google-mlkit-translate = { group = "com.google.mlkit", name = "translate", version.ref = "translate" }
 jackson-module-kotlin = { group = "com.fasterxml.jackson.module", name = "jackson-module-kotlin", version.ref = "jacksonModuleKotlin" }
 java-keyring = { group = "com.github.javakeyring", name = "java-keyring", version.ref = "javaKeyring" }
-jna = { group = "net.java.dev.jna", name = "jna", version.ref = "jna" }
 jtorctl = { module = "info.guardianproject:jtorctl", version.ref = "jtorctl" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 kchesslib = { module = "io.github.cvb941:kchesslib", version.ref = "kchesslib" }
@@ -154,14 +149,13 @@ kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-c
 kotlinx-coroutines-swing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-swing", version.ref = "kotlinxCoroutinesCore" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 kotlinx-serialization-cbor = { module = "org.jetbrains.kotlinx:kotlinx-serialization-cbor", version.ref = "kotlinxSerialization" }
-lazysodium-java = { group = "com.goterl", name = "lazysodium-java", version.ref = "lazysodiumJava" }
-lazysodium-android = { group = "com.goterl", name = "lazysodium-android", version.ref = "lazysodiumAndroid" }
 markdown-commonmark = { group = "com.github.vitorpamplona.compose-richtext", name = "richtext-commonmark", version.ref = "markdown" }
 markdown-ui = { group = "com.github.vitorpamplona.compose-richtext", name = "richtext-ui", version.ref = "markdown" }
 markdown-ui-material3 = { group = "com.github.vitorpamplona.compose-richtext", name = "richtext-ui-material3", version.ref = "markdown" }
 mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
 mockk-android = { group = "io.mockk", name = "mockk-android", version.ref = "mockk" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinx-coroutines-test"}
+negentropy-kmp = { module = "com.vitorpamplona.negentropy:kmp-negentropy", version.ref = "negentropyKmp" }
 net-thauvin-erik-urlencoder-lib = { module = "net.thauvin.erik.urlencoder:urlencoder-lib", version.ref = "netUrlencoderLibVersion" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 okhttpCoroutines = { group = "com.squareup.okhttp3", name = "okhttp-coroutines", version.ref = "okhttp" }

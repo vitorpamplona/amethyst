@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.desktop.ui.chats
 import com.vitorpamplona.amethyst.commons.ui.chat.DmBroadcastStatus
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.sendAndWaitForResponseDetailed
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirmDetailed
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -56,7 +56,7 @@ class DmSendTracker(
         val allSuccessful = mutableSetOf<NormalizedRelayUrl>()
 
         for ((event, relays) in events) {
-            val results = client.sendAndWaitForResponseDetailed(event, relays, 10)
+            val results = client.publishAndConfirmDetailed(event, relays, 10)
             allSuccessful.addAll(results.filter { it.value }.keys)
             _status.value = DmBroadcastStatus.Sending(allSuccessful.size, totalRelays)
         }

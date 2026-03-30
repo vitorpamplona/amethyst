@@ -27,7 +27,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.quartz.nip01Core.tags.events.isTaggedEvent
-import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.NIP90ContentDiscoveryResponseEvent
 
 open class NIP90ContentDiscoveryResponseFilter(
     val account: Account,

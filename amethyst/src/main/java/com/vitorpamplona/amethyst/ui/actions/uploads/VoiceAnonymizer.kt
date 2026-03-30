@@ -25,7 +25,6 @@ import android.media.MediaCodecInfo
 import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.media.MediaMuxer
-import android.util.Log
 import be.tarsos.dsp.AudioDispatcher
 import be.tarsos.dsp.AudioEvent
 import be.tarsos.dsp.AudioProcessor
@@ -33,6 +32,7 @@ import be.tarsos.dsp.WaveformSimilarityBasedOverlapAdd
 import be.tarsos.dsp.io.TarsosDSPAudioFloatConverter
 import be.tarsos.dsp.io.TarsosDSPAudioFormat
 import be.tarsos.dsp.resample.RateTransposer
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.isActive

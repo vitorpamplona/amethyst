@@ -19,11 +19,10 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 package com.vitorpamplona.quartz.nip01Core.relay
-
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.reqUntilEoseAsFlow
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.fetchAsFlow
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
@@ -53,7 +52,7 @@ class NostrClientSubscriptionUntilEoseAsFlowTest : BaseNostrClientTest() {
             val client = NostrClient(socketBuilder, appScope)
 
             val flow =
-                client.reqUntilEoseAsFlow(
+                client.fetchAsFlow(
                     relay = "wss://nos.lol",
                     filter =
                         Filter(
@@ -66,7 +65,7 @@ class NostrClientSubscriptionUntilEoseAsFlowTest : BaseNostrClientTest() {
             val job =
                 launch {
                     flow.collect {
-                        Log.d("ZZ", "List timestamp deltas ${it.printDates()}")
+                        Log.d("ZZ") { "List timestamp deltas ${it.printDates()}" }
                         feedStates = it
                     }
                 }
@@ -92,7 +91,7 @@ class NostrClientSubscriptionUntilEoseAsFlowTest : BaseNostrClientTest() {
             val client = NostrClient(socketBuilder, appScope)
 
             val flow =
-                client.reqUntilEoseAsFlow(
+                client.fetchAsFlow(
                     relay = "wss://nos.lol",
                     filter =
                         Filter(
@@ -105,7 +104,7 @@ class NostrClientSubscriptionUntilEoseAsFlowTest : BaseNostrClientTest() {
             val job =
                 launch {
                     flow.debounce(100).collect {
-                        Log.d("ZZ", "List timestamp deltas ${it.printDates()}")
+                        Log.d("ZZ") { "List timestamp deltas ${it.printDates()}" }
                         feedStates = it
                     }
                 }

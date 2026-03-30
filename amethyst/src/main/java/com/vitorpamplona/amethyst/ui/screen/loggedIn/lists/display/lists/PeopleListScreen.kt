@@ -52,8 +52,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SecondaryTabRow
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -70,7 +70,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
@@ -164,7 +163,7 @@ private fun TopAppTabs(
     viewModel: PeopleListViewModel,
     pagerState: PagerState,
 ) {
-    TabRow(
+    SecondaryTabRow(
         containerColor = Color.Transparent,
         contentColor = MaterialTheme.colorScheme.onBackground,
         selectedTabIndex = pagerState.currentPage,
@@ -448,7 +447,7 @@ private fun ListActionsMenuButton(
 
                     val shareIntent =
                         Intent.createChooser(sendIntent, stringRes(context, R.string.quick_action_share))
-                    ContextCompat.startActivity(context, shareIntent, null)
+                    context.startActivity(shareIntent)
                     isActionListOpen.value = false
                 }
                 M3ActionRow(icon = Icons.Outlined.Edit, text = stringRes(R.string.follow_set_edit_list_metadata)) {

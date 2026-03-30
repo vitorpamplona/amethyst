@@ -24,7 +24,6 @@ import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.IEoseManager
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.LocalCache.users
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.BundledUpdate
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountQueryState
@@ -35,7 +34,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineT
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.IAuthStatus
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.groupByRelay
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.SubscriptionController
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -107,7 +106,7 @@ class AccountFollowsLoaderSubAssembler(
     val sub =
         orchestrator.requestNewSubscription(
             if (isDebug) logTag + newSubId() else newSubId(),
-            object : IRequestListener {
+            object : SubscriptionListener {
                 override fun onEose(
                     relay: NormalizedRelayUrl,
                     forFilters: List<Filter>?,

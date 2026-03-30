@@ -36,7 +36,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.SecondaryScrollableTabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
@@ -87,6 +87,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.mutual.TabMutualCon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.mutual.dal.UserProfileMutualFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.newthreads.TabNotesNewThreads
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.newthreads.dal.UserProfileNewThreadsFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.pinnedNotes.dal.UserProfilePinnedNotesFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.relays.RelaysTabHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.relays.TabRelays
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.reports.ReportsTabHeader
@@ -223,6 +224,16 @@ fun PrepareViewModels(
                 ),
         )
 
+    val pinnedNotesFeedViewModel: UserProfilePinnedNotesFeedViewModel =
+        viewModel(
+            key = baseUser.pubkeyHex + "UserProfilePinnedNotesFeedViewModel",
+            factory =
+                UserProfilePinnedNotesFeedViewModel.Factory(
+                    baseUser,
+                    accountViewModel.account,
+                ),
+        )
+
     val reportsFeedViewModel: UserProfileReportFeedViewModel =
         viewModel(
             key = baseUser.pubkeyHex + "UserProfileReportFeedViewModel",
@@ -244,6 +255,7 @@ fun PrepareViewModels(
         externalIdentities,
         zapFeedViewModel,
         bookmarksFeedViewModel,
+        pinnedNotesFeedViewModel,
         galleryFeedViewModel,
         reportsFeedViewModel,
         accountViewModel = accountViewModel,
@@ -263,6 +275,7 @@ fun ProfileScreen(
     externalIdentities: UserExternalIdentitiesViewModel,
     zapFeedViewModel: UserProfileZapsViewModel,
     bookmarksFeedViewModel: UserProfileBookmarksFeedViewModel,
+    pinnedNotesFeedViewModel: UserProfilePinnedNotesFeedViewModel,
     galleryFeedViewModel: UserProfileGalleryFeedViewModel,
     reportsFeedViewModel: UserProfileReportFeedViewModel,
     accountViewModel: AccountViewModel,
@@ -273,6 +286,7 @@ fun ProfileScreen(
     WatchLifecycleAndUpdateModel(mutualViewModel)
     WatchLifecycleAndUpdateModel(appRecommendations)
     WatchLifecycleAndUpdateModel(bookmarksFeedViewModel)
+    WatchLifecycleAndUpdateModel(pinnedNotesFeedViewModel)
     WatchLifecycleAndUpdateModel(galleryFeedViewModel)
 
     UserProfileFilterAssemblerSubscription(baseUser, accountViewModel.dataSources().profile)
@@ -291,6 +305,7 @@ fun ProfileScreen(
             followersFeedViewModel,
             zapFeedViewModel,
             bookmarksFeedViewModel,
+            pinnedNotesFeedViewModel,
             galleryFeedViewModel,
             reportsFeedViewModel,
             accountViewModel,
@@ -385,6 +400,7 @@ private fun RenderScreen(
     followersFeedViewModel: UserProfileFollowersUserFeedViewModel,
     zapFeedViewModel: UserProfileZapsViewModel,
     bookmarksFeedViewModel: UserProfileBookmarksFeedViewModel,
+    pinnedNotesFeedViewModel: UserProfilePinnedNotesFeedViewModel,
     galleryFeedViewModel: UserProfileGalleryFeedViewModel,
     reportsFeedViewModel: UserProfileReportFeedViewModel,
     accountViewModel: AccountViewModel,
@@ -394,7 +410,7 @@ private fun RenderScreen(
 
     Column {
         ProfileHeader(baseUser, appRecommendations, externalIdentities, nav, accountViewModel)
-        ScrollableTabRow(
+        SecondaryScrollableTabRow(
             containerColor = Color.Transparent,
             contentColor = MaterialTheme.colorScheme.onBackground,
             selectedTabIndex = pagerState.currentPage,
@@ -431,6 +447,7 @@ private fun RenderScreen(
                 followersFeedViewModel,
                 zapFeedViewModel,
                 bookmarksFeedViewModel,
+                pinnedNotesFeedViewModel,
                 galleryFeedViewModel,
                 reportsFeedViewModel,
                 accountViewModel,
@@ -451,6 +468,7 @@ private fun CreateAndRenderPages(
     followersFeedViewModel: UserProfileFollowersUserFeedViewModel,
     zapFeedViewModel: UserProfileZapsViewModel,
     bookmarksFeedViewModel: UserProfileBookmarksFeedViewModel,
+    pinnedNotesFeedViewModel: UserProfilePinnedNotesFeedViewModel,
     galleryFeedViewModel: UserProfileGalleryFeedViewModel,
     reportsFeedViewModel: UserProfileReportFeedViewModel,
     accountViewModel: AccountViewModel,
@@ -464,7 +482,7 @@ private fun CreateAndRenderPages(
     )
 
     when (page) {
-        0 -> TabNotesNewThreads(threadsViewModel, accountViewModel, nav)
+        0 -> TabNotesNewThreads(threadsViewModel, pinnedNotesFeedViewModel, accountViewModel, nav)
         1 -> TabNotesConversations(repliesViewModel, accountViewModel, nav)
         2 -> TabMutualConversations(mutualViewModel, accountViewModel, nav)
         3 -> TabGallery(galleryFeedViewModel, accountViewModel, nav)

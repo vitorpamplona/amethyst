@@ -19,12 +19,12 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 package com.vitorpamplona.quartz.nip01Core.relay
-
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.req
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.StaticSubscription
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -47,13 +47,17 @@ class NostrClientSubscriptionTest : BaseNostrClientTest() {
             val events = mutableSetOf<Event>()
 
             val sub =
-                client.req(
-                    relay = "wss://nos.lol",
-                    filter =
-                        Filter(
-                            kinds = listOf(MetadataEvent.KIND),
-                            limit = 100,
-                        ),
+                StaticSubscription(
+                    client,
+                    mapOf(
+                        RelayUrlNormalizer.normalize("wss://nos.lol") to
+                            listOf(
+                                Filter(
+                                    kinds = listOf(MetadataEvent.KIND),
+                                    limit = 100,
+                                ),
+                            ),
+                    ),
                 ) { event ->
                     assertEquals(MetadataEvent.KIND, event.kind)
                     resultChannel.trySend(event)

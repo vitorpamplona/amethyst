@@ -87,7 +87,7 @@ class AntiSpamFilter {
                 val link1 = njumpLink(NAddress.create(existingAddress.kind, existingAddress.pubKeyHex, existingAddress.dTag, relay))
                 val link2 = njumpLink(NAddress.create(event.kind, event.pubKey, event.dTag(), relay))
 
-                Log.w("Duplicated/SPAM", "${relay?.url} $link1 $link2")
+                Log.w("Duplicated/SPAM") { "${relay?.url} $link1 $link2" }
 
                 // Log down offenders
                 val spammer = logOffender(hash, event)
@@ -114,7 +114,7 @@ class AntiSpamFilter {
                 val link1 = njumpLink(NEvent.create(existingEvent, null, null, relay))
                 val link2 = njumpLink(NEvent.create(event.id, null, null, relay))
 
-                Log.w("Duplicated/SPAM", "${relay?.url} $link1 $link2")
+                Log.w("Duplicated/SPAM") { "${relay?.url} $link1 $link2" }
 
                 // Log down offenders
                 val spammer = logOffender(hash, event)

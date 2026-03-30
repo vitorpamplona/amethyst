@@ -25,7 +25,6 @@ import com.vitorpamplona.quartz.utils.urldetector.UrlMarker
 import com.vitorpamplona.quartz.utils.urldetector.UrlPart
 import com.vitorpamplona.quartz.utils.urldetector.detection.DomainNameReader.Companion.INTERNATIONAL_CHAR_START
 import kotlin.math.max
-import kotlin.text.deleteRange
 
 class UrlDetector(
     content: String,
@@ -253,6 +252,7 @@ class UrlDetector(
                 }
 
                 val backtrackOnFail: Int = reader.position - buffer.length + length
+
                 if (!readDomainName(buffer.substring(length))) {
                     // go back to length location and restart search
                     reader.seek(backtrackOnFail)
@@ -315,81 +315,75 @@ class UrlDetector(
         while (!reader.eof()) {
             val curr = reader.read()
 
-            // if we match a slash, look for a second one.
             if (curr == '/') {
                 buffer.append(curr)
                 if (numSlashes == 1) {
-                    // return only if its an approved protocol. This can be expanded to allow others
-                    val schemeStartIndex: Int = findValidSchemeStartIndex(buffer.toString())
+                    // Two slashes found — check for a valid scheme like "http://"
+                    val schemeStartIndex = findValidSchemeStartIndex(buffer.toString())
                     if (schemeStartIndex >= 0) {
                         buffer.deleteRange(0, schemeStartIndex)
                         currentUrlMarker.setIndex(UrlPart.SCHEME, 0)
                         return true
-                    } else {
-                        return false
                     }
+                    return false
                 }
                 numSlashes++
             } else if (curr == ' ') {
-                // if we find a space or end of input, then nothing found.
                 buffer.append(curr)
                 return false
-            } else if (curr == '[') { // if we're starting to see an ipv6 address
-                reader.goBack() // unread the '[', so that we can start looking for ipv6
-                return false
-            } else if (originalLength > 0 && numSlashes == 0 && CharUtils.isAlpha(curr)) {
-                // If we had already read something before the : and we are matching regardless of slashes, assume it's a scheme
-
-                // Add the slashes to the end of the scheme so it matches what's in the scheme list
-                val schemeStartIndex = findValidSchemeNoSlashesStartIndex(buffer.toString())
-                if (schemeStartIndex >= 0) {
-                    if (schemeStartIndex > 0) {
-                        buffer.deleteRange(0, schemeStartIndex)
-                    }
-                    currentUrlMarker.setIndex(UrlPart.SCHEME, 0)
-                    reader.goBack()
-                    return true
-                } else {
-                    reader.goBack()
-                    return readUserPass(0)
-                }
-                // If this didn't match a defined scheme, continue processing as usual
-            } else if (originalLength > 0 || numSlashes > 0 || !CharUtils.isAlpha(curr)) {
-                // if it's not a character a-z or A-Z then assume we aren't matching scheme, but instead
-                // matching username and password.
-                // Add the slashes to the end of the scheme so it matches what's in the scheme list
-                val schemeStartIndex = findValidSchemeNoSlashesStartIndex(buffer.toString())
-                if (schemeStartIndex >= 0) {
-                    if (schemeStartIndex > 0) {
-                        buffer.deleteRange(0, schemeStartIndex)
-                    }
-                    currentUrlMarker.setIndex(UrlPart.SCHEME, 0)
-                    reader.goBack()
-                    return true
-                }
-
+            } else if (curr == '[') {
+                // Start of IPv6 — unread and let the caller handle it
                 reader.goBack()
-                return readUserPass(0)
+                return false
+            } else if (originalLength > 0 || numSlashes > 0 || !CharUtils.isAlpha(curr)) {
+                // Not a plain alpha char continuing a potential scheme name, or we already
+                // had content before the colon / had slashes. Try matching a scheme without
+                // slashes (e.g. "nostr:npub1...") then fall back to username:password.
+                return trySchemeNoSlashesOrUserPass()
             }
         }
 
         return false
     }
 
-    private fun findValidSchemeStartIndex(optionalScheme: String): Int {
-        val optionalSchemeLowercase = optionalScheme.lowercase()
-        return VALID_SCHEMES
-            .filter(optionalSchemeLowercase::endsWith)
-            .map(optionalSchemeLowercase::lastIndexOf)
-            .firstOrNull() ?: -1
+    /**
+     * Attempts to match the buffer as a scheme without slashes (e.g. "nostr:").
+     * If that fails, treats the content as a potential username:password.
+     */
+    private fun trySchemeNoSlashesOrUserPass(): Boolean {
+        val schemeStartIndex = findValidSchemeNoSlashesStartIndex(buffer.toString())
+        if (schemeStartIndex >= 0) {
+            if (schemeStartIndex > 0) {
+                buffer.deleteRange(0, schemeStartIndex)
+            }
+            currentUrlMarker.setIndex(UrlPart.SCHEME, 0)
+            reader.goBack()
+            return true
+        }
+        reader.goBack()
+        return readUserPass(0)
     }
 
-    private fun findValidSchemeNoSlashesStartIndex(optionalScheme: String): Int {
-        val optionalSchemeLowercase = optionalScheme.lowercase()
-        return VALID_SCHEMES_NO_SLASHES
-            .filter(optionalSchemeLowercase::endsWith)
-            .map(optionalSchemeLowercase::lastIndexOf)
-            .firstOrNull() ?: -1
+    private fun findValidSchemeStartIndex(optionalScheme: String): Int = findSchemeSuffix(optionalScheme, VALID_SCHEMES)
+
+    private fun findValidSchemeNoSlashesStartIndex(optionalScheme: String): Int = findSchemeSuffix(optionalScheme, VALID_SCHEMES_NO_SLASHES)
+
+    /**
+     * Checks if [buffer] ends with any of the [schemes] (case-insensitive)
+     * and returns the start index of the match, or -1 if none match.
+     */
+    private fun findSchemeSuffix(
+        buffer: String,
+        schemes: List<String>,
+    ): Int {
+        val len = buffer.length
+        for (scheme in schemes) {
+            val schemeLen = scheme.length
+            if (len >= schemeLen && buffer.regionMatches(len - schemeLen, scheme, 0, schemeLen, ignoreCase = true)) {
+                return len - schemeLen
+            }
+        }
+        return -1
     }
 
     /**
@@ -430,7 +424,7 @@ class UrlDetector(
             }
         }
 
-        if (rollback) {
+        if (rollback || !done) {
             // got to here, so there is no username and password. (We didn't find a @)
             val distance: Int = buffer.length - start
             buffer.deleteRange(start, buffer.length)
@@ -618,57 +612,33 @@ class UrlDetector(
         var endsOnASlash = true
 
         while (!reader.eof()) {
-            // read the next char
             val curr = reader.read()
 
             if (curr == ' ') {
-                // if end of state and we got here, then the url is valid
-                // if it is not just a word/word
-                if (
-                    currentUrlMarker.hasScheme() ||
-                    currentUrlMarker.hasPort() ||
-                    currentUrlMarker.hasUsernamePassword() ||
-                    !isSingleLevelLabel ||
-                    endsOnASlash
-                ) {
-                    return readEnd(ReadEndState.ValidUrl)
-                } else {
-                    return readEnd(ReadEndState.InvalidUrl)
-                }
+                return readEnd(if (isPathValid(endsOnASlash)) ReadEndState.ValidUrl else ReadEndState.InvalidUrl)
             }
 
-            // append the char
             buffer.append(curr)
 
-            // now see if we move to another state.
-            if (curr == '?') {
-                // if ? read query string
-                return readQueryString()
-            } else if (curr == '#') {
-                // if # read the fragment
-                return readFragment()
-            }
+            if (curr == '?') return readQueryString()
+            if (curr == '#') return readFragment()
 
             endsOnASlash = curr == '/'
         }
 
-        // end of input then this url is good.
-        // if end of state and we got here, then the url is valid
-        // if it is not just a word/word
-        // no need to check for query and fragments
-        // here we accept urls that end in /
-        if (
-            currentUrlMarker.hasScheme() ||
+        return readEnd(if (isPathValid(endsOnASlash)) ReadEndState.ValidUrl else ReadEndState.InvalidUrl)
+    }
+
+    /**
+     * A path is valid if the URL has additional context (scheme, port, credentials)
+     * or if it's not an ambiguous single-level label like "word/word".
+     */
+    private fun isPathValid(endsOnASlash: Boolean): Boolean =
+        currentUrlMarker.hasScheme() ||
             currentUrlMarker.hasPort() ||
             currentUrlMarker.hasUsernamePassword() ||
             !isSingleLevelLabel ||
             endsOnASlash
-        ) {
-            return readEnd(ReadEndState.ValidUrl)
-        } else {
-            return readEnd(ReadEndState.InvalidUrl)
-        }
-    }
 
     /**
      * The url has been read to here. Remember the url if its valid, and reset state.

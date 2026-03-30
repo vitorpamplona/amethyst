@@ -85,7 +85,6 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.ui.chat.ChatMessageCompose
 import com.vitorpamplona.amethyst.commons.ui.chat.ChatroomHeader
@@ -196,7 +195,7 @@ fun ChatPane(
         }
 
     // Resolve users for the header
-    val users = roomKey.users.mapNotNull { cacheProvider.getUserIfExists(it) as? User }
+    val users = roomKey.users.mapNotNull { cacheProvider.getUserIfExists(it) }
     val isGroup = users.size > 1
 
     // Load room into message state
@@ -804,7 +803,7 @@ private suspend fun sendEncryptedFiles(
 ) {
     val orchestrator = DesktopUploadOrchestrator()
     val server = DesktopPreferences.preferredBlossomServer
-    val recipients = roomKey.users.mapNotNull { cacheProvider.getUserIfExists(it) as? User }.map { it.toPTag() }
+    val recipients = roomKey.users.mapNotNull { cacheProvider.getUserIfExists(it) }.map { it.toPTag() }
 
     for (file in files) {
         val cipher = AESGCM()

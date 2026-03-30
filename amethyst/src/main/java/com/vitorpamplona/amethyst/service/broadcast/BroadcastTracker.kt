@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.service.broadcast
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
@@ -85,12 +85,12 @@ class BroadcastTracker {
         // Add to active broadcasts and cache event for retries
         _activeBroadcasts.update { (it + broadcast).toImmutableList() }
 
-        Log.d(TAG, "Starting broadcast $trackingId (kind ${event.kind}) to ${relays.size} relays")
+        Log.d(TAG) { "Starting broadcast $trackingId (kind ${event.kind}) to ${relays.size} relays" }
 
         val resultChannel = Channel<RelayResponse>(UNLIMITED)
 
         val subscription =
-            object : IRelayClientListener {
+            object : RelayConnectionListener {
                 override fun onCannotConnect(
                     relay: IRelayClient,
                     errorMessage: String,
@@ -102,7 +102,7 @@ class BroadcastTracker {
                                 result = RelayResult.Error(errorMessage),
                             ),
                         )
-                        Log.d(TAG, "[$trackingId] Cannot connect to ${relay.url}: $errorMessage")
+                        Log.d(TAG) { "[$trackingId] Cannot connect to ${relay.url}: $errorMessage" }
                     }
                 }
 
@@ -114,7 +114,7 @@ class BroadcastTracker {
                                 result = RelayResult.Error("Relay disconnected before completion"),
                             ),
                         )
-                        Log.d(TAG, "[$trackingId] Disconnected from ${relay.url}")
+                        Log.d(TAG) { "[$trackingId] Disconnected from ${relay.url}" }
                     }
                 }
 
@@ -135,62 +135,65 @@ class BroadcastTracker {
                                         RelayResult.Error(msg.message)
                                     }
                                 resultChannel.trySend(RelayResponse(relay.url, result))
-                                Log.d(TAG, "[$trackingId] Response from ${relay.url}: success=${msg.success} message=${msg.message}")
+                                Log.d(TAG) { "[$trackingId] Response from ${relay.url}: success=${msg.success} message=${msg.message}" }
                             }
                         }
                     }
                 }
             }
 
-        client.subscribe(subscription)
+        try {
+            client.addConnectionListener(subscription)
 
-        val finalBroadcast =
-            coroutineScope {
-                val resultCollector =
-                    async {
-                        val receivedRelays = mutableSetOf<NormalizedRelayUrl>()
-                        var currentBroadcast = broadcast
+            val finalBroadcast =
+                coroutineScope {
+                    val resultCollector =
+                        async {
+                            val receivedRelays = mutableSetOf<NormalizedRelayUrl>()
+                            var currentBroadcast = broadcast
 
-                        withTimeoutOrNull(TIMEOUT_SECONDS * 1000) {
-                            while (receivedRelays.size < relays.size) {
-                                val response = resultChannel.receive()
+                            withTimeoutOrNull(TIMEOUT_SECONDS * 1000) {
+                                while (receivedRelays.size < relays.size) {
+                                    val response = resultChannel.receive()
 
-                                // Skip if already received (don't override success)
-                                if (response.relay in receivedRelays) continue
+                                    // Skip if already received (don't override success)
+                                    if (response.relay in receivedRelays) continue
 
-                                receivedRelays.add(response.relay)
-                                currentBroadcast = currentBroadcast.withResult(response.relay, response.result)
+                                    receivedRelays.add(response.relay)
+                                    currentBroadcast = currentBroadcast.withResult(response.relay, response.result)
 
-                                // Update active broadcasts with new progress
-                                _activeBroadcasts.update { list ->
-                                    list.map { if (it.id == trackingId) currentBroadcast else it }.toImmutableList()
+                                    // Update active broadcasts with new progress
+                                    _activeBroadcasts.update { list ->
+                                        list.map { if (it.id == trackingId) currentBroadcast else it }.toImmutableList()
+                                    }
                                 }
                             }
+
+                            // Mark remaining relays as timeout
+                            relays.filter { it !in receivedRelays }.forEach { relay ->
+                                currentBroadcast = currentBroadcast.withResult(relay, RelayResult.Timeout)
+                            }
+
+                            currentBroadcast
                         }
 
-                        // Mark remaining relays as timeout
-                        relays.filter { it !in receivedRelays }.forEach { relay ->
-                            currentBroadcast = currentBroadcast.withResult(relay, RelayResult.Timeout)
-                        }
+                    // Send after setting up listener
+                    client.publish(event, relays)
 
-                        currentBroadcast
-                    }
+                    resultCollector.await()
+                }
 
-                // Send after setting up listener
-                client.send(event, relays)
+            resultChannel.close()
 
-                resultCollector.await()
+            // Remove from active, emit to completed
+            _activeBroadcasts.update { list ->
+                list.map { if (it.id == trackingId) finalBroadcast else it }.toImmutableList()
             }
 
-        client.unsubscribe(subscription)
-        resultChannel.close()
-
-        // Remove from active, emit to completed
-        _activeBroadcasts.update { list ->
-            list.map { if (it.id == trackingId) finalBroadcast else it }.toImmutableList()
+            Log.d(TAG) { "Broadcast $trackingId complete: ${finalBroadcast.successCount}/${finalBroadcast.totalRelays} success" }
+        } finally {
+            client.removeConnectionListener(subscription)
         }
-
-        Log.d(TAG, "Broadcast $trackingId complete: ${finalBroadcast.successCount}/${finalBroadcast.totalRelays} success")
     }
 
     /**
@@ -263,7 +266,7 @@ class BroadcastTracker {
         val resultChannel = Channel<RelayResponse>(UNLIMITED)
 
         val subscription =
-            object : IRelayClientListener {
+            object : RelayConnectionListener {
                 override fun onCannotConnect(
                     relay: IRelayClient,
                     errorMessage: String,
@@ -275,7 +278,7 @@ class BroadcastTracker {
                                 result = RelayResult.Error(errorMessage),
                             ),
                         )
-                        Log.d(TAG, "[${broadcast.id}] Retry cannot connect to ${relay.url}: $errorMessage")
+                        Log.d(TAG) { "[${broadcast.id}] Retry cannot connect to ${relay.url}: $errorMessage" }
                     }
                 }
 
@@ -287,7 +290,7 @@ class BroadcastTracker {
                                 result = RelayResult.Error("Relay disconnected before completion"),
                             ),
                         )
-                        Log.d(TAG, "[${broadcast.id}] Retry disconnected from ${relay.url}")
+                        Log.d(TAG) { "[${broadcast.id}] Retry disconnected from ${relay.url}" }
                     }
                 }
 
@@ -308,14 +311,14 @@ class BroadcastTracker {
                                         RelayResult.Error(msg.message)
                                     }
                                 resultChannel.trySend(RelayResponse(relay.url, result))
-                                Log.d(TAG, "[${broadcast.id}] Retry response from ${relay.url}: success=${msg.success}")
+                                Log.d(TAG) { "[${broadcast.id}] Retry response from ${relay.url}: success=${msg.success}" }
                             }
                         }
                     }
                 }
             }
 
-        client.subscribe(subscription)
+        client.addConnectionListener(subscription)
 
         val finalBroadcast =
             coroutineScope {
@@ -367,12 +370,12 @@ class BroadcastTracker {
                         currentBroadcast.copy(status = newStatus)
                     }
 
-                client.send(event, relaysToRetry)
+                client.publish(event, relaysToRetry)
 
                 resultCollector.await()
             }
 
-        client.unsubscribe(subscription)
+        client.removeConnectionListener(subscription)
         resultChannel.close()
 
         // Update in active broadcasts
@@ -380,7 +383,7 @@ class BroadcastTracker {
             list.map { if (it.id == broadcast.id) finalBroadcast else it }.toImmutableList()
         }
 
-        Log.d(TAG, "Retry complete for ${broadcast.id}: ${finalBroadcast.successCount}/${finalBroadcast.totalRelays} success")
+        Log.d(TAG) { "Retry complete for ${broadcast.id}: ${finalBroadcast.successCount}/${finalBroadcast.totalRelays} success" }
 
         return finalBroadcast
     }

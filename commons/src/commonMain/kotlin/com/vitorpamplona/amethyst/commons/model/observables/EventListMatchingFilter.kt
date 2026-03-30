@@ -20,7 +20,9 @@
  */
 package com.vitorpamplona.amethyst.commons.model.observables
 
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import java.util.SortedSet
@@ -31,18 +33,27 @@ import java.util.concurrent.ConcurrentSkipListSet
  * that is updated every time a new event that matches
  * the filter is received, including addressables.
  */
-class EventListMatchingFilter(
+class EventListMatchingFilter<T : Event>(
     private val filter: Filter,
     private val atOnce: (filter: Filter) -> SortedSet<Note>,
-    private val update: (List<Event>) -> Unit,
+    private val update: (List<T>) -> Unit,
 ) : Observable {
     // Keeping this here blocks it from being cleared from memory
     var currentResults: ConcurrentSkipListSet<Note> = ConcurrentSkipListSet(CreatedAtIdHexComparator)
 
+    @Suppress("UNCHECKED_CAST")
     override fun new(
         event: Event,
         note: Note,
     ) {
+        if (event is AddressableEvent && note !is AddressableNote) {
+            // event update
+            if (currentResults.contains(note)) {
+                update(currentResults.mapNotNull { it.event as? T })
+            }
+            return
+        }
+
         if (filter.match(event)) {
             currentResults.add(note)
             val limit = filter.limit
@@ -50,18 +61,20 @@ class EventListMatchingFilter(
                 currentResults.remove(currentResults.last())
             }
 
-            update(currentResults.mapNotNull { it.event })
+            update(currentResults.mapNotNull { it.event as? T })
         }
     }
 
+    @Suppress("UNCHECKED_CAST")
     override fun remove(note: Note) {
         if (currentResults.remove(note)) {
-            update(currentResults.mapNotNull { it.event })
+            update(currentResults.mapNotNull { it.event as? T })
         }
     }
 
+    @Suppress("UNCHECKED_CAST")
     fun init() {
         currentResults = ConcurrentSkipListSet(atOnce(filter))
-        update(currentResults.mapNotNull { it.event })
+        update(currentResults.mapNotNull { it.event as? T })
     }
 }

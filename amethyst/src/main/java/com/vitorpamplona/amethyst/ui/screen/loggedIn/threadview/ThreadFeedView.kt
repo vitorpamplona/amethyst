@@ -18,6 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+@file:Suppress("DEPRECATION")
+
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview
 
 import android.annotation.SuppressLint
@@ -145,23 +147,36 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderAttestorProficiency
 import com.vitorpamplona.amethyst.ui.note.types.RenderAttestorRecommendation
 import com.vitorpamplona.amethyst.ui.note.types.RenderCalendarDateSlotEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderCalendarTimeSlotEvent
+import com.vitorpamplona.amethyst.ui.note.types.RenderCashuMint
 import com.vitorpamplona.amethyst.ui.note.types.RenderChannelMessage
+import com.vitorpamplona.amethyst.ui.note.types.RenderChat
 import com.vitorpamplona.amethyst.ui.note.types.RenderChatMessageEncryptedFile
 import com.vitorpamplona.amethyst.ui.note.types.RenderCodeSnippetHeaderForThread
 import com.vitorpamplona.amethyst.ui.note.types.RenderEmojiPack
+import com.vitorpamplona.amethyst.ui.note.types.RenderFedimint
 import com.vitorpamplona.amethyst.ui.note.types.RenderFhirResource
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitIssueEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitPatchEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitRepositoryEvent
+import com.vitorpamplona.amethyst.ui.note.types.RenderGoal
 import com.vitorpamplona.amethyst.ui.note.types.RenderHighlight
 import com.vitorpamplona.amethyst.ui.note.types.RenderInteractiveStory
 import com.vitorpamplona.amethyst.ui.note.types.RenderLiveActivityChatMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderLnZap
+import com.vitorpamplona.amethyst.ui.note.types.RenderMintRecommendation
+import com.vitorpamplona.amethyst.ui.note.types.RenderNamedSiteEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderPinListEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderPoll
 import com.vitorpamplona.amethyst.ui.note.types.RenderPostApproval
 import com.vitorpamplona.amethyst.ui.note.types.RenderPrivateMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderPublicMessage
+import com.vitorpamplona.amethyst.ui.note.types.RenderRelayAddMember
+import com.vitorpamplona.amethyst.ui.note.types.RenderRelayDiscovery
+import com.vitorpamplona.amethyst.ui.note.types.RenderRelayJoinRequest
+import com.vitorpamplona.amethyst.ui.note.types.RenderRelayLeaveRequest
+import com.vitorpamplona.amethyst.ui.note.types.RenderRelayMembershipList
+import com.vitorpamplona.amethyst.ui.note.types.RenderRelayRemoveMember
+import com.vitorpamplona.amethyst.ui.note.types.RenderRootSiteEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderTextEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderTextModificationEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderTorrent
@@ -206,7 +221,6 @@ import com.vitorpamplona.quartz.experimental.forks.IForkableEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
 import com.vitorpamplona.quartz.experimental.medical.FhirResourceEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
-import com.vitorpamplona.quartz.experimental.publicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geoHashOrScope
@@ -228,6 +242,11 @@ import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
+import com.vitorpamplona.quartz.nip43RelayMembers.addMember.RelayAddMemberEvent
+import com.vitorpamplona.quartz.nip43RelayMembers.joinRequest.RelayJoinRequestEvent
+import com.vitorpamplona.quartz.nip43RelayMembers.leaveRequest.RelayLeaveRequestEvent
+import com.vitorpamplona.quartz.nip43RelayMembers.list.RelayMembershipListEvent
+import com.vitorpamplona.quartz.nip43RelayMembers.removeMember.RelayRemoveMemberEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
@@ -246,19 +265,29 @@ import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.splits.hasZapSplitSetup
 import com.vitorpamplona.quartz.nip58Badges.BadgeDefinitionEvent
+import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
+import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.RelayDiscoveryEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip71Video.VideoEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.communityAddress
 import com.vitorpamplona.quartz.nip72ModCommunities.isACommunityPost
+import com.vitorpamplona.quartz.nip75ZapGoals.GoalEvent
+import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
+import com.vitorpamplona.quartz.nip87Ecash.cashu.CashuMintEvent
+import com.vitorpamplona.quartz.nip87Ecash.fedimint.FedimintEvent
+import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
+import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
+import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
@@ -547,6 +576,7 @@ private fun FullBleedNoteCompose(
         when (noteEvent) {
             is BadgeDefinitionEvent -> BadgeDisplay(baseNote = baseNote, accountViewModel)
             is LongTextNoteEvent -> RenderLongFormHeaderForThread(noteEvent, baseNote, accountViewModel)
+            is ThreadEvent -> RenderThreadHeaderForThread(noteEvent)
             is WikiNoteEvent -> RenderWikiHeaderForThread(noteEvent, accountViewModel, nav)
             is ClassifiedsEvent -> RenderClassifiedsReaderForThread(noteEvent, baseNote, accountViewModel, nav)
             is CodeSnippetEvent -> RenderCodeSnippetHeaderForThread(noteEvent)
@@ -662,6 +692,10 @@ private fun FullBleedNoteCompose(
                     RenderFhirResource(baseNote, accountViewModel, nav)
                 } else if (noteEvent is GitRepositoryEvent) {
                     RenderGitRepositoryEvent(baseNote, accountViewModel, nav)
+                } else if (noteEvent is RootSiteEvent) {
+                    RenderRootSiteEvent(baseNote, accountViewModel, nav)
+                } else if (noteEvent is NamedSiteEvent) {
+                    RenderNamedSiteEvent(baseNote, accountViewModel, nav)
                 } else if (noteEvent is InteractiveStoryBaseEvent) {
                     RenderInteractiveStory(
                         baseNote,
@@ -688,6 +722,8 @@ private fun FullBleedNoteCompose(
                     RenderCalendarTimeSlotEvent(baseNote, accountViewModel, nav)
                 } else if (noteEvent is CalendarDateSlotEvent) {
                     RenderCalendarDateSlotEvent(baseNote, accountViewModel, nav)
+                } else if (noteEvent is GoalEvent) {
+                    RenderGoal(baseNote, accountViewModel, nav)
                 } else if (noteEvent is CommentEvent) {
                     RenderTextEvent(
                         baseNote,
@@ -702,6 +738,18 @@ private fun FullBleedNoteCompose(
                     )
                 } else if (noteEvent is RepostEvent || noteEvent is GenericRepostEvent) {
                     RenderRepost(baseNote, quotesLeft = 3, backgroundColor, accountViewModel, nav)
+                } else if (noteEvent is RelayDiscoveryEvent) {
+                    RenderRelayDiscovery(baseNote, accountViewModel, nav)
+                } else if (noteEvent is RelayMembershipListEvent) {
+                    RenderRelayMembershipList(baseNote, accountViewModel, nav)
+                } else if (noteEvent is RelayAddMemberEvent) {
+                    RenderRelayAddMember(baseNote, accountViewModel, nav)
+                } else if (noteEvent is RelayRemoveMemberEvent) {
+                    RenderRelayRemoveMember(baseNote, accountViewModel, nav)
+                } else if (noteEvent is RelayJoinRequestEvent) {
+                    RenderRelayJoinRequest(baseNote, accountViewModel, nav)
+                } else if (noteEvent is RelayLeaveRequestEvent) {
+                    RenderRelayLeaveRequest(baseNote, accountViewModel, nav)
                 } else if (noteEvent is TextNoteModificationEvent) {
                     RenderTextModificationEvent(
                         note = baseNote,
@@ -722,6 +770,22 @@ private fun FullBleedNoteCompose(
                         backgroundColor,
                         accountViewModel,
                         nav,
+                    )
+                } else if (noteEvent is CashuMintEvent) {
+                    RenderCashuMint(noteEvent)
+                } else if (noteEvent is FedimintEvent) {
+                    RenderFedimint(noteEvent)
+                } else if (noteEvent is MintRecommendationEvent) {
+                    RenderMintRecommendation(noteEvent)
+                } else if (noteEvent is ChatEvent) {
+                    RenderChat(
+                        note = baseNote,
+                        makeItShort = false,
+                        canPreview = canPreview,
+                        quotesLeft = 3,
+                        backgroundColor = backgroundColor,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
                     )
                 } else if (noteEvent is PollEvent) {
                     RenderPoll(
@@ -1091,6 +1155,20 @@ private fun RenderLongFormHeaderForThread(
                     color = MaterialTheme.colorScheme.grayText,
                 )
             }
+    }
+}
+
+@Composable
+private fun RenderThreadHeaderForThread(noteEvent: ThreadEvent) {
+    noteEvent.title()?.let {
+        Column(modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp)) {
+            Text(
+                text = it,
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
     }
 }
 

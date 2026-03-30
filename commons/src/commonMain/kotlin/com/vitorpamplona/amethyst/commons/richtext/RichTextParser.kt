@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.commons.richtext
 
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
-import com.vitorpamplona.amethyst.commons.richtext.mimeTypeMap
 import com.vitorpamplona.quartz.experimental.inlineMetadata.Nip54InlineMetadata
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import com.vitorpamplona.quartz.nip31Alts.AltTag
@@ -40,8 +39,8 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.collections.immutable.toPersistentList
 import java.net.MalformedURLException
+import java.net.URI
 import java.net.URISyntaxException
-import java.net.URL
 import kotlin.coroutines.cancellation.CancellationException
 
 class RichTextParser {
@@ -424,11 +423,17 @@ class RichTextParser {
 
         fun isValidURL(url: String?): Boolean =
             try {
-                URL(url).toURI()
-                true
+                if (url != null) {
+                    URI(url).toURL()
+                    true
+                } else {
+                    false
+                }
             } catch (e: MalformedURLException) {
                 false
             } catch (e: URISyntaxException) {
+                false
+            } catch (e: IllegalArgumentException) {
                 false
             }
 

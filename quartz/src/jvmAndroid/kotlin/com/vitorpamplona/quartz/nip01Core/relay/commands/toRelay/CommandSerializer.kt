@@ -25,6 +25,9 @@ import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import com.vitorpamplona.quartz.nip01Core.jackson.EventSerializer
 import com.vitorpamplona.quartz.nip01Core.relay.filters.FilterSerializer
+import com.vitorpamplona.quartz.nip77Negentropy.NegCloseCmd
+import com.vitorpamplona.quartz.nip77Negentropy.NegMsgCmd
+import com.vitorpamplona.quartz.nip77Negentropy.NegOpenCmd
 
 class CommandSerializer : StdSerializer<Command>(Command::class.java) {
     val eventSerializer = EventSerializer()
@@ -63,6 +66,21 @@ class CommandSerializer : StdSerializer<Command>(Command::class.java) {
                 cmd.filters.forEach {
                     filterSerializer.serialize(it, gen, provider)
                 }
+            }
+
+            is NegOpenCmd -> {
+                gen.writeString(cmd.subId)
+                filterSerializer.serialize(cmd.filter, gen, provider)
+                gen.writeString(cmd.initialMessage)
+            }
+
+            is NegMsgCmd -> {
+                gen.writeString(cmd.subId)
+                gen.writeString(cmd.message)
+            }
+
+            is NegCloseCmd -> {
+                gen.writeString(cmd.subId)
             }
 
             else -> {

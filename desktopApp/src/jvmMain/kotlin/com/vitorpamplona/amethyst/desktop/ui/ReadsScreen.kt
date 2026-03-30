@@ -40,11 +40,13 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -61,6 +63,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
+import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.desktop.subscriptions.FeedMode
 import com.vitorpamplona.amethyst.desktop.subscriptions.createContactListSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.createFollowingLongFormFeedSubscription
@@ -68,13 +71,20 @@ import com.vitorpamplona.amethyst.desktop.subscriptions.createLongFormFeedSubscr
 import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
-import java.text.SimpleDateFormat
-import java.util.Date
+import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-private val dateFormat = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
+private val dateFormat = DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.getDefault())
 
-private fun formatDate(timestamp: Long): String = dateFormat.format(Date(timestamp * 1000))
+private fun formatDate(timestamp: Long): String =
+    Instant
+        .ofEpochSecond(timestamp)
+        .atZone(ZoneId.systemDefault())
+        .toLocalDate()
+        .format(dateFormat)
 
 /**
  * Card displaying long-form content (NIP-23) with title, summary, and image.
@@ -171,10 +181,15 @@ fun ReadsScreen(
     relayManager: DesktopRelayConnectionManager,
     localCache: DesktopLocalCache,
     account: AccountState.LoggedIn? = null,
+    nwcConnection: Nip47WalletConnect.Nip47URINorm? = null,
+    subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator? = null,
     onNavigateToProfile: (String) -> Unit = {},
     onNavigateToArticle: (String) -> Unit = {},
+    onNavigateToThread: (String) -> Unit = {},
+    onZapFeedback: (ZapFeedback) -> Unit = {},
 ) {
-    val connectedRelays by relayManager.connectedRelays.collectAsState()
+    val relayStatuses by relayManager.relayStatuses.collectAsState()
+    val connectedRelays = remember(relayStatuses) { relayStatuses.keys }
     val scope = rememberCoroutineScope()
 
     val eventState =
@@ -192,6 +207,18 @@ fun ReadsScreen(
     var followedUsers by remember { mutableStateOf<Set<String>>(emptySet()) }
     var eoseReceivedCount by remember { mutableStateOf(0) }
     val initialLoadComplete = eoseReceivedCount > 0
+
+    // Seed from cache — long-form notes already consumed are in cache
+    LaunchedEffect(Unit) {
+        val cached =
+            localCache.notes.filterIntoSet { _, note ->
+                note.event is LongTextNoteEvent
+            }
+        cached.forEach { note ->
+            (note.event as? LongTextNoteEvent)?.let { eventState.addItem(it) }
+        }
+        if (cached.isNotEmpty()) eoseReceivedCount++
+    }
 
     // Load followed users for Following feed mode
     rememberSubscription(connectedRelays, account, feedMode, relayManager = relayManager) {
@@ -228,7 +255,8 @@ fun ReadsScreen(
             FeedMode.GLOBAL -> {
                 createLongFormFeedSubscription(
                     relays = connectedRelays,
-                    onEvent = { event, _, _, _ ->
+                    onEvent = { event, _, relay, _ ->
+                        subscriptionsCoordinator?.consumeEvent(event, relay)
                         if (event is LongTextNoteEvent) {
                             eventState.addItem(event)
                         }
@@ -357,12 +385,27 @@ fun ReadsScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     items(events, key = { it.id }) { event ->
-                        LongFormCard(
-                            event = event,
-                            localCache = localCache,
-                            onAuthorClick = onNavigateToProfile,
-                            onClick = { onNavigateToArticle(event.id) },
-                        )
+                        Column {
+                            LongFormCard(
+                                event = event,
+                                localCache = localCache,
+                                onAuthorClick = onNavigateToProfile,
+                                onClick = { onNavigateToArticle(event.addressTag()) },
+                            )
+                            if (account != null) {
+                                NoteActionsRow(
+                                    event = event,
+                                    relayManager = relayManager,
+                                    localCache = localCache,
+                                    account = account,
+                                    nwcConnection = nwcConnection,
+                                    onReplyClick = { onNavigateToThread(event.id) },
+                                    onZapFeedback = onZapFeedback,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                                )
+                            }
+                        }
+                        HorizontalDivider(thickness = 1.dp)
                     }
                 }
             }

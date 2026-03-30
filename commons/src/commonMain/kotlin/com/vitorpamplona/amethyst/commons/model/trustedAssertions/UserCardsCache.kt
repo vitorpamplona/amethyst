@@ -25,7 +25,7 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.UserDependencies
 import com.vitorpamplona.amethyst.commons.relays.EOSERelayList
 import com.vitorpamplona.amethyst.commons.util.PlatformNumberFormatter
-import com.vitorpamplona.quartz.experimental.relationshipStatus.ContactCardEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combineTransform

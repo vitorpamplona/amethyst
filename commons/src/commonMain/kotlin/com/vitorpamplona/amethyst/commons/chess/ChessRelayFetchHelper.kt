@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.commons.chess
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -49,7 +49,7 @@ enum class RelayFetchStatus {
 /**
  * One-shot relay fetch helper for chess events.
  *
- * Follows the existing INostrClient + IRequestListener + Channel pattern
+ * Follows the existing INostrClient + SubscriptionListener + Channel pattern
  * from quartz (see NostrClientSingleDownloadExt.kt).
  *
  * Each fetch opens a subscription, collects events until EOSE from all relays,
@@ -62,7 +62,7 @@ class ChessRelayFetchHelper(
     /**
      * Fetch events matching filters from relays, waiting for EOSE.
      *
-     * @param filters Map of relay → filter list (same format as INostrClient.openReqSubscription)
+     * @param filters Map of relay → filter list (same format as INostrClient.subscribe)
      * @param timeoutMs Max time to wait for relays to respond (default from ChessConfig)
      * @param onProgress Optional callback for progress updates per relay
      * @return Deduplicated list of events received before timeout/EOSE
@@ -88,7 +88,7 @@ class ChessRelayFetchHelper(
         }
 
         val listener =
-            object : IRequestListener {
+            object : SubscriptionListener {
                 override fun onEvent(
                     event: Event,
                     isLive: Boolean,
@@ -114,7 +114,7 @@ class ChessRelayFetchHelper(
                 }
             }
 
-        client.openReqSubscription(subId, filters, listener)
+        client.subscribe(subId, filters, listener)
         val eoseResult = withTimeoutOrNull(timeoutMs) { allEose.await() }
 
         // Mark timed-out relays
@@ -127,7 +127,7 @@ class ChessRelayFetchHelper(
             }
         }
 
-        client.close(subId)
+        client.unsubscribe(subId)
 
         return events.values.toList()
     }

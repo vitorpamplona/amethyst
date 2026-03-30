@@ -24,7 +24,6 @@ import androidx.sqlite.SQLiteException
 import com.vitorpamplona.quartz.TestResourceLoader
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
-import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import com.vitorpamplona.quartz.nip40Expiration.isExpired
 import com.vitorpamplona.quartz.utils.Log
 import kotlin.test.AfterTest
@@ -62,7 +61,7 @@ class LargeDBTests {
             try {
                 db.insert(event)
             } catch (e: SQLiteException) {
-                Log.w("LargeDBTests", "Error inserting event: ${e.message} for event: ${event.toJson()}")
+                Log.w("LargeDBTests") { "Error inserting event: ${e.message} for event: ${event.toJson()}" }
             }
         }
     }
@@ -73,7 +72,7 @@ class LargeDBTests {
             try {
                 db.insert(event)
             } catch (e: SQLiteException) {
-                Log.w("LargeDBTests", "Error inserting event: ${e.message} for event: ${event.toJson()}")
+                Log.w("LargeDBTests") { "Error inserting event: ${e.message} for event: ${event.toJson()}" }
             }
         }
     }

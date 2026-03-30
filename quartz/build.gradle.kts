@@ -58,70 +58,8 @@ kotlin {
     // project can be found here:
     // https://developer.android.com/kotlin/multiplatform/migrate
     val xcfName = "quartz-kmpKit"
-    val libsodiumPath = project.file("src/nativeInterop/libsodium")
-    val libsodiumHeaderFilesPath = project.file("$libsodiumPath/include/sodium")
-
-    // Generate target-specific Libsodium definition files for creating native bindings.
-    // Device (iosArm64) uses libsodium.a, simulator targets use libsodium-simulator.a.
-    val libsodiumDeviceDefFile =
-        project.layout.buildDirectory
-            .file("cinterop/Clibsodium-device.def")
-            .get()
-            .asFile
-    val libsodiumSimulatorDefFile =
-        project.layout.buildDirectory
-            .file("cinterop/Clibsodium-simulator.def")
-            .get()
-            .asFile
-
-    // This generates the Libsodium definition file, necessary for creating native bindings(a Kotlin API) for libsodium(for iOS).
-    val libsodiumDefFileGeneration =
-        tasks.register("GenerateSodiumCinteropFile") {
-            outputs.files(libsodiumDeviceDefFile, libsodiumSimulatorDefFile)
-            doLast {
-                libsodiumDeviceDefFile.parentFile.mkdirs()
-                libsodiumDeviceDefFile.writeText(
-                    "package = Clibsodium\n" +
-                        "staticLibraries = libsodium.a\n" +
-                        "libraryPaths = ${libsodiumPath.absolutePath}/ios/lib\n",
-                )
-                libsodiumSimulatorDefFile.writeText(
-                    "package = Clibsodium\n" +
-                        "staticLibraries = libsodium-simulator.a\n" +
-                        "libraryPaths = ${libsodiumPath.absolutePath}/ios-simulators/lib\n",
-                )
-            }
-        }
-
-    listOf(
-        iosArm64(),
-        iosSimulatorArm64(),
-    ).forEach { target ->
-        val isSimulator = target.name != "iosArm64"
-        val defFile = if (isSimulator) libsodiumSimulatorDefFile else libsodiumDeviceDefFile
-
-        target.compilations.getByName("main") {
-            val clibsodium by cinterops.creating {
-                definitionFile = defFile
-                packageName = "Clibsodium"
-
-                headers(
-                    "$libsodiumHeaderFilesPath/crypto_aead_xchacha20poly1305.h",
-                    "$libsodiumHeaderFilesPath/crypto_core_hchacha20.h",
-                    "$libsodiumHeaderFilesPath/crypto_stream_chacha20.h",
-                )
-            }
-
-            tasks.named(cinterops.getByName("clibsodium").interopProcessingTaskName).configure {
-                dependsOn(libsodiumDefFileGeneration)
-            }
-        }
-    }
 
     iosArm64 {
-        binaries.all {
-            linkerOpts("-L${libsodiumPath.absolutePath}/ios/lib", "-lsodium")
-        }
         binaries.framework {
             baseName = xcfName
             isStatic = true
@@ -130,15 +68,14 @@ kotlin {
     }
 
     iosSimulatorArm64 {
-        binaries.all {
-            linkerOpts("-L${libsodiumPath.absolutePath}/ios-simulators/lib", "-lsodium-simulator")
-        }
         binaries.framework {
             baseName = xcfName
             isStatic = true
             binaryOption("bundleId", "com.vitorpamplona.quartz")
         }
     }
+
+    linuxX64()
 
     // This makes sure that the resource file directory is visible for iOS tests.
     val rootDir = "${rootProject.rootDir.path}/quartz/src/commonTest/resources"
@@ -183,9 +120,9 @@ kotlin {
                 // SQLite KMP driver for event store
                 api(libs.androidx.sqlite)
                 implementation(libs.androidx.sqlite.bundled)
-
-                // RFC3986 library(normalizes URLs)
-                api(libs.uri.reference.kmp)
+                
+                // Negentropy set reconciliation (NIP-77)
+                api(libs.negentropy.kmp)
             }
         }
 
@@ -235,10 +172,6 @@ kotlin {
             dependencies {
                 // Bitcoin secp256k1 bindings
                 implementation(libs.secp256k1.kmp.jni.jvm)
-
-                // LibSodium for ChaCha encryption (NIP-44)
-                implementation(libs.lazysodium.java)
-                implementation(libs.jna)
             }
         }
 
@@ -260,10 +193,6 @@ kotlin {
 
                 // Bitcoin secp256k1 bindings to Android
                 api(libs.secp256k1.kmp.jni.android)
-
-                // LibSodium for ChaCha encryption (NIP-44)
-                implementation("com.goterl:lazysodium-android:5.2.0@aar")
-                implementation("net.java.dev.jna:jna:5.18.1@aar")
             }
         }
 
@@ -274,10 +203,6 @@ kotlin {
 
                 // Bitcoin secp256k1 bindings
                 implementation(libs.secp256k1.kmp.jni.jvm)
-
-                // LibSodium for ChaCha encryption (NIP-44) - Needed for host tests
-                implementation(libs.lazysodium.java)
-                implementation(libs.jna)
 
                 // SQLite bundled driver for Host tests
                 implementation(libs.androidx.sqlite.bundled.jvm)
@@ -296,22 +221,40 @@ kotlin {
 
                 // Bitcoin secp256k1 bindings to Android
                 api(libs.secp256k1.kmp.jni.android)
-
-                // LibSodium for ChaCha encryption (NIP-44)
-                implementation("com.goterl:lazysodium-android:5.2.0@aar")
-                implementation("net.java.dev.jna:jna:5.18.1@aar")
             }
         }
 
-        iosMain {
-            dependsOn(commonMain.get())
-            dependencies {
-                implementation(libs.charlietap.cachemap)
-                implementation(libs.net.thauvin.erik.urlencoder.lib)
-                implementation(libs.dev.whyoleg.cryptography.provider.apple.optimal)
-                implementation("io.github.andreypfau:kotlinx-crypto-hmac:0.0.4")
-                implementation("io.github.andreypfau:kotlinx-crypto-sha2:0.0.4")
+        // Must be defined before appleMain, linuxMain, etc.
+        val nativeMain =
+            create("nativeMain") {
+                dependsOn(commonMain.get())
             }
+
+        val nativeTest =
+            create("nativeTest") {
+                dependsOn(commonTest.get())
+            }
+
+        // Must be defined before iosMain and macosMain
+        val appleMain =
+            create("appleMain") {
+                dependsOn(nativeMain)
+                dependencies {
+                    implementation(libs.charlietap.cachemap)
+                    implementation(libs.net.thauvin.erik.urlencoder.lib)
+                    implementation(libs.dev.whyoleg.cryptography.provider.apple.optimal)
+                    implementation("io.github.andreypfau:kotlinx-crypto-hmac:0.0.4")
+                    implementation("io.github.andreypfau:kotlinx-crypto-sha2:0.0.4")
+                }
+            }
+
+        val appleTest =
+            create("appleTest") {
+                dependsOn(nativeTest)
+            }
+
+        iosMain {
+            dependsOn(appleMain)
         }
 
         val iosArm64Main by getting {
@@ -323,9 +266,7 @@ kotlin {
         }
 
         iosTest {
-            dependsOn(commonTest.get())
-            dependencies {
-            }
+            dependsOn(appleTest)
         }
 
         val iosArm64Test by getting {
@@ -334,6 +275,30 @@ kotlin {
 
         val iosSimulatorArm64Test by getting {
             dependsOn(iosTest.get())
+        }
+
+        val linuxMain =
+            create("linuxMain") {
+                dependsOn(nativeMain)
+                dependencies {
+                    implementation(libs.net.thauvin.erik.urlencoder.lib)
+                    implementation(libs.dev.whyoleg.cryptography.provider.apple.optimal)
+                    implementation("io.github.andreypfau:kotlinx-crypto-hmac:0.0.4")
+                    implementation("io.github.andreypfau:kotlinx-crypto-sha2:0.0.4")
+                }
+            }
+
+        val linuxTest =
+            create("linuxTest") {
+                dependsOn(nativeTest)
+            }
+
+        val linuxX64Main by getting {
+            dependsOn(linuxMain)
+        }
+
+        val linuxX64Test by getting {
+            dependsOn(linuxTest)
         }
     }
 }

@@ -45,49 +45,36 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.commons.richtext.UrlParser
-import com.vitorpamplona.amethyst.commons.state.EventCollectionState
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
+import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.desktop.DesktopPreferences
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
+import com.vitorpamplona.amethyst.desktop.feeds.DesktopFollowingFeedFilter
+import com.vitorpamplona.amethyst.desktop.feeds.DesktopGlobalFeedFilter
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.desktop.subscriptions.FeedMode
-import com.vitorpamplona.amethyst.desktop.subscriptions.FilterBuilders
-import com.vitorpamplona.amethyst.desktop.subscriptions.SubscriptionConfig
-import com.vitorpamplona.amethyst.desktop.subscriptions.createBatchMetadataSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.createContactListSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.createFollowingFeedSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.createGlobalFeedSubscription
-import com.vitorpamplona.amethyst.desktop.subscriptions.createReactionsSubscription
-import com.vitorpamplona.amethyst.desktop.subscriptions.createRepliesSubscription
-import com.vitorpamplona.amethyst.desktop.subscriptions.createRepostsSubscription
-import com.vitorpamplona.amethyst.desktop.subscriptions.createZapsSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
 import com.vitorpamplona.amethyst.desktop.ui.media.LightboxOverlay
 import com.vitorpamplona.amethyst.desktop.ui.note.NoteCard
-import com.vitorpamplona.amethyst.desktop.ui.note.extractMentionedPubkeys
+import com.vitorpamplona.amethyst.desktop.viewmodels.DesktopFeedViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
-import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
-import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
-import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
-import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
 
 data class LightboxState(
     val urls: List<String>,
@@ -97,11 +84,12 @@ data class LightboxState(
 )
 
 /**
- * Note card with action buttons.
+ * Note card that reads counts from the Note model (cache-backed).
+ * Event is extracted from Note for signing operations in NoteActionsRow.
  */
 @Composable
 fun FeedNoteCard(
-    event: Event,
+    note: Note,
     relayManager: DesktopRelayConnectionManager,
     localCache: DesktopLocalCache,
     account: AccountState.LoggedIn?,
@@ -112,15 +100,25 @@ fun FeedNoteCard(
     onNavigateToThread: (String) -> Unit = {},
     onImageClick: ((List<String>, Int) -> Unit)? = null,
     onMediaClick: ((List<String>, Int, Float) -> Unit)? = null,
-    zapReceipts: List<ZapReceipt> = emptyList(),
-    reactionCount: Int = 0,
-    replyCount: Int = 0,
-    repostCount: Int = 0,
-    bookmarkList: BookmarkListEvent? = null,
-    isBookmarked: Boolean = false,
-    onBookmarkChanged: (BookmarkListEvent) -> Unit = {},
 ) {
-    val zapAmountSats = zapReceipts.sumOf { it.amountSats }
+    val event = note.event ?: return
+
+    // Observe Note.flowSet for live count updates
+    val flowSet = remember(note) { note.flow() }
+    val reactionsState by flowSet.reactions.stateFlow.collectAsState()
+    val repliesState by flowSet.replies.stateFlow.collectAsState()
+    val zapsState by flowSet.zaps.stateFlow.collectAsState()
+
+    // Read counts from Note model (re-read on each stateFlow emission)
+    val reactionCount = note.countReactions()
+    val replyCount = note.replies.size
+    val repostCount = note.boosts.size
+    val zapAmount = note.zapsAmount
+
+    // Clean up flowSet when card leaves composition
+    DisposableEffect(note) {
+        onDispose { note.clearFlow() }
+    }
 
     Column {
         NoteCard(
@@ -144,15 +142,12 @@ fun FeedNoteCard(
                 onReplyClick = onReply,
                 onZapFeedback = onZapFeedback,
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                zapCount = zapReceipts.size,
-                zapAmountSats = zapAmountSats,
-                zapReceipts = zapReceipts,
+                zapCount = note.zaps.size,
+                zapAmountSats = zapAmount.toLong(),
+                zapReceipts = emptyList(), // TODO: extract ZapReceipts from Note.zaps
                 reactionCount = reactionCount,
                 replyCount = replyCount,
                 repostCount = repostCount,
-                bookmarkList = bookmarkList,
-                isBookmarked = isBookmarked,
-                onBookmarkChanged = onBookmarkChanged,
             )
         }
     }
@@ -171,57 +166,25 @@ fun FeedScreen(
     onNavigateToThread: (String) -> Unit = {},
     onZapFeedback: (ZapFeedback) -> Unit = {},
 ) {
+    val relayStatuses by relayManager.relayStatuses.collectAsState()
     val connectedRelays by relayManager.connectedRelays.collectAsState()
-    // Configured relay URLs only — stabilized with distinctUntilChanged() to prevent
-    // subscription churn from relay status changes (pings, connect/disconnect).
-    // openReqSubscription connects relays on demand; no need to wait for connectedRelays.
-    val configuredRelays by remember {
-        relayManager.relayStatuses
-            .map { it.keys }
-            .distinctUntilChanged()
-    }.collectAsState(emptySet())
-    val scope = rememberCoroutineScope()
-    val eventState =
-        remember {
-            EventCollectionState<Event>(
-                getId = { it.id },
-                sortComparator = compareByDescending { it.createdAt },
-                maxSize = 200,
-                scope = scope,
-            )
-        }
-    val events by eventState.items.collectAsState()
+    val followedUsers by localCache.followedUsers.collectAsState()
+
+    // Available relay URLs — subscribe triggers connection on-demand
+    val allRelayUrls = remember(relayStatuses) { relayStatuses.keys }
+
     var replyToEvent by remember { mutableStateOf<Event?>(null) }
     var lightboxState by remember { mutableStateOf<LightboxState?>(null) }
     var feedMode by remember { mutableStateOf(initialFeedMode ?: DesktopPreferences.feedMode) }
-    var followedUsers by remember { mutableStateOf<Set<String>>(emptySet()) }
-    var zapsByEvent by remember { mutableStateOf<Map<String, List<ZapReceipt>>>(emptyMap()) }
-    // Track reaction event IDs per target event to deduplicate
-    var reactionIdsByEvent by remember { mutableStateOf<Map<String, Set<String>>>(emptyMap()) }
-    val reactionsByEvent = reactionIdsByEvent.mapValues { it.value.size }
-    // Track reply/repost event IDs per target event to deduplicate
-    var replyIdsByEvent by remember { mutableStateOf<Map<String, Set<String>>>(emptyMap()) }
-    val repliesByEvent = replyIdsByEvent.mapValues { it.value.size }
-    var repostIdsByEvent by remember { mutableStateOf<Map<String, Set<String>>>(emptyMap()) }
-    val repostsByEvent = repostIdsByEvent.mapValues { it.value.size }
-    var bookmarkList by remember { mutableStateOf<BookmarkListEvent?>(null) }
-    var bookmarkedEventIds by remember { mutableStateOf<Set<String>>(emptySet()) }
 
-    // Track EOSE to know when initial load is complete
-    var eoseReceivedCount by remember { mutableStateOf(0) }
-    val initialLoadComplete = eoseReceivedCount > 0
-
-    // Load followed users for Following feed mode
-    rememberSubscription(configuredRelays, account, feedMode, relayManager = relayManager) {
-        if (configuredRelays.isNotEmpty() && account != null && feedMode == FeedMode.FOLLOWING) {
+    // Subscribe to contact list (kind 3) — populates localCache.followedUsers
+    rememberSubscription(allRelayUrls, account, relayManager = relayManager) {
+        if (allRelayUrls.isNotEmpty() && account != null) {
             createContactListSubscription(
-                relays = configuredRelays,
+                relays = allRelayUrls,
                 pubKeyHex = account.pubKeyHex,
                 onEvent = { event, _, relay, _ ->
-                    if (event is ContactListEvent) {
-                        val follows = event.verifiedFollowKeySet()
-                        followedUsers = follows
-                    }
+                    subscriptionsCoordinator?.consumeEvent(event, relay)
                 },
             )
         } else {
@@ -229,83 +192,28 @@ fun FeedScreen(
         }
     }
 
-    // Load user's bookmark list
-    rememberSubscription(configuredRelays, account, relayManager = relayManager) {
-        if (configuredRelays.isNotEmpty() && account != null) {
-            SubscriptionConfig(
-                subId = "bookmarks-${account.pubKeyHex.take(8)}",
-                filters =
-                    listOf(
-                        FilterBuilders.byAuthors(
-                            authors = listOf(account.pubKeyHex),
-                            kinds = listOf(BookmarkListEvent.KIND),
-                            limit = 1,
-                        ),
-                    ),
-                relays = configuredRelays,
-                onEvent = { event, _, _, _ ->
-                    if (event is BookmarkListEvent) {
-                        bookmarkList = event
-                        // Extract public bookmarked event IDs
-                        val pubIds =
-                            event
-                                .publicBookmarks()
-                                .filterIsInstance<com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark>()
-                                .map { it.eventId }
-                                .toSet()
-                        bookmarkedEventIds = pubIds
-                    }
-                },
-                onEose = { _, _ -> },
-            )
-        } else {
-            null
-        }
-    }
-
-    // Clear events and reset EOSE when feed mode changes
-    remember(feedMode) {
-        eventState.clear()
-        eoseReceivedCount = 0
-    }
-
-    // Subscribe to feed based on mode
-    rememberSubscription(configuredRelays, feedMode, followedUsers, relayManager = relayManager) {
-        if (configuredRelays.isEmpty()) {
-            return@rememberSubscription null
-        }
+    // Subscribe to feed events (kind 1) — populates cache via coordinator
+    rememberSubscription(allRelayUrls, feedMode, followedUsers, relayManager = relayManager) {
+        if (allRelayUrls.isEmpty()) return@rememberSubscription null
 
         when (feedMode) {
             FeedMode.GLOBAL -> {
                 createGlobalFeedSubscription(
-                    relays = configuredRelays,
-                    onEvent = { event, _, _, _ ->
-                        // Store metadata events in cache
-                        if (event is MetadataEvent) {
-                            localCache.consumeMetadata(event)
-                        }
-                        eventState.addItem(event)
-                    },
-                    onEose = { _, _ ->
-                        eoseReceivedCount++
+                    relays = allRelayUrls,
+                    onEvent = { event, _, relay, _ ->
+                        subscriptionsCoordinator?.consumeEvent(event, relay)
                     },
                 )
             }
 
             FeedMode.FOLLOWING -> {
-                if (followedUsers.isNotEmpty()) {
+                val follows = followedUsers.toList()
+                if (follows.isNotEmpty()) {
                     createFollowingFeedSubscription(
-                        relays = configuredRelays,
-                        followedUsers = followedUsers.toList(),
-                        onEvent = { event, _, _, _ ->
-                            // Store metadata events in cache
-                            if (event is MetadataEvent) {
-                                localCache.consumeMetadata(event)
-                            }
-                            eventState.addItem(event)
-                        },
-                        onEose = { _, _ ->
-                            eoseReceivedCount++
+                        relays = allRelayUrls,
+                        followedUsers = follows,
+                        onEvent = { event, _, relay, _ ->
+                            subscriptionsCoordinator?.consumeEvent(event, relay)
                         },
                     )
                 } else {
@@ -315,344 +223,142 @@ fun FeedScreen(
         }
     }
 
-    // Subscribe to zaps for visible events
-    val eventIds = events.map { it.id }
-    rememberSubscription(configuredRelays, eventIds, relayManager = relayManager) {
-        if (configuredRelays.isEmpty() || eventIds.isEmpty()) {
-            return@rememberSubscription null
+    // DesktopFeedViewModel keyed on feedMode — recreated on mode switch
+    val viewModel =
+        remember(feedMode) {
+            val filter =
+                when (feedMode) {
+                    FeedMode.GLOBAL -> {
+                        DesktopGlobalFeedFilter(localCache)
+                    }
+
+                    FeedMode.FOLLOWING -> {
+                        DesktopFollowingFeedFilter(localCache) {
+                            localCache.followedUsers.value
+                        }
+                    }
+                }
+            DesktopFeedViewModel(filter, localCache)
         }
 
-        createZapsSubscription(
-            relays = configuredRelays,
-            eventIds = eventIds,
-            onEvent = { event, _, _, _ ->
-                if (event is LnZapEvent) {
-                    val receipt = event.toZapReceipt(localCache) ?: return@createZapsSubscription
-                    val targetEventId = event.zappedPost().firstOrNull() ?: return@createZapsSubscription
-                    zapsByEvent =
-                        zapsByEvent.toMutableMap().apply {
-                            val existing = this[targetEventId] ?: emptyList()
-                            if (existing.none { it.createdAt == receipt.createdAt && it.senderPubKey == receipt.senderPubKey }) {
-                                this[targetEventId] = existing + receipt
-                            }
-                        }
-                }
-            },
-        )
+    // Cancel old ViewModel's viewModelScope on recreation
+    DisposableEffect(viewModel) {
+        onDispose { viewModel.destroy() }
     }
 
-    // Subscribe to metadata for zap senders (to show display names)
-    val zapSenderPubkeys =
-        zapsByEvent.values
-            .flatten()
-            .map { it.senderPubKey }
-            .distinct()
-    rememberSubscription(configuredRelays, zapSenderPubkeys, relayManager = relayManager) {
-        if (configuredRelays.isEmpty() || zapSenderPubkeys.isEmpty()) {
-            return@rememberSubscription null
-        }
+    val feedState by viewModel.feedState.feedContent.collectAsState()
 
-        // Only fetch metadata for users we don't have yet
-        val missingPubkeys =
-            zapSenderPubkeys.filter { pubkey ->
-                localCache
-                    .getUserIfExists(pubkey)
-                    ?.metadataOrNull()
-                    ?.flow
-                    ?.value == null
+    // Load metadata for visible notes via Coordinator (rate-limited)
+    LaunchedEffect(feedState, subscriptionsCoordinator) {
+        if (subscriptionsCoordinator != null && feedState is FeedState.Loaded) {
+            val notes = viewModel.feedState.visibleNotes()
+            if (notes.isNotEmpty()) {
+                subscriptionsCoordinator.loadMetadataForNotes(notes)
             }
-        if (missingPubkeys.isEmpty()) {
-            return@rememberSubscription null
-        }
-
-        createBatchMetadataSubscription(
-            relays = configuredRelays,
-            pubKeyHexList = missingPubkeys,
-            onEvent = { event, _, _, _ ->
-                if (event is MetadataEvent) {
-                    localCache.consumeMetadata(event)
-                }
-            },
-        )
-    }
-
-    // Subscribe to reactions for visible events
-    rememberSubscription(configuredRelays, eventIds, relayManager = relayManager) {
-        if (configuredRelays.isEmpty() || eventIds.isEmpty()) {
-            return@rememberSubscription null
-        }
-
-        createReactionsSubscription(
-            relays = configuredRelays,
-            eventIds = eventIds,
-            onEvent = { event, _, _, _ ->
-                if (event is ReactionEvent) {
-                    val targetEventId = event.originalPost().firstOrNull() ?: return@createReactionsSubscription
-                    reactionIdsByEvent =
-                        reactionIdsByEvent.toMutableMap().apply {
-                            val existing = this[targetEventId] ?: emptySet()
-                            this[targetEventId] = existing + event.id
-                        }
-                }
-            },
-        )
-    }
-
-    // Subscribe to replies for visible events
-    rememberSubscription(configuredRelays, eventIds, relayManager = relayManager) {
-        if (configuredRelays.isEmpty() || eventIds.isEmpty()) {
-            return@rememberSubscription null
-        }
-
-        createRepliesSubscription(
-            relays = configuredRelays,
-            eventIds = eventIds,
-            onEvent = { event, _, _, _ ->
-                // Find the event this is replying to
-                val replyToId =
-                    event.tags
-                        .filter { it.size >= 2 && it[0] == "e" }
-                        .lastOrNull()
-                        ?.get(1) ?: return@createRepliesSubscription
-                if (replyToId in eventIds) {
-                    replyIdsByEvent =
-                        replyIdsByEvent.toMutableMap().apply {
-                            val existing = this[replyToId] ?: emptySet()
-                            this[replyToId] = existing + event.id
-                        }
-                }
-            },
-        )
-    }
-
-    // Subscribe to reposts for visible events
-    rememberSubscription(configuredRelays, eventIds, relayManager = relayManager) {
-        if (configuredRelays.isEmpty() || eventIds.isEmpty()) {
-            return@rememberSubscription null
-        }
-
-        createRepostsSubscription(
-            relays = configuredRelays,
-            eventIds = eventIds,
-            onEvent = { event, _, _, _ ->
-                if (event is RepostEvent) {
-                    val targetEventId = event.boostedEventId() ?: return@createRepostsSubscription
-                    repostIdsByEvent =
-                        repostIdsByEvent.toMutableMap().apply {
-                            val existing = this[targetEventId] ?: emptySet()
-                            this[targetEventId] = existing + event.id
-                        }
-                }
-            },
-        )
-    }
-
-    // Subscribe to metadata for note authors + mentioned users
-    val authorPubkeys = events.map { it.pubKey }.distinct()
-    val mentionedPubkeys =
-        remember(events) {
-            val parser = UrlParser()
-            events
-                .flatMap { event ->
-                    val urls = parser.parseValidUrls(event.content)
-                    extractMentionedPubkeys(urls.bech32s)
-                }.distinct()
-        }
-    val allPubkeys = remember(authorPubkeys, mentionedPubkeys) { (authorPubkeys + mentionedPubkeys).distinct() }
-
-    // Use coordinator for rate-limited metadata loading (preferred)
-    LaunchedEffect(allPubkeys, subscriptionsCoordinator) {
-        if (subscriptionsCoordinator != null && allPubkeys.isNotEmpty()) {
-            subscriptionsCoordinator.loadMetadataForPubkeys(allPubkeys)
         }
     }
 
-    // Fallback subscription if coordinator not available
-    rememberSubscription(configuredRelays, allPubkeys, subscriptionsCoordinator, relayManager = relayManager) {
-        // Skip if using coordinator
-        if (subscriptionsCoordinator != null) {
-            return@rememberSubscription null
-        }
-
-        if (configuredRelays.isEmpty() || allPubkeys.isEmpty()) {
-            return@rememberSubscription null
-        }
-
-        // Only fetch metadata for users we don't have yet
-        val missingPubkeys =
-            allPubkeys.filter { pubkey ->
-                localCache
-                    .getUserIfExists(pubkey)
-                    ?.metadataOrNull()
-                    ?.flow
-                    ?.value == null
+    // Request interaction subscriptions — keyed on feedMode (stable), not feedState (changes every 250ms)
+    DisposableEffect(feedMode, subscriptionsCoordinator) {
+        val coordinator = subscriptionsCoordinator ?: return@DisposableEffect onDispose {}
+        val relays = relayManager.relayStatuses.value.keys
+        // Initial subscription with whatever notes are visible now
+        val noteIds = viewModel.feedState.visibleNotes().mapNotNull { it.event?.id }
+        val subId =
+            if (noteIds.isNotEmpty()) {
+                coordinator.requestInteractions(noteIds, relays)
+            } else {
+                null
             }
-        if (missingPubkeys.isEmpty()) {
-            return@rememberSubscription null
-        }
-
-        createBatchMetadataSubscription(
-            relays = configuredRelays,
-            pubKeyHexList = missingPubkeys,
-            onEvent = { event, _, _, _ ->
-                if (event is MetadataEvent) {
-                    localCache.consumeMetadata(event)
-                }
-            },
-        )
+        onDispose { subId?.let { coordinator.releaseInteractions(it) } }
     }
 
     @OptIn(ExperimentalLayoutApi::class)
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Header with compose button — wraps on narrow columns
-            FlowRow(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Column {
-                    FlowRow(
-                        verticalArrangement = Arrangement.Center,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        Text(
-                            if (feedMode == FeedMode.GLOBAL) "Global Feed" else "Following Feed",
-                            style = MaterialTheme.typography.headlineMedium,
-                            color = MaterialTheme.colorScheme.onBackground,
-                        )
-
-                        // Feed mode selector
-                        if (account != null) {
-                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                FilterChip(
-                                    selected = feedMode == FeedMode.GLOBAL,
-                                    onClick = {
-                                        feedMode = FeedMode.GLOBAL
-                                        DesktopPreferences.feedMode = FeedMode.GLOBAL
-                                    },
-                                    label = { Text("Global") },
-                                )
-                                FilterChip(
-                                    selected = feedMode == FeedMode.FOLLOWING,
-                                    onClick = {
-                                        feedMode = FeedMode.FOLLOWING
-                                        DesktopPreferences.feedMode = FeedMode.FOLLOWING
-                                    },
-                                    label = { Text("Following") },
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(Modifier.height(4.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            "${connectedRelays.size} relays connected",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        if (feedMode == FeedMode.FOLLOWING) {
-                            Text(
-                                " • ${followedUsers.size} followed",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        Spacer(Modifier.width(8.dp))
-                        IconButton(
-                            onClick = { relayManager.connect() },
-                            modifier = Modifier.size(24.dp),
-                        ) {
-                            Icon(
-                                Icons.Default.Refresh,
-                                contentDescription = "Refresh",
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(18.dp),
-                            )
-                        }
-                    }
-                }
-
-                // New Post button (primary action)
-                Button(
-                    onClick = onCompose,
-                    enabled = account != null && !account.isReadOnly,
-                ) {
-                    Icon(Icons.Default.Add, "New Post", Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("New Post")
-                }
-            }
+            // Header with compose button
+            FeedHeader(
+                feedMode = feedMode,
+                account = account,
+                connectedRelays = connectedRelays,
+                followedUsersCount = followedUsers.size,
+                onFeedModeChange = { mode ->
+                    feedMode = mode
+                    DesktopPreferences.feedMode = mode
+                },
+                onRefresh = { relayManager.connect() },
+                onCompose = onCompose,
+            )
 
             Spacer(Modifier.height(8.dp))
 
-            if (connectedRelays.isEmpty()) {
-                LoadingState("Connecting to relays...")
-            } else if (feedMode == FeedMode.FOLLOWING && followedUsers.isEmpty()) {
-                LoadingState("Loading followed users...")
-            } else if (events.isEmpty() && !initialLoadComplete) {
-                LoadingState("Loading notes...")
-            } else if (events.isEmpty() && initialLoadComplete) {
-                EmptyState(
-                    title =
-                        if (feedMode == FeedMode.FOLLOWING) {
-                            "No notes from followed users"
-                        } else {
-                            "No notes found"
-                        },
-                    description =
-                        if (feedMode == FeedMode.FOLLOWING) {
-                            "Notes from people you follow will appear here"
-                        } else {
-                            "Notes from the network will appear here"
-                        },
-                    onRefresh = { relayManager.connect() },
-                )
-            } else {
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    // Use distinctBy to prevent duplicate key crashes from events with same ID
-                    items(events.distinctBy { it.id }, key = { it.id }) { event ->
-                        FeedNoteCard(
-                            event = event,
-                            relayManager = relayManager,
-                            localCache = localCache,
-                            account = account,
-                            nwcConnection = nwcConnection,
-                            onReply = { replyToEvent = event },
-                            onZapFeedback = onZapFeedback,
-                            onNavigateToProfile = onNavigateToProfile,
-                            onNavigateToThread = onNavigateToThread,
-                            onImageClick = { urls, index -> lightboxState = LightboxState(urls, index) },
-                            onMediaClick = { urls, index, seekPos ->
-                                com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
-                                    .playVideo(urls[index], seekPos)
-                                com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
-                                    .toggleFullscreen()
+            // Feed content based on FeedState
+            when (val state = feedState) {
+                is FeedState.Loading -> {
+                    if (connectedRelays.isEmpty()) {
+                        LoadingState("Connecting to relays...")
+                    } else {
+                        LoadingState("Loading notes...")
+                    }
+                }
+
+                is FeedState.Empty -> {
+                    EmptyState(
+                        title =
+                            if (feedMode == FeedMode.FOLLOWING) {
+                                "No notes from followed users"
+                            } else {
+                                "No notes found"
                             },
-                            zapReceipts = zapsByEvent[event.id] ?: emptyList(),
-                            reactionCount = reactionsByEvent[event.id] ?: 0,
-                            replyCount = repliesByEvent[event.id] ?: 0,
-                            repostCount = repostsByEvent[event.id] ?: 0,
-                            bookmarkList = bookmarkList,
-                            isBookmarked = bookmarkedEventIds.contains(event.id),
-                            onBookmarkChanged = { newList ->
-                                bookmarkList = newList
-                                val pubIds =
-                                    newList
-                                        .publicBookmarks()
-                                        .filterIsInstance<com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark>()
-                                        .map { it.eventId }
-                                        .toSet()
-                                bookmarkedEventIds = pubIds
+                        description =
+                            if (feedMode == FeedMode.FOLLOWING) {
+                                "Notes from people you follow will appear here"
+                            } else {
+                                "Notes from the network will appear here"
                             },
-                        )
+                        onRefresh = { relayManager.connect() },
+                    )
+                }
+
+                is FeedState.FeedError -> {
+                    EmptyState(
+                        title = "Error loading feed",
+                        description = state.errorMessage,
+                        onRefresh = { relayManager.connect() },
+                    )
+                }
+
+                is FeedState.Loaded -> {
+                    val loadedState by state.feed.collectAsState()
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        items(loadedState.list, key = { it.idHex }) { note ->
+                            FeedNoteCard(
+                                note = note,
+                                relayManager = relayManager,
+                                localCache = localCache,
+                                account = account,
+                                nwcConnection = nwcConnection,
+                                onReply = { replyToEvent = note.event },
+                                onZapFeedback = onZapFeedback,
+                                onNavigateToProfile = onNavigateToProfile,
+                                onNavigateToThread = onNavigateToThread,
+                                onImageClick = { urls, index ->
+                                    lightboxState = LightboxState(urls, index)
+                                },
+                                onMediaClick = { urls, index, seekPos ->
+                                    com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
+                                        .playVideo(urls[index], seekPos)
+                                    com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
+                                        .toggleFullscreen()
+                                },
+                            )
+                        }
                     }
                 }
             }
-        } // end Column
+        }
 
         // Reply dialog
         if (replyToEvent != null && account != null) {
@@ -674,5 +380,91 @@ fun FeedScreen(
                 onDismiss = { lightboxState = null },
             )
         }
-    } // end Box
+    }
+}
+
+/**
+ * Feed header with title, mode selector, relay count, and compose button.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun FeedHeader(
+    feedMode: FeedMode,
+    account: AccountState.LoggedIn?,
+    connectedRelays: Set<Any>,
+    followedUsersCount: Int,
+    onFeedModeChange: (FeedMode) -> Unit,
+    onRefresh: () -> Unit,
+    onCompose: () -> Unit,
+) {
+    FlowRow(
+        modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Column {
+            FlowRow(
+                verticalArrangement = Arrangement.Center,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    if (feedMode == FeedMode.GLOBAL) "Global Feed" else "Following Feed",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.onBackground,
+                )
+
+                if (account != null) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        FilterChip(
+                            selected = feedMode == FeedMode.GLOBAL,
+                            onClick = { onFeedModeChange(FeedMode.GLOBAL) },
+                            label = { Text("Global") },
+                        )
+                        FilterChip(
+                            selected = feedMode == FeedMode.FOLLOWING,
+                            onClick = { onFeedModeChange(FeedMode.FOLLOWING) },
+                            label = { Text("Following") },
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(4.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "${connectedRelays.size} relays connected",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (feedMode == FeedMode.FOLLOWING) {
+                    Text(
+                        " \u2022 $followedUsersCount followed",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Spacer(Modifier.width(8.dp))
+                IconButton(
+                    onClick = onRefresh,
+                    modifier = Modifier.size(24.dp),
+                ) {
+                    Icon(
+                        Icons.Default.Refresh,
+                        contentDescription = "Refresh",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+            }
+        }
+
+        Button(
+            onClick = onCompose,
+            enabled = account != null && !account.isReadOnly,
+        ) {
+            Icon(Icons.Default.Add, "New Post", Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text("New Post")
+        }
+    }
 }

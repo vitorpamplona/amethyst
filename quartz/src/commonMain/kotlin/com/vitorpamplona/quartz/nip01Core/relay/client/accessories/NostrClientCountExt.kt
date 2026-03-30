@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.relay.client.accessories
 
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CountMessage
@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CountResult
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip45Count.HyperLogLog
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.withTimeoutOrNull
@@ -42,7 +43,7 @@ import kotlinx.coroutines.withTimeoutOrNull
  * @param timeoutMs How long to wait for a response (default 15 s).
  * @return The [CountResult], or `null` on timeout.
  */
-suspend fun INostrClient.queryCountSuspend(
+suspend fun INostrClient.count(
     relay: NormalizedRelayUrl,
     filter: Filter,
     timeoutMs: Long = 15_000,
@@ -51,7 +52,7 @@ suspend fun INostrClient.queryCountSuspend(
     val resultChannel = Channel<CountResult>(UNLIMITED)
 
     val listener =
-        object : IRelayClientListener {
+        object : RelayConnectionListener {
             override fun onIncomingMessage(
                 relay: IRelayClient,
                 msgStr: String,
@@ -63,18 +64,18 @@ suspend fun INostrClient.queryCountSuspend(
             }
         }
 
-    subscribe(listener)
+    addConnectionListener(listener)
 
     val result =
         try {
-            queryCount(subId = subId, filters = mapOf(relay to listOf(filter)))
+            count(subId = subId, filters = mapOf(relay to listOf(filter)))
 
             withTimeoutOrNull(timeoutMs) {
                 resultChannel.receive()
             }
         } finally {
-            close(subId)
-            unsubscribe(listener)
+            unsubscribe(subId)
+            removeConnectionListener(listener)
         }
 
     resultChannel.close()
@@ -91,7 +92,7 @@ suspend fun INostrClient.queryCountSuspend(
  * @param timeoutMs How long to wait for all responses (default 15 s).
  * @return Map of relay -> [CountResult] for every relay that responded in time.
  */
-suspend fun INostrClient.queryCountSuspend(
+suspend fun INostrClient.count(
     filters: Map<NormalizedRelayUrl, List<Filter>>,
     timeoutMs: Long = 15_000,
 ): Map<NormalizedRelayUrl, CountResult> {
@@ -101,7 +102,7 @@ suspend fun INostrClient.queryCountSuspend(
     val resultChannel = Channel<Pair<NormalizedRelayUrl, CountResult>>(UNLIMITED)
 
     val listener =
-        object : IRelayClientListener {
+        object : RelayConnectionListener {
             override fun onIncomingMessage(
                 relay: IRelayClient,
                 msgStr: String,
@@ -114,12 +115,12 @@ suspend fun INostrClient.queryCountSuspend(
             }
         }
 
-    subscribe(listener)
+    addConnectionListener(listener)
 
     filters.forEach { (relay, filterList) ->
         val subId = newSubId()
         subIdToRelay[subId] = relay
-        queryCount(subId = subId, filters = mapOf(relay to filterList))
+        count(subId = subId, filters = mapOf(relay to filterList))
     }
 
     val results = mutableMapOf<NormalizedRelayUrl, CountResult>()
@@ -131,9 +132,56 @@ suspend fun INostrClient.queryCountSuspend(
         }
     }
 
-    subIdToRelay.keys.forEach { close(it) }
-    unsubscribe(listener)
+    subIdToRelay.keys.forEach { unsubscribe(it) }
+    removeConnectionListener(listener)
     resultChannel.close()
 
     return results
+}
+
+/**
+ * Queries multiple relays for a COUNT and merges the HyperLogLog
+ * registers from all responses to produce a single merged estimate.
+ *
+ * If any relay returns HLL data, the results are merged by taking
+ * the maximum register value across all relays, and the cardinality
+ * is re-estimated from the merged registers.
+ *
+ * If no relay returns HLL data, falls back to the maximum count
+ * reported by any relay.
+ *
+ * @param relays List of relays to query.
+ * @param filter The filter to count against.
+ * @param timeoutMs How long to wait for all responses (default 15 s).
+ * @return A merged [CountResult], or `null` if no relay responded.
+ */
+suspend fun INostrClient.countMerged(
+    relays: List<NormalizedRelayUrl>,
+    filter: Filter,
+    timeoutMs: Long = 15_000,
+): CountResult? {
+    if (relays.isEmpty()) return null
+
+    val results =
+        count(
+            filters = relays.associateWith { listOf(filter) },
+            timeoutMs = timeoutMs,
+        )
+
+    if (results.isEmpty()) return null
+
+    val hlls = results.values.mapNotNull { it.hll }
+
+    return if (hlls.isNotEmpty()) {
+        val merged = HyperLogLog.merge(hlls)
+        val estimate = HyperLogLog.estimate(merged)
+        CountResult(
+            count = estimate.toInt(),
+            approximate = true,
+            hll = merged,
+        )
+    } else {
+        // No HLL data - use the maximum count from any relay
+        results.values.maxByOrNull { it.count }
+    }
 }

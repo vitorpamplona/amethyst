@@ -107,7 +107,6 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onStart
@@ -260,7 +259,7 @@ class ChatNewMessageViewModel :
         this.canAddZapRaiser = hasLnAddress()
 
         this.userSuggestions?.reset()
-        this.userSuggestions = UserSuggestionState(accountVM.account, accountVM.nip05Client)
+        this.userSuggestions = UserSuggestionState(accountVM.account, accountVM.nip05ClientBuilder())
 
         this.emojiSuggestions?.reset()
         this.emojiSuggestions = EmojiSuggestionState(accountVM.account)
@@ -801,7 +800,7 @@ class ChatNewMessageViewModel :
 
     override fun onCleared() {
         super.onCleared()
-        Log.d("Init", "OnCleared: ${this.javaClass.simpleName}")
+        Log.d("Init") { "OnCleared: ${this.javaClass.simpleName}" }
     }
 
     // NIP-04 sending is deprecated. NIP-17 is always used.

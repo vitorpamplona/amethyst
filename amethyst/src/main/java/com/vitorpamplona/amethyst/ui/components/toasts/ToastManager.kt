@@ -20,11 +20,13 @@
  */
 package com.vitorpamplona.amethyst.ui.components.toasts
 
+import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.toasts.multiline.MultiErrorToastMsg
 import com.vitorpamplona.amethyst.ui.components.toasts.multiline.UserBasedErrorMessage
 import kotlinx.coroutines.flow.MutableStateFlow
 
+@Stable
 class ToastManager {
     val toasts = MutableStateFlow<ToastMsg?>(null)
 
@@ -60,6 +62,14 @@ class ToastManager {
         throwable: Throwable,
     ) {
         toasts.tryEmit(ThrowableToastMsg(titleResId, message, throwable))
+    }
+
+    fun toast(
+        titleResId: Int,
+        description: Int,
+        throwable: Throwable,
+    ) {
+        toasts.tryEmit(ThrowableToastMsg2(titleResId, description, throwable))
     }
 
     fun toast(

@@ -24,16 +24,29 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.relayClient.assemblers.FeedMetadataCoordinator
 import com.vitorpamplona.amethyst.commons.relayClient.preload.MetadataPreloader
 import com.vitorpamplona.amethyst.commons.relayClient.preload.MetadataRateLimiter
+import com.vitorpamplona.amethyst.commons.service.BasicBundledInsert
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.model.DesktopDmRelayState
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import java.lang.management.ManagementFactory
+import java.util.concurrent.ConcurrentHashMap
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * Desktop-specific relay subscriptions coordinator.
@@ -86,6 +99,116 @@ class DesktopRelaySubscriptionsCoordinator(
             },
         )
 
+    // Event bundler: batches consumed notes before emitting to SharedFlow
+    // 250ms for desktop (Android uses 1000ms to save battery)
+    private val eventBundler =
+        BasicBundledInsert<Note>(
+            delay = 250,
+            dispatcher = Dispatchers.IO,
+            scope = scope,
+        )
+
+    // Screen-triggered subscription Jobs — keyed by subId for proper cancellation
+    private val screenSubscriptions = ConcurrentHashMap<String, Job>()
+
+    // Last event received from any subscription — drives RelayHealthIndicator
+    private val _lastEventAt = MutableStateFlow<Long?>(null)
+    val lastEventAt: StateFlow<Long?> = _lastEventAt.asStateFlow()
+
+    /**
+     * Central event router — consumes an event into the cache and emits to event stream.
+     * Called from relay onEvent callbacks. Non-blocking (launches on IO dispatcher).
+     * Try-catch per event ensures one bad event doesn't kill the pipeline.
+     */
+    fun consumeEvent(
+        event: Event,
+        relay: NormalizedRelayUrl?,
+    ) {
+        scope.launch(Dispatchers.IO) {
+            try {
+                val consumed = localCache.consume(event, relay)
+                if (consumed) {
+                    _lastEventAt.value = System.currentTimeMillis()
+                    val note = localCache.getNoteIfExists(event.id) ?: return@launch
+                    eventBundler.invalidateList(note) { batch ->
+                        localCache.eventStream.emitNewNotes(batch)
+                    }
+                }
+            } catch (e: Exception) {
+                println("Coordinator: failed to consume kind=${event.kind} id=${event.id} relay=$relay: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * Request a consolidated interaction subscription for the given note IDs.
+     * Subscribes to kinds 7 (reactions), 9735 (zaps), 6 (reposts), and 1 (replies)
+     * targeting these notes. Returns a subId for cleanup via [releaseInteractions].
+     */
+    fun requestInteractions(
+        noteIds: List<String>,
+        relays: Set<NormalizedRelayUrl>,
+    ): String {
+        val subId = generateSubId("interactions-${noteIds.hashCode()}")
+
+        // Cancel any existing subscription with this ID
+        screenSubscriptions.remove(subId)?.cancel()
+        client.unsubscribe(subId)
+
+        if (noteIds.isEmpty() || relays.isEmpty()) return subId
+
+        val filters =
+            listOf(
+                // Reactions (kind 7) targeting these notes
+                Filter(
+                    kinds = listOf(com.vitorpamplona.quartz.nip25Reactions.ReactionEvent.KIND),
+                    tags = mapOf("e" to noteIds),
+                ),
+                // Zap receipts (kind 9735) targeting these notes
+                Filter(
+                    kinds = listOf(com.vitorpamplona.quartz.nip57Zaps.LnZapEvent.KIND),
+                    tags = mapOf("e" to noteIds),
+                ),
+                // Reposts (kind 6) targeting these notes
+                Filter(
+                    kinds = listOf(com.vitorpamplona.quartz.nip18Reposts.RepostEvent.KIND),
+                    tags = mapOf("e" to noteIds),
+                ),
+            )
+
+        val listener =
+            object : SubscriptionListener {
+                override fun onEvent(
+                    event: Event,
+                    isLive: Boolean,
+                    relay: NormalizedRelayUrl,
+                    forFilters: List<Filter>?,
+                ) {
+                    consumeEvent(event, relay)
+                }
+            }
+
+        val job =
+            scope.launch {
+                client.subscribe(
+                    subId = subId,
+                    filters = relays.associateWith { filters },
+                    listener = listener,
+                )
+            }
+        screenSubscriptions[subId] = job
+
+        return subId
+    }
+
+    /**
+     * Release a screen-triggered interaction subscription.
+     */
+    fun releaseInteractions(subId: String) {
+        screenSubscriptions.remove(subId)?.cancel()
+        client.unsubscribe(subId)
+    }
+
     /**
      * Start the coordinator.
      * Call once when app starts or user logs in.
@@ -94,7 +217,7 @@ class DesktopRelaySubscriptionsCoordinator(
         // Start rate limiter to process queued metadata requests
         rateLimiter.start { pubkey ->
             // When rate limiter dequeues a pubkey, subscribe to its metadata
-            client.openReqSubscription(
+            client.subscribe(
                 filters =
                     indexRelays.associateWith {
                         listOf(
@@ -125,13 +248,6 @@ class DesktopRelaySubscriptionsCoordinator(
      */
     fun loadMetadataForPubkeys(pubkeys: List<HexKey>) {
         feedMetadata.loadMetadataForPubkeys(pubkeys)
-    }
-
-    /**
-     * Load reactions for specific notes.
-     */
-    fun loadReactionsForNotes(noteIds: List<HexKey>) {
-        feedMetadata.loadReactionsForNotes(noteIds)
     }
 
     // -- DM Subscription Support --
@@ -165,7 +281,7 @@ class DesktopRelaySubscriptionsCoordinator(
         if (inboxRelays.isEmpty() && outboxRelays.isEmpty()) return
 
         val listener =
-            object : IRequestListener {
+            object : SubscriptionListener {
                 override fun onEvent(
                     event: Event,
                     isLive: Boolean,
@@ -180,7 +296,7 @@ class DesktopRelaySubscriptionsCoordinator(
         if (inboxRelays.isNotEmpty()) {
             val inboxSubId = generateSubId("dm-inbox-${userPubKeyHex.take(8)}")
             activeDmSubIds.add(inboxSubId)
-            client.openReqSubscription(
+            client.subscribe(
                 subId = inboxSubId,
                 filters =
                     inboxRelays.associateWith {
@@ -194,7 +310,7 @@ class DesktopRelaySubscriptionsCoordinator(
         if (outboxRelays.isNotEmpty()) {
             val outboxSubId = generateSubId("dm-outbox-${userPubKeyHex.take(8)}")
             activeDmSubIds.add(outboxSubId)
-            client.openReqSubscription(
+            client.subscribe(
                 subId = outboxSubId,
                 filters =
                     outboxRelays.associateWith {
@@ -208,7 +324,7 @@ class DesktopRelaySubscriptionsCoordinator(
         if (inboxRelays.isNotEmpty()) {
             val giftWrapSubId = generateSubId("giftwrap-${userPubKeyHex.take(8)}")
             activeDmSubIds.add(giftWrapSubId)
-            client.openReqSubscription(
+            client.subscribe(
                 subId = giftWrapSubId,
                 filters =
                     inboxRelays.associateWith {
@@ -224,7 +340,7 @@ class DesktopRelaySubscriptionsCoordinator(
      */
     fun unsubscribeFromDms() {
         activeDmSubIds.forEach { subId ->
-            client.close(subId)
+            client.unsubscribe(subId)
         }
         activeDmSubIds.clear()
     }
@@ -234,8 +350,68 @@ class DesktopRelaySubscriptionsCoordinator(
      * Call when switching accounts or during cleanup.
      */
     fun clear() {
+        // Clean up screen-triggered subscriptions
+        screenSubscriptions.forEach { (subId, job) ->
+            job.cancel()
+            client.unsubscribe(subId)
+        }
+        screenSubscriptions.clear()
+        _lastEventAt.value = null
+
         unsubscribeFromDms()
         feedMetadata.clear()
         rateLimiter.reset()
+        cleanupJob?.cancel()
+    }
+
+    // ----- Memory Cleanup -----
+
+    private val memoryBean = ManagementFactory.getMemoryMXBean()
+    private var lastCleanupTime = 0L
+    private var cleanupJob: Job? = null
+
+    /**
+     * Starts a periodic memory cleanup coroutine.
+     * Checks heap usage every 30s, runs cleanup at >75% heap or every 5 minutes.
+     */
+    fun startCleanupLoop() {
+        cleanupJob =
+            scope.launch(Dispatchers.Default) {
+                delay(2.minutes)
+                while (isActive) {
+                    delay(30.seconds)
+                    val heapPct = heapUsagePercent()
+                    val elapsed = System.currentTimeMillis() - lastCleanupTime
+                    if (heapPct > 0.75 || elapsed > 5.minutes.inWholeMilliseconds) {
+                        runCleanup()
+                    }
+                }
+            }
+    }
+
+    private suspend fun runCleanup() {
+        val ops =
+            listOf<Pair<String, suspend () -> Unit>>(
+                "cleanMemory" to { localCache.cleanMemory() },
+                "cleanObservers" to { cleanObservers() },
+            )
+        ops.forEach { (name, op) ->
+            try {
+                op()
+            } catch (e: Exception) {
+                println("Cleanup $name failed: ${e.message}")
+            }
+        }
+        lastCleanupTime = System.currentTimeMillis()
+    }
+
+    private fun cleanObservers() {
+        localCache.notes.forEach { _, note -> note.clearFlow() }
+        localCache.addressableNotes.forEach { _, note -> note.clearFlow() }
+    }
+
+    private fun heapUsagePercent(): Double {
+        val heap = memoryBean.heapMemoryUsage
+        return heap.used.toDouble() / heap.max.toDouble()
     }
 }

@@ -18,6 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+@file:Suppress("DEPRECATION")
+
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays
 
 import androidx.compose.foundation.clickable
@@ -61,7 +63,9 @@ import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Payment
+import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.PrivacyTip
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material.icons.filled.Topic
@@ -80,6 +84,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -97,6 +102,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.util.timeDiffAgoShortish
@@ -110,6 +116,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.RenderRelayIcon
 import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.note.UserPicture
+import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.graspLink
 import com.vitorpamplona.amethyst.ui.note.nipLink
 import com.vitorpamplona.amethyst.ui.note.timeAgoNoDot
@@ -117,6 +124,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.BackButton
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.datasource.RelayInfoNip66FilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.Height25Modifier
@@ -147,9 +155,6 @@ import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.nns.NNSEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
-import com.vitorpamplona.quartz.experimental.publicMessages.PublicMessageEvent
-import com.vitorpamplona.quartz.experimental.relationshipStatus.ContactCardEvent
-import com.vitorpamplona.quartz.experimental.trustedAssertions.list.TrustProviderListEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
@@ -254,27 +259,33 @@ import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
 import com.vitorpamplona.quartz.nip75ZapGoals.GoalEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
+import com.vitorpamplona.quartz.nip86RelayManagement.Nip86Client
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendationEvent
-import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryRequestEvent
-import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryResponseEvent
-import com.vitorpamplona.quartz.nip90Dvms.NIP90StatusEvent
-import com.vitorpamplona.quartz.nip90Dvms.NIP90UserDiscoveryRequestEvent
-import com.vitorpamplona.quartz.nip90Dvms.NIP90UserDiscoveryResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.NIP90ContentDiscoveryRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.NIP90ContentDiscoveryResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.status.NIP90StatusEvent
+import com.vitorpamplona.quartz.nip90Dvms.userDiscoveryRequest.NIP90UserDiscoveryRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.userDiscoveryResponse.NIP90UserDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
 import com.vitorpamplona.quartz.nip96FileStorage.config.FileServersEvent
 import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
+import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
+import com.vitorpamplona.quartz.nipB0WebBookmarks.WebBookmarkEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.flow.map
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 
@@ -325,7 +336,11 @@ fun RelayInformationScreen(
             )
         },
     ) { pad ->
+        RelayInfoNip66FilterAssemblerSubscription(relay, accountViewModel)
+
         val relayInfo by loadRelayInfo(relay)
+
+        val discoveryEvents by loadRelayDiscoveryEvents(relay)
 
         val messages =
             remember(relay) {
@@ -338,7 +353,7 @@ fun RelayInformationScreen(
                     .toImmutableList()
             }
 
-        RelayInformationBody(relay, relayInfo, Amethyst.instance.relayStats.get(relay), messages, pad, accountViewModel, nav)
+        RelayInformationBody(relay, relayInfo, discoveryEvents, Amethyst.instance.relayStats.get(relay), messages, pad, accountViewModel, nav)
     }
 }
 
@@ -346,6 +361,7 @@ fun RelayInformationScreen(
 fun RelayInformationBody(
     relay: NormalizedRelayUrl,
     relayInfo: Nip11RelayInformation,
+    discoveryEvents: ImmutableList<RelayDiscoveryEvent>,
     relayStats: RelayStat,
     messages: ImmutableList<IRelayDebugMessage>,
     pad: PaddingValues,
@@ -423,6 +439,13 @@ fun RelayInformationBody(
         if (atLeastOneSoftware) {
             item { SectionHeader(stringRes(R.string.software)) }
             item { SoftwareCard(relayInfo) }
+        }
+
+        if (discoveryEvents.isNotEmpty()) {
+            item { SectionHeader(stringRes(R.string.relay_monitor_reports)) }
+            items(discoveryEvents, key = { it.addressTag() }) { event ->
+                RelayMonitorReportCard(event, accountViewModel, nav)
+            }
         }
 
         if (usedBy.isNotEmpty()) {
@@ -525,7 +548,8 @@ fun RelayInformationBody(
 // Active subscriptions + outbox display
 // ---------------------------------------------------------------------------
 
-private fun kindDisplayName(kind: Int): Int =
+@Suppress("DEPRECATION")
+fun kindDisplayName(kind: Int): Int =
     when (kind) {
         AdvertisedRelayListEvent.KIND -> R.string.kind_outbox_relays
         AppDefinitionEvent.KIND -> R.string.kind_apps
@@ -658,6 +682,7 @@ private fun kindDisplayName(kind: Int): Int =
         VideoShortEvent.KIND -> R.string.kind_shorts
         VoiceEvent.KIND -> R.string.kind_voice_msg
         VoiceReplyEvent.KIND -> R.string.kind_voice_reply
+        WebBookmarkEvent.KIND -> R.string.kind_web_bookmark
         WikiNoteEvent.KIND -> R.string.kind_wiki
         else -> -1
     }
@@ -1101,21 +1126,56 @@ private fun RelayHeader(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
-        OutlinedButton(
+
+        Row(
             modifier = Modifier.padding(horizontal = 30.dp),
-            shape = ButtonBorder,
-            onClick = { nav.nav(Route.RelayFeed(url = relay.url)) },
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.Feed,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp),
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(text = stringRes(R.string.see_relay_feed))
+            OutlinedButton(
+                shape = ButtonBorder,
+                onClick = { nav.nav(Route.RelayFeed(url = relay.url)) },
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.Feed,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(text = stringRes(R.string.see_relay_feed))
+            }
+
+            if (supportsNip43(relayInfo.supported_nips)) {
+                OutlinedButton(
+                    onClick = { nav.nav(Route.RelayMembers(relay.url)) },
+                    shape = ButtonBorder,
+                ) {
+                    Icon(
+                        Icons.Default.People,
+                        contentDescription = stringRes(R.string.relay_members),
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(text = stringRes(R.string.relay_members))
+                }
+            }
+
+            if (Nip86Client.supportsNip86(relayInfo.supported_nips)) {
+                OutlinedButton(
+                    onClick = { nav.nav(Route.RelayManagement(relay.url)) },
+                    shape = ButtonBorder,
+                ) {
+                    Icon(
+                        Icons.Default.Settings,
+                        contentDescription = stringRes(R.string.manage),
+                        modifier = Height25Modifier,
+                    )
+                }
+            }
         }
     }
 }
+
+fun supportsNip43(supportedNips: List<String>?): Boolean = supportedNips?.any { it == "43" } == true
 
 @Composable
 fun FeesCard(
@@ -1534,6 +1594,160 @@ fun PoliciesCard(relay: Nip11RelayInformation) {
 }
 
 @Composable
+fun loadRelayDiscoveryEvents(relay: NormalizedRelayUrl): State<ImmutableList<RelayDiscoveryEvent>> =
+    remember(relay) {
+        LocalCache
+            .observeEvents<RelayDiscoveryEvent>(
+                Filter(
+                    kinds = listOf(RelayDiscoveryEvent.KIND),
+                    tags = mapOf("d" to listOf(relay.url)),
+                    since = TimeUtils.oneWeekAgo(),
+                    limit = 3,
+                ),
+            ).map {
+                it.toImmutableList()
+            }
+    }.collectAsStateWithLifecycle(persistentListOf())
+
+@Composable
+private fun RelayMonitorReportCard(
+    event: RelayDiscoveryEvent,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val context = LocalContext.current
+
+    OutlinedCard(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            // Monitor author + timestamp
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                LoadUser(baseUserHex = event.pubKey, accountViewModel) { user ->
+                    if (user != null) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            UserPicture(
+                                user = user,
+                                size = Size25dp,
+                                accountViewModel = accountViewModel,
+                                nav = nav,
+                            )
+                            UsernameDisplay(user, weight = Modifier.weight(1f), accountViewModel = accountViewModel)
+                        }
+                    }
+                }
+
+                Text(
+                    text = timeAgoNoDot(event.createdAt, context),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                )
+            }
+
+            HorizontalDivider()
+
+            // RTT metrics
+            val rttOpen = event.rttOpen()
+            val rttRead = event.rttRead()
+            val rttWrite = event.rttWrite()
+
+            if (rttOpen != null || rttRead != null || rttWrite != null) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                ) {
+                    rttOpen?.let {
+                        RttChip(stringRes(R.string.relay_monitor_rtt_open), it)
+                    }
+                    rttRead?.let {
+                        RttChip(stringRes(R.string.relay_monitor_rtt_read), it)
+                    }
+                    rttWrite?.let {
+                        RttChip(stringRes(R.string.relay_monitor_rtt_write), it)
+                    }
+                }
+            }
+
+            // Network type
+            val networkTypes = event.networkTypes()
+            if (networkTypes.isNotEmpty()) {
+                InfoRow(
+                    Icons.Default.Language,
+                    stringRes(R.string.relay_monitor_network),
+                    networkTypes.joinToString { it.code },
+                )
+            }
+
+            // Relay type
+            val relayTypes = event.relayTypes()
+            if (relayTypes.isNotEmpty()) {
+                InfoRow(
+                    Icons.Default.Dns,
+                    stringRes(R.string.relay_monitor_relay_type),
+                    relayTypes.joinToString(),
+                )
+            }
+
+            // Requirements
+            val requirements = event.requirements()
+            if (requirements.isNotEmpty()) {
+                InfoRow(
+                    Icons.Default.Lock,
+                    stringRes(R.string.relay_monitor_requirements),
+                    requirements.joinToString { req ->
+                        if (req.negated) "!${req.value}" else req.value
+                    },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun RttChip(
+    label: String,
+    ms: Long,
+) {
+    val color =
+        when {
+            ms < 200 -> Color(0xFF4CAF50)
+
+            // green
+            ms < 500 -> Color(0xFFFFC107)
+
+            // amber
+            else -> MaterialTheme.colorScheme.error
+        }
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Surface(
+            shape = RoundedCornerShape(50),
+            color = color.copy(alpha = 0.15f),
+        ) {
+            Text(
+                text = stringRes(R.string.relay_monitor_ms, ms.toInt()),
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = color,
+            )
+        }
+    }
+}
+
+@Composable
 fun SectionHeader(title: String) {
     Text(
         text = title,
@@ -1657,6 +1871,7 @@ fun RelayHeaderPreview() {
                         ),
                     supported_grasps = listOf("GRASP-01"),
                 ),
+            discoveryEvents = persistentListOf(),
             pad = PaddingValues(0.dp),
             relayStats = RelayStat(),
             messages =

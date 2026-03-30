@@ -77,6 +77,7 @@ import com.vitorpamplona.amethyst.desktop.model.DesktopDmRelayState
 import com.vitorpamplona.amethyst.desktop.model.DesktopIAccount
 import com.vitorpamplona.amethyst.desktop.network.DefaultRelays
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
+import com.vitorpamplona.amethyst.desktop.service.highlights.DesktopHighlightStore
 import com.vitorpamplona.amethyst.desktop.service.images.DesktopImageLoaderSetup
 import com.vitorpamplona.amethyst.desktop.service.media.VlcjPlayerPool
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
@@ -100,6 +101,8 @@ import com.vitorpamplona.amethyst.desktop.ui.relay.RelayStatusCard
 import com.vitorpamplona.amethyst.desktop.ui.settings.MediaServerSettings
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
+import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.LogLevel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -143,10 +146,21 @@ sealed class DesktopScreen {
         val noteId: String,
     ) : DesktopScreen()
 
+    data class Article(
+        val addressTag: String,
+    ) : DesktopScreen()
+
+    data class Editor(
+        val draftSlug: String? = null,
+    ) : DesktopScreen()
+
+    data object Drafts : DesktopScreen()
+
     data object Settings : DesktopScreen()
 }
 
 fun main() {
+    Log.minLevel = LogLevel.DEBUG
     DesktopImageLoaderSetup.setup()
     Runtime.getRuntime().addShutdownHook(
         Thread {
@@ -369,6 +383,8 @@ fun main() {
                             Item("Messages", onClick = { deckState.addColumn(DeckColumnType.Messages) })
                             Item("Search", onClick = { deckState.addColumn(DeckColumnType.Search) })
                             Item("Reads", onClick = { deckState.addColumn(DeckColumnType.Reads) })
+                            Item("Drafts", onClick = { deckState.addColumn(DeckColumnType.Drafts) })
+                            Item("Highlights", onClick = { deckState.addColumn(DeckColumnType.MyHighlights) })
                             Item("Bookmarks", onClick = { deckState.addColumn(DeckColumnType.Bookmarks) })
                             Item("Global Feed", onClick = { deckState.addColumn(DeckColumnType.GlobalFeed) })
                             Item("Profile", onClick = { deckState.addColumn(DeckColumnType.MyProfile) })
@@ -444,8 +460,16 @@ fun App(
                             RelayUrlNormalizer.normalizeOrNull(it)
                         }.toSet(),
                 localCache = localCache,
-            )
+            ).also { it.startCleanupLoop() }
         }
+
+    // Clear cache and subscriptions on logout
+    LaunchedEffect(accountState) {
+        if (accountState is AccountState.LoggedOut) {
+            subscriptionsCoordinator.clear()
+            localCache.clear()
+        }
+    }
 
     // Try to load saved account on startup
     DisposableEffect(Unit) {
@@ -597,6 +621,13 @@ fun MainContent(
             DesktopIAccount(account, localCache, relayManager, dmSendTracker, scope)
         }
 
+    val highlightStore = remember { DesktopHighlightStore(appScope) }
+    val draftStore =
+        remember {
+            com.vitorpamplona.amethyst.desktop.service.drafts
+                .DesktopDraftStore(appScope)
+        }
+
     // Subscribe to incoming DMs and process into chatroomList
     LaunchedEffect(account) {
         relayManager.connectedRelays.first { it.isNotEmpty() }
@@ -708,6 +739,7 @@ fun MainContent(
             Row(Modifier.fillMaxSize().weight(1f)) {
                 when (layoutMode) {
                     LayoutMode.SINGLE_PANE -> {
+                        val lastRelayEvent by subscriptionsCoordinator.lastEventAt.collectAsState()
                         SinglePaneLayout(
                             relayManager = relayManager,
                             localCache = localCache,
@@ -716,12 +748,15 @@ fun MainContent(
                             iAccount = iAccount,
                             nwcConnection = nwcConnection,
                             subscriptionsCoordinator = subscriptionsCoordinator,
+                            highlightStore = highlightStore,
+                            draftStore = draftStore,
                             appScope = appScope,
                             onShowComposeDialog = onShowComposeDialog,
                             onShowReplyDialog = onShowReplyDialog,
                             onZapFeedback = onZapFeedback,
                             signerConnectionState = signerConnectionState,
                             lastPingTimeSec = lastPingTimeSec,
+                            lastRelayEventAt = lastRelayEvent,
                             modifier = Modifier.weight(1f),
                         )
                     }
@@ -753,6 +788,8 @@ fun MainContent(
                             iAccount = iAccount,
                             nwcConnection = nwcConnection,
                             subscriptionsCoordinator = subscriptionsCoordinator,
+                            highlightStore = highlightStore,
+                            draftStore = draftStore,
                             appScope = appScope,
                             onShowComposeDialog = onShowComposeDialog,
                             onShowReplyDialog = onShowReplyDialog,

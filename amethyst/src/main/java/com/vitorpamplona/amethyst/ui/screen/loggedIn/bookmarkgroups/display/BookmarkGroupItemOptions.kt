@@ -41,10 +41,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.AnnotatedString
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
@@ -54,6 +52,7 @@ import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection
+import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeEditDraftTo
@@ -125,6 +124,7 @@ fun BookmarkGroupItemOptionsMenu(
             isFollowingAuthor = false,
             isPrivateBookmarkNote = false,
             isPublicBookmarkNote = false,
+            isPinnedNote = false,
             isLoggedUser = false,
             isSensitive = false,
             showSensitiveContent = null,
@@ -159,7 +159,7 @@ fun BookmarkGroupItemOptionsMenu(
         title = stringRes(R.string.bookmark_item_actions_dialog_title),
         onDismiss = onDismiss,
     ) {
-        val clipboardManager = LocalClipboardManager.current
+        val clipboardManager = LocalClipboard.current
         val actContext = LocalContext.current
         val scope = rememberCoroutineScope()
 
@@ -202,20 +202,24 @@ fun BookmarkGroupItemOptionsMenu(
         M3ActionSection {
             M3ActionRow(icon = Icons.Outlined.ContentCopy, text = stringRes(R.string.copy_text)) {
                 val lastNoteVersion = (editState?.value as? GenericLoadable.Loaded)?.loaded?.modificationToShow?.value ?: note
-                accountViewModel.decrypt(lastNoteVersion) { clipboardManager.setText(AnnotatedString(it)) }
+                accountViewModel.decrypt(lastNoteVersion) {
+                    scope.launch {
+                        clipboardManager.setText(it)
+                    }
+                }
                 onDismiss()
             }
             M3ActionRow(icon = Icons.Outlined.ContentCopy, text = stringRes(R.string.copy_user_pubkey)) {
                 note.author?.let {
                     scope.launch(Dispatchers.IO) {
-                        clipboardManager.setText(AnnotatedString("nostr:${it.pubkeyNpub()}"))
+                        clipboardManager.setText("nostr:${it.pubkeyNpub()}")
                         onDismiss()
                     }
                 }
             }
             M3ActionRow(icon = Icons.Outlined.ContentCopy, text = stringRes(R.string.copy_note_id)) {
                 scope.launch(Dispatchers.IO) {
-                    clipboardManager.setText(AnnotatedString(note.toNostrUri()))
+                    clipboardManager.setText(note.toNostrUri())
                     onDismiss()
                 }
             }
@@ -236,7 +240,7 @@ fun BookmarkGroupItemOptionsMenu(
 
                 val shareIntent =
                     Intent.createChooser(sendIntent, stringRes(actContext, R.string.quick_action_share))
-                ContextCompat.startActivity(actContext, shareIntent, null)
+                actContext.startActivity(shareIntent)
                 onDismiss()
             }
         }

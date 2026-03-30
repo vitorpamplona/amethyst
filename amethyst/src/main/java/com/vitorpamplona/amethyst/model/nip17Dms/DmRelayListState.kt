@@ -88,7 +88,7 @@ class DmRelayListState(
 
     init {
         settings.backupDMRelayList?.let {
-            Log.d("AccountRegisterObservers", "Loading saved DM Relay List ${it.toJson()}")
+            Log.d("AccountRegisterObservers") { "Loading saved DM Relay List ${it.toJson()}" }
             @OptIn(DelicateCoroutinesApi::class)
             scope.launch(Dispatchers.IO) {
                 LocalCache.justConsumeMyOwnEvent(it)
@@ -98,7 +98,7 @@ class DmRelayListState(
         scope.launch(Dispatchers.IO) {
             Log.d("AccountRegisterObservers", "NIP-17 Relay List Collector Start")
             getDMRelayListFlow().collect {
-                Log.d("AccountRegisterObservers", "Updating DM Relay List for ${signer.pubKey}")
+                Log.d("AccountRegisterObservers") { "Updating DM Relay List for ${signer.pubKey}" }
                 (it.note.event as? ChatMessageRelayListEvent)?.let {
                     settings.updateDMRelayList(it)
                 }

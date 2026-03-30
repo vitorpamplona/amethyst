@@ -33,7 +33,6 @@ import com.vitorpamplona.quartz.experimental.attestations.request.AttestationReq
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.forks.IForkableEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
-import com.vitorpamplona.quartz.experimental.publicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -72,6 +71,7 @@ import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
+import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
 
 class NotificationFeedFilter(
     val account: Account,

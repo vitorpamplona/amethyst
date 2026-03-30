@@ -1,0 +1,198 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.quartz.nipBEBle.relay
+
+import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
+import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nipBEBle.BleConfig
+import com.vitorpamplona.quartz.nipBEBle.BlePeer
+import com.vitorpamplona.quartz.nipBEBle.protocol.BleChunkAssembler
+import com.vitorpamplona.quartz.nipBEBle.protocol.BleMessageChunker
+import com.vitorpamplona.quartz.nipBEBle.transport.BleTransport
+import com.vitorpamplona.quartz.utils.Log
+
+/**
+ * A Nostr relay client that communicates over BLE instead of WebSockets.
+ *
+ * Implements [IRelayClient] so it can be used interchangeably with WebSocket-based
+ * relay clients in the existing relay pool and subscription infrastructure.
+ *
+ * Per NIP-BE, the client:
+ * - Writes commands to the server's Write Characteristic
+ * - Receives messages via notifications on the Read Characteristic
+ *
+ * Usage:
+ * ```kotlin
+ * val client = BleNostrClient(
+ *     peer = discoveredPeer,
+ *     transport = androidBleTransport,
+ *     listener = myConnectionListener,
+ *     chunkSize = negotiatedMtu - 3
+ * )
+ * client.connect()
+ * client.sendIfConnected(EventCmd(myEvent))
+ * ```
+ */
+class BleNostrClient(
+    val peer: BlePeer,
+    val transport: BleTransport,
+    val listener: RelayConnectionListener,
+    var chunkSize: Int = BleConfig.DEFAULT_CHUNK_SIZE,
+) : IRelayClient {
+    override val url: NormalizedRelayUrl = NormalizedRelayUrl("ble://${peer.deviceUuid}/")
+
+    private var connected = false
+    private val assembler = BleChunkAssembler()
+    private val sendQueue = ArrayDeque<Array<ByteArray>>()
+    private var isSending = false
+
+    override fun isConnected(): Boolean = connected
+
+    override fun needsToReconnect(): Boolean = !connected
+
+    override fun connect() {
+        listener.onConnecting(this)
+        transport.connectToPeer(peer)
+    }
+
+    override fun connectAndSyncFiltersIfDisconnected(ignoreRetryDelays: Boolean) {
+        if (!connected) {
+            connect()
+        }
+    }
+
+    override fun sendOrConnectAndSync(cmd: Command) {
+        if (connected && cmd.isValid()) {
+            sendIfConnected(cmd)
+        } else if (!connected) {
+            connectAndSyncFiltersIfDisconnected()
+        }
+    }
+
+    override fun sendIfConnected(cmd: Command) {
+        if (!connected) return
+
+        val json = OptimizedJsonMapper.toJson(cmd)
+        val chunks = BleMessageChunker.splitIntoChunks(json, chunkSize)
+
+        synchronized(sendQueue) {
+            sendQueue.addLast(chunks)
+            if (!isSending) {
+                isSending = true
+                sendNextMessage()
+            }
+        }
+
+        listener.onSent(this, json, cmd, true)
+    }
+
+    override fun disconnect() {
+        connected = false
+        assembler.reset()
+        synchronized(sendQueue) {
+            sendQueue.clear()
+            isSending = false
+        }
+        transport.disconnectFromPeer(peer)
+        listener.onDisconnected(this)
+    }
+
+    /**
+     * Called by the mesh manager when the transport reports a successful connection.
+     */
+    fun onConnected() {
+        connected = true
+        listener.onConnected(this, 0, false)
+    }
+
+    /**
+     * Called by the mesh manager when the transport reports disconnection.
+     */
+    fun onDisconnected() {
+        connected = false
+        assembler.reset()
+        synchronized(sendQueue) {
+            sendQueue.clear()
+            isSending = false
+        }
+        listener.onDisconnected(this)
+    }
+
+    /**
+     * Called by the mesh manager when a chunk arrives from the server
+     * (via Read Characteristic notification).
+     */
+    fun onChunkReceived(chunk: ByteArray) {
+        val message = assembler.addChunk(chunk) ?: return
+
+        try {
+            val msg = OptimizedJsonMapper.fromJsonToMessage(message)
+            listener.onIncomingMessage(this, message, msg)
+        } catch (e: Exception) {
+            Log.e("BleNostrClient", "Failed to parse message from ${peer.deviceUuid}: $message", e)
+        }
+    }
+
+    /**
+     * Called when the server acknowledges a write, allowing the next chunk to be sent.
+     */
+    fun onWriteSuccess() {
+        sendNextChunk()
+    }
+
+    private var currentChunks: Array<ByteArray>? = null
+    private var currentChunkIndex = 0
+
+    private fun sendNextMessage() {
+        val chunks =
+            synchronized(sendQueue) {
+                sendQueue.removeFirstOrNull()
+            }
+        if (chunks == null) {
+            synchronized(sendQueue) {
+                isSending = false
+            }
+            return
+        }
+        currentChunks = chunks
+        currentChunkIndex = 0
+        sendNextChunk()
+    }
+
+    private fun sendNextChunk() {
+        val chunks = currentChunks ?: return
+        if (currentChunkIndex >= chunks.size) {
+            currentChunks = null
+            sendNextMessage()
+            return
+        }
+
+        val success = transport.writeChunk(peer, chunks[currentChunkIndex])
+        if (success) {
+            currentChunkIndex++
+        } else {
+            Log.e("BleNostrClient", "Failed to write chunk $currentChunkIndex to ${peer.deviceUuid}")
+        }
+    }
+}
