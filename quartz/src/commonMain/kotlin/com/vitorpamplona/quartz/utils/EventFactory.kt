@@ -51,6 +51,12 @@ import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip15Marketplace.auction.AuctionEvent
+import com.vitorpamplona.quartz.nip15Marketplace.bid.BidEvent
+import com.vitorpamplona.quartz.nip15Marketplace.bidConfirmation.BidConfirmationEvent
+import com.vitorpamplona.quartz.nip15Marketplace.marketplace.MarketplaceEvent
+import com.vitorpamplona.quartz.nip15Marketplace.product.ProductEvent
+import com.vitorpamplona.quartz.nip15Marketplace.stall.StallEvent
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
@@ -222,10 +228,13 @@ class EventFactory {
                 AttestorRecommendationEvent.KIND -> AttestorRecommendationEvent(id, pubKey, createdAt, tags, content, sig)
                 AttestorProficiencyEvent.KIND -> AttestorProficiencyEvent(id, pubKey, createdAt, tags, content, sig)
                 AudioHeaderEvent.KIND -> AudioHeaderEvent(id, pubKey, createdAt, tags, content, sig)
+                AuctionEvent.KIND -> AuctionEvent(id, pubKey, createdAt, tags, content, sig)
                 AudioTrackEvent.KIND -> AudioTrackEvent(id, pubKey, createdAt, tags, content, sig)
                 BadgeAwardEvent.KIND -> BadgeAwardEvent(id, pubKey, createdAt, tags, content, sig)
                 BadgeDefinitionEvent.KIND -> BadgeDefinitionEvent(id, pubKey, createdAt, tags, content, sig)
                 BadgeProfilesEvent.KIND -> BadgeProfilesEvent(id, pubKey, createdAt, tags, content, sig)
+                BidEvent.KIND -> BidEvent(id, pubKey, createdAt, tags, content, sig)
+                BidConfirmationEvent.KIND -> BidConfirmationEvent(id, pubKey, createdAt, tags, content, sig)
                 BlockedRelayListEvent.KIND -> BlockedRelayListEvent(id, pubKey, createdAt, tags, content, sig)
                 BlossomServersEvent.KIND -> BlossomServersEvent(id, pubKey, createdAt, tags, content, sig)
                 BlossomAuthorizationEvent.KIND -> BlossomAuthorizationEvent(id, pubKey, createdAt, tags, content, sig)
@@ -308,6 +317,7 @@ class EventFactory {
                 LnZapPrivateEvent.KIND -> LnZapPrivateEvent(id, pubKey, createdAt, tags, content, sig)
                 LnZapRequestEvent.KIND -> LnZapRequestEvent(id, pubKey, createdAt, tags, content, sig)
                 LongTextNoteEvent.KIND -> LongTextNoteEvent(id, pubKey, createdAt, tags, content, sig)
+                MarketplaceEvent.KIND -> MarketplaceEvent(id, pubKey, createdAt, tags, content, sig)
                 MeetingRoomEvent.KIND -> MeetingRoomEvent(id, pubKey, createdAt, tags, content, sig)
                 MeetingRoomPresenceEvent.KIND -> MeetingRoomPresenceEvent(id, pubKey, createdAt, tags, content, sig)
                 MeetingSpaceEvent.KIND -> MeetingSpaceEvent(id, pubKey, createdAt, tags, content, sig)
@@ -334,6 +344,7 @@ class EventFactory {
                 ZapPollEvent.KIND -> ZapPollEvent(id, pubKey, createdAt, tags, content, sig)
                 PollEvent.KIND -> PollEvent(id, pubKey, createdAt, tags, content, sig)
                 PollResponseEvent.KIND -> PollResponseEvent(id, pubKey, createdAt, tags, content, sig)
+                ProductEvent.KIND -> ProductEvent(id, pubKey, createdAt, tags, content, sig)
                 PrivateDmEvent.KIND -> PrivateDmEvent(id, pubKey, createdAt, tags, content, sig)
                 PrivateOutboxRelayListEvent.KIND -> PrivateOutboxRelayListEvent(id, pubKey, createdAt, tags, content, sig)
                 ProxyRelayListEvent.KIND -> ProxyRelayListEvent(id, pubKey, createdAt, tags, content, sig)
@@ -359,6 +370,7 @@ class EventFactory {
                 RequestToVanishEvent.KIND -> RequestToVanishEvent(id, pubKey, createdAt, tags, content, sig)
                 SealedRumorEvent.KIND -> SealedRumorEvent(id, pubKey, createdAt, tags, content, sig)
                 SearchRelayListEvent.KIND -> SearchRelayListEvent(id, pubKey, createdAt, tags, content, sig)
+                StallEvent.KIND -> StallEvent(id, pubKey, createdAt, tags, content, sig)
                 StatusEvent.KIND -> StatusEvent(id, pubKey, createdAt, tags, content, sig)
                 TextNoteEvent.KIND -> TextNoteEvent(id, pubKey, createdAt, tags, content, sig)
                 ThreadEvent.KIND -> ThreadEvent(id, pubKey, createdAt, tags, content, sig)
