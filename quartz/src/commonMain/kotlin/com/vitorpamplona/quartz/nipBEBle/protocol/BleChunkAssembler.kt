@@ -20,37 +20,43 @@
  */
 package com.vitorpamplona.quartz.nipBEBle.protocol
 
+import kotlin.concurrent.atomics.AtomicReference
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
+
 /**
  * Accumulates incoming BLE chunks for a single message and reassembles
  * them once all chunks have arrived.
  *
- * Thread-safe: all access to internal state is synchronized.
+ * Thread-safe: uses a lock-free compare-and-set loop over an immutable list.
  */
+@OptIn(ExperimentalAtomicApi::class)
 class BleChunkAssembler {
-    private val lock = Any()
-    private val receivedChunks = mutableListOf<ByteArray>()
+    private val receivedChunks = AtomicReference(emptyList<ByteArray>())
 
     /**
      * Adds a received chunk. If this completes the message, returns the
      * reassembled JSON string. Otherwise returns null.
      */
-    fun addChunk(chunk: ByteArray): String? =
-        synchronized(lock) {
-            receivedChunks.add(chunk)
-            if (BleMessageChunker.isComplete(receivedChunks)) {
-                val message = BleMessageChunker.joinChunks(receivedChunks.toTypedArray())
-                receivedChunks.clear()
-                message
+    fun addChunk(chunk: ByteArray): String? {
+        while (true) {
+            val current = receivedChunks.load()
+            val updated = current + chunk
+            if (BleMessageChunker.isComplete(updated)) {
+                if (receivedChunks.compareAndSet(current, emptyList())) {
+                    return BleMessageChunker.joinChunks(updated.toTypedArray())
+                }
             } else {
-                null
+                if (receivedChunks.compareAndSet(current, updated)) {
+                    return null
+                }
             }
         }
+    }
 
     /**
      * Discards any partially received chunks.
      */
-    fun reset() =
-        synchronized(lock) {
-            receivedChunks.clear()
-        }
+    fun reset() {
+        receivedChunks.store(emptyList())
+    }
 }
