@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.utils
 
 object Log {
-    @Volatile var minLevel: LogLevel = LogLevel.DEBUG
+    var minLevel: LogLevel = LogLevel.DEBUG
 
     fun d(
         tag: String,
