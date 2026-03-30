@@ -34,7 +34,10 @@ import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 
-private fun isFeedNote(event: com.vitorpamplona.quartz.nip01Core.core.Event?): Boolean = event is TextNoteEvent || event is RepostEvent || event is GenericRepostEvent
+private fun isFeedNote(event: com.vitorpamplona.quartz.nip01Core.core.Event?): Boolean =
+    event is TextNoteEvent ||
+        event is RepostEvent ||
+        event is GenericRepostEvent
 
 private fun List<Note>.deduplicateReposts(): List<Note> =
     distinctBy { note ->
@@ -132,7 +135,7 @@ class DesktopThreadFilter(
 }
 
 /**
- * Profile feed: all kind 1 notes by a specific pubkey.
+ * Profile feed: text notes + reposts by a specific pubkey.
  */
 class DesktopProfileFeedFilter(
     private val pubkey: HexKey,
@@ -140,19 +143,21 @@ class DesktopProfileFeedFilter(
 ) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String = "profile-$pubkey"
 
+    private fun isProfileNote(note: Note): Boolean {
+        val event = note.event ?: return false
+        return note.author?.pubkeyHex == pubkey && isFeedNote(event)
+    }
+
     override fun feed(): List<Note> =
         cache.notes
-            .filterIntoSet { _, note ->
-                note.event is TextNoteEvent && note.author?.pubkeyHex == pubkey
-            }.sortedWith(DefaultFeedOrder)
+            .filterIntoSet { _, note -> isProfileNote(note) }
+            .sortedWith(DefaultFeedOrder)
+            .deduplicateReposts()
             .take(limit())
 
-    override fun applyFilter(newItems: Set<Note>): Set<Note> =
-        newItems.filterTo(HashSet()) {
-            it.event is TextNoteEvent && it.author?.pubkeyHex == pubkey
-        }
+    override fun applyFilter(newItems: Set<Note>): Set<Note> = newItems.filterTo(HashSet()) { isProfileNote(it) }
 
-    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
+    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder).deduplicateReposts()
 
     override fun limit(): Int = 1000
 }

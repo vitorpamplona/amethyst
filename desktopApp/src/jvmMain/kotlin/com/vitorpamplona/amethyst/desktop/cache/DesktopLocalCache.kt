@@ -39,6 +39,7 @@ import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentRequestEvent
@@ -173,7 +174,7 @@ class DesktopLocalCache : ICacheProvider {
         when (event) {
             is MetadataEvent -> {
                 consumeMetadata(event)
-                true
+                false // metadata updates User, not Note — skip event stream
             }
 
             is TextNoteEvent -> {
@@ -212,6 +213,10 @@ class DesktopLocalCache : ICacheProvider {
                 consumeBookmarkList(event)
             }
 
+            is CommentEvent -> {
+                consumeComment(event, relay)
+            }
+
             else -> {
                 false
             }
@@ -223,6 +228,24 @@ class DesktopLocalCache : ICacheProvider {
      */
     private fun consumeTextNote(
         event: TextNoteEvent,
+        relay: NormalizedRelayUrl?,
+    ): Boolean {
+        val note = getOrCreateNote(event.id)
+        if (note.event != null) return false
+        val author = getOrCreateUser(event.pubKey)
+        val repliesTo = event.tagsWithoutCitations().map { getOrCreateNote(it) }
+        note.loadEvent(event, author, repliesTo)
+        relay?.let { note.addRelay(it) }
+        repliesTo.forEach { it.addReply(note) }
+        return true
+    }
+
+    /**
+     * Consumes a kind 1111 comment event (NIP-22).
+     * Like text notes but uses BaseThreadedEvent reply structure.
+     */
+    private fun consumeComment(
+        event: CommentEvent,
         relay: NormalizedRelayUrl?,
     ): Boolean {
         val note = getOrCreateNote(event.id)

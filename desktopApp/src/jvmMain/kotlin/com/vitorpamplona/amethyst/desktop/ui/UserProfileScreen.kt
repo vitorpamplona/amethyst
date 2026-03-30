@@ -121,6 +121,7 @@ fun UserProfileScreen(
     onBack: () -> Unit,
     onCompose: () -> Unit = {},
     onNavigateToProfile: (String) -> Unit = {},
+    onNavigateToThread: (String) -> Unit = {},
     onNavigateToArticle: (String) -> Unit = {},
     onZapFeedback: (ZapFeedback) -> Unit = {},
 ) {
@@ -796,6 +797,7 @@ fun UserProfileScreen(
                                         onReply = onCompose,
                                         onZapFeedback = onZapFeedback,
                                         onNavigateToProfile = onNavigateToProfile,
+                                        onNavigateToThread = onNavigateToThread,
                                         onImageClick = { urls, index ->
                                             lightboxState = LightboxState(urls, index)
                                         },
