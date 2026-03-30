@@ -31,6 +31,10 @@ import com.vitorpamplona.quartz.nipBEBle.protocol.BleChunkAssembler
 import com.vitorpamplona.quartz.nipBEBle.protocol.BleMessageChunker
 import com.vitorpamplona.quartz.nipBEBle.transport.BleTransport
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.Channel
+import kotlin.concurrent.atomics.AtomicBoolean
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 /**
  * A Nostr relay client that communicates over BLE instead of WebSockets.
@@ -54,6 +58,7 @@ import com.vitorpamplona.quartz.utils.Log
  * client.sendIfConnected(EventCmd(myEvent))
  * ```
  */
+@OptIn(ExperimentalAtomicApi::class, ExperimentalCoroutinesApi::class)
 class BleNostrClient(
     val peer: BlePeer,
     val transport: BleTransport,
@@ -64,8 +69,8 @@ class BleNostrClient(
 
     private var connected = false
     private val assembler = BleChunkAssembler()
-    private val sendQueue = ArrayDeque<Array<ByteArray>>()
-    private var isSending = false
+    private val sendQueue = Channel<Array<ByteArray>>(Channel.UNLIMITED)
+    private val isSending = AtomicBoolean(false)
 
     override fun isConnected(): Boolean = connected
 
@@ -96,12 +101,9 @@ class BleNostrClient(
         val json = OptimizedJsonMapper.toJson(cmd)
         val chunks = BleMessageChunker.splitIntoChunks(json, chunkSize)
 
-        synchronized(sendQueue) {
-            sendQueue.addLast(chunks)
-            if (!isSending) {
-                isSending = true
-                sendNextMessage()
-            }
+        sendQueue.trySend(chunks)
+        if (!isSending.exchange(true)) {
+            sendNextMessage()
         }
 
         listener.onSent(this, json, cmd, true)
@@ -110,10 +112,7 @@ class BleNostrClient(
     override fun disconnect() {
         connected = false
         assembler.reset()
-        synchronized(sendQueue) {
-            sendQueue.clear()
-            isSending = false
-        }
+        drainQueue()
         transport.disconnectFromPeer(peer)
         listener.onDisconnected(this)
     }
@@ -132,10 +131,7 @@ class BleNostrClient(
     fun onDisconnected() {
         connected = false
         assembler.reset()
-        synchronized(sendQueue) {
-            sendQueue.clear()
-            isSending = false
-        }
+        drainQueue()
         listener.onDisconnected(this)
     }
 
@@ -165,19 +161,26 @@ class BleNostrClient(
     private var currentChunkIndex = 0
 
     private fun sendNextMessage() {
-        val chunks =
-            synchronized(sendQueue) {
-                sendQueue.removeFirstOrNull()
-            }
-        if (chunks == null) {
-            synchronized(sendQueue) {
-                isSending = false
+        val result = sendQueue.tryReceive()
+        if (result.isFailure) {
+            isSending.store(false)
+            // Double-check: an item may have been added after tryReceive
+            // but before we cleared the flag.
+            if (sendQueue.isEmpty) return
+            if (!isSending.exchange(true)) {
+                sendNextMessage()
             }
             return
         }
-        currentChunks = chunks
+        currentChunks = result.getOrNull()
         currentChunkIndex = 0
         sendNextChunk()
+    }
+
+    private fun drainQueue() {
+        while (sendQueue.tryReceive().isSuccess) {}
+        currentChunks = null
+        isSending.store(false)
     }
 
     private fun sendNextChunk() {
