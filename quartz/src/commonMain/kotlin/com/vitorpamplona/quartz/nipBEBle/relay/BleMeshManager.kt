@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nipBEBle
+package com.vitorpamplona.quartz.nipBEBle.relay
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
@@ -27,6 +27,12 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
+import com.vitorpamplona.quartz.nipBEBle.BlePeer
+import com.vitorpamplona.quartz.nipBEBle.BleRole
+import com.vitorpamplona.quartz.nipBEBle.assignRole
+import com.vitorpamplona.quartz.nipBEBle.protocol.BleMessageChunker
+import com.vitorpamplona.quartz.nipBEBle.transport.BleTransport
+import com.vitorpamplona.quartz.nipBEBle.transport.BleTransportListener
 import com.vitorpamplona.quartz.utils.Log
 
 /**

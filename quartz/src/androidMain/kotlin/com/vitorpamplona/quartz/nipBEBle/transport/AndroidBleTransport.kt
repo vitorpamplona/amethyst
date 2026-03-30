@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nipBEBle
+package com.vitorpamplona.quartz.nipBEBle.transport
 
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
@@ -41,6 +41,10 @@ import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
 import android.content.Context
 import android.os.ParcelUuid
+import com.vitorpamplona.quartz.nipBEBle.AndroidBleTransportContract
+import com.vitorpamplona.quartz.nipBEBle.BleConfig
+import com.vitorpamplona.quartz.nipBEBle.BlePeer
+import com.vitorpamplona.quartz.nipBEBle.BleRole
 import com.vitorpamplona.quartz.utils.Log
 import java.util.UUID
 

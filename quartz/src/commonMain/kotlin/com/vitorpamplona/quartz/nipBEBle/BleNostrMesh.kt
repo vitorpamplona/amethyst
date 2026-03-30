@@ -24,6 +24,11 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
+import com.vitorpamplona.quartz.nipBEBle.relay.BleMeshListener
+import com.vitorpamplona.quartz.nipBEBle.relay.BleMeshManager
+import com.vitorpamplona.quartz.nipBEBle.relay.BleNostrServer
+import com.vitorpamplona.quartz.nipBEBle.transport.BleTransport
+import com.vitorpamplona.quartz.nipBEBle.transport.BleTransportListener
 
 /**
  * Easy-to-use facade for NIP-BE Nostr BLE mesh networking.
