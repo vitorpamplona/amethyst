@@ -26,6 +26,9 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip90Dvms.tags.inputPrompt
+import com.vitorpamplona.quartz.nip90Dvms.tags.output
+import com.vitorpamplona.quartz.nip90Dvms.tags.param
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -42,10 +45,26 @@ class NIP90TextGenerationRequestEvent(
         const val ALT = "NIP90 Text Generation request"
 
         fun build(
+            prompt: String,
+            model: String? = null,
+            maxTokens: Int? = null,
+            temperature: Double? = null,
+            topK: Int? = null,
+            topP: Double? = null,
+            frequencyPenalty: Double? = null,
+            outputMimeType: String? = null,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<NIP90TextGenerationRequestEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
             alt(ALT)
+            inputPrompt(prompt)
+            model?.let { param("model", it) }
+            maxTokens?.let { param("max_tokens", it.toString()) }
+            temperature?.let { param("temperature", it.toString()) }
+            topK?.let { param("top_k", it.toString()) }
+            topP?.let { param("top_p", it.toString()) }
+            frequencyPenalty?.let { param("frequency_penalty", it.toString()) }
+            outputMimeType?.let { output(it) }
             initializer()
         }
     }

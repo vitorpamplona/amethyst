@@ -18,39 +18,24 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip90Dvms.opReturn
+package com.vitorpamplona.quartz.nip90Dvms.tags
 
-import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip31Alts.alt
-import com.vitorpamplona.quartz.nip90Dvms.tags.inputText
-import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.utils.ensure
 
-@Immutable
-class NIP90OpReturnRequestEvent(
-    id: HexKey,
-    pubKey: HexKey,
-    createdAt: Long,
-    tags: Array<Array<String>>,
-    content: String,
-    sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+class OutputTag(
+    val mimeType: String,
+) {
     companion object {
-        const val KIND = 5901
-        const val ALT = "NIP90 OP_RETURN Creation request"
-        const val MAX_OP_RETURN_BYTES = 80
+        const val TAG_NAME = "output"
 
-        fun build(
-            text: String,
-            createdAt: Long = TimeUtils.now(),
-            initializer: TagArrayBuilder<NIP90OpReturnRequestEvent>.() -> Unit = {},
-        ) = eventTemplate(KIND, "", createdAt) {
-            alt(ALT)
-            inputText(text)
-            initializer()
+        fun parse(tag: Array<String>): OutputTag? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
+            return OutputTag(tag[1])
         }
+
+        fun assemble(mimeType: String) = arrayOf(TAG_NAME, mimeType)
     }
 }

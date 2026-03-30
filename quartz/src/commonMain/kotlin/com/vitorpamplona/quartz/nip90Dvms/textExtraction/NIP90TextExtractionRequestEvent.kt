@@ -26,6 +26,9 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip90Dvms.tags.inputUrl
+import com.vitorpamplona.quartz.nip90Dvms.tags.output
+import com.vitorpamplona.quartz.nip90Dvms.tags.param
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -42,10 +45,21 @@ class NIP90TextExtractionRequestEvent(
         const val ALT = "NIP90 Text Extraction request"
 
         fun build(
+            inputUrl: String,
+            outputMimeType: String? = null,
+            rangeStart: String? = null,
+            rangeEnd: String? = null,
+            alignment: String? = null,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<NIP90TextExtractionRequestEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
             alt(ALT)
+            inputUrl(inputUrl)
+            outputMimeType?.let { output(it) }
+            if (rangeStart != null && rangeEnd != null) {
+                param("range", rangeStart, rangeEnd)
+            }
+            alignment?.let { param("alignment", it) }
             initializer()
         }
     }

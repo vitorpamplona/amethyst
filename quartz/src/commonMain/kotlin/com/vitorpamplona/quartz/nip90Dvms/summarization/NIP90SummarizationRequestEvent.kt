@@ -26,6 +26,9 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip90Dvms.tags.inputEvent
+import com.vitorpamplona.quartz.nip90Dvms.tags.output
+import com.vitorpamplona.quartz.nip90Dvms.tags.param
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -42,10 +45,16 @@ class NIP90SummarizationRequestEvent(
         const val ALT = "NIP90 Summarization request"
 
         fun build(
+            eventIds: List<HexKey>,
+            length: String? = null,
+            outputMimeType: String? = null,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<NIP90SummarizationRequestEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
             alt(ALT)
+            eventIds.forEach { inputEvent(it) }
+            length?.let { param("length", it) }
+            outputMimeType?.let { output(it) }
             initializer()
         }
     }

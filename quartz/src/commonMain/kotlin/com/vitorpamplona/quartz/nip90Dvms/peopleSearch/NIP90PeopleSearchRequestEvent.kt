@@ -26,6 +26,8 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip90Dvms.tags.inputText
+import com.vitorpamplona.quartz.nip90Dvms.tags.param
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -42,10 +44,14 @@ class NIP90PeopleSearchRequestEvent(
         const val ALT = "NIP90 People Search request"
 
         fun build(
+            searchQuery: String,
+            maxResults: Int? = null,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<NIP90PeopleSearchRequestEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
             alt(ALT)
+            inputText(searchQuery)
+            maxResults?.let { param("max_results", it.toString()) }
             initializer()
         }
     }
