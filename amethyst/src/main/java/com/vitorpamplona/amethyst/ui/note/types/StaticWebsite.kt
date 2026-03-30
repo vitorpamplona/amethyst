@@ -20,29 +20,38 @@
  */
 package com.vitorpamplona.amethyst.ui.note.types
 
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
-import coil3.compose.AsyncImage
+import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
-import com.vitorpamplona.amethyst.ui.theme.MaxWidthWithHorzPadding
-import com.vitorpamplona.amethyst.ui.theme.innerPostModifier
-import com.vitorpamplona.amethyst.ui.theme.previewCardImageModifier
-import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
-import com.vitorpamplona.quartz.nip19Bech32.toNpub
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
+import com.vitorpamplona.amethyst.ui.theme.Size10dp
+import com.vitorpamplona.amethyst.ui.theme.Size5dp
+import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
+import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 
 @Composable
 fun RenderRootSiteEvent(
@@ -52,18 +61,13 @@ fun RenderRootSiteEvent(
 ) {
     val event = baseNote.event as? RootSiteEvent ?: return
 
-    val npub =
-        remember(event.pubKey) {
-            event.pubKey.hexToByteArray().toNpub()
-        }
-
-    RenderStaticWebsitePreview(
+    RenderStaticWebsite(
         title = event.title(),
         description = event.description(),
-        npub = npub,
-        identifier = null,
-        faviconHash = event.paths().firstOrNull { it.path == "/favicon.ico" }?.hash,
+        source = event.source(),
         servers = event.servers(),
+        paths = event.paths(),
+        identifier = null,
     )
 }
 
@@ -75,87 +79,129 @@ fun RenderNamedSiteEvent(
 ) {
     val event = baseNote.event as? NamedSiteEvent ?: return
 
-    val npub =
-        remember(event.pubKey) {
-            event.pubKey.hexToByteArray().toNpub()
-        }
-
-    RenderStaticWebsitePreview(
+    RenderStaticWebsite(
         title = event.title(),
         description = event.description(),
-        npub = npub,
-        identifier = event.identifier(),
-        faviconHash = event.paths().firstOrNull { it.path == "/favicon.ico" }?.hash,
+        source = event.source(),
         servers = event.servers(),
+        paths = event.paths(),
+        identifier = event.identifier(),
     )
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun RenderStaticWebsitePreview(
+private fun RenderStaticWebsite(
     title: String?,
     description: String?,
-    npub: String,
-    identifier: String?,
-    faviconHash: String?,
+    source: String?,
     servers: List<String>,
+    paths: List<PathTag>,
+    identifier: String?,
 ) {
-    val nsiteHost =
-        if (identifier != null) {
-            "$npub.$identifier.nsite.lol"
-        } else {
-            "$npub.nsite.lol"
-        }
-
-    val nsiteUrl = "https://$nsiteHost"
-
-    val faviconUrl =
-        if (faviconHash != null && servers.isNotEmpty()) {
-            "${servers.first()}/$faviconHash"
-        } else {
-            null
-        }
-
-    val uri = LocalUriHandler.current
-
-    Column(
-        modifier = MaterialTheme.colorScheme.innerPostModifier,
+    Row(
+        modifier =
+            Modifier
+                .clip(shape = QuoteBorder)
+                .border(
+                    1.dp,
+                    MaterialTheme.colorScheme.subtleBorder,
+                    QuoteBorder,
+                ).padding(Size10dp),
     ) {
-        faviconUrl?.let {
-            AsyncImage(
-                model = it,
-                contentDescription = title,
-                modifier = previewCardImageModifier,
-            )
-        }
+        Column {
+            val displayTitle =
+                title
+                    ?: identifier
+                    ?: stringRes(id = R.string.nsite_root_site)
 
-        Text(
-            text = nsiteHost,
-            style = MaterialTheme.typography.bodySmall,
-            modifier = MaxWidthWithHorzPadding,
-            color = Color.Gray,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-
-        Text(
-            text = title ?: identifier ?: stringRes(id = R.string.nsite_root_site),
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = MaxWidthWithHorzPadding,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-
-        description?.let {
             Text(
-                text = it,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = MaxWidthWithHorzPadding,
-                color = Color.Gray,
-                maxLines = 3,
+                text = stringRes(id = R.string.nsite_title, displayTitle),
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.fillMaxWidth(),
             )
-        }
 
-        Spacer(modifier = DoubleVertSpacer)
+            description?.let {
+                Text(
+                    text = it,
+                    modifier = Modifier.fillMaxWidth().padding(vertical = Size5dp),
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+
+            HorizontalDivider(thickness = DividerThickness)
+
+            source?.let {
+                Row(Modifier.fillMaxWidth().padding(top = Size5dp)) {
+                    Text(
+                        text = stringRes(id = R.string.nsite_source),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Spacer(modifier = StdHorzSpacer)
+                    ClickableUrl(
+                        url = it,
+                        urlText = it.removePrefix("https://").removePrefix("http://"),
+                    )
+                }
+            }
+
+            if (servers.isNotEmpty()) {
+                Row(Modifier.fillMaxWidth().padding(top = Size5dp)) {
+                    Text(
+                        text = stringRes(id = R.string.nsite_servers),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Spacer(modifier = StdHorzSpacer)
+                    Column {
+                        servers.forEach { server ->
+                            ClickableUrl(
+                                url = server,
+                                urlText = server.removePrefix("https://").removePrefix("http://"),
+                            )
+                        }
+                    }
+                }
+            }
+
+            if (paths.isNotEmpty()) {
+                Row(Modifier.fillMaxWidth().padding(top = Size5dp)) {
+                    Text(
+                        text = stringRes(id = R.string.nsite_files, paths.size),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth().padding(top = Size5dp),
+                    horizontalArrangement = Arrangement.spacedBy(Size5dp),
+                    verticalArrangement = Arrangement.spacedBy(Size5dp),
+                ) {
+                    paths.take(10).forEach { path ->
+                        Text(
+                            text = path.path,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    if (paths.size > 10) {
+                        Text(
+                            text = stringRes(id = R.string.nsite_more_files, paths.size - 10),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                        )
+                    }
+                }
+            }
+        }
     }
 }
