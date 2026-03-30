@@ -18,22 +18,35 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.types
+package com.vitorpamplona.quartz.nip90Dvms.userDiscoveryResponse
 
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.nip90Dvms.status.NIP90StatusEvent
+import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.utils.TimeUtils
 
-@Composable
-fun RenderNIP90Status(
-    note: Note,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    val noteEvent = note.event as? NIP90StatusEvent ?: return
+@Immutable
+class NIP90UserDiscoveryResponseEvent(
+    id: HexKey,
+    pubKey: HexKey,
+    createdAt: Long,
+    tags: Array<Array<String>>,
+    content: String,
+    sig: HexKey,
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+    companion object {
+        const val KIND = 6301
+        const val ALT = "NIP90 User Discovery reply"
 
-    Text(text = noteEvent.content)
+        fun build(
+            createdAt: Long = TimeUtils.now(),
+            initializer: TagArrayBuilder<NIP90UserDiscoveryResponseEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, "", createdAt) {
+            alt(ALT)
+            initializer()
+        }
+    }
 }

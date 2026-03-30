@@ -18,15 +18,16 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip90Dvms
+package com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip31Alts.AltTag
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Stable
@@ -43,21 +44,19 @@ class NIP90ContentDiscoveryRequestEvent(
         const val KIND = 5300
         const val ALT = "NIP90 Content Discovery request"
 
-        suspend fun create(
+        fun build(
             dvmPublicKey: HexKey,
             forUser: HexKey,
             relays: Set<NormalizedRelayUrl>,
-            signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-        ): NIP90ContentDiscoveryRequestEvent {
-            val content = ""
-            val tags = mutableListOf<Array<String>>()
-            tags.add(arrayOf("p", dvmPublicKey))
-            tags.add(AltTag.assemble(ALT))
-            tags.add(arrayOf("relays") + relays.map { it.url }.toTypedArray())
-            tags.add(arrayOf("param", "max_results", "200"))
-            tags.add(arrayOf("param", "user", forUser))
-            return signer.sign(createdAt, KIND, tags.toTypedArray(), content)
+            initializer: TagArrayBuilder<NIP90ContentDiscoveryRequestEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, "", createdAt) {
+            alt(ALT)
+            dvmPubKey(dvmPublicKey)
+            relays(relays)
+            param("max_results", "200")
+            param("user", forUser)
+            initializer()
         }
     }
 }

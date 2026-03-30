@@ -18,22 +18,20 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.types
+package com.vitorpamplona.quartz.nip90Dvms.status
 
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.nip90Dvms.status.NIP90StatusEvent
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip90Dvms.status.tags.AmountTag
+import com.vitorpamplona.quartz.nip90Dvms.status.tags.StatusTag
 
-@Composable
-fun RenderNIP90Status(
-    note: Note,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    val noteEvent = note.event as? NIP90StatusEvent ?: return
+fun TagArrayBuilder<NIP90StatusEvent>.status(
+    code: String,
+    description: String,
+) = addUnique(StatusTag.assemble(code, description))
 
-    Text(text = noteEvent.content)
-}
+fun TagArrayBuilder<NIP90StatusEvent>.amount(amount: Long) = addUnique(AmountTag.assemble(amount))
+
+fun TagArrayBuilder<NIP90StatusEvent>.amount(
+    amount: Long,
+    lnInvoice: String,
+) = addUnique(AmountTag.assemble(amount, lnInvoice))

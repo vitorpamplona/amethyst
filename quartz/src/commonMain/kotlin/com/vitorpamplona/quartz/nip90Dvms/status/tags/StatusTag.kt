@@ -18,37 +18,41 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip90Dvms
+package com.vitorpamplona.quartz.nip90Dvms.status.tags
 
-import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip31Alts.AltTag
-import com.vitorpamplona.quartz.utils.TimeUtils
+import androidx.compose.runtime.Stable
+import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.utils.ensure
 
-@Immutable
-class NIP90UserDiscoveryResponseEvent(
-    id: HexKey,
-    pubKey: HexKey,
-    createdAt: Long,
-    tags: Array<Array<String>>,
-    content: String,
-    sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+@Stable
+class StatusTag(
+    val code: String,
+    val description: String,
+) {
     companion object {
-        const val KIND = 6301
-        const val ALT = "NIP90 Content Discovery reply"
+        const val TAG_NAME = "status"
 
-        suspend fun create(
-            signer: NostrSigner,
-            createdAt: Long = TimeUtils.now(),
-        ): NIP90UserDiscoveryResponseEvent {
-            val tags =
-                arrayOf(
-                    AltTag.assemble(ALT),
-                )
-            return signer.sign(createdAt, KIND, tags, "")
+        fun isTag(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
+
+        fun parse(
+            tag: Array<String>,
+            content: String,
+        ): StatusTag? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
+            return if (tag.has(2) && content.isEmpty()) {
+                StatusTag(tag[1], tag[2])
+            } else {
+                StatusTag(tag[1], content)
+            }
         }
+
+        fun assemble(
+            code: String,
+            description: String,
+        ) = arrayOf(TAG_NAME, code, description)
+
+        fun assemble(status: StatusTag) = assemble(status.code, status.description)
     }
 }
