@@ -42,8 +42,14 @@ object BleConfig {
     /** Maximum compressed message size (64KB). */
     const val MAX_MESSAGE_SIZE = 64 * 1024
 
-    /** Default chunk size for message batching. */
+    /**
+     * Default payload size per chunk in bytes (excluding 2-byte overhead).
+     * Each transmitted chunk is `DEFAULT_CHUNK_SIZE + 2` bytes on the wire.
+     */
     const val DEFAULT_CHUNK_SIZE = 500
+
+    /** Default MTU to request during BLE connection. */
+    const val DEFAULT_MTU = 512
 
     /** Minimum MTU for BLE 4.2. */
     const val MIN_MTU_BLE_4_2 = 20

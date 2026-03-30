@@ -48,15 +48,19 @@ class BleMessageChunkerTest {
     @Test
     fun chunksHaveCorrectFormat() {
         val message = """["EVENT",{"id":"abc","kind":1,"content":"hello world"}]"""
-        val chunks = BleMessageChunker.splitIntoChunks(message, chunkSize = 20)
+        val chunkSize = 20
+        val chunks = BleMessageChunker.splitIntoChunks(message, chunkSize = chunkSize)
 
         for ((i, chunk) in chunks.withIndex()) {
-            // First 2 bytes are the index
+            // First byte is the index
             assertEquals(i, BleMessageChunker.chunkIndex(chunk))
             // Last byte is the total count
             assertEquals(chunks.size, BleMessageChunker.totalChunks(chunk))
-            // Each chunk should be at most chunkSize
-            assertTrue(chunk.size <= 20, "Chunk size ${chunk.size} exceeds max 20")
+            // Each chunk should be at most chunkSize + 2 (overhead)
+            assertTrue(
+                chunk.size <= chunkSize + BleMessageChunker.CHUNK_OVERHEAD,
+                "Chunk size ${chunk.size} exceeds max ${chunkSize + BleMessageChunker.CHUNK_OVERHEAD}",
+            )
         }
     }
 

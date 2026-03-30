@@ -103,7 +103,8 @@ class AndroidBleTransport(
                 .Builder()
                 .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY)
                 .setConnectable(true)
-                .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_MEDIUM)
+                .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH)
+                .setTimeout(0)
                 .build()
 
         val data =
@@ -158,6 +159,7 @@ class AndroidBleTransport(
                 BluetoothGattCharacteristic.PROPERTY_WRITE,
                 BluetoothGattCharacteristic.PERMISSION_WRITE,
             )
+        writeChar.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
 
         readCharacteristic =
             BluetoothGattCharacteristic(
@@ -364,7 +366,8 @@ class AndroidBleTransport(
                 val peer = peerMap[peerUuid] ?: return
 
                 if (newState == BluetoothProfile.STATE_CONNECTED) {
-                    gatt.discoverServices()
+                    gatt.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH)
+                    gatt.requestMtu(BleConfig.DEFAULT_MTU)
                 } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                     listener?.onPeerDisconnected(peer)
                 }
@@ -428,6 +431,8 @@ class AndroidBleTransport(
                     val peer = peerMap[peerUuid] ?: return
                     listener?.onMtuChanged(peer, mtu)
                 }
+                // Discover services after MTU negotiation (matching samiz flow)
+                gatt.discoverServices()
             }
         }
 

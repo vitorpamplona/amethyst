@@ -223,7 +223,8 @@ class BleMeshManager(
         peer: BlePeer,
         mtu: Int,
     ) {
-        val chunkSize = mtu - 3
+        // ATT overhead is 3 bytes, chunk framing is 2 bytes (index + total count)
+        val chunkSize = mtu - 3 - BleMessageChunker.CHUNK_OVERHEAD
         clients[peer.deviceUuid]?.chunkSize = chunkSize
         servers[peer.deviceUuid]?.chunkSize = chunkSize
     }

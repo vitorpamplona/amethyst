@@ -27,18 +27,22 @@ import com.vitorpamplona.quartz.utils.Deflate
  *
  * NIP-BE messages are DEFLATE-compressed and split into chunks with the format:
  * ```
- * [batch index (first 2 bytes)][payload][total batches (last byte)]
+ * [chunk index (1 byte)][payload (up to chunkSize bytes)][total chunks (1 byte)]
  * ```
  *
- * Each chunk carries a 2-byte index prefix and a 1-byte total count suffix,
- * so the payload per chunk is `chunkSize - 3` bytes of compressed data.
+ * Each chunk carries a 1-byte index prefix and a 1-byte total count suffix
+ * (2 bytes overhead), matching the reference implementation in KoalaSat/samiz.
  */
 object BleMessageChunker {
+    /** Per-chunk overhead: 1 byte index + 1 byte total count. */
+    const val CHUNK_OVERHEAD = 2
+
     /**
      * Compresses and splits a NIP-01 JSON message into BLE-sized chunks.
      *
      * @param message The JSON message string (e.g., `["EVENT", {...}]`).
-     * @param chunkSize The maximum size of each chunk in bytes (default 500).
+     * @param chunkSize The maximum payload size per chunk in bytes (default 500).
+     *   The actual transmitted chunk size is `payload + 2` (index + total count).
      * @return Array of byte arrays, each representing one chunk.
      * @throws IllegalArgumentException if compressed message exceeds 64KB.
      */
@@ -52,26 +56,23 @@ object BleMessageChunker {
             "Compressed message size ${compressed.size} exceeds maximum ${BleConfig.MAX_MESSAGE_SIZE} bytes"
         }
 
-        // Overhead per chunk: 2 bytes index prefix + 1 byte total count suffix
-        val payloadSize = chunkSize - 3
-        require(payloadSize > 0) { "chunkSize must be at least 4 bytes" }
+        require(chunkSize > 0) { "chunkSize must be positive" }
 
-        val numChunks = (compressed.size + payloadSize - 1) / payloadSize
+        val numChunks = (compressed.size + chunkSize - 1) / chunkSize
 
         require(numChunks <= 255) {
             "Message requires $numChunks chunks but maximum is 255"
         }
 
         return Array(numChunks) { i ->
-            val start = i * payloadSize
-            val end = minOf((i + 1) * payloadSize, compressed.size)
+            val start = i * chunkSize
+            val end = minOf((i + 1) * chunkSize, compressed.size)
             val payload = compressed.copyOfRange(start, end)
 
-            // [2-byte index][payload][1-byte total]
-            val chunk = ByteArray(payload.size + 3)
-            chunk[0] = (i shr 8).toByte()
-            chunk[1] = (i and 0xFF).toByte()
-            payload.copyInto(chunk, 2)
+            // [1-byte index][payload][1-byte total]
+            val chunk = ByteArray(payload.size + CHUNK_OVERHEAD)
+            chunk[0] = i.toByte()
+            payload.copyInto(chunk, 1)
             chunk[chunk.size - 1] = numChunks.toByte()
 
             chunk
@@ -81,7 +82,7 @@ object BleMessageChunker {
     /**
      * Reassembles and decompresses chunks back into a NIP-01 JSON message.
      *
-     * Chunks can arrive in any order; they are sorted by their index prefix.
+     * Chunks can arrive in any order; they are sorted by their index byte.
      *
      * @param chunks The received chunks.
      * @return The original JSON message string.
@@ -91,7 +92,7 @@ object BleMessageChunker {
 
         var reassembled = ByteArray(0)
         for (chunk in sorted) {
-            val payload = chunk.copyOfRange(2, chunk.size - 1)
+            val payload = chunk.copyOfRange(1, chunk.size - 1)
             val newArray = ByteArray(reassembled.size + payload.size)
             reassembled.copyInto(newArray)
             payload.copyInto(newArray, reassembled.size)
@@ -102,9 +103,9 @@ object BleMessageChunker {
     }
 
     /**
-     * Extracts the 2-byte chunk index from a chunk.
+     * Extracts the 1-byte chunk index from a chunk.
      */
-    fun chunkIndex(chunk: ByteArray): Int = ((chunk[0].toInt() and 0xFF) shl 8) or (chunk[1].toInt() and 0xFF)
+    fun chunkIndex(chunk: ByteArray): Int = chunk[0].toInt() and 0xFF
 
     /**
      * Extracts the total number of expected chunks from a chunk's last byte.
