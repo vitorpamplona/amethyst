@@ -15,6 +15,8 @@ Quartz provides a complete, transport-agnostic relay engine:
 
 `NostrServer` doesn't know about HTTP or WebSockets. You provide a `send` callback per connection, and it gives you a `RelaySession` that accepts raw JSON strings. This makes it trivial to plug into Ktor (or any other transport).
 
+Both `NostrServer` and `EventStore` implement `AutoCloseable`, so you can use Kotlin's `.use {}` for automatic resource cleanup.
+
 ## Quick Start
 
 ### 1. Add Dependencies
@@ -59,21 +61,15 @@ fun main() {
 
         routing {
             webSocket("/") {
-                // 4. Register this WebSocket as a relay connection
-                val session = server.connect { json ->
-                    launch { send(Frame.Text(json)) }
-                }
-
-                try {
-                    // 5. Forward incoming frames to the relay session
+                // 4. Serve this WebSocket connection (auto-cleanup on disconnect)
+                server.serve(
+                    send = { json -> launch { send(Frame.Text(json)) } },
+                ) { session ->
                     for (frame in incoming) {
                         if (frame is Frame.Text) {
                             session.receive(frame.readText())
                         }
                     }
-                } finally {
-                    // 6. Clean up when the client disconnects
-                    session.close()
                 }
             }
         }
@@ -83,6 +79,17 @@ fun main() {
 
 That's it. You now have a NIP-01 compliant relay running on `ws://localhost:7777`.
 
+The `serve` method creates a `RelaySession`, passes it to your block, and automatically closes the session when the block completes (normally or via exception). No `try`/`finally` needed.
+
+> **Tip:** If you need direct control over the session lifecycle, use `connect()` with `.use {}`:
+> ```kotlin
+> server.connect { json -> launch { send(Frame.Text(json)) } }.use { session ->
+>     for (frame in incoming) {
+>         if (frame is Frame.Text) session.receive(frame.readText())
+>     }
+> }
+> ```
+
 ## How It Works
 
 ### Connection Lifecycle
@@ -91,7 +98,7 @@ That's it. You now have a NIP-01 compliant relay running on `ws://localhost:7777
 Client connects via WebSocket
         │
         ▼
-server.connect { json -> send(json) }
+server.serve(send) { session -> ... }
         │
         ▼
    RelaySession created
@@ -106,7 +113,7 @@ server.connect { json -> send(json) }
 └───────────────────────────────┘
         │
         ▼
-Client disconnects → session.close()
+Client disconnects → session auto-closed
         │
         ▼
    All subscriptions cancelled
@@ -233,11 +240,20 @@ Validates:
 - Timestamp is within 10 minutes
 - Event signature is valid
 
-### Composing Policies with `PolicyStack`
+### Composing Policies
 
-Chain multiple policies together. All must approve; the first rejection wins. Policies run in order and can rewrite commands for downstream policies.
+Chain multiple policies using the `+` operator or `PolicyStack`. All must approve; the first rejection wins. Policies run in order and can rewrite commands for downstream policies.
 
 ```kotlin
+// Using the + operator
+val server = NostrServer(
+    store = store,
+    policyBuilder = {
+        VerifyPolicy + FullAuthPolicy(relay = "wss://myrelay.example.com/".normalizeRelayUrl()!!)
+    },
+)
+
+// Or using PolicyStack for three or more policies
 val server = NostrServer(
     store = store,
     policyBuilder = {
@@ -283,10 +299,7 @@ Use it:
 val server = NostrServer(
     store = store,
     policyBuilder = {
-        PolicyStack(
-            VerifyPolicy,
-            KindWhitelistPolicy(allowedKinds = setOf(0, 1, 3, 7, 30023)),
-        )
+        VerifyPolicy + KindWhitelistPolicy(allowedKinds = setOf(0, 1, 3, 7, 30023))
     },
 )
 ```
@@ -307,7 +320,6 @@ val server = NostrServer(
 ```kotlin
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.server.NostrServer
-import com.vitorpamplona.quartz.nip01Core.relay.server.policies.PolicyStack
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.VerifyPolicy
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.DefaultIndexingStrategy
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
@@ -318,61 +330,43 @@ import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.launch
-import java.time.Duration
 
 fun main() {
-    val relayUrl = "wss://myrelay.example.com/"
-
     val store = EventStore(
         dbName = "relay-events.db",
-        relay = relayUrl.normalizeRelayUrl(),
+        relay = "wss://myrelay.example.com/".normalizeRelayUrl(),
         indexStrategy = DefaultIndexingStrategy(
             indexEventsByCreatedAtAlone = true,
         ),
     )
 
-    val server = NostrServer(
+    // NostrServer implements AutoCloseable — .use {} ensures clean shutdown
+    NostrServer(
         store = store,
-        policyBuilder = {
-            PolicyStack(
-                VerifyPolicy,
-                // Add your custom policies here
-            )
-        },
-    )
+        policyBuilder = { VerifyPolicy },
+    ).use { server ->
+        embeddedServer(Netty, port = 7777) {
+            install(WebSockets) {
+                pingPeriodMillis = 30_000
+                timeoutMillis = 60_000
+                maxFrameSize = Long.MAX_VALUE
+            }
 
-    embeddedServer(Netty, port = 7777) {
-        install(WebSockets) {
-            pingPeriodMillis = 30_000
-            timeoutMillis = 60_000
-            maxFrameSize = Long.MAX_VALUE
-        }
-
-        routing {
-            webSocket("/") {
-                val session = server.connect { json ->
-                    launch { send(Frame.Text(json)) }
-                }
-
-                try {
-                    for (frame in incoming) {
-                        when (frame) {
-                            is Frame.Text -> session.receive(frame.readText())
-                            else -> { /* ignore binary, ping, pong */ }
+            routing {
+                webSocket("/") {
+                    server.serve(
+                        send = { json -> launch { send(Frame.Text(json)) } },
+                    ) { session ->
+                        for (frame in incoming) {
+                            if (frame is Frame.Text) {
+                                session.receive(frame.readText())
+                            }
                         }
                     }
-                } finally {
-                    session.close()
                 }
             }
-        }
-    }.start(wait = true)
-
-    // Clean shutdown
-    Runtime.getRuntime().addShutdownHook(Thread {
-        server.shutdown()
-        store.close()
-    })
+        }.start(wait = true)
+    }
 }
 ```
 
@@ -388,7 +382,7 @@ fun main() {
 │   ┌────────────────────────────────────────┐     │
 │   │            NostrServer                 │     │
 │   │                                        │     │
-│   │   connect(send) ──► RelaySession       │     │
+│   │   serve(send) { session -> ... }       │     │
 │   │                      │                 │     │
 │   │                      ├─ IRelayPolicy   │     │
 │   │                      │  (validate)     │     │
@@ -433,31 +427,29 @@ class MyRelayTest {
     @Test
     fun clientCanPublishAndSubscribe() = runTest {
         val dispatcher = UnconfinedTestDispatcher(testScheduler)
-        val store = EventStore(null) // in-memory
-        val server = NostrServer(
-            store = store,
+
+        NostrServer(
+            store = EventStore(null),
             policyBuilder = { EmptyPolicy },
             parentContext = dispatcher,
-        )
+        ).use { server ->
+            // Collect messages sent to this client
+            val messages = mutableListOf<String>()
+            val session = server.connect { messages.add(it) }
 
-        // Collect messages sent to this client
-        val messages = mutableListOf<String>()
-        val session = server.connect { messages.add(it) }
+            // Publish an event
+            session.receive("""["EVENT",{"id":"${"0".repeat(64)}","pubkey":"${"a".repeat(64)}","created_at":1000,"kind":1,"tags":[],"content":"hello","sig":"${"b".repeat(128)}"}]""")
 
-        // Publish an event
-        session.receive("""["EVENT",{"id":"${"0".repeat(64)}","pubkey":"${"a".repeat(64)}","created_at":1000,"kind":1,"tags":[],"content":"hello","sig":"${"b".repeat(128)}"}]""")
+            // Verify OK response
+            assertTrue(messages.any { it.contains("OK") })
 
-        // Verify OK response
-        assertTrue(messages.any { it.contains("OK") })
+            // Subscribe to kind 1
+            session.receive("""["REQ","sub1",{"kinds":[1]}]""")
 
-        // Subscribe to kind 1
-        session.receive("""["REQ","sub1",{"kinds":[1]}]""")
-
-        // Verify we get the event back + EOSE
-        assertTrue(messages.any { it.contains("EVENT") })
-        assertTrue(messages.any { it.contains("EOSE") })
-
-        server.shutdown()
+            // Verify we get the event back + EOSE
+            assertTrue(messages.any { it.contains("EVENT") })
+            assertTrue(messages.any { it.contains("EOSE") })
+        }
     }
 }
 ```
