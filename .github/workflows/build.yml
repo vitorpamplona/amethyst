@@ -26,16 +26,7 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: 21
-
-      - name: Cache gradle
-        uses: actions/cache@v5
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
+          cache: gradle
 
       - name: Linter (gradle)
         run: ./gradlew spotlessCheck
@@ -60,16 +51,7 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: 21
-
-      - name: Cache gradle
-        uses: actions/cache@v5
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
+          cache: gradle
 
       - name: Test (gradle)
         run: ./gradlew test --no-daemon
@@ -102,16 +84,7 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: 21
-
-      - name: Cache gradle
-        uses: actions/cache@v5
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
+          cache: gradle
 
       - name: Build APK (gradle)
         run: ./gradlew assembleDebug
@@ -181,16 +154,7 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: 21
-
-      - name: Cache gradle
-        uses: actions/cache@v5
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
+          cache: gradle
 
       - name: Build Desktop Distribution
         run: ./gradlew :desktopApp:${{ matrix.task }}
