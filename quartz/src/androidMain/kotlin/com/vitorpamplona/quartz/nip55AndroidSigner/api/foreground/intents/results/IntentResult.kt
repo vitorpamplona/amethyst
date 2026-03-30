@@ -52,12 +52,7 @@ data class IntentResult(
                 result = data.getStringExtra("result"),
                 event = data.getStringExtra("event"),
                 `package` = data.getStringExtra("package"),
-                rejected =
-                    if (data.extras?.containsKey("rejected") == true) {
-                        data.getBooleanExtra("rejected", false)
-                    } else {
-                        null
-                    },
+                rejected = data.extras?.containsKey("rejected"),
             )
 
         fun fromJson(json: String): IntentResult = JsonMapperNip55.fromJsonTo<IntentResult>(json)
