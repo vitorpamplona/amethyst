@@ -48,6 +48,7 @@ import com.vitorpamplona.quartz.experimental.attestations.recommendation.Attesto
 import com.vitorpamplona.quartz.experimental.attestations.request.AttestationRequestEvent
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
+import com.vitorpamplona.quartz.experimental.decoupling.setup.EncryptionKeyListEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
@@ -61,6 +62,7 @@ import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.nns.NNSEvent
+import com.vitorpamplona.quartz.experimental.profileGallery.GalleryListEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
@@ -98,6 +100,12 @@ import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionIndex
 import com.vitorpamplona.quartz.nip10Notes.BaseNoteEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip15Marketplace.auction.AuctionEvent
+import com.vitorpamplona.quartz.nip15Marketplace.bid.BidEvent
+import com.vitorpamplona.quartz.nip15Marketplace.bidConfirmation.BidConfirmationEvent
+import com.vitorpamplona.quartz.nip15Marketplace.marketplace.MarketplaceEvent
+import com.vitorpamplona.quartz.nip15Marketplace.product.ProductEvent
+import com.vitorpamplona.quartz.nip15Marketplace.stall.StallEvent
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
@@ -125,8 +133,22 @@ import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMuteUserEvent
 import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.SupportedRolesEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.CreateGroupEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.CreateInviteEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.DeleteEventEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.DeleteGroupEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.EditMetadataEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.PutUserEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.RemoveUserEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.request.JoinRequestEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.request.LeaveRequestEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiPackSelectionEvent
+import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.reply.GitReplyEvent
@@ -139,6 +161,12 @@ import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
 import com.vitorpamplona.quartz.nip39ExtIdentities.ExternalIdentitiesEvent
 import com.vitorpamplona.quartz.nip40Expiration.isExpirationBefore
 import com.vitorpamplona.quartz.nip40Expiration.isExpired
+import com.vitorpamplona.quartz.nip43RelayMembers.addMember.RelayAddMemberEvent
+import com.vitorpamplona.quartz.nip43RelayMembers.inviteRequest.RelayInviteRequestEvent
+import com.vitorpamplona.quartz.nip43RelayMembers.joinRequest.RelayJoinRequestEvent
+import com.vitorpamplona.quartz.nip43RelayMembers.leaveRequest.RelayLeaveRequestEvent
+import com.vitorpamplona.quartz.nip43RelayMembers.list.RelayMembershipListEvent
+import com.vitorpamplona.quartz.nip43RelayMembers.removeMember.RelayRemoveMemberEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentRequestEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
@@ -162,6 +190,9 @@ import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
 import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
@@ -175,6 +206,14 @@ import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
+import com.vitorpamplona.quartz.nip60Cashu.history.CashuSpendingHistoryEvent
+import com.vitorpamplona.quartz.nip60Cashu.quote.CashuMintQuoteEvent
+import com.vitorpamplona.quartz.nip60Cashu.token.CashuTokenEvent
+import com.vitorpamplona.quartz.nip60Cashu.wallet.CashuWalletEvent
+import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent
+import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
+import com.vitorpamplona.quartz.nip61Nutzaps.redemption.NutzapRedemptionEvent
+import com.vitorpamplona.quartz.nip61Nutzaps.token.TokenEvent
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
 import com.vitorpamplona.quartz.nip64Chess.challenge.accept.LiveChessGameAcceptEvent
 import com.vitorpamplona.quartz.nip64Chess.challenge.offer.LiveChessGameChallengeEvent
@@ -187,6 +226,7 @@ import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.RelayDiscoveryEvent
 import com.vitorpamplona.quartz.nip66RelayMonitor.monitor.RelayMonitorEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.P2POrderEvent
 import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
@@ -196,9 +236,16 @@ import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefiniti
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
 import com.vitorpamplona.quartz.nip75ZapGoals.GoalEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
+import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.addressables.AddressableAssertionEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.events.EventAssertionEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.externalIds.ExternalIdAssertionEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
+import com.vitorpamplona.quartz.nip87Ecash.cashu.CashuMintEvent
+import com.vitorpamplona.quartz.nip87Ecash.fedimint.FedimintEvent
+import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
@@ -819,6 +866,302 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     fun consume(
         event: LiveChessDrawOfferEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
+
+    // NIP-15 Marketplace
+    fun consume(
+        event: AuctionEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
+
+    fun consume(
+        event: BidEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: BidConfirmationEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: MarketplaceEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
+
+    fun consume(
+        event: ProductEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
+
+    fun consume(
+        event: StallEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
+
+    // NIP-29 Relay Groups
+    fun consume(
+        event: PutUserEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: RemoveUserEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: EditMetadataEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: DeleteEventEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: CreateGroupEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: DeleteGroupEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: CreateInviteEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: JoinRequestEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: LeaveRequestEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: GroupMetadataEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
+
+    fun consume(
+        event: GroupAdminsEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
+
+    fun consume(
+        event: GroupMembersEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
+
+    fun consume(
+        event: SupportedRolesEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
+
+    // NIP-32 Labeling
+    fun consume(
+        event: LabelEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    // NIP-43 Relay Members
+    fun consume(
+        event: RelayAddMemberEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: RelayRemoveMemberEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: RelayMembershipListEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: RelayJoinRequestEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: RelayInviteRequestEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: RelayLeaveRequestEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    // NIP-53 Meeting Spaces
+    fun consume(
+        event: MeetingRoomEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
+
+    fun consume(
+        event: MeetingRoomPresenceEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
+
+    fun consume(
+        event: MeetingSpaceEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
+
+    // NIP-60 Cashu
+    fun consume(
+        event: CashuMintQuoteEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: CashuTokenEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: CashuSpendingHistoryEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: CashuWalletEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    // NIP-61 Nutzaps
+    fun consume(
+        event: NutzapEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: NutzapInfoEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
+
+    fun consume(
+        event: NutzapRedemptionEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: TokenEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    // NIP-69 P2P Orders
+    fun consume(
+        event: P2POrderEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
+
+    // NIP-7D Threads
+    fun consume(
+        event: ThreadEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    // NIP-85 Trusted Assertions
+    fun consume(
+        event: EventAssertionEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
+
+    fun consume(
+        event: AddressableAssertionEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
+
+    fun consume(
+        event: ExternalIdAssertionEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
+
+    // NIP-87 Ecash
+    fun consume(
+        event: CashuMintEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: FedimintEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: MintRecommendationEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    // Encryption Key List
+    fun consume(
+        event: EncryptionKeyListEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
+
+    // Gallery List (deprecated, replaced by NIP-68)
+    @Suppress("DEPRECATION")
+    fun consume(
+        event: GalleryListEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
@@ -3150,10 +3493,13 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is AttestorRecommendationEvent -> consume(event, relay, wasVerified)
                 is AttestorProficiencyEvent -> consume(event, relay, wasVerified)
                 is AudioHeaderEvent -> consume(event, relay, wasVerified)
+                is AuctionEvent -> consume(event, relay, wasVerified)
                 is AudioTrackEvent -> consume(event, relay, wasVerified)
                 is BadgeAwardEvent -> consume(event, relay, wasVerified)
                 is BadgeDefinitionEvent -> consume(event, relay, wasVerified)
                 is BadgeProfilesEvent -> consume(event, relay, wasVerified)
+                is BidEvent -> consume(event, relay, wasVerified)
+                is BidConfirmationEvent -> consume(event, relay, wasVerified)
                 is BlockedRelayListEvent -> consume(event, relay, wasVerified)
                 is BlossomServersEvent -> consume(event, relay, wasVerified)
                 is BroadcastRelayListEvent -> consume(event, relay, wasVerified)
@@ -3162,6 +3508,11 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is CalendarDateSlotEvent -> consume(event, relay, wasVerified)
                 is CalendarTimeSlotEvent -> consume(event, relay, wasVerified)
                 is CalendarRSVPEvent -> consume(event, relay, wasVerified)
+                is CashuMintEvent -> consume(event, relay, wasVerified)
+                is CashuMintQuoteEvent -> consume(event, relay, wasVerified)
+                is CashuTokenEvent -> consume(event, relay, wasVerified)
+                is CashuSpendingHistoryEvent -> consume(event, relay, wasVerified)
+                is CashuWalletEvent -> consume(event, relay, wasVerified)
                 is ChannelCreateEvent -> consume(event, relay, wasVerified)
                 is ChannelListEvent -> consume(event, relay, wasVerified)
                 is ChannelHideMessageEvent -> consume(event, relay, wasVerified)
@@ -3177,16 +3528,26 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is CommunityListEvent -> consume(event, relay, wasVerified)
                 is CommunityPostApprovalEvent -> consume(event, relay, wasVerified)
                 is ContactListEvent -> consume(event, relay, wasVerified)
+                is CreateGroupEvent -> consume(event, relay, wasVerified)
+                is CreateInviteEvent -> consume(event, relay, wasVerified)
+                is DeleteEventEvent -> consume(event, relay, wasVerified)
+                is DeleteGroupEvent -> consume(event, relay, wasVerified)
                 is DeletionEvent -> consume(event, relay, wasVerified)
                 is DraftWrapEvent -> consume(event, relay, wasVerified)
+                is EditMetadataEvent -> consume(event, relay, wasVerified)
                 is EmojiPackEvent -> consume(event, relay, wasVerified)
                 is EmojiPackSelectionEvent -> consume(event, relay, wasVerified)
+                is EncryptionKeyListEvent -> consume(event, relay, wasVerified)
                 is EphemeralChatEvent -> consume(event, relay, wasVerified)
                 is EphemeralChatListEvent -> consume(event, relay, wasVerified)
+                is EventAssertionEvent -> consume(event, relay, wasVerified)
+                is ExternalIdAssertionEvent -> consume(event, relay, wasVerified)
                 is ExternalIdentitiesEvent -> consume(event, relay, wasVerified)
+                is FedimintEvent -> consume(event, relay, wasVerified)
                 is GenericRepostEvent -> consume(event, relay, wasVerified)
                 is FhirResourceEvent -> consume(event, relay, wasVerified)
                 is FileHeaderEvent -> consume(event, relay, wasVerified)
+                is GalleryListEvent -> consume(event, relay, wasVerified)
                 is ProfileGalleryEntryEvent -> consume(event, relay, wasVerified)
                 is FileServersEvent -> consume(event, relay, wasVerified)
                 is FileStorageEvent -> consume(event, relay, wasVerified)
@@ -3199,6 +3560,9 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is GitReplyEvent -> consume(event, relay, wasVerified)
                 is GitPatchEvent -> consume(event, relay, wasVerified)
                 is GitRepositoryEvent -> consume(event, relay, wasVerified)
+                is GroupMetadataEvent -> consume(event, relay, wasVerified)
+                is GroupAdminsEvent -> consume(event, relay, wasVerified)
+                is GroupMembersEvent -> consume(event, relay, wasVerified)
                 is RootSiteEvent -> consume(event, relay, wasVerified)
                 is NamedSiteEvent -> consume(event, relay, wasVerified)
                 is ChessGameEvent -> consume(event, relay, wasVerified)
@@ -3215,7 +3579,10 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is InteractiveStoryPrologueEvent -> consume(event, relay, wasVerified)
                 is InteractiveStorySceneEvent -> consume(event, relay, wasVerified)
                 is InteractiveStoryReadingStateEvent -> consume(event, relay, wasVerified)
+                is JoinRequestEvent -> consume(event, relay, wasVerified)
+                is LabelEvent -> consume(event, relay, wasVerified)
                 is LabeledBookmarkListEvent -> consume(event, relay, wasVerified)
+                is LeaveRequestEvent -> consume(event, relay, wasVerified)
                 is LiveActivitiesEvent -> consume(event, relay, wasVerified)
                 is LiveActivitiesChatMessageEvent -> consume(event, relay, wasVerified)
                 is LnZapEvent -> consume(event, relay, wasVerified)
@@ -3228,10 +3595,18 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is LnZapPaymentRequestEvent -> consume(event, relay, wasVerified)
                 is LnZapPaymentResponseEvent -> consume(event, relay, wasVerified)
                 is LongTextNoteEvent -> consume(event, relay, wasVerified)
+                is MarketplaceEvent -> consume(event, relay, wasVerified)
+                is MeetingRoomEvent -> consume(event, relay, wasVerified)
+                is MeetingRoomPresenceEvent -> consume(event, relay, wasVerified)
+                is MeetingSpaceEvent -> consume(event, relay, wasVerified)
                 is MetadataEvent -> consume(event, relay, wasVerified)
+                is MintRecommendationEvent -> consume(event, relay, wasVerified)
                 is MuteListEvent -> consume(event, relay, wasVerified)
                 is NNSEvent -> consume(event, relay, wasVerified)
                 is NipTextEvent -> consume(event, relay, wasVerified)
+                is NutzapEvent -> consume(event, relay, wasVerified)
+                is NutzapInfoEvent -> consume(event, relay, wasVerified)
+                is NutzapRedemptionEvent -> consume(event, relay, wasVerified)
                 is OtsEvent -> consume(event, relay, wasVerified)
                 is PictureEvent -> consume(event, relay, wasVerified)
                 is PrivateDmEvent -> consume(event, relay, wasVerified)
@@ -3239,7 +3614,11 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is ProxyRelayListEvent -> consume(event, relay, wasVerified)
                 is PinListEvent -> consume(event, relay, wasVerified)
                 is PublicMessageEvent -> consume(event, relay, wasVerified)
+                is P2POrderEvent -> consume(event, relay, wasVerified)
                 is PeopleListEvent -> consume(event, relay, wasVerified)
+                is ProductEvent -> consume(event, relay, wasVerified)
+                is PutUserEvent -> consume(event, relay, wasVerified)
+                is RemoveUserEvent -> consume(event, relay, wasVerified)
                 is RequestToVanishEvent -> consume(event, relay, wasVerified)
                 is CodeSnippetEvent -> consume(event, relay, wasVerified)
                 is ZapPollEvent -> consume(event, relay, wasVerified)
@@ -3250,14 +3629,25 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is RelayMonitorEvent -> consume(event, relay, wasVerified)
                 is ReactionEvent -> consume(event, relay, wasVerified)
                 is ContactCardEvent -> consume(event, relay, wasVerified)
+                is AddressableAssertionEvent -> consume(event, relay, wasVerified)
+                is RelayAddMemberEvent -> consume(event, relay, wasVerified)
+                is RelayRemoveMemberEvent -> consume(event, relay, wasVerified)
+                is RelayMembershipListEvent -> consume(event, relay, wasVerified)
+                is RelayJoinRequestEvent -> consume(event, relay, wasVerified)
+                is RelayInviteRequestEvent -> consume(event, relay, wasVerified)
+                is RelayLeaveRequestEvent -> consume(event, relay, wasVerified)
                 is RelaySetEvent -> consume(event, relay, wasVerified)
                 is ReportEvent -> consume(event, relay, wasVerified)
                 is RepostEvent -> consume(event, relay, wasVerified)
+                is StallEvent -> consume(event, relay, wasVerified)
                 is SealedRumorEvent -> consume(event, relay, wasVerified)
                 is SearchRelayListEvent -> consume(event, relay, wasVerified)
                 is StatusEvent -> consume(event, relay, wasVerified)
+                is SupportedRolesEvent -> consume(event, relay, wasVerified)
                 is TextNoteEvent -> consume(event, relay, wasVerified)
+                is ThreadEvent -> consume(event, relay, wasVerified)
                 is TextNoteModificationEvent -> consume(event, relay, wasVerified)
+                is TokenEvent -> consume(event, relay, wasVerified)
                 is TorrentEvent -> consume(event, relay, wasVerified)
                 is TorrentCommentEvent -> consume(event, relay, wasVerified)
                 is TrustedRelayListEvent -> consume(event, relay, wasVerified)
