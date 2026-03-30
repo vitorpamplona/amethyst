@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CountCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
+import com.vitorpamplona.quartz.nip01Core.relay.server.policies.PolicyStack
 
 /**
  * Defines custom behavior for this relay.
@@ -76,7 +77,7 @@ interface IRelayPolicy {
      */
     fun canSendToSession(event: Event): Boolean = true
 
-    operator fun plus(other: IRelayPolicy) = listOf(this, other)
+    operator fun plus(other: IRelayPolicy): IRelayPolicy = PolicyStack(this, other)
 }
 
 sealed interface PolicyResult<T : Command> {
