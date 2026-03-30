@@ -228,7 +228,7 @@ class DesktopLocalCache : ICacheProvider {
         val note = getOrCreateNote(event.id)
         if (note.event != null) return false
         val author = getOrCreateUser(event.pubKey)
-        val repliesTo = event.tagsWithoutCitations().mapNotNull { getNoteIfExists(it) }
+        val repliesTo = event.tagsWithoutCitations().map { getOrCreateNote(it) }
         note.loadEvent(event, author, repliesTo)
         relay?.let { note.addRelay(it) }
         repliesTo.forEach { it.addReply(note) }
