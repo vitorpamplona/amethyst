@@ -26,7 +26,10 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip90Dvms.tags.InputTag
+import com.vitorpamplona.quartz.nip90Dvms.tags.firstInputByType
 import com.vitorpamplona.quartz.nip90Dvms.tags.inputEvent
+import com.vitorpamplona.quartz.nip90Dvms.tags.inputs
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -38,6 +41,10 @@ class NIP90EventTimestampingRequestEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+    fun inputs(): List<InputTag> = tags.inputs()
+
+    fun eventIdToStamp(): HexKey? = tags.firstInputByType("event")?.value
+
     companion object {
         const val KIND = 5900
         const val ALT = "NIP90 Event Timestamping request"

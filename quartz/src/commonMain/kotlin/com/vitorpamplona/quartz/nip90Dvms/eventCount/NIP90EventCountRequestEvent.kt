@@ -26,7 +26,10 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip90Dvms.tags.InputTag
+import com.vitorpamplona.quartz.nip90Dvms.tags.dvmParamAll
 import com.vitorpamplona.quartz.nip90Dvms.tags.inputText
+import com.vitorpamplona.quartz.nip90Dvms.tags.inputs
 import com.vitorpamplona.quartz.nip90Dvms.tags.param
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -39,6 +42,14 @@ class NIP90EventCountRequestEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+    fun inputs(): List<InputTag> = tags.inputs()
+
+    fun relays(): List<String> = tags.dvmParamAll("relay")
+
+    fun groups(): List<String> = tags.dvmParamAll("group")
+
+    fun filterJson(): String = content
+
     companion object {
         const val KIND = 5400
         const val ALT = "NIP90 Event Count request"

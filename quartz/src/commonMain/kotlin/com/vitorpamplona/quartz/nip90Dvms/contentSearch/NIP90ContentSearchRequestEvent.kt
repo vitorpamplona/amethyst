@@ -26,7 +26,11 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip90Dvms.tags.InputTag
+import com.vitorpamplona.quartz.nip90Dvms.tags.dvmParam
+import com.vitorpamplona.quartz.nip90Dvms.tags.firstInputByType
 import com.vitorpamplona.quartz.nip90Dvms.tags.inputText
+import com.vitorpamplona.quartz.nip90Dvms.tags.inputs
 import com.vitorpamplona.quartz.nip90Dvms.tags.param
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -39,6 +43,18 @@ class NIP90ContentSearchRequestEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+    fun inputs(): List<InputTag> = tags.inputs()
+
+    fun searchQuery(): String? = tags.firstInputByType("text")?.value
+
+    fun users(): String? = tags.dvmParam("users")
+
+    fun since(): Long? = tags.dvmParam("since")?.toLongOrNull()
+
+    fun until(): Long? = tags.dvmParam("until")?.toLongOrNull()
+
+    fun maxResults(): Int? = tags.dvmParam("max_results")?.toIntOrNull()
+
     companion object {
         const val KIND = 5302
         const val ALT = "NIP90 Content Search request"

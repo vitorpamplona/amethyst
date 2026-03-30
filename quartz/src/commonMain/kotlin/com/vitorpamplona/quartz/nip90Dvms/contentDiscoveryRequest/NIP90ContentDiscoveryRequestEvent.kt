@@ -28,6 +28,9 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip90Dvms.tags.InputTag
+import com.vitorpamplona.quartz.nip90Dvms.tags.dvmParam
+import com.vitorpamplona.quartz.nip90Dvms.tags.inputs
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Stable
@@ -40,6 +43,18 @@ class NIP90ContentDiscoveryRequestEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+    fun inputs(): List<InputTag> = tags.inputs()
+
+    fun dvmPubKey(): HexKey? = tags.firstOrNull { it.size >= 2 && it[0] == "p" }?.get(1)
+
+    fun relays() = tags.relays()
+
+    fun params() = tags.params()
+
+    fun user(): String? = tags.dvmParam("user")
+
+    fun maxResults(): String? = tags.dvmParam("max_results")
+
     companion object {
         const val KIND = 5300
         const val ALT = "NIP90 Content Discovery request"

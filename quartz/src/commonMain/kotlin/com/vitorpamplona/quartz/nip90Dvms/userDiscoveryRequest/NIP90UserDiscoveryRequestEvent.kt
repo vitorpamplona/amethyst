@@ -26,6 +26,9 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip90Dvms.tags.InputTag
+import com.vitorpamplona.quartz.nip90Dvms.tags.dvmParam
+import com.vitorpamplona.quartz.nip90Dvms.tags.inputs
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -37,6 +40,12 @@ class NIP90UserDiscoveryRequestEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+    fun inputs(): List<InputTag> = tags.inputs()
+
+    fun dvmPubKey(): HexKey? = tags.firstOrNull { it.size >= 2 && it[0] == "p" }?.get(1)
+
+    fun user(): String? = tags.dvmParam("user")
+
     companion object {
         const val KIND = 5301
         const val ALT = "NIP90 User Discovery request"

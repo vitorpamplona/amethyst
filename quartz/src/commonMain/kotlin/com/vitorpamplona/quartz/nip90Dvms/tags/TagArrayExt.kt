@@ -24,4 +24,18 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArray
 
 fun TagArray.inputs() = mapNotNull(InputTag::parse)
 
+fun TagArray.firstInputByType(type: String) = inputs().firstOrNull { it.type == type }
+
 fun TagArray.outputMimeType() = firstNotNullOfOrNull(OutputTag::parse)?.mimeType
+
+fun TagArray.dvmParams(): List<Pair<String, List<String>>> =
+    filter { it.size >= 3 && it[0] == "param" }
+        .map { it[1] to it.drop(2) }
+
+fun TagArray.dvmParam(key: String): String? = firstOrNull { it.size >= 3 && it[0] == "param" && it[1] == key }?.getOrNull(2)
+
+fun TagArray.dvmParamValues(key: String): List<String>? = firstOrNull { it.size >= 3 && it[0] == "param" && it[1] == key }?.drop(2)
+
+fun TagArray.dvmParamAll(key: String): List<String> =
+    filter { it.size >= 3 && it[0] == "param" && it[1] == key }
+        .mapNotNull { it.getOrNull(2) }

@@ -26,8 +26,12 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip90Dvms.tags.InputTag
+import com.vitorpamplona.quartz.nip90Dvms.tags.dvmParam
+import com.vitorpamplona.quartz.nip90Dvms.tags.firstInputByType
 import com.vitorpamplona.quartz.nip90Dvms.tags.inputText
 import com.vitorpamplona.quartz.nip90Dvms.tags.inputUrl
+import com.vitorpamplona.quartz.nip90Dvms.tags.inputs
 import com.vitorpamplona.quartz.nip90Dvms.tags.param
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -40,6 +44,22 @@ class NIP90ImageGenerationRequestEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+    fun inputs(): List<InputTag> = tags.inputs()
+
+    fun prompt(): String? = tags.firstInputByType("text")?.value
+
+    fun sourceImageUrl(): String? = tags.firstInputByType("url")?.value
+
+    fun model(): String? = tags.dvmParam("model")
+
+    fun lora(): String? = tags.dvmParam("lora")
+
+    fun ratio(): String? = tags.dvmParam("ratio")
+
+    fun size(): String? = tags.dvmParam("size")
+
+    fun negativePrompt(): String? = tags.dvmParam("negative_prompt")
+
     companion object {
         const val KIND = 5100
         const val ALT = "NIP90 Image Generation request"
