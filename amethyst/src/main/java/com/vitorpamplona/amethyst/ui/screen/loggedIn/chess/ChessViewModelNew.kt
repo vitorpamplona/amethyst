@@ -99,7 +99,7 @@ class ChessViewModelNew(
     // ============================================
 
     init {
-        Log.d("chessdebug", "[AndroidVM] init: instanceId=$instanceId, userPubkey=${account.userProfile().pubkeyHex.take(8)}")
+        Log.d("chessdebug") { "[AndroidVM] init: instanceId=$instanceId, userPubkey=${account.userProfile().pubkeyHex.take(8)}" }
         logic.startPolling()
     }
 
@@ -144,10 +144,10 @@ class ChessViewModelNew(
         if (event.kind != JesterProtocol.KIND) return
         val jesterEvent =
             event.toJesterEvent() ?: run {
-                Log.d("chessdebug", "[AndroidVM] handleIncomingEvent: failed to parse kind ${event.kind} event ${event.id.take(8)} as JesterEvent")
+                Log.d("chessdebug") { "[AndroidVM] handleIncomingEvent: failed to parse kind ${event.kind} event ${event.id.take(8)} as JesterEvent" }
                 return
             }
-        Log.d("chessdebug", "[AndroidVM] handleIncomingEvent: id=${event.id.take(8)}, pubkey=${event.pubKey.take(8)}, isStart=${jesterEvent.isStartEvent()}, isMove=${jesterEvent.isMoveEvent()}")
+        Log.d("chessdebug") { "[AndroidVM] handleIncomingEvent: id=${event.id.take(8)}, pubkey=${event.pubKey.take(8)}, isStart=${jesterEvent.isStartEvent()}, isMove=${jesterEvent.isMoveEvent()}" }
         logic.handleIncomingEvent(jesterEvent)
     }
 

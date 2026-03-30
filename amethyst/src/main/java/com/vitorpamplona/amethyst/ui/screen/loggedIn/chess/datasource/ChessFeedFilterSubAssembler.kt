@@ -25,7 +25,7 @@ import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -62,7 +62,7 @@ class ChessFeedFilterSubAssembler(
 
     override fun newSub(key: ChessQueryState): Subscription =
         requestNewSubscription(
-            object : IRequestListener {
+            object : SubscriptionListener {
                 override fun onEose(
                     relay: NormalizedRelayUrl,
                     forFilters: List<Filter>?,

@@ -90,7 +90,7 @@ class ChessEventCollector(
      */
     fun addEvent(event: JesterEvent): Boolean {
         if (processedEventIds.contains(event.id)) {
-            Log.d("chessdebug", "[Collector] DEDUP: event ${event.id.take(8)} already processed for game ${startEventId.take(8)}")
+            Log.d("chessdebug") { "[Collector] DEDUP: event ${event.id.take(8)} already processed for game ${startEventId.take(8)}" }
             return false
         }
 
@@ -100,7 +100,7 @@ class ChessEventCollector(
         val isMoveEvent = event.isMoveEvent() && eventStartId == startEventId
 
         if (!isStartEvent && !isMoveEvent) {
-            Log.d("chessdebug", "[Collector] REJECTED: event ${event.id.take(8)} not for game ${startEventId.take(8)} (isStart=$isStartEvent, isMove=$isMoveEvent, eventStartId=${eventStartId?.take(8)})")
+            Log.d("chessdebug") { "[Collector] REJECTED: event ${event.id.take(8)} not for game ${startEventId.take(8)} (isStart=$isStartEvent, isMove=$isMoveEvent, eventStartId=${eventStartId?.take(8)})" }
             return false
         }
 
@@ -136,7 +136,7 @@ class ChessEventCollector(
         if (_startEvent.compareAndSet(null, event)) {
             processedEventIds.add(event.id)
             incrementEventCount()
-            Log.d("chessdebug", "[Collector] START event added: id=${event.id.take(8)}, pubkey=${event.pubKey.take(8)}, createdAt=${event.createdAt}")
+            Log.d("chessdebug") { "[Collector] START event added: id=${event.id.take(8)}, pubkey=${event.pubKey.take(8)}, createdAt=${event.createdAt}" }
             return true
         }
         return false
@@ -156,7 +156,7 @@ class ChessEventCollector(
         if (moves.putIfAbsent(event.id, event) == null) {
             processedEventIds.add(event.id)
             incrementEventCount()
-            Log.d("chessdebug", "[Collector] MOVE event added: id=${event.id.take(8)}, pubkey=${event.pubKey.take(8)}, move=${event.move()}, historySize=${event.history().size}, fen=${event.fen()?.take(30)}, result=${event.result()}, totalMoves=${moves.size}")
+            Log.d("chessdebug") { "[Collector] MOVE event added: id=${event.id.take(8)}, pubkey=${event.pubKey.take(8)}, move=${event.move()}, historySize=${event.history().size}, fen=${event.fen()?.take(30)}, result=${event.result()}, totalMoves=${moves.size}" }
             return true
         }
         return false
@@ -263,7 +263,7 @@ class ChessEventCollectorManager {
     fun addEvent(event: JesterEvent): Boolean {
         // For start events, create collector with event ID
         if (event.isStartEvent()) {
-            Log.d("chessdebug", "[CollectorMgr] Routing START event ${event.id.take(8)} from ${event.pubKey.take(8)}")
+            Log.d("chessdebug") { "[CollectorMgr] Routing START event ${event.id.take(8)} from ${event.pubKey.take(8)}" }
             val collector = getOrCreate(event.id)
             return collector.addEvent(event)
         }
@@ -271,12 +271,12 @@ class ChessEventCollectorManager {
         // For move events, find the collector by startEventId
         val startId =
             event.startEventId() ?: run {
-                Log.d("chessdebug", "[CollectorMgr] REJECTED: move event ${event.id.take(8)} has no startEventId")
+                Log.d("chessdebug") { "[CollectorMgr] REJECTED: move event ${event.id.take(8)} has no startEventId" }
                 return false
             }
         val collector =
             collectors[startId] ?: run {
-                Log.d("chessdebug", "[CollectorMgr] REJECTED: no collector for game ${startId.take(8)} (active games: ${collectors.keys.map { it.take(8) }})")
+                Log.d("chessdebug") { "[CollectorMgr] REJECTED: no collector for game ${startId.take(8)} (active games: ${collectors.keys.map { it.take(8) }})" }
                 return false
             }
         return collector.addEvent(event)
