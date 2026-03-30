@@ -115,7 +115,7 @@ class NostrServerTest {
             val stored = store.query<Event>(Filter(ids = listOf(event.id)))
             assertEquals(1, stored.size)
 
-            server.shutdown()
+            server.close()
         }
 
     @Test
@@ -138,7 +138,7 @@ class NostrServerTest {
             assertTrue(okMessages[0].contains("\"true\""))
             assertTrue(okMessages[1].contains("\"false\""))
 
-            server.shutdown()
+            server.close()
         }
 
     // -- REQ command -----------------------------------------------------------
@@ -172,7 +172,7 @@ class NostrServerTest {
             // Events should be newest first
             assertTrue(events[0].event.createdAt >= events[1].event.createdAt)
 
-            server.shutdown()
+            server.close()
         }
 
     @Test
@@ -195,7 +195,7 @@ class NostrServerTest {
             val events = collector.parsedEventMessages().filterIsInstance<EventMessage>()
             assertEquals(3, events.size)
 
-            server.shutdown()
+            server.close()
         }
 
     // -- Live subscription -----------------------------------------------------
@@ -226,7 +226,7 @@ class NostrServerTest {
             assertTrue(newMessages.isNotEmpty())
             assertTrue(newMessages[0].contains("\"EVENT\""))
 
-            server.shutdown()
+            server.close()
         }
 
     @Test
@@ -251,7 +251,7 @@ class NostrServerTest {
 
             assertEquals(countAfterEose, collector1.messages.size)
 
-            server.shutdown()
+            server.close()
         }
 
     // -- CLOSE command ---------------------------------------------------------
@@ -282,7 +282,7 @@ class NostrServerTest {
 
             assertEquals(countAfterClose, collector1.messages.size)
 
-            server.shutdown()
+            server.close()
         }
 
     @Test
@@ -318,7 +318,7 @@ class NostrServerTest {
             assertTrue(newMessages[0].contains("\"EVENT\""))
             assertTrue(newMessages[0].contains(hexId(2)))
 
-            server.shutdown()
+            server.close()
         }
 
     // -- COUNT command (NIP-45) ------------------------------------------------
@@ -344,7 +344,7 @@ class NostrServerTest {
             assertEquals(1, countMessages.size)
             assertTrue(countMessages[0].contains("\"count\":2"))
 
-            server.shutdown()
+            server.close()
         }
 
     // -- Disconnect ------------------------------------------------------------
@@ -374,7 +374,7 @@ class NostrServerTest {
             assertEquals(countAfterDisconnect, collector1.messages.size)
             assertEquals(2, collector2.messages.size)
 
-            server.shutdown()
+            server.close()
         }
 
     // -- Invalid messages ------------------------------------------------------
@@ -392,6 +392,6 @@ class NostrServerTest {
             assertEquals(1, collector.messages.size)
             assertTrue(collector.messages[0].contains("NOTICE"))
 
-            server.shutdown()
+            server.close()
         }
 }

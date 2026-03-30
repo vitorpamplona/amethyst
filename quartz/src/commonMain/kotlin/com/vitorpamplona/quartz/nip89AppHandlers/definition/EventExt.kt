@@ -18,37 +18,6 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip89AppHandlers.definition.tags
+package com.vitorpamplona.quartz.nip89AppHandlers.definition
 
-import com.vitorpamplona.quartz.nip01Core.core.Tag
-import com.vitorpamplona.quartz.nip01Core.core.has
-import com.vitorpamplona.quartz.nip89AppHandlers.PlatformType
-import com.vitorpamplona.quartz.utils.arrayOfNotNull
-
-class PlatformLinkTag(
-    val platform: String,
-    val uri: String,
-    val entityType: String?,
-) {
-    fun toTagArray() = assemble(platform, uri, entityType)
-
-    companion object {
-        fun match(tag: Tag): Boolean =
-            if (tag.has(2)) {
-                tag[0] == PlatformType.IOS.code || tag[0] == PlatformType.WEB.code || tag[0] == PlatformType.ANDROID.code
-            } else {
-                false
-            }
-
-        fun parse(tag: Tag): PlatformLinkTag? {
-            if (match(tag)) return PlatformLinkTag(tag[0], tag[1], tag.getOrNull(2))
-            return null
-        }
-
-        fun assemble(
-            platform: String,
-            uri: String,
-            entityType: String?,
-        ) = arrayOfNotNull(platform, uri, entityType)
-    }
-}
+fun AppDefinitionEvent.platformLinks() = tags.platformLinks()

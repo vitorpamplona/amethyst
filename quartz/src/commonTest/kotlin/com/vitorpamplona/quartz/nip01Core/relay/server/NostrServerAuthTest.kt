@@ -142,7 +142,7 @@ class NostrServerAuthTest {
             assertEquals(1, collector.messages.size)
             assertTrue(collector.messages[0].contains("\"AUTH\""))
 
-            server.shutdown()
+            server.close()
         }
 
     @Test
@@ -167,7 +167,7 @@ class NostrServerAuthTest {
             assertTrue((session.policy as FullAuthPolicy).isAuthenticated())
             assertTrue(session.policy.authenticatedUsers.contains(pubkey))
 
-            server.shutdown()
+            server.close()
         }
 
     @Test
@@ -188,7 +188,7 @@ class NostrServerAuthTest {
             assertTrue(okMessages[0].contains("challenge"))
             assertFalse((session.policy as FullAuthPolicy).isAuthenticated())
 
-            server.shutdown()
+            server.close()
         }
 
     @Test
@@ -213,7 +213,7 @@ class NostrServerAuthTest {
             assertTrue(okMessages[0].contains("relay url"))
             assertFalse((session.policy as FullAuthPolicy).isAuthenticated())
 
-            server.shutdown()
+            server.close()
         }
 
     @Test
@@ -242,7 +242,7 @@ class NostrServerAuthTest {
             assertTrue(okMessages[0].contains("created_at"))
             assertFalse((session.policy as FullAuthPolicy).isAuthenticated())
 
-            server.shutdown()
+            server.close()
         }
 
     @Test
@@ -281,7 +281,7 @@ class NostrServerAuthTest {
             assertTrue(okMessages[0].contains("could not parse message"))
             assertFalse((session.policy as FullAuthPolicy).isAuthenticated())
 
-            server.shutdown()
+            server.close()
         }
 
     @Test
@@ -315,7 +315,7 @@ class NostrServerAuthTest {
             assertTrue(authedPubkeys.contains(pubkey))
             assertTrue(authedPubkeys.contains(pubkey2))
 
-            server.shutdown()
+            server.close()
         }
 
     // -- NIP-42: requireAuth ---------------------------------------------------
@@ -337,7 +337,7 @@ class NostrServerAuthTest {
             assertTrue(okMessages[0].contains("\"false\""))
             assertTrue(okMessages[0].contains("auth-required:"))
 
-            server.shutdown()
+            server.close()
         }
 
     @Test
@@ -354,7 +354,7 @@ class NostrServerAuthTest {
             assertEquals(1, closedMessages.size)
             assertTrue(closedMessages[0].contains("auth-required:"))
 
-            server.shutdown()
+            server.close()
         }
 
     @Test
@@ -371,7 +371,7 @@ class NostrServerAuthTest {
             assertEquals(1, closedMessages.size)
             assertTrue(closedMessages[0].contains("auth-required:"))
 
-            server.shutdown()
+            server.close()
         }
 
     @Test
@@ -410,7 +410,7 @@ class NostrServerAuthTest {
             val eoseMessages = collector.rawMessagesContaining("EOSE")
             assertTrue(eoseMessages.isNotEmpty())
 
-            server.shutdown()
+            server.close()
         }
 
     @Test
@@ -430,7 +430,7 @@ class NostrServerAuthTest {
             assertEquals(1, okMessages.size)
             assertTrue(okMessages[0].contains("\"true\""))
 
-            server.shutdown()
+            server.close()
         }
 
     // -- Custom AuthPolicy tests -----------------------------------------------
@@ -471,7 +471,7 @@ class NostrServerAuthTest {
             assertTrue(okMessages[1].contains("\"false\""))
             assertTrue(okMessages[1].contains("auth-required:"))
 
-            server.shutdown()
+            server.close()
         }
 
     @Test
@@ -531,6 +531,6 @@ class NostrServerAuthTest {
             assertEquals(1, events.size)
             assertEquals(pubkey, events[0].event.pubKey)
 
-            server.shutdown()
+            server.close()
         }
 }

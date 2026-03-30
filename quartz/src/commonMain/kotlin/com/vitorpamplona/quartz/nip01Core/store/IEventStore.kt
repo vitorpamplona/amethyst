@@ -23,7 +23,7 @@ package com.vitorpamplona.quartz.nip01Core.store
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 
-interface IEventStore {
+interface IEventStore : AutoCloseable {
     fun insert(event: Event)
 
     interface ITransaction {
@@ -56,5 +56,5 @@ interface IEventStore {
 
     fun deleteExpiredEvents()
 
-    fun close()
+    override fun close()
 }

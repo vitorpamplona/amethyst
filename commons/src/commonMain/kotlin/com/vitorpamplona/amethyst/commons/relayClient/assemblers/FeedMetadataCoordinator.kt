@@ -32,6 +32,9 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
+import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import kotlinx.coroutines.CoroutineScope
 
@@ -66,6 +69,7 @@ class FeedMetadataCoordinator(
     // Track what we've already queued to avoid duplicates
     private val queuedPubkeys = mutableSetOf<HexKey>()
     private val queuedNoteIds = mutableSetOf<HexKey>()
+    private val queuedBoostedIds = mutableSetOf<HexKey>()
 
     /**
      * Start processing the subscription queue.
@@ -109,6 +113,37 @@ class FeedMetadataCoordinator(
      */
     fun loadMetadataForNotes(notes: List<Note>) {
         if (notes.isEmpty()) return
+
+        // Fetch referenced note content: reposts (via replyTo) + quoted notes (via e-tags)
+        val repostBoostedIds =
+            notes
+                .filter { it.event is RepostEvent || it.event is GenericRepostEvent }
+                .mapNotNull { it.replyTo?.lastOrNull() }
+                .filter { it.event == null }
+                .map { it.idHex }
+
+        val quotedNoteIds =
+            notes
+                .mapNotNull { it.event }
+                .flatMap { event -> event.tags.mapNotNull { ETag.parseId(it) } }
+
+        val allReferencedIds =
+            (repostBoostedIds + quotedNoteIds)
+                .filter { it !in queuedBoostedIds }
+                .distinct()
+
+        if (allReferencedIds.isNotEmpty()) {
+            queuedBoostedIds.addAll(allReferencedIds)
+            val referencedFilter =
+                Filter(
+                    ids = allReferencedIds,
+                )
+            priorityQueue.enqueue(
+                SubscriptionPriority.METADATA,
+                referencedFilter,
+                tag = "feed-referenced-notes",
+            )
+        }
 
         // Extract unique authors that we haven't already queued
         val authors =

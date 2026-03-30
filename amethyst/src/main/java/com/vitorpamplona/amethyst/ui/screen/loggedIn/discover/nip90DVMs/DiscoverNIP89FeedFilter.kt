@@ -41,6 +41,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 
 open class DiscoverNIP89FeedFilter(
     val account: Account,
+    val targetKind: Int = 5300,
 ) : AdditiveFeedFilter<Note>() {
     val lastAnnounced = TimeUtils.oneYearAgo()
 
@@ -61,7 +62,7 @@ open class DiscoverNIP89FeedFilter(
     override fun feed(): List<Note> {
         val notes =
             LocalCache.addressables.filterIntoSet(AppDefinitionEvent.KIND) { _, it ->
-                acceptDVM(it)
+                acceptApp(it)
             }
 
         return sort(notes)
@@ -75,29 +76,29 @@ open class DiscoverNIP89FeedFilter(
             account.hiddenUsers.flow.value,
         )
 
-    fun acceptDVM(note: Note): Boolean {
+    fun acceptApp(note: Note): Boolean {
         val noteEvent = note.event
         return if (noteEvent is AppDefinitionEvent) {
-            acceptDVM(noteEvent, note.relays)
+            acceptApp(noteEvent, note.relays)
         } else {
             false
         }
     }
 
-    fun acceptDVM(
+    open fun acceptApp(
         noteEvent: AppDefinitionEvent,
         relays: List<NormalizedRelayUrl>,
     ): Boolean {
         val filterParams = buildFilterParams(account)
         return noteEvent.appMetaData()?.subscription != true &&
             filterParams.match(noteEvent, relays) &&
-            noteEvent.includeKind(5300) &&
-            noteEvent.createdAt > lastAnnounced // && params.match(noteEvent)
+            noteEvent.includeKind(targetKind) &&
+            noteEvent.createdAt > lastAnnounced
     }
 
     protected open fun innerApplyFilter(collection: Collection<Note>): Set<Note> =
         collection.filterTo(HashSet()) {
-            acceptDVM(it)
+            acceptApp(it)
         }
 
     override fun sort(items: Set<Note>): List<Note> {

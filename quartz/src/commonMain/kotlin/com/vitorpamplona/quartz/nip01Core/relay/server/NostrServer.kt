@@ -41,7 +41,7 @@ class NostrServer(
     private val store: IEventStore,
     private val policyBuilder: () -> IRelayPolicy = { VerifyPolicy },
     private val parentContext: CoroutineContext = SupervisorJob(),
-) {
+) : AutoCloseable {
     private val subStore = LiveEventStore(store)
 
     /** Scope for all subscriptions. */
@@ -70,11 +70,38 @@ class NostrServer(
         }
 
     /**
-     * Shuts down the server, cancelling all subscriptions and sessions.
+     * Registers a new client connection and serves it for the duration of
+     * [incoming]. The session is automatically closed when [incoming] returns.
+     *
+     * @param send   Callback the server uses to send JSON messages to this client.
+     * @param incoming Suspend block that yields raw JSON strings from the client
+     *                 (e.g., reading WebSocket text frames in a loop).
      */
-    fun shutdown() {
+    suspend fun serve(
+        send: (String) -> Unit,
+        incoming: suspend (RelaySession) -> Unit,
+    ) {
+        val session = connect(send)
+        try {
+            incoming(session)
+        } finally {
+            session.close()
+        }
+    }
+
+    /**
+     * Shuts down the server, cancelling all subscriptions and closing the store.
+     */
+    override fun close() {
         connections.forEach { _, session -> session.cancelAllSubscriptions() }
         connections.clear()
         scope.cancel()
+        store.close()
     }
+
+    /**
+     * Shuts down the server, cancelling all subscriptions and closing the store.
+     */
+    @Deprecated("Use close() instead", replaceWith = ReplaceWith("close()"))
+    fun shutdown() = close()
 }

@@ -204,7 +204,8 @@ fun ReadsScreen(
     val events by eventState.items.collectAsState()
 
     var feedMode by remember { mutableStateOf(FeedMode.GLOBAL) }
-    var followedUsers by remember { mutableStateOf<Set<String>>(emptySet()) }
+    // Seed followedUsers from cache so Following mode works immediately on back-nav
+    var followedUsers by remember { mutableStateOf(localCache.followedUsers.value) }
     var eoseReceivedCount by remember { mutableStateOf(0) }
     val initialLoadComplete = eoseReceivedCount > 0
 
@@ -272,7 +273,8 @@ fun ReadsScreen(
                     createFollowingLongFormFeedSubscription(
                         relays = connectedRelays,
                         followedUsers = followedUsers.toList(),
-                        onEvent = { event, _, _, _ ->
+                        onEvent = { event, _, relay, _ ->
+                            subscriptionsCoordinator?.consumeEvent(event, relay)
                             if (event is LongTextNoteEvent) {
                                 eventState.addItem(event)
                             }
