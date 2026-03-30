@@ -91,6 +91,7 @@ import com.vitorpamplona.amethyst.desktop.subscriptions.createChessSubscriptionW
 import com.vitorpamplona.amethyst.desktop.subscriptions.createMetadataListSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
 import com.vitorpamplona.quartz.nip64Chess.ChessGameNameGenerator
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.nip64Chess.Color as ChessColor
 
 /**
@@ -119,7 +120,7 @@ fun ChessScreen(
         ChessConfig.CHESS_RELAYS.forEach { relayUrl ->
             relayManager.addRelay(relayUrl)
         }
-        println("[ChessScreen] Added ${ChessConfig.CHESS_RELAYS.size} chess relays to relay manager")
+        Log.d("chessdebug") { "[ChessScreen] Added ${ChessConfig.CHESS_RELAYS.size} chess relays to relay manager" }
     }
 
     // Derive stable keys to avoid recomposition from LiveChessGameState identity changes
