@@ -37,7 +37,7 @@ enum class FeedMode {
  */
 fun createGlobalFeedSubscription(
     relays: Set<NormalizedRelayUrl>,
-    limit: Int = 50,
+    limit: Int = 200,
     onEvent: (Event, Boolean, NormalizedRelayUrl, List<Filter>?) -> Unit,
     onEose: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
 ): SubscriptionConfig =
@@ -55,7 +55,7 @@ fun createGlobalFeedSubscription(
 fun createFollowingFeedSubscription(
     relays: Set<NormalizedRelayUrl>,
     followedUsers: List<String>,
-    limit: Int = 50,
+    limit: Int = 200,
     onEvent: (Event, Boolean, NormalizedRelayUrl, List<Filter>?) -> Unit,
     onEose: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
 ): SubscriptionConfig? {
@@ -121,9 +121,21 @@ fun createThreadRepliesSubscription(
         subId = generateSubId("thread-${noteId.take(8)}"),
         filters =
             listOf(
+                // Kind 1 replies via lowercase e-tag (NIP-10)
                 FilterBuilders.byETags(
                     eventIds = listOf(noteId),
-                    kinds = listOf(1), // TextNoteEvent
+                    kinds = listOf(1),
+                    limit = limit,
+                ),
+                // Kind 1111 comments via lowercase e-tag (reply parent) or uppercase E-tag (root)
+                FilterBuilders.byTags(
+                    tags = mapOf("e" to listOf(noteId)),
+                    kinds = listOf(1111),
+                    limit = limit,
+                ),
+                FilterBuilders.byTags(
+                    tags = mapOf("E" to listOf(noteId)),
+                    kinds = listOf(1111),
                     limit = limit,
                 ),
             ),

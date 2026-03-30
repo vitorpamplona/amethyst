@@ -55,9 +55,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.compose.elements.BoostedMark
+import com.vitorpamplona.amethyst.commons.compose.layouts.GenericRepostLayout
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.richtext.UrlParser
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
+import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.desktop.DesktopPreferences
 import com.vitorpamplona.amethyst.desktop.account.AccountState
@@ -67,14 +71,22 @@ import com.vitorpamplona.amethyst.desktop.feeds.DesktopGlobalFeedFilter
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.desktop.subscriptions.FeedMode
+import com.vitorpamplona.amethyst.desktop.subscriptions.FilterBuilders
+import com.vitorpamplona.amethyst.desktop.subscriptions.SubscriptionConfig
 import com.vitorpamplona.amethyst.desktop.subscriptions.createContactListSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.createFollowingFeedSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.createGlobalFeedSubscription
+import com.vitorpamplona.amethyst.desktop.subscriptions.generateSubId
 import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
 import com.vitorpamplona.amethyst.desktop.ui.media.LightboxOverlay
 import com.vitorpamplona.amethyst.desktop.ui.note.NoteCard
 import com.vitorpamplona.amethyst.desktop.viewmodels.DesktopFeedViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
+import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
+import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
+import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
+import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
 
 data class LightboxState(
     val urls: List<String>,
@@ -86,6 +98,8 @@ data class LightboxState(
 /**
  * Note card that reads counts from the Note model (cache-backed).
  * Event is extracted from Note for signing operations in NoteActionsRow.
+ * Handles reposts (kind 6/16) by showing overlapping avatars + "Boosted" label
+ * and rendering the original note content.
  */
 @Composable
 fun FeedNoteCard(
@@ -102,53 +116,141 @@ fun FeedNoteCard(
     onMediaClick: ((List<String>, Int, Float) -> Unit)? = null,
 ) {
     val event = note.event ?: return
+    val isRepost = event is RepostEvent || event is GenericRepostEvent
 
-    // Observe Note.flowSet for live count updates
-    val flowSet = remember(note) { note.flow() }
-    val reactionsState by flowSet.reactions.stateFlow.collectAsState()
-    val repliesState by flowSet.replies.stateFlow.collectAsState()
-    val zapsState by flowSet.zaps.stateFlow.collectAsState()
+    if (isRepost) {
+        val originalNote = note.replyTo?.lastOrNull()
+        if (originalNote == null) {
+            return
+        }
 
-    // Read counts from Note model (re-read on each stateFlow emission)
-    val reactionCount = note.countReactions()
-    val replyCount = note.replies.size
-    val repostCount = note.boosts.size
-    val zapAmount = note.zapsAmount
+        // Observe original note's flowSet — MUST happen before reading .event
+        // so we recompose when the async fetch fills in the event
+        val flowSet = remember(originalNote) { originalNote.flow() }
+        val metadataState by flowSet.metadata.stateFlow.collectAsState()
+        val reactionsState by flowSet.reactions.stateFlow.collectAsState()
+        val repliesState by flowSet.replies.stateFlow.collectAsState()
+        val zapsState by flowSet.zaps.stateFlow.collectAsState()
 
-    // Clean up flowSet when card leaves composition
-    DisposableEffect(note) {
-        onDispose { note.clearFlow() }
-    }
+        DisposableEffect(originalNote) {
+            onDispose { originalNote.clearFlow() }
+        }
 
-    Column {
-        NoteCard(
-            note = event.toNoteDisplayData(localCache),
-            localCache = localCache,
-            onClick = { onNavigateToThread(event.id) },
-            onAuthorClick = onNavigateToProfile,
-            onMentionClick = onNavigateToProfile,
-            onImageClick = onImageClick,
-            onMediaClick = onMediaClick,
-        )
+        // Now read event — recomposition will re-read this when metadata invalidates
+        val originalEvent = originalNote.event
+        if (originalEvent == null) {
+            return
+        }
 
-        // Action buttons (only if logged in)
-        if (account != null) {
-            NoteActionsRow(
-                event = event,
-                relayManager = relayManager,
-                localCache = localCache,
-                account = account,
-                nwcConnection = nwcConnection,
-                onReplyClick = onReply,
-                onZapFeedback = onZapFeedback,
+        val reactionCount = originalNote.countReactions()
+        val replyCount = originalNote.replies.size
+        val repostCount = originalNote.boosts.size
+        val zapAmount = originalNote.zapsAmount
+
+        val reposterUser = localCache.getUserIfExists(event.pubKey)
+        val originalUser = localCache.getUserIfExists(originalEvent.pubKey)
+
+        Column {
+            // Repost header: overlapping avatars + "Boosted" label
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                zapCount = note.zaps.size,
-                zapAmountSats = zapAmount.toLong(),
-                zapReceipts = emptyList(), // TODO: extract ZapReceipts from Note.zaps
-                reactionCount = reactionCount,
-                replyCount = replyCount,
-                repostCount = repostCount,
+            ) {
+                GenericRepostLayout(
+                    baseAuthorPicture = {
+                        UserAvatar(
+                            userHex = originalEvent.pubKey,
+                            pictureUrl = originalUser?.profilePicture(),
+                            size = 35.dp,
+                        )
+                    },
+                    repostAuthorPicture = {
+                        UserAvatar(
+                            userHex = event.pubKey,
+                            pictureUrl = reposterUser?.profilePicture(),
+                            size = 35.dp,
+                        )
+                    },
+                )
+                BoostedMark()
+            }
+
+            // Original note content
+            NoteCard(
+                note = originalEvent.toNoteDisplayData(localCache),
+                localCache = localCache,
+                onClick = { onNavigateToThread(originalEvent.id) },
+                onAuthorClick = onNavigateToProfile,
+                onMentionClick = onNavigateToProfile,
+                onImageClick = onImageClick,
+                onMediaClick = onMediaClick,
             )
+
+            // Action buttons for original note
+            if (account != null) {
+                NoteActionsRow(
+                    event = originalEvent,
+                    relayManager = relayManager,
+                    localCache = localCache,
+                    account = account,
+                    nwcConnection = nwcConnection,
+                    onReplyClick = onReply,
+                    onZapFeedback = onZapFeedback,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                    zapCount = originalNote.zaps.size,
+                    zapAmountSats = zapAmount.toLong(),
+                    zapReceipts = emptyList(),
+                    reactionCount = reactionCount,
+                    replyCount = replyCount,
+                    repostCount = repostCount,
+                )
+            }
+        }
+    } else {
+        // Regular note rendering (unchanged)
+        val flowSet = remember(note) { note.flow() }
+        val reactionsState by flowSet.reactions.stateFlow.collectAsState()
+        val repliesState by flowSet.replies.stateFlow.collectAsState()
+        val zapsState by flowSet.zaps.stateFlow.collectAsState()
+
+        val reactionCount = note.countReactions()
+        val replyCount = note.replies.size
+        val repostCount = note.boosts.size
+        val zapAmount = note.zapsAmount
+
+        DisposableEffect(note) {
+            onDispose { note.clearFlow() }
+        }
+
+        Column {
+            NoteCard(
+                note = event.toNoteDisplayData(localCache),
+                localCache = localCache,
+                onClick = { onNavigateToThread(event.id) },
+                onAuthorClick = onNavigateToProfile,
+                onMentionClick = onNavigateToProfile,
+                onImageClick = onImageClick,
+                onMediaClick = onMediaClick,
+            )
+
+            if (account != null) {
+                NoteActionsRow(
+                    event = event,
+                    relayManager = relayManager,
+                    localCache = localCache,
+                    account = account,
+                    nwcConnection = nwcConnection,
+                    onReplyClick = onReply,
+                    onZapFeedback = onZapFeedback,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                    zapCount = note.zaps.size,
+                    zapAmountSats = zapAmount.toLong(),
+                    zapReceipts = emptyList(),
+                    reactionCount = reactionCount,
+                    replyCount = replyCount,
+                    repostCount = repostCount,
+                )
+            }
         }
     }
 }
@@ -248,14 +350,113 @@ fun FeedScreen(
 
     val feedState by viewModel.feedState.feedContent.collectAsState()
 
-    // Load metadata for visible notes via Coordinator (rate-limited)
+    // Load metadata for visible notes + repost/quoted note authors via Coordinator
     LaunchedEffect(feedState, subscriptionsCoordinator) {
         if (subscriptionsCoordinator != null && feedState is FeedState.Loaded) {
             val notes = viewModel.feedState.visibleNotes()
             if (notes.isNotEmpty()) {
                 subscriptionsCoordinator.loadMetadataForNotes(notes)
+
+                // Also load metadata for repost original + quoted note authors
+                val referencedAuthors =
+                    notes
+                        .filter { it.event is RepostEvent || it.event is GenericRepostEvent }
+                        .mapNotNull {
+                            it.replyTo
+                                ?.lastOrNull()
+                                ?.author
+                                ?.pubkeyHex
+                        }
+                subscriptionsCoordinator.loadMetadataForPubkeys(referencedAuthors)
             }
         }
+    }
+
+    // Fetch missing referenced notes (repost originals + quoted notes via e-tags)
+    // Uses a direct relay subscription — bypasses the coordinator pipeline
+    val missingNoteIds =
+        remember(feedState) {
+            if (feedState !is FeedState.Loaded) return@remember emptyList<String>()
+            val notes = viewModel.feedState.visibleNotes()
+
+            // Repost originals where event is null
+            val repostOriginals =
+                notes
+                    .filter { it.event is RepostEvent || it.event is GenericRepostEvent }
+                    .mapNotNull { it.replyTo?.lastOrNull() }
+            val repostIds = repostOriginals.filter { it.event == null }.map { it.idHex }
+
+            // Quoted note IDs from content bech32s (nostr:nevent/nostr:note references)
+            val allEvents = (notes + repostOriginals.filter { it.event != null }).mapNotNull { it.event }
+            val contentQuotedIds =
+                allEvents
+                    .flatMap { event ->
+                        UrlParser().parseValidUrls(event.content).bech32s.mapNotNull { bech32 ->
+                            when (val entity = Nip19Parser.uriToRoute(bech32)?.entity) {
+                                is NNote -> entity.hex
+                                is NEvent -> entity.hex
+                                else -> null
+                            }
+                        }
+                    }.filter { localCache.getNoteIfExists(it)?.event == null }
+
+            (repostIds + contentQuotedIds).distinct()
+        }
+
+    rememberSubscription(allRelayUrls, missingNoteIds, relayManager = relayManager) {
+        if (allRelayUrls.isEmpty() || missingNoteIds.isEmpty()) return@rememberSubscription null
+        SubscriptionConfig(
+            subId = generateSubId("fetch-referenced"),
+            filters = listOf(FilterBuilders.byIds(missingNoteIds)),
+            relays = allRelayUrls,
+            onEvent = { event, _, relay, _ ->
+                subscriptionsCoordinator?.consumeEvent(event, relay)
+            },
+        )
+    }
+
+    // Fetch missing metadata (kind 0) for all note authors including referenced notes
+    val missingAuthorPubkeys =
+        remember(feedState) {
+            if (feedState !is FeedState.Loaded) return@remember emptyList<String>()
+            val notes = viewModel.feedState.visibleNotes()
+
+            // Collect all referenced notes (repost originals + e-tag/content referenced)
+            val repostOriginals =
+                notes
+                    .filter { it.event is RepostEvent || it.event is GenericRepostEvent }
+                    .mapNotNull { it.replyTo?.lastOrNull() }
+
+            // All notes in cache that are referenced by visible notes
+            val allEvents = (notes + repostOriginals.filter { it.event != null }).mapNotNull { it.event }
+            val quotedNotes =
+                allEvents.flatMap { event ->
+                    UrlParser().parseValidUrls(event.content).bech32s.mapNotNull { bech32 ->
+                        when (val entity = Nip19Parser.uriToRoute(bech32)?.entity) {
+                            is NNote -> localCache.getNoteIfExists(entity.hex)
+                            is NEvent -> localCache.getNoteIfExists(entity.hex)
+                            else -> null
+                        }
+                    }
+                }
+
+            // Authors from feed notes + repost originals + quoted notes
+            (notes.mapNotNull { it.author } + repostOriginals.mapNotNull { it.author } + quotedNotes.mapNotNull { it.author })
+                .filter { it.profilePicture() == null }
+                .map { it.pubkeyHex }
+                .distinct()
+        }
+
+    rememberSubscription(allRelayUrls, missingAuthorPubkeys, relayManager = relayManager) {
+        if (allRelayUrls.isEmpty() || missingAuthorPubkeys.isEmpty()) return@rememberSubscription null
+        SubscriptionConfig(
+            subId = generateSubId("fetch-metadata"),
+            filters = listOf(FilterBuilders.userMetadataMultiple(missingAuthorPubkeys)),
+            relays = allRelayUrls,
+            onEvent = { event, _, relay, _ ->
+                subscriptionsCoordinator?.consumeEvent(event, relay)
+            },
+        )
     }
 
     // Request interaction subscriptions — keyed on feedMode (stable), not feedState (changes every 250ms)

@@ -36,8 +36,10 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.taggedAddresses
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentRequestEvent
@@ -148,6 +150,13 @@ class DesktopLocalCache : ICacheProvider {
             val newUserMetadata = event.contactMetaData()
             if (newUserMetadata != null) {
                 user.updateUserInfo(newUserMetadata, event)
+                // Invalidate metadata flows on notes by this author that have observers
+                // so QuotedNoteEmbed/FeedNoteCard recompose with updated avatar/name
+                notes.forEach { _, note ->
+                    if (note.author?.pubkeyHex == event.pubKey && note.flowSet?.metadata?.hasObservers() == true) {
+                        note.flowSet?.metadata?.invalidateData()
+                    }
+                }
             }
         }
     }
@@ -165,7 +174,7 @@ class DesktopLocalCache : ICacheProvider {
         when (event) {
             is MetadataEvent -> {
                 consumeMetadata(event)
-                true
+                false // metadata updates User, not Note — skip event stream
             }
 
             is TextNoteEvent -> {
@@ -188,6 +197,10 @@ class DesktopLocalCache : ICacheProvider {
                 consumeRepost(event, relay)
             }
 
+            is GenericRepostEvent -> {
+                consumeGenericRepost(event, relay)
+            }
+
             is ContactListEvent -> {
                 consumeContactList(event)
             }
@@ -198,6 +211,10 @@ class DesktopLocalCache : ICacheProvider {
 
             is BookmarkListEvent -> {
                 consumeBookmarkList(event)
+            }
+
+            is CommentEvent -> {
+                consumeComment(event, relay)
             }
 
             else -> {
@@ -216,7 +233,25 @@ class DesktopLocalCache : ICacheProvider {
         val note = getOrCreateNote(event.id)
         if (note.event != null) return false
         val author = getOrCreateUser(event.pubKey)
-        val repliesTo = event.tagsWithoutCitations().mapNotNull { getNoteIfExists(it) }
+        val repliesTo = event.tagsWithoutCitations().map { getOrCreateNote(it) }
+        note.loadEvent(event, author, repliesTo)
+        relay?.let { note.addRelay(it) }
+        repliesTo.forEach { it.addReply(note) }
+        return true
+    }
+
+    /**
+     * Consumes a kind 1111 comment event (NIP-22).
+     * Like text notes but uses BaseThreadedEvent reply structure.
+     */
+    private fun consumeComment(
+        event: CommentEvent,
+        relay: NormalizedRelayUrl?,
+    ): Boolean {
+        val note = getOrCreateNote(event.id)
+        if (note.event != null) return false
+        val author = getOrCreateUser(event.pubKey)
+        val repliesTo = event.tagsWithoutCitations().map { getOrCreateNote(it) }
         note.loadEvent(event, author, repliesTo)
         relay?.let { note.addRelay(it) }
         repliesTo.forEach { it.addReply(note) }
@@ -299,6 +334,8 @@ class DesktopLocalCache : ICacheProvider {
     /**
      * Consumes a kind 6 repost event.
      * Links repost to target note via e-tag.
+     * Uses getOrCreateNote for the boosted note so the link exists even if
+     * the original note hasn't arrived yet (it will be filled in later).
      */
     private fun consumeRepost(
         event: RepostEvent,
@@ -307,7 +344,27 @@ class DesktopLocalCache : ICacheProvider {
         val note = getOrCreateNote(event.id)
         if (note.event != null) return false
         val author = getOrCreateUser(event.pubKey)
-        val boostedNote = event.boostedEventId()?.let { getNoteIfExists(it) }
+        val boostedId = event.boostedEventId()
+        val boostedNote = boostedId?.let { getOrCreateNote(it) }
+        val repliesTo = listOfNotNull(boostedNote)
+        note.loadEvent(event, author, repliesTo)
+        relay?.let { note.addRelay(it) }
+        boostedNote?.addBoost(note)
+        return true
+    }
+
+    /**
+     * Consumes a kind 16 generic repost event.
+     * Links repost to target note via e-tag.
+     */
+    private fun consumeGenericRepost(
+        event: GenericRepostEvent,
+        relay: NormalizedRelayUrl?,
+    ): Boolean {
+        val note = getOrCreateNote(event.id)
+        if (note.event != null) return false
+        val author = getOrCreateUser(event.pubKey)
+        val boostedNote = event.boostedEventId()?.let { getOrCreateNote(it) }
         val repliesTo = listOfNotNull(boostedNote)
         note.loadEvent(event, author, repliesTo)
         relay?.let { note.addRelay(it) }

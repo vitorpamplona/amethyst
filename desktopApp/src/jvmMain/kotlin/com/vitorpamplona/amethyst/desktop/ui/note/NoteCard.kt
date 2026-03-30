@@ -38,6 +38,9 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -63,6 +66,7 @@ import com.vitorpamplona.amethyst.desktop.ui.media.AudioPlayer
 import com.vitorpamplona.amethyst.desktop.ui.media.DesktopVideoPlayer
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalWindowState
 import com.vitorpamplona.amethyst.desktop.ui.media.isAnimatedGifUrl
+import com.vitorpamplona.amethyst.desktop.ui.toNoteDisplayData
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
@@ -324,6 +328,7 @@ fun NoteCard(
 private data class ResolvedMention(
     val displayText: String,
     val pubKeyHex: String? = null,
+    val noteIdHex: String? = null,
 )
 
 /**
@@ -354,11 +359,11 @@ private fun resolveBech32(
         }
 
         is NNote -> {
-            ResolvedMention("note:${entity.hex.take(8)}...")
+            ResolvedMention(displayText = "note:${entity.hex.take(8)}...", noteIdHex = entity.hex)
         }
 
         is NEvent -> {
-            ResolvedMention("note:${entity.hex.take(8)}...")
+            ResolvedMention(displayText = "note:${entity.hex.take(8)}...", noteIdHex = entity.hex)
         }
 
         else -> {
@@ -386,12 +391,37 @@ fun extractMentionedPubkeys(bech32s: Set<String>): List<String> =
  * URLs are underlined in primary color; bech32 mentions show as @displayName in primary color
  * and navigate to profile on click.
  */
+private data class ContentSegment(
+    val start: Int,
+    val raw: String,
+    val isUrl: Boolean,
+)
+
+private fun buildSegments(
+    content: String,
+    schemeUrls: Collection<String>,
+    bech32s: Collection<String>,
+): List<ContentSegment> {
+    val segments = mutableListOf<ContentSegment>()
+    for (url in schemeUrls) {
+        val idx = content.indexOf(url)
+        if (idx != -1) segments.add(ContentSegment(idx, url, true))
+    }
+    for (bech32 in bech32s) {
+        val idx = content.indexOf(bech32)
+        if (idx != -1) segments.add(ContentSegment(idx, bech32, false))
+    }
+    segments.sortBy { it.start }
+    return segments
+}
+
 @Composable
 fun RichTextContent(
     content: String,
     urls: Urls,
     localCache: DesktopLocalCache? = null,
     onMentionClick: ((String) -> Unit)? = null,
+    onNavigateToThread: ((String) -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val defaultColor = MaterialTheme.colorScheme.onSurface
@@ -404,80 +434,159 @@ fun RichTextContent(
             color = defaultColor,
             modifier = modifier,
         )
+        return
+    }
+
+    // Resolve bech32s to find quoted notes vs inline mentions
+    val resolvedBech32s =
+        remember(urls.bech32s, localCache) {
+            urls.bech32s.associateWith { resolveBech32(it, localCache) }
+        }
+
+    // Collect quoted note IDs (nevent/note references)
+    val quotedBech32s = remember(resolvedBech32s) { resolvedBech32s.filter { it.value.noteIdHex != null }.keys }
+    val quotedNoteIds = remember(resolvedBech32s) { resolvedBech32s.values.mapNotNull { it.noteIdHex }.toSet() }
+
+    if (quotedNoteIds.isEmpty()) {
+        // No quoted notes — render everything as annotated text
+        val segments = remember(content, urls) { buildSegments(content, urls.withScheme, urls.bech32s) }
+        RichAnnotatedText(content, segments, resolvedBech32s, defaultColor, primaryColor, onMentionClick, modifier)
     } else {
-        data class Segment(
-            val start: Int,
-            val raw: String,
-            val isUrl: Boolean,
-        )
-
-        val segments = mutableListOf<Segment>()
-        for (url in urls.withScheme) {
-            val idx = content.indexOf(url)
-            if (idx != -1) segments.add(Segment(idx, url, true))
-        }
-        for (bech32 in urls.bech32s) {
-            val idx = content.indexOf(bech32)
-            if (idx != -1) segments.add(Segment(idx, bech32, false))
-        }
-        segments.sortBy { it.start }
-
-        val annotatedText =
-            buildAnnotatedString {
-                var lastIndex = 0
-
-                for (segment in segments) {
-                    if (segment.start < lastIndex) continue
-
-                    // Add text before segment
-                    if (segment.start > lastIndex) {
-                        append(content.substring(lastIndex, segment.start))
+        // Has quoted notes — render text + embedded note cards
+        Column(modifier = modifier) {
+            // Strip quoted note bech32 references from text
+            val strippedText =
+                remember(content, quotedBech32s) {
+                    var text = content
+                    for (bech32 in quotedBech32s) {
+                        text = text.replace(bech32, "").trim()
                     }
-
-                    if (segment.isUrl) {
-                        withStyle(
-                            SpanStyle(
-                                color = primaryColor,
-                                textDecoration = TextDecoration.Underline,
-                            ),
-                        ) {
-                            append(segment.raw)
-                        }
-                    } else {
-                        val resolved = resolveBech32(segment.raw, localCache)
-                        if (resolved.pubKeyHex != null && onMentionClick != null) {
-                            val pubKey = resolved.pubKeyHex
-                            withLink(
-                                LinkAnnotation.Clickable(
-                                    tag = "mention",
-                                    styles = TextLinkStyles(SpanStyle(color = primaryColor)),
-                                ) {
-                                    onMentionClick(pubKey)
-                                },
-                            ) {
-                                append(resolved.displayText)
-                            }
-                        } else {
-                            withStyle(SpanStyle(color = primaryColor)) {
-                                append(resolved.displayText)
-                            }
-                        }
-                    }
-
-                    lastIndex = segment.start + segment.raw.length
+                    text
                 }
 
-                // Add remaining text
-                if (lastIndex < content.length) {
-                    append(content.substring(lastIndex))
-                }
+            if (strippedText.isNotBlank()) {
+                val inlineBech32s = urls.bech32s - quotedBech32s
+                val segments = remember(strippedText, urls, inlineBech32s) { buildSegments(strippedText, urls.withScheme, inlineBech32s) }
+                RichAnnotatedText(strippedText, segments, resolvedBech32s, defaultColor, primaryColor, onMentionClick)
             }
 
-        Text(
-            text = annotatedText,
-            style = MaterialTheme.typography.bodyMedium,
-            color = defaultColor,
-            modifier = modifier,
-        )
+            // Render quoted notes as embedded cards
+            for (noteId in quotedNoteIds) {
+                Spacer(Modifier.height(8.dp))
+                QuotedNoteEmbed(noteId, localCache, onMentionClick, onNavigateToThread)
+            }
+        }
     }
+}
+
+/**
+ * Renders a quoted note by ID. Observes the note's metadata flow so it
+ * recomposes when the event arrives asynchronously from a relay fetch.
+ * Also observes the author's metadata for display name / avatar updates.
+ */
+@Composable
+fun QuotedNoteEmbed(
+    noteId: String,
+    localCache: DesktopLocalCache?,
+    onMentionClick: ((String) -> Unit)? = null,
+    onNavigateToThread: ((String) -> Unit)? = null,
+) {
+    if (localCache == null) return
+
+    // getOrCreateNote ensures a placeholder exists so subscriptions can find it
+    val note = remember(noteId) { localCache.getOrCreateNote(noteId) }
+
+    // Observe note metadata flow — recomposes when loadEvent() is called
+    val flowSet = remember(note) { note.flow() }
+    val metadataState by flowSet.metadata.stateFlow.collectAsState()
+
+    DisposableEffect(note) {
+        onDispose { note.clearFlow() }
+    }
+
+    val event = note.event
+    if (event != null) {
+        // Recompute on every recomposition — picks up user metadata changes
+        val displayData = event.toNoteDisplayData(localCache)
+
+        NoteCard(
+            note = displayData,
+            localCache = localCache,
+            onClick = onNavigateToThread?.let { nav -> { nav(event.id) } },
+            onAuthorClick = onMentionClick,
+            onMentionClick = onMentionClick,
+        )
+    } else {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors =
+                CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                ),
+        ) {
+            Text(
+                "Loading quoted note...",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(12.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun RichAnnotatedText(
+    content: String,
+    segments: List<ContentSegment>,
+    resolvedBech32s: Map<String, ResolvedMention>,
+    defaultColor: androidx.compose.ui.graphics.Color,
+    primaryColor: androidx.compose.ui.graphics.Color,
+    onMentionClick: ((String) -> Unit)?,
+    modifier: Modifier = Modifier,
+) {
+    val annotatedText =
+        buildAnnotatedString {
+            var lastIndex = 0
+            for (seg in segments) {
+                if (seg.start < lastIndex) continue
+                if (seg.start > lastIndex) {
+                    append(content.substring(lastIndex, seg.start))
+                }
+                if (seg.isUrl) {
+                    withStyle(SpanStyle(color = primaryColor, textDecoration = TextDecoration.Underline)) {
+                        append(seg.raw)
+                    }
+                } else {
+                    val resolved = resolvedBech32s[seg.raw] ?: ResolvedMention(seg.raw)
+                    if (resolved.pubKeyHex != null && onMentionClick != null) {
+                        val pubKey = resolved.pubKeyHex
+                        withLink(
+                            LinkAnnotation.Clickable(
+                                tag = "mention",
+                                styles = TextLinkStyles(SpanStyle(color = primaryColor)),
+                            ) {
+                                onMentionClick(pubKey)
+                            },
+                        ) {
+                            append(resolved.displayText)
+                        }
+                    } else {
+                        withStyle(SpanStyle(color = primaryColor)) {
+                            append(resolved.displayText)
+                        }
+                    }
+                }
+                lastIndex = seg.start + seg.raw.length
+            }
+            if (lastIndex < content.length) {
+                append(content.substring(lastIndex))
+            }
+        }
+
+    Text(
+        text = annotatedText,
+        style = MaterialTheme.typography.bodyMedium,
+        color = defaultColor,
+        modifier = modifier,
+    )
 }
