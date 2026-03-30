@@ -56,10 +56,6 @@ jobs:
       - name: Test (gradle)
         run: ./gradlew test --no-daemon
 
-      - name: Stop Gradle Daemon
-        if: always()
-        run: ./gradlew --stop
-
       - name: Android Test Report
         uses: asadmansr/android-test-report-action@v1.2.0
         if: ${{ always() && matrix.os == 'ubuntu-latest' }}
@@ -158,10 +154,6 @@ jobs:
 
       - name: Build Desktop Distribution
         run: ./gradlew :desktopApp:${{ matrix.task }}
-
-      - name: Stop Gradle Daemon
-        if: always()
-        run: ./gradlew --stop
 
       - name: Upload Desktop Distribution
         uses: actions/upload-artifact@v6
