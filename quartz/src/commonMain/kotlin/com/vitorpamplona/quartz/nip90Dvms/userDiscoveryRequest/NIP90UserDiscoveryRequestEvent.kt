@@ -18,17 +18,18 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip90Dvms
+package com.vitorpamplona.quartz.nip90Dvms.userDiscoveryRequest
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip31Alts.AltTag
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
-class NIP90StatusEvent(
+class NIP90UserDiscoveryRequestEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
@@ -36,56 +37,16 @@ class NIP90StatusEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
-    class StatusCode(
-        val code: String,
-        val description: String,
-    )
-
-    class AmountInvoice(
-        val amount: Long?,
-        val lnInvoice: String?,
-    )
-
-    fun status(): StatusCode? =
-        tags.firstOrNull { it.size > 1 && it[0] == "status" }?.let {
-            if (it.size > 2 && content == "") {
-                StatusCode(it[1], it[2])
-            } else {
-                StatusCode(it[1], content)
-            }
-        }
-
-    fun firstAmount(): AmountInvoice? =
-        tags.firstOrNull { it.size > 1 && it[0] == "amount" }?.let {
-            val amount = it[1].toLongOrNull()
-            if (it.size > 2) {
-                if (it[2].isNotBlank()) {
-                    AmountInvoice(amount, it[2])
-                } else {
-                    null
-                }
-            } else {
-                if (amount != null) {
-                    AmountInvoice(amount, null)
-                } else {
-                    null
-                }
-            }
-        }
-
     companion object {
-        const val KIND = 7000
-        const val ALT = "NIP90 Status update"
+        const val KIND = 5301
+        const val ALT = "NIP90 User Discovery request"
 
-        suspend fun create(
-            signer: NostrSigner,
+        fun build(
             createdAt: Long = TimeUtils.now(),
-        ): NIP90StatusEvent {
-            val tags =
-                arrayOf(
-                    AltTag.assemble(ALT),
-                )
-            return signer.sign(createdAt, KIND, tags, "")
+            initializer: TagArrayBuilder<NIP90UserDiscoveryRequestEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, "", createdAt) {
+            alt(ALT)
+            initializer()
         }
     }
 }

@@ -200,7 +200,7 @@ import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprov
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
-import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.NIP90ContentDiscoveryRequestEvent
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nip92IMeta.imetas
 import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
@@ -1881,7 +1881,7 @@ class Account(
         onReady: (event: NIP90ContentDiscoveryRequestEvent) -> Unit,
     ) {
         val relays = nip65RelayList.inboxFlow.value.toSet()
-        val request = NIP90ContentDiscoveryRequestEvent.create(dvmPublicKey.pubkeyHex, signer.pubKey, relays, signer)
+        val request = signer.sign<NIP90ContentDiscoveryRequestEvent>(NIP90ContentDiscoveryRequestEvent.build(dvmPublicKey.pubkeyHex, signer.pubKey, relays))
 
         val relayList =
             dvmPublicKey.inboxRelays()?.toSet()?.ifEmpty { null }

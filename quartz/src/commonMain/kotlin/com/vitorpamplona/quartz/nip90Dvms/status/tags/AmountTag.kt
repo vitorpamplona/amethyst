@@ -18,22 +18,40 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.types
+package com.vitorpamplona.quartz.nip90Dvms.status.tags
 
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.nip90Dvms.status.NIP90StatusEvent
+import androidx.compose.runtime.Stable
+import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.utils.ensure
 
-@Composable
-fun RenderNIP90Status(
-    note: Note,
-    accountViewModel: AccountViewModel,
-    nav: INav,
+@Stable
+class AmountTag(
+    val amount: Long?,
+    val lnInvoice: String?,
 ) {
-    val noteEvent = note.event as? NIP90StatusEvent ?: return
+    companion object {
+        const val TAG_NAME = "amount"
 
-    Text(text = noteEvent.content)
+        fun isTag(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
+
+        fun parse(tag: Array<String>): AmountTag? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            val amount = tag[1].toLongOrNull()
+            return if (tag.has(2) && tag[2].isNotBlank()) {
+                AmountTag(amount, tag[2])
+            } else if (amount != null) {
+                AmountTag(amount, null)
+            } else {
+                null
+            }
+        }
+
+        fun assemble(amount: Long) = arrayOf(TAG_NAME, amount.toString())
+
+        fun assemble(
+            amount: Long,
+            lnInvoice: String,
+        ) = arrayOf(TAG_NAME, amount.toString(), lnInvoice)
+    }
 }

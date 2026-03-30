@@ -18,22 +18,36 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.types
+package com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.tags
 
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.nip90Dvms.status.NIP90StatusEvent
+import androidx.compose.runtime.Stable
+import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.utils.ensure
 
-@Composable
-fun RenderNIP90Status(
-    note: Note,
-    accountViewModel: AccountViewModel,
-    nav: INav,
+@Stable
+class ParamTag(
+    val key: String,
+    val value: String,
 ) {
-    val noteEvent = note.event as? NIP90StatusEvent ?: return
+    companion object {
+        const val TAG_NAME = "param"
 
-    Text(text = noteEvent.content)
+        fun isTag(tag: Array<String>) = tag.has(2) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
+
+        fun parse(tag: Array<String>): ParamTag? {
+            ensure(tag.has(2)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
+            return ParamTag(tag[1], tag[2])
+        }
+
+        fun assemble(
+            key: String,
+            value: String,
+        ) = arrayOf(TAG_NAME, key, value)
+
+        fun assemble(param: ParamTag) = assemble(param.key, param.value)
+
+        fun assemble(params: List<ParamTag>) = params.map { assemble(it) }
+    }
 }

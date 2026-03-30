@@ -18,22 +18,29 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.types
+package com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.tags
 
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.nip90Dvms.status.NIP90StatusEvent
+import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.utils.ensure
 
-@Composable
-fun RenderNIP90Status(
-    note: Note,
-    accountViewModel: AccountViewModel,
-    nav: INav,
+class RelaysTag(
+    val relays: List<NormalizedRelayUrl>,
 ) {
-    val noteEvent = note.event as? NIP90StatusEvent ?: return
+    companion object {
+        const val TAG_NAME = "relays"
 
-    Text(text = noteEvent.content)
+        fun isTag(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME
+
+        fun parse(tag: Array<String>): RelaysTag? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            val relays = tag.drop(1).mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }
+            ensure(relays.isNotEmpty()) { return null }
+            return RelaysTag(relays)
+        }
+
+        fun assemble(relays: Set<NormalizedRelayUrl>) = arrayOf(TAG_NAME) + relays.map { it.url }.toTypedArray()
+    }
 }

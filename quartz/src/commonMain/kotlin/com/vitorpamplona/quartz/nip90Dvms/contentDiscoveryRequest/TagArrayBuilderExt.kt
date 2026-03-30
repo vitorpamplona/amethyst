@@ -18,22 +18,19 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.types
+package com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest
 
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.nip90Dvms.status.NIP90StatusEvent
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.tags.ParamTag
+import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.tags.RelaysTag
 
-@Composable
-fun RenderNIP90Status(
-    note: Note,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    val noteEvent = note.event as? NIP90StatusEvent ?: return
+fun TagArrayBuilder<NIP90ContentDiscoveryRequestEvent>.dvmPubKey(pubKey: HexKey) = addUnique(arrayOf("p", pubKey))
 
-    Text(text = noteEvent.content)
-}
+fun TagArrayBuilder<NIP90ContentDiscoveryRequestEvent>.relays(relays: Set<NormalizedRelayUrl>) = addUnique(RelaysTag.assemble(relays))
+
+fun TagArrayBuilder<NIP90ContentDiscoveryRequestEvent>.param(
+    key: String,
+    value: String,
+) = add(ParamTag.assemble(key, value))

@@ -18,37 +18,14 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip90Dvms
+package com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest
 
-import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip31Alts.AltTag
-import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.tags.ParamTag
+import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.tags.RelaysTag
 
-@Immutable
-class NIP90UserDiscoveryRequestEvent(
-    id: HexKey,
-    pubKey: HexKey,
-    createdAt: Long,
-    tags: Array<Array<String>>,
-    content: String,
-    sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
-    companion object {
-        const val KIND = 5301
-        const val ALT = "NIP90 Content Discovery request"
+fun TagArray.relays() = firstNotNullOfOrNull(RelaysTag::parse)
 
-        suspend fun create(
-            signer: NostrSigner,
-            createdAt: Long = TimeUtils.now(),
-        ): NIP90UserDiscoveryRequestEvent {
-            val tags =
-                arrayOf(
-                    AltTag.assemble(ALT),
-                )
-            return signer.sign(createdAt, KIND, tags, "")
-        }
-    }
-}
+fun TagArray.params() = mapNotNull(ParamTag::parse)
+
+fun TagArray.param(key: String) = params().firstOrNull { it.key == key }
