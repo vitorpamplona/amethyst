@@ -18,37 +18,30 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip89AppHandlers.definition.tags
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip88PollApps
 
-import com.vitorpamplona.quartz.nip01Core.core.Tag
-import com.vitorpamplona.quartz.nip01Core.core.has
-import com.vitorpamplona.quartz.nip89AppHandlers.PlatformType
-import com.vitorpamplona.quartz.utils.arrayOfNotNull
+import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip90DVMs.DiscoverNIP89FeedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
+import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 
-class PlatformLinkTag(
-    val platform: String,
-    val uri: String,
-    val entityType: String?,
-) {
-    fun toTagArray() = assemble(platform, uri, entityType)
-
-    companion object {
-        fun match(tag: Tag): Boolean =
-            if (tag.has(2)) {
-                tag[0] == PlatformType.IOS.code || tag[0] == PlatformType.WEB.code || tag[0] == PlatformType.ANDROID.code
-            } else {
-                false
-            }
-
-        fun parse(tag: Tag): PlatformLinkTag? {
-            if (match(tag)) return PlatformLinkTag(tag[0], tag[1], tag.getOrNull(2))
-            return null
-        }
-
-        fun assemble(
-            platform: String,
-            uri: String,
-            entityType: String?,
-        ) = arrayOfNotNull(platform, uri, entityType)
+/**
+ * NIP-89 discovery feed filter for poll-supporting applications.
+ *
+ * Discovers [AppDefinitionEvent]s that declare support for [PollEvent.KIND] (1068),
+ * linking NIP-88 polls to NIP-89 app handler discovery.
+ */
+class DiscoverNIP89PollAppsFeedFilter(
+    account: Account,
+) : DiscoverNIP89FeedFilter(account, PollEvent.KIND) {
+    override fun acceptApp(
+        noteEvent: AppDefinitionEvent,
+        relays: List<NormalizedRelayUrl>,
+    ): Boolean {
+        val filterParams = buildFilterParams(account)
+        return filterParams.match(noteEvent, relays) &&
+            noteEvent.includeKind(targetKind) &&
+            noteEvent.createdAt > lastAnnounced
     }
 }
