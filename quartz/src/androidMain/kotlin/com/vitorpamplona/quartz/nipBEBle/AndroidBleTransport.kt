@@ -58,8 +58,8 @@ import java.util.UUID
  *
  * Usage:
  * ```kotlin
- * val transport = AndroidBleTransport(context)
- * val mesh = BleMeshManager(transport, myListener)
+ * val mesh = BleNostrMesh(AndroidBleTransport(context))
+ * mesh.onEvent { event, peer -> saveEvent(event) }
  * mesh.start()
  * ```
  */
@@ -67,7 +67,8 @@ import java.util.UUID
 class AndroidBleTransport(
     private val context: Context,
     override val deviceUuid: String = UUID.randomUUID().toString().uppercase(),
-) : BleTransport {
+) : BleTransport,
+    AndroidBleTransportContract {
     private val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
     private val bluetoothAdapter: BluetoothAdapter? = bluetoothManager.adapter
 
@@ -88,6 +89,10 @@ class AndroidBleTransport(
      * Sets the listener for transport events. Must be called before [startAdvertising] or [startScanning].
      */
     fun setListener(listener: BleTransportListener) {
+        this.listener = listener
+    }
+
+    override fun setTransportListener(listener: BleTransportListener) {
         this.listener = listener
     }
 
