@@ -29,7 +29,6 @@ import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.model.DesktopDmRelayState
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -219,7 +218,7 @@ class DesktopRelaySubscriptionsCoordinator(
                 filters =
                     indexRelays.associateWith {
                         listOf(
-                            com.vitorpamplona.quartz.nip01Core.relay.filters.Filter(
+                            Filter(
                                 kinds = listOf(com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent.KIND),
                                 authors = listOf(pubkey),
                                 limit = 1,
