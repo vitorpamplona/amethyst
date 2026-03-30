@@ -1830,4 +1830,27 @@ anz der Bedingungen ist erforderlich</string>
     <string name="relay_management_relay_icon_url">Relay-Symbol-URL</string>
     <string name="relay_management_button">Relay verwalten</string>
     <string name="manage">Verwalten</string>
+    <string name="nsite_root_site">Stammseite</string>
+    <string name="nsite_servers">Server:</string>
+    <string name="nsite_source">Quelle:</string>
+    <string name="nsite_title">Statische Website: %1$s</string>
+    <string name="relay_discovery_accepted_kinds">Akzeptierte Arten</string>
+    <string name="relay_discovery_geohash">Standort</string>
+    <string name="relay_join_request">Relay-Beitrittsanfrage</string>
+    <string name="relay_leave_request">Relay-Austrittsanfrage</string>
+    <string name="relay_member_added">Mitglied zum Relay hinzugefügt</string>
+    <string name="relay_member_removed">Mitglied aus Relay entfernt</string>
+    <string name="relay_members">Mitglieder</string>
+    <string name="relay_members_added">%1$d Mitglieder zum Relay hinzugefügt</string>
+    <string name="relay_members_count">%1$d Mitglieder</string>
+    <string name="relay_members_empty">Keine Mitglieder gefunden</string>
+    <string name="relay_members_join_sent">Beitrittsanfrage gesendet</string>
+    <string name="relay_members_leave_sent">Austrittsanfrage gesendet</string>
+    <string name="relay_members_loading">Mitglieder werden geladen…</string>
+    <string name="relay_members_removed">%1$d Mitglieder aus Relay entfernt</string>
+    <string name="relay_members_request_join">Beitritt anfragen</string>
+    <string name="relay_members_request_leave">Austritt anfragen</string>
+    <string name="relay_members_title">Mitglieder von %1$s</string>
+    <string name="relay_members_you_are_member">Du bist Mitglied</string>
+    <string name="relay_membership_list">Relay-Mitgliederliste</string>
 </resources>

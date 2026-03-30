@@ -1825,4 +1825,27 @@
     <string name="relay_management_relay_icon_url">URL ikony relé</string>
     <string name="relay_management_button">Spravovat relé</string>
     <string name="manage">Spravovat</string>
+    <string name="nsite_root_site">Kořenový web</string>
+    <string name="nsite_servers">Servery:</string>
+    <string name="nsite_source">Zdroj:</string>
+    <string name="nsite_title">Statický web: %1$s</string>
+    <string name="relay_discovery_accepted_kinds">Přijímané druhy</string>
+    <string name="relay_discovery_geohash">Poloha</string>
+    <string name="relay_join_request">Žádost o připojení k relé</string>
+    <string name="relay_leave_request">Žádost o opuštění relé</string>
+    <string name="relay_member_added">Člen přidán do relé</string>
+    <string name="relay_member_removed">Člen odebrán z relé</string>
+    <string name="relay_members">Členové</string>
+    <string name="relay_members_added">%1$d členů přidáno do relé</string>
+    <string name="relay_members_count">%1$d členů</string>
+    <string name="relay_members_empty">Žádní členové nenalezeni</string>
+    <string name="relay_members_join_sent">Žádost o připojení odeslána</string>
+    <string name="relay_members_leave_sent">Žádost o opuštění odeslána</string>
+    <string name="relay_members_loading">Načítání členů…</string>
+    <string name="relay_members_removed">%1$d členů odebráno z relé</string>
+    <string name="relay_members_request_join">Požádat o připojení</string>
+    <string name="relay_members_request_leave">Požádat o opuštění</string>
+    <string name="relay_members_title">Členové %1$s</string>
+    <string name="relay_members_you_are_member">Jste členem</string>
+    <string name="relay_membership_list">Seznam členů relé</string>
 </resources>
