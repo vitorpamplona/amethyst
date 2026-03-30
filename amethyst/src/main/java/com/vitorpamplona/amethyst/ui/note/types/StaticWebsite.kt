@@ -21,10 +21,7 @@
 package com.vitorpamplona.amethyst.ui.note.types
 
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -51,7 +48,6 @@ import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
-import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 
 @Composable
 fun RenderRootSiteEvent(
@@ -66,7 +62,6 @@ fun RenderRootSiteEvent(
         description = event.description(),
         source = event.source(),
         servers = event.servers(),
-        paths = event.paths(),
         identifier = null,
     )
 }
@@ -84,19 +79,16 @@ fun RenderNamedSiteEvent(
         description = event.description(),
         source = event.source(),
         servers = event.servers(),
-        paths = event.paths(),
         identifier = event.identifier(),
     )
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun RenderStaticWebsite(
     title: String?,
     description: String?,
     source: String?,
     servers: List<String>,
-    paths: List<PathTag>,
     identifier: String?,
 ) {
     Row(
@@ -164,41 +156,6 @@ private fun RenderStaticWebsite(
                                 urlText = server.removePrefix("https://").removePrefix("http://"),
                             )
                         }
-                    }
-                }
-            }
-
-            if (paths.isNotEmpty()) {
-                Row(Modifier.fillMaxWidth().padding(top = Size5dp)) {
-                    Text(
-                        text = stringRes(id = R.string.nsite_files, paths.size),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-
-                FlowRow(
-                    modifier = Modifier.fillMaxWidth().padding(top = Size5dp),
-                    horizontalArrangement = Arrangement.spacedBy(Size5dp),
-                    verticalArrangement = Arrangement.spacedBy(Size5dp),
-                ) {
-                    paths.take(10).forEach { path ->
-                        Text(
-                            text = path.path,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                    if (paths.size > 10) {
-                        Text(
-                            text = stringRes(id = R.string.nsite_more_files, paths.size - 10),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                        )
                     }
                 }
             }

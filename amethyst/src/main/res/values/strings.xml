@@ -1492,9 +1492,7 @@
     <string name="nsite_root_site">Root Site</string>
     <string name="nsite_source">Source:</string>
     <string name="nsite_servers">Servers:</string>
-    <string name="nsite_files">%1$d files</string>
-    <string name="nsite_more_files">+%1$d more</string>
-    <string name="existed_since">OTS: %1$s</string>
+<string name="existed_since">OTS: %1$s</string>
 
     <string name="ots_info_title">Timestamp Proof</string>
     <string name="ots_info_description">There\'s proof this post was signed sometime before %1$s. The proof was stamped in the Bitcoin blockchain at that date and time.</string>
