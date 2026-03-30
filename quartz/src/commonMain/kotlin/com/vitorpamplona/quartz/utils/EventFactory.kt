@@ -71,6 +71,19 @@ import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMuteUserEvent
 import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.SupportedRolesEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.CreateGroupEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.CreateInviteEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.DeleteEventEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.DeleteGroupEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.EditMetadataEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.PutUserEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.RemoveUserEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.request.JoinRequestEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.request.LeaveRequestEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiPackSelectionEvent
 import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
@@ -251,6 +264,19 @@ class EventFactory {
                 CashuSpendingHistoryEvent.KIND -> CashuSpendingHistoryEvent(id, pubKey, createdAt, tags, content, sig)
                 CashuWalletEvent.KIND -> CashuWalletEvent(id, pubKey, createdAt, tags, content, sig)
                 ChatEvent.KIND -> ChatEvent(id, pubKey, createdAt, tags, content, sig)
+                PutUserEvent.KIND -> PutUserEvent(id, pubKey, createdAt, tags, content, sig)
+                RemoveUserEvent.KIND -> RemoveUserEvent(id, pubKey, createdAt, tags, content, sig)
+                EditMetadataEvent.KIND -> EditMetadataEvent(id, pubKey, createdAt, tags, content, sig)
+                DeleteEventEvent.KIND -> DeleteEventEvent(id, pubKey, createdAt, tags, content, sig)
+                CreateGroupEvent.KIND -> CreateGroupEvent(id, pubKey, createdAt, tags, content, sig)
+                DeleteGroupEvent.KIND -> DeleteGroupEvent(id, pubKey, createdAt, tags, content, sig)
+                CreateInviteEvent.KIND -> CreateInviteEvent(id, pubKey, createdAt, tags, content, sig)
+                JoinRequestEvent.KIND -> JoinRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                LeaveRequestEvent.KIND -> LeaveRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                GroupMetadataEvent.KIND -> GroupMetadataEvent(id, pubKey, createdAt, tags, content, sig)
+                GroupAdminsEvent.KIND -> GroupAdminsEvent(id, pubKey, createdAt, tags, content, sig)
+                GroupMembersEvent.KIND -> GroupMembersEvent(id, pubKey, createdAt, tags, content, sig)
+                SupportedRolesEvent.KIND -> SupportedRolesEvent(id, pubKey, createdAt, tags, content, sig)
                 ChessGameEvent.KIND -> ChessGameEvent(id, pubKey, createdAt, tags, content, sig)
                 CodeSnippetEvent.KIND -> CodeSnippetEvent(id, pubKey, createdAt, tags, content, sig)
                 RelayFeedsListEvent.KIND -> RelayFeedsListEvent(id, pubKey, createdAt, tags, content, sig)
