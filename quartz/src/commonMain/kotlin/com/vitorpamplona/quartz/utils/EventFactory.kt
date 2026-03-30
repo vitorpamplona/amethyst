@@ -186,6 +186,7 @@ import com.vitorpamplona.quartz.nipB0WebBookmarks.WebBookmarkEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
+import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 
 interface EventBuilder {
     fun build(
@@ -239,6 +240,7 @@ class EventFactory {
                 CashuTokenEvent.KIND -> CashuTokenEvent(id, pubKey, createdAt, tags, content, sig)
                 CashuSpendingHistoryEvent.KIND -> CashuSpendingHistoryEvent(id, pubKey, createdAt, tags, content, sig)
                 CashuWalletEvent.KIND -> CashuWalletEvent(id, pubKey, createdAt, tags, content, sig)
+                ChatEvent.KIND -> ChatEvent(id, pubKey, createdAt, tags, content, sig)
                 ChessGameEvent.KIND -> ChessGameEvent(id, pubKey, createdAt, tags, content, sig)
                 CodeSnippetEvent.KIND -> CodeSnippetEvent(id, pubKey, createdAt, tags, content, sig)
                 RelayFeedsListEvent.KIND -> RelayFeedsListEvent(id, pubKey, createdAt, tags, content, sig)

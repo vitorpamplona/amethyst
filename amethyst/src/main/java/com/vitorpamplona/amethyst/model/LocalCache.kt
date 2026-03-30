@@ -217,6 +217,7 @@ import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.nipB0WebBookmarks.WebBookmarkEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
+import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.utils.DualCase
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
@@ -2157,6 +2158,12 @@ object LocalCache : ILocalCache, ICacheProvider {
     ) = consumeRegularEvent(event, relay, wasVerified)
 
     fun consume(
+        event: ChatEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
         event: PollEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
@@ -3236,6 +3243,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is RequestToVanishEvent -> consume(event, relay, wasVerified)
                 is CodeSnippetEvent -> consume(event, relay, wasVerified)
                 is ZapPollEvent -> consume(event, relay, wasVerified)
+                is ChatEvent -> consume(event, relay, wasVerified)
                 is PollEvent -> consume(event, relay, wasVerified)
                 is PollResponseEvent -> consume(event, relay, wasVerified)
                 is RelayDiscoveryEvent -> consume(event, relay, wasVerified)
