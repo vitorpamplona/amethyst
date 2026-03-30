@@ -1282,6 +1282,10 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="git_repository">Git skladišče: %1$s</string>
     <string name="git_web_address">Splet:</string>
     <string name="git_clone_address">Klon:</string>
+    <string name="nsite_title">Statična spletna stran: %1$s</string>
+    <string name="nsite_root_site">Izhodiščno spletišče</string>
+    <string name="nsite_source">Vir:</string>
+    <string name="nsite_servers">Strežniki:</string>
     <string name="existed_since">OTS: %1$s</string>
     <string name="ots_info_title">Dokaz časovnega žiga</string>
     <string name="ots_info_description">Obstaja dokaz, da je bil ta zapisek podpisan pred %1$s. Dokaz je bil ožigosan v Bitcoin verigi blokov na ta datum in čas.</string>
