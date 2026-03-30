@@ -309,7 +309,7 @@ class Url(
     private fun dropLastSegment(output: StringBuilder) {
         val lastSlash = output.lastIndexOf('/')
         if (lastSlash >= 0) {
-            output.delete(lastSlash, output.length)
+            output.deleteRange(lastSlash, output.length)
         } else {
             output.clear()
         }
