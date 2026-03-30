@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.note.creators.previews
 
 import androidx.compose.runtime.Stable
-import androidx.compose.ui.text.input.TextFieldValue
 import com.vitorpamplona.amethyst.service.CachedUrlParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -33,22 +32,22 @@ import kotlinx.coroutines.flow.map
 
 @Stable
 class PreviewState {
-    var source = MutableStateFlow(TextFieldValue(""))
+    var source = MutableStateFlow("")
 
     @OptIn(FlowPreview::class)
     val results =
         source
             .debounce(500)
             .map {
-                CachedUrlParser.parseValidUrls(it.text)
+                CachedUrlParser.parseValidUrls(it)
             }.distinctUntilChanged()
             .flowOn(Dispatchers.IO)
 
     fun reset() {
-        source.tryEmit(TextFieldValue(""))
+        source.tryEmit("")
     }
 
-    fun update(text: TextFieldValue) {
+    fun update(text: String) {
         source.tryEmit(text)
     }
 }

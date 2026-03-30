@@ -38,7 +38,7 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
-import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
+import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -114,8 +114,8 @@ fun EditFieldRow(
         }
 
         ThinPaddingTextField(
-            value = channelScreenModel.message,
-            onValueChange = { channelScreenModel.updateMessage(it) },
+            state = channelScreenModel.message,
+            onTextChanged = { channelScreenModel.onMessageChanged() },
             keyboardOptions =
                 KeyboardOptions.Default.copy(
                     capitalization = KeyboardCapitalization.Sentences,
@@ -151,7 +151,7 @@ fun EditFieldRow(
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent,
                 ),
-            visualTransformation = UrlUserTagTransformation(MaterialTheme.colorScheme.primary),
+            outputTransformation = UrlUserTagOutputTransformation(MaterialTheme.colorScheme.primary),
         )
     }
 }
