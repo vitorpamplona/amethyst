@@ -50,7 +50,7 @@ class UrlUserTagOutputTransformation(
                 replace(match.range.first, match.range.last + 1, displayName)
 
                 // Apply color styling to the replaced display name
-                addAnnotation(
+                addStyle(
                     SpanStyle(color = color, textDecoration = TextDecoration.None),
                     match.range.first,
                     match.range.first + displayName.length,
@@ -71,7 +71,7 @@ private fun TextFieldBuffer.highlightUrls(color: Color) {
 
     val matcher = urlPattern.matcher(text)
     while (matcher.find()) {
-        addAnnotation(
+        addStyle(
             SpanStyle(color = color, textDecoration = TextDecoration.None),
             matcher.start(),
             matcher.end(),
