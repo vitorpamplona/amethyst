@@ -323,6 +323,13 @@ private fun NewPostScreenBody(
                         MessageField(
                             R.string.what_s_on_your_mind,
                             postViewModel,
+                            onContentReceived = { uri, mimeType ->
+                                postViewModel.selectImage(
+                                    persistentListOf(
+                                        SelectedMedia(uri, mimeType),
+                                    ),
+                                )
+                            },
                         )
                     }
                 }

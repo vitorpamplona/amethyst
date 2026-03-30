@@ -20,6 +20,14 @@
  */
 package com.vitorpamplona.amethyst.ui.components
 
+import android.net.Uri
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.content.MediaType
+import androidx.compose.foundation.content.ReceiveContentListener
+import androidx.compose.foundation.content.TransferableContent
+import androidx.compose.foundation.content.consume
+import androidx.compose.foundation.content.contentReceiver
+import androidx.compose.foundation.content.hasMediaType
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.PaddingValues
@@ -58,12 +66,13 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 // The only change is the contentPadding below
 
 // New TextFieldState-based overload for GIF keyboard support
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun ThinPaddingTextField(
     state: TextFieldState,
     modifier: Modifier = Modifier,
     onTextChanged: (() -> Unit)? = null,
+    onContentReceived: ((Uri, String?) -> Unit)? = null,
     enabled: Boolean = true,
     readOnly: Boolean = false,
     textStyle: TextStyle = LocalTextStyle.current,
@@ -131,11 +140,41 @@ fun ThinPaddingTextField(
             TextFieldLineLimits.MultiLine(minLines, maxLines)
         }
 
+    val contentModifier =
+        if (onContentReceived != null) {
+            modifier.contentReceiver(
+                object : ReceiveContentListener {
+                    override fun onReceive(transferableContent: TransferableContent): TransferableContent? {
+                        if (!transferableContent.hasMediaType(MediaType.Image)) {
+                            return transferableContent
+                        }
+                        val remaining =
+                            transferableContent.consume { item ->
+                                val uri = item.uri
+                                if (uri != null) {
+                                    onContentReceived(
+                                        uri,
+                                        transferableContent.clipEntry.clipData.description
+                                            .getMimeType(0),
+                                    )
+                                    true
+                                } else {
+                                    false
+                                }
+                            }
+                        return remaining
+                    }
+                },
+            )
+        } else {
+            modifier
+        }
+
     CompositionLocalProvider(LocalTextSelectionColors provides colors.textSelectionColors) {
         BasicTextField(
             state = state,
             modifier =
-                modifier
+                contentModifier
                     .defaultMinSize(
                         minWidth = TextFieldDefaults.MinWidth,
                         minHeight = 36.dp,

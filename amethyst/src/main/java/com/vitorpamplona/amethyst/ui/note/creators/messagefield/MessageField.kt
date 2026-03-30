@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.note.creators.messagefield
 
+import android.net.Uri
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.LocalTextStyle
@@ -51,6 +52,7 @@ fun MessageField(
     placeholder: Int,
     viewModel: IMessageField,
     requestFocus: Boolean = true,
+    onContentReceived: ((Uri, String?) -> Unit)? = null,
 ) {
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -67,6 +69,7 @@ fun MessageField(
     ThinPaddingTextField(
         state = viewModel.message,
         onTextChanged = viewModel::onMessageChanged,
+        onContentReceived = onContentReceived,
         keyboardOptions =
             KeyboardOptions.Default.copy(
                 capitalization = KeyboardCapitalization.Sentences,
