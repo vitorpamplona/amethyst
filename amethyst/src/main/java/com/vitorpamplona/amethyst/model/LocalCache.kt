@@ -252,9 +252,43 @@ import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendationEvent
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.NIP90ContentDiscoveryRequestEvent
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.NIP90ContentDiscoveryResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.contentSearch.NIP90ContentSearchRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.contentSearch.NIP90ContentSearchResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.eventCount.NIP90EventCountRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.eventCount.NIP90EventCountResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.eventPowDelegation.NIP90EventPowDelegationRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.eventPowDelegation.NIP90EventPowDelegationResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.eventPublishSchedule.NIP90EventPublishScheduleRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.eventPublishSchedule.NIP90EventPublishScheduleResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.eventTimestamping.NIP90EventTimestampingRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.eventTimestamping.NIP90EventTimestampingResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.imageGeneration.NIP90ImageGenerationRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.imageGeneration.NIP90ImageGenerationResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.imageToVideo.NIP90ImageToVideoRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.imageToVideo.NIP90ImageToVideoResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.malwareScanning.NIP90MalwareScanRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.malwareScanning.NIP90MalwareScanResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.opReturn.NIP90OpReturnRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.opReturn.NIP90OpReturnResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.peopleSearch.NIP90PeopleSearchRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.peopleSearch.NIP90PeopleSearchResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.status.NIP90StatusEvent
+import com.vitorpamplona.quartz.nip90Dvms.summarization.NIP90SummarizationRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.summarization.NIP90SummarizationResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.textExtraction.NIP90TextExtractionRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.textExtraction.NIP90TextExtractionResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.textGeneration.NIP90TextGenerationRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.textGeneration.NIP90TextGenerationResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.textToSpeech.NIP90TextToSpeechRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.textToSpeech.NIP90TextToSpeechResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.translation.NIP90TranslationRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.translation.NIP90TranslationResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.userDiscoveryRequest.NIP90UserDiscoveryRequestEvent
 import com.vitorpamplona.quartz.nip90Dvms.userDiscoveryResponse.NIP90UserDiscoveryResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.videoConversion.NIP90VideoConversionRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.videoConversion.NIP90VideoConversionResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.videoTranslation.NIP90VideoTranslationRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.videoTranslation.NIP90VideoTranslationResponseEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
 import com.vitorpamplona.quartz.nip96FileStorage.config.FileServersEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
@@ -798,6 +832,210 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     fun consume(
         event: NIP90UserDiscoveryRequestEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: NIP90TextExtractionRequestEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: NIP90TextExtractionResponseEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: NIP90SummarizationRequestEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: NIP90SummarizationResponseEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: NIP90TranslationRequestEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: NIP90TranslationResponseEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: NIP90TextGenerationRequestEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: NIP90TextGenerationResponseEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: NIP90ImageGenerationRequestEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: NIP90ImageGenerationResponseEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: NIP90VideoConversionRequestEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: NIP90VideoConversionResponseEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: NIP90VideoTranslationRequestEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: NIP90VideoTranslationResponseEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: NIP90ImageToVideoRequestEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: NIP90ImageToVideoResponseEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: NIP90TextToSpeechRequestEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: NIP90TextToSpeechResponseEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: NIP90ContentSearchRequestEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: NIP90ContentSearchResponseEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: NIP90PeopleSearchRequestEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: NIP90PeopleSearchResponseEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: NIP90EventCountRequestEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: NIP90EventCountResponseEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: NIP90MalwareScanRequestEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: NIP90MalwareScanResponseEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: NIP90EventTimestampingRequestEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: NIP90EventTimestampingResponseEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: NIP90OpReturnRequestEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: NIP90OpReturnResponseEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: NIP90EventPublishScheduleRequestEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: NIP90EventPublishScheduleResponseEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: NIP90EventPowDelegationRequestEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: NIP90EventPowDelegationResponseEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeRegularEvent(event, relay, wasVerified)
@@ -3592,6 +3830,40 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is NIP90ContentDiscoveryRequestEvent -> consume(event, relay, wasVerified)
                 is NIP90UserDiscoveryResponseEvent -> consume(event, relay, wasVerified)
                 is NIP90UserDiscoveryRequestEvent -> consume(event, relay, wasVerified)
+                is NIP90TextExtractionRequestEvent -> consume(event, relay, wasVerified)
+                is NIP90TextExtractionResponseEvent -> consume(event, relay, wasVerified)
+                is NIP90SummarizationRequestEvent -> consume(event, relay, wasVerified)
+                is NIP90SummarizationResponseEvent -> consume(event, relay, wasVerified)
+                is NIP90TranslationRequestEvent -> consume(event, relay, wasVerified)
+                is NIP90TranslationResponseEvent -> consume(event, relay, wasVerified)
+                is NIP90TextGenerationRequestEvent -> consume(event, relay, wasVerified)
+                is NIP90TextGenerationResponseEvent -> consume(event, relay, wasVerified)
+                is NIP90ImageGenerationRequestEvent -> consume(event, relay, wasVerified)
+                is NIP90ImageGenerationResponseEvent -> consume(event, relay, wasVerified)
+                is NIP90VideoConversionRequestEvent -> consume(event, relay, wasVerified)
+                is NIP90VideoConversionResponseEvent -> consume(event, relay, wasVerified)
+                is NIP90VideoTranslationRequestEvent -> consume(event, relay, wasVerified)
+                is NIP90VideoTranslationResponseEvent -> consume(event, relay, wasVerified)
+                is NIP90ImageToVideoRequestEvent -> consume(event, relay, wasVerified)
+                is NIP90ImageToVideoResponseEvent -> consume(event, relay, wasVerified)
+                is NIP90TextToSpeechRequestEvent -> consume(event, relay, wasVerified)
+                is NIP90TextToSpeechResponseEvent -> consume(event, relay, wasVerified)
+                is NIP90ContentSearchRequestEvent -> consume(event, relay, wasVerified)
+                is NIP90ContentSearchResponseEvent -> consume(event, relay, wasVerified)
+                is NIP90PeopleSearchRequestEvent -> consume(event, relay, wasVerified)
+                is NIP90PeopleSearchResponseEvent -> consume(event, relay, wasVerified)
+                is NIP90EventCountRequestEvent -> consume(event, relay, wasVerified)
+                is NIP90EventCountResponseEvent -> consume(event, relay, wasVerified)
+                is NIP90MalwareScanRequestEvent -> consume(event, relay, wasVerified)
+                is NIP90MalwareScanResponseEvent -> consume(event, relay, wasVerified)
+                is NIP90EventTimestampingRequestEvent -> consume(event, relay, wasVerified)
+                is NIP90EventTimestampingResponseEvent -> consume(event, relay, wasVerified)
+                is NIP90OpReturnRequestEvent -> consume(event, relay, wasVerified)
+                is NIP90OpReturnResponseEvent -> consume(event, relay, wasVerified)
+                is NIP90EventPublishScheduleRequestEvent -> consume(event, relay, wasVerified)
+                is NIP90EventPublishScheduleResponseEvent -> consume(event, relay, wasVerified)
+                is NIP90EventPowDelegationRequestEvent -> consume(event, relay, wasVerified)
+                is NIP90EventPowDelegationResponseEvent -> consume(event, relay, wasVerified)
                 is LnZapPaymentRequestEvent -> consume(event, relay, wasVerified)
                 is LnZapPaymentResponseEvent -> consume(event, relay, wasVerified)
                 is LongTextNoteEvent -> consume(event, relay, wasVerified)
