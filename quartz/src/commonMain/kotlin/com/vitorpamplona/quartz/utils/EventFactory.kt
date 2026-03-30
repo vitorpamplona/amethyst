@@ -192,9 +192,43 @@ import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendationEvent
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.NIP90ContentDiscoveryRequestEvent
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.NIP90ContentDiscoveryResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.contentSearch.NIP90ContentSearchRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.contentSearch.NIP90ContentSearchResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.eventCount.NIP90EventCountRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.eventCount.NIP90EventCountResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.eventPowDelegation.NIP90EventPowDelegationRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.eventPowDelegation.NIP90EventPowDelegationResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.eventPublishSchedule.NIP90EventPublishScheduleRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.eventPublishSchedule.NIP90EventPublishScheduleResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.eventTimestamping.NIP90EventTimestampingRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.eventTimestamping.NIP90EventTimestampingResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.imageGeneration.NIP90ImageGenerationRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.imageGeneration.NIP90ImageGenerationResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.imageToVideo.NIP90ImageToVideoRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.imageToVideo.NIP90ImageToVideoResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.malwareScanning.NIP90MalwareScanRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.malwareScanning.NIP90MalwareScanResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.opReturn.NIP90OpReturnRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.opReturn.NIP90OpReturnResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.peopleSearch.NIP90PeopleSearchRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.peopleSearch.NIP90PeopleSearchResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.status.NIP90StatusEvent
+import com.vitorpamplona.quartz.nip90Dvms.summarization.NIP90SummarizationRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.summarization.NIP90SummarizationResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.textExtraction.NIP90TextExtractionRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.textExtraction.NIP90TextExtractionResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.textGeneration.NIP90TextGenerationRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.textGeneration.NIP90TextGenerationResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.textToSpeech.NIP90TextToSpeechRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.textToSpeech.NIP90TextToSpeechResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.translation.NIP90TranslationRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.translation.NIP90TranslationResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.userDiscoveryRequest.NIP90UserDiscoveryRequestEvent
 import com.vitorpamplona.quartz.nip90Dvms.userDiscoveryResponse.NIP90UserDiscoveryResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.videoConversion.NIP90VideoConversionRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.videoConversion.NIP90VideoConversionResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.videoTranslation.NIP90VideoTranslationRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.videoTranslation.NIP90VideoTranslationResponseEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
 import com.vitorpamplona.quartz.nip96FileStorage.config.FileServersEvent
 import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
@@ -359,10 +393,44 @@ class EventFactory {
                 NutzapRedemptionEvent.KIND -> NutzapRedemptionEvent(id, pubKey, createdAt, tags, content, sig)
                 NostrConnectEvent.KIND -> NostrConnectEvent(id, pubKey, createdAt, tags, content, sig)
                 NIP90StatusEvent.KIND -> NIP90StatusEvent(id, pubKey, createdAt, tags, content, sig)
+                NIP90TextExtractionRequestEvent.KIND -> NIP90TextExtractionRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                NIP90TextExtractionResponseEvent.KIND -> NIP90TextExtractionResponseEvent(id, pubKey, createdAt, tags, content, sig)
+                NIP90SummarizationRequestEvent.KIND -> NIP90SummarizationRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                NIP90SummarizationResponseEvent.KIND -> NIP90SummarizationResponseEvent(id, pubKey, createdAt, tags, content, sig)
+                NIP90TranslationRequestEvent.KIND -> NIP90TranslationRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                NIP90TranslationResponseEvent.KIND -> NIP90TranslationResponseEvent(id, pubKey, createdAt, tags, content, sig)
+                NIP90TextGenerationRequestEvent.KIND -> NIP90TextGenerationRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                NIP90TextGenerationResponseEvent.KIND -> NIP90TextGenerationResponseEvent(id, pubKey, createdAt, tags, content, sig)
+                NIP90ImageGenerationRequestEvent.KIND -> NIP90ImageGenerationRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                NIP90ImageGenerationResponseEvent.KIND -> NIP90ImageGenerationResponseEvent(id, pubKey, createdAt, tags, content, sig)
+                NIP90VideoConversionRequestEvent.KIND -> NIP90VideoConversionRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                NIP90VideoConversionResponseEvent.KIND -> NIP90VideoConversionResponseEvent(id, pubKey, createdAt, tags, content, sig)
+                NIP90VideoTranslationRequestEvent.KIND -> NIP90VideoTranslationRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                NIP90VideoTranslationResponseEvent.KIND -> NIP90VideoTranslationResponseEvent(id, pubKey, createdAt, tags, content, sig)
+                NIP90ImageToVideoRequestEvent.KIND -> NIP90ImageToVideoRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                NIP90ImageToVideoResponseEvent.KIND -> NIP90ImageToVideoResponseEvent(id, pubKey, createdAt, tags, content, sig)
+                NIP90TextToSpeechRequestEvent.KIND -> NIP90TextToSpeechRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                NIP90TextToSpeechResponseEvent.KIND -> NIP90TextToSpeechResponseEvent(id, pubKey, createdAt, tags, content, sig)
                 NIP90ContentDiscoveryRequestEvent.KIND -> NIP90ContentDiscoveryRequestEvent(id, pubKey, createdAt, tags, content, sig)
                 NIP90ContentDiscoveryResponseEvent.KIND -> NIP90ContentDiscoveryResponseEvent(id, pubKey, createdAt, tags, content, sig)
                 NIP90UserDiscoveryRequestEvent.KIND -> NIP90UserDiscoveryRequestEvent(id, pubKey, createdAt, tags, content, sig)
                 NIP90UserDiscoveryResponseEvent.KIND -> NIP90UserDiscoveryResponseEvent(id, pubKey, createdAt, tags, content, sig)
+                NIP90ContentSearchRequestEvent.KIND -> NIP90ContentSearchRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                NIP90ContentSearchResponseEvent.KIND -> NIP90ContentSearchResponseEvent(id, pubKey, createdAt, tags, content, sig)
+                NIP90PeopleSearchRequestEvent.KIND -> NIP90PeopleSearchRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                NIP90PeopleSearchResponseEvent.KIND -> NIP90PeopleSearchResponseEvent(id, pubKey, createdAt, tags, content, sig)
+                NIP90EventCountRequestEvent.KIND -> NIP90EventCountRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                NIP90EventCountResponseEvent.KIND -> NIP90EventCountResponseEvent(id, pubKey, createdAt, tags, content, sig)
+                NIP90MalwareScanRequestEvent.KIND -> NIP90MalwareScanRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                NIP90MalwareScanResponseEvent.KIND -> NIP90MalwareScanResponseEvent(id, pubKey, createdAt, tags, content, sig)
+                NIP90EventTimestampingRequestEvent.KIND -> NIP90EventTimestampingRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                NIP90EventTimestampingResponseEvent.KIND -> NIP90EventTimestampingResponseEvent(id, pubKey, createdAt, tags, content, sig)
+                NIP90OpReturnRequestEvent.KIND -> NIP90OpReturnRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                NIP90OpReturnResponseEvent.KIND -> NIP90OpReturnResponseEvent(id, pubKey, createdAt, tags, content, sig)
+                NIP90EventPublishScheduleRequestEvent.KIND -> NIP90EventPublishScheduleRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                NIP90EventPublishScheduleResponseEvent.KIND -> NIP90EventPublishScheduleResponseEvent(id, pubKey, createdAt, tags, content, sig)
+                NIP90EventPowDelegationRequestEvent.KIND -> NIP90EventPowDelegationRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                NIP90EventPowDelegationResponseEvent.KIND -> NIP90EventPowDelegationResponseEvent(id, pubKey, createdAt, tags, content, sig)
                 OtsEvent.KIND -> OtsEvent(id, pubKey, createdAt, tags, content, sig)
                 PaymentTargetsEvent.KIND -> PaymentTargetsEvent(id, pubKey, createdAt, tags, content, sig)
                 PeopleListEvent.KIND -> PeopleListEvent(id, pubKey, createdAt, tags, content, sig)

@@ -55,7 +55,7 @@ class NIP90ContentDiscoveryResponseEvent(
         try {
             events =
                 OptimizedJsonMapper.fromJsonToTagArray(content).mapNotNull {
-                    if (it.size > 1 && it[0] == "e") {
+                    if (it.size > 1 && (it[0] == "e" || it[0] == "a")) {
                         it[1]
                     } else {
                         null

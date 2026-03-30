@@ -18,44 +18,30 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip90Dvms.userDiscoveryRequest
+package com.vitorpamplona.quartz.nip90Dvms.tags
 
-import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip31Alts.alt
-import com.vitorpamplona.quartz.nip90Dvms.tags.InputTag
-import com.vitorpamplona.quartz.nip90Dvms.tags.dvmParam
-import com.vitorpamplona.quartz.nip90Dvms.tags.inputs
-import com.vitorpamplona.quartz.utils.TimeUtils
 
-@Immutable
-class NIP90UserDiscoveryRequestEvent(
-    id: HexKey,
-    pubKey: HexKey,
-    createdAt: Long,
-    tags: Array<Array<String>>,
-    content: String,
-    sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
-    fun inputs(): List<InputTag> = tags.inputs()
+fun <T : Event> TagArrayBuilder<T>.inputUrl(url: String) = add(InputTag.assembleUrl(url))
 
-    fun dvmPubKey(): HexKey? = tags.firstOrNull { it.size >= 2 && it[0] == "p" }?.get(1)
+fun <T : Event> TagArrayBuilder<T>.inputText(text: String) = add(InputTag.assembleText(text))
 
-    fun user(): String? = tags.dvmParam("user")
+fun <T : Event> TagArrayBuilder<T>.inputEvent(eventId: HexKey) = add(InputTag.assembleEvent(eventId))
 
-    companion object {
-        const val KIND = 5301
-        const val ALT = "NIP90 User Discovery request"
+fun <T : Event> TagArrayBuilder<T>.inputJob(jobId: HexKey) = add(InputTag.assembleJob(jobId))
 
-        fun build(
-            createdAt: Long = TimeUtils.now(),
-            initializer: TagArrayBuilder<NIP90UserDiscoveryRequestEvent>.() -> Unit = {},
-        ) = eventTemplate(KIND, "", createdAt) {
-            alt(ALT)
-            initializer()
-        }
-    }
-}
+fun <T : Event> TagArrayBuilder<T>.inputPrompt(prompt: String) = add(InputTag.assemblePrompt(prompt))
+
+fun <T : Event> TagArrayBuilder<T>.output(mimeType: String) = addUnique(OutputTag.assemble(mimeType))
+
+fun <T : Event> TagArrayBuilder<T>.param(
+    key: String,
+    value: String,
+) = add(arrayOf("param", key, value))
+
+fun <T : Event> TagArrayBuilder<T>.param(
+    key: String,
+    vararg values: String,
+) = add(arrayOf("param", key) + values)

@@ -23,9 +23,11 @@ package com.vitorpamplona.quartz.nip90Dvms.userDiscoveryResponse
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -37,6 +39,35 @@ class NIP90UserDiscoveryResponseEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+    @kotlinx.serialization.Transient
+    @kotlin.jvm.Transient
+    var people: List<HexKey>? = null
+
+    fun innerTags(): List<HexKey> {
+        if (content.isEmpty()) {
+            return listOf()
+        }
+
+        people?.let {
+            return it
+        }
+
+        try {
+            people =
+                OptimizedJsonMapper.fromJsonToTagArray(content).mapNotNull {
+                    if (it.size > 1 && it[0] == "p") {
+                        it[1]
+                    } else {
+                        null
+                    }
+                }
+        } catch (e: Throwable) {
+            Log.w("NIP90UserDiscoveryResponseEvent") { "Error parsing the JSON ${e.message}" }
+        }
+
+        return people ?: listOf()
+    }
+
     companion object {
         const val KIND = 6301
         const val ALT = "NIP90 User Discovery reply"

@@ -18,24 +18,24 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest
+package com.vitorpamplona.quartz.nip90Dvms.peopleSearch
 
 import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip90Dvms.tags.InputTag
 import com.vitorpamplona.quartz.nip90Dvms.tags.dvmParam
+import com.vitorpamplona.quartz.nip90Dvms.tags.firstInputByType
+import com.vitorpamplona.quartz.nip90Dvms.tags.inputText
 import com.vitorpamplona.quartz.nip90Dvms.tags.inputs
+import com.vitorpamplona.quartz.nip90Dvms.tags.param
 import com.vitorpamplona.quartz.utils.TimeUtils
 
-@Stable
 @Immutable
-class NIP90ContentDiscoveryRequestEvent(
+class NIP90PeopleSearchRequestEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
@@ -45,32 +45,23 @@ class NIP90ContentDiscoveryRequestEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
     fun inputs(): List<InputTag> = tags.inputs()
 
-    fun dvmPubKey(): HexKey? = tags.firstOrNull { it.size >= 2 && it[0] == "p" }?.get(1)
+    fun searchQuery(): String? = tags.firstInputByType("text")?.value
 
-    fun relays() = tags.relays()
-
-    fun params() = tags.params()
-
-    fun user(): String? = tags.dvmParam("user")
-
-    fun maxResults(): String? = tags.dvmParam("max_results")
+    fun maxResults(): Int? = tags.dvmParam("max_results")?.toIntOrNull()
 
     companion object {
-        const val KIND = 5300
-        const val ALT = "NIP90 Content Discovery request"
+        const val KIND = 5303
+        const val ALT = "NIP90 People Search request"
 
         fun build(
-            dvmPublicKey: HexKey,
-            forUser: HexKey,
-            relays: Set<NormalizedRelayUrl>,
+            searchQuery: String,
+            maxResults: Int? = null,
             createdAt: Long = TimeUtils.now(),
-            initializer: TagArrayBuilder<NIP90ContentDiscoveryRequestEvent>.() -> Unit = {},
+            initializer: TagArrayBuilder<NIP90PeopleSearchRequestEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
             alt(ALT)
-            dvmPubKey(dvmPublicKey)
-            relays(relays)
-            param("max_results", "200")
-            param("user", forUser)
+            inputText(searchQuery)
+            maxResults?.let { param("max_results", it.toString()) }
             initializer()
         }
     }

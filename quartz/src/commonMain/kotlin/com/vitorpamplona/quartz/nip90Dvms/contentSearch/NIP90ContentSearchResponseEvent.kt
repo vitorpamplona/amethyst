@@ -18,24 +18,20 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest
+package com.vitorpamplona.quartz.nip90Dvms.contentSearch
 
 import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip31Alts.alt
-import com.vitorpamplona.quartz.nip90Dvms.tags.InputTag
-import com.vitorpamplona.quartz.nip90Dvms.tags.dvmParam
-import com.vitorpamplona.quartz.nip90Dvms.tags.inputs
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 
-@Stable
 @Immutable
-class NIP90ContentDiscoveryRequestEvent(
+class NIP90ContentSearchResponseEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
@@ -43,34 +39,44 @@ class NIP90ContentDiscoveryRequestEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
-    fun inputs(): List<InputTag> = tags.inputs()
+    @kotlinx.serialization.Transient
+    @kotlin.jvm.Transient
+    var events: List<HexKey>? = null
 
-    fun dvmPubKey(): HexKey? = tags.firstOrNull { it.size >= 2 && it[0] == "p" }?.get(1)
+    fun innerTags(): List<HexKey> {
+        if (content.isEmpty()) {
+            return listOf()
+        }
 
-    fun relays() = tags.relays()
+        events?.let {
+            return it
+        }
 
-    fun params() = tags.params()
+        try {
+            events =
+                OptimizedJsonMapper.fromJsonToTagArray(content).mapNotNull {
+                    if (it.size > 1 && (it[0] == "e" || it[0] == "a")) {
+                        it[1]
+                    } else {
+                        null
+                    }
+                }
+        } catch (e: Throwable) {
+            Log.w("NIP90ContentSearchResponseEvent") { "Error parsing the JSON ${e.message}" }
+        }
 
-    fun user(): String? = tags.dvmParam("user")
-
-    fun maxResults(): String? = tags.dvmParam("max_results")
+        return events ?: listOf()
+    }
 
     companion object {
-        const val KIND = 5300
-        const val ALT = "NIP90 Content Discovery request"
+        const val KIND = 6302
+        const val ALT = "NIP90 Content Search response"
 
         fun build(
-            dvmPublicKey: HexKey,
-            forUser: HexKey,
-            relays: Set<NormalizedRelayUrl>,
             createdAt: Long = TimeUtils.now(),
-            initializer: TagArrayBuilder<NIP90ContentDiscoveryRequestEvent>.() -> Unit = {},
+            initializer: TagArrayBuilder<NIP90ContentSearchResponseEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
             alt(ALT)
-            dvmPubKey(dvmPublicKey)
-            relays(relays)
-            param("max_results", "200")
-            param("user", forUser)
             initializer()
         }
     }

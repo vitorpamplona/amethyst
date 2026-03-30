@@ -18,24 +18,25 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest
+package com.vitorpamplona.quartz.nip90Dvms.summarization
 
 import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip90Dvms.tags.InputTag
 import com.vitorpamplona.quartz.nip90Dvms.tags.dvmParam
+import com.vitorpamplona.quartz.nip90Dvms.tags.inputEvent
 import com.vitorpamplona.quartz.nip90Dvms.tags.inputs
+import com.vitorpamplona.quartz.nip90Dvms.tags.output
+import com.vitorpamplona.quartz.nip90Dvms.tags.outputMimeType
+import com.vitorpamplona.quartz.nip90Dvms.tags.param
 import com.vitorpamplona.quartz.utils.TimeUtils
 
-@Stable
 @Immutable
-class NIP90ContentDiscoveryRequestEvent(
+class NIP90SummarizationRequestEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
@@ -45,32 +46,25 @@ class NIP90ContentDiscoveryRequestEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
     fun inputs(): List<InputTag> = tags.inputs()
 
-    fun dvmPubKey(): HexKey? = tags.firstOrNull { it.size >= 2 && it[0] == "p" }?.get(1)
+    fun outputMimeType(): String? = tags.outputMimeType()
 
-    fun relays() = tags.relays()
-
-    fun params() = tags.params()
-
-    fun user(): String? = tags.dvmParam("user")
-
-    fun maxResults(): String? = tags.dvmParam("max_results")
+    fun length(): String? = tags.dvmParam("length")
 
     companion object {
-        const val KIND = 5300
-        const val ALT = "NIP90 Content Discovery request"
+        const val KIND = 5001
+        const val ALT = "NIP90 Summarization request"
 
         fun build(
-            dvmPublicKey: HexKey,
-            forUser: HexKey,
-            relays: Set<NormalizedRelayUrl>,
+            eventIds: List<HexKey>,
+            length: String? = null,
+            outputMimeType: String? = null,
             createdAt: Long = TimeUtils.now(),
-            initializer: TagArrayBuilder<NIP90ContentDiscoveryRequestEvent>.() -> Unit = {},
+            initializer: TagArrayBuilder<NIP90SummarizationRequestEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
             alt(ALT)
-            dvmPubKey(dvmPublicKey)
-            relays(relays)
-            param("max_results", "200")
-            param("user", forUser)
+            eventIds.forEach { inputEvent(it) }
+            length?.let { param("length", it) }
+            outputMimeType?.let { output(it) }
             initializer()
         }
     }
