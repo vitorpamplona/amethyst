@@ -1270,6 +1270,10 @@
     <string name="git_repository">Git 仓库： %1$s</string>
     <string name="git_web_address">网址</string>
     <string name="git_clone_address">克隆：</string>
+    <string name="nsite_title">静态网站: %1$s</string>
+    <string name="nsite_root_site">根站点</string>
+    <string name="nsite_source">源：</string>
+    <string name="nsite_servers">服务器：</string>
     <string name="existed_since">OTS：%1$s</string>
     <string name="ots_info_title">OpenTimestamps 证明</string>
     <string name="ots_info_description">%1$s之前的某个时候签署了此帖子的证明。此证明是在那个日期和时间在比特币区块链中盖章的。</string>
@@ -1832,4 +1836,21 @@
     <string name="relay_management_relay_icon_url">中继图标 URL</string>
     <string name="relay_management_button">管理中继</string>
     <string name="manage">管理</string>
+    <string name="relay_members">成员</string>
+    <string name="relay_members_title">%1$s 的成员</string>
+    <string name="relay_members_count">%1$d 位成员</string>
+    <string name="relay_members_loading">加载成员…</string>
+    <string name="relay_members_empty">未找到成员</string>
+    <string name="relay_members_request_join">申请加入</string>
+    <string name="relay_members_request_leave">请求退出</string>
+    <string name="relay_members_join_sent">加入请求已发送</string>
+    <string name="relay_members_leave_sent">已发送离开请求</string>
+    <string name="relay_members_you_are_member">您是成员</string>
+    <string name="relay_membership_list">中继成员列表</string>
+    <string name="relay_member_added">已添加成员到中继</string>
+    <string name="relay_members_added">添加了 %1$d 位成员到中继</string>
+    <string name="relay_member_removed">从中继删除了成员</string>
+    <string name="relay_members_removed">从中继删除了 %1$d 位成员</string>
+    <string name="relay_join_request">中继加入请求</string>
+    <string name="relay_leave_request">中继离开请求</string>
 </resources>

@@ -1270,6 +1270,10 @@
     <string name="git_repository">Git tároló: %1$s</string>
     <string name="git_web_address">Weboldal:</string>
     <string name="git_clone_address">Klónozás:</string>
+    <string name="nsite_title">Statikus weboldal: %1$s</string>
+    <string name="nsite_root_site">Főoldal</string>
+    <string name="nsite_source">Forrás:</string>
+    <string name="nsite_servers">Kiszolgálók:</string>
     <string name="existed_since">OTS: %1$s</string>
     <string name="ots_info_title">Időbélyeg-igazolás</string>
     <string name="ots_info_description">Bizonyíték van arra, hogy ezt a bejegyzést valamikor %1$s előtt írták alá. A bizonyítékot ezen a napon és időpontban bélyegezték a Bitcoin blokkláncába.</string>
@@ -1832,4 +1836,21 @@
     <string name="relay_management_relay_icon_url">Átjátszó ikonjának webcíme</string>
     <string name="relay_management_button">Átjátszó kezelése</string>
     <string name="manage">Kezelés</string>
+    <string name="relay_members">Tagok</string>
+    <string name="relay_members_title">A(z) %1$s tagjai</string>
+    <string name="relay_members_count">%1$d tag</string>
+    <string name="relay_members_loading">Tagok betöltése…</string>
+    <string name="relay_members_empty">Nem találhatók tagok</string>
+    <string name="relay_members_request_join">Csatlakozási kérés</string>
+    <string name="relay_members_request_leave">Elhagyási kérés</string>
+    <string name="relay_members_join_sent">Csatlakozási kérés elküldve</string>
+    <string name="relay_members_leave_sent">Elhagyási kérés elküldve</string>
+    <string name="relay_members_you_are_member">Ön tagja az átjátszónak</string>
+    <string name="relay_membership_list">Átjátszó tagsági listája</string>
+    <string name="relay_member_added">A tag hozzá lett adva az átjátszóhoz</string>
+    <string name="relay_members_added">%1$d tag hozzáadva az átjátszóhoz</string>
+    <string name="relay_member_removed">A tag el lett távolítva az átjátszóról</string>
+    <string name="relay_members_removed">%1$d tag el lett távolítva az átjátszóról</string>
+    <string name="relay_join_request">Átjátszóhoz való csatlakozás kérése</string>
+    <string name="relay_leave_request">Átjátszó elhagyásának kérése</string>
 </resources>
