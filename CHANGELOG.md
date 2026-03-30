@@ -1,3 +1,9 @@
+<a id="v1.07.1"></a>
+# [Release v1.07.1: Fixes](https://github.com/vitorpamplona/amethyst/releases/tag/v1.07.1) - 2026-03-30
+
+- New translations
+- Fixes BLE's module need for syncronized events.
+
 <a id="v1.07.0"></a>
 # [Release v1.07.0: Vanish, Relay Management, Pin Notes](https://github.com/vitorpamplona/amethyst/releases/tag/v1.07.0) - 2026-03-30
 
