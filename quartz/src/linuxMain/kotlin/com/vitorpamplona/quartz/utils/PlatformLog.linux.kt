@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.utils
 
-actual object Log {
+actual object PlatformLog {
     actual fun w(
         tag: String,
         message: String,
@@ -48,14 +48,24 @@ actual object Log {
     actual fun d(
         tag: String,
         message: String,
+        throwable: Throwable?,
     ) {
-        println("DEBUG: [$tag] $message")
+        if (throwable != null) {
+            println("DEBUG: [$tag] $message. Throwable: $throwable CAUSE ${throwable.cause}")
+        } else {
+            println("DEBUG: [$tag] $message")
+        }
     }
 
     actual fun i(
         tag: String,
         message: String,
+        throwable: Throwable?,
     ) {
-        println("INFO: [$tag] $message")
+        if (throwable != null) {
+            println("INFO: [$tag] $message. Throwable: $throwable CAUSE ${throwable.cause}")
+        } else {
+            println("INFO: [$tag] $message")
+        }
     }
 }
