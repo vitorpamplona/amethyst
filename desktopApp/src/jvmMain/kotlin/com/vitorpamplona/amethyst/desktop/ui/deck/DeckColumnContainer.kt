@@ -296,6 +296,7 @@ internal fun RootContent(
                 onBack = {},
                 onCompose = onShowComposeDialog,
                 onNavigateToProfile = onNavigateToProfile,
+                onNavigateToThread = onNavigateToThread,
                 onNavigateToArticle = onNavigateToArticle,
                 onZapFeedback = onZapFeedback,
             )
@@ -325,6 +326,7 @@ internal fun RootContent(
                 onBack = {},
                 onCompose = onShowComposeDialog,
                 onNavigateToProfile = onNavigateToProfile,
+                onNavigateToThread = onNavigateToThread,
                 onZapFeedback = onZapFeedback,
             )
         }
@@ -426,6 +428,7 @@ internal fun OverlayContent(
                 onBack = onBack,
                 onCompose = onShowComposeDialog,
                 onNavigateToProfile = onNavigateToProfile,
+                onNavigateToThread = onNavigateToThread,
                 onNavigateToArticle = onNavigateToArticle,
                 onZapFeedback = onZapFeedback,
             )

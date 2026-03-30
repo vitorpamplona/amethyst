@@ -91,11 +91,9 @@ class DesktopRelaySubscriptionsCoordinator(
             scope = scope,
             indexRelays = indexRelays,
             preloader = preloader,
-            onEvent = { event, _ ->
-                // Consume metadata events into local cache
-                if (event is MetadataEvent) {
-                    localCache.consumeMetadata(event)
-                }
+            onEvent = { event, relay ->
+                // Route all fetched events (metadata, boosted notes, etc.) into cache
+                localCache.consume(event, relay)
             },
         )
 
