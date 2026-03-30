@@ -29,6 +29,10 @@ import com.vitorpamplona.quartz.nipBEBle.protocol.BleChunkAssembler
 import com.vitorpamplona.quartz.nipBEBle.protocol.BleMessageChunker
 import com.vitorpamplona.quartz.nipBEBle.transport.BleTransport
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.Channel
+import kotlin.concurrent.atomics.AtomicBoolean
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 /**
  * Handles the server (relay) side of a BLE Nostr connection.
@@ -52,6 +56,7 @@ import com.vitorpamplona.quartz.utils.Log
  * server.sendMessage(EventMessage(subId, event))
  * ```
  */
+@OptIn(ExperimentalAtomicApi::class, ExperimentalCoroutinesApi::class)
 class BleNostrServer(
     val peer: BlePeer,
     val transport: BleTransport,
@@ -60,8 +65,8 @@ class BleNostrServer(
 ) {
     private var connected = false
     private val assembler = BleChunkAssembler()
-    private val sendQueue = ArrayDeque<Array<ByteArray>>()
-    private var isSending = false
+    private val sendQueue = Channel<Array<ByteArray>>(Channel.UNLIMITED)
+    private val isSending = AtomicBoolean(false)
 
     fun isConnected(): Boolean = connected
 
@@ -79,10 +84,7 @@ class BleNostrServer(
     fun onClientDisconnected() {
         connected = false
         assembler.reset()
-        synchronized(sendQueue) {
-            sendQueue.clear()
-            isSending = false
-        }
+        drainQueue()
         listener.onClientDisconnected(this)
     }
 
@@ -110,12 +112,9 @@ class BleNostrServer(
         val json = OptimizedJsonMapper.toJson(msg)
         val chunks = BleMessageChunker.splitIntoChunks(json, chunkSize)
 
-        synchronized(sendQueue) {
-            sendQueue.addLast(chunks)
-            if (!isSending) {
-                isSending = true
-                sendNextMessage()
-            }
+        sendQueue.trySend(chunks)
+        if (!isSending.exchange(true)) {
+            sendNextMessage()
         }
     }
 
@@ -139,19 +138,26 @@ class BleNostrServer(
     private var currentChunkIndex = 0
 
     private fun sendNextMessage() {
-        val chunks =
-            synchronized(sendQueue) {
-                sendQueue.removeFirstOrNull()
-            }
-        if (chunks == null) {
-            synchronized(sendQueue) {
-                isSending = false
+        val result = sendQueue.tryReceive()
+        if (result.isFailure) {
+            isSending.store(false)
+            // Double-check: an item may have been added after tryReceive
+            // but before we cleared the flag.
+            if (sendQueue.isEmpty) return
+            if (!isSending.exchange(true)) {
+                sendNextMessage()
             }
             return
         }
-        currentChunks = chunks
+        currentChunks = result.getOrNull()
         currentChunkIndex = 0
         sendNextChunk()
+    }
+
+    private fun drainQueue() {
+        while (sendQueue.tryReceive().isSuccess) {}
+        currentChunks = null
+        isSending.store(false)
     }
 
     private fun sendNextChunk() {
