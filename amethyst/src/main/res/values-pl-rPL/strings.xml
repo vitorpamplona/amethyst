@@ -1267,6 +1267,10 @@
     <string name="git_repository">Repozytorium Git: %1$s</string>
     <string name="git_web_address">Strona internetowa:</string>
     <string name="git_clone_address">Klonuj:</string>
+    <string name="nsite_title">Statyczna Witryna: %1$s</string>
+    <string name="nsite_root_site">Strona główna</string>
+    <string name="nsite_source">Źródło:</string>
+    <string name="nsite_servers">Serwery:</string>
     <string name="existed_since">OTS: %1$s</string>
     <string name="ots_info_title">Potwierdzenie znacznika czasu</string>
     <string name="ots_info_description">Istnieje dowód na to, że ten post został podpisany przed %1$s. Dowód został opatrzony pieczęcią w łańcuchu bloków Bitcoin w tym dniu i czasie.</string>

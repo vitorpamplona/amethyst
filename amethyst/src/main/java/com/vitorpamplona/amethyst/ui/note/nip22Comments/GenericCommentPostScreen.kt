@@ -34,6 +34,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -46,7 +47,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -125,7 +125,8 @@ fun ReplyCommentPostScreen(
             postViewModel.quote(it)
         }
         message?.ifBlank { null }?.let {
-            postViewModel.updateMessage(TextFieldValue(it))
+            postViewModel.message.setTextAndPlaceCursorAtEnd(it)
+            postViewModel.onMessageChanged()
         }
         attachment?.ifBlank { null }?.toUri()?.let {
             withContext(Dispatchers.IO) {

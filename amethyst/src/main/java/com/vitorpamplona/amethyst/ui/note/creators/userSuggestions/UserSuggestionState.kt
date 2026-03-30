@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.note.creators.userSuggestions
 
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.runtime.Stable
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
@@ -198,5 +199,18 @@ class UserSuggestionState(
             message.text.replaceRange(lastWordStart, message.selection.end, wordToInsert),
             TextRange(lastWordStart + wordToInsert.length, lastWordStart + wordToInsert.length),
         )
+    }
+
+    fun replaceCurrentWord(
+        state: TextFieldState,
+        word: String,
+        item: User,
+    ) {
+        val wordToInsert = "@${item.pubkeyNpub()}"
+        state.edit {
+            val lastWordStart = selection.end - word.length
+            replace(lastWordStart, selection.end, wordToInsert)
+            selection = TextRange(lastWordStart + wordToInsert.length, lastWordStart + wordToInsert.length)
+        }
     }
 }
