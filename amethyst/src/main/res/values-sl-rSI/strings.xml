@@ -77,7 +77,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="zaps">Zapi</string>
     <string name="view_count">Števec vpogledov</string>
     <string name="boost">Pošlji naprej</string>
-    <string name="boosted">Poslano naprej</string>
+    <string name="boosted">poslano naprej</string>
     <string name="edited">posodobljeno</string>
     <string name="edited_number">uredi #%1$s</string>
     <string name="original">original</string>
