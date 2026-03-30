@@ -27,6 +27,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
  * Provides convenience functions for creating relay subscription filters.
  */
 object FilterBuilders {
+    private val FEED_KINDS = listOf(1, 6, 16) // TextNoteEvent, RepostEvent, GenericRepostEvent
+
     /**
      * Creates a filter for text notes (kind 1) from all authors.
      *
@@ -41,7 +43,7 @@ object FilterBuilders {
         until: Long? = null,
     ): Filter =
         Filter(
-            kinds = listOf(1), // TextNoteEvent.KIND
+            kinds = FEED_KINDS,
             limit = limit,
             since = since,
             until = until,
@@ -63,7 +65,7 @@ object FilterBuilders {
         until: Long? = null,
     ): Filter =
         Filter(
-            kinds = listOf(1), // TextNoteEvent.KIND
+            kinds = FEED_KINDS,
             authors = authors,
             limit = limit,
             since = since,

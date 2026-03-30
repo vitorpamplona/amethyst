@@ -28,12 +28,26 @@ import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
+import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 
+private fun isFeedNote(event: com.vitorpamplona.quartz.nip01Core.core.Event?): Boolean = event is TextNoteEvent || event is RepostEvent || event is GenericRepostEvent
+
+private fun List<Note>.deduplicateReposts(): List<Note> =
+    distinctBy { note ->
+        val event = note.event
+        if (event is RepostEvent || event is GenericRepostEvent) {
+            note.replyTo?.lastOrNull()?.idHex ?: note.idHex
+        } else {
+            note.idHex
+        }
+    }
+
 /**
- * Global feed: all kind 1 text notes, sorted by createdAt desc.
+ * Global feed: kind 1 text notes + kind 6/16 reposts, sorted by createdAt desc.
  */
 class DesktopGlobalFeedFilter(
     private val cache: DesktopLocalCache,
@@ -42,19 +56,20 @@ class DesktopGlobalFeedFilter(
 
     override fun feed(): List<Note> =
         cache.notes
-            .filterIntoSet { _, note -> note.event is TextNoteEvent }
+            .filterIntoSet { _, note -> isFeedNote(note.event) }
             .sortedWith(DefaultFeedOrder)
+            .deduplicateReposts()
             .take(limit())
 
-    override fun applyFilter(newItems: Set<Note>): Set<Note> = newItems.filterTo(HashSet()) { it.event is TextNoteEvent }
+    override fun applyFilter(newItems: Set<Note>): Set<Note> = newItems.filterTo(HashSet()) { isFeedNote(it.event) }
 
-    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
+    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder).deduplicateReposts()
 
     override fun limit(): Int = 2500
 }
 
 /**
- * Following feed: kind 1 text notes from followed pubkeys.
+ * Following feed: kind 1 text notes + kind 6/16 reposts from followed pubkeys.
  */
 class DesktopFollowingFeedFilter(
     private val cache: DesktopLocalCache,
@@ -66,19 +81,20 @@ class DesktopFollowingFeedFilter(
         val follows = followedPubkeys()
         return cache.notes
             .filterIntoSet { _, note ->
-                note.event is TextNoteEvent && note.author?.pubkeyHex in follows
+                isFeedNote(note.event) && note.author?.pubkeyHex in follows
             }.sortedWith(DefaultFeedOrder)
+            .deduplicateReposts()
             .take(limit())
     }
 
     override fun applyFilter(newItems: Set<Note>): Set<Note> {
         val follows = followedPubkeys()
         return newItems.filterTo(HashSet()) {
-            it.event is TextNoteEvent && it.author?.pubkeyHex in follows
+            isFeedNote(it.event) && it.author?.pubkeyHex in follows
         }
     }
 
-    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
+    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder).deduplicateReposts()
 
     override fun limit(): Int = 2500
 }

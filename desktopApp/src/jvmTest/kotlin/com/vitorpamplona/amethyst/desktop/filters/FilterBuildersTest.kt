@@ -37,7 +37,7 @@ class FilterBuildersTest {
     fun testTextNotesGlobal() {
         val filter = FilterBuilders.textNotesGlobal(limit = 50)
 
-        assertEquals(listOf(1), filter.kinds)
+        assertEquals(listOf(1, 6, 16), filter.kinds)
         assertEquals(50, filter.limit)
         assertNull(filter.authors)
         assertNull(filter.tags)
@@ -51,7 +51,7 @@ class FilterBuildersTest {
         val until = 1640995200L // 2022-01-01
         val filter = FilterBuilders.textNotesGlobal(limit = 100, since = since, until = until)
 
-        assertEquals(listOf(1), filter.kinds)
+        assertEquals(listOf(1, 6, 16), filter.kinds)
         assertEquals(100, filter.limit)
         assertEquals(since, filter.since)
         assertEquals(until, filter.until)
@@ -62,7 +62,7 @@ class FilterBuildersTest {
         val authors = listOf(testPubKey, testPubKey2)
         val filter = FilterBuilders.textNotesFromAuthors(authors, limit = 25)
 
-        assertEquals(listOf(1), filter.kinds)
+        assertEquals(listOf(1, 6, 16), filter.kinds)
         assertEquals(authors, filter.authors)
         assertEquals(25, filter.limit)
         assertNull(filter.tags)
@@ -74,7 +74,7 @@ class FilterBuildersTest {
         val since = 1609459200L
         val filter = FilterBuilders.textNotesFromAuthors(authors, limit = 10, since = since)
 
-        assertEquals(listOf(1), filter.kinds)
+        assertEquals(listOf(1, 6, 16), filter.kinds)
         assertEquals(authors, filter.authors)
         assertEquals(10, filter.limit)
         assertEquals(since, filter.since)
@@ -421,7 +421,7 @@ class FilterBuildersTest {
         val filter = FilterBuilders.textNotesGlobal(limit = 50)
 
         assertTrue(!filter.isEmpty())
-        assertEquals(listOf(1), filter.kinds)
+        assertEquals(listOf(1, 6, 16), filter.kinds)
         assertEquals(50, filter.limit)
     }
 
@@ -431,7 +431,7 @@ class FilterBuildersTest {
         val filter = FilterBuilders.textNotesFromAuthors(followedUsers, limit = 50)
 
         assertTrue(!filter.isEmpty())
-        assertEquals(listOf(1), filter.kinds)
+        assertEquals(listOf(1, 6, 16), filter.kinds)
         assertEquals(followedUsers, filter.authors)
         assertEquals(50, filter.limit)
     }
@@ -447,7 +447,7 @@ class FilterBuildersTest {
         assertTrue(!contactListFilter.isEmpty())
 
         assertEquals(listOf(0), metadataFilter.kinds)
-        assertEquals(listOf(1), postsFilter.kinds)
+        assertEquals(listOf(1, 6, 16), postsFilter.kinds)
         assertEquals(listOf(3), contactListFilter.kinds)
     }
 
