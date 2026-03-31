@@ -22,13 +22,19 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.datasource
 
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe.LocationTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.global.GlobalTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.hashtag.HashtagTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.allcommunities.AllCommunitiesTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.community.SingleCommunityTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.datasource.subassemblies.filterPicturesByAllCommunities
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.datasource.subassemblies.filterPicturesByAuthors
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.datasource.subassemblies.filterPicturesByCommunity
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.datasource.subassemblies.filterPicturesByFollows
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.datasource.subassemblies.filterPicturesByGeohashes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.datasource.subassemblies.filterPicturesByHashtag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.datasource.subassemblies.filterPicturesByMutedAuthors
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.datasource.subassemblies.filterPicturesGlobal
@@ -40,10 +46,13 @@ fun makePicturesFilter(
     defaultSince: Long? = null,
 ): List<RelayBasedFilter> =
     when (feedSettings) {
+        is AllCommunitiesTopNavPerRelayFilterSet -> filterPicturesByAllCommunities(feedSettings, since, defaultSince)
         is AllFollowsTopNavPerRelayFilterSet -> filterPicturesByFollows(feedSettings, since, defaultSince)
         is AuthorsTopNavPerRelayFilterSet -> filterPicturesByAuthors(feedSettings, since, defaultSince)
         is GlobalTopNavPerRelayFilterSet -> filterPicturesGlobal(feedSettings, since, defaultSince)
         is HashtagTopNavPerRelayFilterSet -> filterPicturesByHashtag(feedSettings, since, defaultSince)
+        is LocationTopNavPerRelayFilterSet -> filterPicturesByGeohashes(feedSettings, since, defaultSince)
         is MutedAuthorsTopNavPerRelayFilterSet -> filterPicturesByMutedAuthors(feedSettings, since, defaultSince)
+        is SingleCommunityTopNavPerRelayFilterSet -> filterPicturesByCommunity(feedSettings, since, defaultSince)
         else -> emptyList()
     }

@@ -22,13 +22,19 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.shorts.datasource
 
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe.LocationTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.global.GlobalTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.hashtag.HashtagTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.allcommunities.AllCommunitiesTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.community.SingleCommunityTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.shorts.datasource.subassemblies.filterShortsByAllCommunities
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.shorts.datasource.subassemblies.filterShortsByAuthors
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.shorts.datasource.subassemblies.filterShortsByCommunity
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.shorts.datasource.subassemblies.filterShortsByFollows
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.shorts.datasource.subassemblies.filterShortsByGeohashes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.shorts.datasource.subassemblies.filterShortsByHashtag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.shorts.datasource.subassemblies.filterShortsByMutedAuthors
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.shorts.datasource.subassemblies.filterShortsGlobal
@@ -40,10 +46,13 @@ fun makeShortsFilter(
     defaultSince: Long? = null,
 ): List<RelayBasedFilter> =
     when (feedSettings) {
+        is AllCommunitiesTopNavPerRelayFilterSet -> filterShortsByAllCommunities(feedSettings, since, defaultSince)
         is AllFollowsTopNavPerRelayFilterSet -> filterShortsByFollows(feedSettings, since, defaultSince)
         is AuthorsTopNavPerRelayFilterSet -> filterShortsByAuthors(feedSettings, since, defaultSince)
         is GlobalTopNavPerRelayFilterSet -> filterShortsGlobal(feedSettings, since, defaultSince)
         is HashtagTopNavPerRelayFilterSet -> filterShortsByHashtag(feedSettings, since, defaultSince)
+        is LocationTopNavPerRelayFilterSet -> filterShortsByGeohashes(feedSettings, since, defaultSince)
         is MutedAuthorsTopNavPerRelayFilterSet -> filterShortsByMutedAuthors(feedSettings, since, defaultSince)
+        is SingleCommunityTopNavPerRelayFilterSet -> filterShortsByCommunity(feedSettings, since, defaultSince)
         else -> emptyList()
     }
