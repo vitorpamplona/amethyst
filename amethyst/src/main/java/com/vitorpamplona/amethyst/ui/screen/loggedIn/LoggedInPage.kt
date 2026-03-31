@@ -53,6 +53,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.datasource.Discove
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.HomeFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.VideoFilterAssemblerSubscription
 import com.vitorpamplona.quartz.nip55AndroidSigner.client.IActivityLauncher
+import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.NostrSignerWithClientTag
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.launch
 
@@ -165,7 +166,22 @@ fun NotificationRegistration(accountViewModel: AccountViewModel) {
 
 @Composable
 private fun ListenToExternalSignerIfNeeded(accountViewModel: AccountViewModel) {
-    if (accountViewModel.account.signer is IActivityLauncher) {
+    val externalSignerLauncher =
+        when (val signer = accountViewModel.account.signer) {
+            is IActivityLauncher -> {
+                signer
+            }
+
+            is NostrSignerWithClientTag if signer.inner is IActivityLauncher -> {
+                signer.inner as IActivityLauncher
+            }
+
+            else -> {
+                null
+            }
+        }
+
+    if (externalSignerLauncher != null) {
         val launcher =
             rememberLauncherForActivityResult(
                 contract = ActivityResultContracts.StartActivityForResult(),
@@ -173,7 +189,7 @@ private fun ListenToExternalSignerIfNeeded(accountViewModel: AccountViewModel) {
                     if (result.resultCode == Activity.RESULT_OK) {
                         result.data?.let {
                             accountViewModel.runOnIO {
-                                accountViewModel.account.signer.newResponse(it)
+                                externalSignerLauncher.newResponse(it)
                             }
                         }
                     }
@@ -181,7 +197,7 @@ private fun ListenToExternalSignerIfNeeded(accountViewModel: AccountViewModel) {
             )
 
         DisposableEffect(accountViewModel, accountViewModel.account, launcher) {
-            val launcher: (Intent) -> Unit = { intent ->
+            val intentLauncher: (Intent) -> Unit = { intent ->
                 try {
                     launcher.launch(intent)
                 } catch (e: ActivityNotFoundException) {
@@ -193,9 +209,9 @@ private fun ListenToExternalSignerIfNeeded(accountViewModel: AccountViewModel) {
                 }
             }
 
-            accountViewModel.account.signer.registerForegroundLauncher(launcher)
+            externalSignerLauncher.registerForegroundLauncher(intentLauncher)
             onDispose {
-                accountViewModel.account.signer.unregisterForegroundLauncher(launcher)
+                externalSignerLauncher.unregisterForegroundLauncher(intentLauncher)
             }
         }
     }

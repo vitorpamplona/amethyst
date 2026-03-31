@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.home
 
 import android.content.Context
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
@@ -183,7 +185,7 @@ open class ShortNotePostViewModel :
     val iMetaAttachments = IMetaAttachments()
     var nip95attachments by mutableStateOf<List<Pair<FileStorageEvent, FileStorageHeaderEvent>>>(emptyList())
 
-    override var message by mutableStateOf(TextFieldValue(""))
+    override val message = TextFieldState()
 
     val urlPreviews = PreviewState()
 
@@ -367,7 +369,7 @@ open class ShortNotePostViewModel :
             multiOrchestrator = null
 
             quote?.let { quotedNote ->
-                message = TextFieldValue(message.text + "\nnostr:${quotedNote.toNEvent()}")
+                message.setTextAndPlaceCursorAtEnd(message.text.toString() + "\nnostr:${quotedNote.toNEvent()}")
 
                 quotedNote.author?.let { quotedUser ->
                     if (quotedUser.pubkeyHex != user.pubkeyHex) {
@@ -385,7 +387,7 @@ open class ShortNotePostViewModel :
             }
 
             fork?.let { forkedNoted ->
-                message = TextFieldValue(version?.event?.content ?: forkedNoted.event?.content ?: "")
+                message.setTextAndPlaceCursorAtEnd(version?.event?.content ?: forkedNoted.event?.content ?: "")
 
                 forkedNoted.event?.isSensitiveOrNSFW()?.let {
                     if (it) wantsToMarkAsSensitive = true
@@ -436,7 +438,7 @@ open class ShortNotePostViewModel :
             }
         }
 
-        urlPreviews.update(message)
+        urlPreviews.update(message.text.toString())
     }
 
     private fun loadFromDraft(draft: Note) {
@@ -533,11 +535,11 @@ open class ShortNotePostViewModel :
         wantsPoll = false
         wantsZapPoll = false
 
-        message = TextFieldValue(draftEvent.content)
+        message.setTextAndPlaceCursorAtEnd(draftEvent.content)
 
         iMetaAttachments.addAll(draftEvent.imetas())
 
-        urlPreviews.update(message)
+        urlPreviews.update(message.text.toString())
     }
 
     private fun loadFromDraft(draftEvent: PollEvent) {
@@ -605,11 +607,11 @@ open class ShortNotePostViewModel :
         pollType = draftEvent.pollType()
         closedAt = draftEvent.endsAt() ?: TimeUtils.oneDayAhead()
 
-        message = TextFieldValue(draftEvent.content)
+        message.setTextAndPlaceCursorAtEnd(draftEvent.content)
 
         iMetaAttachments.addAll(draftEvent.imetas())
 
-        urlPreviews.update(message)
+        urlPreviews.update(message.text.toString())
     }
 
     private fun loadFromDraft(draftEvent: ZapPollEvent) {
@@ -679,11 +681,11 @@ open class ShortNotePostViewModel :
         zapPollConsensusThreshold = draftEvent.consensusThreshold()?.let { (it * 100).toInt() }
         zapPollClosedAt = draftEvent.closedAt() ?: TimeUtils.oneDayAhead()
 
-        message = TextFieldValue(draftEvent.content)
+        message.setTextAndPlaceCursorAtEnd(draftEvent.content)
 
         iMetaAttachments.addAll(draftEvent.imetas())
 
-        urlPreviews.update(message)
+        urlPreviews.update(message.text.toString())
     }
 
     suspend fun sendPostSync() {
@@ -750,7 +752,7 @@ open class ShortNotePostViewModel :
     }
 
     suspend fun sendDraftSync() {
-        if (message.text.isBlank()) {
+        if (message.text.toString().isBlank()) {
             accountViewModel.account.deleteDraftIgnoreErrors(draftTag.current)
         } else {
             val attachments = mutableSetOf<Event>()
@@ -811,7 +813,7 @@ open class ShortNotePostViewModel :
 
         val tagger =
             NewMessageTagger(
-                message.text,
+                message.text.toString(),
                 pTags,
                 eTags,
                 accountViewModel,
@@ -1000,8 +1002,8 @@ open class ShortNotePostViewModel :
                         val note = nip95.let { it1 -> account.consumeNip95(it1.first, it1.second) }
 
                         note?.let {
-                            message = message.insertUrlAtCursor("nostr:" + it.toNEvent())
-                            urlPreviews.update(message)
+                            message.insertUrlAtCursor("nostr:" + it.toNEvent())
+                            urlPreviews.update(message.text.toString())
                         }
                     } else if (state.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
                         val iMeta =
@@ -1024,8 +1026,8 @@ open class ShortNotePostViewModel :
 
                         iMetaAttachments.replace(iMeta.url, iMeta)
 
-                        message = message.insertUrlAtCursor(state.result.url)
-                        urlPreviews.update(message)
+                        message.insertUrlAtCursor(state.result.url)
+                        urlPreviews.update(message.text.toString())
                     }
                 }
 
@@ -1042,7 +1044,7 @@ open class ShortNotePostViewModel :
     open fun cancel() {
         draftTag.rotate()
 
-        message = TextFieldValue("")
+        message.setTextAndPlaceCursorAtEnd("")
 
         forkedFromNote = null
 
@@ -1104,15 +1106,15 @@ open class ShortNotePostViewModel :
     }
 
     open fun addToMessage(it: String) {
-        updateMessage(TextFieldValue(message.text + " " + it))
+        message.setTextAndPlaceCursorAtEnd(message.text.toString() + " " + it)
+        onMessageChanged()
     }
 
-    override fun updateMessage(newMessage: TextFieldValue) {
-        message = newMessage
-        urlPreviews.update(message)
+    override fun onMessageChanged() {
+        urlPreviews.update(message.text.toString())
 
         if (message.selection.collapsed) {
-            val lastWord = newMessage.currentWord()
+            val lastWord = message.currentWord()
             if (lastWord.startsWith("@")) {
                 userSuggestionsMainMessage = UserSuggestionAnchor.MAIN_MESSAGE
                 userSuggestions?.processCurrentWord(lastWord)
@@ -1140,8 +1142,8 @@ open class ShortNotePostViewModel :
         userSuggestions?.let { userSuggestions ->
             if (userSuggestionsMainMessage == UserSuggestionAnchor.MAIN_MESSAGE) {
                 val lastWord = message.currentWord()
-                message = userSuggestions.replaceCurrentWord(message, lastWord, item)
-                urlPreviews.update(message)
+                userSuggestions.replaceCurrentWord(message, lastWord, item)
+                urlPreviews.update(message.text.toString())
             } else if (userSuggestionsMainMessage == UserSuggestionAnchor.FORWARD_ZAPS) {
                 forwardZapTo.value.addItem(item)
                 forwardZapToEditting.value = TextFieldValue("")
@@ -1157,8 +1159,8 @@ open class ShortNotePostViewModel :
     open fun autocompleteWithEmoji(item: EmojiMedia) {
         val wordToInsert = ":${item.code}:"
 
-        message = message.replaceCurrentWord(wordToInsert)
-        urlPreviews.update(message)
+        message.replaceCurrentWord(wordToInsert)
+        urlPreviews.update(message.text.toString())
 
         emojiSuggestions?.reset()
 
@@ -1174,8 +1176,8 @@ open class ShortNotePostViewModel :
             }
         }
 
-        message = message.replaceCurrentWord(wordToInsert)
-        urlPreviews.update(message)
+        message.replaceCurrentWord(wordToInsert)
+        urlPreviews.update(message.text.toString())
 
         emojiSuggestions?.reset()
 
@@ -1201,7 +1203,7 @@ open class ShortNotePostViewModel :
         }
 
         // Regular text/media posts require text
-        return message.text.isNotBlank() &&
+        return message.text.toString().isNotBlank() &&
             !mediaUploadTracker.isUploading &&
             !isUploadingVoice &&
             !wantsInvoice &&
@@ -1226,7 +1228,7 @@ open class ShortNotePostViewModel :
     }
 
     fun insertAtCursor(newElement: String) {
-        message = message.insertUrlAtCursor(newElement)
+        message.insertUrlAtCursor(newElement)
     }
 
     fun selectImage(uris: ImmutableList<SelectedMedia>) {
@@ -1378,7 +1380,7 @@ open class ShortNotePostViewModel :
     override fun updateZapFromText() {
         viewModelScope.launch(Dispatchers.IO) {
             val tagger =
-                NewMessageTagger(message.text, emptyList(), emptyList(), accountViewModel)
+                NewMessageTagger(message.text.toString(), emptyList(), emptyList(), accountViewModel)
             tagger.run()
             tagger.pTags?.forEach { taggedUser ->
                 if (!forwardZapTo.value.items.any { it.key == taggedUser }) {

@@ -56,7 +56,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
-import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
+import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromFiles
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakePictureButton
@@ -415,8 +415,8 @@ fun SendDirectMessageTo(
             )
 
             ThinPaddingTextField(
-                value = postViewModel.toUsers,
-                onValueChange = postViewModel::updateToUsers,
+                state = postViewModel.toUsers,
+                onTextChanged = postViewModel::onToUsersChanged,
                 modifier =
                     Modifier
                         .weight(1f)
@@ -432,8 +432,8 @@ fun SendDirectMessageTo(
                         color = MaterialTheme.colorScheme.placeholderText,
                     )
                 },
-                visualTransformation =
-                    UrlUserTagTransformation(
+                outputTransformation =
+                    UrlUserTagOutputTransformation(
                         MaterialTheme.colorScheme.primary,
                     ),
                 colors =

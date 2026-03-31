@@ -120,7 +120,7 @@ kotlin {
                 // SQLite KMP driver for event store
                 api(libs.androidx.sqlite)
                 implementation(libs.androidx.sqlite.bundled)
-                
+
                 // Negentropy set reconciliation (NIP-77)
                 api(libs.negentropy.kmp)
             }
@@ -315,7 +315,7 @@ mavenPublishing {
     coordinates(
         groupId = "com.vitorpamplona.quartz",
         artifactId = "quartz",
-        version = "1.06.3",
+        version = "1.07.2",
     )
 
     // Configure publishing to Maven Central

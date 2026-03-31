@@ -37,6 +37,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddPhotoAlternate
@@ -67,7 +68,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -80,7 +80,7 @@ import com.vitorpamplona.amethyst.commons.richtext.EncryptedMediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
-import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
+import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromFiles
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
@@ -158,7 +158,8 @@ fun NewGroupDMScreen(
 
     LaunchedEffect(postViewModel, accountViewModel) {
         message?.ifBlank { null }?.let {
-            postViewModel.updateMessage(TextFieldValue(it))
+            postViewModel.message.setTextAndPlaceCursorAtEnd(it)
+            postViewModel.onMessageChanged()
         }
         attachment?.let {
             withContext(Dispatchers.IO) {
@@ -530,8 +531,8 @@ fun SendDirectMessageTo(
             )
 
             ThinPaddingTextField(
-                value = postViewModel.toUsers,
-                onValueChange = postViewModel::updateToUsers,
+                state = postViewModel.toUsers,
+                onTextChanged = postViewModel::onToUsersChanged,
                 modifier =
                     Modifier
                         .weight(1f)
@@ -547,8 +548,8 @@ fun SendDirectMessageTo(
                         color = MaterialTheme.colorScheme.placeholderText,
                     )
                 },
-                visualTransformation =
-                    UrlUserTagTransformation(
+                outputTransformation =
+                    UrlUserTagOutputTransformation(
                         MaterialTheme.colorScheme.primary,
                     ),
                 colors =
@@ -572,8 +573,8 @@ fun SendDirectMessageTo(
             )
 
             ThinPaddingTextField(
-                value = postViewModel.subject,
-                onValueChange = { postViewModel.updateSubject(it) },
+                state = postViewModel.subject,
+                onTextChanged = { postViewModel.onSubjectChanged() },
                 modifier = Modifier.fillMaxWidth(),
                 placeholder = {
                     Text(
@@ -581,8 +582,8 @@ fun SendDirectMessageTo(
                         color = MaterialTheme.colorScheme.placeholderText,
                     )
                 },
-                visualTransformation =
-                    UrlUserTagTransformation(
+                outputTransformation =
+                    UrlUserTagOutputTransformation(
                         MaterialTheme.colorScheme.primary,
                     ),
                 colors =

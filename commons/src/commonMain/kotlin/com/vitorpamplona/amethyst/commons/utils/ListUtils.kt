@@ -22,6 +22,14 @@ package com.vitorpamplona.amethyst.commons.utils
 
 import kotlinx.collections.immutable.ImmutableList
 
+/**
+ * Compares two [ImmutableList] instances by element identity (`===`), not value equality (`==`).
+ *
+ * Returns `true` only when both lists have the same size and each element at the same index
+ * is the exact same object reference.
+ *
+ * Useful for cheap change detection in UI/state pipelines where object identity is meaningful.
+ */
 fun <T> equalImmutableLists(
     list1: ImmutableList<T>,
     list2: ImmutableList<T>,

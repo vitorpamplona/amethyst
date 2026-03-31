@@ -1,5 +1,193 @@
+<a id="v1.07.2"></a>
+# [Release v1.07.2: GIF Keyboard](https://github.com/vitorpamplona/amethyst/releases/tag/v1.07.2) - 2026-03-30
+
+- Adds GIF uploads support from Keyboard
+- Migrates text fields and @ modifiers to the new Jetpack Compose states
+- Fixes Bug that wasn't openning Amber to sign
+- Fixes Bug on rejections using old Ambers
+- Replaces hex input with user search dialog in relay management (allow/ban user)
+
+<a id="v1.07.1"></a>
+# [Release v1.07.1: Fixes](https://github.com/vitorpamplona/amethyst/releases/tag/v1.07.1) - 2026-03-30
+
+- New translations
+- Fixes BLE's module need for synchronized events.
+
+<a id="v1.07.0"></a>
+# [Release v1.07.0: Vanish, Relay Management, Pin Notes](https://github.com/vitorpamplona/amethyst/releases/tag/v1.07.0) - 2026-03-30
+
+Amethyst:
+- Adds support to Pin Notes
+- Adds support to Polls feed screen
+- Adds support for Requests to Vanish
+- Adds support for Relay management (NIP-86) from Amethyst
+- Adds support for Relay monitor assessments (NIP-66) in the Relay Info screen.
+- Adds support for Relay member information (NIP-43) in the Relay Info screen
+- Adds support for WebBookmarks
+- Adds support for Zap Goals
+
+Quartz:
+- Rewords the NostrClient API for simpler commands.
+- Adds NIP-15: Nostr Marketplace protocol — product listings, stalls, merchant events (#2020)
+- Adds NIP-24: Birthday field support added to UserMetadata (#1979)
+- Adds NIP-29: Relay-based groups — group events, member management, moderation (#2021)
+- Adds NIP-32: Labeling protocol — LabelEvent and tag parsing (#1975)
+- Adds NIP-43: Relay access metadata and membership management with UI screens (#2010)
+- Adds NIP-60: Cashu wallet and spending history event support (#2009)
+- Adds NIP-61: Nutzaps protocol support (#2008)
+- Adds NIP-62: Request to Vanish feature — data deletion with relay compliance testing (#1958)
+- Adds NIP-66: Relay monitor discovery events — UI, filter assembler, subscription composable (#1968)
+- Adds NIP-69: P2P Order Events (kind 38383) (#2019)
+- Adds NIP-75: Zap Goals support with creation and rendering (#1965)
+- Adds NIP-77: Negentropy set reconciliation protocol support (#1955)
+- Adds NIP-7D: Thread events (kind 11) rendering (#2016)
+- Adds NIP-85: Trusted Assertions — assertions for events and addressables (#1981)
+- Adds NIP-86: Relay management UI and client implementation (#1954)
+- Adds NIP-87: Ecash mint discoverability — Cashu and Fedimint event types (#2015)
+- Adds NIP-89: Compliance fixes, PlatformLinkTag parsing, app handler extensions (#2030)
+- Adds NIP-90: All DVM kind event classes from data-vending-machines spec, restructured packages (#2023, #2025)
+- Adds NIP-A4: Add k tag to zap requests and enforce e tag prohibition (#1978)
+- Adds NIP-BE: Bluetooth Low Energy mesh networking / Nostr BLE Communications Protocol (#2022)
+- Adds NIP-C7: Chat messages (kind 9) implementation (#2018)
+- Adds NIP-5A: Static website event rendering (#2017)
+- Adds NIP-51, kind 10001: Pinned notes feature (#1956)
+
+Improvements and Fixes:
+- Show toast instead of dialog on media download success
+- Dynamically adjust preferred Blossom server when list changes
+- Add relay discovery to node master rendering list
+- Add scroll to settings page
+- Solves crashing when multiple relays with the same url are included in the resulting list.
+- Keep screen on during PiP playback and survive screen lock (#1999)
+- Desktop feed loading — missing events, broken profile navigation (#2027)
+- Use getOrCreateNote for reply linking to fix flaky thread test (#2027)
+- Route ReadsScreen following-mode events through cache (#2027)
+- Pin ElectrumX server certs for Samsung One UI 7 / Android 16 compatibility (#1937)
+- Duplicate keys in relay management lazy column — sort pubkeys
+- URL detector — fixes localhost:3030 strings, Japanese character URLs
+- Web Bookmarks floating action button shape (circle) and open graph previews.
+- NIP-86 requests now send Accept and Content-Type headers
+- On DMs, activates decryption for all filetypes that match decryption url with the cipher info, not only binaries
+- Adds a try/finally to subscriptions to make sure they close even in crashes.
+- Protects against crashes when the signer sends an unverifiable payload back to Amethyst
+
+Desktop:
+- Cache-centric architecture for desktop feeds (#1905)
+- Render reposts and quoted notes in feed (#2027)
+
+Performance
+- Faster startup procedures with less loading on the main thread.
+- 20x Faster Rfc3986Normalizer and way less objects being created.
+- Url Detector without using regex
+- Parallelize preference file access at startup for faster launch
+- Remove internal runBlocking calls
+- Lazy loading the memory trimming service
+- Speeding up DrawerContent rendering
+- Eagerly delete intermediate temp files in upload pipeline
+
+Refactoring:
+- Simplify NostrClient API for beginner-friendliness (#1986)
+- Simplify relay API with AutoCloseable and serve() helper (#2031)
+- URL detector performance and readability improvements (#2013)
+- Restructure NIP-90 DVMs to match NIP-88 Polls pattern (#2023)
+- Reorganize NIP-BE into subpackages
+- Move public messages and trusted assertions out of experimental
+
+Migrations & Deprecation Fixes
+
+- Migrate `LocalClipboardManager` to `LocalClipboard` (#1995)
+- Migrate `LocalAutofillTree` to semantics-based Autofill API (#1996)
+- Migrate `TabRow`/`ScrollableTabRow` to Material 3 Secondary variants (#1994)
+- Replace `ContextCompat.startActivity` with `Context.startActivity` (#1993)
+- Suppress deprecation and unchecked cast warnings in Quartz internal code (#1985)
+
+Platform & Build
+
+- Add linuxX64 target and restructure native source sets
+- Add explicit permissions to GitHub Actions workflows
+- Stop Gradle daemons after build steps
+- Increase Android CI build timeout to 45 minutes
+- Update video compression library to latest
+- Update dependencies, add local maven repo for easier library development
+- Remove libsodium files
+- Git hooks installation in worktrees (.git file vs directory)
+- Fixes lack of proxy access to download VLC files in claude's web environment.
+- Log level filtering — LogLevel enum, PlatformLog, lambda overloads for 194+ Log.d() calls (#2005)
+- Parallelize BaseDBTest forEachDB using coroutines
+
+Documentation
+
+- Add CLIENT.md guide for building Nostr clients with Quartz
+- Add RELAY.md guide for building relays with Ktor, NostrServer, SQLite
+
+Contributors
+
+- @npub1gcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqlfnj5z — Primary development
+- @npub1e2yuky03caw4ke3zy68lg0fz3r4gkt94hx4fjmlelacyljgyk79svn3eef — Log level filtering, video compression, toast downloads, CI fixes, git worktree fix
+- @npub12cfje6nl2nuxplcqfvhg7ljt89fmpj0n0fd24zxsukja5qm9wmtqd7y76c — Desktop cache architecture, desktop bugfixes
+- @npub1w4uswmv6lu9yel005l3qgheysmr7tk9uvwluddznju3nuxalevvs2d0jr5 — CI workflow permissions
+- @npub1a3tx8wcrt789skl6gg7rqwj4wey0j53eesr4z6asd4h4jwrd62jq0wkq4k — Remove libsodium files
+- **mstrofnone** — ElectrumX cert pinning for Samsung One UI 7
+
+Translations
+
+- Czech, German, Swedish, and Portuguese by @npub1e2yuky03caw4ke3zy68lg0fz3r4gkt94hx4fjmlelacyljgyk79svn3eef
+- Hungarian by @npub1dnvslq0vvrs8d603suykc4harv94yglcxwna9sl2xu8grt2afm3qgfh0tp
+- French by @npub106efcyntxc5qwl3w8krrhyt626m59ya2nk9f40px5s968u5xdwhsjsr8fz
+- Polish by @npub16gjyljum0ksrrm28zzvejydgxwfm7xse98zwc4hlgq8epxeuggushqwyrm
+- Hindi by @npub1ww6huwu3xye6r05n3qkjeq62wds5pq0jswhl7uc59lchc0n0ns4sdtw5e6
+- Slovenian by @npub1qqqqqqz7nhdqz3uuwmzlflxt46lyu7zkuqhcapddhgz66c4ddynswreecw
+- Bengali by @npub13qtw3yu0uc9r4yj5x0rhgy8nj5q0uyeq0pavkgt9ly69uuzxgkfqwvx23t
+- Spanish by @npub1luhyzgce7qtcs6r6v00ryjxza8av8u4dzh3avg0zks38tjktnmxspxq903
+- Chinese by hypnotichemionus4 and @npub1gd8e0xfkylc7v8c5a6hkpj4gelwwcy99jt90lqjseqjj2t253s2s6ch58h
+- Russian by Anton Zhao
+
+<a id="v1.06.3"></a>
+# [Release v1.06.3: Anon Posting](https://github.com/vitorpamplona/amethyst/releases/tag/v1.06.3) - 2026-03-24
+
+Improvements to Anon Posting and Reply navigation on DMs
+
+<a id="v1.06.2"></a>
+# [Release v1.06.2: Multi-choice Polls](https://github.com/vitorpamplona/amethyst/releases/tag/v1.06.2) - 2026-03-24
+
+- Add poll type selector for single and multiple choice polls
+- Add drag-to-seek support on the video progress indicator
+- Hide video controls on playback start
+- Recording indicator bar stops recording when tapped, not just the small stop icon.
+- Fixes non http uris in the references tag
+- Makes sure quote tags only happen once in events.
+- Removes the clickable NIP-05 URL in the @ tagging of users
+- Reduces the need to compute naddr to index articles in bookmarks
+- Checks if p tags are user pubkeys when loading drafts.
+- Scroll to the replied message when clicking reply preview in chat
+- Add an anonymous reply with a throwaway keypair
+- Fixes pool rendering when one label is large and the other is small
+- Use uri-reference-kmp in commonMain. Remove platform-specific implementations.
+- Avoids crashing the app in URLs with japanese chars
+- Sorts followers into a set to avoid LazyColumn key conflicts.
+- Clickable relay rows on the profile page
+- Move cache lookups from NavHost route lambdas into screen composables
+- Improvements to the status of attestations. Validity first, then Processing status.
+- Fixes Tor Manager flow value and improves Tor binding lifecycle.
+- Simplifies the report feed in the user profile
+- Clears some inconsistencies in translated strings
+- Fixes client tags
+- Fixes routes for AppDefinition events.
+
+<a id="v1.06.1"></a>
+# [Release v1.06.1: Fixes](https://github.com/vitorpamplona/amethyst/releases/tag/v1.06.1) - 2026-03-23
+
+- Improvements to the rendering of Polls.
+- Solves some of the crashes of the concurrent modification exception
+- Fixes URL parsers with Japanese chars
+- Fixes Wallet import from Primal on Poco phones
+- Improves the wording of the Last Seen
+- Fixes for "Cannot disable reuse from root if it was caused by other groups"
+- Fixes comparator to avoid Comparison method violates its general contract!
+- Improves zap-store settings
+
 <a id="v1.06.0"></a>
-# [Release v1.06.0: Polls, Relay Feeds, Wallets and much more](https://github.com/vitorpamplona/amethyst/releases/tag/v1.06.0) - 2025-03-21
+# [Release v1.06.0: Polls, Relay Feeds, Wallets and much more](https://github.com/vitorpamplona/amethyst/releases/tag/v1.06.0) - 2026-03-21
 
 Polls:
 - Adds support for creating and rendering NIP-85
@@ -271,13 +459,13 @@ Updated translations:
 - Russian by Anton Zhao
 
 <a id="v1.05.1"></a>
-# [Release v1.05.1: BugFixes](https://github.com/vitorpamplona/amethyst/releases/tag/v1.05.0) - 2025-01-08
+# [Release v1.05.1: BugFixes](https://github.com/vitorpamplona/amethyst/releases/tag/v1.05.0) - 2026-01-08
 
 - Fixed mixed DMs between logged in users.
 - Fixed draft screen click to edit post.
 
 <a id="v1.05.0"></a>
-# [Release v1.05.0: Bookmark Lists and WoT Scores](https://github.com/vitorpamplona/amethyst/releases/tag/v1.05.0) - 2025-01-08
+# [Release v1.05.0: Bookmark Lists and WoT Scores](https://github.com/vitorpamplona/amethyst/releases/tag/v1.05.0) - 2026-01-08
 
 #Amethyst v1.05.0: Bookmark Lists, Voice Notes, and WoT Scores
 

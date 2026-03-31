@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.send
 
 import android.content.Context
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
@@ -137,7 +139,7 @@ open class ChannelNewMessageViewModel :
     val iMetaAttachments = IMetaAttachments()
     var nip95attachments by mutableStateOf<List<Pair<FileStorageEvent, FileStorageHeaderEvent>>>(emptyList())
 
-    var message by mutableStateOf(TextFieldValue(""))
+    val message = TextFieldState()
     var urlPreview by mutableStateOf<String?>(null)
     val isUploadingImage: Boolean get() = uploadState?.isUploadingImage ?: false
     val isUploadingFile: Boolean get() = uploadState?.isUploadingFile ?: false
@@ -274,7 +276,7 @@ open class ChannelNewMessageViewModel :
             }
         }
 
-        message = TextFieldValue(draftEvent.content)
+        message.setTextAndPlaceCursorAtEnd(draftEvent.content)
 
         iMetaAttachments.addAll(draftEvent.imetas())
 
@@ -302,7 +304,7 @@ open class ChannelNewMessageViewModel :
     }
 
     suspend fun sendDraftSync() {
-        if (message.text.isBlank()) {
+        if (message.text.toString().isBlank()) {
             account.deleteDraftIgnoreErrors(draftTag.current)
         } else {
             val attachments = mutableSetOf<Event>()
@@ -365,14 +367,14 @@ open class ChannelNewMessageViewModel :
                         val note = nip95.let { it1 -> account.consumeNip95(it1.first, it1.second) }
 
                         note?.let {
-                            message = message.insertUrlAtCursor(it.toNostrUri())
+                            message.insertUrlAtCursor(it.toNostrUri())
                         }
 
                         urlPreview = findUrlInMessage()
                     } else if (upload.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
                         iMetaAttachments.add(upload.result, uploadState.caption, uploadState.contentWarningReason)
 
-                        message = message.insertUrlAtCursor(upload.result.url)
+                        message.insertUrlAtCursor(upload.result.url)
                         urlPreview = findUrlInMessage()
                     }
                 }
@@ -392,18 +394,19 @@ open class ChannelNewMessageViewModel :
 
     private suspend fun createTemplate(): EventTemplate<out Event>? {
         val channel = channel ?: return null
+        val messageText = message.text.toString()
         val tagger =
             NewMessageTagger(
-                message = message.text,
+                message = messageText,
                 pTags = listOfNotNull(replyTo.value?.author),
                 eTags = listOfNotNull(replyTo.value),
                 dao = accountViewModel,
             )
         tagger.run()
 
-        val urls = findURLs(message.text)
+        val urls = findURLs(messageText)
         val usedAttachments = iMetaAttachments.filterIsIn(urls.toSet())
-        val emojis = findEmoji(message.text, accountViewModel.account.emoji.myEmojis.value)
+        val emojis = findEmoji(messageText, accountViewModel.account.emoji.myEmojis.value)
 
         val channelRelays = channel.relays()
         val geoHash = if (wantsToAddGeoHash) (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString() else null
@@ -533,7 +536,7 @@ open class ChannelNewMessageViewModel :
     open fun cancel() {
         draftTag.rotate()
 
-        message = TextFieldValue("")
+        message.setTextAndPlaceCursorAtEnd("")
 
         replyTo.value = null
 
@@ -561,18 +564,18 @@ open class ChannelNewMessageViewModel :
         emojiSuggestions?.reset()
     }
 
-    open fun findUrlInMessage(): String? = UrlParser().parseValidUrls(message.text).withScheme.firstOrNull()
+    open fun findUrlInMessage(): String? = UrlParser().parseValidUrls(message.text.toString()).withScheme.firstOrNull()
 
     open fun addToMessage(it: String) {
-        updateMessage(TextFieldValue(message.text + " " + it))
+        message.setTextAndPlaceCursorAtEnd(message.text.toString() + " " + it)
+        onMessageChanged()
     }
 
-    open fun updateMessage(newMessage: TextFieldValue) {
-        message = newMessage
+    open fun onMessageChanged() {
         urlPreview = findUrlInMessage()
 
-        if (newMessage.selection.collapsed) {
-            val lastWord = newMessage.currentWord()
+        if (message.selection.collapsed) {
+            val lastWord = message.currentWord()
             if (lastWord.startsWith("@")) {
                 userSuggestionsMainMessage = UserSuggestionAnchor.MAIN_MESSAGE
                 userSuggestions?.processCurrentWord(lastWord)
@@ -600,7 +603,7 @@ open class ChannelNewMessageViewModel :
         userSuggestions?.let {
             if (userSuggestionsMainMessage == UserSuggestionAnchor.MAIN_MESSAGE) {
                 val lastWord = message.currentWord()
-                message = it.replaceCurrentWord(message, lastWord, item)
+                it.replaceCurrentWord(message, lastWord, item)
             } else if (userSuggestionsMainMessage == UserSuggestionAnchor.FORWARD_ZAPS) {
                 forwardZapTo.addItem(item)
                 forwardZapToEditting = TextFieldValue("")
@@ -615,7 +618,7 @@ open class ChannelNewMessageViewModel :
 
     open fun autocompleteWithEmoji(item: EmojiPackState.EmojiMedia) {
         val wordToInsert = ":${item.code}:"
-        message = message.replaceCurrentWord(wordToInsert)
+        message.replaceCurrentWord(wordToInsert)
 
         emojiSuggestions?.reset()
 
@@ -631,7 +634,7 @@ open class ChannelNewMessageViewModel :
             }
         }
 
-        message = message.replaceCurrentWord(wordToInsert)
+        message.replaceCurrentWord(wordToInsert)
 
         emojiSuggestions?.reset()
 
@@ -648,7 +651,7 @@ open class ChannelNewMessageViewModel :
             uploadState?.multiOrchestrator == null
 
     fun insertAtCursor(newElement: String) {
-        message = message.insertUrlAtCursor(newElement)
+        message.insertUrlAtCursor(newElement)
     }
 
     override fun locationManager(): LocationState = Amethyst.instance.locationManager
@@ -675,7 +678,7 @@ open class ChannelNewMessageViewModel :
 
     fun updateZapFromText() {
         viewModelScope.launch(Dispatchers.IO) {
-            val tagger = NewMessageTagger(message.text, emptyList(), emptyList(), accountViewModel)
+            val tagger = NewMessageTagger(message.text.toString(), emptyList(), emptyList(), accountViewModel)
             tagger.run()
             tagger.pTags?.forEach { taggedUser ->
                 if (!forwardZapTo.items.any { it.key == taggedUser }) {
