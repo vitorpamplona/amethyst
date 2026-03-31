@@ -39,6 +39,7 @@ import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
@@ -61,6 +62,7 @@ val SearchPostsByTextKinds1 =
         BadgeDefinitionEvent.KIND,
         PeopleListEvent.KIND,
         BookmarkListEvent.KIND,
+        OldBookmarkListEvent.KIND,
         AudioHeaderEvent.KIND,
         AudioTrackEvent.KIND,
         PinListEvent.KIND,

@@ -408,8 +408,12 @@
 
     <string name="manual_zaps">Manual Zap Splits</string>
     <string name="bookmarks">Bookmarks</string>
-    <string name="bookmarks_title">Default Bookmarks</string>
-    <string name="bookmarks_explainer">Your default Bookmarks that many clients support</string>
+    <string name="bookmarks_title">Bookmarks</string>
+    <string name="bookmarks_explainer">Your bookmarks (kind 10003)</string>
+    <string name="old_bookmarks_title">Old Bookmarks</string>
+    <string name="old_bookmarks_explainer">Your old bookmarks (kind 30001). Migrate them to the new format.</string>
+    <string name="migrate_bookmarks_button">Move All to New Bookmarks</string>
+    <string name="migrate_bookmarks_success">Bookmarks migrated successfully</string>
     <string name="drafts">Drafts</string>
     <string name="polls">Polls</string>
     <string name="private_bookmarks">Private Bookmarks</string>
@@ -1742,6 +1746,7 @@
     <string name="kind_blossom_auth">Blossom Auth</string>
     <string name="kind_broadcast_relays">Broadcast Relays</string>
     <string name="kind_bookmark_list">Bookmark List</string>
+    <string name="kind_old_bookmark_list">Old Bookmark List</string>
     <string name="kind_day_appointment">Day Appointment</string>
     <string name="kind_calendar">Calendar</string>
     <string name="kind_appointment">Appointment</string>

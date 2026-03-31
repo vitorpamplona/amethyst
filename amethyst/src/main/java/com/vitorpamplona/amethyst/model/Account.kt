@@ -56,6 +56,7 @@ import com.vitorpamplona.amethyst.model.nip17Dms.DmRelayListState
 import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcSignerState
 import com.vitorpamplona.amethyst.model.nip51Lists.BookmarkListState
 import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
+import com.vitorpamplona.amethyst.model.nip51Lists.OldBookmarkListState
 import com.vitorpamplona.amethyst.model.nip51Lists.PinListState
 import com.vitorpamplona.amethyst.model.nip51Lists.blockPeopleList.BlockPeopleListState
 import com.vitorpamplona.amethyst.model.nip51Lists.blockedRelays.BlockedRelayListDecryptionCache
@@ -176,6 +177,7 @@ import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
@@ -320,6 +322,7 @@ class Account(
     val hiddenUsers = HiddenUsersState(muteList.flow, blockPeopleList.flow, scope, settings)
 
     val labeledBookmarkLists = LabeledBookmarkListsState(signer, cache, scope)
+    val oldBookmarkState = OldBookmarkListState(signer, cache, scope)
     val bookmarkState = BookmarkListState(signer, cache, scope)
     val pinState = PinListState(signer, cache, scope)
     val emoji = EmojiPackState(signer, cache, scope)
@@ -1813,6 +1816,25 @@ class Account(
      */
     fun consumeBookmarkEvent(event: Event) {
         cache.justConsumeMyOwnEvent(event)
+    }
+
+    suspend fun migrateOldBookmarksToNew() {
+        if (!isWriteable()) return
+
+        val oldList = oldBookmarkState.getBookmarkList() ?: return
+        val publicBookmarks = oldList.publicBookmarks()
+        val privateBookmarks = oldList.privateBookmarks(signer) ?: emptyList()
+
+        if (publicBookmarks.isEmpty() && privateBookmarks.isEmpty()) return
+
+        val newEvent =
+            BookmarkListEvent.create(
+                publicBookmarks = publicBookmarks,
+                privateBookmarks = privateBookmarks,
+                signer = signer,
+            )
+
+        sendMyPublicAndPrivateOutbox(newEvent)
     }
 
     suspend fun addPin(note: Note) {
