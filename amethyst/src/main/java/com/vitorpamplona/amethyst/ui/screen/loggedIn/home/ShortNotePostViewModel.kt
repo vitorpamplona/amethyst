@@ -38,6 +38,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.compose.currentWord
 import com.vitorpamplona.amethyst.commons.compose.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.compose.replaceCurrentWord
+import com.vitorpamplona.amethyst.commons.compose.setTextAndPlaceCursorAtBeginning
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState.EmojiMedia
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -369,7 +370,7 @@ open class ShortNotePostViewModel :
             multiOrchestrator = null
 
             quote?.let { quotedNote ->
-                message.setTextAndPlaceCursorAtEnd(message.text.toString() + "\nnostr:${quotedNote.toNEvent()}")
+                message.setTextAndPlaceCursorAtBeginning(message.text.toString() + "\nnostr:${quotedNote.toNEvent()}")
 
                 quotedNote.author?.let { quotedUser ->
                     if (quotedUser.pubkeyHex != user.pubkeyHex) {
