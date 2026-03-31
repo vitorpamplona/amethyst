@@ -46,6 +46,7 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.AllMediaServersScreen
 import com.vitorpamplona.amethyst.ui.broadcast.DisplayBroadcastProgress
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.components.toasts.DisplayErrorMessages
+import com.vitorpamplona.amethyst.ui.navigation.composableFromEnd
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.navs.rememberNav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -126,6 +127,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SecurityFiltersScr
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.UpdateZapAmountScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.UserSettingsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.shorts.ShortsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.ThreadScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.VideoScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletReceiveScreen
@@ -178,6 +180,7 @@ fun BuildNavigation(
         composable<Route.Notification> { NotificationScreen(accountViewModel, nav) }
         composableFromEnd<Route.Polls> { PollsScreen(accountViewModel, nav) }
         composableFromEnd<Route.Pictures> { PicturesScreen(accountViewModel, nav) }
+        composableFromEnd<Route.Shorts> { ShortsScreen(accountViewModel, nav) }
         composable<Route.Chess> { ChessLobbyScreen(accountViewModel, nav) }
 
         composableFromEnd<Route.Wallet> { WalletScreen(accountViewModel, nav) }

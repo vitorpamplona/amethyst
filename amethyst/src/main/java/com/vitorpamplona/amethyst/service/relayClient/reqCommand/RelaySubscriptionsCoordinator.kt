@@ -42,6 +42,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.datasource.PollsFilte
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.datasource.UserProfileFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relay.datasource.RelayFeedFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.datasource.RelayInfoNip66FilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.shorts.datasource.ShortsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.datasources.ThreadFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.VideoFilterAssembler
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -64,8 +65,6 @@ class RelaySubscriptionsCoordinator(
     val chatroomList = ChatroomListFilterAssembler(client)
     val video = VideoFilterAssembler(client)
     val discovery = DiscoveryFilterAssembler(client)
-    val polls = PollsFilterAssembler(client)
-    val pictures = PicturesFilterAssembler(client)
 
     // loaders of content that is not yet in the device.
     // they are active when looking at events, users, channels.
@@ -89,6 +88,10 @@ class RelaySubscriptionsCoordinator(
     val followPacks = FollowPackFeedFilterAssembler(client)
     val chess = ChessFilterAssembler(client)
 
+    val polls = PollsFilterAssembler(client)
+    val pictures = PicturesFilterAssembler(client)
+    val shorts = ShortsFilterAssembler(client)
+
     // active when sending zaps via NWC
     val nwc = NWCPaymentFilterAssembler(client)
 
@@ -101,6 +104,7 @@ class RelaySubscriptionsCoordinator(
             discovery,
             polls,
             pictures,
+            shorts,
             channelFinder,
             eventFinder,
             userFinder,

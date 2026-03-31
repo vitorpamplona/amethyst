@@ -46,6 +46,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.OpenPollsStat
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.dal.NotificationFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.dal.PictureFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.dal.PollsFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.shorts.dal.ShortsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.dal.VideoFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.webBookmarks.dal.WebBookmarkFeedFilter
 import kotlinx.coroutines.CoroutineScope
@@ -74,6 +75,7 @@ class AccountFeedContentStates(
     val pollsFeed = FeedContentState(PollsFeedFilter(account), scope, LocalCache)
 
     val picturesFeed = FeedContentState(PictureFeedFilter(account), scope, LocalCache)
+    val shortsFeed = FeedContentState(ShortsFeedFilter(account), scope, LocalCache)
 
     val notifications = CardFeedContentState(NotificationFeedFilter(account), scope)
     val notificationsOpenPolls = OpenPollsState(account, scope)
@@ -112,6 +114,7 @@ class AccountFeedContentStates(
         pollsFeed.updateFeedWith(newNotes)
 
         picturesFeed.updateFeedWith(newNotes)
+        shortsFeed.updateFeedWith(newNotes)
 
         notifications.updateFeedWith(newNotes)
         notificationSummary.invalidateInsertData(newNotes)
@@ -144,6 +147,7 @@ class AccountFeedContentStates(
         pollsFeed.deleteFromFeed(newNotes)
 
         picturesFeed.deleteFromFeed(newNotes)
+        shortsFeed.deleteFromFeed(newNotes)
 
         notifications.deleteFromFeed(newNotes)
         notificationSummary.invalidateInsertData(newNotes)

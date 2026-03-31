@@ -58,6 +58,8 @@ import androidx.compose.material.icons.outlined.CollectionsBookmark
 import androidx.compose.material.icons.outlined.Drafts
 import androidx.compose.material.icons.outlined.GroupAdd
 import androidx.compose.material.icons.outlined.Language
+import androidx.compose.material.icons.outlined.Photo
+import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Sync
 import androidx.compose.material3.HorizontalDivider
@@ -583,11 +585,18 @@ fun ListContent(
 
         NavigationRow(
             title = R.string.pictures,
-            icon = R.drawable.ic_picture,
-            iconReference = 1,
+            icon = Icons.Outlined.Photo,
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
             route = Route.Pictures,
+        )
+
+        NavigationRow(
+            title = R.string.shorts,
+            icon = Icons.Outlined.PlayCircle,
+            tint = MaterialTheme.colorScheme.onBackground,
+            nav = nav,
+            route = Route.Shorts,
         )
 
         NavigationRow(
