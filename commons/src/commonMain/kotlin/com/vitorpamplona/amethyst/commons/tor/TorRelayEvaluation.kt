@@ -18,7 +18,31 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.torState
+package com.vitorpamplona.amethyst.commons.tor
 
-// Canonical type now lives in commons
-typealias TorRelaySettings = com.vitorpamplona.amethyst.commons.tor.TorRelaySettings
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isLocalHost
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isOnion
+
+class TorRelayEvaluation(
+    val torSettings: TorRelaySettings,
+    val trustedRelayList: Set<NormalizedRelayUrl>,
+    val dmRelayList: Set<NormalizedRelayUrl>,
+) {
+    fun useTor(relay: NormalizedRelayUrl): Boolean =
+        if (torSettings.torType == TorType.OFF) {
+            false
+        } else {
+            if (relay.isLocalHost()) {
+                false
+            } else if (relay.isOnion()) {
+                torSettings.onionRelaysViaTor
+            } else if (relay in dmRelayList) {
+                torSettings.dmRelaysViaTor
+            } else if (relay in trustedRelayList) {
+                torSettings.trustedRelaysViaTor
+            } else {
+                torSettings.newRelaysViaTor
+            }
+        }
+}
