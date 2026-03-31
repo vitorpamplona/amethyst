@@ -39,7 +39,7 @@ fun PollsTopBar(
     nav: INav,
 ) {
     UserDrawerSearchTopBar(accountViewModel, nav) {
-        val list by accountViewModel.account.settings.defaultDiscoveryFollowList
+        val list by accountViewModel.account.settings.defaultPollsFollowList
             .collectAsStateWithLifecycle()
 
         PollsTopNavFilterBar(

@@ -45,7 +45,7 @@ class ShortsFeedFilter(
 
     override fun limit() = 200
 
-    fun followList(): TopFilter = account.settings.defaultDiscoveryFollowList.value
+    fun followList(): TopFilter = account.settings.defaultShortsFollowList.value
 
     fun TopFilter.isMuteList() = this is TopFilter.MuteList
 

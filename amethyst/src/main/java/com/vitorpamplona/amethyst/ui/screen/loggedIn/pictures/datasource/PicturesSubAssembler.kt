@@ -51,7 +51,7 @@ class PicturesSubAssembler(
 
     override fun list(key: PicturesQueryState) = key.listName()
 
-    fun PicturesQueryState.listNameFlow() = account.settings.defaultDiscoveryFollowList
+    fun PicturesQueryState.listNameFlow() = account.settings.defaultPicturesFollowList
 
     fun PicturesQueryState.listName() = listNameFlow().value
 

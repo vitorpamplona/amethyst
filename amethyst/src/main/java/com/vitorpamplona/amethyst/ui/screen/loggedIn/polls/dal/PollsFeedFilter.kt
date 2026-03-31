@@ -37,7 +37,7 @@ class PollsFeedFilter(
 
     override fun limit() = 200
 
-    fun followList(): TopFilter = account.settings.defaultDiscoveryFollowList.value
+    fun followList(): TopFilter = account.settings.defaultPollsFollowList.value
 
     fun TopFilter.isMuteList() = this is TopFilter.MuteList
 

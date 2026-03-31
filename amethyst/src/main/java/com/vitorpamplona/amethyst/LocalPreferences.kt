@@ -97,6 +97,10 @@ private object PrefKeys {
     const val DEFAULT_STORIES_FOLLOW_LIST = "defaultStoriesFollowList"
     const val DEFAULT_NOTIFICATION_FOLLOW_LIST = "defaultNotificationFollowList"
     const val DEFAULT_DISCOVERY_FOLLOW_LIST = "defaultDiscoveryFollowList"
+    const val DEFAULT_POLLS_FOLLOW_LIST = "defaultPollsFollowList"
+    const val DEFAULT_PICTURES_FOLLOW_LIST = "defaultPicturesFollowList"
+    const val DEFAULT_SHORTS_FOLLOW_LIST = "defaultShortsFollowList"
+    const val DEFAULT_LONGS_FOLLOW_LIST = "defaultLongsFollowList"
     const val ZAP_PAYMENT_REQUEST_SERVER = "zapPaymentServer"
     const val LATEST_USER_METADATA = "latestUserMetadata"
     const val LATEST_CONTACT_LIST = "latestContactList"
@@ -331,6 +335,11 @@ object LocalPreferences {
                     putString(PrefKeys.DEFAULT_NOTIFICATION_FOLLOW_LIST, JsonMapper.toJson(settings.defaultNotificationFollowList.value))
                     putString(PrefKeys.DEFAULT_DISCOVERY_FOLLOW_LIST, JsonMapper.toJson(settings.defaultDiscoveryFollowList.value))
 
+                    putString(PrefKeys.DEFAULT_POLLS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultPollsFollowList.value))
+                    putString(PrefKeys.DEFAULT_PICTURES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultPicturesFollowList.value))
+                    putString(PrefKeys.DEFAULT_SHORTS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultShortsFollowList.value))
+                    putString(PrefKeys.DEFAULT_LONGS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultLongsFollowList.value))
+
                     putOrRemove(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER, settings.zapPaymentRequest.value?.denormalize())
 
                     putOrRemove(PrefKeys.LATEST_CONTACT_LIST, settings.backupContactList)
@@ -470,6 +479,12 @@ object LocalPreferences {
                     val defaultStoriesFollowListStr = getString(PrefKeys.DEFAULT_STORIES_FOLLOW_LIST, null)
                     val defaultNotificationFollowListStr = getString(PrefKeys.DEFAULT_NOTIFICATION_FOLLOW_LIST, null)
                     val defaultDiscoveryFollowListStr = getString(PrefKeys.DEFAULT_DISCOVERY_FOLLOW_LIST, null)
+
+                    val defaultPollsFollowListStr = getString(PrefKeys.DEFAULT_POLLS_FOLLOW_LIST, null)
+                    val defaultPicturesFollowListStr = getString(PrefKeys.DEFAULT_PICTURES_FOLLOW_LIST, null)
+                    val defaultShortsFollowListStr = getString(PrefKeys.DEFAULT_SHORTS_FOLLOW_LIST, null)
+                    val defaultLongsFollowListStr = getString(PrefKeys.DEFAULT_LONGS_FOLLOW_LIST, null)
+
                     val zapPaymentRequestServerStr = getString(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER, null)
                     val defaultFileServerStr = getString(PrefKeys.DEFAULT_FILE_SERVER, null)
 
@@ -501,6 +516,12 @@ object LocalPreferences {
                     val defaultStoriesFollowList = async { parseOrNull<TopFilter>(defaultStoriesFollowListStr) ?: TopFilter.Global }
                     val defaultNotificationFollowList = async { parseOrNull<TopFilter>(defaultNotificationFollowListStr) ?: TopFilter.Global }
                     val defaultDiscoveryFollowList = async { parseOrNull<TopFilter>(defaultDiscoveryFollowListStr) ?: TopFilter.Global }
+
+                    val defaultPollsFollowList = async { parseOrNull<TopFilter>(defaultPollsFollowListStr) ?: TopFilter.Global }
+                    val defaultPicturesFollowList = async { parseOrNull<TopFilter>(defaultPicturesFollowListStr) ?: TopFilter.Global }
+                    val defaultShortsFollowList = async { parseOrNull<TopFilter>(defaultShortsFollowListStr) ?: TopFilter.Global }
+                    val defaultLongsFollowList = async { parseOrNull<TopFilter>(defaultLongsFollowListStr) ?: TopFilter.Global }
+
                     val zapPaymentRequestServer = async { parseOrNull<Nip47WalletConnect.Nip47URI>(zapPaymentRequestServerStr) }
                     val defaultFileServer = async { parseOrNull<ServerName>(defaultFileServerStr) ?: DEFAULT_MEDIA_SERVERS[0] }
 
@@ -545,6 +566,10 @@ object LocalPreferences {
                         defaultStoriesFollowList = MutableStateFlow(defaultStoriesFollowList.await()),
                         defaultNotificationFollowList = MutableStateFlow(defaultNotificationFollowList.await()),
                         defaultDiscoveryFollowList = MutableStateFlow(defaultDiscoveryFollowList.await()),
+                        defaultPollsFollowList = MutableStateFlow(defaultPollsFollowList.await()),
+                        defaultPicturesFollowList = MutableStateFlow(defaultPicturesFollowList.await()),
+                        defaultShortsFollowList = MutableStateFlow(defaultShortsFollowList.await()),
+                        defaultLongsFollowList = MutableStateFlow(defaultLongsFollowList.await()),
                         zapPaymentRequest = MutableStateFlow(zapPaymentRequestServer.await()?.normalize()),
                         hideDeleteRequestDialog = hideDeleteRequestDialog,
                         hideBlockAlertDialog = hideBlockAlertDialog,

@@ -51,7 +51,7 @@ class ShortsSubAssembler(
 
     override fun list(key: ShortsQueryState) = key.listName()
 
-    fun ShortsQueryState.listNameFlow() = account.settings.defaultDiscoveryFollowList
+    fun ShortsQueryState.listNameFlow() = account.settings.defaultShortsFollowList
 
     fun ShortsQueryState.listName() = listNameFlow().value
 

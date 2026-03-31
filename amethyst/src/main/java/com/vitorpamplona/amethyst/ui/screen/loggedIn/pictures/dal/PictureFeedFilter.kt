@@ -36,7 +36,7 @@ class PictureFeedFilter(
 
     override fun limit() = 200
 
-    fun followList(): TopFilter = account.settings.defaultDiscoveryFollowList.value
+    fun followList(): TopFilter = account.settings.defaultPicturesFollowList.value
 
     fun TopFilter.isMuteList() = this is TopFilter.MuteList
 

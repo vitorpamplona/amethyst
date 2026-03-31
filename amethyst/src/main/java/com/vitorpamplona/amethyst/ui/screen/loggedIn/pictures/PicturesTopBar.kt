@@ -39,7 +39,7 @@ fun PicturesTopBar(
     nav: INav,
 ) {
     UserDrawerSearchTopBar(accountViewModel, nav) {
-        val list by accountViewModel.account.settings.defaultDiscoveryFollowList
+        val list by accountViewModel.account.settings.defaultPicturesFollowList
             .collectAsStateWithLifecycle()
 
         PicturesTopNavFilterBar(
