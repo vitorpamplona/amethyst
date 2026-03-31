@@ -185,7 +185,7 @@ private fun PictureCardImage(
 }
 
 @Composable
-private fun PictureCardCaption(event: PictureEvent) {
+internal fun PictureCardCaption(event: PictureEvent) {
     val title = event.title()
     val content = event.content
 
