@@ -36,6 +36,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.compose.currentWord
 import com.vitorpamplona.amethyst.commons.compose.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.compose.replaceCurrentWord
+import com.vitorpamplona.amethyst.commons.compose.setTextAndPlaceCursorAtBeginning
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -244,7 +245,7 @@ open class CommentPostViewModel :
     }
 
     open fun quote(quote: Note) {
-        message.setTextAndPlaceCursorAtEnd(message.text.toString() + "\nnostr:${quote.toNEvent()}")
+        message.setTextAndPlaceCursorAtBeginning(message.text.toString() + "\nnostr:${quote.toNEvent()}")
 
         quote.author?.let { quotedUser ->
             if (quotedUser.pubkeyHex != accountViewModel.userProfile().pubkeyHex) {

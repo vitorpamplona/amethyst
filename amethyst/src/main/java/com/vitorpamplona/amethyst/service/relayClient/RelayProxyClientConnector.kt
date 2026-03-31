@@ -79,16 +79,24 @@ class RelayProxyClientConnector(
                         client.disconnect()
                     }
                     if (it.torStatus is TorServiceStatus.Active) {
-                        it.torStatus.torControlConnection?.signal(TorControlCommands.SIGNAL_DORMANT)
-                        Log.d("ManageRelayServices", "Pausing Tor Activity")
+                        try {
+                            it.torStatus.torControlConnection?.signal(TorControlCommands.SIGNAL_DORMANT)
+                            Log.d("ManageRelayServices", "Pausing Tor Activity")
+                        } catch (e: Exception) {
+                            Log.e("ManageRelayServices") { "Failed to signal Tor dormant: ${e.message}" }
+                        }
                     }
                 } else if (it.connectivity is ConnectivityStatus.Active && !client.isActive()) {
                     Log.d("ManageRelayServices", "Connectivity On: Resuming Relay Services")
 
                     if (it.torStatus is TorServiceStatus.Active) {
-                        it.torStatus.torControlConnection?.signal(TorControlCommands.SIGNAL_ACTIVE)
-                        it.torStatus.torControlConnection?.signal(TorControlCommands.SIGNAL_NEWNYM)
-                        Log.d("ManageRelayServices", "Resuming Tor Activity with new nym")
+                        try {
+                            it.torStatus.torControlConnection?.signal(TorControlCommands.SIGNAL_ACTIVE)
+                            it.torStatus.torControlConnection?.signal(TorControlCommands.SIGNAL_NEWNYM)
+                            Log.d("ManageRelayServices", "Resuming Tor Activity with new nym")
+                        } catch (e: Exception) {
+                            Log.e("ManageRelayServices") { "Failed to signal Tor active: ${e.message}" }
+                        }
                     }
 
                     // only calls this if the client is not active. Otherwise goes to the else below

@@ -25,6 +25,13 @@ import androidx.compose.ui.text.TextRange
 import kotlin.math.max
 import kotlin.math.min
 
+fun TextFieldState.setTextAndPlaceCursorAtBeginning(text: String) {
+    edit {
+        replace(0, length, text)
+        selection = TextRange(0, 0)
+    }
+}
+
 fun TextFieldState.insertUrlAtCursor(url: String) {
     edit {
         var toInsert = url.trim()

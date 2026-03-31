@@ -38,6 +38,7 @@ import com.vitorpamplona.quartz.nip64Chess.jester.JesterEvent
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterGameEvents
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterProtocol
 import com.vitorpamplona.quartz.nip64Chess.jester.toJesterEvent
+import com.vitorpamplona.quartz.utils.Log
 
 /**
  * Android implementation of ChessEventPublisher using Jester protocol.
@@ -59,9 +60,9 @@ class AndroidChessPublisher(
      * Uses ChessEventBroadcaster to ensure relay connections before sending.
      */
     private suspend fun broadcastToChessRelays(event: com.vitorpamplona.quartz.nip01Core.core.Event): Boolean {
-        println("[AndroidChessPublisher] Broadcasting event ${event.id.take(8)} via ChessEventBroadcaster")
+        Log.d("chessdebug") { "[AndroidChessPublisher] Broadcasting event ${event.id.take(8)} via ChessEventBroadcaster" }
         val result = broadcaster.broadcast(event)
-        println("[AndroidChessPublisher] Broadcast result: ${result.message}")
+        Log.d("chessdebug") { "[AndroidChessPublisher] Broadcast result: ${result.message}" }
         return result.success
     }
 
@@ -92,7 +93,7 @@ class AndroidChessPublisher(
             account.cache.justConsumeMyOwnEvent(signedEvent)
             if (success) signedEvent.id else null
         } catch (e: Exception) {
-            println("[AndroidChessPublisher] publishStart failed: ${e.message}")
+            Log.d("chessdebug") { "[AndroidChessPublisher] publishStart failed: ${e.message}" }
             null
         }
 
@@ -118,7 +119,7 @@ class AndroidChessPublisher(
             account.cache.justConsumeMyOwnEvent(signedEvent)
             if (success) signedEvent.id else null
         } catch (e: Exception) {
-            println("[AndroidChessPublisher] publishMove failed: ${e.message}")
+            Log.d("chessdebug") { "[AndroidChessPublisher] publishMove failed: ${e.message}" }
             null
         }
 
@@ -145,7 +146,7 @@ class AndroidChessPublisher(
             account.cache.justConsumeMyOwnEvent(signedEvent)
             success
         } catch (e: Exception) {
-            println("[AndroidChessPublisher] publishGameEnd failed: ${e.message}")
+            Log.d("chessdebug") { "[AndroidChessPublisher] publishGameEnd failed: ${e.message}" }
             false
         }
 
@@ -180,7 +181,7 @@ class AndroidRelayFetcher(
         }
 
     override fun getRelayUrls(): List<String> {
-        println("[AndroidRelayFetcher] getRelayUrls: using ${ChessConfig.CHESS_RELAYS.size} chess relays")
+        Log.d("chessdebug") { "[AndroidRelayFetcher] getRelayUrls: using ${ChessConfig.CHESS_RELAYS.size} chess relays" }
         return ChessConfig.CHESS_RELAYS
     }
 
@@ -193,7 +194,7 @@ class AndroidRelayFetcher(
      * 2. Fetch moves that reference the start event via #e tag
      */
     override suspend fun fetchGameEvents(startEventId: String): JesterGameEvents {
-        println("[AndroidRelayFetcher] fetchGameEvents: fetching from relays for startEventId=$startEventId")
+        Log.d("chessdebug") { "[AndroidRelayFetcher] fetchGameEvents: fetching from relays for startEventId=$startEventId" }
 
         // Filter 1: Fetch the start event by its ID
         val startEventFilter =
@@ -223,7 +224,7 @@ class AndroidRelayFetcher(
             }
         }
 
-        println("[AndroidRelayFetcher] fetchGameEvents: found start=${startEvent != null}, moves=${moves.size}")
+        Log.d("chessdebug") { "[AndroidRelayFetcher] fetchGameEvents: found start=${startEvent != null}, moves=${moves.size}" }
 
         return JesterGameEvents(
             startEvent = startEvent,
@@ -237,30 +238,30 @@ class AndroidRelayFetcher(
      */
     override suspend fun fetchChallenges(onProgress: ((RelayFetchProgress) -> Unit)?): List<JesterEvent> {
         val relays = chessRelayUrls()
-        println("[AndroidRelayFetcher] fetchChallenges: fetching from ${relays.size} relays: $relays")
+        Log.d("chessdebug") { "[AndroidRelayFetcher] fetchChallenges: fetching from ${relays.size} relays: $relays" }
 
         if (relays.isEmpty()) {
-            println("[AndroidRelayFetcher] fetchChallenges: WARNING - no connected relays!")
+            Log.d("chessdebug") { "[AndroidRelayFetcher] fetchChallenges: WARNING - no connected relays!" }
             return emptyList()
         }
 
         val filter = ChessFilterBuilder.challengesFilter(userPubkey)
-        println("[AndroidRelayFetcher] fetchChallenges: filter kinds=${filter.kinds}, tags=${filter.tags}, since=${filter.since}, limit=${filter.limit}")
-        println("[AndroidRelayFetcher] fetchChallenges: filter JSON=${filter.toJson()}")
+        Log.d("chessdebug") { "[AndroidRelayFetcher] fetchChallenges: filter kinds=${filter.kinds}, tags=${filter.tags}, since=${filter.since}, limit=${filter.limit}" }
+        Log.d("chessdebug") { "[AndroidRelayFetcher] fetchChallenges: filter JSON=${filter.toJson()}" }
 
         val relayFilters = relays.associateWith { listOf(filter) }
         val events = fetchHelper.fetchEvents(relayFilters, onProgress = onProgress)
-        println("[AndroidRelayFetcher] fetchChallenges: received ${events.size} raw events")
+        Log.d("chessdebug") { "[AndroidRelayFetcher] fetchChallenges: received ${events.size} raw events" }
 
         // Debug: If no events, also try without #e filter to see if relays have ANY kind 30 events
         if (events.isEmpty()) {
-            println("[AndroidRelayFetcher] DEBUG: No events with #e filter, trying without tag filter...")
+            Log.d("chessdebug") { "[AndroidRelayFetcher] DEBUG: No events with #e filter, trying without tag filter..." }
             val debugFilter = ChessFilterBuilder.recentGamesFilter()
             val debugFilters = relays.associateWith { listOf(debugFilter) }
             val debugEvents = fetchHelper.fetchEvents(debugFilters, timeoutMs = 10_000)
-            println("[AndroidRelayFetcher] DEBUG: recentGamesFilter (no #e) returned ${debugEvents.size} events")
+            Log.d("chessdebug") { "[AndroidRelayFetcher] DEBUG: recentGamesFilter (no #e) returned ${debugEvents.size} events" }
             debugEvents.take(5).forEach { e ->
-                println("[AndroidRelayFetcher] DEBUG: kind=${e.kind}, id=${e.id.take(8)}, tags=${e.tags.take(3).map { it.toList() }}")
+                Log.d("chessdebug") { "[AndroidRelayFetcher] DEBUG: kind=${e.kind}, id=${e.id.take(8)}, tags=${e.tags.take(3).map { it.toList() }}" }
             }
         }
 
@@ -286,7 +287,7 @@ class AndroidRelayFetcher(
             }
         }
 
-        println("[AndroidRelayFetcher] fetchChallenges: found ${challenges.size} challenges from ${events.size} events")
+        Log.d("chessdebug") { "[AndroidRelayFetcher] fetchChallenges: found ${challenges.size} challenges from ${events.size} events" }
         return challenges
     }
 
@@ -356,7 +357,7 @@ class AndroidRelayFetcher(
      * Uses one-shot fetch for reliability.
      */
     override suspend fun fetchUserGameIds(onProgress: ((RelayFetchProgress) -> Unit)?): Set<String> {
-        println("[AndroidRelayFetcher] fetchUserGameIds: fetching from relays")
+        Log.d("chessdebug") { "[AndroidRelayFetcher] fetchUserGameIds: fetching from relays" }
 
         // Fetch events authored by user AND events tagging user
         val authoredFilter = ChessFilterBuilder.userGamesFilter(userPubkey)
@@ -386,7 +387,7 @@ class AndroidRelayFetcher(
             }
         }
 
-        println("[AndroidRelayFetcher] fetchUserGameIds: found ${gameIds.size} game IDs from ${events.size} events")
+        Log.d("chessdebug") { "[AndroidRelayFetcher] fetchUserGameIds: found ${gameIds.size} game IDs from ${events.size} events" }
         return gameIds
     }
 }

@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.chess
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip64Chess.Color
+import com.vitorpamplona.quartz.nip64Chess.GameStatus
 import com.vitorpamplona.quartz.nip64Chess.LiveChessGameState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -296,7 +297,8 @@ class ChessLobbyState(
     }
 
     fun updatePublicGames(games: List<PublicGame>) {
-        _publicGames.value = games
+        // Filter out games where the user is a participant
+        _publicGames.value = games.filter { it.whitePubkey != userPubkey && it.blackPubkey != userPubkey }
     }
 
     fun addActiveGame(
@@ -392,65 +394,62 @@ class ChessLobbyState(
     }
 
     /**
-     * Move a game from active/spectating to completed.
-     * Display names are optional; UI can look them up later if needed.
+     * Move a game to completed. Looks up the game from active/spectating maps,
+     * or uses the provided [liveState] if the game isn't in either map yet
+     * (e.g. a newly discovered game that is already finished).
      */
     fun moveToCompleted(
         gameId: String,
         result: String,
         termination: String?,
+        liveState: LiveChessGameState? = null,
         whiteDisplayName: String? = null,
         blackDisplayName: String? = null,
     ) {
-        val existingState = _activeGames.value[gameId] ?: _spectatingGames.value[gameId]
-        existingState?.let { gameState ->
-            // Derive white/black pubkeys from player color
-            val whitePubkey =
-                if (gameState.playerColor == Color.WHITE) {
-                    gameState.playerPubkey
-                } else {
-                    gameState.opponentPubkey
-                }
-            val blackPubkey =
-                if (gameState.playerColor == Color.BLACK) {
-                    gameState.playerPubkey
-                } else {
-                    gameState.opponentPubkey
-                }
+        val gameState = _activeGames.value[gameId] ?: _spectatingGames.value[gameId] ?: liveState ?: return
 
-            val completed =
-                CompletedGame(
-                    gameId = gameId,
-                    whitePubkey = whitePubkey,
-                    whiteDisplayName = whiteDisplayName,
-                    blackPubkey = blackPubkey,
-                    blackDisplayName = blackDisplayName,
-                    result = result,
-                    termination = termination,
-                    moveCount = gameState.moveHistory.value.size,
-                    completedAt =
-                        com.vitorpamplona.quartz.utils.TimeUtils
-                            .now(),
-                )
+        val whitePubkey =
+            if (gameState.playerColor == Color.WHITE) gameState.playerPubkey else gameState.opponentPubkey
+        val blackPubkey =
+            if (gameState.playerColor == Color.BLACK) gameState.playerPubkey else gameState.opponentPubkey
 
-            _completedGames.update { current ->
-                // Avoid duplicates
-                if (current.any { it.gameId == gameId }) {
-                    current
-                } else {
-                    listOf(completed) + current
-                }
-            }
+        val completed =
+            CompletedGame(
+                gameId = gameId,
+                whitePubkey = whitePubkey,
+                whiteDisplayName = whiteDisplayName,
+                blackPubkey = blackPubkey,
+                blackDisplayName = blackDisplayName,
+                result = result,
+                termination = termination,
+                moveCount = gameState.moveHistory.value.size,
+                completedAt =
+                    com.vitorpamplona.quartz.utils.TimeUtils
+                        .now(),
+            )
 
-            // Remove from active/spectating
-            _activeGames.update { it - gameId }
-            _spectatingGames.update { it - gameId }
-
-            // Clear selection if this game was selected
-            if (_selectedGameId.value == gameId) {
-                _selectedGameId.value = null
-            }
+        _completedGames.update { current ->
+            if (current.any { it.gameId == gameId }) current else listOf(completed) + current
         }
+
+        // Remove from active/spectating
+        _activeGames.update { it - gameId }
+        _spectatingGames.update { it - gameId }
+
+        // Clear selection if this game was selected
+        if (_selectedGameId.value == gameId) {
+            _selectedGameId.value = null
+        }
+    }
+
+    fun removeCompletedGame(gameId: String) {
+        _completedGames.update { current ->
+            current.filter { it.gameId != gameId }
+        }
+    }
+
+    fun clearCompletedGames() {
+        _completedGames.value = emptyList()
     }
 
     fun addSpectatingGame(
@@ -461,6 +460,16 @@ class ChessLobbyState(
         if (AcceptedGamesRegistry.wasAccepted(gameId)) {
             // Add to active games instead
             _activeGames.update { it + (gameId to state) }
+            return
+        }
+        // Don't add own games to spectating list
+        // Note: LiveChessGameState.playerPubkey is always viewerPubkey regardless of role,
+        // so we check isSpectator instead to determine if the user is actually a participant
+        if (!state.isSpectator) {
+            return
+        }
+        // Don't add finished games to spectating list
+        if (state.gameStatus.value is GameStatus.Finished) {
             return
         }
         _spectatingGames.update { it + (gameId to state) }

@@ -201,6 +201,14 @@ fun LiveChessGameScreen(
     onResign: () -> Unit,
     isSpectatorOverride: Boolean? = null,
     onGameEndDismiss: (() -> Unit)? = null,
+    onLeaveSpectating: (() -> Unit)? = null,
+    whiteName: String = "White",
+    whiteHex: String = "",
+    whiteAvatarUrl: String? = null,
+    blackName: String = "Black",
+    blackHex: String = "",
+    blackAvatarUrl: String? = null,
+    onPlayerClick: ((pubkeyHex: String) -> Unit)? = null,
 ) {
     // Observe state flows for automatic recomposition on updates
     val currentPosition by gameState.currentPosition.collectAsState()
@@ -210,8 +218,9 @@ fun LiveChessGameScreen(
     // Use override if provided, otherwise fall back to gameState flag
     val isSpectator = isSpectatorOverride ?: gameState.isSpectator
 
-    // Pending challenges and spectators cannot make moves
-    val canMakeMoves = !isSpectator && !gameState.isPendingChallenge
+    // Spectators cannot make moves; pending challenges still allow board interaction
+    // (matches Desktop behavior where board is always interactive for participants)
+    val canMakeMoves = !isSpectator
 
     // Track if game end overlay was dismissed
     var gameEndDismissed by remember { mutableStateOf(false) }
@@ -235,6 +244,22 @@ fun LiveChessGameScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
+                // Player vs Player avatar header
+                if (whiteHex.isNotEmpty() || blackHex.isNotEmpty()) {
+                    ChessPlayerVsHeader(
+                        whiteName = whiteName,
+                        whiteHex = whiteHex,
+                        whiteAvatarUrl = whiteAvatarUrl,
+                        blackName = blackName,
+                        blackHex = blackHex,
+                        blackAvatarUrl = blackAvatarUrl,
+                        isWhiteTurn = currentPosition.activeColor == Color.WHITE,
+                        onWhiteClick = onPlayerClick?.let { { it(whiteHex) } },
+                        onBlackClick = onPlayerClick?.let { { it(blackHex) } },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+
                 // Game info - use currentPosition.activeColor for turn display
                 GameInfoHeader(
                     gameId = gameState.startEventId,
@@ -278,7 +303,7 @@ fun LiveChessGameScreen(
                     }
 
                     isSpectator -> {
-                        SpectatorInfo()
+                        SpectatorInfo(onLeaveSpectating = onLeaveSpectating)
                     }
 
                     else -> {
@@ -526,22 +551,33 @@ private fun GameInfoHeader(
  * Info banner shown when spectating a game
  */
 @Composable
-private fun SpectatorInfo() {
-    Box(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .background(
-                    MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f),
-                    RoundedCornerShape(8.dp),
-                ).padding(12.dp),
-        contentAlignment = Alignment.Center,
+private fun SpectatorInfo(onLeaveSpectating: (() -> Unit)? = null) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text(
-            text = "Watching game - spectator mode",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onTertiaryContainer,
-        )
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .background(
+                        MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f),
+                        RoundedCornerShape(8.dp),
+                    ).padding(12.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = "Watching game - spectator mode",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onTertiaryContainer,
+            )
+        }
+        onLeaveSpectating?.let { onLeave ->
+            OutlinedButton(onClick = onLeave) {
+                Text("Leave Game")
+            }
+        }
     }
 }
 
