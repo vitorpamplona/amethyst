@@ -109,6 +109,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.redirect.LoadRedirectScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relay.RelayFeedScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.AllRelayListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.RelayInformationScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.deployment.RelayDeploymentScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync.EventSyncScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.nip43.RelayMembersScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.nip86.RelayManagementScreen
@@ -227,6 +228,7 @@ fun BuildNavigation(
         composableFromEnd<Route.RequestToVanish> { RequestToVanishScreen(accountViewModel, nav) }
         composableFromEnd<Route.VanishEvents> { VanishEventsScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.EditMediaServers> { AllMediaServersScreen(accountViewModel, nav) }
+        composableFromEnd<Route.DeployRelay> { RelayDeploymentScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.UpdateReactionType> { UpdateReactionTypeScreen(accountViewModel, nav) }
 
         composableFromEndArgs<Route.ContentDiscovery> { DvmContentDiscoveryScreen(it.id, accountViewModel, nav) }

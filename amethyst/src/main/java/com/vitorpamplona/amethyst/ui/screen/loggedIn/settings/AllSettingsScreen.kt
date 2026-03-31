@@ -32,6 +32,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.CloudUpload
 import androidx.compose.material.icons.outlined.DeleteForever
+import androidx.compose.material.icons.outlined.Dns
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Key
@@ -96,6 +97,13 @@ fun AllSettingsScreen(
                 iconPainterRef = 4,
                 tint = tint,
                 onClick = { nav.nav(Route.EditRelays) },
+            )
+            HorizontalDivider()
+            SettingsNavigationRow(
+                title = R.string.deploy_relay,
+                icon = Icons.Outlined.Dns,
+                tint = tint,
+                onClick = { nav.nav(Route.DeployRelay) },
             )
             HorizontalDivider()
             SettingsNavigationRow(

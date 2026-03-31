@@ -2105,4 +2105,44 @@
     <string name="relay_members_removed">%1$d members removed from relay</string>
     <string name="relay_join_request">Relay join request</string>
     <string name="relay_leave_request">Relay leave request</string>
+
+    <!-- Relay Deployment -->
+    <string name="deploy_relay">Deploy Relay</string>
+    <string name="deploy_relay_subtitle">Deploy your own Nostr relay on a Virtual Private Server. Choose a provider, pick a plan, and have a strfry relay running in minutes.</string>
+    <string name="choose_provider">Choose a VPS Provider</string>
+    <string name="what_is_strfry">What is strfry?</string>
+    <string name="strfry_description">strfry is a high-performance Nostr relay written in C++. It uses minimal resources and can handle thousands of concurrent connections. Your relay will be automatically configured and ready to use.</string>
+    <string name="accepts_crypto">Accepts cryptocurrency</string>
+    <string name="enter_api_key_title">%1$s API Key</string>
+    <string name="enter_api_key_description">Enter your API key from %1$s. You can create one in your account dashboard.</string>
+    <string name="api_key">API Key</string>
+    <string name="validate_and_continue">Validate &amp; Continue</string>
+    <string name="api_key_security_note">Your API key is stored only in memory and never saved to disk or sent to any server other than your chosen VPS provider.</string>
+    <string name="existing_servers">Your Existing Relay Servers</string>
+    <string name="deploy_new_relay">Deploy a New Relay</string>
+    <string name="select_region">Select Region</string>
+    <string name="select_plan">Select Plan</string>
+    <string name="continue_button">Continue</string>
+    <string name="configure_relay">Configure Your Relay</string>
+    <string name="deployment_summary">Deployment Summary</string>
+    <string name="relay_name">Relay Name</string>
+    <string name="relay_description_label">Description</string>
+    <string name="domain_optional">Domain (optional)</string>
+    <string name="domain_hint">If you have a domain, point its DNS A record to the server IP. SSL will be configured automatically via Let\'s Encrypt.</string>
+    <string name="deploy_now">Deploy Now</string>
+    <string name="deploying_relay">Deploying Your Relay</string>
+    <string name="server_management">Server Management</string>
+    <string name="server_id_label">Server ID</string>
+    <string name="ipv4_label">IPv4</string>
+    <string name="ipv6_label">IPv6</string>
+    <string name="region_label">Region</string>
+    <string name="os_label">OS</string>
+    <string name="relay_url_label">Relay URL</string>
+    <string name="delete">Delete</string>
+    <string name="delete_server">Delete Server</string>
+    <string name="delete_server_confirm_title">Delete Server?</string>
+    <string name="delete_server_confirm_message">This will permanently destroy the server and all data on it. This action cannot be undone. You will stop being charged for it.</string>
+    <string name="next_steps_title">Next Steps</string>
+    <string name="next_steps_description">1. strfry is being installed (takes 3-5 minutes after the server is active)\n2. Add this relay URL to your relay list in Amethyst settings\n3. If you set up a domain, point its DNS to the server IP\n4. Use the Relay Management screen to configure access policies</string>
+    <string name="server_provisioning">Server is being provisioned. This usually takes 1-2 minutes.</string>
 </resources>

@@ -146,6 +146,8 @@ sealed class Route {
 
     @Serializable object EditMediaServers : Route()
 
+    @Serializable object DeployRelay : Route()
+
     @Serializable object UpdateReactionType : Route()
 
     @Serializable data class Nip47NWCSetup(
