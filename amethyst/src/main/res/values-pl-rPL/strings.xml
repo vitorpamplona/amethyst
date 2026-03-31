@@ -1622,6 +1622,7 @@
     <string name="namecoin_test_connection">Test połączenia</string>
     <string name="namecoin_testing">Testowanie serwerów…</string>
     <string name="namecoin_test_success">Podłączony</string>
+    <string name="namecoin_test_failed">Test nieudany</string>
     <string name="namecoin_test_results">Wyniki testu</string>
     <string name="namecoin_diagnostics">Diagnostyka</string>
     <string name="namecoin_last_test">Ostatni test</string>
