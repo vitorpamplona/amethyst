@@ -20,88 +20,84 @@
  */
 package com.vitorpamplona.amethyst.ui.tor
 
-import android.content.ComponentName
 import android.content.Context
-import android.content.Context.BIND_AUTO_CREATE
-import android.content.Intent
-import android.content.ServiceConnection
-import android.os.IBinder
 import com.vitorpamplona.quartz.utils.Log
+import info.guardianproject.arti.ArtiLogListener
+import info.guardianproject.arti.ArtiProxy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.launch
-import org.torproject.jni.TorService
-import org.torproject.jni.TorService.LocalBinder
 
-private const val SOCKS_PORT_POLL_INTERVAL_MS = 100L
+private const val DEFAULT_SOCKS_PORT = 19050
+private const val MAX_PORT_RETRIES = 3
 
 class TorService(
     val context: Context,
 ) {
     val status =
         callbackFlow {
-            Log.d("TorService", "Binding Tor Service")
+            Log.d("TorService", "Starting Arti Tor Service")
             trySend(TorServiceStatus.Connecting)
 
-            val currentIntent = Intent(context, TorService::class.java)
-            val serviceConnection: ServiceConnection =
-                object : ServiceConnection {
-                    override fun onServiceConnected(
-                        name: ComponentName,
-                        service: IBinder,
-                    ) {
-                        launch(Dispatchers.IO) {
-                            try {
-                                // moved torService to a local variable, since we only need it once
-                                val torService = (service as LocalBinder).service
+            var socksPort = DEFAULT_SOCKS_PORT
+            var artiProxy: ArtiProxy? = null
+            var started = false
 
-                                while (torService.socksPort < 0) {
-                                    delay(SOCKS_PORT_POLL_INTERVAL_MS)
-                                }
+            val logListener =
+                ArtiLogListener { logLine ->
+                    val text = logLine ?: return@ArtiLogListener
+                    Log.d("TorService") { "Arti: $text" }
 
-                                val active = TorServiceStatus.Active(torService.socksPort)
-                                active.torControlConnection = torService.torControlConnection
-
-                                trySend(active)
-                                Log.d("TorService") { "Tor Service Connected ${torService.socksPort}" }
-                            } catch (e: Exception) {
-                                Log.e("TorService") { "Tor service connection failed: ${e.message}" }
-                                trySend(TorServiceStatus.Off)
+                    when {
+                        text.contains("Sufficiently bootstrapped", ignoreCase = true) ||
+                            text.contains("is usable", ignoreCase = true) -> {
+                            if (!started) {
+                                started = true
+                                trySend(TorServiceStatus.Active(socksPort))
+                                Log.d("TorService") { "Arti bootstrapped on port $socksPort" }
                             }
                         }
-                    }
 
-                    override fun onServiceDisconnected(name: ComponentName) {
-                        Log.d("TorService", "Tor Service Disconnected")
-                        trySend(TorServiceStatus.Off)
+                        text.contains("state changed to Stopped", ignoreCase = true) -> {
+                            started = false
+                            trySend(TorServiceStatus.Off)
+                        }
                     }
                 }
 
-            try {
-                context.bindService(
-                    currentIntent,
-                    serviceConnection,
-                    BIND_AUTO_CREATE,
-                )
-            } catch (e: Exception) {
-                Log.e("TorService") { "Failed to bind Tor Service: ${e.message}" }
+            var lastError: Exception? = null
+            for (attempt in 0 until MAX_PORT_RETRIES) {
+                try {
+                    artiProxy =
+                        ArtiProxy
+                            .Builder(context.applicationContext)
+                            .setSocksPort(socksPort)
+                            .setDnsPort(socksPort + 1)
+                            .setLogListener(logListener)
+                            .build()
+
+                    artiProxy!!.start()
+                    lastError = null
+                    break
+                } catch (e: Exception) {
+                    lastError = e
+                    Log.e("TorService") { "Failed to start Arti on port $socksPort (attempt ${attempt + 1}): ${e.message}" }
+                    socksPort++
+                }
+            }
+
+            if (lastError != null) {
+                Log.e("TorService") { "Failed to start Arti after $MAX_PORT_RETRIES attempts" }
                 trySend(TorServiceStatus.Off)
             }
 
             awaitClose {
-                Log.d("TorService", "Stopping Tor Service")
+                Log.d("TorService", "Stopping Arti Tor Service")
                 try {
-                    context.unbindService(serviceConnection)
+                    artiProxy?.stop()
                 } catch (e: Exception) {
-                    Log.d("TorService") { "Failed to unbind Tor Service: ${e.message}" }
-                }
-                try {
-                    context.stopService(currentIntent)
-                } catch (e: Exception) {
-                    Log.d("TorService") { "Failed to stop Tor Service: ${e.message}" }
+                    Log.d("TorService") { "Failed to stop Arti: ${e.message}" }
                 }
                 trySend(TorServiceStatus.Off)
             }
