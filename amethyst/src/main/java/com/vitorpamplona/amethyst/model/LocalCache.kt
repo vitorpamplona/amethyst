@@ -581,7 +581,6 @@ object LocalCache : ILocalCache, ICacheProvider {
         return false
     }
 
-
     fun consumeRegularEvent(
         event: Event,
         relay: NormalizedRelayUrl?,
