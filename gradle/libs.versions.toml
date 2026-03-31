@@ -24,6 +24,9 @@ fragmentKtx = "1.8.9"
 gms = "4.4.4"
 jacksonModuleKotlin = "2.21.2"
 javaKeyring = "1.0.4"
+jtorctl = "0.4.5.7"
+kmpTorRuntime = "2.6.0"
+kmpTorResource = "409.5.0"
 junit = "4.13.2"
 kchesslib = "1.0.5"
 kotlin = "2.3.20"
@@ -144,6 +147,9 @@ google-mlkit-language-id = { group = "com.google.mlkit", name = "language-id", v
 google-mlkit-translate = { group = "com.google.mlkit", name = "translate", version.ref = "translate" }
 jackson-module-kotlin = { group = "com.fasterxml.jackson.module", name = "jackson-module-kotlin", version.ref = "jacksonModuleKotlin" }
 java-keyring = { group = "com.github.javakeyring", name = "java-keyring", version.ref = "javaKeyring" }
+jtorctl = { module = "info.guardianproject:jtorctl", version.ref = "jtorctl" }
+kmp-tor-runtime = { group = "io.matthewnelson.kmp-tor", name = "runtime", version.ref = "kmpTorRuntime" }
+kmp-tor-resource-exec-tor = { group = "io.matthewnelson.kmp-tor", name = "resource-exec-tor", version.ref = "kmpTorResource" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 kchesslib = { module = "io.github.cvb941:kchesslib", version.ref = "kchesslib" }
 kotlinx-collections-immutable = { group = "org.jetbrains.kotlinx", name = "kotlinx-collections-immutable", version.ref = "kotlinxCollectionsImmutable" }
