@@ -31,7 +31,6 @@ import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.SUPPORTED_VIDEO_FEED_MIME_TYPES_SET
-import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureMeta
@@ -128,7 +127,6 @@ class VideoFeedFilter(
                 (noteEvent is VideoHorizontalEvent && acceptanceEvent(noteEvent)) ||
                 (noteEvent is VideoNormalEvent && acceptanceEvent(noteEvent)) ||
                 (noteEvent is VideoShortEvent && acceptanceEvent(noteEvent)) ||
-                (noteEvent is FileStorageHeaderEvent && noteEvent.isOneOf(SUPPORTED_VIDEO_FEED_MIME_TYPES_SET)) ||
                 (noteEvent is PictureEvent && acceptanceEvent(noteEvent))
         ) &&
             params.match(noteEvent, note.relays) &&

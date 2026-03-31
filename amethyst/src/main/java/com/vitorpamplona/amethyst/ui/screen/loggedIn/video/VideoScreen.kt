@@ -20,84 +20,37 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.video
 
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.pager.VerticalPager
-import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
-import com.vitorpamplona.amethyst.ui.components.ClickableBox
-import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
-import com.vitorpamplona.amethyst.ui.feeds.FeedError
-import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
+import com.vitorpamplona.amethyst.ui.feeds.RenderFeedContentState
+import com.vitorpamplona.amethyst.ui.feeds.SaveableFeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
-import com.vitorpamplona.amethyst.ui.feeds.WatchScrollToTop
-import com.vitorpamplona.amethyst.ui.feeds.rememberForeverPagerState
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
-import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
-import com.vitorpamplona.amethyst.ui.note.BoostReaction
-import com.vitorpamplona.amethyst.ui.note.CheckHiddenFeedWatchBlockAndReport
-import com.vitorpamplona.amethyst.ui.note.LikeReaction
-import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
-import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
-import com.vitorpamplona.amethyst.ui.note.ObserveDisplayNip05Status
-import com.vitorpamplona.amethyst.ui.note.RenderAllRelayList
-import com.vitorpamplona.amethyst.ui.note.ReplyReaction
-import com.vitorpamplona.amethyst.ui.note.ZapReaction
-import com.vitorpamplona.amethyst.ui.note.elements.NoteDropDownMenu
-import com.vitorpamplona.amethyst.ui.note.types.FileHeaderDisplay
-import com.vitorpamplona.amethyst.ui.note.types.FileStorageHeaderDisplay
-import com.vitorpamplona.amethyst.ui.note.types.JustVideoDisplay
-import com.vitorpamplona.amethyst.ui.note.types.PictureDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.PictureCardCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.VideoFilterAssemblerSubscription
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.AuthorInfoVideoFeed
-import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
-import com.vitorpamplona.amethyst.ui.theme.HalfFeedPadding
-import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
-import com.vitorpamplona.amethyst.ui.theme.Size22Modifier
-import com.vitorpamplona.amethyst.ui.theme.Size35Modifier
-import com.vitorpamplona.amethyst.ui.theme.Size40Modifier
-import com.vitorpamplona.amethyst.ui.theme.Size40dp
-import com.vitorpamplona.amethyst.ui.theme.Size55dp
-import com.vitorpamplona.amethyst.ui.theme.VideoReactionColumnPadding
-import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip71Video.VideoEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
@@ -146,9 +99,9 @@ fun VideoScreen(
         Column(
             modifier = Modifier.padding(it).consumeWindowInsets(it),
         ) {
-            RenderPage(
+            RenderFeed(
                 videoFeedContentState = videoFeedContentState,
-                pagerStateKey = ScrollStateKeys.VIDEO_SCREEN,
+                scrollKey = ScrollStateKeys.VIDEO_SCREEN,
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
@@ -172,291 +125,80 @@ fun WatchAccountForVideoScreen(
 }
 
 @Composable
-fun RenderPage(
+private fun RenderFeed(
     videoFeedContentState: FeedContentState,
-    pagerStateKey: String?,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    val feedState by videoFeedContentState.feedContent.collectAsStateWithLifecycle()
-
-    CrossfadeIfEnabled(
-        targetState = feedState,
-        animationSpec = tween(durationMillis = 100),
-        label = "RenderPage",
-        accountViewModel = accountViewModel,
-    ) { state ->
-        when (state) {
-            is FeedState.Empty -> {
-                FeedEmpty(videoFeedContentState::invalidateData)
-            }
-
-            is FeedState.FeedError -> {
-                FeedError(state.errorMessage, videoFeedContentState::invalidateData)
-            }
-
-            is FeedState.Loaded -> {
-                LoadedState(state, pagerStateKey, videoFeedContentState, accountViewModel, nav)
-            }
-
-            is FeedState.Loading -> {
-                LoadingFeed()
-            }
-        }
-    }
-}
-
-@Composable
-private fun LoadedState(
-    loaded: FeedState.Loaded,
-    pagerStateKey: String?,
-    videoFeedContentState: FeedContentState,
+    scrollKey: String?,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     RefresheableBox(invalidateableContent = videoFeedContentState) {
-        SlidingCarousel(
-            loaded,
-            pagerStateKey,
-            videoFeedContentState,
-            accountViewModel,
-            nav,
-        )
-    }
-}
-
-@Composable
-fun SlidingCarousel(
-    loaded: FeedState.Loaded,
-    pagerStateKey: String?,
-    videoFeedContentState: FeedContentState,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    val items by loaded.feed.collectAsStateWithLifecycle()
-
-    val pagerState =
-        if (pagerStateKey != null) {
-            rememberForeverPagerState(pagerStateKey) { items.list.size }
-        } else {
-            rememberPagerState(items.list.size) { items.list.size }
-        }
-
-    WatchScrollToTop(videoFeedContentState, pagerState)
-
-    VerticalPager(
-        state = pagerState,
-        beyondViewportPageCount = 1,
-        modifier = Modifier.fillMaxSize(),
-        key = { index -> items.list.getOrNull(index)?.idHex ?: "$index" },
-    ) { index ->
-        items.list.getOrNull(index)?.let { note ->
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CheckHiddenFeedWatchBlockAndReport(
-                    note = note,
-                    modifier = Modifier.fillMaxWidth(),
-                    showHiddenWarning = true,
-                    ignoreAllBlocksAndReports = items.showHidden,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                ) {
-                    RenderVideoOrPictureNote(
-                        note,
-                        accountViewModel,
-                        nav,
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun RenderVideoOrPictureNote(
-    note: Note,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    Column(Modifier.fillMaxSize(1f), verticalArrangement = Arrangement.Center) {
-        Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-            val noteEvent = remember { note.event }
-            if (noteEvent is PictureEvent) {
-                val backgroundColor = remember { mutableStateOf(Color.Transparent) }
-                PictureDisplay(note, false, ContentScale.Fit, HalfFeedPadding, backgroundColor, accountViewModel, nav)
-            } else if (noteEvent is FileHeaderEvent) {
-                FileHeaderDisplay(note, false, ContentScale.Fit, accountViewModel)
-            } else if (noteEvent is FileStorageHeaderEvent) {
-                FileStorageHeaderDisplay(note, false, ContentScale.Fit, accountViewModel)
-            } else if (noteEvent is VideoEvent) {
-                JustVideoDisplay(note, false, ContentScale.Fit, accountViewModel)
-            }
-        }
-    }
-
-    Row(modifier = Modifier.fillMaxSize(1f).navigationBarsPadding(), verticalAlignment = Alignment.Bottom) {
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
-            RenderAuthorInformation(note, nav, accountViewModel)
-        }
-
-        Column(
-            modifier = AuthorInfoVideoFeed,
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            ReactionsColumn(note, accountViewModel, nav)
-        }
-    }
-}
-
-@Composable
-private fun RenderAuthorInformation(
-    note: Note,
-    nav: INav,
-    accountViewModel: AccountViewModel,
-) {
-    Row(modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-        NoteAuthorPicture(note, Size55dp, accountViewModel = accountViewModel, nav = nav)
-
-        Spacer(modifier = DoubleHorzSpacer)
-
-        Column(
-            Modifier
-                .height(65.dp)
-                .weight(1f),
-            verticalArrangement = Arrangement.Center,
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                NoteUsernameDisplay(note, Modifier.weight(1f), accountViewModel = accountViewModel)
-                VideoUserOptionAction(note, accountViewModel, nav)
-            }
-            if (accountViewModel.settings.isCompleteUIMode()) {
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    ObserveDisplayNip05Status(
-                        note.author!!,
-                        accountViewModel,
+        SaveableFeedContentState(videoFeedContentState, scrollStateKey = scrollKey) { listState ->
+            RenderFeedContentState(
+                feedContentState = videoFeedContentState,
+                accountViewModel = accountViewModel,
+                listState = listState,
+                nav = nav,
+                routeForLastRead = "VideosFeed",
+                onLoaded = { loaded ->
+                    VideoFeedLoaded(
+                        loaded = loaded,
+                        listState = listState,
+                        accountViewModel = accountViewModel,
                         nav = nav,
                     )
-                }
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(top = 2.dp),
-                ) {
-                    RenderAllRelayList(baseNote = note, accountViewModel = accountViewModel, nav = nav)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun VideoUserOptionAction(
-    note: Note,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    val popupExpanded = remember { mutableStateOf(false) }
-
-    ClickableBox(
-        modifier = Size22Modifier,
-        onClick = { popupExpanded.value = true },
-    ) {
-        Icon(
-            imageVector = Icons.Default.MoreVert,
-            contentDescription = stringRes(id = R.string.more_options),
-            modifier = Size20Modifier,
-            tint = MaterialTheme.colorScheme.placeholderText,
-        )
-
-        if (popupExpanded.value) {
-            NoteDropDownMenu(
-                note,
-                { popupExpanded.value = false },
-                null,
-                accountViewModel,
-                nav,
+                },
             )
         }
     }
 }
 
 @Composable
-fun ReactionsColumn(
-    baseNote: Note,
+fun VideoFeedLoaded(
+    loaded: FeedState.Loaded,
+    listState: LazyListState,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-//    var wantsToReplyTo by remember { mutableStateOf<Note?>(null) }
+    val items by loaded.feed.collectAsStateWithLifecycle()
 
-//    var wantsToQuote by remember { mutableStateOf<Note?>(null) }
-
-//    if (wantsToReplyTo != null) {
-//        NewPostView(
-//            onClose = { wantsToReplyTo = null },
-//            baseReplyTo = wantsToReplyTo,
-//            quote = null,
-//            accountViewModel = accountViewModel,
-//            nav = nav,
-//        )
-//    }
-
-//    if (wantsToQuote != null) {
-//        NewPostView(
-//            onClose = { wantsToQuote = null },
-//            baseReplyTo = null,
-//            quote = wantsToQuote,
-//            accountViewModel = accountViewModel,
-//            nav = nav,
-//        )
-//    }
-
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = VideoReactionColumnPadding,
+    LazyColumn(
+        contentPadding = FeedPadding,
+        state = listState,
     ) {
-        ReplyReaction(
-            baseNote = baseNote,
-            grayTint = MaterialTheme.colorScheme.onBackground,
-            accountViewModel = accountViewModel,
-            iconSizeModifier = Size40Modifier,
-        ) {
-            routeFor(
-                baseNote,
-                accountViewModel.account,
-            )?.let { nav.nav(it) }
-        }
-        BoostReaction(
-            baseNote = baseNote,
-            grayTint = MaterialTheme.colorScheme.onBackground,
-            accountViewModel = accountViewModel,
-            iconSizeModifier = Size40Modifier,
-            iconSize = Size40dp,
-            onQuotePress = {
-                nav.nav(
-                    Route.NewShortNote(
-                        quote = baseNote.idHex,
-                    ),
+        itemsIndexed(
+            items.list,
+            key = { _, item -> item.idHex },
+            contentType = { _, item -> item.event?.kind ?: -1 },
+        ) { _, item ->
+            if (item.event is PictureEvent) {
+                PictureCardCompose(
+                    baseNote = item,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
                 )
-            },
-            onForkPress = {
-            },
-        )
-        LikeReaction(
-            baseNote = baseNote,
-            grayTint = MaterialTheme.colorScheme.onBackground,
-            accountViewModel = accountViewModel,
-            nav = nav,
-            iconSize = Size40dp,
-            heartSizeModifier = Size35Modifier,
-            iconFontSize = 28.sp,
-        )
-        ZapReaction(
-            baseNote = baseNote,
-            grayTint = MaterialTheme.colorScheme.onBackground,
-            accountViewModel = accountViewModel,
-            iconSize = Size40dp,
-            iconSizeModifier = Size40Modifier,
-            animationModifier = Size35Modifier,
-            nav = nav,
-        )
+
+                HorizontalDivider(
+                    thickness = DividerThickness,
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+            } else if (item.event is VideoEvent) {
+                VideoCardCompose(item, accountViewModel, nav)
+
+                HorizontalDivider(
+                    thickness = DividerThickness,
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+            } else if (item.event is FileHeaderEvent) {
+                FileHeaderCardCompose(item, accountViewModel, nav)
+
+                HorizontalDivider(
+                    thickness = DividerThickness,
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+        }
     }
 }

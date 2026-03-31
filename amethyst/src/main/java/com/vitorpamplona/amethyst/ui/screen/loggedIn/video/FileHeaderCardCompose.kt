@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.video
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -38,26 +38,29 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
+import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
+import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.components.AutoNonlazyGrid
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.ui.note.observeEdits
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.UserCardHeader
-import com.vitorpamplona.quartz.nip68Picture.PictureEvent
-import kotlinx.collections.immutable.toImmutableList
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
+import kotlin.text.ifEmpty
 
 @Composable
-fun PictureCardCompose(
+fun FileHeaderCardCompose(
     baseNote: Note,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val event = (baseNote.event as? PictureEvent) ?: return
+    val event = (baseNote.event as? FileHeaderEvent) ?: return
     val backgroundColor = remember { mutableStateOf(Color.Transparent) }
     val editState = observeEdits(baseNote = baseNote, accountViewModel = accountViewModel)
 
@@ -68,7 +71,7 @@ fun PictureCardCompose(
         UserCardHeader(baseNote, accountViewModel, nav)
 
         // Image content
-        PictureCardImage(baseNote, event, backgroundColor, accountViewModel)
+        FileHeaderCardImage(baseNote, event, backgroundColor, accountViewModel)
 
         // Reactions row
         ReactionsRow(
@@ -81,66 +84,69 @@ fun PictureCardCompose(
         )
 
         // Title and content
-        PictureCardCaption(event)
+        FileHeaderCardCaption(event)
     }
 }
 
 @Composable
-private fun PictureCardImage(
+private fun FileHeaderCardImage(
     note: Note,
-    event: PictureEvent,
+    event: FileHeaderEvent,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
 ) {
-    val uri = note.toNostrUri()
+    val fullUrl = event.url() ?: return
 
-    val images by
-        remember(note) {
-            mutableStateOf(
-                event
-                    .imetaTags()
-                    .map {
-                        MediaUrlImage(
-                            url = it.url,
-                            description = it.alt,
-                            hash = it.hash,
-                            blurhash = it.blurhash,
-                            dim = it.dimension,
-                            uri = uri,
-                            mimeType = it.mimeType,
-                        )
-                    }.toImmutableList(),
-            )
-        }
+    val content by remember(note) {
+        val blurHash = event.blurhash()
+        val hash = event.hash()
+        val dimensions = event.dimensions()
+        val description = event.content.ifEmpty { null } ?: event.alt()
+        val isImage = event.mimeType()?.startsWith("image/") == true || RichTextParser.isImageUrl(fullUrl)
+        val uri = note.toNostrUri()
+        val mimeType = event.mimeType()
 
-    if (images.isNotEmpty()) {
-        SensitivityWarning(note = note, accountViewModel = accountViewModel) {
-            if (images.size == 1) {
-                ZoomableContentView(
-                    content = images.first(),
-                    images = images,
-                    roundedCorner = false,
-                    contentScale = ContentScale.FillWidth,
-                    accountViewModel = accountViewModel,
+        mutableStateOf<BaseMediaContent>(
+            if (isImage) {
+                MediaUrlImage(
+                    url = fullUrl,
+                    description = description,
+                    hash = hash,
+                    blurhash = blurHash,
+                    dim = dimensions,
+                    uri = uri,
+                    mimeType = mimeType,
                 )
             } else {
-                AutoNonlazyGrid(images.size) {
-                    ZoomableContentView(
-                        content = images[it],
-                        images = images,
-                        roundedCorner = false,
-                        contentScale = ContentScale.Crop,
-                        accountViewModel = accountViewModel,
-                    )
-                }
-            }
-        }
+                MediaUrlVideo(
+                    url = fullUrl,
+                    description = description,
+                    hash = hash,
+                    blurhash = blurHash,
+                    dim = dimensions,
+                    uri = uri,
+                    authorName = note.author?.toBestDisplayName(),
+                    mimeType = mimeType,
+                )
+            },
+        )
+    }
+
+    SensitivityWarning(note = note, accountViewModel = accountViewModel) {
+        ZoomableContentView(
+            content = content,
+            roundedCorner = false,
+            contentScale = ContentScale.FillWidth,
+            accountViewModel = accountViewModel,
+        )
     }
 }
 
 @Composable
-internal fun PictureCardCaption(event: PictureEvent) {
-    val title = event.title()
+internal fun FileHeaderCardCaption(videoEvent: FileHeaderEvent) {
+    val event = (videoEvent as? Event) ?: return
+
+    val title = videoEvent.summary()
     val content = event.content
 
     if (title != null || content.isNotBlank()) {
