@@ -1505,6 +1505,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="kind_audio_track">Zvočni zapis</string>
     <string name="kind_badge_awards">Nagradne značke</string>
     <string name="kind_badge_definitions">Definicija značke</string>
+    <string name="kind_accepted_badge_set">Sprejet nabor značk</string>
     <string name="kind_profile_badges">Značke profila</string>
     <string name="kind_blocked_relays">Blokirani releji</string>
     <string name="kind_blossom_servers">Blossom strežniki</string>
