@@ -165,6 +165,10 @@ class AccountSettings(
     val defaultStoriesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultNotificationFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultDiscoveryFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
+    val defaultPollsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
+    val defaultPicturesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
+    val defaultShortsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
+    val defaultLongsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val zapPaymentRequest: MutableStateFlow<Nip47WalletConnect.Nip47URINorm?> = MutableStateFlow(null),
     var hideDeleteRequestDialog: Boolean = false,
     var hideBlockAlertDialog: Boolean = false,
@@ -317,6 +321,50 @@ class AccountSettings(
     fun changeDefaultDiscoveryFollowList(name: TopFilter) {
         if (defaultDiscoveryFollowList.value != name) {
             defaultDiscoveryFollowList.tryEmit(name)
+            saveAccountSettings()
+        }
+    }
+
+    fun changeDefaultPollsFollowList(name: FeedDefinition) {
+        changeDefaultPollsFollowList(name.code)
+    }
+
+    fun changeDefaultPollsFollowList(name: TopFilter) {
+        if (defaultPollsFollowList.value != name) {
+            defaultPollsFollowList.tryEmit(name)
+            saveAccountSettings()
+        }
+    }
+
+    fun changeDefaultPicturesFollowList(name: FeedDefinition) {
+        changeDefaultPicturesFollowList(name.code)
+    }
+
+    fun changeDefaultPicturesFollowList(name: TopFilter) {
+        if (defaultPicturesFollowList.value != name) {
+            defaultPicturesFollowList.tryEmit(name)
+            saveAccountSettings()
+        }
+    }
+
+    fun changeDefaultShortsFollowList(name: FeedDefinition) {
+        changeDefaultShortsFollowList(name.code)
+    }
+
+    fun changeDefaultShortsFollowList(name: TopFilter) {
+        if (defaultShortsFollowList.value != name) {
+            defaultShortsFollowList.tryEmit(name)
+            saveAccountSettings()
+        }
+    }
+
+    fun changeDefaultLongsFollowList(name: FeedDefinition) {
+        changeDefaultLongsFollowList(name.code)
+    }
+
+    fun changeDefaultLongsFollowList(name: TopFilter) {
+        if (defaultLongsFollowList.value != name) {
+            defaultLongsFollowList.tryEmit(name)
             saveAccountSettings()
         }
     }

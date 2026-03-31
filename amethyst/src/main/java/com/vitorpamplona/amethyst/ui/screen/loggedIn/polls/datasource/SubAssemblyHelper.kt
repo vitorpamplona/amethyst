@@ -22,13 +22,19 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.datasource
 
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe.LocationTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.global.GlobalTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.hashtag.HashtagTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.allcommunities.AllCommunitiesTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.community.SingleCommunityTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.datasource.subassemblies.filterPollsByAllCommunities
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.datasource.subassemblies.filterPollsByAuthors
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.datasource.subassemblies.filterPollsByCommunity
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.datasource.subassemblies.filterPollsByFollows
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.datasource.subassemblies.filterPollsByGeohashes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.datasource.subassemblies.filterPollsByHashtag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.datasource.subassemblies.filterPollsByMutedAuthors
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.datasource.subassemblies.filterPollsGlobal
@@ -40,10 +46,13 @@ fun makePollsFilter(
     defaultSince: Long? = null,
 ): List<RelayBasedFilter> =
     when (feedSettings) {
+        is AllCommunitiesTopNavPerRelayFilterSet -> filterPollsByAllCommunities(feedSettings, since, defaultSince)
         is AllFollowsTopNavPerRelayFilterSet -> filterPollsByFollows(feedSettings, since, defaultSince)
         is AuthorsTopNavPerRelayFilterSet -> filterPollsByAuthors(feedSettings, since, defaultSince)
         is GlobalTopNavPerRelayFilterSet -> filterPollsGlobal(feedSettings, since, defaultSince)
         is HashtagTopNavPerRelayFilterSet -> filterPollsByHashtag(feedSettings, since, defaultSince)
         is MutedAuthorsTopNavPerRelayFilterSet -> filterPollsByMutedAuthors(feedSettings, since, defaultSince)
+        is LocationTopNavPerRelayFilterSet -> filterPollsByGeohashes(feedSettings, since, defaultSince)
+        is SingleCommunityTopNavPerRelayFilterSet -> filterPollsByCommunity(feedSettings, since, defaultSince)
         else -> emptyList()
     }

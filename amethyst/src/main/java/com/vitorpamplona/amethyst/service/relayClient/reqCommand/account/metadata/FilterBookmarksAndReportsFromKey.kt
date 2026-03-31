@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.labeledBookmarkList.LabeledBookmarkListEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
@@ -34,6 +35,7 @@ val ReportsAndBookmarksFromKeyKinds =
     listOf(
         ReportEvent.KIND,
         BookmarkListEvent.KIND,
+        OldBookmarkListEvent.KIND,
         LabeledBookmarkListEvent.KIND,
         PinListEvent.KIND,
         RequestToVanishEvent.KIND,

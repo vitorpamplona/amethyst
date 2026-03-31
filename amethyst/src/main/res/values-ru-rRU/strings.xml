@@ -86,6 +86,7 @@
     <string name="channel_name">Название канала</string>
     <string name="my_awesome_group">Моя новая группа</string>
     <string name="picture_url">URL фотографии</string>
+    <string name="optional_picture_url">Url (необязательно)</string>
     <string name="description">Описание</string>
     <string name="no_description">Описание не найдено</string>
     <string name="about_us">"О нас.. "</string>
@@ -102,6 +103,8 @@
     <string name="bytes">Байт</string>
     <string name="error">Ошибка</string>
     <string name="errors">Ошибки</string>
+    <string name="connection_success_rate_description">Процент успешных соединений к трансляции</string>
+    <string name="errors_description">Количество ошибок соединения в этой сессии</string>
     <string name="home_feed">Домашняя лента</string>
     <string name="private_message_feed">Лента личных сообщений</string>
     <string name="public_chat_feed">Лента чатов</string>
@@ -131,9 +134,17 @@
     <string name="video_download_has_started_toast">Скачивание видео было запущено…</string>
     <string name="media_download_has_started_toast">Загрузка вложений было запущено…</string>
     <string name="failed_to_save_the_image">Не удалось сохранить фото</string>
+    <string name="video_saved_to_the_gallery">Видео сохранено в галерею</string>
     <string name="failed_to_save_the_video">Не удалось сохранить видео</string>
     <string name="upload_image">Загрузить фото</string>
+    <string name="upload_file">Загрузить файл</string>
+    <string name="take_a_picture">Сделать фото</string>
+    <string name="record_a_video">Снять видео</string>
     <string name="uploading">Загрузка…</string>
+    <string name="voice_preset_deep">Глубокий</string>
+    <string name="voice_preset_high">Высокий</string>
+    <string name="voice_preset_neutral">Нейтральный</string>
+    <string name="voice_anonymize_description">Обрабатывает ваш голос. Внимание: основные изменения тона потенциально могут быть отменены определенными слушателями.</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Пользователь не установил Lightning адрес для получения чаевых</string>
     <string name="reply_here">"ответить.. "</string>
     <string name="copies_the_note_id_to_the_clipboard_for_sharing">Копирует ID записи для отправки</string>
@@ -176,6 +187,11 @@
     <string name="acceptance_of_terms_is_required">Нужно принять условия использования</string>
     <string name="key_is_required">Нужно ввести ключ</string>
     <string name="login">Войти</string>
+    <string name="create_account">Создать аккаунт</string>
+    <string name="how_should_we_call_you">Как нам вас называть?</string>
+    <string name="don_t_have_an_account">Нет учетной записи Nostr?</string>
+    <string name="already_have_an_account">Уже есть учетная запись Nostr?</string>
+    <string name="create_a_new_account">Создать новый аккаунт</string>
     <string name="generate_a_new_key">Сгенерировать ключ</string>
     <string name="loading_feed">Загрузка ленты</string>
     <string name="loading_account">Загрузка аккаунта</string>
@@ -216,8 +232,13 @@
     <string name="mark_all_new_as_read">Отметить все новые прочитанными</string>
     <string name="mark_all_as_read">Отметить всё прочитанным</string>
     <string name="backup_keys">Резервное копирование</string>
+    <string name="account_backup_tips3_md" tools:ignore="Typos">        Для дополнительной безопасности вы можете зашифровать ваш ключ с помощью пароля. Этот ключ начинается с **ncryptsec1** и не может быть использован без пароля.
+        \n\nЕсли вы потеряете свой пароль, вы не сможете восстановить ваш ключ.
+    </string>
+    <string name="failed_to_encrypt_key">Не удалось зашифровать ваш приватный ключ</string>
     <string name="secret_key_copied_to_clipboard">Приватный ключ (nsec) скопирован</string>
     <string name="copy_my_secret_key">Скопировать мой приватный ключ</string>
+    <string name="encrypt_and_copy_my_secret_key">Зашифровать и копировать мой секретный ключ</string>
     <string name="biometric_authentication_failed">Ошибка входа</string>
     <string name="biometric_authentication_failed_explainer">Биометрия не смогла подтвердить личность владельца этого телефона</string>
     <string name="biometric_authentication_failed_explainer_with_error">Биометрия не смогла подтвердить личность владельца этого телефона. Ошибка: %1$s</string>
@@ -261,6 +282,7 @@
     <string name="report_dialog_impersonation">@string/impersonation</string>
     <string name="report_dialog_nudity">@string/nudity</string>
     <string name="report_dialog_illegal">@string/illegal_behavior</string>
+    <string name="report_dialog_malware">Вредоносное ПО</string>
     <string name="report_dialog_blocking_a_user">Блокировать и скрыть пользователя для вас. Ваши записи останутся видны тем, кого вы заблокировали. Блокированные пользователи перечислены на экране «Фильтры безопасности».</string>
     <string name="report_dialog_block_hide_user_btn"><![CDATA[@string/block_hide_user]]></string>
     <string name="report_dialog_report_btn">Пожаловаться</string>
@@ -273,6 +295,11 @@
     <string name="report_dialog_title">Заблокировать и пожаловаться</string>
     <string name="block_only">Блокировать</string>
     <string name="bookmarks">Закладки</string>
+    <string name="bookmarks_title">Закладки</string>
+    <string name="bookmarks_explainer">Ваши закладки</string>
+    <string name="old_bookmarks_title">Старые закладки</string>
+    <string name="polls">Опросы</string>
+    <string name="pictures">Изображения</string>
     <string name="private_bookmarks">Личные закладки</string>
     <string name="public_bookmarks">Публичные закладки</string>
     <string name="add_to_private_bookmarks">Добавить в Личные закладки</string>
@@ -286,17 +313,24 @@
     <string name="wallet_connect_service_secret">Секрет Wallet Connect</string>
     <string name="wallet_connect_service_show_secret">Показать секрет</string>
     <string name="wallet_connect_service_secret_placeholder">nsec / приватный ключ в hex</string>
+    <string name="zap_type_section_explainer">Определяет, как отображается ваша личность, когда вы отправляете зап.</string>
+    <string name="wallet_connect_connect_app">Подключить кошелек</string>
     <string name="pledge_amount_in_sats">Сумма взноса в sat</string>
     <string name="post_poll">Отправить опрос</string>
     <string name="poll_heading_required">Обязательные поля:</string>
     <string name="poll_zap_recipients">Получатели запов</string>
     <string name="poll_primary_description">Описание опроса</string>
+    <string name="poll_option">Вариант ответа</string>
     <string name="poll_option_index">Вариант %s</string>
     <string name="poll_option_description">Описание варианта</string>
     <string name="poll_heading_optional">Опциональные поля:</string>
     <string name="poll_zap_value_min">Минимальный зап</string>
     <string name="poll_zap_value_max">Максимальный зап</string>
     <string name="poll_consensus_threshold">Консенсус</string>
+    <string name="poll_consensus_threshold_percent">(0–100)%</string>
+    <string name="poll_single_choice">Один вариант ответа</string>
+    <string name="poll_multiple_choice">Несколько вариантов ответа</string>
+    <string name="poll_closing_date_time">Дата закрытия опроса &amp; Время</string>
     <string name="poll_closing_time">Закрытие после</string>
     <string name="poll_closing_time_days">дней</string>
     <string name="poll_unable_to_vote">Невозможно проголосовать</string>
@@ -331,6 +365,8 @@
     <string name="zap_type_nonzap_explainer">Без следа в Nostr, обычный Lightning платеж</string>
     <string name="file_server">Сервер для загрузки</string>
     <string name="zap_forward_lnAddress">LnAddress или @User</string>
+    <string name="built_in_servers_description">Список Amethyst. Вы можете добавить его индивидуально или добавить список.</string>
+    <string name="uploading_state_uploading">Загрузка</string>
     <string name="upload_server_relays_nip95">Ваши релеи (NIP-95)</string>
     <string name="upload_server_relays_nip95_explainer">Файл хранится на ваших релеях. Новый NIP: может не работать в других клиентах</string>
     <string name="connect_via_tor_short">Настройка Tor/Orbot</string>
@@ -350,6 +386,7 @@
         \n6. Нажмите кнопку активации, чтобы использовать Orbot как прокси-сервер
     </string>
     <string name="orbot_socks_port">Порт Orbot Socks</string>
+    <string name="tor_use_money_operations">Денежные операции</string>
     <string name="invalid_port_number">Неверный порт</string>
     <string name="use_orbot">Исп. Orbot</string>
     <string name="disconnect_from_your_orbot_setup">Отключить Tor/Orbot</string>

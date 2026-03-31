@@ -31,10 +31,9 @@ import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip31Alts.alt
-import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
+import com.vitorpamplona.quartz.nip51Lists.PrivateReplaceableTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.BookmarkIdTag
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark
@@ -51,7 +50,7 @@ class BookmarkListEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+) : PrivateReplaceableTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     EventHintProvider,
     AddressHintProvider {
     override fun eventHints() = tags.mapNotNull(EventBookmark::parseAsHint)
@@ -71,11 +70,10 @@ class BookmarkListEvent(
     suspend fun privateBookmarks(signer: NostrSigner): List<BookmarkIdTag>? = privateTags(signer)?.mapNotNull(BookmarkIdTag::parse)
 
     companion object {
-        const val KIND = 30001
+        const val KIND = 10003
         const val ALT = "List of bookmarks"
-        const val DEFAULT_D_TAG_BOOKMARKS = "bookmark"
 
-        fun createBookmarkAddress(pubKey: HexKey) = Address(KIND, pubKey, DEFAULT_D_TAG_BOOKMARKS)
+        fun createBookmarkAddress(pubKey: HexKey) = Address(KIND, pubKey, "")
 
         suspend fun create(
             bookmarkIdTag: BookmarkIdTag,
@@ -195,11 +193,10 @@ class BookmarkListEvent(
             title: String = "",
             publicBookmarks: List<BookmarkIdTag> = emptyList(),
             privateBookmarks: List<BookmarkIdTag> = emptyList(),
-            dTag: String = DEFAULT_D_TAG_BOOKMARKS,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
         ): BookmarkListEvent {
-            val template = build(title, publicBookmarks, privateBookmarks, signer, dTag, createdAt)
+            val template = build(title, publicBookmarks, privateBookmarks, signer, createdAt)
             return signer.sign(template)
         }
 
@@ -208,7 +205,6 @@ class BookmarkListEvent(
             publicBookmarks: List<BookmarkIdTag> = emptyList(),
             privateBookmarks: List<BookmarkIdTag> = emptyList(),
             signer: NostrSigner,
-            dTag: String = DEFAULT_D_TAG_BOOKMARKS,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<BookmarkListEvent>.() -> Unit = {},
         ) = eventTemplate(
@@ -216,7 +212,6 @@ class BookmarkListEvent(
             description = PrivateTagsInContent.encryptNip44(privateBookmarks.map { it.toTagArray() }.toTypedArray(), signer),
             createdAt = createdAt,
         ) {
-            dTag(dTag)
             alt(ALT)
             title(title)
             bookmarks(publicBookmarks)

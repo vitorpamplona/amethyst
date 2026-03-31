@@ -43,6 +43,12 @@ sealed class Route {
 
     @Serializable object Polls : Route()
 
+    @Serializable object Pictures : Route()
+
+    @Serializable object Shorts : Route()
+
+    @Serializable object Longs : Route()
+
     @Serializable object Chess : Route()
 
     @Serializable object Wallet : Route()
@@ -64,6 +70,8 @@ sealed class Route {
     @Serializable object OtsSettings : Route()
 
     @Serializable object Bookmarks : Route()
+
+    @Serializable object OldBookmarks : Route()
 
     @Serializable object BookmarkGroups : Route()
 

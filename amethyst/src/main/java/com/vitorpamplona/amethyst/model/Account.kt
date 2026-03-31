@@ -56,6 +56,7 @@ import com.vitorpamplona.amethyst.model.nip17Dms.DmRelayListState
 import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcSignerState
 import com.vitorpamplona.amethyst.model.nip51Lists.BookmarkListState
 import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
+import com.vitorpamplona.amethyst.model.nip51Lists.OldBookmarkListState
 import com.vitorpamplona.amethyst.model.nip51Lists.PinListState
 import com.vitorpamplona.amethyst.model.nip51Lists.blockPeopleList.BlockPeopleListState
 import com.vitorpamplona.amethyst.model.nip51Lists.blockedRelays.BlockedRelayListDecryptionCache
@@ -176,6 +177,7 @@ import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
@@ -224,6 +226,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.debounce
@@ -320,6 +323,7 @@ class Account(
     val hiddenUsers = HiddenUsersState(muteList.flow, blockPeopleList.flow, scope, settings)
 
     val labeledBookmarkLists = LabeledBookmarkListsState(signer, cache, scope)
+    val oldBookmarkState = OldBookmarkListState(signer, cache, scope)
     val bookmarkState = BookmarkListState(signer, cache, scope)
     val pinState = PinListState(signer, cache, scope)
     val emoji = EmojiPackState(signer, cache, scope)
@@ -379,10 +383,9 @@ class Account(
             geohashCache = geohashListDecryptionCache,
         )
 
-    // App-ready Feeds
-    val liveHomeFollowLists: StateFlow<IFeedTopNavFilter> =
+    fun topNavFilterFlow(listName: MutableStateFlow<TopFilter>) =
         FeedTopNavFilterState(
-            feedFilterListName = settings.defaultHomeFollowList,
+            feedFilterListName = listName,
             kind3Follows = kind3FollowList.flow,
             allFollows = allFollows.flow,
             locationFlow = geolocationFlow,
@@ -394,55 +397,30 @@ class Account(
             scope = scope,
         ).flow
 
+    // App-ready Feeds
+    val liveHomeFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultHomeFollowList)
     val liveHomeFollowListsPerRelay = OutboxLoaderState(liveHomeFollowLists, cache, scope).flow
 
-    val liveStoriesFollowLists: StateFlow<IFeedTopNavFilter> =
-        FeedTopNavFilterState(
-            feedFilterListName = settings.defaultStoriesFollowList,
-            kind3Follows = kind3FollowList.flow,
-            allFollows = allFollows.flow,
-            locationFlow = geolocationFlow,
-            followsRelays = defaultGlobalRelays.flow,
-            blockedRelays = blockedRelayList.flow,
-            proxyRelays = proxyRelayList.flow,
-            caches = feedDecryptionCaches,
-            signer = signer,
-            scope = scope,
-        ).flow
-
+    val liveStoriesFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultStoriesFollowList)
     val liveStoriesFollowListsPerRelay = OutboxLoaderState(liveStoriesFollowLists, cache, scope).flow
 
-    val liveDiscoveryFollowLists: StateFlow<IFeedTopNavFilter> =
-        FeedTopNavFilterState(
-            feedFilterListName = settings.defaultDiscoveryFollowList,
-            kind3Follows = kind3FollowList.flow,
-            allFollows = allFollows.flow,
-            locationFlow = geolocationFlow,
-            followsRelays = defaultGlobalRelays.flow,
-            blockedRelays = blockedRelayList.flow,
-            proxyRelays = proxyRelayList.flow,
-            caches = feedDecryptionCaches,
-            signer = signer,
-            scope = scope,
-        ).flow
-
+    val liveDiscoveryFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultDiscoveryFollowList)
     val liveDiscoveryFollowListsPerRelay = OutboxLoaderState(liveDiscoveryFollowLists, cache, scope).flow
 
-    val liveNotificationFollowLists: StateFlow<IFeedTopNavFilter> =
-        FeedTopNavFilterState(
-            feedFilterListName = settings.defaultNotificationFollowList,
-            kind3Follows = kind3FollowList.flow,
-            allFollows = allFollows.flow,
-            locationFlow = geolocationFlow,
-            followsRelays = defaultGlobalRelays.flow,
-            blockedRelays = blockedRelayList.flow,
-            proxyRelays = proxyRelayList.flow,
-            caches = feedDecryptionCaches,
-            signer = signer,
-            scope = scope,
-        ).flow
-
+    val liveNotificationFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultNotificationFollowList)
     val liveNotificationFollowListsPerRelay = OutboxLoaderState(liveNotificationFollowLists, cache, scope).flow
+
+    val livePollsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultPollsFollowList)
+    val livePollsFollowListsPerRelay = OutboxLoaderState(livePollsFollowLists, cache, scope).flow
+
+    val livePicturesFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultPicturesFollowList)
+    val livePicturesFollowListsPerRelay = OutboxLoaderState(livePicturesFollowLists, cache, scope).flow
+
+    val liveShortsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultShortsFollowList)
+    val liveShortsFollowListsPerRelay = OutboxLoaderState(liveShortsFollowLists, cache, scope).flow
+
+    val liveLongsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultLongsFollowList)
+    val liveLongsFollowListsPerRelay = OutboxLoaderState(liveLongsFollowLists, cache, scope).flow
 
     override fun isWriteable(): Boolean = settings.isWriteable()
 
@@ -1813,6 +1791,49 @@ class Account(
      */
     fun consumeBookmarkEvent(event: Event) {
         cache.justConsumeMyOwnEvent(event)
+    }
+
+    suspend fun migrateOldBookmarksToNew() {
+        if (!isWriteable()) return
+
+        val oldList = oldBookmarkState.getBookmarkList() ?: return
+        val oldPublic = oldList.publicBookmarks()
+        val oldPrivate = oldList.privateBookmarks(signer) ?: emptyList()
+
+        if (oldPublic.isEmpty() && oldPrivate.isEmpty()) return
+
+        val existingNewList = bookmarkState.getBookmarkList()
+
+        val newEvent =
+            if (existingNewList != null) {
+                val existingPublic = existingNewList.publicBookmarks()
+                val existingPrivate = existingNewList.privateBookmarks(signer) ?: emptyList()
+
+                val existingPublicIds = existingPublic.map { it.toTagIdOnly().toList() }.toSet()
+                val existingPrivateIds = existingPrivate.map { it.toTagIdOnly().toList() }.toSet()
+
+                val newPublic = oldPublic.filter { it.toTagIdOnly().toList() !in existingPublicIds }
+                val newPrivate = oldPrivate.filter { it.toTagIdOnly().toList() !in existingPrivateIds }
+
+                if (newPublic.isEmpty() && newPrivate.isEmpty()) return
+
+                val mergedPublic = existingPublic + newPublic
+                val mergedPrivate = existingPrivate + newPrivate
+
+                BookmarkListEvent.create(
+                    publicBookmarks = mergedPublic,
+                    privateBookmarks = mergedPrivate,
+                    signer = signer,
+                )
+            } else {
+                BookmarkListEvent.create(
+                    publicBookmarks = oldPublic,
+                    privateBookmarks = oldPrivate,
+                    signer = signer,
+                )
+            }
+
+        sendMyPublicAndPrivateOutbox(newEvent)
     }
 
     suspend fun addPin(note: Note) {

@@ -125,7 +125,7 @@ class EventNotificationConsumer(
                     is ChatMessageEncryptedFileHeaderEvent -> {
                         notify(innerEvent, account)
                     }
-                    
+
                     is ReactionEvent -> {
                         notify(innerEvent, account)
                     }
@@ -581,7 +581,7 @@ class EventNotificationConsumer(
                 applicationContext,
             )
     }
-    
+
     private suspend fun notifyChessEvent(
         event: BaseChessEvent,
         account: Account,

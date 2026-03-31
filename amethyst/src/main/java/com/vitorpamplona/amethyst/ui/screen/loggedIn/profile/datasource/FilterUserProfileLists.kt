@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
@@ -34,6 +35,7 @@ import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendatio
 val UserProfileListKinds =
     listOf(
         BookmarkListEvent.KIND,
+        OldBookmarkListEvent.KIND,
         PinListEvent.KIND,
         PeopleListEvent.KIND,
         FollowListEvent.KIND,

@@ -99,7 +99,7 @@ fun WatchAccountForPollsScreen(
     pollsFeedContentState: FeedContentState,
     accountViewModel: AccountViewModel,
 ) {
-    val listState by accountViewModel.account.liveDiscoveryFollowLists.collectAsStateWithLifecycle()
+    val listState by accountViewModel.account.livePollsFollowLists.collectAsStateWithLifecycle()
     val hiddenUsers =
         accountViewModel.account.hiddenUsers.flow
             .collectAsStateWithLifecycle()

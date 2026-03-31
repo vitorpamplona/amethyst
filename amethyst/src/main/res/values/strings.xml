@@ -408,10 +408,17 @@
 
     <string name="manual_zaps">Manual Zap Splits</string>
     <string name="bookmarks">Bookmarks</string>
-    <string name="bookmarks_title">Default Bookmarks</string>
-    <string name="bookmarks_explainer">Your default Bookmarks that many clients support</string>
+    <string name="bookmarks_title">Bookmarks</string>
+    <string name="bookmarks_explainer">Your bookmarks</string>
+    <string name="old_bookmarks_title">Old Bookmarks</string>
+    <string name="old_bookmarks_explainer">Your old bookmarks</string>
+    <string name="migrate_bookmarks_button">Move All to New Bookmarks</string>
+    <string name="migrate_bookmarks_success">Bookmarks migrated successfully</string>
     <string name="drafts">Drafts</string>
     <string name="polls">Polls</string>
+    <string name="pictures">Pictures</string>
+    <string name="shorts">Shorts</string>
+    <string name="longs">Videos</string>
     <string name="private_bookmarks">Private Bookmarks</string>
     <string name="public_bookmarks">Public Bookmarks</string>
     <string name="add_to_private_bookmarks">Add to Private Bookmarks</string>
@@ -1296,6 +1303,7 @@
     <string name="route_notifications">Notifications</string>
     <string name="route_global">Global</string>
     <string name="route_video">Shorts</string>
+    <string name="route_pictures">Pictures</string>
     <string name="route_chess">Chess</string>
     <string name="wallet">Wallet</string>
     <string name="wallet_balance">Balance</string>
@@ -1742,6 +1750,7 @@
     <string name="kind_blossom_auth">Blossom Auth</string>
     <string name="kind_broadcast_relays">Broadcast Relays</string>
     <string name="kind_bookmark_list">Bookmark List</string>
+    <string name="kind_old_bookmark_list">Old Bookmark List</string>
     <string name="kind_day_appointment">Day Appointment</string>
     <string name="kind_calendar">Calendar</string>
     <string name="kind_appointment">Appointment</string>

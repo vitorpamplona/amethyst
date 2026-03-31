@@ -45,6 +45,7 @@ import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentRequestEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.utils.DualCase
@@ -211,6 +212,10 @@ class DesktopLocalCache : ICacheProvider {
 
             is BookmarkListEvent -> {
                 consumeBookmarkList(event)
+            }
+
+            is OldBookmarkListEvent -> {
+                consumeOldBookmarkList(event)
             }
 
             is CommentEvent -> {
@@ -407,6 +412,19 @@ class DesktopLocalCache : ICacheProvider {
      * Stores in addressableNotes cache.
      */
     private fun consumeBookmarkList(event: BookmarkListEvent): Boolean {
+        val address = event.address()
+        val addressableNote = getOrCreateAddressableNote(address)
+        val author = getOrCreateUser(event.pubKey)
+
+        // Only update if newer
+        val existingEvent = addressableNote.event
+        if (existingEvent != null && existingEvent.createdAt >= event.createdAt) return false
+
+        addressableNote.loadEvent(event, author, emptyList())
+        return true
+    }
+
+    private fun consumeOldBookmarkList(event: OldBookmarkListEvent): Boolean {
         val address = event.address()
         val addressableNote = getOrCreateAddressableNote(address)
         val author = getOrCreateUser(event.pubKey)

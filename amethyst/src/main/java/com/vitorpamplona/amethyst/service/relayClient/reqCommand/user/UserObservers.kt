@@ -37,6 +37,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
@@ -261,7 +262,7 @@ fun observeUserBookmarkCount(
     UserFinderFilterAssemblerSubscription(user, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
-    val flow =
+    val newFlow =
         remember(user) {
             accountViewModel
                 .bookmarks(user)
@@ -274,7 +275,27 @@ fun observeUserBookmarkCount(
                 .flowOn(Dispatchers.IO)
         }
 
-    return flow.collectAsStateWithLifecycle(0)
+    val oldFlow =
+        remember(user) {
+            accountViewModel
+                .oldBookmarks(user)
+                .flow()
+                .metadata.stateFlow
+                .sample(200)
+                .mapLatest { noteState ->
+                    (noteState.note.event as? OldBookmarkListEvent)?.countBookmarks() ?: 0
+                }.distinctUntilChanged()
+                .flowOn(Dispatchers.IO)
+        }
+
+    val combined =
+        remember(user) {
+            kotlinx.coroutines.flow.combine(newFlow, oldFlow) { newCount, oldCount ->
+                newCount + oldCount
+            }
+        }
+
+    return combined.collectAsStateWithLifecycle(0)
 }
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)

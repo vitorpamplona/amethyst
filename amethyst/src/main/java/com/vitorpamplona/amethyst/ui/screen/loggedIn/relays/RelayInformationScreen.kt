@@ -205,6 +205,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEv
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
 import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
@@ -232,9 +233,9 @@ import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
-import com.vitorpamplona.quartz.nip58Badges.BadgeAwardEvent
-import com.vitorpamplona.quartz.nip58Badges.BadgeDefinitionEvent
-import com.vitorpamplona.quartz.nip58Badges.BadgeProfilesEvent
+import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
+import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
+import com.vitorpamplona.quartz.nip58Badges.profiles.BadgeProfilesEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
@@ -569,6 +570,7 @@ fun kindDisplayName(kind: Int): Int =
         BlossomAuthorizationEvent.KIND -> R.string.kind_blossom_auth
         BroadcastRelayListEvent.KIND -> R.string.kind_broadcast_relays
         BookmarkListEvent.KIND -> R.string.kind_bookmark_list
+        OldBookmarkListEvent.KIND -> R.string.kind_old_bookmark_list
         CalendarDateSlotEvent.KIND -> R.string.kind_day_appointment
         CalendarEvent.KIND -> R.string.kind_calendar
         CalendarTimeSlotEvent.KIND -> R.string.kind_appointment

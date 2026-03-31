@@ -27,8 +27,6 @@ import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
 import androidx.media3.datasource.cache.SimpleCache
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import java.io.File
 
 @SuppressLint("UnsafeOptInUsageError")
@@ -42,20 +40,18 @@ class VideoCache {
 
     lateinit var cacheDataSourceFactory: CacheDataSource.Factory
 
-    suspend fun initFileCache(
+    fun initFileCache(
         context: Context,
         cachePath: File,
     ) {
         exoDatabaseProvider = StandaloneDatabaseProvider(context)
 
-        withContext(Dispatchers.IO) {
-            simpleCache =
-                SimpleCache(
-                    cachePath,
-                    leastRecentlyUsedCacheEvictor,
-                    exoDatabaseProvider,
-                )
-        }
+        simpleCache =
+            SimpleCache(
+                cachePath,
+                leastRecentlyUsedCacheEvictor,
+                exoDatabaseProvider,
+            )
     }
 
     // This method should be called when proxy setting changes.

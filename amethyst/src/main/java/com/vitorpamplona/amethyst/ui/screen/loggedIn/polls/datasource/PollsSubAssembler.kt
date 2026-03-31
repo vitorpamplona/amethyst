@@ -51,11 +51,11 @@ class PollsSubAssembler(
 
     override fun list(key: PollsQueryState) = key.listName()
 
-    fun PollsQueryState.listNameFlow() = account.settings.defaultDiscoveryFollowList
+    fun PollsQueryState.listNameFlow() = account.settings.defaultPollsFollowList
 
     fun PollsQueryState.listName() = listNameFlow().value
 
-    fun PollsQueryState.followsPerRelayFlow() = account.liveDiscoveryFollowListsPerRelay
+    fun PollsQueryState.followsPerRelayFlow() = account.livePollsFollowListsPerRelay
 
     fun PollsQueryState.followsPerRelay() = followsPerRelayFlow().value
 

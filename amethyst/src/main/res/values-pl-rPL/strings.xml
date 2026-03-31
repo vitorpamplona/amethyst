@@ -377,8 +377,14 @@
     <string name="bookmarks">Zakładki</string>
     <string name="bookmarks_title">Domyślne zakładki</string>
     <string name="bookmarks_explainer">Twoje domyślne zakładki obsługiwane przez większość klientów</string>
+    <string name="old_bookmarks_title">Stare zakładki</string>
+    <string name="old_bookmarks_explainer">Twoje stare zakładki</string>
+    <string name="migrate_bookmarks_button">Przenieś wszystko do nowych zakładek</string>
+    <string name="migrate_bookmarks_success">Zakładki pomyślnie przeniesione</string>
     <string name="drafts">Projekty</string>
     <string name="polls">Ankiety</string>
+    <string name="pictures">Zdjęcia</string>
+    <string name="shorts">Filmiki</string>
     <string name="private_bookmarks">Prywatne Zakładki</string>
     <string name="public_bookmarks">Publiczne zakładki</string>
     <string name="add_to_private_bookmarks">Dodaj do prywatnych zakładek</string>
@@ -652,6 +658,16 @@
     <string name="app_notification_mark_read_label">Przeczytane</string>
     <string name="app_notification_dms_summary">Nowe wiadomości</string>
     <string name="app_notification_zaps_summary">Nowe zapy</string>
+    <string name="app_notification_reactions_channel_name">Reakcje</string>
+    <string name="app_notification_reactions_channel_description">Powiadamia Cię, gdy ktoś zareaguje na twój post</string>
+    <string name="app_notification_reactions_channel_message">%1$s zareagował na Twój post</string>
+    <string name="app_notification_reactions_channel_message_for">dla %1$s</string>
+    <string name="app_notification_reactions_summary">Nowe reakcje</string>
+    <string name="app_notification_chess_channel_name">Pojedynek szachowy</string>
+    <string name="app_notification_chess_channel_description">Powiadamia Cię o wydarzeniach w szachach</string>
+    <string name="app_notification_chess_challenge_accepted">%1$s zaakceptował Twoją ofertę</string>
+    <string name="app_notification_chess_your_turn">%1$s wykonał ruch — teraz Twoja kolej</string>
+    <string name="app_notification_chess_summary">Aktualizacje szachów</string>
     <string name="reply_notify">Powiadom: </string>
     <string name="channel_list_join_conversation">Dołącz do dyskusji</string>
     <string name="channel_list_user_or_group_id">ID Użytkownika lub Grupy</string>
@@ -1092,6 +1108,7 @@
     <string name="route_notifications">Powiadomienia</string>
     <string name="route_global">Wszystkie</string>
     <string name="route_video">Filmiki</string>
+    <string name="route_pictures">Zdjęcia</string>
     <string name="route_chess">Szachy</string>
     <string name="wallet">Portfel</string>
     <string name="wallet_balance">Saldo</string>
@@ -1478,6 +1495,7 @@
     <string name="kind_blossom_auth">Autentykacja Blossom</string>
     <string name="kind_broadcast_relays">Transmitery Nadawcze</string>
     <string name="kind_bookmark_list">Lista zakładek</string>
+    <string name="kind_old_bookmark_list">Stara lista zakładek</string>
     <string name="kind_day_appointment">Data spotkania</string>
     <string name="kind_calendar">Kalendarz</string>
     <string name="kind_appointment">Spotkanie</string>

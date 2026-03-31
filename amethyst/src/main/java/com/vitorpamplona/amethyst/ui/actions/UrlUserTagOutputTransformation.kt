@@ -26,8 +26,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.style.TextDecoration
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.nip19Bech32.decodePublicKey
+import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import kotlin.coroutines.cancellation.CancellationException
 
 class UrlUserTagOutputTransformation(
@@ -36,15 +35,20 @@ class UrlUserTagOutputTransformation(
     override fun TextFieldBuffer.transformOutput() {
         val text = asCharSequence().toString()
 
-        // Find all @npub mentions using regex and replace in reverse order
+        // Find all user mentions using regex and replace in reverse order
         // so that earlier indices remain valid after replacements.
-        val npubRegex = Regex("@npub1[a-z0-9]{58}")
-        val matches = npubRegex.findAll(text).toList().reversed()
+        // Matches: @npub1..., nostr:npub1..., @nprofile1..., nostr:nprofile1...
+        val mentionRegex = Regex("(?:@|nostr:)(?:npub1[a-z0-9]{58}|nprofile1[a-z0-9]+)")
+        val matches = mentionRegex.findAll(text).toList().reversed()
 
         for (match in matches) {
             try {
-                val key = decodePublicKey(match.value.removePrefix("@"))
-                val user = LocalCache.getOrCreateUser(key.toHexKey())
+                val bech32 =
+                    match.value
+                        .removePrefix("@")
+                        .removePrefix("nostr:")
+                val hex = decodePublicKeyAsHexOrNull(bech32) ?: continue
+                val user = LocalCache.getOrCreateUser(hex)
                 val displayName = "@${user.toBestDisplayName()}"
 
                 replace(match.range.first, match.range.last + 1, displayName)

@@ -18,31 +18,27 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip58Badges
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.shorts.datasource.subassemblies
 
-import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 
-@Immutable
-class BadgeDefinitionEvent(
-    id: HexKey,
-    pubKey: HexKey,
-    createdAt: Long,
-    tags: Array<Array<String>>,
-    content: String,
-    sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-    fun name() = tags.firstOrNull { it.size > 1 && it[0] == "name" }?.get(1)
+fun filterShortsByFollows(
+    followsSet: AllFollowsTopNavPerRelayFilterSet,
+    since: SincePerRelayMap?,
+    defaultSince: Long? = null,
+): List<RelayBasedFilter> {
+    if (followsSet.set.isEmpty()) return emptyList()
 
-    fun thumb() = tags.firstOrNull { it.size > 1 && it[0] == "thumb" }?.get(1)
+    return followsSet.set.flatMap {
+        val since = since?.get(it.key)?.time ?: defaultSince
+        val relay = it.key
 
-    fun image() = tags.firstOrNull { it.size > 1 && it[0] == "image" }?.get(1)
-
-    fun description() = tags.firstOrNull { it.size > 1 && it[0] == "description" }?.get(1)
-
-    companion object {
-        const val KIND = 30009
-        const val ALT = "Badge definition"
+        listOfNotNull(
+            it.value.authors?.let {
+                filterShortsByAuthors(relay, it, since)
+            },
+        ).flatten()
     }
 }

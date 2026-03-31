@@ -40,11 +40,14 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.drafts.dal.DraftEventsFeedF
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal.HomeConversationsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal.HomeLiveFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal.HomeNewThreadFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.longs.dal.LongsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CardFeedContentState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NotificationSummaryState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.OpenPollsState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.dal.NotificationFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.dal.PictureFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.dal.PollsFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.shorts.dal.ShortsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.dal.VideoFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.webBookmarks.dal.WebBookmarkFeedFilter
 import kotlinx.coroutines.CoroutineScope
@@ -71,6 +74,10 @@ class AccountFeedContentStates(
     val discoverPublicChats = FeedContentState(DiscoverChatFeedFilter(account), scope, LocalCache)
 
     val pollsFeed = FeedContentState(PollsFeedFilter(account), scope, LocalCache)
+
+    val picturesFeed = FeedContentState(PictureFeedFilter(account), scope, LocalCache)
+    val shortsFeed = FeedContentState(ShortsFeedFilter(account), scope, LocalCache)
+    val longsFeed = FeedContentState(LongsFeedFilter(account), scope, LocalCache)
 
     val notifications = CardFeedContentState(NotificationFeedFilter(account), scope)
     val notificationsOpenPolls = OpenPollsState(account, scope)
@@ -108,6 +115,10 @@ class AccountFeedContentStates(
 
         pollsFeed.updateFeedWith(newNotes)
 
+        picturesFeed.updateFeedWith(newNotes)
+        shortsFeed.updateFeedWith(newNotes)
+        longsFeed.updateFeedWith(newNotes)
+
         notifications.updateFeedWith(newNotes)
         notificationSummary.invalidateInsertData(newNotes)
 
@@ -137,6 +148,10 @@ class AccountFeedContentStates(
         discoverPublicChats.deleteFromFeed(newNotes)
 
         pollsFeed.deleteFromFeed(newNotes)
+
+        picturesFeed.deleteFromFeed(newNotes)
+        shortsFeed.deleteFromFeed(newNotes)
+        longsFeed.deleteFromFeed(newNotes)
 
         notifications.deleteFromFeed(newNotes)
         notificationSummary.invalidateInsertData(newNotes)

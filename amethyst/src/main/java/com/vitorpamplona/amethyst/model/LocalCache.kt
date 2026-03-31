@@ -144,6 +144,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEv
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
 import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
@@ -167,9 +168,9 @@ import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
-import com.vitorpamplona.quartz.nip58Badges.BadgeAwardEvent
-import com.vitorpamplona.quartz.nip58Badges.BadgeDefinitionEvent
-import com.vitorpamplona.quartz.nip58Badges.BadgeProfilesEvent
+import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
+import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
+import com.vitorpamplona.quartz.nip58Badges.profiles.BadgeProfilesEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
@@ -2555,6 +2556,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is BlossomServersEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is BroadcastRelayListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is BookmarkListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
+                is OldBookmarkListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is CalendarEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is CalendarDateSlotEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is CalendarTimeSlotEvent -> consumeBaseReplaceable(event, relay, wasVerified)

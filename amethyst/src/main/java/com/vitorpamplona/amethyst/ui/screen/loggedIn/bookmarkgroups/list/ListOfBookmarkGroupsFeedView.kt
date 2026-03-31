@@ -43,6 +43,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.nip51Lists.BookmarkListState
+import com.vitorpamplona.amethyst.model.nip51Lists.OldBookmarkListState
 import com.vitorpamplona.amethyst.model.nip51Lists.labeledBookmarkLists.LabeledBookmarkList
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.BookmarkType
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -55,8 +56,10 @@ import kotlinx.coroutines.flow.StateFlow
 @Composable
 fun ListOfBookmarkGroupsFeedView(
     defaultBookmarks: BookmarkListState,
+    oldBookmarks: OldBookmarkListState,
     groupListFeedSource: StateFlow<List<LabeledBookmarkList>>,
     openDefaultBookmarks: () -> Unit,
+    openOldBookmarks: () -> Unit,
     onOpenItem: (String, BookmarkType) -> Unit,
     onRenameItem: (targetBookmarkGroup: LabeledBookmarkList) -> Unit,
     onItemDescriptionChange: (bookmarkGroup: LabeledBookmarkList) -> Unit,
@@ -71,6 +74,11 @@ fun ListOfBookmarkGroupsFeedView(
     ) {
         item {
             DefaultBookmarkList(defaultBookmarks, openDefaultBookmarks)
+            HorizontalDivider(thickness = DividerThickness)
+        }
+
+        item {
+            OldBookmarkList(oldBookmarks, openOldBookmarks)
             HorizontalDivider(thickness = DividerThickness)
         }
 
@@ -110,6 +118,50 @@ fun DefaultBookmarkList(
             ) {
                 Text(
                     stringRes(R.string.bookmarks_explainer),
+                    overflow = TextOverflow.Ellipsis,
+                    maxLines = 2,
+                )
+            }
+        },
+        leadingContent = {
+            Column(
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.BookmarkBorder,
+                    contentDescription = stringRes(R.string.bookmark_list_icon_label),
+                    modifier = Size40Modifier,
+                )
+                Spacer(StdVertSpacer)
+                BookmarkMembershipStatusAndNumberDisplay(
+                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                    postBookmarksSize = bookmarkState.public.size + bookmarkState.private.size,
+                    articleBookmarksSize = 0,
+                )
+            }
+        },
+    )
+}
+
+@Composable
+fun OldBookmarkList(
+    oldBookmarks: OldBookmarkListState,
+    openOldBookmarks: () -> Unit,
+) {
+    val bookmarkState by oldBookmarks.bookmarks.collectAsStateWithLifecycle()
+
+    ListItem(
+        modifier = Modifier.clickable(onClick = openOldBookmarks),
+        headlineContent = {
+            Text(stringRes(R.string.old_bookmarks_title), maxLines = 1, overflow = TextOverflow.Ellipsis)
+        },
+        supportingContent = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    stringRes(R.string.old_bookmarks_explainer),
                     overflow = TextOverflow.Ellipsis,
                     maxLines = 2,
                 )
