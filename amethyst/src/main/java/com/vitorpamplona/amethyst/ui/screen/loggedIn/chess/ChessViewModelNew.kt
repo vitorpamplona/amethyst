@@ -25,6 +25,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.chess.ChessBroadcastStatus
 import com.vitorpamplona.amethyst.commons.chess.ChessChallenge
+import com.vitorpamplona.amethyst.commons.chess.ChessDismissedGamesStorage
 import com.vitorpamplona.amethyst.commons.chess.ChessLobbyLogic
 import com.vitorpamplona.amethyst.commons.chess.ChessPollingDefaults
 import com.vitorpamplona.amethyst.commons.chess.ChessSyncStatus
@@ -36,6 +37,7 @@ import com.vitorpamplona.quartz.nip64Chess.Color
 import com.vitorpamplona.quartz.nip64Chess.LiveChessGameState
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterProtocol
 import com.vitorpamplona.quartz.nip64Chess.jester.toJesterEvent
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -50,6 +52,7 @@ import kotlinx.coroutines.flow.StateFlow
 @Stable
 class ChessViewModelNew(
     private val account: Account,
+    application: android.app.Application,
 ) : ViewModel() {
     // Instance ID for debugging ViewModel sharing
     val instanceId = System.identityHashCode(this)
@@ -58,6 +61,7 @@ class ChessViewModelNew(
     private val publisher = AndroidChessPublisher(account)
     private val fetcher = AndroidRelayFetcher(account)
     private val metadataProvider = AndroidMetadataProvider()
+    private val dismissedStorage = ChessDismissedGamesStorage.create(application)
 
     // Shared business logic (creates its own ChessLobbyState internally)
     private val logic =
@@ -68,6 +72,7 @@ class ChessViewModelNew(
             metadataProvider = metadataProvider,
             scope = viewModelScope,
             pollingConfig = ChessPollingDefaults.android,
+            dismissedStorage = dismissedStorage,
         )
 
     // ============================================
@@ -94,6 +99,7 @@ class ChessViewModelNew(
     // ============================================
 
     init {
+        Log.d("chessdebug") { "[AndroidVM] init: instanceId=$instanceId, userPubkey=${account.userProfile().pubkeyHex.take(8)}" }
         logic.startPolling()
     }
 
@@ -102,6 +108,10 @@ class ChessViewModelNew(
     fun stopPolling() = logic.stopPolling()
 
     fun forceRefresh() = logic.forceRefresh()
+
+    fun dismissCompletedGame(gameId: String) = logic.dismissCompletedGame(gameId)
+
+    fun dismissAllCompletedGames() = logic.dismissAllCompletedGames()
 
     /**
      * Ensure a game ID is being polled for updates.
@@ -132,7 +142,12 @@ class ChessViewModelNew(
 
     fun handleIncomingEvent(event: Event) {
         if (event.kind != JesterProtocol.KIND) return
-        val jesterEvent = event.toJesterEvent() ?: return
+        val jesterEvent =
+            event.toJesterEvent() ?: run {
+                Log.d("chessdebug") { "[AndroidVM] handleIncomingEvent: failed to parse kind ${event.kind} event ${event.id.take(8)} as JesterEvent" }
+                return
+            }
+        Log.d("chessdebug") { "[AndroidVM] handleIncomingEvent: id=${event.id.take(8)}, pubkey=${event.pubKey.take(8)}, isStart=${jesterEvent.isStartEvent()}, isMove=${jesterEvent.isMoveEvent()}" }
         logic.handleIncomingEvent(jesterEvent)
     }
 
@@ -166,6 +181,8 @@ class ChessViewModelNew(
 
     fun claimAbandonmentVictory(gameId: String) = logic.claimAbandonmentVictory(gameId)
 
+    fun dismissGame(gameId: String) = logic.dismissGame(gameId)
+
     // ============================================
     // Spectator operations
     // ============================================
@@ -174,7 +191,9 @@ class ChessViewModelNew(
 
     fun loadGameAsSpectator(gameId: String) = logic.loadGameAsSpectator(gameId)
 
-    fun stopSpectating(gameId: String) = logic.state.removeSpectatingGame(gameId)
+    fun stopSpectating(gameId: String) = logic.stopSpectating(gameId)
+
+    fun removeGame(gameId: String) = logic.removeGame(gameId)
 
     // ============================================
     // Utility

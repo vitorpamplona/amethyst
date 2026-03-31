@@ -75,4 +75,4 @@ sealed class CardFeedState {
  */
 val DefaultCardComparator: Comparator<Card> =
     compareByDescending<Card> { it.createdAt() }
-        .thenByDescending { it.id() }
+        .thenBy { it.id() }

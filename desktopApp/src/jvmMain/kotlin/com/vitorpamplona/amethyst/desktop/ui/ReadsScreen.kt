@@ -196,7 +196,7 @@ fun ReadsScreen(
         remember {
             EventCollectionState<LongTextNoteEvent>(
                 getId = { it.id },
-                sortComparator = compareByDescending { it.publishedAt() ?: it.createdAt },
+                sortComparator = compareByDescending<LongTextNoteEvent> { it.publishedAt() ?: it.createdAt }.thenBy { it.id },
                 maxSize = 100,
                 scope = scope,
             )

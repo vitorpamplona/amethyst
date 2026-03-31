@@ -117,6 +117,7 @@ fun InteractiveChessBoard(
                         val isLegalMove = legalMoves.contains(square)
 
                         val showCoord = if (flipped) rank == 7 else rank == 0
+                        val showRankLabel = if (flipped) file == 7 else file == 0
 
                         InteractiveChessSquare(
                             piece = piece,
@@ -125,6 +126,7 @@ fun InteractiveChessBoard(
                             isSelected = isSelected,
                             isLegalMove = isLegalMove,
                             showCoordinate = showCoord,
+                            showRankLabel = showRankLabel,
                             file = file,
                             rank = rank,
                             onClick = {
@@ -231,6 +233,7 @@ private fun InteractiveChessSquare(
     isSelected: Boolean,
     isLegalMove: Boolean,
     showCoordinate: Boolean,
+    showRankLabel: Boolean,
     file: Int,
     rank: Int,
     onClick: () -> Unit,
@@ -283,6 +286,20 @@ private fun InteractiveChessSquare(
                     Modifier
                         .size(size * 0.8f)
                         .border(3.dp, Color(0xFF7FA650).copy(alpha = 0.5f), CircleShape),
+            )
+        }
+
+        // Show rank label (1-8) on left file
+        if (showRankLabel) {
+            Text(
+                text = (rank + 1).toString(),
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (isLight) Color(0xFFB58863) else Color(0xFFF0D9B5),
+                modifier =
+                    Modifier
+                        .align(Alignment.TopStart)
+                        .padding(2.dp),
             )
         }
 

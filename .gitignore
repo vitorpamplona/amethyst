@@ -163,3 +163,6 @@ TASKS.md
 desktopApp/src/jvmMain/appResources/linux/
 desktopApp/src/jvmMain/appResources/macos/
 desktopApp/src/jvmMain/appResources/windows/
+
+# Git worktrees
+.worktrees/

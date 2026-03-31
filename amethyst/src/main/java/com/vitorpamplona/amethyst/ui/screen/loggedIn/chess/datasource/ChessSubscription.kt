@@ -66,8 +66,19 @@ fun ChessSubscription(
             )
         }
 
+    // Wire incoming chess events from relay subscriptions to the ViewModel
+    val chessAssembler = accountViewModel.dataSources().chess
+    DisposableEffect(chessAssembler, chessViewModel) {
+        chessAssembler.setOnChessEvent { event ->
+            chessViewModel.handleIncomingEvent(event)
+        }
+        onDispose {
+            chessAssembler.setOnChessEvent(null)
+        }
+    }
+
     // Register subscription with Amethyst's subscription system
-    KeyDataSourceSubscription(state, accountViewModel.dataSources().chess)
+    KeyDataSourceSubscription(state, chessAssembler)
 
     // Trigger ViewModel refresh when subscription state changes
     // This fetches challenges from LocalCache after events arrive

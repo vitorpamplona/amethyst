@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.note.types
 
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -97,11 +98,12 @@ fun RenderLiveChessChallenge(
 ) {
     val event = (note.event as? LiveChessGameChallengeEvent) ?: return
     val gameId = event.gameId()
+    val activity = LocalActivity.current as androidx.fragment.app.FragmentActivity
 
     val chessViewModel: ChessViewModelNew =
         viewModel(
             key = "ChessViewModelNew-${accountViewModel.account.userProfile().pubkeyHex}",
-            factory = ChessViewModelFactory(accountViewModel.account),
+            factory = ChessViewModelFactory(accountViewModel.account, activity.application),
         )
 
     val isOpenChallenge = event.opponentPubkey() == null

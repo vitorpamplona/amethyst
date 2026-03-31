@@ -18,29 +18,21 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.datasource
-
-import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+package com.vitorpamplona.amethyst.commons.chess
 
 /**
- * Filter assembler for chess events
+ * Persists dismissed chess game IDs locally per user.
+ * Uses expect/actual for platform-specific storage.
  */
-class ChessFilterAssembler(
-    client: INostrClient,
-) : ComposeSubscriptionManager<ChessQueryState>() {
-    private val subAssembler = ChessFeedFilterSubAssembler(client, ::allKeys)
-
-    val group = listOf(subAssembler)
-
-    fun setOnChessEvent(callback: ((Event) -> Unit)?) {
-        subAssembler.onChessEvent = callback
+expect class ChessDismissedGamesStorage private constructor() {
+    companion object {
+        fun create(context: Any? = null): ChessDismissedGamesStorage
     }
 
-    override fun invalidateKeys() = invalidateFilters()
+    fun load(userPubkey: String): Set<String>
 
-    override fun invalidateFilters() = group.forEach { it.invalidateFilters() }
-
-    override fun destroy() = group.forEach { it.destroy() }
+    fun save(
+        userPubkey: String,
+        ids: Set<String>,
+    )
 }
