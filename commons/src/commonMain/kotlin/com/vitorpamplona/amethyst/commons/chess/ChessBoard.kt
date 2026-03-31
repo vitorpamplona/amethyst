@@ -79,6 +79,12 @@ fun ChessBoard(
                             } else {
                                 null
                             },
+                        rankLabel =
+                            if (showCoordinates && file == 0) {
+                                (rank + 1).toString()
+                            } else {
+                                null
+                            },
                     )
                 }
             }
@@ -95,6 +101,7 @@ private fun ChessSquare(
     isLight: Boolean,
     size: Dp,
     coordinate: String?,
+    rankLabel: String? = null,
 ) {
     Box(
         modifier =
@@ -111,6 +118,20 @@ private fun ChessSquare(
                 imageVector = it.toImageVector(),
                 contentDescription = "${it.color} ${it.type}",
                 modifier = Modifier.fillMaxSize().padding(2.dp),
+            )
+        }
+
+        // Show rank label (1-8) on left file
+        rankLabel?.let {
+            Text(
+                text = it,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (isLight) Color(0xFFB58863) else Color(0xFFF0D9B5),
+                modifier =
+                    Modifier
+                        .align(Alignment.TopStart)
+                        .padding(2.dp),
             )
         }
 

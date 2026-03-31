@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterProtocol
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.delay
 
 /**
@@ -67,10 +68,14 @@ class ChessEventBroadcaster(
         val targetRelays = ChessConfig.CHESS_RELAYS.map { NormalizedRelayUrl(it) }.toSet()
         val subId = newSubId()
 
+        Log.d("chessdebug") { "[Broadcaster] broadcast: event=${event.id.take(8)}, kind=${event.kind}, targetRelays=${targetRelays.map { it.url }}" }
+
         // Step 1: Check which relays are already connected
         val initialConnected = client.connectedRelaysFlow().value
         val alreadyConnected = targetRelays.intersect(initialConnected)
         val needsConnection = targetRelays - alreadyConnected
+
+        Log.d("chessdebug") { "[Broadcaster] connected=${alreadyConnected.map { it.url }}, needsConnection=${needsConnection.map { it.url }}" }
 
         // Step 2: If some relays need connection, open a subscription to trigger it
         if (needsConnection.isNotEmpty()) {
@@ -110,7 +115,10 @@ class ChessEventBroadcaster(
         }
 
         // Step 3: Send the event and wait for OK responses
+        Log.d("chessdebug") { "[Broadcaster] sending event ${event.id.take(8)} and waiting for OK (timeout=${timeoutSeconds}s)" }
         val success = client.publishAndConfirm(event, targetRelays, timeoutSeconds)
+
+        Log.d("chessdebug") { "[Broadcaster] broadcast result: success=$success for event ${event.id.take(8)}" }
 
         // Note: publishAndConfirm only returns aggregate success (any relay accepted)
         // We don't have per-relay results, so relayResults is empty

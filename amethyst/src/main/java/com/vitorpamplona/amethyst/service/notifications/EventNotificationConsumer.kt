@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendChessNotification
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendDMNotification
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendZapNotification
 import com.vitorpamplona.amethyst.ui.note.showAmount
@@ -47,6 +48,9 @@ import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import com.vitorpamplona.quartz.nip64Chess.baseEvent.BaseChessEvent
+import com.vitorpamplona.quartz.nip64Chess.challenge.accept.LiveChessGameAcceptEvent
+import com.vitorpamplona.quartz.nip64Chess.move.LiveChessMoveEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import java.math.BigDecimal
@@ -104,10 +108,29 @@ class EventNotificationConsumer(
                 Log.d(TAG) { "Unwrapped consume ${innerEvent.javaClass.simpleName}" }
 
                 when (innerEvent) {
-                    is PrivateDmEvent -> notify(innerEvent, account)
-                    is LnZapEvent -> notify(innerEvent, account)
-                    is ChatMessageEvent -> notify(innerEvent, account)
-                    is ChatMessageEncryptedFileHeaderEvent -> notify(innerEvent, account)
+                    is PrivateDmEvent -> {
+                        notify(innerEvent, account)
+                    }
+
+                    is LnZapEvent -> {
+                        notify(innerEvent, account)
+                    }
+
+                    is ChatMessageEvent -> {
+                        notify(innerEvent, account)
+                    }
+
+                    is ChatMessageEncryptedFileHeaderEvent -> {
+                        notify(innerEvent, account)
+                    }
+
+                    is LiveChessGameAcceptEvent -> {
+                        notifyChessEvent(innerEvent, account, R.string.app_notification_chess_challenge_accepted)
+                    }
+
+                    is LiveChessMoveEvent -> {
+                        notifyChessEvent(innerEvent, account, R.string.app_notification_chess_your_turn)
+                    }
                 }
             }
         }
@@ -478,6 +501,39 @@ class EventNotificationConsumer(
                     }
                 }
             }
+        }
+    }
+
+    private suspend fun notifyChessEvent(
+        event: BaseChessEvent,
+        account: Account,
+        contentStringRes: Int,
+    ) {
+        if (
+            event.createdAt > TimeUtils.fifteenMinutesAgo() &&
+            event.pubKey != account.signer.pubKey
+        ) {
+            val author = LocalCache.getOrCreateUser(event.pubKey)
+            val user = author.toBestDisplayName()
+            val userPicture = author.profilePicture()
+            val title = stringRes(applicationContext, R.string.app_notification_chess_channel_name)
+            val content = stringRes(applicationContext, contentStringRes, user)
+            val noteUri =
+                "notifications$ACCOUNT_QUERY_PARAM" +
+                    account.signer.pubKey
+                        .hexToByteArray()
+                        .toNpub()
+
+            notificationManager()
+                .sendChessNotification(
+                    event.id,
+                    content,
+                    title,
+                    event.createdAt,
+                    userPicture,
+                    noteUri,
+                    applicationContext,
+                )
         }
     }
 
