@@ -1848,4 +1848,24 @@
     <string name="relay_members_removed">%1$d membros removidos do relay</string>
     <string name="relay_join_request">Solicitação de entrada no relay</string>
     <string name="relay_leave_request">Solicitação de saída do relay</string>
+    <string name="app_notification_chess_challenge_accepted">%1$s aceitou seu desafio de xadrez</string>
+    <string name="app_notification_chess_channel_description">Notifica você sobre eventos de jogos de xadrez</string>
+    <string name="app_notification_chess_channel_name">Xadrez</string>
+    <string name="app_notification_chess_summary">Atualizações de xadrez</string>
+    <string name="app_notification_chess_your_turn">%1$s jogou — a sua vez</string>
+    <string name="app_notification_reactions_channel_description">Notifica você quando alguém reage à sua publicação</string>
+    <string name="app_notification_reactions_channel_message">%1$s reagiu à sua publicação</string>
+    <string name="app_notification_reactions_channel_message_for">para %1$s</string>
+    <string name="app_notification_reactions_channel_name">Reações</string>
+    <string name="app_notification_reactions_summary">Novas reações</string>
+    <string name="kind_accepted_badge_set">Conjunto de Distintivos Aceito</string>
+    <string name="kind_old_bookmark_list">Lista de Favoritos Antiga</string>
+    <string name="longs">Vídeos</string>
+    <string name="migrate_bookmarks_button">Mover Tudo para Novos Favoritos</string>
+    <string name="migrate_bookmarks_success">Favoritos migrados com sucesso</string>
+    <string name="old_bookmarks_explainer">Seus favoritos antigos</string>
+    <string name="old_bookmarks_title">Favoritos Antigos</string>
+    <string name="pictures">Imagens</string>
+    <string name="route_pictures">Imagens</string>
+    <string name="shorts">Curtas</string>
 </resources>

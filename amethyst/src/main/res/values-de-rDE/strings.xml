@@ -1853,4 +1853,24 @@ anz der Bedingungen ist erforderlich</string>
     <string name="relay_members_removed">%1$d Mitglieder aus Relay entfernt</string>
     <string name="relay_join_request">Relay-Beitrittsanfrage</string>
     <string name="relay_leave_request">Relay-Austrittsanfrage</string>
+    <string name="app_notification_chess_challenge_accepted">%1$s hat deine Schachherausforderung angenommen</string>
+    <string name="app_notification_chess_channel_description">Benachrichtigt dich über Schachspiel-Ereignisse</string>
+    <string name="app_notification_chess_channel_name">Schach</string>
+    <string name="app_notification_chess_summary">Schach-Updates</string>
+    <string name="app_notification_chess_your_turn">%1$s hat gezogen — du bist dran</string>
+    <string name="app_notification_reactions_channel_description">Benachrichtigt dich, wenn jemand auf deinen Beitrag reagiert</string>
+    <string name="app_notification_reactions_channel_message">%1$s hat auf deinen Beitrag reagiert</string>
+    <string name="app_notification_reactions_channel_message_for">für %1$s</string>
+    <string name="app_notification_reactions_channel_name">Reaktionen</string>
+    <string name="app_notification_reactions_summary">Neue Reaktionen</string>
+    <string name="kind_accepted_badge_set">Akzeptiertes Abzeichen-Set</string>
+    <string name="kind_old_bookmark_list">Alte Lesezeichenliste</string>
+    <string name="longs">Videos</string>
+    <string name="migrate_bookmarks_button">Alle in neue Lesezeichen verschieben</string>
+    <string name="migrate_bookmarks_success">Lesezeichen erfolgreich migriert</string>
+    <string name="old_bookmarks_explainer">Deine alten Lesezeichen</string>
+    <string name="old_bookmarks_title">Alte Lesezeichen</string>
+    <string name="pictures">Bilder</string>
+    <string name="route_pictures">Bilder</string>
+    <string name="shorts">Kurzvideos</string>
 </resources>

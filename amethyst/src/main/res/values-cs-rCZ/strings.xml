@@ -1848,4 +1848,24 @@
     <string name="relay_members_removed">%1$d členů odebráno z relé</string>
     <string name="relay_join_request">Žádost o připojení k relé</string>
     <string name="relay_leave_request">Žádost o opuštění relé</string>
+    <string name="app_notification_chess_challenge_accepted">%1$s přijal/a vaši šachovou výzvu</string>
+    <string name="app_notification_chess_channel_description">Upozorní vás na události šachových her</string>
+    <string name="app_notification_chess_channel_name">Šachy</string>
+    <string name="app_notification_chess_summary">Aktualizace šachů</string>
+    <string name="app_notification_chess_your_turn">%1$s táhl/a — jste na tahu</string>
+    <string name="app_notification_reactions_channel_description">Upozorní vás, když někdo reaguje na váš příspěvek</string>
+    <string name="app_notification_reactions_channel_message">%1$s reagoval/a na váš příspěvek</string>
+    <string name="app_notification_reactions_channel_message_for">na %1$s</string>
+    <string name="app_notification_reactions_channel_name">Reakce</string>
+    <string name="app_notification_reactions_summary">Nové reakce</string>
+    <string name="kind_accepted_badge_set">Přijatá sada odznaků</string>
+    <string name="kind_old_bookmark_list">Starý seznam záložek</string>
+    <string name="longs">Videa</string>
+    <string name="migrate_bookmarks_button">Přesunout vše do nových záložek</string>
+    <string name="migrate_bookmarks_success">Záložky úspěšně přesunuty</string>
+    <string name="old_bookmarks_explainer">Vaše staré záložky</string>
+    <string name="old_bookmarks_title">Staré záložky</string>
+    <string name="pictures">Obrázky</string>
+    <string name="route_pictures">Obrázky</string>
+    <string name="shorts">Krátká videa</string>
 </resources>
