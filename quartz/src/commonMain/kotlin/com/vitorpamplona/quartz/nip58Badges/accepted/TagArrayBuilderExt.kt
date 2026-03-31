@@ -18,9 +18,9 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip58Badges.profiles
+package com.vitorpamplona.quartz.nip58Badges.accepted
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip58Badges.profiles.tags.AcceptedBadge
+import com.vitorpamplona.quartz.nip58Badges.accepted.tags.AcceptedBadge
 
-fun TagArrayBuilder<BadgeProfilesEvent>.acceptedBadges(badges: List<AcceptedBadge>) = addAll(AcceptedBadge.assemble(badges))
+fun TagArrayBuilder<AcceptedBadgeSetEvent>.acceptedBadges(badges: List<AcceptedBadge>) = addAll(AcceptedBadge.assemble(badges))
