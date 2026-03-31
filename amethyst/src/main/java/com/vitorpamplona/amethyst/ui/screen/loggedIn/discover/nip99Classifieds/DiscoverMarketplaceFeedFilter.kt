@@ -75,5 +75,5 @@ open class DiscoverMarketplaceFeedFilter(
         }
     }
 
-    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(compareBy({ it.createdAt() }, { it.idHex })).reversed()
+    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(compareByDescending<Note> { it.createdAt() }.thenBy { it.idHex })
 }
