@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.datasource.subassemb
 
 import com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe.LocationTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.datasource.subassemblies.filterPicturesByGeohashes
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -62,7 +61,7 @@ fun filterPollsByGeohashes(
             if (it.value.geotags.isEmpty()) {
                 null
             } else {
-                filterPicturesByGeohashes(
+                filterPollsByGeohashes(
                     relay = it.key,
                     geotags = it.value.geotags,
                     since = since?.get(it.key)?.time ?: defaultSince,
