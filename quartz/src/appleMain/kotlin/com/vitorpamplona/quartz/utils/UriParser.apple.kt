@@ -45,9 +45,15 @@ actual class UriParser actual constructor(
         return queryItems.mapNotNull { (it as? NSURLQueryItem)?.name }.toSet()
     }
 
-    actual fun getQueryParameter(param: String): String? {
+    actual fun getQueryParameter(param: String): List<String>? {
         val queryItems = nsUrlComponents.queryItems ?: return null
-        return (queryItems.firstOrNull { (it as? NSURLQueryItem)?.name == param } as? NSURLQueryItem)?.value
+        return queryItems.mapNotNull {
+            if ((it as? NSURLQueryItem)?.name == param) {
+                it.value
+            } else {
+                null
+            }
+        }
     }
 
     val fragments: Map<String, String> by lazy {

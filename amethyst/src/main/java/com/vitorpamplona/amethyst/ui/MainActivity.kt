@@ -195,7 +195,7 @@ fun uriToRoute(
     if (isWalletConnectRoute(uri)) {
         try {
             val url = UriParser(uri)
-            val nip47Uri = url.getQueryParameter("value")
+            val nip47Uri = url.getQueryParameter("value")?.firstOrNull()
             if (nip47Uri != null) {
                 Nip47WalletConnect.parse(nip47Uri)
                 return Route.Nip47NWCSetup(nip47Uri)
