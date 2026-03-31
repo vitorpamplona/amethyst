@@ -35,6 +35,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.nip51Lists.BookmarkListState
+import com.vitorpamplona.amethyst.model.nip51Lists.OldBookmarkListState
 import com.vitorpamplona.amethyst.model.nip51Lists.labeledBookmarkLists.LabeledBookmarkList
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -51,8 +52,10 @@ fun ListOfBookmarkGroupsScreen(
 ) {
     ListOfBookmarkGroupsFeed(
         defaultBookmarks = accountViewModel.account.bookmarkState,
+        oldBookmarks = accountViewModel.account.oldBookmarkState,
         listSource = accountViewModel.account.labeledBookmarkLists.listFeedFlow,
         openDefaultBookmarks = { nav.nav(Route.Bookmarks) },
+        openOldBookmarks = { nav.nav(Route.OldBookmarks) },
         addBookmarkGroup = { nav.nav(Route.BookmarkGroupMetadataEdit()) },
         openBookmarkGroup = { identifier, bookmarkType ->
             nav.nav(Route.BookmarkGroupView(identifier, bookmarkType))
@@ -88,8 +91,10 @@ fun ListOfBookmarkGroupsScreen(
 @Composable
 fun ListOfBookmarkGroupsFeed(
     defaultBookmarks: BookmarkListState,
+    oldBookmarks: OldBookmarkListState,
     listSource: StateFlow<List<LabeledBookmarkList>>,
     openDefaultBookmarks: () -> Unit,
+    openOldBookmarks: () -> Unit,
     addBookmarkGroup: () -> Unit,
     openBookmarkGroup: (identifier: String, bookmarkType: BookmarkType) -> Unit,
     renameBookmarkGroup: (bookmarkGroup: LabeledBookmarkList) -> Unit,
@@ -115,8 +120,10 @@ fun ListOfBookmarkGroupsFeed(
         ) {
             ListOfBookmarkGroupsFeedView(
                 defaultBookmarks = defaultBookmarks,
+                oldBookmarks = oldBookmarks,
                 groupListFeedSource = listSource,
                 openDefaultBookmarks = openDefaultBookmarks,
+                openOldBookmarks = openOldBookmarks,
                 onOpenItem = openBookmarkGroup,
                 onRenameItem = renameBookmarkGroup,
                 onItemDescriptionChange = changeBookmarkGroupDescription,

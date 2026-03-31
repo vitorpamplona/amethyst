@@ -69,6 +69,7 @@ import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -439,6 +440,7 @@ fun Event.toKindName(): String =
         is VoiceEvent -> stringRes(R.string.voice_post)
         is VoiceReplyEvent -> stringRes(R.string.voice_reply)
         is BookmarkListEvent -> stringRes(R.string.bookmarks)
+        is OldBookmarkListEvent -> stringRes(R.string.bookmarks)
         else -> stringRes(R.string.post)
     }
 

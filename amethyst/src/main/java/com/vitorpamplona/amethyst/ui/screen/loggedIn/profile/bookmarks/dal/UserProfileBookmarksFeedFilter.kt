@@ -26,7 +26,9 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.BookmarkIdTag
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark
 
 class UserProfileBookmarksFeedFilter(
@@ -36,17 +38,29 @@ class UserProfileBookmarksFeedFilter(
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + user.pubkeyHex
 
     override fun feed(): List<Note> {
+        val newBookmarks = getBookmarksFromNew()
+        val oldBookmarks = getBookmarksFromOld()
+
+        return (newBookmarks + oldBookmarks).distinctBy { it.idHex }.reversed()
+    }
+
+    private fun getBookmarksFromNew(): List<Note> {
         val note = LocalCache.getOrCreateAddressableNote(BookmarkListEvent.createBookmarkAddress(user.pubkeyHex))
         val noteEvent = note.event as? BookmarkListEvent ?: return emptyList()
-
-        val notes =
-            noteEvent.publicBookmarks().mapNotNull {
-                when (it) {
-                    is AddressBookmark -> LocalCache.getOrCreateAddressableNote(it.address)
-                    is EventBookmark -> LocalCache.checkGetOrCreateNote(it.eventId)
-                }
-            }
-
-        return notes.reversed()
+        return resolveBookmarks(noteEvent.publicBookmarks())
     }
+
+    private fun getBookmarksFromOld(): List<Note> {
+        val note = LocalCache.getOrCreateAddressableNote(OldBookmarkListEvent.createBookmarkAddress(user.pubkeyHex))
+        val noteEvent = note.event as? OldBookmarkListEvent ?: return emptyList()
+        return resolveBookmarks(noteEvent.publicBookmarks())
+    }
+
+    private fun resolveBookmarks(bookmarks: List<BookmarkIdTag>): List<Note> =
+        bookmarks.mapNotNull {
+            when (it) {
+                is AddressBookmark -> LocalCache.getOrCreateAddressableNote(it.address)
+                is EventBookmark -> LocalCache.checkGetOrCreateNote(it.eventId)
+            }
+        }
 }

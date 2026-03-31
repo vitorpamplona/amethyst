@@ -144,6 +144,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEv
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
 import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
@@ -2555,6 +2556,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is BlossomServersEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is BroadcastRelayListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is BookmarkListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
+                is OldBookmarkListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is CalendarEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is CalendarDateSlotEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is CalendarTimeSlotEvent -> consumeBaseReplaceable(event, relay, wasVerified)

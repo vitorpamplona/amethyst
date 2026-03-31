@@ -65,6 +65,8 @@ sealed class Route {
 
     @Serializable object Bookmarks : Route()
 
+    @Serializable object OldBookmarks : Route()
+
     @Serializable object BookmarkGroups : Route()
 
     @Serializable object ImportFollowsSelectUser : Route()

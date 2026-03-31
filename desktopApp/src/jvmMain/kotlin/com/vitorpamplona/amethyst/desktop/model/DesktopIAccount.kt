@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.nip02FollowList.Kind3FollowListRepository
 import com.vitorpamplona.amethyst.commons.model.nip02FollowList.Kind3FollowListState
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.BookmarkListState
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.OldBookmarkListState
 import com.vitorpamplona.amethyst.commons.model.nip65RelayList.Nip65RelayListRepository
 import com.vitorpamplona.amethyst.commons.model.nip65RelayList.Nip65RelayListState
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
@@ -76,6 +77,7 @@ class DesktopIAccount(
 
     // ----- State Classes (pin important notes via strong refs for GC retention) -----
 
+    val oldBookmarkState = OldBookmarkListState(signer, localCache, scope)
     val bookmarkState = BookmarkListState(signer, localCache, scope)
 
     val kind3FollowList =

@@ -18,8 +18,19 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.nip51Lists
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.old.dal
 
-typealias BookmarkListState = com.vitorpamplona.amethyst.commons.model.nip51Lists.BookmarkListState
+import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.dal.FeedFilter
 
-typealias OldBookmarkListState = com.vitorpamplona.amethyst.commons.model.nip51Lists.OldBookmarkListState
+class OldBookmarkPublicFeedFilter(
+    val account: Account,
+) : FeedFilter<Note>() {
+    override fun feedKey(): String =
+        account.oldBookmarkState.bookmarks.value
+            .hashCode()
+            .toString()
+
+    override fun feed(): List<Note> = account.oldBookmarkState.bookmarks.value.public
+}
