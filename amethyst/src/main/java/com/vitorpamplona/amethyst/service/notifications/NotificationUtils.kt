@@ -46,13 +46,13 @@ object NotificationUtils {
     private var dmChannel: NotificationChannel? = null
     private var zapChannel: NotificationChannel? = null
     private var reactionChannel: NotificationChannel? = null
+    private var chessChannel: NotificationChannel? = null
+
     private const val DM_GROUP_KEY = "com.vitorpamplona.amethyst.DM_NOTIFICATION"
     private const val ZAP_GROUP_KEY = "com.vitorpamplona.amethyst.ZAP_NOTIFICATION"
     private const val REACTION_GROUP_KEY = "com.vitorpamplona.amethyst.REACTION_NOTIFICATION"
-    private var chessChannel: NotificationChannel? = null
-    private const val DM_GROUP_KEY = "com.vitorpamplona.amethyst.DM_NOTIFICATION"
-    private const val ZAP_GROUP_KEY = "com.vitorpamplona.amethyst.ZAP_NOTIFICATION"
     private const val CHESS_GROUP_KEY = "com.vitorpamplona.amethyst.CHESS_NOTIFICATION"
+
     const val REPLY_ACTION = "com.vitorpamplona.amethyst.REPLY_ACTION"
     const val MARK_READ_ACTION = "com.vitorpamplona.amethyst.MARK_READ_ACTION"
     const val KEY_REPLY_TEXT = "key_reply_text"
@@ -149,7 +149,7 @@ object NotificationUtils {
         return chessChannel!!
     }
 
-    suspend fun NotificationManager.sendChessNotification(
+    suspend fun NotificationManager.sendReactionNotification(
         id: String,
         messageBody: String,
         messageTitle: String,
