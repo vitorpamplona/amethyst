@@ -1,3 +1,8 @@
+<a id="v1.07.4"></a>
+# [Release v1.07.4: NWC fix](https://github.com/vitorpamplona/amethyst/releases/tag/v1.07.4) - 2026-03-31
+
+- Fixes Nostr wallet connect receiving the secret. 
+
 <a id="v1.07.3"></a>
 # [Release v1.07.3: GIF Keyboard](https://github.com/vitorpamplona/amethyst/releases/tag/v1.07.3) - 2026-03-31
 
