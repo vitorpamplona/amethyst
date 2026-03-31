@@ -92,7 +92,10 @@ class LabeledBookmarkListEvent(
         const val ALT = "A labeled list of bookmarks"
 
         @OptIn(ExperimentalUuidApi::class)
-        fun createBookmarkAddress(pubKey: HexKey) = Address(KIND, pubKey, Uuid.random().toString())
+        fun createAddress(
+            pubKey: HexKey,
+            dTag: String,
+        ) = Address(KIND, pubKey, dTag)
 
         suspend fun create(
             title: String = "",
