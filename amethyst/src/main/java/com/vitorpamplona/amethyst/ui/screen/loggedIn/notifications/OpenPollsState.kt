@@ -80,6 +80,6 @@ class OpenPollsState(
                         false
                     }
                 }
-            }.sortedByDescending { it.createdAt() }
+            }.sortedWith(compareByDescending<Note> { it.createdAt() }.thenBy { it.idHex })
     }
 }

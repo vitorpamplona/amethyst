@@ -33,16 +33,16 @@ object SearchResultSorter {
     ): List<Event> =
         when (order) {
             SearchSortOrder.NEWEST -> {
-                events.sortedByDescending { it.createdAt }
+                events.sortedWith(compareByDescending<Event> { it.createdAt }.thenBy { it.id })
             }
 
             SearchSortOrder.OLDEST -> {
-                events.sortedBy { it.createdAt }
+                events.sortedWith(compareBy<Event> { it.createdAt }.thenBy { it.id })
             }
 
             SearchSortOrder.RELEVANCE -> {
                 if (searchText.isBlank()) {
-                    events.sortedByDescending { it.createdAt }
+                    events.sortedWith(compareByDescending<Event> { it.createdAt }.thenBy { it.id })
                 } else {
                     events.sortedByDescending { scoreEvent(it, searchText) }
                 }
