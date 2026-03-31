@@ -582,6 +582,15 @@ fun ListContent(
         )
 
         NavigationRow(
+            title = R.string.pictures,
+            icon = R.drawable.ic_picture,
+            iconReference = 1,
+            tint = MaterialTheme.colorScheme.onBackground,
+            nav = nav,
+            route = Route.Pictures,
+        )
+
+        NavigationRow(
             title = R.string.wallet,
             icon = Icons.Outlined.AccountBalanceWallet,
             tint = MaterialTheme.colorScheme.onBackground,

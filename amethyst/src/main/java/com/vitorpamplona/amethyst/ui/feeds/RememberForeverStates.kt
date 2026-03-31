@@ -56,6 +56,7 @@ object ScrollStateKeys {
     const val DISCOVER_CHATS = "DiscoverChatsFeed"
 
     const val POLLS_SCREEN = "PollsFeed"
+    const val PICTURES_SCREEN = "PicturesFeed"
 
     const val SEARCH_SCREEN = "SearchFeed"
 
