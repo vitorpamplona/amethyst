@@ -193,7 +193,7 @@ class UserSuggestionState(
         item: User,
     ): TextFieldValue {
         val lastWordStart = message.selection.end - word.length
-        val wordToInsert = "@${item.pubkeyNpub()}"
+        val wordToInsert = "@${item.pubkeyNpub()} "
 
         return TextFieldValue(
             message.text.replaceRange(lastWordStart, message.selection.end, wordToInsert),
@@ -206,7 +206,7 @@ class UserSuggestionState(
         word: String,
         item: User,
     ) {
-        val wordToInsert = "@${item.pubkeyNpub()}"
+        val wordToInsert = "@${item.pubkeyNpub()} "
         state.edit {
             val lastWordStart = selection.end - word.length
             replace(lastWordStart, selection.end, wordToInsert)
