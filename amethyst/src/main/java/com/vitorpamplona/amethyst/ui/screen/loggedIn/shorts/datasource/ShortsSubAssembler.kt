@@ -44,7 +44,7 @@ class ShortsSubAssembler(
     ): List<RelayBasedFilter> {
         val feedSettings = key.followsPerRelay()
 
-        return makePicturesFilter(feedSettings, since, key.feedStates.picturesFeed.lastNoteCreatedAtIfFilled())
+        return makeShortsFilter(feedSettings, since, key.feedStates.shortsFeed.lastNoteCreatedAtIfFilled())
     }
 
     override fun user(key: ShortsQueryState) = key.account.userProfile()
@@ -78,7 +78,7 @@ class ShortsSubAssembler(
                     }
                 },
                 key.account.scope.launch(Dispatchers.IO) {
-                    key.feedStates.picturesFeed.lastNoteCreatedAtWhenFullyLoaded.sample(5000).collectLatest {
+                    key.feedStates.shortsFeed.lastNoteCreatedAtWhenFullyLoaded.sample(5000).collectLatest {
                         invalidateFilters()
                     }
                 },

@@ -34,7 +34,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.shorts.datasource.subassemb
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.shorts.datasource.subassemblies.filterShortsGlobal
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 
-fun makePicturesFilter(
+fun makeShortsFilter(
     feedSettings: IFeedTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
     defaultSince: Long? = null,
