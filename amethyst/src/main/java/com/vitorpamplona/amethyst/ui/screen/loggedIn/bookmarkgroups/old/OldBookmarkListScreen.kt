@@ -32,7 +32,7 @@ import androidx.compose.material.icons.automirrored.filled.DriveFileMove
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SecondaryScrollableTabRow
+import androidx.compose.material3.SecondaryTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -42,7 +42,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
@@ -102,11 +101,10 @@ private fun RenderOldBookmarkScreen(
         topBar = {
             Column {
                 TopBarWithBackButton(stringRes(id = R.string.old_bookmarks_title), nav::popBack)
-                SecondaryScrollableTabRow(
+                SecondaryTabRow(
                     containerColor = Color.Transparent,
                     contentColor = MaterialTheme.colorScheme.onBackground,
                     selectedTabIndex = pagerState.currentPage,
-                    edgePadding = 8.dp,
                     modifier = TabRowHeight,
                 ) {
                     Tab(
