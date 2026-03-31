@@ -26,20 +26,24 @@ import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import java.util.SortedSet
-import java.util.concurrent.ConcurrentSkipListSet
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Creates a list of events (regular and addressable)
  * that is updated every time a new event that matches
  * the filter is received, including addressables.
+ *
+ * Uses a ConcurrentHashMap keyed by note.idHex for identity tracking.
+ * For AddressableNotes, idHex is the stable address (kind:pubkey:dTag),
+ * so event replacements are correctly detected as updates, not new entries.
  */
 class EventListMatchingFilter<T : Event>(
     private val filter: Filter,
     private val atOnce: (filter: Filter) -> SortedSet<Note>,
     private val update: (List<T>) -> Unit,
 ) : Observable {
-    // Keeping this here blocks it from being cleared from memory
-    var currentResults: ConcurrentSkipListSet<Note> = ConcurrentSkipListSet(CreatedAtIdHexComparator)
+    // Keeping this here blocks notes from being cleared from memory
+    private val trackedNotes = ConcurrentHashMap<String, Note>()
 
     @Suppress("UNCHECKED_CAST")
     override fun new(
@@ -47,34 +51,51 @@ class EventListMatchingFilter<T : Event>(
         note: Note,
     ) {
         if (event is AddressableEvent && note !is AddressableNote) {
-            // event update
-            if (currentResults.contains(note)) {
-                update(currentResults.mapNotNull { it.event as? T })
+            // Addressable event arrived through a regular Note path.
+            // Re-emit if we're tracking this note.
+            if (trackedNotes.containsKey(note.idHex)) {
+                emitCurrentResults()
             }
             return
         }
 
         if (filter.match(event)) {
-            currentResults.add(note)
-            val limit = filter.limit
-            if (limit != null && currentResults.size > limit) {
-                currentResults.remove(currentResults.last())
+            val isNew = trackedNotes.put(note.idHex, note) == null
+            if (isNew) {
+                val limit = filter.limit
+                if (limit != null && trackedNotes.size > limit) {
+                    val sorted = trackedNotes.values.sortedWith(CreatedAtIdHexComparator)
+                    val toRemove = sorted.last()
+                    trackedNotes.remove(toRemove.idHex)
+                }
             }
 
-            update(currentResults.mapNotNull { it.event as? T })
+            // Always emit: new notes need emission, and addressable
+            // updates (isNew=false) need re-emission with new event content.
+            emitCurrentResults()
         }
     }
 
     @Suppress("UNCHECKED_CAST")
     override fun remove(note: Note) {
-        if (currentResults.remove(note)) {
-            update(currentResults.mapNotNull { it.event as? T })
+        if (trackedNotes.remove(note.idHex) != null) {
+            emitCurrentResults()
         }
     }
 
     @Suppress("UNCHECKED_CAST")
+    private fun emitCurrentResults() {
+        update(
+            trackedNotes.values
+                .sortedWith(CreatedAtIdHexComparator)
+                .mapNotNull { it.event as? T },
+        )
+    }
+
+    @Suppress("UNCHECKED_CAST")
     fun init() {
-        currentResults = ConcurrentSkipListSet(atOnce(filter))
-        update(currentResults.mapNotNull { it.event as? T })
+        trackedNotes.clear()
+        atOnce(filter).associateByTo(trackedNotes) { it.idHex }
+        emitCurrentResults()
     }
 }

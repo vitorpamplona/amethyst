@@ -318,16 +318,22 @@ object LocalCache : ILocalCache, ICacheProvider {
                 }
             }
 
+        // Sort first, then apply limit to keep the most recent entries
+        val allMatches = (addressableMatches + noteMatches).toSortedSet(CreatedAtIdHexComparator)
+
         val limit = filter.limit
-
-        val limitedSet =
-            if (limit != null) {
-                (addressableMatches + noteMatches).take(limit)
-            } else {
-                (addressableMatches + noteMatches)
+        if (limit != null && allMatches.size > limit) {
+            val result = sortedSetOf(CreatedAtIdHexComparator)
+            val iterator = allMatches.iterator()
+            var count = 0
+            while (iterator.hasNext() && count < limit) {
+                result.add(iterator.next())
+                count++
             }
+            return result
+        }
 
-        return limitedSet.toSortedSet(CreatedAtIdHexComparator)
+        return allMatches
     }
 
     fun observeNotes(filter: Filter): Flow<List<Note>> =
