@@ -107,7 +107,7 @@ fun WatchAccountForShortsScreen(
     videoFeedState: FeedContentState,
     accountViewModel: AccountViewModel,
 ) {
-    val listState by accountViewModel.account.liveDiscoveryFollowLists.collectAsStateWithLifecycle()
+    val listState by accountViewModel.account.liveShortsFollowLists.collectAsStateWithLifecycle()
     val hiddenUsers =
         accountViewModel.account.hiddenUsers.flow
             .collectAsStateWithLifecycle()

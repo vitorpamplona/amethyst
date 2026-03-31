@@ -55,7 +55,7 @@ class PollsSubAssembler(
 
     fun PollsQueryState.listName() = listNameFlow().value
 
-    fun PollsQueryState.followsPerRelayFlow() = account.liveDiscoveryFollowListsPerRelay
+    fun PollsQueryState.followsPerRelayFlow() = account.livePollsFollowListsPerRelay
 
     fun PollsQueryState.followsPerRelay() = followsPerRelayFlow().value
 

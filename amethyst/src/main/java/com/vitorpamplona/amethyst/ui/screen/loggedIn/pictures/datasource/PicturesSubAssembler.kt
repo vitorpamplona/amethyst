@@ -55,7 +55,7 @@ class PicturesSubAssembler(
 
     fun PicturesQueryState.listName() = listNameFlow().value
 
-    fun PicturesQueryState.followsPerRelayFlow() = account.liveDiscoveryFollowListsPerRelay
+    fun PicturesQueryState.followsPerRelayFlow() = account.livePicturesFollowListsPerRelay
 
     fun PicturesQueryState.followsPerRelay() = followsPerRelayFlow().value
 

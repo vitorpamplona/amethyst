@@ -71,7 +71,7 @@ class ShortsFeedFilter(
 
     fun buildFilterParams(account: Account): FilterByListParams =
         FilterByListParams.create(
-            account.liveDiscoveryFollowLists.value,
+            account.liveShortsFollowLists.value,
             account.hiddenUsers.flow.value,
         )
 

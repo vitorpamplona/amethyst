@@ -60,7 +60,7 @@ class PictureFeedFilter(
 
     fun buildFilterParams(account: Account): FilterByListParams =
         FilterByListParams.create(
-            account.liveDiscoveryFollowLists.value,
+            account.livePicturesFollowLists.value,
             account.hiddenUsers.flow.value,
         )
 

@@ -61,7 +61,7 @@ class PollsFeedFilter(
 
     fun buildFilterParams(account: Account): FilterByListParams =
         FilterByListParams.create(
-            account.liveDiscoveryFollowLists.value,
+            account.livePollsFollowLists.value,
             account.hiddenUsers.flow.value,
         )
 

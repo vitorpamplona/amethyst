@@ -226,6 +226,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.debounce
@@ -382,10 +383,9 @@ class Account(
             geohashCache = geohashListDecryptionCache,
         )
 
-    // App-ready Feeds
-    val liveHomeFollowLists: StateFlow<IFeedTopNavFilter> =
+    fun topNavFilterFlow(listName: MutableStateFlow<TopFilter>) =
         FeedTopNavFilterState(
-            feedFilterListName = settings.defaultHomeFollowList,
+            feedFilterListName = listName,
             kind3Follows = kind3FollowList.flow,
             allFollows = allFollows.flow,
             locationFlow = geolocationFlow,
@@ -397,55 +397,30 @@ class Account(
             scope = scope,
         ).flow
 
+    // App-ready Feeds
+    val liveHomeFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultHomeFollowList)
     val liveHomeFollowListsPerRelay = OutboxLoaderState(liveHomeFollowLists, cache, scope).flow
 
-    val liveStoriesFollowLists: StateFlow<IFeedTopNavFilter> =
-        FeedTopNavFilterState(
-            feedFilterListName = settings.defaultStoriesFollowList,
-            kind3Follows = kind3FollowList.flow,
-            allFollows = allFollows.flow,
-            locationFlow = geolocationFlow,
-            followsRelays = defaultGlobalRelays.flow,
-            blockedRelays = blockedRelayList.flow,
-            proxyRelays = proxyRelayList.flow,
-            caches = feedDecryptionCaches,
-            signer = signer,
-            scope = scope,
-        ).flow
-
+    val liveStoriesFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultStoriesFollowList)
     val liveStoriesFollowListsPerRelay = OutboxLoaderState(liveStoriesFollowLists, cache, scope).flow
 
-    val liveDiscoveryFollowLists: StateFlow<IFeedTopNavFilter> =
-        FeedTopNavFilterState(
-            feedFilterListName = settings.defaultDiscoveryFollowList,
-            kind3Follows = kind3FollowList.flow,
-            allFollows = allFollows.flow,
-            locationFlow = geolocationFlow,
-            followsRelays = defaultGlobalRelays.flow,
-            blockedRelays = blockedRelayList.flow,
-            proxyRelays = proxyRelayList.flow,
-            caches = feedDecryptionCaches,
-            signer = signer,
-            scope = scope,
-        ).flow
-
+    val liveDiscoveryFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultDiscoveryFollowList)
     val liveDiscoveryFollowListsPerRelay = OutboxLoaderState(liveDiscoveryFollowLists, cache, scope).flow
 
-    val liveNotificationFollowLists: StateFlow<IFeedTopNavFilter> =
-        FeedTopNavFilterState(
-            feedFilterListName = settings.defaultNotificationFollowList,
-            kind3Follows = kind3FollowList.flow,
-            allFollows = allFollows.flow,
-            locationFlow = geolocationFlow,
-            followsRelays = defaultGlobalRelays.flow,
-            blockedRelays = blockedRelayList.flow,
-            proxyRelays = proxyRelayList.flow,
-            caches = feedDecryptionCaches,
-            signer = signer,
-            scope = scope,
-        ).flow
-
+    val liveNotificationFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultNotificationFollowList)
     val liveNotificationFollowListsPerRelay = OutboxLoaderState(liveNotificationFollowLists, cache, scope).flow
+
+    val livePollsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultPollsFollowList)
+    val livePollsFollowListsPerRelay = OutboxLoaderState(livePollsFollowLists, cache, scope).flow
+
+    val livePicturesFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultPicturesFollowList)
+    val livePicturesFollowListsPerRelay = OutboxLoaderState(livePicturesFollowLists, cache, scope).flow
+
+    val liveShortsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultShortsFollowList)
+    val liveShortsFollowListsPerRelay = OutboxLoaderState(liveShortsFollowLists, cache, scope).flow
+
+    val liveLongsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultLongsFollowList)
+    val liveLongsFollowListsPerRelay = OutboxLoaderState(liveLongsFollowLists, cache, scope).flow
 
     override fun isWriteable(): Boolean = settings.isWriteable()
 

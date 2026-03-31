@@ -55,7 +55,7 @@ class ShortsSubAssembler(
 
     fun ShortsQueryState.listName() = listNameFlow().value
 
-    fun ShortsQueryState.followsPerRelayFlow() = account.liveDiscoveryFollowListsPerRelay
+    fun ShortsQueryState.followsPerRelayFlow() = account.liveShortsFollowListsPerRelay
 
     fun ShortsQueryState.followsPerRelay() = followsPerRelayFlow().value
 

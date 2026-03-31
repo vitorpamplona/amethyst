@@ -55,7 +55,7 @@ class LongsSubAssembler(
 
     fun LongsQueryState.listName() = listNameFlow().value
 
-    fun LongsQueryState.followsPerRelayFlow() = account.liveDiscoveryFollowListsPerRelay
+    fun LongsQueryState.followsPerRelayFlow() = account.liveLongsFollowListsPerRelay
 
     fun LongsQueryState.followsPerRelay() = followsPerRelayFlow().value
 
