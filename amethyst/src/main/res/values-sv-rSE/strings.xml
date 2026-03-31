@@ -1847,24 +1847,4 @@
     <string name="relay_members_removed">%1$d medlemmar borttagna från relä</string>
     <string name="relay_join_request">Begäran om att gå med i relä</string>
     <string name="relay_leave_request">Begäran om att lämna relä</string>
-    <string name="app_notification_chess_challenge_accepted">%1$s accepterade din schackutmaning</string>
-    <string name="app_notification_chess_channel_description">Meddelar dig om schackspelshändelser</string>
-    <string name="app_notification_chess_channel_name">Schack</string>
-    <string name="app_notification_chess_summary">Schackuppdateringar</string>
-    <string name="app_notification_chess_your_turn">%1$s drog — din tur</string>
-    <string name="app_notification_reactions_channel_description">Meddelar dig när någon reagerar på ditt inlägg</string>
-    <string name="app_notification_reactions_channel_message">%1$s reagerade på ditt inlägg</string>
-    <string name="app_notification_reactions_channel_message_for">för %1$s</string>
-    <string name="app_notification_reactions_channel_name">Reaktioner</string>
-    <string name="app_notification_reactions_summary">Nya reaktioner</string>
-    <string name="kind_accepted_badge_set">Accepterad emblemuppsättning</string>
-    <string name="kind_old_bookmark_list">Gammal bokmärkeslista</string>
-    <string name="longs">Videor</string>
-    <string name="migrate_bookmarks_button">Flytta allt till nya bokmärken</string>
-    <string name="migrate_bookmarks_success">Bokmärken migrerade</string>
-    <string name="old_bookmarks_explainer">Dina gamla bokmärken</string>
-    <string name="old_bookmarks_title">Gamla bokmärken</string>
-    <string name="pictures">Bilder</string>
-    <string name="route_pictures">Bilder</string>
-    <string name="shorts">Kortfilmer</string>
 </resources>
