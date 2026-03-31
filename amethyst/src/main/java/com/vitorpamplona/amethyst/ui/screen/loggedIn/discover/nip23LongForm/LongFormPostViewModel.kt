@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip23LongForm
 
 import android.content.Context
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
@@ -147,7 +149,7 @@ class LongFormPostViewModel :
 
     var isUploadingCoverImage by mutableStateOf(false)
 
-    override var message by mutableStateOf(TextFieldValue(""))
+    override val message = TextFieldState()
 
     var showPreview by mutableStateOf(false)
 
@@ -241,7 +243,7 @@ class LongFormPostViewModel :
                 summary = TextFieldValue(noteEvent.summary() ?: "")
                 publishedAt = noteEvent.publishedAt() ?: noteEvent.createdAt
                 coverImageUrl = noteEvent.image() ?: ""
-                message = TextFieldValue(noteEvent.content)
+                message.setTextAndPlaceCursorAtEnd(noteEvent.content)
                 existingDTag = noteEvent.dTag()
             }
 
@@ -265,7 +267,7 @@ class LongFormPostViewModel :
         summary = TextFieldValue(draftEvent.summary() ?: "")
         publishedAt = draftEvent.publishedAt() ?: draftEvent.createdAt
         coverImageUrl = draftEvent.image() ?: ""
-        message = TextFieldValue(draftEvent.content)
+        message.setTextAndPlaceCursorAtEnd(draftEvent.content)
         existingDTag = draftEvent.dTag()
 
         canAddInvoice = accountViewModel.userProfile().lnAddress() != null
@@ -335,7 +337,7 @@ class LongFormPostViewModel :
     }
 
     suspend fun sendDraftSync() {
-        if (message.text.isBlank() && title.text.isBlank()) {
+        if (message.text.toString().isBlank() && title.text.isBlank()) {
             accountViewModel.account.deleteDraftIgnoreErrors(draftTag.current)
         } else {
             val template = createTemplate() ?: return
@@ -349,7 +351,7 @@ class LongFormPostViewModel :
 
         val tagger =
             NewMessageTagger(
-                message.text,
+                message.text.toString(),
                 null,
                 null,
                 accountViewModel,
@@ -539,7 +541,7 @@ class LongFormPostViewModel :
                         iMetaAttachments.replace(iMeta.url, iMeta)
 
                         val markdownImage = "![${alt ?: ""}](${state.result.url})"
-                        message = message.insertUrlAtCursor(markdownImage)
+                        message.insertUrlAtCursor(markdownImage)
                     }
                 }
 
@@ -559,7 +561,7 @@ class LongFormPostViewModel :
         title = TextFieldValue("")
         summary = TextFieldValue("")
         coverImageUrl = ""
-        message = TextFieldValue("")
+        message.setTextAndPlaceCursorAtEnd("")
         publishedAt = TimeUtils.now()
         showPreview = false
 
@@ -594,11 +596,9 @@ class LongFormPostViewModel :
         this.multiOrchestrator?.remove(selected)
     }
 
-    override fun updateMessage(newMessage: TextFieldValue) {
-        message = newMessage
-
+    override fun onMessageChanged() {
         if (message.selection.collapsed) {
-            val lastWord = newMessage.currentWord()
+            val lastWord = message.currentWord()
             if (lastWord.startsWith("@")) {
                 userSuggestionsMainMessage = UserSuggestionAnchor.MAIN_MESSAGE
                 userSuggestions?.processCurrentWord(lastWord)
@@ -626,7 +626,7 @@ class LongFormPostViewModel :
         userSuggestions?.let { userSuggestions ->
             if (userSuggestionsMainMessage == UserSuggestionAnchor.MAIN_MESSAGE) {
                 val lastWord = message.currentWord()
-                message = userSuggestions.replaceCurrentWord(message, lastWord, item)
+                userSuggestions.replaceCurrentWord(message, lastWord, item)
             } else if (userSuggestionsMainMessage == UserSuggestionAnchor.FORWARD_ZAPS) {
                 forwardZapTo.value.addItem(item)
                 forwardZapToEditting.value = TextFieldValue("")
@@ -641,7 +641,7 @@ class LongFormPostViewModel :
 
     fun autocompleteWithEmoji(item: EmojiMedia) {
         val wordToInsert = ":${item.code}:"
-        message = message.replaceCurrentWord(wordToInsert)
+        message.replaceCurrentWord(wordToInsert)
         emojiSuggestions?.reset()
         draftTag.newVersion()
     }
@@ -655,21 +655,21 @@ class LongFormPostViewModel :
             }
         }
 
-        message = message.replaceCurrentWord(wordToInsert)
+        message.replaceCurrentWord(wordToInsert)
         emojiSuggestions?.reset()
         draftTag.newVersion()
     }
 
     fun canPost(): Boolean =
         title.text.isNotBlank() &&
-            message.text.isNotBlank() &&
+            message.text.toString().isNotBlank() &&
             !isUploadingImage &&
             !wantsInvoice &&
             (!wantsZapRaiser || zapRaiserAmount.value != null) &&
             multiOrchestrator == null
 
     fun insertAtCursor(newElement: String) {
-        message = message.insertUrlAtCursor(newElement)
+        message.insertUrlAtCursor(newElement)
     }
 
     fun selectImage(uris: ImmutableList<SelectedMedia>) {
@@ -699,7 +699,7 @@ class LongFormPostViewModel :
     override fun updateZapFromText() {
         viewModelScope.launch(Dispatchers.IO) {
             val tagger =
-                NewMessageTagger(message.text, emptyList(), emptyList(), accountViewModel)
+                NewMessageTagger(message.text.toString(), emptyList(), emptyList(), accountViewModel)
             tagger.run()
             tagger.pTags?.forEach { taggedUser ->
                 if (!forwardZapTo.value.items.any { it.key == taggedUser }) {

@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send
 
 import android.content.Context
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
@@ -203,7 +205,7 @@ class ChatNewMessageViewModel :
 
     var uploadsWaitingToBeSent by mutableStateOf<List<SuccessfulUploads>>(emptyList())
 
-    override var message by mutableStateOf(TextFieldValue(""))
+    override val message = TextFieldState()
 
     val urlPreviews = PreviewState()
 
@@ -215,8 +217,8 @@ class ChatNewMessageViewModel :
 
     var emojiSuggestions: EmojiSuggestionState? = null
 
-    var toUsers by mutableStateOf(TextFieldValue(""))
-    var subject by mutableStateOf(TextFieldValue(""))
+    val toUsers = TextFieldState()
+    val subject = TextFieldState()
 
     // Invoices
     var canAddInvoice by mutableStateOf(false)
@@ -273,10 +275,9 @@ class ChatNewMessageViewModel :
 
     fun load(room: ChatroomKey) {
         this.room.tryEmit(room)
-        this.toUsers =
-            TextFieldValue(
-                room.users.mapNotNull { runCatching { Hex.decode(it).toNpub() }.getOrNull() }.joinToString(", ") { "@$it" },
-            )
+        this.toUsers.setTextAndPlaceCursorAtEnd(
+            room.users.mapNotNull { runCatching { Hex.decode(it).toNpub() }.getOrNull() }.joinToString(", ") { "@$it" },
+        )
     }
 
     fun reply(replyNote: Note) {
@@ -290,8 +291,8 @@ class ChatNewMessageViewModel :
     }
 
     fun quote(quote: Note) {
-        message = TextFieldValue(message.text + "\nnostr:${quote.toNEvent()}")
-        urlPreviews.update(message)
+        message.setTextAndPlaceCursorAtEnd(message.text.toString() + "\nnostr:${quote.toNEvent()}")
+        urlPreviews.update(message.text.toString())
 
         // creates a split with that author.
         val quotedAuthor = quote.author ?: return
@@ -371,14 +372,13 @@ class ChatNewMessageViewModel :
         }
 
         draftEvent.subject()?.let {
-            subject = TextFieldValue()
+            subject.setTextAndPlaceCursorAtEnd("")
         }
 
         if (draftEvent is NIP17Group) {
-            toUsers =
-                TextFieldValue(
-                    draftEvent.groupMembers().mapNotNull { runCatching { Hex.decode(it).toNpub() }.getOrNull() }.joinToString(", ") { "@$it" },
-                )
+            toUsers.setTextAndPlaceCursorAtEnd(
+                draftEvent.groupMembers().mapNotNull { runCatching { Hex.decode(it).toNpub() }.getOrNull() }.joinToString(", ") { "@$it" },
+            )
 
             val replyId =
                 when (draftEvent) {
@@ -392,7 +392,7 @@ class ChatNewMessageViewModel :
             }
         } else if (draftEvent is PrivateDmEvent) {
             val recipientNPub = draftEvent.verifiedRecipientPubKey()?.let { Hex.decode(it).toNpub() }
-            toUsers = TextFieldValue("@$recipientNPub")
+            toUsers.setTextAndPlaceCursorAtEnd("@$recipientNPub")
 
             val replyId = draftEvent.replyTo()
             if (replyId != null) {
@@ -400,13 +400,14 @@ class ChatNewMessageViewModel :
             }
         }
 
-        message =
+        val draftText =
             if (draftEvent is PrivateDmEvent) {
-                TextFieldValue(accountViewModel.account.privateDMDecryptionCache.cachedDM(draftEvent) ?: "")
+                accountViewModel.account.privateDMDecryptionCache.cachedDM(draftEvent) ?: ""
             } else {
-                TextFieldValue(draftEvent.content)
+                draftEvent.content
             }
-        urlPreviews.update(message)
+        message.setTextAndPlaceCursorAtEnd(draftText)
+        urlPreviews.update(message.text.toString())
 
         iMetaAttachments.addAll(draftEvent.imetas())
     }
@@ -421,7 +422,7 @@ class ChatNewMessageViewModel :
     }
 
     suspend fun sendDraftSync() {
-        if (message.text.isBlank()) {
+        if (message.text.toString().isBlank()) {
             account.deleteDraftIgnoreErrors(draftTag.current)
         } else {
             innerSendPost(draftTag.current)
@@ -563,11 +564,12 @@ class ChatNewMessageViewModel :
     private suspend fun innerSendPost(draftTag: String?) {
         val room = room.value ?: return
 
-        val urls = findURLs(message.text)
+        val messageText = message.text.toString()
+        val urls = findURLs(messageText)
         val usedAttachments = iMetaAttachments.filterIsIn(urls.toSet())
-        val emojis = findEmoji(message.text, accountViewModel.account.emoji.myEmojis.value)
+        val emojis = findEmoji(messageText, accountViewModel.account.emoji.myEmojis.value)
         val geoHash = if (wantsToAddGeoHash) (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString() else null
-        val message = message.text
+        val message = messageText
 
         val contentWarningReason = if (wantsToMarkAsSensitive) contentWarningDescription else null
         val localExpirationDate = if (wantsExpirationDate) expirationDate else null
@@ -633,8 +635,8 @@ class ChatNewMessageViewModel :
     fun cancel() {
         draftTag.rotate()
 
-        message = TextFieldValue("")
-        subject = TextFieldValue("")
+        message.setTextAndPlaceCursorAtEnd("")
+        subject.setTextAndPlaceCursorAtEnd("")
 
         replyTo.value = null
 
@@ -667,15 +669,15 @@ class ChatNewMessageViewModel :
     }
 
     fun addToMessage(it: String) {
-        updateMessage(TextFieldValue(message.text + " " + it))
+        message.setTextAndPlaceCursorAtEnd(message.text.toString() + " " + it)
+        onMessageChanged()
     }
 
-    override fun updateMessage(newMessage: TextFieldValue) {
-        message = newMessage
-        urlPreviews.update(newMessage)
+    override fun onMessageChanged() {
+        urlPreviews.update(message.text.toString())
 
         if (message.selection.collapsed) {
-            val lastWord = newMessage.currentWord()
+            val lastWord = message.currentWord()
             if (lastWord.startsWith("@")) {
                 userSuggestionsMainMessage = UserSuggestionAnchor.MAIN_MESSAGE
                 userSuggestions?.processCurrentWord(lastWord)
@@ -689,11 +691,9 @@ class ChatNewMessageViewModel :
         draftTag.newVersion()
     }
 
-    fun updateToUsers(newToUsersValue: TextFieldValue) {
-        toUsers = newToUsersValue
-
-        if (newToUsersValue.selection.collapsed) {
-            val lastWord = newToUsersValue.currentWord()
+    fun onToUsersChanged() {
+        if (toUsers.selection.collapsed) {
+            val lastWord = toUsers.currentWord()
             userSuggestionsMainMessage = UserSuggestionAnchor.TO_USERS
             userSuggestions?.processCurrentWord(lastWord)
         }
@@ -706,7 +706,7 @@ class ChatNewMessageViewModel :
     fun updateRoomFromUsersInput() {
         viewModelScope.launch(Dispatchers.IO) {
             delay(300)
-            val toUsersTagger = NewMessageTagger(toUsers.text, null, null, accountViewModel)
+            val toUsersTagger = NewMessageTagger(toUsers.text.toString(), null, null, accountViewModel)
             toUsersTagger.run()
 
             val users = toUsersTagger.pTags?.mapTo(mutableSetOf()) { it.pubkeyHex }
@@ -720,8 +720,7 @@ class ChatNewMessageViewModel :
         }
     }
 
-    fun updateSubject(it: TextFieldValue) {
-        subject = it
+    fun onSubjectChanged() {
         draftTag.newVersion()
     }
 
@@ -738,14 +737,14 @@ class ChatNewMessageViewModel :
         userSuggestions?.let { userSuggestions ->
             if (userSuggestionsMainMessage == UserSuggestionAnchor.MAIN_MESSAGE) {
                 val lastWord = message.currentWord()
-                message = userSuggestions.replaceCurrentWord(message, lastWord, item)
-                urlPreviews.update(message)
+                userSuggestions.replaceCurrentWord(message, lastWord, item)
+                urlPreviews.update(message.text.toString())
             } else if (userSuggestionsMainMessage == UserSuggestionAnchor.FORWARD_ZAPS) {
                 forwardZapTo.value.addItem(item)
                 forwardZapToEditting.value = TextFieldValue("")
             } else if (userSuggestionsMainMessage == UserSuggestionAnchor.TO_USERS) {
                 val lastWord = toUsers.currentWord()
-                toUsers = userSuggestions.replaceCurrentWord(toUsers, lastWord, item)
+                userSuggestions.replaceCurrentWord(toUsers, lastWord, item)
                 updateRoomFromUsersInput()
             }
 
@@ -759,8 +758,8 @@ class ChatNewMessageViewModel :
     fun autocompleteWithEmoji(item: EmojiPackState.EmojiMedia) {
         val wordToInsert = ":${item.code}:"
 
-        message = message.replaceCurrentWord(wordToInsert)
-        urlPreviews.update(message)
+        message.replaceCurrentWord(wordToInsert)
+        urlPreviews.update(message.text.toString())
 
         emojiSuggestions?.reset()
 
@@ -776,8 +775,8 @@ class ChatNewMessageViewModel :
             }
         }
 
-        message = message.replaceCurrentWord(wordToInsert)
-        urlPreviews.update(message)
+        message.replaceCurrentWord(wordToInsert)
+        urlPreviews.update(message.text.toString())
 
         emojiSuggestions?.reset()
 
@@ -794,8 +793,8 @@ class ChatNewMessageViewModel :
             recipientsMissingDmRelays.value.isEmpty()
 
     fun insertAtCursor(newElement: String) {
-        message = message.insertUrlAtCursor(newElement)
-        urlPreviews.update(message)
+        message.insertUrlAtCursor(newElement)
+        urlPreviews.update(message.text.toString())
     }
 
     override fun onCleared() {
@@ -816,7 +815,7 @@ class ChatNewMessageViewModel :
 
     override fun updateZapFromText() {
         viewModelScope.launch(Dispatchers.IO) {
-            val tagger = NewMessageTagger(message.text, emptyList(), emptyList(), accountViewModel)
+            val tagger = NewMessageTagger(message.text.toString(), emptyList(), emptyList(), accountViewModel)
             tagger.run()
             tagger.pTags?.forEach { taggedUser ->
                 if (!forwardZapTo.value.items.any { it.key == taggedUser }) {

@@ -54,7 +54,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
-import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
+import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
@@ -201,8 +201,8 @@ fun EditField(
     accountViewModel: AccountViewModel,
 ) {
     ThinPaddingTextField(
-        value = channelScreenModel.message,
-        onValueChange = { channelScreenModel.updateMessage(it) },
+        state = channelScreenModel.message,
+        onTextChanged = { channelScreenModel.onMessageChanged() },
         keyboardOptions = PostKeyboard,
         shape = EditFieldBorder,
         modifier = Modifier.fillMaxWidth(),
@@ -231,7 +231,7 @@ fun EditField(
                 focusedIndicatorColor = Color.Transparent,
                 unfocusedIndicatorColor = Color.Transparent,
             ),
-        visualTransformation = UrlUserTagTransformation(MaterialTheme.colorScheme.primary),
+        outputTransformation = UrlUserTagOutputTransformation(MaterialTheme.colorScheme.primary),
     )
 }
 
