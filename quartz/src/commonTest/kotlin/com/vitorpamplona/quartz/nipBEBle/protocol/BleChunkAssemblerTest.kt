@@ -24,6 +24,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class BleChunkAssemblerTest {
     @Test
@@ -43,7 +44,7 @@ class BleChunkAssemblerTest {
         val assembler = BleChunkAssembler()
         val message = """["EVENT",{"content":"hello world from nostr ble mesh networking"}]"""
         val chunks = BleMessageChunker.splitIntoChunks(message, chunkSize = 10)
-        assert(chunks.size > 1)
+        assertTrue(chunks.size > 1)
 
         for (i in 0 until chunks.size - 1) {
             val result = assembler.addChunk(chunks[i])

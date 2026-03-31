@@ -696,7 +696,7 @@ class ChessLobbyLogic(
                 // Check status FIRST to avoid briefly emitting a finished game through activeGames
                 val gameStatus = result.liveState.gameStatus.value
                 if (gameStatus is GameStatus.Finished) {
-                    Log.d("chessdebug") { "[Lobby] refreshGame: game ${startEventId.take(8)} is FINISHED (${(gameStatus as GameStatus.Finished).result}), moving to completed" }
+                    Log.d("chessdebug") { "[Lobby] refreshGame: game ${startEventId.take(8)} is FINISHED (${gameStatus.result}), moving to completed" }
                     state.moveToCompleted(startEventId, gameStatus.result.notation, null)
                     pollingDelegate.removeGameId(startEventId)
                 } else {
