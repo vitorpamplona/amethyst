@@ -119,15 +119,15 @@ object NotificationUtils {
                 description =
                     stringRes(applicationContext, R.string.app_notification_reactions_channel_description)
             }
-            
+
         val notificationManager: NotificationManager =
             applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            
+
         notificationManager.createNotificationChannel(reactionChannel!!)
 
         return reactionChannel!!
     }
-                    
+
     fun getOrCreateChessChannel(applicationContext: Context): NotificationChannel {
         if (chessChannel != null) return chessChannel!!
 
@@ -148,7 +148,7 @@ object NotificationUtils {
 
         return chessChannel!!
     }
-      
+
     suspend fun NotificationManager.sendChessNotification(
         id: String,
         messageBody: String,
@@ -176,7 +176,7 @@ object NotificationUtils {
             applicationContext = applicationContext,
         )
     }
-    
+
     suspend fun NotificationManager.sendChessNotification(
         id: String,
         messageBody: String,
