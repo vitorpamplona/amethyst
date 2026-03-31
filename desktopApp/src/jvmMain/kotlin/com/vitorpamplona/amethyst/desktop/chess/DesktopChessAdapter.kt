@@ -41,6 +41,7 @@ import com.vitorpamplona.quartz.nip64Chess.jester.JesterEvent
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterGameEvents
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterProtocol
 import com.vitorpamplona.quartz.nip64Chess.jester.toJesterEvent
+import com.vitorpamplona.quartz.utils.Log
 
 /**
  * Desktop implementation of ChessEventPublisher using Jester protocol.
@@ -63,9 +64,9 @@ class DesktopChessPublisher(
      * Uses ChessEventBroadcaster to ensure relay connections before sending.
      */
     private suspend fun broadcastToChessRelays(event: com.vitorpamplona.quartz.nip01Core.core.Event): Boolean {
-        println("[DesktopChessPublisher] Broadcasting event ${event.id.take(8)} via ChessEventBroadcaster")
+        Log.d("chessdebug") { "[DesktopChessPublisher] Broadcasting event ${event.id.take(8)} via ChessEventBroadcaster" }
         val result = broadcaster.broadcast(event)
-        println("[DesktopChessPublisher] Broadcast result: ${result.message}")
+        Log.d("chessdebug") { "[DesktopChessPublisher] Broadcast result: ${result.message}" }
         return result.success
     }
 
@@ -93,7 +94,7 @@ class DesktopChessPublisher(
             val success = broadcastToChessRelays(signedEvent)
             if (success) signedEvent.id else null
         } catch (e: Exception) {
-            println("[DesktopChessPublisher] publishStart failed: ${e.message}")
+            Log.d("chessdebug") { "[DesktopChessPublisher] publishStart failed: ${e.message}" }
             null
         }
 
@@ -116,7 +117,7 @@ class DesktopChessPublisher(
             val success = broadcastToChessRelays(signedEvent)
             if (success) signedEvent.id else null
         } catch (e: Exception) {
-            println("[DesktopChessPublisher] publishMove failed: ${e.message}")
+            Log.d("chessdebug") { "[DesktopChessPublisher] publishMove failed: ${e.message}" }
             null
         }
 
@@ -139,7 +140,7 @@ class DesktopChessPublisher(
             val signedEvent = account.signer.sign(template)
             broadcastToChessRelays(signedEvent)
         } catch (e: Exception) {
-            println("[DesktopChessPublisher] publishGameEnd failed: ${e.message}")
+            Log.d("chessdebug") { "[DesktopChessPublisher] publishGameEnd failed: ${e.message}" }
             false
         }
 
@@ -169,7 +170,7 @@ class DesktopRelayFetcher(
     private fun chessRelayUrls(): List<NormalizedRelayUrl> = ChessConfig.CHESS_RELAYS.map { NormalizedRelayUrl(it) }
 
     override fun getRelayUrls(): List<String> {
-        println("[DesktopRelayFetcher] getRelayUrls: using ${ChessConfig.CHESS_RELAYS.size} chess relays")
+        Log.d("chessdebug") { "[DesktopRelayFetcher] getRelayUrls: using ${ChessConfig.CHESS_RELAYS.size} chess relays" }
         return ChessConfig.CHESS_RELAYS
     }
 
@@ -182,11 +183,11 @@ class DesktopRelayFetcher(
      * 2. Fetch moves that reference the start event via #e tag
      */
     override suspend fun fetchGameEvents(startEventId: String): JesterGameEvents {
-        println("[DesktopRelayFetcher] fetchGameEvents: querying cache for startEventId=$startEventId")
+        Log.d("chessdebug") { "[DesktopRelayFetcher] fetchGameEvents: querying cache for startEventId=$startEventId" }
 
         // Query cache first (populated by subscription)
         val cachedEvents = DesktopChessEventCache.getGameEvents(startEventId)
-        println("[DesktopRelayFetcher] fetchGameEvents cache: start=${cachedEvents.startEvent != null}, moves=${cachedEvents.moves.size}")
+        Log.d("chessdebug") { "[DesktopRelayFetcher] fetchGameEvents cache: start=${cachedEvents.startEvent != null}, moves=${cachedEvents.moves.size}" }
 
         // Also do relay query to catch any new events and populate cache
         // Filter 1: Fetch the start event by its ID
@@ -220,7 +221,7 @@ class DesktopRelayFetcher(
         // Merge: prefer cache start event, merge all moves
         val allMoves = (cachedEvents.moves + relayMoves).distinctBy { it.id }
 
-        println("[DesktopRelayFetcher] fetchGameEvents: found start=${cachedEvents.startEvent ?: relayStartEvent != null}, moves=${allMoves.size}")
+        Log.d("chessdebug") { "[DesktopRelayFetcher] fetchGameEvents: found start=${cachedEvents.startEvent ?: relayStartEvent != null}, moves=${allMoves.size}" }
 
         return JesterGameEvents(
             startEvent = cachedEvents.startEvent ?: relayStartEvent,
@@ -233,7 +234,7 @@ class DesktopRelayFetcher(
      */
     override suspend fun fetchChallenges(onProgress: ((RelayFetchProgress) -> Unit)?): List<JesterEvent> {
         val relays = chessRelayUrls()
-        println("[DesktopRelayFetcher] fetchChallenges: querying cache first, then ${relays.size} chess relays")
+        Log.d("chessdebug") { "[DesktopRelayFetcher] fetchChallenges: querying cache first, then ${relays.size} chess relays" }
 
         // Query cache for start events that are:
         // 1. Open challenges (no specific opponent)
@@ -246,7 +247,7 @@ class DesktopRelayFetcher(
                     event.pubKey == userPubkey
             }
 
-        println("[DesktopRelayFetcher] fetchChallenges: found ${cachedStartEvents.size} in cache")
+        Log.d("chessdebug") { "[DesktopRelayFetcher] fetchChallenges: found ${cachedStartEvents.size} in cache" }
 
         // Also do relay query to catch any new challenges
         val filter = ChessFilterBuilder.challengesFilter(userPubkey)
@@ -264,7 +265,7 @@ class DesktopRelayFetcher(
 
         // Merge and deduplicate
         val allStartEvents = (cachedStartEvents + relayStartEvents).distinctBy { it.id }
-        println("[DesktopRelayFetcher] fetchChallenges: total ${allStartEvents.size} after merge")
+        Log.d("chessdebug") { "[DesktopRelayFetcher] fetchChallenges: total ${allStartEvents.size} after merge" }
         return allStartEvents
     }
 
@@ -273,7 +274,7 @@ class DesktopRelayFetcher(
      */
     override suspend fun fetchUserGameIds(onProgress: ((RelayFetchProgress) -> Unit)?): Set<String> {
         val relays = chessRelayUrls()
-        println("[DesktopRelayFetcher] fetchUserGameIds: querying cache first, then ${relays.size} chess relays")
+        Log.d("chessdebug") { "[DesktopRelayFetcher] fetchUserGameIds: querying cache first, then ${relays.size} chess relays" }
 
         val gameIds = mutableSetOf<String>()
 
@@ -291,7 +292,7 @@ class DesktopRelayFetcher(
                 event.startEventId()?.let { gameIds.add(it) }
             }
 
-        println("[DesktopRelayFetcher] fetchUserGameIds: found ${gameIds.size} in cache")
+        Log.d("chessdebug") { "[DesktopRelayFetcher] fetchUserGameIds: found ${gameIds.size} in cache" }
 
         // Also do relay query to catch any new game IDs
         val userFilter = ChessFilterBuilder.userGamesFilter(userPubkey)
@@ -314,7 +315,7 @@ class DesktopRelayFetcher(
                 }
             }
 
-        println("[DesktopRelayFetcher] fetchUserGameIds: total ${gameIds.size} after merge")
+        Log.d("chessdebug") { "[DesktopRelayFetcher] fetchUserGameIds: total ${gameIds.size} after merge" }
         return gameIds
     }
 

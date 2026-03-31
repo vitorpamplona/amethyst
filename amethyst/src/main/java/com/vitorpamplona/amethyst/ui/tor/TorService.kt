@@ -54,18 +54,23 @@ class TorService(
                         service: IBinder,
                     ) {
                         launch(Dispatchers.IO) {
-                            // moved torService to a local variable, since we only need it once
-                            val torService = (service as LocalBinder).service
+                            try {
+                                // moved torService to a local variable, since we only need it once
+                                val torService = (service as LocalBinder).service
 
-                            while (torService.socksPort < 0) {
-                                delay(SOCKS_PORT_POLL_INTERVAL_MS)
+                                while (torService.socksPort < 0) {
+                                    delay(SOCKS_PORT_POLL_INTERVAL_MS)
+                                }
+
+                                val active = TorServiceStatus.Active(torService.socksPort)
+                                active.torControlConnection = torService.torControlConnection
+
+                                trySend(active)
+                                Log.d("TorService") { "Tor Service Connected ${torService.socksPort}" }
+                            } catch (e: Exception) {
+                                Log.e("TorService") { "Tor service connection failed: ${e.message}" }
+                                trySend(TorServiceStatus.Off)
                             }
-
-                            val active = TorServiceStatus.Active(torService.socksPort)
-                            active.torControlConnection = torService.torControlConnection
-
-                            trySend(active)
-                            Log.d("TorService") { "Tor Service Connected ${torService.socksPort}" }
                         }
                     }
 
@@ -75,11 +80,16 @@ class TorService(
                     }
                 }
 
-            context.bindService(
-                currentIntent,
-                serviceConnection,
-                BIND_AUTO_CREATE,
-            )
+            try {
+                context.bindService(
+                    currentIntent,
+                    serviceConnection,
+                    BIND_AUTO_CREATE,
+                )
+            } catch (e: Exception) {
+                Log.e("TorService") { "Failed to bind Tor Service: ${e.message}" }
+                trySend(TorServiceStatus.Off)
+            }
 
             awaitClose {
                 Log.d("TorService", "Stopping Tor Service")
@@ -88,8 +98,10 @@ class TorService(
                 } catch (e: Exception) {
                     Log.d("TorService") { "Failed to unbind Tor Service: ${e.message}" }
                 }
-                launch {
+                try {
                     context.stopService(currentIntent)
+                } catch (e: Exception) {
+                    Log.d("TorService") { "Failed to stop Tor Service: ${e.message}" }
                 }
                 trySend(TorServiceStatus.Off)
             }

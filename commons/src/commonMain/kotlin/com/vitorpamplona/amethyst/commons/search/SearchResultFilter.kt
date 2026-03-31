@@ -53,7 +53,7 @@ object SearchResultFilter {
         }
 
         // Sort by createdAt descending
-        return result.sortedByDescending { it.createdAt }
+        return result.sortedWith(compareByDescending<Event> { it.createdAt }.thenBy { it.id })
     }
 
     fun isReply(event: Event): Boolean = event.kind == 1 && event.tags.any { it.size >= 2 && it[0] == "e" }
