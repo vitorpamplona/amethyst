@@ -20,6 +20,17 @@
  */
 package com.vitorpamplona.amethyst.ui.tor
 
+import com.vitorpamplona.amethyst.commons.tor.TorPresetType
+import com.vitorpamplona.amethyst.commons.tor.TorSettings
+import com.vitorpamplona.amethyst.commons.tor.TorType
+import com.vitorpamplona.amethyst.commons.tor.isPreset
+import com.vitorpamplona.amethyst.commons.tor.parseTorPresetType
+import com.vitorpamplona.amethyst.commons.tor.parseTorType
+import com.vitorpamplona.amethyst.commons.tor.torDefaultPreset
+import com.vitorpamplona.amethyst.commons.tor.torFullyPrivate
+import com.vitorpamplona.amethyst.commons.tor.torOnlyWhenNeededPreset
+import com.vitorpamplona.amethyst.commons.tor.torSmallPayloadsPreset
+import com.vitorpamplona.amethyst.commons.tor.whichPreset
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals

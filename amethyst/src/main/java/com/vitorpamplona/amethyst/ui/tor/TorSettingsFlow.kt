@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.ui.tor
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.tor.TorSettings
+import com.vitorpamplona.amethyst.commons.tor.TorType
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 

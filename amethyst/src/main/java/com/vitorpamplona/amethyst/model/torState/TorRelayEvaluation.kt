@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model.torState
 
-import com.vitorpamplona.amethyst.ui.tor.TorType
+import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isLocalHost
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isOnion
