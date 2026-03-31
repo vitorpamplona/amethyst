@@ -655,6 +655,11 @@
     <string name="app_notification_mark_read_label">标记为已读</string>
     <string name="app_notification_dms_summary">新信息</string>
     <string name="app_notification_zaps_summary">新打闪</string>
+    <string name="app_notification_chess_channel_name">国际象棋</string>
+    <string name="app_notification_chess_channel_description">提醒您有关国际象棋游戏的事件</string>
+    <string name="app_notification_chess_challenge_accepted">%1$s 接受了您的国际象棋挑战</string>
+    <string name="app_notification_chess_your_turn">%1$s 已移动 —— 轮到您了</string>
+    <string name="app_notification_chess_summary">国际象棋更新</string>
     <string name="reply_notify">通知：</string>
     <string name="channel_list_join_conversation">加入对话</string>
     <string name="channel_list_user_or_group_id">用户或群组 ID</string>
