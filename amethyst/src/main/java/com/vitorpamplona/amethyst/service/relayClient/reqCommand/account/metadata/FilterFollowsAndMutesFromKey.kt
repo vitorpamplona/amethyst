@@ -30,7 +30,7 @@ import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiPackSelectionEve
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
-import com.vitorpamplona.quartz.nip58Badges.BadgeProfilesEvent
+import com.vitorpamplona.quartz.nip58Badges.profiles.BadgeProfilesEvent
 
 val FollowAndMutesFromKeyKinds =
     listOf(

@@ -18,30 +18,31 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip58Badges
+package com.vitorpamplona.quartz.nip58Badges.award
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.core.Address
-import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
-import com.vitorpamplona.quartz.nip01Core.tags.aTag.taggedAddresses
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
-import com.vitorpamplona.quartz.nip01Core.tags.events.taggedEvents
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
-class BadgeProfilesEvent(
+class BadgeAwardEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     EventHintProvider,
     AddressHintProvider,
     PubKeyHintProvider {
@@ -57,17 +58,26 @@ class BadgeProfilesEvent(
 
     override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
 
-    fun badgeAwardEvents() = taggedEvents()
+    fun awardees() = tags.awardees()
 
-    fun badgeAwardDefinitions() = taggedAddresses()
+    fun awardeeIds() = tags.awardeeIds()
+
+    fun awardDefinition() = tags.awardDefinitions()
 
     companion object {
-        const val KIND = 30008
-        private const val STANDARD_D_TAG = "profile_badges"
-        private const val ALT = "List of accepted badges by the author"
+        const val KIND = 8
+        const val ALT_DESCRIPTION = "Badge award"
 
-        fun createAddress(pubKey: HexKey): Address = Address(KIND, pubKey, STANDARD_D_TAG)
-
-        fun createAddressTag(pubKey: HexKey): ATag = ATag(KIND, pubKey, STANDARD_D_TAG, null)
+        fun build(
+            awardDefinition: ATag,
+            awardees: List<PTag>,
+            createdAt: Long = TimeUtils.now(),
+            initializer: TagArrayBuilder<BadgeAwardEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, "", createdAt) {
+            alt(ALT_DESCRIPTION)
+            awardDefinition(awardDefinition)
+            awardees(awardees)
+            initializer()
+        }
     }
 }

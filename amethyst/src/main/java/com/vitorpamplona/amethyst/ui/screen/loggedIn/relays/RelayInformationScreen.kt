@@ -232,9 +232,9 @@ import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
-import com.vitorpamplona.quartz.nip58Badges.BadgeAwardEvent
-import com.vitorpamplona.quartz.nip58Badges.BadgeDefinitionEvent
-import com.vitorpamplona.quartz.nip58Badges.BadgeProfilesEvent
+import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
+import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
+import com.vitorpamplona.quartz.nip58Badges.profiles.BadgeProfilesEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent

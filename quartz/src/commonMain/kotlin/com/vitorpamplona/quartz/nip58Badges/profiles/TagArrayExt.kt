@@ -18,31 +18,15 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip58Badges
+package com.vitorpamplona.quartz.nip58Badges.profiles
 
-import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.taggedAddresses
+import com.vitorpamplona.quartz.nip01Core.tags.events.taggedEvents
+import com.vitorpamplona.quartz.nip58Badges.profiles.tags.AcceptedBadge
 
-@Immutable
-class BadgeDefinitionEvent(
-    id: HexKey,
-    pubKey: HexKey,
-    createdAt: Long,
-    tags: Array<Array<String>>,
-    content: String,
-    sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-    fun name() = tags.firstOrNull { it.size > 1 && it[0] == "name" }?.get(1)
+fun TagArray.acceptedBadges() = AcceptedBadge.parseAll(this)
 
-    fun thumb() = tags.firstOrNull { it.size > 1 && it[0] == "thumb" }?.get(1)
+fun TagArray.badgeAwardEvents() = taggedEvents()
 
-    fun image() = tags.firstOrNull { it.size > 1 && it[0] == "image" }?.get(1)
-
-    fun description() = tags.firstOrNull { it.size > 1 && it[0] == "description" }?.get(1)
-
-    companion object {
-        const val KIND = 30009
-        const val ALT = "Badge definition"
-    }
-}
+fun TagArray.badgeAwardDefinitions() = taggedAddresses()
