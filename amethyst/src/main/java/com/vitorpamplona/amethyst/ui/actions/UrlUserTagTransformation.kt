@@ -31,8 +31,10 @@ import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextDecoration
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.nip19Bech32.decodePublicKey
+import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
+import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
+import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
+import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import kotlin.coroutines.cancellation.CancellationException
 
 data class RangesChanges(
@@ -60,20 +62,19 @@ fun buildAnnotatedStringWithUrlHighlighting(
                 text.text.split('\n').joinToString("\n") { paragraph: String ->
                     paragraph.split(' ').joinToString(" ") { word: String ->
                         try {
-                            if (word.startsWith("@npub") && word.length >= 64) {
-                                val keyB32 = word.substring(0, 64)
-                                val restOfWord = word.substring(64)
+                            val mention = parseUserMention(word)
+                            if (mention != null) {
+                                val (keyPortion, restOfWord, hexKey) = mention
 
                                 val startIndex = builderBefore.toString().length
 
                                 builderBefore.append(
-                                    "$keyB32$restOfWord ",
+                                    "$keyPortion$restOfWord ",
                                 ) // accounts for the \n at the end of each paragraph
 
-                                val endIndex = startIndex + keyB32.length
+                                val endIndex = startIndex + keyPortion.length
 
-                                val key = decodePublicKey(keyB32.removePrefix("@"))
-                                val user = LocalCache.getOrCreateUser(key.toHexKey())
+                                val user = LocalCache.getOrCreateUser(hexKey)
 
                                 val newWord = "@${user.toBestDisplayName()}"
                                 val startNew = builderAfter.toString().length
@@ -180,4 +181,47 @@ fun buildAnnotatedStringWithUrlHighlighting(
         newText,
         numberOffsetTranslator,
     )
+}
+
+private data class UserMention(
+    val keyPortion: String,
+    val restOfWord: String,
+    val hexKey: String,
+)
+
+private fun parseUserMention(word: String): UserMention? {
+    var key = word
+    val prefix: String
+
+    if (key.startsWith("nostr:", true)) {
+        prefix = key.substring(0, 6)
+        key = key.substring(6)
+    } else if (key.startsWith("@")) {
+        prefix = "@"
+        key = key.substring(1)
+    } else {
+        return null
+    }
+
+    if (key.startsWith("npub1", true) && key.length >= 63) {
+        val keyB32 = key.substring(0, 63)
+        val restOfWord = key.substring(63)
+        val hex = decodePublicKeyAsHexOrNull(keyB32) ?: return null
+        return UserMention("$prefix$keyB32", restOfWord, hex)
+    } else if (key.startsWith("nprofile1", true)) {
+        val parsed = Nip19Parser.uriToRoute(key) ?: return null
+        val entity = parsed.entity
+        if (entity !is NProfile && entity !is NPub) return null
+        val hex =
+            when (entity) {
+                is NProfile -> entity.hex
+                is NPub -> entity.hex
+                else -> return null
+            }
+        val bech32Len = parsed.nip19raw.length
+        val restOfWord = key.substring(bech32Len)
+        return UserMention("$prefix${parsed.nip19raw}", restOfWord, hex)
+    }
+
+    return null
 }
