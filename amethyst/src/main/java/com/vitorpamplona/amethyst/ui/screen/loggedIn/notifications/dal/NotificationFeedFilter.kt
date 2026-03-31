@@ -124,7 +124,7 @@ class NotificationFeedFilter(
 
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + followList().code
 
-    fun followList(): TopFilter = account.settings.defaultDiscoveryFollowList.value
+    fun followList(): TopFilter = account.settings.defaultNotificationFollowList.value
 
     fun TopFilter.isMuteList() = this is TopFilter.MuteList
 

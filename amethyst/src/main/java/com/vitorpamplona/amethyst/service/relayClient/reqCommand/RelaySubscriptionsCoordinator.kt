@@ -37,6 +37,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.feed.datasource
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.datasource.GeoHashFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.datasource.HashtagFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.HomeFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.longs.datasource.LongsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.datasource.PicturesFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.datasource.PollsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.datasource.UserProfileFilterAssembler
@@ -91,6 +92,7 @@ class RelaySubscriptionsCoordinator(
     val polls = PollsFilterAssembler(client)
     val pictures = PicturesFilterAssembler(client)
     val shorts = ShortsFilterAssembler(client)
+    val longs = LongsFilterAssembler(client)
 
     // active when sending zaps via NWC
     val nwc = NWCPaymentFilterAssembler(client)
@@ -105,6 +107,7 @@ class RelaySubscriptionsCoordinator(
             polls,
             pictures,
             shorts,
+            longs,
             channelFinder,
             eventFinder,
             userFinder,
