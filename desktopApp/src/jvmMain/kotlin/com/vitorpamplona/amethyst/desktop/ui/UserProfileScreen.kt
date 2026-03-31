@@ -829,7 +829,7 @@ fun UserProfileScreen(
                             }
                         } else {
                             items(
-                                articleEvents.sortedByDescending { it.publishedAt() ?: it.createdAt },
+                                articleEvents.sortedWith(compareByDescending<LongTextNoteEvent> { it.publishedAt() ?: it.createdAt }.thenBy { it.id }),
                                 key = { "art-${it.id}" },
                             ) { article ->
                                 LongFormCard(
@@ -871,7 +871,7 @@ fun UserProfileScreen(
                             }
                         } else {
                             items(
-                                highlightEvents.sortedByDescending { it.createdAt },
+                                highlightEvents.sortedWith(compareByDescending<HighlightEvent> { it.createdAt }.thenBy { it.id }),
                                 key = { "hl-${it.id}" },
                             ) { highlight ->
                                 PublishedHighlightCard(

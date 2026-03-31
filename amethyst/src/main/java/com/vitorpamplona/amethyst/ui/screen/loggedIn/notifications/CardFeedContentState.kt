@@ -262,8 +262,7 @@ class CardFeedContentState(
                         val sortedList =
                             singleList
                                 .get(string)
-                                ?.sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
-                                ?.reversed()
+                                ?.sortedWith(compareByDescending<Note> { it.createdAt() }.thenBy { it.idHex })
 
                         sortedList?.chunked(30)?.map { chunk ->
                             MultiSetCard(
@@ -293,8 +292,7 @@ class CardFeedContentState(
                         ZapUserSetCard(
                             user.key,
                             zaps
-                                .sortedWith(compareBy({ it.createdAt() }, { it.idHex() }))
-                                .reversed()
+                                .sortedWith(compareByDescending<CombinedZap> { it.createdAt() }.thenBy { it.idHex() })
                                 .toImmutableList(),
                         )
                     }
@@ -318,8 +316,7 @@ class CardFeedContentState(
                 }
 
         return (multiCards + textNoteCards + userZaps)
-            .sortedWith(compareBy({ it.createdAt() }, { it.id() }))
-            .reversed()
+            .sortedWith(compareByDescending<Card> { it.createdAt() }.thenBy { it.id() })
     }
 
     private fun updateFeed(notes: ImmutableList<Card>) {
@@ -383,8 +380,7 @@ class CardFeedContentState(
                 val updatedCards =
                     (oldNotesState.feed.value.list + newCards)
                         .distinctBy { it.id() }
-                        .sortedWith(compareBy({ it.createdAt() }, { it.id() }))
-                        .reversed()
+                        .sortedWith(compareByDescending<Card> { it.createdAt() }.thenBy { it.id() })
                         .take(localFilter.limit())
                         .toImmutableList()
 

@@ -45,6 +45,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -67,8 +68,10 @@ import com.vitorpamplona.amethyst.commons.chess.ActiveGameCard
 import com.vitorpamplona.amethyst.commons.chess.ChallengeCard
 import com.vitorpamplona.amethyst.commons.chess.ChessChallenge
 import com.vitorpamplona.amethyst.commons.chess.ChessSyncBanner
+import com.vitorpamplona.amethyst.commons.chess.CompletedGameCard
 import com.vitorpamplona.amethyst.commons.chess.NewChessGameDialog
 import com.vitorpamplona.amethyst.commons.chess.OutgoingChallengeCard
+import com.vitorpamplona.amethyst.commons.chess.OverlappingAvatars
 import com.vitorpamplona.amethyst.commons.chess.PublicGameCard
 import com.vitorpamplona.amethyst.commons.chess.SpectatingGameCard
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
@@ -94,7 +97,7 @@ fun ChessLobbyScreen(
         viewModel(
             viewModelStoreOwner = activity,
             key = "ChessViewModelNew-${accountViewModel.account.userProfile().pubkeyHex}",
-            factory = ChessViewModelFactory(accountViewModel.account),
+            factory = ChessViewModelFactory(accountViewModel.account, activity.application),
         )
 
     // Subscribe to chess events when screen is visible
@@ -294,13 +297,19 @@ fun ChessLobbyContent(
     val spectatingGames by chessViewModel.spectatingGames.collectAsState()
     val publicGames by chessViewModel.publicGames.collectAsState()
     val challenges by chessViewModel.challenges.collectAsState()
+    val completedGames by chessViewModel.completedGames.collectAsState()
     val userPubkey = accountViewModel.account.userProfile().pubkeyHex
+    val currentUser =
+        remember(userPubkey) {
+            accountViewModel.checkGetOrCreateUser(userPubkey)
+        }
 
     val hasContent =
         activeGames.isNotEmpty() ||
             spectatingGames.isNotEmpty() ||
             publicGames.isNotEmpty() ||
-            challenges.isNotEmpty()
+            challenges.isNotEmpty() ||
+            completedGames.isNotEmpty()
 
     if (!hasContent) {
         // Empty state - use LazyColumn so pull-to-refresh works
@@ -359,15 +368,24 @@ fun ChessLobbyContent(
             }
 
             items(activeGames.entries.toList(), key = { "active-${it.key}" }) { (gameId, state) ->
-                val displayName =
+                val opponent =
                     remember(state.opponentPubkey) {
-                        accountViewModel.checkGetOrCreateUser(state.opponentPubkey)?.toBestDisplayName() ?: state.opponentPubkey.take(8)
+                        accountViewModel.checkGetOrCreateUser(state.opponentPubkey)
                     }
+                val displayName = opponent?.toBestDisplayName() ?: state.opponentPubkey.take(8)
                 ActiveGameCard(
                     gameId = gameId,
                     opponentName = displayName,
                     isYourTurn = state.isPlayerTurn(),
                     onClick = { onSelectGame(gameId) },
+                    avatar = {
+                        OverlappingAvatars(
+                            avatar1Hex = state.playerPubkey,
+                            avatar2Hex = state.opponentPubkey,
+                            avatar1Url = currentUser?.profilePicture(),
+                            avatar2Url = opponent?.profilePicture(),
+                        )
+                    },
                 )
             }
         }
@@ -386,14 +404,28 @@ fun ChessLobbyContent(
             }
 
             items(outgoingChallenges, key = { "outgoing-${it.eventId}" }) { challenge ->
-                val opponentName =
-                    challenge.opponentPubkey?.let { pubkey ->
-                        accountViewModel.checkGetOrCreateUser(pubkey)?.toBestDisplayName() ?: pubkey.take(8)
+                val opponentUser =
+                    remember(challenge.opponentPubkey) {
+                        challenge.opponentPubkey?.let { accountViewModel.checkGetOrCreateUser(it) }
                     }
+                val opponentName =
+                    opponentUser?.toBestDisplayName()
+                        ?: challenge.opponentPubkey?.take(8)
                 OutgoingChallengeCard(
                     opponentName = opponentName,
                     userPlaysWhite = challenge.challengerColor == ChessColor.WHITE,
                     onClick = { onOpenOwnChallenge(challenge) },
+                    avatar =
+                        challenge.opponentPubkey?.let { opPubkey ->
+                            {
+                                OverlappingAvatars(
+                                    avatar1Hex = userPubkey,
+                                    avatar2Hex = opPubkey,
+                                    avatar1Url = currentUser?.profilePicture(),
+                                    avatar2Url = opponentUser?.profilePicture(),
+                                )
+                            }
+                        },
                 )
             }
         }
@@ -447,6 +479,14 @@ fun ChessLobbyContent(
                     challengerPlaysWhite = challenge.challengerColor == ChessColor.WHITE,
                     isIncoming = true,
                     onAccept = { onAcceptChallenge(challenge) },
+                    avatar = {
+                        OverlappingAvatars(
+                            avatar1Hex = challenge.challengerPubkey,
+                            avatar2Hex = userPubkey,
+                            avatar1Url = challenge.challengerAvatarUrl,
+                            avatar2Url = currentUser?.profilePicture(),
+                        )
+                    },
                 )
             }
         }
@@ -476,6 +516,14 @@ fun ChessLobbyContent(
                     challengerPlaysWhite = challenge.challengerColor == ChessColor.WHITE,
                     isIncoming = false,
                     onAccept = { onAcceptChallenge(challenge) },
+                    avatar = {
+                        OverlappingAvatars(
+                            avatar1Hex = challenge.challengerPubkey,
+                            avatar2Hex = userPubkey,
+                            avatar1Url = challenge.challengerAvatarUrl,
+                            avatar2Url = currentUser?.profilePicture(),
+                        )
+                    },
                 )
             }
         }
@@ -500,6 +548,63 @@ fun ChessLobbyContent(
                     blackName = blackName,
                     moveCount = game.moveCount,
                     onWatch = { onWatchGame(game.gameId) },
+                )
+            }
+        }
+
+        // Finished games section
+        if (completedGames.isNotEmpty()) {
+            item {
+                Spacer(Modifier.height(16.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        "Finished Games",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    if (completedGames.size >= 2) {
+                        TextButton(onClick = { chessViewModel.dismissAllCompletedGames() }) {
+                            Text("Clear all")
+                        }
+                    }
+                }
+            }
+
+            items(
+                completedGames.take(10),
+                key = { "completed-${it.gameId}-${it.completedAt}" },
+            ) { game ->
+                val opponentPubkey =
+                    if (game.whitePubkey == userPubkey) game.blackPubkey else game.whitePubkey
+                val opponentUser =
+                    remember(opponentPubkey) {
+                        accountViewModel.checkGetOrCreateUser(opponentPubkey)
+                    }
+                val opponentName =
+                    opponentUser?.toBestDisplayName()
+                        ?: game.blackDisplayName
+                        ?: game.whiteDisplayName
+                        ?: opponentPubkey.take(8)
+                CompletedGameCard(
+                    opponentName = opponentName,
+                    result = game.result,
+                    didUserWin = game.didUserWin(userPubkey),
+                    isDraw = game.isDraw,
+                    moveCount = game.moveCount,
+                    onClick = { onSelectGame(game.gameId) },
+                    onDismiss = { chessViewModel.dismissCompletedGame(game.gameId) },
+                    avatar = {
+                        OverlappingAvatars(
+                            avatar1Hex = userPubkey,
+                            avatar2Hex = opponentPubkey,
+                            avatar1Url = currentUser?.profilePicture(),
+                            avatar2Url = opponentUser?.profilePicture(),
+                        )
+                    },
                 )
             }
         }

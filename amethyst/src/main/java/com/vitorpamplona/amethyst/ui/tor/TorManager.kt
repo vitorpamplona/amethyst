@@ -22,11 +22,13 @@ package com.vitorpamplona.amethyst.ui.tor
 
 import android.content.Context
 import com.vitorpamplona.amethyst.model.preferences.TorSharedPreferences
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flowOn
@@ -71,6 +73,9 @@ class TorManager(
                     }
                 }
             }
+        }.catch { e ->
+            Log.e("TorManager") { "Tor service error: ${e.message}" }
+            emit(TorServiceStatus.Off)
         }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,

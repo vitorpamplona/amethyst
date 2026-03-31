@@ -30,11 +30,12 @@ import com.vitorpamplona.amethyst.model.Account
  */
 class ChessViewModelFactory(
     private val account: Account,
+    private val application: android.app.Application,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(ChessViewModelNew::class.java)) {
-            return ChessViewModelNew(account) as T
+            return ChessViewModelNew(account, application) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

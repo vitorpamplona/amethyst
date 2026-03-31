@@ -18,29 +18,34 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.datasource
+package com.vitorpamplona.amethyst.commons.chess
 
-import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import java.util.prefs.Preferences
 
-/**
- * Filter assembler for chess events
- */
-class ChessFilterAssembler(
-    client: INostrClient,
-) : ComposeSubscriptionManager<ChessQueryState>() {
-    private val subAssembler = ChessFeedFilterSubAssembler(client, ::allKeys)
+actual class ChessDismissedGamesStorage private actual constructor() {
+    private val prefs: Preferences = Preferences.userNodeForPackage(ChessDismissedGamesStorage::class.java)
 
-    val group = listOf(subAssembler)
+    actual companion object {
+        private const val NODE_PREFIX = "chess_dismissed_"
+        private const val DELIMITER = ","
 
-    fun setOnChessEvent(callback: ((Event) -> Unit)?) {
-        subAssembler.onChessEvent = callback
+        actual fun create(context: Any?): ChessDismissedGamesStorage = ChessDismissedGamesStorage()
     }
 
-    override fun invalidateKeys() = invalidateFilters()
+    actual fun load(userPubkey: String): Set<String> {
+        val raw = prefs.get("$NODE_PREFIX$userPubkey", "")
+        if (raw.isEmpty()) return emptySet()
+        return raw.split(DELIMITER).toSet()
+    }
 
-    override fun invalidateFilters() = group.forEach { it.invalidateFilters() }
-
-    override fun destroy() = group.forEach { it.destroy() }
+    actual fun save(
+        userPubkey: String,
+        ids: Set<String>,
+    ) {
+        if (ids.isEmpty()) {
+            prefs.remove("$NODE_PREFIX$userPubkey")
+        } else {
+            prefs.put("$NODE_PREFIX$userPubkey", ids.joinToString(DELIMITER))
+        }
+    }
 }
