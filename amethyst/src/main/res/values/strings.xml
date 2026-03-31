@@ -1744,6 +1744,7 @@
     <string name="kind_audio_track">Audio Track</string>
     <string name="kind_badge_awards">Badge Awards</string>
     <string name="kind_badge_definitions">Badge Definitions</string>
+    <string name="kind_accepted_badge_set">Accepted Badge Set</string>
     <string name="kind_profile_badges">Profile Badges</string>
     <string name="kind_blocked_relays">Blocked Relays</string>
     <string name="kind_blossom_servers">Blossom Servers</string>

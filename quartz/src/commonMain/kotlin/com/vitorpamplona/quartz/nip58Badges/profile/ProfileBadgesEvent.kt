@@ -18,11 +18,11 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip58Badges.profiles
+package com.vitorpamplona.quartz.nip58Badges.profile
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Address
-import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
+import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
@@ -30,22 +30,21 @@ import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
-import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip31Alts.alt
-import com.vitorpamplona.quartz.nip58Badges.profiles.tags.AcceptedBadge
+import com.vitorpamplona.quartz.nip58Badges.accepted.tags.AcceptedBadge
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
-class BadgeProfilesEvent(
+class ProfileBadgesEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     EventHintProvider,
     AddressHintProvider,
     PubKeyHintProvider {
@@ -68,20 +67,18 @@ class BadgeProfilesEvent(
     fun badgeAwardDefinitions() = tags.badgeAwardDefinitions()
 
     companion object {
-        const val KIND = 30008
-        private const val STANDARD_D_TAG = "profile_badges"
+        const val KIND = 10008
         const val ALT_DESCRIPTION = "List of accepted badges by the author"
 
-        fun createAddress(pubKey: HexKey): Address = Address(KIND, pubKey, STANDARD_D_TAG)
+        fun createAddress(pubKey: HexKey): Address = Address(KIND, pubKey, "")
 
-        fun createAddressTag(pubKey: HexKey): ATag = ATag(KIND, pubKey, STANDARD_D_TAG, null)
+        fun createAddressTag(pubKey: HexKey): ATag = ATag(KIND, pubKey, "", null)
 
         fun build(
             acceptedBadges: List<AcceptedBadge> = emptyList(),
             createdAt: Long = TimeUtils.now(),
-            initializer: TagArrayBuilder<BadgeProfilesEvent>.() -> Unit = {},
+            initializer: TagArrayBuilder<ProfileBadgesEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            dTag(STANDARD_D_TAG)
             alt(ALT_DESCRIPTION)
             if (acceptedBadges.isNotEmpty()) {
                 acceptedBadges(acceptedBadges)

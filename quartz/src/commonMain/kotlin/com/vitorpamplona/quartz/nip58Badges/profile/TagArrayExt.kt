@@ -18,12 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip58Badges.profiles
+package com.vitorpamplona.quartz.nip58Badges.profile
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.taggedAddresses
 import com.vitorpamplona.quartz.nip01Core.tags.events.taggedEvents
-import com.vitorpamplona.quartz.nip58Badges.profiles.tags.AcceptedBadge
+import com.vitorpamplona.quartz.nip58Badges.accepted.tags.AcceptedBadge
 
 fun TagArray.acceptedBadges() = AcceptedBadge.parseAll(this)
 

@@ -32,13 +32,14 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEventAndMapNotNull
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -49,11 +50,18 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BadgePictureModifier
 import com.vitorpamplona.amethyst.ui.theme.Size35Modifier
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip58Badges.accepted.AcceptedBadgeSetEvent
 import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
-import com.vitorpamplona.quartz.nip58Badges.profiles.BadgeProfilesEvent
+import com.vitorpamplona.quartz.nip58Badges.profile.ProfileBadgesEvent
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 
 @Composable
 fun DisplayBadges(
@@ -61,25 +69,44 @@ fun DisplayBadges(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    LoadAddressableNote(
-        BadgeProfilesEvent.createAddress(baseUser.pubkeyHex),
-        accountViewModel,
-    ) { note ->
-        if (note != null) {
-            WatchAndRenderBadgeList(note, accountViewModel, nav)
-        }
-    }
+    val oldDesign = AcceptedBadgeSetEvent.createAddress(baseUser.pubkeyHex)
+    val newDesign = ProfileBadgesEvent.createAddress(baseUser.pubkeyHex)
+
+    val oldNote = accountViewModel.getOrCreateAddressableNote(oldDesign)
+    val newNote = accountViewModel.getOrCreateAddressableNote(newDesign)
+
+    WatchAndRenderBadgeList(oldNote, newNote, accountViewModel, nav)
 }
 
 @Composable
 private fun WatchAndRenderBadgeList(
-    note: AddressableNote,
+    oldNote: AddressableNote,
+    newNote: AddressableNote,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val badgeList by observeNoteEventAndMapNotNull(note, accountViewModel) { event: BadgeProfilesEvent ->
-        event.badgeAwardEvents().toImmutableList()
-    }
+    // Subscribe in the relay for changes in this note.
+    EventFinderFilterAssemblerSubscription(oldNote, accountViewModel)
+    EventFinderFilterAssemblerSubscription(newNote, accountViewModel)
+
+    // Subscribe in the LocalCache for changes that arrive in the device
+    val flow =
+        remember(oldNote, newNote) {
+            combine(
+                oldNote.flow().metadata.stateFlow,
+                newNote.flow().metadata.stateFlow,
+            ) { oldNote, newNote ->
+                val oldProfileBadgeEvent = oldNote.note.event as? AcceptedBadgeSetEvent
+                val newProfileBadgeEvent = newNote.note.event as? ProfileBadgesEvent
+
+                newProfileBadgeEvent?.badgeAwardEvents()?.toImmutableList()
+                    ?: oldProfileBadgeEvent?.badgeAwardEvents()?.toImmutableList()
+            }.distinctUntilChanged()
+                .flowOn(Dispatchers.IO)
+        }
+
+    // Subscribe in the LocalCache for changes that arrive in the device
+    val badgeList by flow.collectAsStateWithLifecycle(persistentListOf())
 
     badgeList?.let { list -> RenderBadgeList(list, accountViewModel, nav) }
 }
