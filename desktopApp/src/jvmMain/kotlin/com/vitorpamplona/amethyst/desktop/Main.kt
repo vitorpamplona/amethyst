@@ -442,10 +442,32 @@ fun App(
     onShowAddColumnDialog: () -> Unit,
     replyToNote: com.vitorpamplona.quartz.nip01Core.core.Event?,
 ) {
-    val relayManager = remember { DesktopRelayConnectionManager() }
     val localCache = remember { DesktopLocalCache() }
     val accountState by accountManager.accountState.collectAsState()
     val scope = remember { CoroutineScope(SupervisorJob() + Dispatchers.Main) }
+
+    // Tor support: load settings, create manager, create proxy-aware HTTP client
+    val torSettings =
+        remember {
+            com.vitorpamplona.amethyst.desktop.tor.DesktopTorPreferences
+                .load()
+        }
+    val torTypeFlow = remember { kotlinx.coroutines.flow.MutableStateFlow(torSettings.torType) }
+    val externalPortFlow = remember { kotlinx.coroutines.flow.MutableStateFlow(torSettings.externalSocksPort) }
+    val torManager =
+        remember {
+            com.vitorpamplona.amethyst.desktop.tor
+                .DesktopTorManager(torTypeFlow, externalPortFlow, scope)
+        }
+    val httpClient =
+        remember {
+            com.vitorpamplona.amethyst.desktop.network.DesktopHttpClient(
+                torManager = torManager,
+                shouldUseTorForRelay = { false }, // TODO: wire TorRelayEvaluation when settings UI is built
+                scope = scope,
+            )
+        }
+    val relayManager = remember { DesktopRelayConnectionManager(httpClient) }
 
     // Subscriptions coordinator — uses default relay URLs for metadata indexing.
     // Feed subscriptions (inside MainContent) drive actual relay pool connections.

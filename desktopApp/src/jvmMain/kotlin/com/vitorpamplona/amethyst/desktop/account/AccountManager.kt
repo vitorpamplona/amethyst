@@ -138,7 +138,7 @@ class AccountManager internal constructor(
     private suspend fun getOrCreateNip46Client(): INostrClient =
         nip46ClientMutex.withLock {
             nip46Client ?: NostrClient(
-                BasicOkHttpWebSocket.Builder(DesktopHttpClient::getHttpClient),
+                BasicOkHttpWebSocket.Builder(DesktopHttpClient::getSimpleHttpClient),
             ).also {
                 nip46Client = it
                 it.connect()
