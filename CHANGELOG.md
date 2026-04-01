@@ -1,3 +1,9 @@
+<a id="v1.08.0"></a>
+# [Release v1.08.0: Arti](https://github.com/vitorpamplona/amethyst/releases/tag/v1.08.0) - 2026-04-01
+
+- Migrates C Tor to Arti Tor (hopefully no more random crashes)
+- Fixes highlight of users when composing and tagging
+
 <a id="v1.07.5"></a>
 # [Release v1.07.5: Image upload fix](https://github.com/vitorpamplona/amethyst/releases/tag/v1.07.5) - 2026-03-31
 

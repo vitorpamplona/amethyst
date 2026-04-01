@@ -20,15 +20,10 @@
  */
 package com.vitorpamplona.amethyst.ui.tor
 
-import net.freehaven.tor.control.TorControlConnection
-
 sealed class TorServiceStatus {
     data class Active(
         val port: Int,
-    ) : TorServiceStatus() {
-        // If internal, it has control.
-        var torControlConnection: TorControlConnection? = null
-    }
+    ) : TorServiceStatus()
 
     object Off : TorServiceStatus()
 

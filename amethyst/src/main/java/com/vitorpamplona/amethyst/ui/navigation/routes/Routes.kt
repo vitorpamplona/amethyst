@@ -39,7 +39,9 @@ sealed class Route {
 
     @Serializable object Discover : Route()
 
-    @Serializable object Notification : Route()
+    @Serializable data class Notification(
+        val scrollToEventId: String? = null,
+    ) : Route()
 
     @Serializable object Polls : Route()
 

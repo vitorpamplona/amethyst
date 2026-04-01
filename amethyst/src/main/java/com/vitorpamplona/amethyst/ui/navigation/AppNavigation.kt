@@ -184,7 +184,7 @@ fun BuildNavigation(
         composable<Route.Message> { MessagesScreen(accountViewModel, nav) }
         composable<Route.Video> { VideoScreen(accountViewModel, nav) }
         composable<Route.Discover> { DiscoverScreen(accountViewModel, nav) }
-        composable<Route.Notification> { NotificationScreen(accountViewModel, nav) }
+        composableArgs<Route.Notification> { NotificationScreen(it.scrollToEventId, accountViewModel, nav) }
         composableFromEnd<Route.Polls> { PollsScreen(accountViewModel, nav) }
         composableFromEnd<Route.Pictures> { PicturesScreen(accountViewModel, nav) }
         composableFromEnd<Route.Shorts> { ShortsScreen(accountViewModel, nav) }

@@ -60,6 +60,7 @@ import kotlin.coroutines.cancellation.CancellationException
 
 private const val TAG = "EventNotificationConsumer"
 private const val ACCOUNT_QUERY_PARAM = "?account="
+private const val SCROLL_TO_QUERY_PARAM = "&scrollTo="
 
 class EventNotificationConsumer(
     private val applicationContext: Context,
@@ -455,7 +456,8 @@ class EventNotificationConsumer(
                                 "notifications$ACCOUNT_QUERY_PARAM" +
                                     account.signer.pubKey
                                         .hexToByteArray()
-                                        .toNpub()
+                                        .toNpub() +
+                                    SCROLL_TO_QUERY_PARAM + event.id
 
                             Log.d(TAG) { "Notify ${event.id} $content $title $noteUri" }
 
@@ -490,7 +492,8 @@ class EventNotificationConsumer(
                             "notifications$ACCOUNT_QUERY_PARAM" +
                                 account.signer.pubKey
                                     .hexToByteArray()
-                                    .toNpub()
+                                    .toNpub() +
+                                SCROLL_TO_QUERY_PARAM + event.id
 
                         Log.d(TAG) { "Notify ${event.id} $title $noteUri" }
 
@@ -568,7 +571,8 @@ class EventNotificationConsumer(
             "notifications$ACCOUNT_QUERY_PARAM" +
                 account.signer.pubKey
                     .hexToByteArray()
-                    .toNpub()
+                    .toNpub() +
+                SCROLL_TO_QUERY_PARAM + event.id
 
         notificationManager()
             .sendReactionNotification(
@@ -600,7 +604,8 @@ class EventNotificationConsumer(
                 "notifications$ACCOUNT_QUERY_PARAM" +
                     account.signer.pubKey
                         .hexToByteArray()
-                        .toNpub()
+                        .toNpub() +
+                    SCROLL_TO_QUERY_PARAM + event.id
 
             notificationManager()
                 .sendChessNotification(

@@ -20,90 +20,111 @@
  */
 package com.vitorpamplona.amethyst.ui.tor
 
-import android.content.ComponentName
 import android.content.Context
-import android.content.Context.BIND_AUTO_CREATE
-import android.content.Intent
-import android.content.ServiceConnection
-import android.os.IBinder
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.launch
-import org.torproject.jni.TorService
-import org.torproject.jni.TorService.LocalBinder
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.util.concurrent.atomic.AtomicBoolean
 
-private const val SOCKS_PORT_POLL_INTERVAL_MS = 100L
+private const val DEFAULT_SOCKS_PORT = 19050
 
+/**
+ * Manages the Arti Tor client via custom JNI bindings.
+ *
+ * The native TorClient is initialized once and persists for the app's
+ * lifetime — its state file lock is never released until the process exits.
+ * The SOCKS proxy can be started/stopped independently without affecting
+ * the TorClient or its file locks.
+ *
+ * All JNI calls (including System.loadLibrary) run on [Dispatchers.IO]
+ * to avoid blocking the main thread.
+ */
 class TorService(
     val context: Context,
 ) {
-    val status =
-        callbackFlow {
-            Log.d("TorService", "Binding Tor Service")
-            trySend(TorServiceStatus.Connecting)
+    private val socksPort = DEFAULT_SOCKS_PORT
+    private val initialized = AtomicBoolean(false)
+    private val proxyRunning = AtomicBoolean(false)
 
-            val currentIntent = Intent(context, TorService::class.java)
-            val serviceConnection: ServiceConnection =
-                object : ServiceConnection {
-                    override fun onServiceConnected(
-                        name: ComponentName,
-                        service: IBinder,
-                    ) {
-                        launch(Dispatchers.IO) {
-                            try {
-                                // moved torService to a local variable, since we only need it once
-                                val torService = (service as LocalBinder).service
+    private val _status = MutableStateFlow<TorServiceStatus>(TorServiceStatus.Off)
+    val status: StateFlow<TorServiceStatus> = _status.asStateFlow()
 
-                                while (torService.socksPort < 0) {
-                                    delay(SOCKS_PORT_POLL_INTERVAL_MS)
-                                }
+    /**
+     * Initialize the TorClient (once) and start the SOCKS proxy.
+     * Must be called from a coroutine on [Dispatchers.IO].
+     */
+    suspend fun start() {
+        if (proxyRunning.get()) {
+            if (_status.value is TorServiceStatus.Active) return
+            _status.value = TorServiceStatus.Connecting
+            return
+        }
 
-                                val active = TorServiceStatus.Active(torService.socksPort)
-                                active.torControlConnection = torService.torControlConnection
+        _status.value = TorServiceStatus.Connecting
 
-                                trySend(active)
-                                Log.d("TorService") { "Tor Service Connected ${torService.socksPort}" }
-                            } catch (e: Exception) {
-                                Log.e("TorService") { "Tor service connection failed: ${e.message}" }
-                                trySend(TorServiceStatus.Off)
-                            }
+        withContext(Dispatchers.IO) {
+            // Initialize TorClient once — this bootstraps the Tor network.
+            // setLogCallback and initialize are the first ArtiNative calls,
+            // which triggers System.loadLibrary on this IO thread.
+            if (initialized.compareAndSet(false, true)) {
+                ArtiNative.setLogCallback { text ->
+                    Log.d("TorService") {
+                        val newLine = text.indexOf('\n')
+                        if (newLine > 1) {
+                            "Arti: ${text.substring(0, newLine)}"
+                        } else {
+                            "Arti: $text"
                         }
                     }
 
-                    override fun onServiceDisconnected(name: ComponentName) {
-                        Log.d("TorService", "Tor Service Disconnected")
-                        trySend(TorServiceStatus.Off)
+                    when {
+                        text.contains("Sufficiently bootstrapped", ignoreCase = true) -> {
+                            _status.value = TorServiceStatus.Active(socksPort)
+                            Log.d("TorService") { "Arti SOCKS proxy active on port $socksPort" }
+                        }
                     }
                 }
 
-            try {
-                context.bindService(
-                    currentIntent,
-                    serviceConnection,
-                    BIND_AUTO_CREATE,
-                )
-            } catch (e: Exception) {
-                Log.e("TorService") { "Failed to bind Tor Service: ${e.message}" }
-                trySend(TorServiceStatus.Off)
+                val dataDir = File(context.filesDir, "arti").absolutePath
+                Log.d("TorService") { "Initializing Arti with data dir: $dataDir" }
+
+                val initResult = ArtiNative.initialize(dataDir)
+                if (initResult != 0) {
+                    Log.e("TorService") { "Failed to initialize Arti: error $initResult" }
+                    initialized.set(false)
+                    _status.value = TorServiceStatus.Off
+                    return@withContext
+                }
             }
 
-            awaitClose {
-                Log.d("TorService", "Stopping Tor Service")
-                try {
-                    context.unbindService(serviceConnection)
-                } catch (e: Exception) {
-                    Log.d("TorService") { "Failed to unbind Tor Service: ${e.message}" }
-                }
-                try {
-                    context.stopService(currentIntent)
-                } catch (e: Exception) {
-                    Log.d("TorService") { "Failed to stop Tor Service: ${e.message}" }
-                }
-                trySend(TorServiceStatus.Off)
+            // Start the SOCKS proxy (can be called multiple times safely)
+            val proxyResult = ArtiNative.startSocksProxy(socksPort)
+            if (proxyResult != 0) {
+                Log.e("TorService") { "Failed to start SOCKS proxy: error $proxyResult" }
+                _status.value = TorServiceStatus.Off
+                return@withContext
             }
-        }.flowOn(Dispatchers.IO)
+
+            proxyRunning.set(true)
+        }
+    }
+
+    /**
+     * Stop the SOCKS proxy and release the port.
+     * The TorClient stays alive — no file lock issues on restart.
+     */
+    suspend fun stop() {
+        if (!proxyRunning.compareAndSet(true, false)) return
+
+        withContext(Dispatchers.IO) {
+            ArtiNative.stopSocksProxy()
+            Log.d("TorService") { "SOCKS proxy stopped" }
+        }
+
+        _status.value = TorServiceStatus.Off
+    }
 }

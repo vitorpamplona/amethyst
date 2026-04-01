@@ -54,9 +54,9 @@ android {
         applicationId = "com.vitorpamplona.amethyst"
         minSdk = libs.versions.android.minSdk.get().toInteger()
         targetSdk = libs.versions.android.targetSdk.get().toInteger()
-        versionCode = 441
-        versionName = generateVersionName("1.07.5")
-        buildConfigField "String", "RELEASE_NOTES_ID", "\"12cd4bce977ed53502cf121ecba89a190ab02685333c8f230bac35b04f920eeb\""
+        versionCode = 442
+        versionName = generateVersionName("1.08.0")
+        buildConfigField "String", "RELEASE_NOTES_ID", "\"be99e8c8d4df0f54b44eb6c96976ccb38baeea0192436a1c6fc8bc5e930da6b0\""
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -349,9 +349,6 @@ dependencies {
     implementation libs.vico.charts.compose
     implementation libs.vico.charts.m3
 
-    // GeoHash
-    implementation libs.drfonfon.geohash
-
     // Waveform visualizer
     implementation libs.audiowaveform
 
@@ -374,9 +371,6 @@ dependencies {
 
     // Kotlin serialization for the times where we need the Json tree and performance is not that important.
     implementation(libs.kotlinx.serialization.json)
-
-    implementation libs.tor.android
-    implementation libs.jtorctl
 
     testImplementation libs.junit
     testImplementation libs.mockk
