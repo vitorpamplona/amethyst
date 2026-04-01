@@ -34,7 +34,6 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicLong
 
 private const val DEFAULT_SOCKS_PORT = 19050
 private const val MAX_PORT_RETRIES = 3
@@ -59,7 +58,6 @@ class TorService(
     private var artiProxy: ArtiProxy? = null
     private var currentPort: Int = DEFAULT_SOCKS_PORT
     private val bootstrapped = AtomicBoolean(false)
-    private val lastLogTime = AtomicLong(0L)
 
     private val _status = MutableStateFlow<TorServiceStatus>(TorServiceStatus.Off)
     val status: StateFlow<TorServiceStatus> = _status.asStateFlow()
@@ -68,7 +66,6 @@ class TorService(
         ArtiLogListener { logLine ->
             val text = logLine ?: return@ArtiLogListener
             Log.d("TorService") { "Arti: $text" }
-            lastLogTime.set(System.currentTimeMillis())
 
             when {
                 text.contains("Sufficiently bootstrapped", ignoreCase = true) ||
@@ -113,7 +110,6 @@ class TorService(
 
                 _status.value = TorServiceStatus.Connecting
                 bootstrapped.set(false)
-                lastLogTime.set(System.currentTimeMillis())
 
                 withContext(Dispatchers.IO) {
                     var socksPort = DEFAULT_SOCKS_PORT
