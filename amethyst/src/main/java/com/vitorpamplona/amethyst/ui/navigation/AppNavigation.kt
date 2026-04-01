@@ -105,6 +105,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.newUser.ImportFollowListSel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NotificationScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.publicMessages.NewPublicMessageScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.PicturesScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.PollPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.PollsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.privacy.PrivacyOptionsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.ProfileScreen
@@ -368,6 +369,26 @@ fun BuildNavigation(
                 quoteId = it.quote,
                 forkId = it.fork,
                 versionId = it.version,
+                draftId = it.draft,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+
+        composableFromBottomArgs<Route.NewPoll> {
+            PollPostScreen(
+                isZapPoll = false,
+                message = it.message,
+                draftId = it.draft,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+
+        composableFromBottomArgs<Route.NewZapPoll> {
+            PollPostScreen(
+                isZapPoll = true,
+                message = it.message,
                 draftId = it.draft,
                 accountViewModel = accountViewModel,
                 nav = nav,

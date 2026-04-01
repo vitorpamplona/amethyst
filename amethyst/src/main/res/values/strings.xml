@@ -1340,6 +1340,12 @@
     <string name="new_product">New Product</string>
     <string name="new_exclusive_geo_note">New Geo-Exclusive Post</string>
     <string name="new_long_form_post">New Article</string>
+    <string name="new_poll">New Poll</string>
+    <string name="new_zap_poll">New Zap Poll</string>
+    <string name="new_regular_poll">New Regular Poll</string>
+    <string name="new_picture">New Picture</string>
+    <string name="new_short_video">New Short Video</string>
+    <string name="new_long_video">New Long Video</string>
 
     <string name="article_title">Title</string>
     <string name="article_summary">Summary (optional)</string>

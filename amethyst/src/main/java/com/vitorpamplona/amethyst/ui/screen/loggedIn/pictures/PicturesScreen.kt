@@ -76,6 +76,9 @@ fun PicturesScreen(
                 }
             }
         },
+        floatingButton = {
+            NewPictureButton(accountViewModel, nav, picturesFeedContentState::sendToTop)
+        },
         accountViewModel = accountViewModel,
     ) { paddingValues ->
         Column(Modifier.padding(paddingValues)) {
