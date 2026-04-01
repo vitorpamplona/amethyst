@@ -17,7 +17,7 @@ The Quartz library was successfully converted from Android-only to full KMP supp
 ## Current artifact
 
 ```
-com.vitorpamplona.quartz:quartz:1.07.4
+com.vitorpamplona.quartz:quartz:1.07.5
 ```
 
 See `.claude/skills/quartz-integration/SKILL.md` for full integration guide.
