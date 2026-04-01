@@ -58,17 +58,21 @@ class TorManager(
         }.transformLatest { (torType, externalSocksPort) ->
             when (torType) {
                 TorType.INTERNAL -> {
+                    service.start()
                     emitAll(service.status)
                 }
 
                 TorType.OFF -> {
+                    service.stop()
                     emit(TorServiceStatus.Off)
                 }
 
                 TorType.EXTERNAL -> {
+                    service.stop()
                     if (externalSocksPort > 0) {
                         emit(TorServiceStatus.Active(externalSocksPort))
                     } else {
+                        service.start()
                         emitAll(service.status)
                     }
                 }

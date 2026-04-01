@@ -25,152 +25,145 @@ import com.vitorpamplona.quartz.utils.Log
 import info.guardianproject.arti.ArtiLogListener
 import info.guardianproject.arti.ArtiProxy
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 
 private const val DEFAULT_SOCKS_PORT = 19050
 private const val MAX_PORT_RETRIES = 3
-private const val BOOTSTRAP_TIMEOUT_MS = 120_000L
-private const val BOOTSTRAP_CHECK_INTERVAL_MS = 10_000L
+private const val STOP_SETTLE_MS = 2_000L
 
+/**
+ * Manages a single ArtiProxy instance with explicit start/stop lifecycle.
+ *
+ * ArtiProxy holds an exclusive lock on state files in the filesystem. Unlike
+ * the old Android TorService (where bind/unbind was idempotent), we cannot
+ * create and destroy ArtiProxy instances on every flow collection cycle —
+ * the file lock from the old instance may not be released before the new
+ * one tries to acquire it.
+ *
+ * Instead, TorService owns a single ArtiProxy and exposes its state via
+ * a [StateFlow]. TorManager calls [start]/[stop] to control the lifecycle.
+ */
 class TorService(
     val context: Context,
 ) {
-    val status =
-        callbackFlow {
-            Log.d("TorService", "Starting Arti Tor Service")
-            trySend(TorServiceStatus.Connecting)
+    private val mutex = Mutex()
+    private var artiProxy: ArtiProxy? = null
+    private var currentPort: Int = DEFAULT_SOCKS_PORT
+    private val bootstrapped = AtomicBoolean(false)
+    private val lastLogTime = AtomicLong(0L)
 
-            var socksPort = DEFAULT_SOCKS_PORT
-            var artiProxy: ArtiProxy? = null
-            val bootstrapped = AtomicBoolean(false)
-            val lastLogTime = AtomicLong(System.currentTimeMillis())
+    private val _status = MutableStateFlow<TorServiceStatus>(TorServiceStatus.Off)
+    val status: StateFlow<TorServiceStatus> = _status.asStateFlow()
 
-            val logListener =
-                ArtiLogListener { logLine ->
-                    val text = logLine ?: return@ArtiLogListener
-                    Log.d("TorService") { "Arti: $text" }
-                    lastLogTime.set(System.currentTimeMillis())
+    private val logListener =
+        ArtiLogListener { logLine ->
+            val text = logLine ?: return@ArtiLogListener
+            Log.d("TorService") { "Arti: $text" }
+            lastLogTime.set(System.currentTimeMillis())
 
-                    when {
-                        text.contains("Sufficiently bootstrapped", ignoreCase = true) ||
-                            text.contains("is usable", ignoreCase = true) -> {
-                            if (bootstrapped.compareAndSet(false, true)) {
-                                trySend(TorServiceStatus.Active(socksPort))
-                                Log.d("TorService") { "Arti bootstrapped on port $socksPort" }
-                            }
-                        }
-
-                        text.contains("state changed to Stopped", ignoreCase = true) -> {
-                            bootstrapped.set(false)
-                            trySend(TorServiceStatus.Off)
-                        }
-
-                        text.contains(
-                            "Another process has the lock",
-                            ignoreCase = true,
-                        ) -> {
-                            Log.e("TorService") { "Arti state file lock conflict" }
-                            bootstrapped.set(false)
-                            trySend(TorServiceStatus.Off)
-                        }
+            when {
+                text.contains("Sufficiently bootstrapped", ignoreCase = true) ||
+                    text.contains("is usable", ignoreCase = true) -> {
+                    if (bootstrapped.compareAndSet(false, true)) {
+                        _status.value = TorServiceStatus.Active(currentPort)
+                        Log.d("TorService") { "Arti bootstrapped on port $currentPort" }
                     }
                 }
 
-            var lastError: Exception? = null
-            for (attempt in 0 until MAX_PORT_RETRIES) {
-                try {
-                    artiProxy =
-                        ArtiProxy
-                            .Builder(context.applicationContext)
-                            .setSocksPort(socksPort)
-                            .setDnsPort(socksPort + 1)
-                            .setLogListener(logListener)
-                            .build()
+                text.contains("state changed to Stopped", ignoreCase = true) -> {
+                    bootstrapped.set(false)
+                    _status.value = TorServiceStatus.Off
+                }
 
-                    artiProxy!!.start()
-                    lastError = null
-                    break
-                } catch (e: Exception) {
-                    lastError = e
-                    Log.e("TorService") {
-                        "Failed to start Arti on port $socksPort (attempt ${attempt + 1}): ${e.message}"
-                    }
-                    // Stop the failed instance before retrying
+                text.contains(
+                    "Another process has the lock",
+                    ignoreCase = true,
+                ) -> {
+                    Log.e("TorService") { "Arti state file lock conflict" }
+                    bootstrapped.set(false)
+                    _status.value = TorServiceStatus.Off
+                }
+            }
+        }
+
+    suspend fun start() {
+        mutex.withLock {
+            if (artiProxy != null) {
+                // Already running — just ensure status is up to date
+                if (bootstrapped.get()) {
+                    _status.value = TorServiceStatus.Active(currentPort)
+                } else {
+                    _status.value = TorServiceStatus.Connecting
+                }
+                return
+            }
+
+            _status.value = TorServiceStatus.Connecting
+            bootstrapped.set(false)
+            lastLogTime.set(System.currentTimeMillis())
+
+            withContext(Dispatchers.IO) {
+                var socksPort = DEFAULT_SOCKS_PORT
+                var lastError: Exception? = null
+
+                for (attempt in 0 until MAX_PORT_RETRIES) {
                     try {
-                        artiProxy?.stop()
-                    } catch (_: Exception) {
-                    }
-                    artiProxy = null
-                    socksPort++
-                }
-            }
+                        val proxy =
+                            ArtiProxy
+                                .Builder(context.applicationContext)
+                                .setSocksPort(socksPort)
+                                .setDnsPort(socksPort + 1)
+                                .setLogListener(logListener)
+                                .build()
 
-            if (lastError != null) {
-                Log.e("TorService") { "Failed to start Arti after $MAX_PORT_RETRIES attempts" }
-                trySend(TorServiceStatus.Off)
-            }
-
-            // Monitor for bootstrap stalls: if Arti stops producing logs
-            // during bootstrap, restart it.
-            val monitorJob =
-                launch {
-                    val startTime = System.currentTimeMillis()
-                    while (!bootstrapped.get()) {
-                        delay(BOOTSTRAP_CHECK_INTERVAL_MS)
-
-                        if (bootstrapped.get()) break
-
-                        val elapsed = System.currentTimeMillis() - startTime
-                        val timeSinceLastLog = System.currentTimeMillis() - lastLogTime.get()
-
-                        if (elapsed > BOOTSTRAP_TIMEOUT_MS) {
-                            Log.w("TorService") {
-                                "Arti bootstrap timed out after ${elapsed / 1000}s"
-                            }
-                            // Stop and restart once
-                            try {
-                                artiProxy?.stop()
-                            } catch (_: Exception) {
-                            }
-
-                            delay(1000)
-                            try {
-                                artiProxy =
-                                    ArtiProxy
-                                        .Builder(context.applicationContext)
-                                        .setSocksPort(socksPort)
-                                        .setDnsPort(socksPort + 1)
-                                        .setLogListener(logListener)
-                                        .build()
-                                artiProxy!!.start()
-                                lastLogTime.set(System.currentTimeMillis())
-                            } catch (e: Exception) {
-                                Log.e("TorService") { "Arti restart failed: ${e.message}" }
-                                trySend(TorServiceStatus.Off)
-                            }
-                            break // Only retry once
-                        } else if (timeSinceLastLog > BOOTSTRAP_CHECK_INTERVAL_MS * 3) {
-                            Log.w("TorService") {
-                                "Arti log stall detected (${timeSinceLastLog / 1000}s since last log)"
-                            }
+                        proxy.start()
+                        artiProxy = proxy
+                        currentPort = socksPort
+                        lastError = null
+                        Log.d("TorService") { "Arti started on port $socksPort" }
+                        break
+                    } catch (e: Exception) {
+                        lastError = e
+                        Log.e("TorService") {
+                            "Failed to start Arti on port $socksPort (attempt ${attempt + 1}): ${e.message}"
                         }
+                        socksPort++
                     }
                 }
 
-            awaitClose {
-                Log.d("TorService", "Stopping Arti Tor Service")
-                monitorJob.cancel()
+                if (lastError != null) {
+                    Log.e("TorService") { "Failed to start Arti after $MAX_PORT_RETRIES attempts" }
+                    _status.value = TorServiceStatus.Off
+                }
+            }
+        }
+    }
+
+    suspend fun stop() {
+        mutex.withLock {
+            val proxy = artiProxy ?: return@withLock
+            artiProxy = null
+            bootstrapped.set(false)
+
+            Log.d("TorService", "Stopping Arti")
+            withContext(Dispatchers.IO) {
                 try {
-                    artiProxy?.stop()
+                    proxy.stop()
                 } catch (e: Exception) {
                     Log.d("TorService") { "Failed to stop Arti: ${e.message}" }
                 }
+                // Give the native layer time to release file locks
+                delay(STOP_SETTLE_MS)
             }
-        }.flowOn(Dispatchers.IO)
+            _status.value = TorServiceStatus.Off
+        }
+    }
 }
