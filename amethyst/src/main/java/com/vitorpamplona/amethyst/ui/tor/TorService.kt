@@ -37,30 +37,23 @@ import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.atomic.AtomicBoolean
 
 private const val DEFAULT_SOCKS_PORT = 19050
-private const val MAX_PORT_RETRIES = 3
 private const val STOP_TIMEOUT_MS = 10_000L
 
 /**
  * Manages a single ArtiProxy instance with explicit start/stop lifecycle.
  *
- * ArtiProxy holds an exclusive lock on state files in the filesystem. Unlike
- * the old Android TorService (where bind/unbind was idempotent), we cannot
- * create and destroy ArtiProxy instances on every flow collection cycle —
- * the file lock from the old instance may not be released before the new
- * one tries to acquire it.
- *
- * Instead, TorService owns a single ArtiProxy and exposes its state via
- * a [StateFlow]. TorManager calls [start]/[stop] to control the lifecycle.
+ * ArtiProxy is created once and reused for the lifetime of the app.
+ * Only [start] and [stop] are called on it — never recreated — to
+ * avoid state file lock conflicts in the native layer.
  */
 class TorService(
     val context: Context,
 ) {
     private val mutex = Mutex()
-    private var artiProxy: ArtiProxy? = null
-    private var currentPort: Int = DEFAULT_SOCKS_PORT
+    private val running = AtomicBoolean(false)
     private val bootstrapped = AtomicBoolean(false)
+    private val socksPort = DEFAULT_SOCKS_PORT
 
-    // Signalled by the log listener when Arti confirms it has stopped
     @Volatile
     private var stoppedSignal: CompletableDeferred<Unit>? = null
 
@@ -76,13 +69,14 @@ class TorService(
                 text.contains("Sufficiently bootstrapped", ignoreCase = true) ||
                     text.contains("is usable", ignoreCase = true) -> {
                     if (bootstrapped.compareAndSet(false, true)) {
-                        _status.value = TorServiceStatus.Active(currentPort)
-                        Log.d("TorService") { "Arti bootstrapped on port $currentPort" }
+                        _status.value = TorServiceStatus.Active(socksPort)
+                        Log.d("TorService") { "Arti bootstrapped on port $socksPort" }
                     }
                 }
 
                 text.contains("state changed to Stopped", ignoreCase = true) -> {
                     bootstrapped.set(false)
+                    running.set(false)
                     _status.value = TorServiceStatus.Off
                     stoppedSignal?.complete(Unit)
                 }
@@ -98,16 +92,20 @@ class TorService(
             }
         }
 
+    private val artiProxy: ArtiProxy =
+        ArtiProxy
+            .Builder(context.applicationContext)
+            .setSocksPort(socksPort)
+            .setDnsPort(socksPort + 1)
+            .setLogListener(logListener)
+            .build()
+
     suspend fun start() {
-        // NonCancellable ensures that if the calling coroutine is cancelled
-        // (e.g., by transformLatest switching modes), we don't leak a
-        // half-started ArtiProxy with no reference to stop it.
         withContext(NonCancellable) {
             mutex.withLock {
-                if (artiProxy != null) {
-                    // Already running — just ensure status is up to date
+                if (running.get()) {
                     if (bootstrapped.get()) {
-                        _status.value = TorServiceStatus.Active(currentPort)
+                        _status.value = TorServiceStatus.Active(socksPort)
                     } else {
                         _status.value = TorServiceStatus.Connecting
                     }
@@ -118,36 +116,12 @@ class TorService(
                 bootstrapped.set(false)
 
                 withContext(Dispatchers.IO) {
-                    var socksPort = DEFAULT_SOCKS_PORT
-                    var lastError: Exception? = null
-
-                    for (attempt in 0 until MAX_PORT_RETRIES) {
-                        try {
-                            val proxy =
-                                ArtiProxy
-                                    .Builder(context.applicationContext)
-                                    .setSocksPort(socksPort)
-                                    .setDnsPort(socksPort + 1)
-                                    .setLogListener(logListener)
-                                    .build()
-
-                            proxy.start()
-                            artiProxy = proxy
-                            currentPort = socksPort
-                            lastError = null
-                            Log.d("TorService") { "Arti started on port $socksPort" }
-                            break
-                        } catch (e: Exception) {
-                            lastError = e
-                            Log.e("TorService") {
-                                "Failed to start Arti on port $socksPort (attempt ${attempt + 1}): ${e.message}"
-                            }
-                            socksPort++
-                        }
-                    }
-
-                    if (lastError != null) {
-                        Log.e("TorService") { "Failed to start Arti after $MAX_PORT_RETRIES attempts" }
+                    try {
+                        artiProxy.start()
+                        running.set(true)
+                        Log.d("TorService") { "Arti started on port $socksPort" }
+                    } catch (e: Exception) {
+                        Log.e("TorService") { "Failed to start Arti: ${e.message}" }
                         _status.value = TorServiceStatus.Off
                     }
                 }
@@ -156,27 +130,21 @@ class TorService(
     }
 
     suspend fun stop() {
-        // NonCancellable ensures stop() completes fully even if the caller
-        // is cancelled, preventing leaked ArtiProxy instances and file locks.
         withContext(NonCancellable) {
             mutex.withLock {
-                val proxy = artiProxy ?: return@withContext
-                artiProxy = null
-                bootstrapped.set(false)
+                if (!running.get()) return@withContext
 
                 Log.d("TorService", "Stopping Arti")
                 withContext(Dispatchers.IO) {
-                    // Set up a signal to wait for the "Stopped" log confirmation
                     val signal = CompletableDeferred<Unit>()
                     stoppedSignal = signal
 
                     try {
-                        proxy.stop()
+                        artiProxy.stop()
                     } catch (e: Exception) {
                         Log.d("TorService") { "Failed to stop Arti: ${e.message}" }
                     }
 
-                    // Wait for the native layer to confirm stop and release file locks
                     val confirmed = withTimeoutOrNull(STOP_TIMEOUT_MS) { signal.await() }
                     stoppedSignal = null
 
@@ -184,6 +152,7 @@ class TorService(
                         Log.d("TorService") { "Arti confirmed stopped" }
                     } else {
                         Log.w("TorService") { "Arti stop timed out after ${STOP_TIMEOUT_MS / 1000}s" }
+                        running.set(false)
                     }
                 }
                 _status.value = TorServiceStatus.Off
