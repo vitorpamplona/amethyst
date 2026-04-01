@@ -1686,6 +1686,11 @@ class Account(
 
     suspend fun createStatus(newStatus: String) = sendMyPublicAndPrivateOutbox(UserStatusAction.create(newStatus, signer))
 
+    suspend fun publishCallSignaling(wrap: GiftWrapEvent) {
+        val relayList = computeRelayListToBroadcast(wrap)
+        client.publish(wrap, relayList)
+    }
+
     suspend fun updateStatus(
         oldStatus: AddressableNote,
         newStatus: String,
