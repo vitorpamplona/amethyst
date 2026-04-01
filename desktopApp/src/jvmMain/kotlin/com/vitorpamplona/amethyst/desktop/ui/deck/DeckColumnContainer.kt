@@ -312,7 +312,15 @@ internal fun RootContent(
         }
 
         DeckColumnType.Settings -> {
-            RelaySettingsScreen(relayManager, account, accountManager)
+            val torState = com.vitorpamplona.amethyst.desktop.ui.tor.LocalTorState.current
+            RelaySettingsScreen(
+                relayManager = relayManager,
+                account = account,
+                accountManager = accountManager,
+                torStatus = torState.status,
+                torSettings = torState.settings,
+                onTorSettingsChanged = torState.onSettingsChanged,
+            )
         }
 
         is DeckColumnType.Profile -> {

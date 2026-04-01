@@ -159,6 +159,10 @@ sealed class DesktopScreen {
     data object Settings : DesktopScreen()
 }
 
+/** Reference to active Tor manager for shutdown hook. Set by App composable. */
+@Volatile
+private var activeTorManager: com.vitorpamplona.amethyst.desktop.tor.DesktopTorManager? = null
+
 fun main() {
     Log.minLevel = LogLevel.DEBUG
     DesktopImageLoaderSetup.setup()
@@ -167,6 +171,8 @@ fun main() {
             com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
                 .shutdown()
             VlcjPlayerPool.shutdown()
+            // Stop Tor daemon if running — reference set by App composable
+            activeTorManager?.stopSync()
         },
     )
     // Pre-init VLC on background thread so first play is fast
@@ -447,27 +453,47 @@ fun App(
     val scope = remember { CoroutineScope(SupervisorJob() + Dispatchers.Main) }
 
     // Tor support: load settings, create manager, create proxy-aware HTTP client
-    val torSettings =
-        remember {
+    var torSettings by remember {
+        mutableStateOf(
             com.vitorpamplona.amethyst.desktop.tor.DesktopTorPreferences
-                .load()
-        }
+                .load(),
+        )
+    }
     val torTypeFlow = remember { kotlinx.coroutines.flow.MutableStateFlow(torSettings.torType) }
     val externalPortFlow = remember { kotlinx.coroutines.flow.MutableStateFlow(torSettings.externalSocksPort) }
     val torManager =
         remember {
-            com.vitorpamplona.amethyst.desktop.tor
-                .DesktopTorManager(torTypeFlow, externalPortFlow, scope)
+            com.vitorpamplona.amethyst.desktop.tor.DesktopTorManager(torTypeFlow, externalPortFlow, scope).also {
+                activeTorManager = it
+            }
         }
+
+    // Build TorRelayEvaluation for per-relay routing
+    val torRelayEvaluation =
+        remember(torSettings) {
+            com.vitorpamplona.amethyst.commons.tor.TorRelayEvaluation(
+                torSettings =
+                    com.vitorpamplona.amethyst.commons.tor.TorRelaySettings(
+                        torType = torSettings.torType,
+                        onionRelaysViaTor = torSettings.onionRelaysViaTor,
+                        dmRelaysViaTor = torSettings.dmRelaysViaTor,
+                        newRelaysViaTor = torSettings.newRelaysViaTor,
+                        trustedRelaysViaTor = torSettings.trustedRelaysViaTor,
+                    ),
+                trustedRelayList = emptySet(), // TODO: populate from account relay lists
+                dmRelayList = emptySet(), // TODO: populate from account relay lists
+            )
+        }
+
     val httpClient =
-        remember {
+        remember(torRelayEvaluation) {
             com.vitorpamplona.amethyst.desktop.network.DesktopHttpClient(
                 torManager = torManager,
-                shouldUseTorForRelay = { false }, // TODO: wire TorRelayEvaluation when settings UI is built
+                shouldUseTorForRelay = { url -> torRelayEvaluation.useTor(url) },
                 scope = scope,
             )
         }
-    val relayManager = remember { DesktopRelayConnectionManager(httpClient) }
+    val relayManager = remember(httpClient) { DesktopRelayConnectionManager(httpClient) }
 
     // Subscriptions coordinator — uses default relay URLs for metadata indexing.
     // Feed subscriptions (inside MainContent) drive actual relay pool connections.
@@ -563,21 +589,37 @@ fun App(
                         accountManager.loadNwcConnection()
                     }
 
-                    MainContent(
-                        layoutMode = layoutMode,
-                        deckState = deckState,
-                        relayManager = relayManager,
-                        localCache = localCache,
-                        accountManager = accountManager,
-                        account = account,
-                        nwcConnection = nwcConnection,
-                        subscriptionsCoordinator = subscriptionsCoordinator,
-                        appScope = scope,
-                        torStatus = torManager.status.collectAsState().value,
-                        onShowComposeDialog = onShowComposeDialog,
-                        onShowReplyDialog = onShowReplyDialog,
-                        onShowAddColumnDialog = onShowAddColumnDialog,
-                    )
+                    val currentTorStatus = torManager.status.collectAsState().value
+                    androidx.compose.runtime.CompositionLocalProvider(
+                        com.vitorpamplona.amethyst.desktop.ui.tor.LocalTorState provides
+                            com.vitorpamplona.amethyst.desktop.ui.tor.TorState(
+                                status = currentTorStatus,
+                                settings = torSettings,
+                                onSettingsChanged = { newSettings ->
+                                    torSettings = newSettings
+                                    com.vitorpamplona.amethyst.desktop.tor.DesktopTorPreferences
+                                        .save(newSettings)
+                                    torTypeFlow.value = newSettings.torType
+                                    externalPortFlow.value = newSettings.externalSocksPort
+                                },
+                            ),
+                    ) {
+                        MainContent(
+                            layoutMode = layoutMode,
+                            deckState = deckState,
+                            relayManager = relayManager,
+                            localCache = localCache,
+                            accountManager = accountManager,
+                            account = account,
+                            nwcConnection = nwcConnection,
+                            subscriptionsCoordinator = subscriptionsCoordinator,
+                            appScope = scope,
+                            torStatus = currentTorStatus,
+                            onShowComposeDialog = onShowComposeDialog,
+                            onShowReplyDialog = onShowReplyDialog,
+                            onShowAddColumnDialog = onShowAddColumnDialog,
+                        )
+                    }
 
                     // Compose dialog
                     if (showComposeDialog) {
