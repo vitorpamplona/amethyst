@@ -51,18 +51,23 @@ class TorService(
     val status: StateFlow<TorServiceStatus> = _status.asStateFlow()
 
     init {
-        ArtiNative.setLogCallback(
-            ArtiLogCallback { text ->
-                Log.d("TorService") { "Arti: $text" }
-
-                when {
-                    text.contains("Sufficiently bootstrapped", ignoreCase = true) -> {
-                        _status.value = TorServiceStatus.Active(socksPort)
-                        Log.d("TorService") { "Arti SOCKS proxy active on port $socksPort" }
-                    }
+        ArtiNative.setLogCallback { text ->
+            Log.d("TorService") {
+                val newLine = text.indexOf('\n')
+                if (newLine > 1) {
+                    "Arti: ${text.substring(0, newLine)}"
+                } else {
+                    "Arti: $text"
                 }
-            },
-        )
+            }
+
+            when {
+                text.contains("Sufficiently bootstrapped", ignoreCase = true) -> {
+                    _status.value = TorServiceStatus.Active(socksPort)
+                    Log.d("TorService") { "Arti SOCKS proxy active on port $socksPort" }
+                }
+            }
+        }
     }
 
     /**
