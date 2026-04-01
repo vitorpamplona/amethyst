@@ -192,7 +192,7 @@ private fun CallInProgressUI(
 @Composable
 private fun IncomingCallUI(
     callerPubKey: String,
-    callType: com.vitorpamplona.quartz.nip100WebRtcCalls.tags.CallType,
+    callType: com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType,
     accountViewModel: AccountViewModel,
     onAccept: () -> Unit,
     onReject: () -> Unit,

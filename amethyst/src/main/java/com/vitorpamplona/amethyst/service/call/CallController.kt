@@ -25,10 +25,10 @@ import android.content.Intent
 import com.vitorpamplona.amethyst.commons.call.CallManager
 import com.vitorpamplona.amethyst.commons.call.CallState
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip100WebRtcCalls.WebRtcCallFactory
-import com.vitorpamplona.quartz.nip100WebRtcCalls.events.CallIceCandidateEvent
-import com.vitorpamplona.quartz.nip100WebRtcCalls.tags.CallType
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import com.vitorpamplona.quartz.nipACWebRtcCalls.WebRtcCallFactory
+import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallIceCandidateEvent
+import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.webrtc.IceCandidate

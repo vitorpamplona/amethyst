@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip100WebRtcCalls.events
+package com.vitorpamplona.quartz.nipACWebRtcCalls.events
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -26,14 +26,17 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
-import com.vitorpamplona.quartz.nip100WebRtcCalls.tags.CallIdTag
-import com.vitorpamplona.quartz.nip100WebRtcCalls.tags.callId
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip40Expiration.expiration
+import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallIdTag
+import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType
+import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallTypeTag
+import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.callId
+import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.callType
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
-class CallRenegotiateEvent(
+class CallOfferEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
@@ -43,23 +46,27 @@ class CallRenegotiateEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
     fun callId() = tags.firstNotNullOfOrNull(CallIdTag::parse)
 
+    fun callType() = tags.firstNotNullOfOrNull(CallTypeTag::parse)
+
     fun sdpOffer() = content
 
     companion object {
-        const val KIND = 25055
-        const val ALT_DESCRIPTION = "WebRTC call renegotiation"
-        const val EXPIRATION_SECONDS = 300L
+        const val KIND = 25050
+        const val ALT_DESCRIPTION = "WebRTC call offer"
+        const val EXPIRATION_SECONDS = 300L // 5 minutes
 
         fun build(
             sdpOffer: String,
-            peerPubKey: HexKey,
+            calleePubKey: HexKey,
             callId: String,
+            type: CallType,
             createdAt: Long = TimeUtils.now(),
-            initializer: TagArrayBuilder<CallRenegotiateEvent>.() -> Unit = {},
+            initializer: TagArrayBuilder<CallOfferEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, sdpOffer, createdAt) {
             alt(ALT_DESCRIPTION)
-            pTag(peerPubKey)
+            pTag(calleePubKey)
             callId(callId)
+            callType(type)
             expiration(createdAt + EXPIRATION_SECONDS)
             initializer()
         }

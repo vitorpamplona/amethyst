@@ -53,7 +53,7 @@ fun ChatroomScreen(
                 onCallClick = { peerPubKey ->
                     accountViewModel.callController?.initiateCall(
                         peerPubKey,
-                        com.vitorpamplona.quartz.nip100WebRtcCalls.tags.CallType.VOICE,
+                        com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType.VOICE,
                     )
                     nav.nav(
                         com.vitorpamplona.amethyst.ui.navigation.routes.Route.ActiveCall(
