@@ -146,6 +146,12 @@ import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
+import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallAnswerEvent
+import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallHangupEvent
+import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallIceCandidateEvent
+import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallOfferEvent
+import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallRejectEvent
+import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallRenegotiateEvent
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -217,10 +223,6 @@ class AccountViewModel(
         callManager.onAnswerReceived = { event -> controller.onCallAnswerReceived(event.sdpAnswer()) }
         callManager.onIceCandidateReceived = { event -> controller.onIceCandidateReceived(event) }
         callController = controller
-    }
-
-    init {
-        account.newNotesPreProcessor.callManager = callManager
     }
 
     val eventSync =
@@ -1410,6 +1412,23 @@ class AccountViewModel(
             LocalCache.live.deletedEventBundles.collect { newNotes ->
                 logTime("AccountViewModel deletedEventBundle Update with ${newNotes.size} new notes") {
                     feedStates.deleteNotes(newNotes)
+                }
+            }
+        }
+
+        viewModelScope.launch(Dispatchers.IO) {
+            LocalCache.live.newEventBundles.collect { newNotes ->
+                newNotes.forEach { note ->
+                    val event = note.event ?: return@forEach
+                    when (event) {
+                        is CallOfferEvent,
+                        is CallAnswerEvent,
+                        is CallIceCandidateEvent,
+                        is CallHangupEvent,
+                        is CallRejectEvent,
+                        is CallRenegotiateEvent,
+                        -> callManager.onSignalingEvent(event)
+                    }
                 }
             }
         }
