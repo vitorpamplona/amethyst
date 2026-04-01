@@ -39,6 +39,7 @@
     <!-- Audio/Video Playback -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_PHONE_CALL" />
 
     <!-- Keeps screen on while playing videos -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
@@ -220,6 +221,12 @@
                 <action android:name="android.media.browse.MediaBrowserService"/>
             </intent-filter>
         </service>
+
+        <service
+            android:name=".service.call.CallForegroundService"
+            android:foregroundServiceType="phoneCall"
+            android:stopWithTask="true"
+            android:exported="false" />
 
         <provider
             android:name="androidx.core.content.FileProvider"

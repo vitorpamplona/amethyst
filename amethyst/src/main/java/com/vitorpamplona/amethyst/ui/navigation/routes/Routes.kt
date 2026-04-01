@@ -300,6 +300,11 @@ sealed class Route {
         val id: String,
     ) : Route()
 
+    @Serializable data class ActiveCall(
+        val callId: String,
+        val peerPubKey: HexKey,
+    ) : Route()
+
     @Serializable data class EventRedirect(
         val id: String,
     ) : Route()

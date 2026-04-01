@@ -50,6 +50,7 @@ secp256k1KmpJniAndroid = "0.23.0"
 securityCryptoKtx = "1.1.0"
 slf4j = "2.0.17"
 spotless = "8.4.0"
+streamWebrtcAndroid = "1.3.8"
 tarsosdsp = "2.5"
 torAndroid = "0.4.9.5.1"
 translate = "17.0.3"
@@ -162,6 +163,7 @@ okhttpCoroutines = { group = "com.squareup.okhttp3", name = "okhttp-coroutines",
 secp256k1-kmp-common = { group = "fr.acinq.secp256k1", name = "secp256k1-kmp", version.ref = "secp256k1KmpJniAndroid" }
 secp256k1-kmp-jni-android = { group = "fr.acinq.secp256k1", name = "secp256k1-kmp-jni-android", version.ref = "secp256k1KmpJniAndroid" }
 secp256k1-kmp-jni-jvm = { group = "fr.acinq.secp256k1", name = "secp256k1-kmp-jni-jvm", version.ref = "secp256k1KmpJniAndroid" }
+stream-webrtc-android = { group = "io.getstream", name = "stream-webrtc-android", version.ref = "streamWebrtcAndroid" }
 tarsosdsp = { group = "be.tarsos.dsp", name = "core", version.ref = "tarsosdsp" }
 tor-android = { module = "info.guardianproject:tor-android", version.ref = "torAndroid" }
 unifiedpush = { group = "com.github.UnifiedPush", name = "android-connector", version.ref = "unifiedpush" }
