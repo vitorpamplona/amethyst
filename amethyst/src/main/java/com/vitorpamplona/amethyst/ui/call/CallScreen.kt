@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.call.CallManager
 import com.vitorpamplona.amethyst.commons.call.CallState
+import com.vitorpamplona.amethyst.service.call.CallController
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -66,6 +67,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun CallScreen(
     callManager: CallManager,
+    callController: CallController?,
     accountViewModel: AccountViewModel,
     onCallEnded: () -> Unit,
 ) {
@@ -91,7 +93,7 @@ fun CallScreen(
                 callerPubKey = state.callerPubKey,
                 callType = state.callType,
                 accountViewModel = accountViewModel,
-                onAccept = { /* handled by caller */ },
+                onAccept = { callController?.acceptIncomingCall(state.sdpOffer) },
                 onReject = { scope.launch { callManager.rejectCall() } },
             )
         }
