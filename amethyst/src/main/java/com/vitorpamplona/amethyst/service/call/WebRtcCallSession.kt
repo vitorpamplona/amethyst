@@ -86,7 +86,7 @@ class WebRtcCallSession(
                 rtcConfig,
                 object : PeerConnection.Observer {
                     override fun onIceCandidate(candidate: IceCandidate?) {
-                        candidate?.let { onIceCandidate(it) }
+                        candidate?.let { this@WebRtcCallSession.onIceCandidate(it) }
                     }
 
                     override fun onIceCandidatesRemoved(candidates: Array<out IceCandidate>?) {}
