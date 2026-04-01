@@ -1,6 +1,6 @@
 [package]
 name = "arti-android"
-version = "1.9.0"
+version = "2.2.0"
 edition = "2021"
 
 [lib]
@@ -9,14 +9,14 @@ crate-type = ["cdylib"]
 [workspace]
 
 [dependencies]
-arti-client = { version = "0.38", default-features = false, features = [
+arti-client = { version = "0.41", default-features = false, features = [
     "tokio",
     "rustls",
     "compression",
     "onion-service-client",
     "static-sqlite",
 ] }
-tor-rtcompat = { version = "0.38", default-features = false, features = ["tokio", "rustls"] }
+tor-rtcompat = { version = "0.41", default-features = false, features = ["tokio", "rustls"] }
 jni = "0.21"
 tokio = { version = "1", features = ["rt-multi-thread", "net", "io-util", "time", "macros"] }
 anyhow = "1"
