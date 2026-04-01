@@ -360,24 +360,25 @@ open class ChannelNewMessageViewModel :
                 )
 
             if (results.allGood) {
-                results.successful.forEach { upload ->
-                    if (upload.result is UploadOrchestrator.OrchestratorResult.NIP95Result) {
-                        val nip95 = account.createNip95(upload.result.bytes, headerInfo = upload.result.fileHeader, uploadState.caption, uploadState.contentWarningReason)
-                        nip95attachments = nip95attachments + nip95
-                        val note = nip95.let { it1 -> account.consumeNip95(it1.first, it1.second) }
+                val urls =
+                    results.successful.mapNotNull { upload ->
+                        if (upload.result is UploadOrchestrator.OrchestratorResult.NIP95Result) {
+                            val nip95 = account.createNip95(upload.result.bytes, headerInfo = upload.result.fileHeader, uploadState.caption, uploadState.contentWarningReason)
+                            nip95attachments = nip95attachments + nip95
+                            val note = nip95.let { it1 -> account.consumeNip95(it1.first, it1.second) }
 
-                        note?.let {
-                            message.insertUrlAtCursor(it.toNostrUri())
+                            note?.toNostrUri()
+                        } else if (upload.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
+                            iMetaAttachments.add(upload.result, uploadState.caption, uploadState.contentWarningReason)
+
+                            upload.result.url
+                        } else {
+                            null
                         }
-
-                        urlPreview = findUrlInMessage()
-                    } else if (upload.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
-                        iMetaAttachments.add(upload.result, uploadState.caption, uploadState.contentWarningReason)
-
-                        message.insertUrlAtCursor(upload.result.url)
-                        urlPreview = findUrlInMessage()
                     }
-                }
+
+                message.insertUrlAtCursor(urls.joinToString(" "))
+                urlPreview = findUrlInMessage()
 
                 uploadState.reset()
                 onceUploaded()

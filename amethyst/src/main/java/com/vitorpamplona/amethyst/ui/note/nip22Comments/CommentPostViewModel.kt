@@ -521,41 +521,45 @@ open class CommentPostViewModel :
                 )
 
             if (results.allGood) {
-                results.successful.forEach { state ->
-                    if (state.result is UploadOrchestrator.OrchestratorResult.NIP95Result) {
-                        val nip95 = account.createNip95(state.result.bytes, headerInfo = state.result.fileHeader, alt, contentWarningReason)
-                        nip95attachments = nip95attachments + nip95
-                        val note = nip95.let { it1 -> account.consumeNip95(it1.first, it1.second) }
+                val urls =
+                    results.successful.mapNotNull { state ->
+                        if (state.result is UploadOrchestrator.OrchestratorResult.NIP95Result) {
+                            val nip95 = account.createNip95(state.result.bytes, headerInfo = state.result.fileHeader, alt, contentWarningReason)
+                            nip95attachments = nip95attachments + nip95
+                            val note = nip95.let { it1 -> account.consumeNip95(it1.first, it1.second) }
 
-                        note?.let {
-                            message.insertUrlAtCursor("nostr:" + it.toNEvent())
-                            urlPreviews.update(message.text.toString())
+                            note?.let {
+                                "nostr:" + it.toNEvent()
+                            }
+                        } else if (state.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
+                            val iMeta =
+                                IMetaTagBuilder(state.result.url)
+                                    .apply {
+                                        hash(state.result.fileHeader.hash)
+                                        size(state.result.fileHeader.size)
+                                        state.result.fileHeader.mimeType
+                                            ?.let { mimeType(it) }
+                                        state.result.fileHeader.dim
+                                            ?.let { dims(it) }
+                                        state.result.fileHeader.blurHash
+                                            ?.let { blurhash(it.blurhash) }
+                                        state.result.magnet?.let { magnet(it) }
+                                        state.result.uploadedHash?.let { originalHash(it) }
+
+                                        alt?.let { alt(it) }
+                                        contentWarningReason?.let { sensitiveContent(contentWarningReason) }
+                                    }.build()
+
+                            iMetaAttachments.replace(iMeta.url, iMeta)
+
+                            state.result.url
+                        } else {
+                            null
                         }
-                    } else if (state.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
-                        val iMeta =
-                            IMetaTagBuilder(state.result.url)
-                                .apply {
-                                    hash(state.result.fileHeader.hash)
-                                    size(state.result.fileHeader.size)
-                                    state.result.fileHeader.mimeType
-                                        ?.let { mimeType(it) }
-                                    state.result.fileHeader.dim
-                                        ?.let { dims(it) }
-                                    state.result.fileHeader.blurHash
-                                        ?.let { blurhash(it.blurhash) }
-                                    state.result.magnet?.let { magnet(it) }
-                                    state.result.uploadedHash?.let { originalHash(it) }
-
-                                    alt?.let { alt(it) }
-                                    contentWarningReason?.let { sensitiveContent(contentWarningReason) }
-                                }.build()
-
-                        iMetaAttachments.replace(iMeta.url, iMeta)
-
-                        message.insertUrlAtCursor(state.result.url)
-                        urlPreviews.update(message.text.toString())
                     }
-                }
+
+                message.insertUrlAtCursor(urls.joinToString(" "))
+                urlPreviews.update(message.text.toString())
 
                 multiOrchestrator = null
             } else {
