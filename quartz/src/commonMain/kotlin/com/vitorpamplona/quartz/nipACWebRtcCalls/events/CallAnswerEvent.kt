@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip100WebRtcCalls.events
+package com.vitorpamplona.quartz.nipACWebRtcCalls.events
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -26,14 +26,14 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
-import com.vitorpamplona.quartz.nip100WebRtcCalls.tags.CallIdTag
-import com.vitorpamplona.quartz.nip100WebRtcCalls.tags.callId
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip40Expiration.expiration
+import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallIdTag
+import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.callId
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
-class CallRejectEvent(
+class CallAnswerEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
@@ -43,20 +43,20 @@ class CallRejectEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
     fun callId() = tags.firstNotNullOfOrNull(CallIdTag::parse)
 
-    fun reason() = content.ifEmpty { null }
+    fun sdpAnswer() = content
 
     companion object {
-        const val KIND = 25054
-        const val ALT_DESCRIPTION = "WebRTC call rejection"
+        const val KIND = 25051
+        const val ALT_DESCRIPTION = "WebRTC call answer"
         const val EXPIRATION_SECONDS = 300L
 
         fun build(
+            sdpAnswer: String,
             callerPubKey: HexKey,
             callId: String,
-            reason: String = "",
             createdAt: Long = TimeUtils.now(),
-            initializer: TagArrayBuilder<CallRejectEvent>.() -> Unit = {},
-        ) = eventTemplate(KIND, reason, createdAt) {
+            initializer: TagArrayBuilder<CallAnswerEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, sdpAnswer, createdAt) {
             alt(ALT_DESCRIPTION)
             pTag(callerPubKey)
             callId(callId)
