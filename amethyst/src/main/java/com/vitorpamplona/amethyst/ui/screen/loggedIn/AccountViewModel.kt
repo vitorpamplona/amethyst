@@ -366,7 +366,7 @@ class AccountViewModel(
         mapOf(
             Route.Home to homeHasNewItemsFlow,
             Route.Message to messagesHasNewItemsFlow,
-            Route.Notification to notificationHasNewItemsFlow,
+            Route.Notification() to notificationHasNewItemsFlow,
         )
 
     fun isWriteable(): Boolean = account.isWriteable()

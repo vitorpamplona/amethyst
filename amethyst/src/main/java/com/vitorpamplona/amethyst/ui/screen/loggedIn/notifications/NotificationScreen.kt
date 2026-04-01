@@ -42,6 +42,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
 fun NotificationScreen(
+    scrollToEventId: String? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -50,6 +51,7 @@ fun NotificationScreen(
         notifSummaryState = accountViewModel.feedStates.notificationSummary,
         notifPolls = accountViewModel.feedStates.notificationsOpenPolls,
         sharedPrefs = accountViewModel.settings.uiSettingsFlow,
+        scrollToEventId = scrollToEventId,
         accountViewModel = accountViewModel,
         nav = nav,
     )
@@ -61,6 +63,7 @@ fun NotificationScreen(
     notifSummaryState: NotificationSummaryState,
     notifPolls: OpenPollsState,
     sharedPrefs: UiSettingsFlow,
+    scrollToEventId: String? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -79,8 +82,8 @@ fun NotificationScreen(
             }
         },
         bottomBar = {
-            AppBottomBar(Route.Notification, accountViewModel) { route ->
-                if (route == Route.Notification) {
+            AppBottomBar(Route.Notification(), accountViewModel) { route ->
+                if (route is Route.Notification) {
                     notifFeedContentState.invalidateDataAndSendToTop(true)
                 } else {
                     nav.newStack(route)
@@ -98,7 +101,7 @@ fun NotificationScreen(
 
                 WatchScrollToTop(notifFeedContentState, listState)
 
-                RenderCardFeed(notifFeedContentState, notifPolls, accountViewModel, listState, nav, "Notification")
+                RenderCardFeed(notifFeedContentState, notifPolls, accountViewModel, listState, nav, "Notification", scrollToEventId)
             }
         }
     }

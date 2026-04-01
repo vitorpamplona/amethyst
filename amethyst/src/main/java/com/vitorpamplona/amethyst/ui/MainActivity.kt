@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
 import com.vitorpamplona.amethyst.service.playback.composable.DEFAULT_MUTED_SETTING
 import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
+import com.vitorpamplona.amethyst.ui.navigation.findParameterValue
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.screen.AccountScreen
@@ -129,7 +130,8 @@ fun uriToRoute(
     account: Account,
 ): Route? {
     if (isNotificationRoute(uri)) {
-        return Route.Notification
+        val scrollTo = runCatching { java.net.URI(uri.removePrefix("nostr:")).findParameterValue("scrollTo") }.getOrNull()
+        return Route.Notification(scrollToEventId = scrollTo)
     }
     if (isHashtagRoute(uri)) {
         return Route.Hashtag(uri.removePrefix("nostr:").removePrefix("hashtag?id=").lowercase())
