@@ -46,7 +46,23 @@ fun ChatroomScreen(
     DisappearingScaffold(
         isInvertedLayout = true,
         topBar = {
-            RenderRoomTopBar(roomId, accountViewModel, nav)
+            RenderRoomTopBar(
+                room = roomId,
+                accountViewModel = accountViewModel,
+                nav = nav,
+                onCallClick = { peerPubKey ->
+                    accountViewModel.callController?.initiateCall(
+                        peerPubKey,
+                        com.vitorpamplona.quartz.nip100WebRtcCalls.tags.CallType.VOICE,
+                    )
+                    nav.nav(
+                        com.vitorpamplona.amethyst.ui.navigation.routes.Route.ActiveCall(
+                            callId = "",
+                            peerPubKey = peerPubKey,
+                        ),
+                    )
+                },
+            )
         },
         accountViewModel = accountViewModel,
     ) {

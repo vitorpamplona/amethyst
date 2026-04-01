@@ -44,6 +44,7 @@ import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.compose.Disp
 import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataScreen
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.AllMediaServersScreen
 import com.vitorpamplona.amethyst.ui.broadcast.DisplayBroadcastProgress
+import com.vitorpamplona.amethyst.ui.call.CallScreen
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.components.toasts.DisplayErrorMessages
 import com.vitorpamplona.amethyst.ui.navigation.composableFromEnd
@@ -168,6 +169,11 @@ fun BuildNavigation(
     accountViewModel: AccountViewModel,
     nav: Nav,
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        accountViewModel.initCallController(context)
+    }
+
     NavHost(
         navController = nav.controller,
         startDestination = Route.Home,
@@ -253,6 +259,14 @@ fun BuildNavigation(
 
         composableFromEndArgs<Route.Room> { ChatroomScreen(it.toKey(), it.message, it.replyId, it.draftId, it.expiresDays, accountViewModel, nav) }
         composableFromEndArgs<Route.RoomByAuthor> { ChatroomByAuthorScreen(it.id, null, accountViewModel, nav) }
+
+        composableFromEndArgs<Route.ActiveCall> {
+            CallScreen(
+                callManager = accountViewModel.callManager,
+                accountViewModel = accountViewModel,
+                onCallEnded = { nav.popBack() },
+            )
+        }
 
         composableFromEndArgs<Route.PublicChatChannel> {
             PublicChatChannelScreen(it.id, it.draftId, it.replyTo, accountViewModel, nav)
