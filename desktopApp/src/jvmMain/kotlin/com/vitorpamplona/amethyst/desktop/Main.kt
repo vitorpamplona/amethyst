@@ -573,6 +573,7 @@ fun App(
                         nwcConnection = nwcConnection,
                         subscriptionsCoordinator = subscriptionsCoordinator,
                         appScope = scope,
+                        torStatus = torManager.status.collectAsState().value,
                         onShowComposeDialog = onShowComposeDialog,
                         onShowReplyDialog = onShowReplyDialog,
                         onShowAddColumnDialog = onShowAddColumnDialog,
@@ -624,6 +625,7 @@ fun MainContent(
     nwcConnection: Nip47WalletConnect.Nip47URINorm?,
     subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator,
     appScope: CoroutineScope,
+    torStatus: com.vitorpamplona.amethyst.commons.tor.TorServiceStatus,
     onShowComposeDialog: () -> Unit,
     onShowReplyDialog: (com.vitorpamplona.quartz.nip01Core.core.Event) -> Unit,
     onShowAddColumnDialog: () -> Unit,
@@ -796,6 +798,7 @@ fun MainContent(
                                 },
                                 signerConnectionState = signerConnectionState,
                                 lastPingTimeSec = lastPingTimeSec,
+                                torStatus = torStatus,
                             )
 
                             VerticalDivider()
@@ -879,6 +882,11 @@ fun RelaySettingsScreen(
     relayManager: DesktopRelayConnectionManager,
     account: AccountState.LoggedIn,
     accountManager: AccountManager,
+    torStatus: com.vitorpamplona.amethyst.commons.tor.TorServiceStatus = com.vitorpamplona.amethyst.commons.tor.TorServiceStatus.Off,
+    torSettings: com.vitorpamplona.amethyst.commons.tor.TorSettings =
+        com.vitorpamplona.amethyst.commons.tor
+            .TorSettings(torType = com.vitorpamplona.amethyst.commons.tor.TorType.OFF),
+    onTorSettingsChanged: (com.vitorpamplona.amethyst.commons.tor.TorSettings) -> Unit = {},
 ) {
     val relayStatuses by relayManager.relayStatuses.collectAsState()
     val connectedRelays by relayManager.connectedRelays.collectAsState()
@@ -989,6 +997,16 @@ fun RelaySettingsScreen(
         MediaServerSettings(
             initialServers = DesktopPreferences.blossomServers,
             onServersChanged = { DesktopPreferences.blossomServers = it },
+        )
+        Spacer(Modifier.height(24.dp))
+        HorizontalDivider()
+        Spacer(Modifier.height(24.dp))
+
+        // Tor Settings
+        com.vitorpamplona.amethyst.desktop.ui.tor.TorSettingsSection(
+            torStatus = torStatus,
+            currentSettings = torSettings,
+            onSettingsChanged = onTorSettingsChanged,
         )
         Spacer(Modifier.height(24.dp))
         HorizontalDivider()

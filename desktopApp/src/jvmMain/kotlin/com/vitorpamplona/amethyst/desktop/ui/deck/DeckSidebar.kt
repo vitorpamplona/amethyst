@@ -42,7 +42,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.domain.nip46.SignerConnectionState
+import com.vitorpamplona.amethyst.commons.tor.TorServiceStatus
 import com.vitorpamplona.amethyst.commons.ui.components.BunkerHeartbeatIndicator
+import com.vitorpamplona.amethyst.desktop.ui.tor.TorStatusIndicator
 
 @Composable
 fun DeckSidebar(
@@ -50,6 +52,7 @@ fun DeckSidebar(
     onOpenSettings: () -> Unit,
     signerConnectionState: SignerConnectionState,
     lastPingTimeSec: Long?,
+    torStatus: TorServiceStatus,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -86,6 +89,11 @@ fun DeckSidebar(
             signerConnectionState = signerConnectionState,
             lastPingTimeSec = lastPingTimeSec,
         )
+
+        if (torStatus !is TorServiceStatus.Off) {
+            Spacer(Modifier.size(4.dp))
+            TorStatusIndicator(status = torStatus)
+        }
 
         Spacer(Modifier.size(8.dp))
 
