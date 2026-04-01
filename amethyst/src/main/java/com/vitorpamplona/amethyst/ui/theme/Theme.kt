@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.halilibo.richtext.ui.BlockQuoteGutter.BarGutter
 import com.halilibo.richtext.ui.RichTextStyle
 import com.halilibo.richtext.ui.resolveDefaults
 import com.patrykandpatrick.vico.compose.common.VicoTheme
@@ -296,6 +297,13 @@ val MarkDownStyleOnDark =
             RichTextDefaults.listStyle?.copy(
                 itemSpacing = 10.sp,
             ),
+        blockQuoteGutter =
+            BarGutter(
+                startMargin = 4.sp,
+                barWidth = 3.sp,
+                endMargin = 8.sp,
+                color = { DarkColorPalette.primary.copy(alpha = 0.45f) },
+            ),
         codeBlockStyle =
             RichTextDefaults.codeBlockStyle?.copy(
                 textStyle =
@@ -312,6 +320,12 @@ val MarkDownStyleOnDark =
                         .border(1.dp, DarkSubtleBorder, QuoteBorder)
                         .background(DarkColorPalette.onSurface.copy(alpha = 0.05f))
                         .padding(horizontal = 16.dp, vertical = 12.dp),
+            ),
+        tableStyle =
+            RichTextDefaults.tableStyle?.copy(
+                borderColor = DarkSubtleBorder,
+                borderStrokeWidth = 1f,
+                cellPadding = 10.sp,
             ),
         stringStyle =
             RichTextDefaults.stringStyle?.copy(
@@ -340,6 +354,13 @@ val MarkDownStyleOnLight =
             RichTextDefaults.listStyle?.copy(
                 itemSpacing = 10.sp,
             ),
+        blockQuoteGutter =
+            BarGutter(
+                startMargin = 4.sp,
+                barWidth = 3.sp,
+                endMargin = 8.sp,
+                color = { LightColorPalette.primary.copy(alpha = 0.45f) },
+            ),
         codeBlockStyle =
             RichTextDefaults.codeBlockStyle?.copy(
                 textStyle =
@@ -356,6 +377,12 @@ val MarkDownStyleOnLight =
                         .border(1.dp, LightSubtleBorder, QuoteBorder)
                         .background(LightColorPalette.onSurface.copy(alpha = 0.05f))
                         .padding(horizontal = 16.dp, vertical = 12.dp),
+            ),
+        tableStyle =
+            RichTextDefaults.tableStyle?.copy(
+                borderColor = LightSubtleBorder,
+                borderStrokeWidth = 1f,
+                cellPadding = 10.sp,
             ),
         stringStyle =
             RichTextDefaults.stringStyle?.copy(
