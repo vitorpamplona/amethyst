@@ -487,13 +487,31 @@ fun App(
 
     val httpClient =
         remember(torRelayEvaluation) {
-            com.vitorpamplona.amethyst.desktop.network.DesktopHttpClient(
-                torManager = torManager,
-                shouldUseTorForRelay = { url -> torRelayEvaluation.useTor(url) },
-                scope = scope,
-            )
+            com.vitorpamplona.amethyst.desktop.network
+                .DesktopHttpClient(
+                    torManager = torManager,
+                    shouldUseTorForRelay = { url -> torRelayEvaluation.useTor(url) },
+                    torTypeProvider = { torTypeFlow.value },
+                    scope = scope,
+                ).also {
+                    com.vitorpamplona.amethyst.desktop.network.DesktopHttpClient
+                        .setInstance(it)
+                }
         }
     val relayManager = remember(httpClient) { DesktopRelayConnectionManager(httpClient) }
+
+    // Reconnect relays through Tor when it becomes active (prevents stale clearnet connections)
+    LaunchedEffect(torManager, relayManager) {
+        var previouslyActive = false
+        torManager.status.collect { status ->
+            val nowActive = status is com.vitorpamplona.amethyst.commons.tor.TorServiceStatus.Active
+            if (nowActive && !previouslyActive) {
+                kotlinx.coroutines.delay(500) // Brief delay for proxy client to propagate
+                relayManager.client.reconnect(onlyIfChanged = false, ignoreRetryDelays = true)
+            }
+            previouslyActive = nowActive
+        }
+    }
 
     // Subscriptions coordinator — uses default relay URLs for metadata indexing.
     // Feed subscriptions (inside MainContent) drive actual relay pool connections.

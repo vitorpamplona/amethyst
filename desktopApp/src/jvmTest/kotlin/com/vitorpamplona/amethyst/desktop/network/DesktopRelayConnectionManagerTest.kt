@@ -42,7 +42,7 @@ class DesktopRelayConnectionManagerTest {
                 override suspend fun newIdentity() {}
             }
         val scope = CoroutineScope(SupervisorJob())
-        val httpClient = DesktopHttpClient(fakeTorManager, { false }, scope)
+        val httpClient = DesktopHttpClient(fakeTorManager, { false }, { com.vitorpamplona.amethyst.commons.tor.TorType.OFF }, scope)
         return DesktopRelayConnectionManager(httpClient)
     }
 

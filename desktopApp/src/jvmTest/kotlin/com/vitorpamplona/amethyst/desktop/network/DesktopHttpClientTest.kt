@@ -60,6 +60,7 @@ class DesktopHttpClientTest {
     private fun buildTorAwareClient(
         torPort: Int? = null,
         shouldUseTor: (NormalizedRelayUrl) -> Boolean = { false },
+        torType: com.vitorpamplona.amethyst.commons.tor.TorType = if (torPort != null) com.vitorpamplona.amethyst.commons.tor.TorType.INTERNAL else com.vitorpamplona.amethyst.commons.tor.TorType.OFF,
     ): DesktopHttpClient {
         val statusFlow =
             MutableStateFlow<TorServiceStatus>(
@@ -79,7 +80,7 @@ class DesktopHttpClientTest {
 
                 override suspend fun newIdentity() {}
             }
-        return DesktopHttpClient(fakeTorManager, shouldUseTor, scope)
+        return DesktopHttpClient(fakeTorManager, shouldUseTor, { torType }, scope)
     }
 
     @Test

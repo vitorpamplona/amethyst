@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.desktop.network
 
 import com.vitorpamplona.amethyst.commons.tor.ITorManager
+import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isLocalHost
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isOnion
@@ -49,8 +50,12 @@ import java.util.concurrent.TimeUnit
 class DesktopHttpClient(
     torManager: ITorManager,
     private val shouldUseTorForRelay: (NormalizedRelayUrl) -> Boolean,
+    private val torTypeProvider: () -> TorType,
     scope: CoroutineScope,
 ) {
+    /** Returns true if user expects Tor routing (INTERNAL or EXTERNAL mode). */
+    fun isTorExpected(): Boolean = torTypeProvider() != TorType.OFF
+
     private val sharedConnectionPool = ConnectionPool()
 
     private val directClient: OkHttpClient by lazy {
@@ -119,7 +124,24 @@ class DesktopHttpClient(
         private const val BASE_TIMEOUT_SECONDS = 30L
         private const val TOR_TIMEOUT_MULTIPLIER = 2 // Desktop: 2x, not Android's 3x
 
-        /** Simple direct client for code that doesn't need Tor routing (e.g. NIP-46 bunker). */
+        lateinit var instance: DesktopHttpClient
+            private set
+
+        fun setInstance(client: DesktopHttpClient) {
+            instance = client
+        }
+
+        /** Fail-closed client: SOCKS proxy on dead port 1. Requests fail instead of leaking IP. */
+        private val failClosedClient: OkHttpClient by lazy {
+            OkHttpClient
+                .Builder()
+                .proxy(Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", 1)))
+                .connectTimeout(1, TimeUnit.SECONDS)
+                .readTimeout(1, TimeUnit.SECONDS)
+                .build()
+        }
+
+        /** Simple direct client for pre-init only (tests, startup). */
         private val simpleClient: OkHttpClient by lazy {
             OkHttpClient
                 .Builder()
@@ -131,7 +153,22 @@ class DesktopHttpClient(
                 .build()
         }
 
-        /** Backward-compatible static accessor for code that doesn't need Tor. */
-        fun getSimpleHttpClient(url: NormalizedRelayUrl): OkHttpClient = simpleClient
+        /**
+         * Returns the current Tor-aware client.
+         * - Tor active → proxy client (SOCKS)
+         * - Tor off → direct client
+         * - Tor expected but bootstrapping → FAIL-CLOSED (dead proxy, requests fail not leak)
+         * - Instance not set → simpleClient (pre-init/tests only)
+         */
+        fun currentClient(): OkHttpClient {
+            if (!::instance.isInitialized) return simpleClient
+            val client = instance
+            val proxyClient = client.proxyClient.value
+            if (proxyClient != null) return proxyClient
+            return if (client.isTorExpected()) failClosedClient else client.getNonProxyClient()
+        }
+
+        /** Backward-compatible static accessor for relay WebSocket builder. */
+        fun getSimpleHttpClient(url: NormalizedRelayUrl): OkHttpClient = currentClient()
     }
 }

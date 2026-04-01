@@ -44,6 +44,8 @@ object DesktopImageLoaderSetup {
             .diskCache { newDiskCache() }
             .precision(Precision.INEXACT)
             .components {
+                // TODO: Wire Coil through Tor — OkHttpNetworkFetcher.factory() not resolving in JVM module
+                // add(coil3.network.okhttp.OkHttpNetworkFetcher.factory { DesktopHttpClient.currentClient() })
                 add(SvgDecoder.Factory())
                 add(SkiaGifDecoder.Factory())
                 add(DesktopBase64Fetcher.Factory)

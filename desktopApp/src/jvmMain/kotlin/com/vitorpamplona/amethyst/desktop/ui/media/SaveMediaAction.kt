@@ -20,16 +20,16 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui.media
 
+import com.vitorpamplona.amethyst.desktop.network.DesktopHttpClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.awt.FileDialog
 import java.awt.Frame
 import java.io.File
 
 object SaveMediaAction {
-    private val httpClient = OkHttpClient()
+    private val httpClient get() = DesktopHttpClient.currentClient()
 
     /**
      * Opens a save dialog and downloads the media URL to the chosen file.
