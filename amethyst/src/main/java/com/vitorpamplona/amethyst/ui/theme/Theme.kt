@@ -51,6 +51,7 @@ import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -301,14 +302,16 @@ val MarkDownStyleOnDark =
                     TextStyle(
                         fontFamily = FontFamily.Monospace,
                         fontSize = Font14SP,
+                        lineHeight = 1.45.em,
                     ),
                 modifier =
                     Modifier
-                        .padding(0.dp)
+                        .padding(vertical = 4.dp)
                         .fillMaxWidth()
                         .clip(shape = QuoteBorder)
                         .border(1.dp, DarkSubtleBorder, QuoteBorder)
-                        .background(DarkColorPalette.onSurface.copy(alpha = 0.05f)),
+                        .background(DarkColorPalette.onSurface.copy(alpha = 0.05f))
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
             ),
         stringStyle =
             RichTextDefaults.stringStyle?.copy(
@@ -324,6 +327,7 @@ val MarkDownStyleOnDark =
                         fontFamily = FontFamily.Monospace,
                         fontSize = Font14SP,
                         background = DarkColorPalette.onSurface.copy(alpha = 0.22f),
+                        letterSpacing = 0.3.sp,
                     ),
             ),
     )
@@ -342,14 +346,16 @@ val MarkDownStyleOnLight =
                     TextStyle(
                         fontFamily = FontFamily.Monospace,
                         fontSize = Font14SP,
+                        lineHeight = 1.45.em,
                     ),
                 modifier =
                     Modifier
-                        .padding(0.dp)
+                        .padding(vertical = 4.dp)
                         .fillMaxWidth()
                         .clip(shape = QuoteBorder)
                         .border(1.dp, LightSubtleBorder, QuoteBorder)
-                        .background(DarkColorPalette.onSurface.copy(alpha = 0.05f)),
+                        .background(LightColorPalette.onSurface.copy(alpha = 0.05f))
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
             ),
         stringStyle =
             RichTextDefaults.stringStyle?.copy(
@@ -365,6 +371,7 @@ val MarkDownStyleOnLight =
                         fontFamily = FontFamily.Monospace,
                         fontSize = Font14SP,
                         background = LightColorPalette.onSurface.copy(alpha = 0.12f),
+                        letterSpacing = 0.3.sp,
                     ),
             ),
     )
