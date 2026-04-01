@@ -30,7 +30,6 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,10 +37,14 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
-import com.vitorpamplona.amethyst.commons.richtext.ExpandableTextCutOffCalculator
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.getGradient
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -49,6 +52,8 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
 import com.vitorpamplona.amethyst.ui.theme.StdTopPadding
+
+private val SUMMARY_MAX_HEIGHT = 300.dp
 
 object ShowFullTextCache {
     val cache = LruCache<String, Boolean>(10)
@@ -78,33 +83,52 @@ fun ExpandableRichTextViewer(
             }
         }
 
-    val whereToCut = remember(content) { ExpandableTextCutOffCalculator.indexToCutOff(content) }
+    var overflows by remember { mutableStateOf(false) }
+    val maxHeightPx = with(LocalDensity.current) { SUMMARY_MAX_HEIGHT.roundToPx() }
 
-    val text by
-        remember(content) {
-            derivedStateOf {
-                if (showFullText) {
-                    content
+    Box {
+        Layout(
+            content = {
+                RichTextViewer(
+                    content,
+                    canPreview,
+                    quotesLeft,
+                    modifier,
+                    tags,
+                    backgroundColor,
+                    callbackUri,
+                    accountViewModel,
+                    nav,
+                )
+            },
+            modifier = Modifier.clipToBounds(),
+        ) { measurables, constraints ->
+            val childConstraints = constraints.copy(maxHeight = Constraints.Infinity)
+            val placeable =
+                measurables.firstOrNull()?.measure(childConstraints)
+                    ?: return@Layout layout(0, 0) {}
+
+            val contentOverflows = placeable.height > maxHeightPx
+            if (contentOverflows != overflows) {
+                overflows = contentOverflows
+            }
+
+            val displayHeight =
+                if (!showFullText && contentOverflows) {
+                    maxHeightPx
                 } else {
-                    content.take(whereToCut)
+                    placeable.height
                 }
+
+            layout(
+                placeable.width.coerceIn(constraints.minWidth, constraints.maxWidth),
+                displayHeight,
+            ) {
+                placeable.place(0, 0)
             }
         }
 
-    Box {
-        RichTextViewer(
-            text,
-            canPreview,
-            quotesLeft,
-            modifier.align(Alignment.TopStart),
-            tags,
-            backgroundColor,
-            callbackUri,
-            accountViewModel,
-            nav,
-        )
-
-        if (content.length > whereToCut && !showFullText) {
+        if (overflows && !showFullText) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
