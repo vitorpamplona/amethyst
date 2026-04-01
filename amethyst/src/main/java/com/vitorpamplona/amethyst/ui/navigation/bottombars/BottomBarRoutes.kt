@@ -44,5 +44,5 @@ val bottomNavigationItems =
         BottomBarRoute(Route.Message, R.drawable.ic_dm, R.string.route_messages),
         BottomBarRoute(Route.Video, R.drawable.ic_video, R.string.route_video),
         BottomBarRoute(Route.Discover, R.drawable.ic_sensors, R.string.route_discover),
-        BottomBarRoute(Route.Notification, R.drawable.ic_notifications, R.string.route_notifications),
+        BottomBarRoute(Route.Notification(), R.drawable.ic_notifications, R.string.route_notifications),
     )

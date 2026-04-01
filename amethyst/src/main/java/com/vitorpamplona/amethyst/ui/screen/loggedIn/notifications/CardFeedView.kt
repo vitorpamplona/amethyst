@@ -20,8 +20,10 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -38,8 +40,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -66,6 +72,7 @@ import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
+import kotlinx.coroutines.delay
 
 @Composable
 fun RenderCardFeed(
@@ -75,6 +82,7 @@ fun RenderCardFeed(
     listState: LazyListState,
     nav: INav,
     routeForLastRead: String,
+    scrollToEventId: String? = null,
 ) {
     val feedState by feedContent.feedContent.collectAsStateWithLifecycle()
 
@@ -101,6 +109,7 @@ fun RenderCardFeed(
                     routeForLastRead = routeForLastRead,
                     accountViewModel = accountViewModel,
                     nav = nav,
+                    scrollToEventId = scrollToEventId,
                 )
             }
 
@@ -133,9 +142,28 @@ private fun FeedLoaded(
     routeForLastRead: String,
     accountViewModel: AccountViewModel,
     nav: INav,
+    scrollToEventId: String? = null,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
     val openPolls by polls.flow.collectAsStateWithLifecycle()
+
+    // Track which card is highlighted (will auto-clear after animation)
+    var highlightedCardId by remember { mutableStateOf<String?>(null) }
+
+    // Scroll to the card containing the target event ID
+    if (scrollToEventId != null) {
+        LaunchedEffect(scrollToEventId, items) {
+            val position = items.list.indexOfFirst { it.containsEventId(scrollToEventId) }
+            if (position >= 0) {
+                // +1 offset for the donation card header item
+                val scrollIndex = position + 1 + openPolls.size
+                listState.animateScrollToItem(scrollIndex)
+                highlightedCardId = items.list[position].id()
+                delay(2000)
+                highlightedCardId = null
+            }
+        }
+    }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -182,7 +210,14 @@ private fun FeedLoaded(
             key = { _, item -> item.id() },
             contentType = { _, item -> item.javaClass.simpleName },
         ) { _, item ->
-            Row(Modifier.fillMaxWidth().animateItem()) {
+            val isHighlighted = highlightedCardId == item.id()
+            val highlightColor by animateColorAsState(
+                targetValue = if (isHighlighted) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) else Color.Transparent,
+                animationSpec = tween(durationMillis = if (isHighlighted) 300 else 1000),
+                label = "highlightAnimation",
+            )
+
+            Row(Modifier.fillMaxWidth().background(highlightColor).animateItem()) {
                 logTime(
                     debugMessage = { "CardFeedView $item" },
                 ) {
