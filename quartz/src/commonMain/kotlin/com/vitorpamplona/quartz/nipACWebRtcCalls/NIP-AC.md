@@ -6,11 +6,9 @@ WebRTC Calls
 
 `draft` `optional`
 
-This NIP defines a protocol for establishing peer-to-peer voice and video calls between Nostr users using WebRTC, with Nostr relays serving as the signaling transport.
-
-## Motivation
-
-Nostr users currently lack a way to make real-time voice or video calls without relying on centralized services. By using Nostr relays for WebRTC signaling and public STUN servers for NAT traversal, calls can be established in a fully decentralized manner — no custom server infrastructure is required. Once a WebRTC peer connection is established, the relay is no longer involved in the media stream.
+This NIP defines a protocol for establishing private peer-to-peer voice and video calls between Nostr
+users using WebRTC, with Nostr relays serving as the signaling transport and public STUN servers for
+NAT traversal — no custom server infrastructure is required
 
 ## Overview
 
@@ -23,7 +21,9 @@ The protocol works as follows:
 5. Both parties exchange **ICE candidates** as gift-wrapped events for NAT traversal
 6. A **direct WebRTC peer connection** is established for audio/video
 
-All signaling events MUST be gift-wrapped using [NIP-59](https://github.com/nostr-protocol/nips/blob/master/59.md) for metadata privacy. Events are signed by the sender's key and wrapped directly (without the seal layer) — the gift wrap's random ephemeral key already hides the sender from relay operators.
+All signaling events MUST be gift-wrapped using [NIP-59](https://github.com/nostr-protocol/nips/blob/master/59.md) for metadata privacy.
+Events are signed by the sender's key and wrapped directly (without the seal layer) — the gift wrap's
+random ephemeral key already hides the sender from relay operators.
 
 ## Event Kinds
 
@@ -44,8 +44,6 @@ All signaling events MUST include:
 |---------------|-------------------------------------------------------|----------|
 | `p`           | Hex pubkey of the recipient                           | YES      |
 | `call-id`     | UUID identifying the call session                     | YES      |
-| `expiration`  | Unix timestamp ([NIP-40](https://github.com/nostr-protocol/nips/blob/master/40.md)), SHOULD be ~5 minutes from `created_at` | YES      |
-| `alt`         | Human-readable description ([NIP-31](https://github.com/nostr-protocol/nips/blob/master/31.md)) | YES      |
 
 Additional tags for **Call Offer** (kind 25050):
 
@@ -59,21 +57,16 @@ Additional tags for **Call Offer** (kind 25050):
 
 The `content` field contains the SDP offer string.
 
-```json
+```yaml
 {
   "kind": 25050,
-  "pubkey": "<caller-hex-pubkey>",
-  "created_at": 1234567890,
   "content": "v=0\r\no=- 4611731400430051336 2 IN IP4 127.0.0.1\r\n...",
   "tags": [
     ["p", "<callee-hex-pubkey>"],
     ["call-id", "550e8400-e29b-41d4-a716-446655440000"],
-    ["call-type", "video"],
-    ["expiration", "1234568190"],
-    ["alt", "WebRTC call offer"]
+    ["call-type", "video"]
   ],
-  "id": "<event-id>",
-  "sig": "<signature>"
+  # other fields
 }
 ```
 
@@ -81,20 +74,15 @@ The `content` field contains the SDP offer string.
 
 The `content` field contains the SDP answer string.
 
-```json
+```yaml
 {
   "kind": 25051,
-  "pubkey": "<callee-hex-pubkey>",
-  "created_at": 1234567895,
   "content": "v=0\r\no=- 4611731400430051337 2 IN IP4 127.0.0.1\r\n...",
   "tags": [
     ["p", "<caller-hex-pubkey>"],
     ["call-id", "550e8400-e29b-41d4-a716-446655440000"],
-    ["expiration", "1234568195"],
-    ["alt", "WebRTC call answer"]
   ],
-  "id": "<event-id>",
-  "sig": "<signature>"
+  # other fields
 }
 ```
 
@@ -102,20 +90,15 @@ The `content` field contains the SDP answer string.
 
 The `content` field contains the ICE candidate as a JSON string with the fields `candidate`, `sdpMid`, and `sdpMLineIndex`.
 
-```json
+```yaml
 {
   "kind": 25052,
-  "pubkey": "<sender-hex-pubkey>",
-  "created_at": 1234567896,
   "content": "{\"candidate\":\"candidate:842163049 1 udp 1677729535 203.0.113.1 44323 typ srflx raddr 0.0.0.0 rport 0 generation 0\",\"sdpMid\":\"0\",\"sdpMLineIndex\":0}",
   "tags": [
     ["p", "<peer-hex-pubkey>"],
     ["call-id", "550e8400-e29b-41d4-a716-446655440000"],
-    ["expiration", "1234568196"],
-    ["alt", "WebRTC ICE candidate"]
   ],
-  "id": "<event-id>",
-  "sig": "<signature>"
+  # other fields
 }
 ```
 
@@ -123,20 +106,15 @@ The `content` field contains the ICE candidate as a JSON string with the fields 
 
 The `content` field MAY contain a human-readable reason or be empty.
 
-```json
+```yaml
 {
   "kind": 25053,
-  "pubkey": "<sender-hex-pubkey>",
-  "created_at": 1234568000,
   "content": "",
   "tags": [
     ["p", "<peer-hex-pubkey>"],
     ["call-id", "550e8400-e29b-41d4-a716-446655440000"],
-    ["expiration", "1234568300"],
-    ["alt", "WebRTC call hangup"]
   ],
-  "id": "<event-id>",
-  "sig": "<signature>"
+  # other fields
 }
 ```
 
@@ -144,20 +122,15 @@ The `content` field MAY contain a human-readable reason or be empty.
 
 The `content` field MAY contain a reason or be empty.
 
-```json
+```yaml
 {
   "kind": 25054,
-  "pubkey": "<callee-hex-pubkey>",
-  "created_at": 1234567893,
   "content": "",
   "tags": [
     ["p", "<caller-hex-pubkey>"],
     ["call-id", "550e8400-e29b-41d4-a716-446655440000"],
-    ["expiration", "1234568193"],
-    ["alt", "WebRTC call rejection"]
   ],
-  "id": "<event-id>",
-  "sig": "<signature>"
+  # other fields
 }
 ```
 
@@ -165,20 +138,15 @@ The `content` field MAY contain a reason or be empty.
 
 Used for mid-call changes such as toggling video on/off. The `content` field contains a new SDP offer.
 
-```json
+```yaml
 {
   "kind": 25055,
-  "pubkey": "<sender-hex-pubkey>",
-  "created_at": 1234568100,
   "content": "v=0\r\no=- 4611731400430051338 3 IN IP4 127.0.0.1\r\n...",
   "tags": [
     ["p", "<peer-hex-pubkey>"],
     ["call-id", "550e8400-e29b-41d4-a716-446655440000"],
-    ["expiration", "1234568400"],
-    ["alt", "WebRTC call renegotiation"]
   ],
-  "id": "<event-id>",
-  "sig": "<signature>"
+  # other fields
 }
 ```
 
