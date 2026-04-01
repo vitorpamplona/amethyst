@@ -50,6 +50,12 @@ import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip100WebRtcCalls.events.CallAnswerEvent
+import com.vitorpamplona.quartz.nip100WebRtcCalls.events.CallHangupEvent
+import com.vitorpamplona.quartz.nip100WebRtcCalls.events.CallIceCandidateEvent
+import com.vitorpamplona.quartz.nip100WebRtcCalls.events.CallOfferEvent
+import com.vitorpamplona.quartz.nip100WebRtcCalls.events.CallRejectEvent
+import com.vitorpamplona.quartz.nip100WebRtcCalls.events.CallRenegotiateEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip15Marketplace.auction.AuctionEvent
 import com.vitorpamplona.quartz.nip15Marketplace.bid.BidEvent
@@ -295,6 +301,12 @@ class EventFactory {
                 CalendarEvent.KIND -> CalendarEvent(id, pubKey, createdAt, tags, content, sig)
                 CalendarTimeSlotEvent.KIND -> CalendarTimeSlotEvent(id, pubKey, createdAt, tags, content, sig)
                 CalendarRSVPEvent.KIND -> CalendarRSVPEvent(id, pubKey, createdAt, tags, content, sig)
+                CallAnswerEvent.KIND -> CallAnswerEvent(id, pubKey, createdAt, tags, content, sig)
+                CallHangupEvent.KIND -> CallHangupEvent(id, pubKey, createdAt, tags, content, sig)
+                CallIceCandidateEvent.KIND -> CallIceCandidateEvent(id, pubKey, createdAt, tags, content, sig)
+                CallOfferEvent.KIND -> CallOfferEvent(id, pubKey, createdAt, tags, content, sig)
+                CallRejectEvent.KIND -> CallRejectEvent(id, pubKey, createdAt, tags, content, sig)
+                CallRenegotiateEvent.KIND -> CallRenegotiateEvent(id, pubKey, createdAt, tags, content, sig)
                 CashuMintEvent.KIND -> CashuMintEvent(id, pubKey, createdAt, tags, content, sig)
                 CashuMintQuoteEvent.KIND -> CashuMintQuoteEvent(id, pubKey, createdAt, tags, content, sig)
                 CashuTokenEvent.KIND -> CashuTokenEvent(id, pubKey, createdAt, tags, content, sig)
