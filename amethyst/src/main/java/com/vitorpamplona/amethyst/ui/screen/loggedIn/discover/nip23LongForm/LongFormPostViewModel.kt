@@ -519,31 +519,36 @@ class LongFormPostViewModel :
                 )
 
             if (results.allGood) {
-                results.successful.forEach { state ->
-                    if (state.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
-                        val iMeta =
-                            IMetaTagBuilder(state.result.url)
-                                .apply {
-                                    hash(state.result.fileHeader.hash)
-                                    size(state.result.fileHeader.size)
-                                    state.result.fileHeader.mimeType
-                                        ?.let { mimeType(it) }
-                                    state.result.fileHeader.dim
-                                        ?.let { dims(it) }
-                                    state.result.fileHeader.blurHash
-                                        ?.let { blurhash(it.blurhash) }
-                                    state.result.magnet?.let { magnet(it) }
-                                    state.result.uploadedHash?.let { originalHash(it) }
-                                    alt?.let { alt(it) }
-                                    contentWarningReason?.let { sensitiveContent(contentWarningReason) }
-                                }.build()
+                val urls =
+                    results.successful.mapNotNull { state ->
+                        if (state.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
+                            val iMeta =
+                                IMetaTagBuilder(state.result.url)
+                                    .apply {
+                                        hash(state.result.fileHeader.hash)
+                                        size(state.result.fileHeader.size)
+                                        state.result.fileHeader.mimeType
+                                            ?.let { mimeType(it) }
+                                        state.result.fileHeader.dim
+                                            ?.let { dims(it) }
+                                        state.result.fileHeader.blurHash
+                                            ?.let { blurhash(it.blurhash) }
+                                        state.result.magnet?.let { magnet(it) }
+                                        state.result.uploadedHash?.let { originalHash(it) }
+                                        alt?.let { alt(it) }
+                                        contentWarningReason?.let { sensitiveContent(contentWarningReason) }
+                                    }.build()
 
-                        iMetaAttachments.replace(iMeta.url, iMeta)
+                            iMetaAttachments.replace(iMeta.url, iMeta)
 
-                        val markdownImage = "![${alt ?: ""}](${state.result.url})"
-                        message.insertUrlAtCursor(markdownImage)
+                            val markdownImage = "![${alt ?: ""}](${state.result.url})"
+                            markdownImage
+                        } else {
+                            null
+                        }
                     }
-                }
+
+                message.insertUrlAtCursor(urls.joinToString(" "))
 
                 multiOrchestrator = null
             } else {

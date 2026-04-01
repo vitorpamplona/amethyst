@@ -1,3 +1,40 @@
+<a id="v1.08.0"></a>
+# [Release v1.08.0: Arti](https://github.com/vitorpamplona/amethyst/releases/tag/v1.08.0) - 2026-04-01
+
+- Migrates C Tor to Arti Tor (hopefully no more random crashes)
+- Fixes highlight of users when composing and tagging
+
+<a id="v1.07.5"></a>
+# [Release v1.07.5: Image upload fix](https://github.com/vitorpamplona/amethyst/releases/tag/v1.07.5) - 2026-03-31
+
+- Fixes Image uploads crashing the app
+
+<a id="v1.07.4"></a>
+# [Release v1.07.4: NWC fix](https://github.com/vitorpamplona/amethyst/releases/tag/v1.07.4) - 2026-03-31
+
+- Fixes Nostr wallet connect receiving the secret.
+
+<a id="v1.07.3"></a>
+# [Release v1.07.3: GIF Keyboard](https://github.com/vitorpamplona/amethyst/releases/tag/v1.07.3) - 2026-03-31
+
+- Migrates Shorts UI out of a paged design
+- New edge-to-edge feed for Pictures only
+- New edge-to-edge feed for Shorts only
+- New edge-to-edge feed for long Videos only
+- Migrates Badges to kind 10008
+- Migrates Bookmarks to kind 10003
+- Fixes AOSP keyboard auto-correction bug
+- Fixes Poll's top nav filter
+- Fixes loading of Bookmark sets
+- Fixes sorting stability by including event ids
+- Fixes cursor position in quote post field
+- Fixes rendering of nostr: uris when composing notes
+- Adds Basic support for reaction notifications
+- Refactors NIP-58 Badges on Quartz
+- Refactors LocalCache methods
+- Improvements to the Chess engine (debug only)
+- Add error handling to Tor service initialization and control
+
 <a id="v1.07.2"></a>
 # [Release v1.07.2: GIF Keyboard](https://github.com/vitorpamplona/amethyst/releases/tag/v1.07.2) - 2026-03-30
 

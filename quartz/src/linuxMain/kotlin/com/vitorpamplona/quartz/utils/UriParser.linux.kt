@@ -125,20 +125,20 @@ actual class UriParser actual constructor(
         val query = parsedQuery ?: return emptySet()
         return query
             .split('&')
-            .mapNotNull { param ->
+            .map { param ->
                 val eqIndex = param.indexOf('=')
                 if (eqIndex >= 0) param.substring(0, eqIndex) else param
             }.toSet()
     }
 
-    actual fun getQueryParameter(param: String): String? {
+    actual fun getQueryParameter(param: String): List<String>? {
         val query = parsedQuery ?: return null
         return query
             .split('&')
-            .firstOrNull { part ->
+            .filter { part ->
                 val eqIndex = part.indexOf('=')
                 if (eqIndex >= 0) part.substring(0, eqIndex) == param else part == param
-            }?.let { part ->
+            }.map { part ->
                 val eqIndex = part.indexOf('=')
                 if (eqIndex >= 0) part.substring(eqIndex + 1) else ""
             }

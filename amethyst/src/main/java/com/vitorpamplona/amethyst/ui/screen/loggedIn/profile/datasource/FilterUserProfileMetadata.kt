@@ -26,7 +26,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
-import com.vitorpamplona.quartz.nip58Badges.profiles.BadgeProfilesEvent
+import com.vitorpamplona.quartz.nip58Badges.accepted.AcceptedBadgeSetEvent
+import com.vitorpamplona.quartz.nip58Badges.profile.ProfileBadgesEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 
 val UserProfileMetadataKinds =
@@ -34,7 +35,8 @@ val UserProfileMetadataKinds =
         MetadataEvent.KIND,
         AdvertisedRelayListEvent.KIND,
         ContactListEvent.KIND,
-        BadgeProfilesEvent.KIND,
+        AcceptedBadgeSetEvent.KIND,
+        ProfileBadgesEvent.KIND,
     )
 
 fun filterUserProfileMetadata(

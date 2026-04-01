@@ -205,47 +205,50 @@ open class EditPostViewModel : ViewModel() {
                 )
 
             if (results.allGood) {
-                results.successful.forEach { state ->
-                    if (state.result is UploadOrchestrator.OrchestratorResult.NIP95Result) {
-                        val nip95 =
-                            myAccount.createNip95(
-                                byteArray = state.result.bytes,
-                                headerInfo = state.result.fileHeader,
-                                alt = alt,
-                                contentWarningReason = if (sensitiveContent) "" else null,
-                            )
-                        nip95attachments = nip95attachments + nip95
-                        val note = nip95.let { it1 -> account.consumeNip95(it1.first, it1.second) }
+                val urls =
+                    results.successful.mapNotNull { state ->
+                        if (state.result is UploadOrchestrator.OrchestratorResult.NIP95Result) {
+                            val nip95 =
+                                myAccount.createNip95(
+                                    byteArray = state.result.bytes,
+                                    headerInfo = state.result.fileHeader,
+                                    alt = alt,
+                                    contentWarningReason = if (sensitiveContent) "" else null,
+                                )
+                            nip95attachments = nip95attachments + nip95
+                            val note = nip95.let { it1 -> account.consumeNip95(it1.first, it1.second) }
 
-                        note?.let {
-                            message = message.insertUrlAtCursor("nostr:" + it.toNEvent())
+                            note?.let {
+                                "nostr:" + it.toNEvent()
+                            }
+                        } else if (state.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
+                            val iMeta =
+                                IMetaTagBuilder(state.result.url)
+                                    .apply {
+                                        hash(state.result.fileHeader.hash)
+                                        size(state.result.fileHeader.size)
+                                        state.result.fileHeader.mimeType
+                                            ?.let { mimeType(it) }
+                                        state.result.fileHeader.dim
+                                            ?.let { dims(it) }
+                                        state.result.fileHeader.blurHash
+                                            ?.let { blurhash(it.blurhash) }
+                                        state.result.magnet?.let { magnet(it) }
+                                        state.result.uploadedHash?.let { originalHash(it) }
+                                        alt?.let { alt(it) }
+                                        if (sensitiveContent) sensitiveContent("")
+                                    }.build()
+
+                            iMetaAttachments = iMetaAttachments.filter { it.url != iMeta.url } + iMeta
+
+                            state.result.url
+                        } else {
+                            null
                         }
-
-                        urlPreview = findUrlInMessage()
-                    } else if (state.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
-                        val iMeta =
-                            IMetaTagBuilder(state.result.url)
-                                .apply {
-                                    hash(state.result.fileHeader.hash)
-                                    size(state.result.fileHeader.size)
-                                    state.result.fileHeader.mimeType
-                                        ?.let { mimeType(it) }
-                                    state.result.fileHeader.dim
-                                        ?.let { dims(it) }
-                                    state.result.fileHeader.blurHash
-                                        ?.let { blurhash(it.blurhash) }
-                                    state.result.magnet?.let { magnet(it) }
-                                    state.result.uploadedHash?.let { originalHash(it) }
-                                    alt?.let { alt(it) }
-                                    if (sensitiveContent) sensitiveContent("")
-                                }.build()
-
-                        iMetaAttachments = iMetaAttachments.filter { it.url != iMeta.url } + iMeta
-
-                        message = message.insertUrlAtCursor(state.result.url)
-                        urlPreview = findUrlInMessage()
                     }
-                }
+
+                message = message.insertUrlAtCursor(urls.joinToString(" "))
+                urlPreview = findUrlInMessage()
 
                 this@EditPostViewModel.multiOrchestrator = null
             } else {

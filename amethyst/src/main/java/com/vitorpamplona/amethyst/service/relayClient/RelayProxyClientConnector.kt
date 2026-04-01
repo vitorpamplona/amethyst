@@ -40,7 +40,6 @@ import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
-import net.freehaven.tor.control.TorControlCommands
 import okhttp3.OkHttpClient
 
 class RelayProxyClientConnector(
@@ -79,24 +78,13 @@ class RelayProxyClientConnector(
                         client.disconnect()
                     }
                     if (it.torStatus is TorServiceStatus.Active) {
-                        try {
-                            it.torStatus.torControlConnection?.signal(TorControlCommands.SIGNAL_DORMANT)
-                            Log.d("ManageRelayServices", "Pausing Tor Activity")
-                        } catch (e: Exception) {
-                            Log.e("ManageRelayServices") { "Failed to signal Tor dormant: ${e.message}" }
-                        }
+                        Log.d("ManageRelayServices", "Connectivity off, Tor idle")
                     }
                 } else if (it.connectivity is ConnectivityStatus.Active && !client.isActive()) {
                     Log.d("ManageRelayServices", "Connectivity On: Resuming Relay Services")
 
                     if (it.torStatus is TorServiceStatus.Active) {
-                        try {
-                            it.torStatus.torControlConnection?.signal(TorControlCommands.SIGNAL_ACTIVE)
-                            it.torStatus.torControlConnection?.signal(TorControlCommands.SIGNAL_NEWNYM)
-                            Log.d("ManageRelayServices", "Resuming Tor Activity with new nym")
-                        } catch (e: Exception) {
-                            Log.e("ManageRelayServices") { "Failed to signal Tor active: ${e.message}" }
-                        }
+                        Log.d("ManageRelayServices", "Connectivity resumed, Tor active")
                     }
 
                     // only calls this if the client is not active. Otherwise goes to the else below

@@ -233,9 +233,10 @@ import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip58Badges.accepted.AcceptedBadgeSetEvent
 import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
-import com.vitorpamplona.quartz.nip58Badges.profiles.BadgeProfilesEvent
+import com.vitorpamplona.quartz.nip58Badges.profile.ProfileBadgesEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
@@ -552,6 +553,7 @@ fun RelayInformationBody(
 @Suppress("DEPRECATION")
 fun kindDisplayName(kind: Int): Int =
     when (kind) {
+        AcceptedBadgeSetEvent.KIND -> R.string.kind_accepted_badge_set
         AdvertisedRelayListEvent.KIND -> R.string.kind_outbox_relays
         AppDefinitionEvent.KIND -> R.string.kind_apps
         AppRecommendationEvent.KIND -> R.string.kind_app_recommendations
@@ -564,7 +566,6 @@ fun kindDisplayName(kind: Int): Int =
         AttestorProficiencyEvent.KIND -> R.string.attestor_proficiency
         BadgeAwardEvent.KIND -> R.string.kind_badge_awards
         BadgeDefinitionEvent.KIND -> R.string.kind_badge_definitions
-        BadgeProfilesEvent.KIND -> R.string.kind_profile_badges
         BlockedRelayListEvent.KIND -> R.string.kind_blocked_relays
         BlossomServersEvent.KIND -> R.string.kind_blossom_servers
         BlossomAuthorizationEvent.KIND -> R.string.kind_blossom_auth
@@ -651,6 +652,7 @@ fun kindDisplayName(kind: Int): Int =
         OtsEvent.KIND -> R.string.kind_ots
         PaymentTargetsEvent.KIND -> R.string.kind_pay_to
         PeopleListEvent.KIND -> R.string.kind_people_lists
+        ProfileBadgesEvent.KIND -> R.string.kind_profile_badges
         PictureEvent.KIND -> R.string.kind_pictures
         PinListEvent.KIND -> R.string.kind_pins
         ZapPollEvent.KIND -> R.string.kind_zap_poll

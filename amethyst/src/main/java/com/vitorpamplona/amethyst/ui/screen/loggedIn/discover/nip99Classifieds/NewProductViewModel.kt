@@ -421,30 +421,35 @@ open class NewProductViewModel :
                 )
 
             if (results.allGood) {
-                results.successful.forEach {
-                    if (it.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
-                        if (it.result.fileHeader.mimeType
-                                ?.startsWith("image") == true
-                        ) {
-                            productImages = productImages +
-                                ProductImageMeta(
-                                    it.result.url,
-                                    it.result.fileHeader.mimeType,
-                                    it.result.fileHeader.blurHash
-                                        ?.blurhash,
-                                    it.result.fileHeader.dim,
-                                    alt,
-                                    it.result.fileHeader.hash,
-                                    it.result.fileHeader.size,
-                                )
-                        } else {
-                            iMetaDescription.add(it.result, alt, contentWarningReason)
+                val urls =
+                    results.successful.mapNotNull {
+                        if (it.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
+                            if (it.result.fileHeader.mimeType
+                                    ?.startsWith("image") == true
+                            ) {
+                                productImages = productImages +
+                                    ProductImageMeta(
+                                        it.result.url,
+                                        it.result.fileHeader.mimeType,
+                                        it.result.fileHeader.blurHash
+                                            ?.blurhash,
+                                        it.result.fileHeader.dim,
+                                        alt,
+                                        it.result.fileHeader.hash,
+                                        it.result.fileHeader.size,
+                                    )
+                            } else {
+                                iMetaDescription.add(it.result, alt, contentWarningReason)
 
-                            message.insertUrlAtCursor(it.result.url)
-                            urlPreviews.update(message.text.toString())
+                                it.result.url
+                            }
+                        } else {
+                            null
                         }
                     }
-                }
+
+                message.insertUrlAtCursor(urls.joinToString(" "))
+                urlPreviews.update(message.text.toString())
 
                 multiOrchestrator = null
             } else {

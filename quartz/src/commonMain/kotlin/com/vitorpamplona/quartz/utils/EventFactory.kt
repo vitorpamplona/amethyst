@@ -140,9 +140,10 @@ import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip58Badges.accepted.AcceptedBadgeSetEvent
 import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
-import com.vitorpamplona.quartz.nip58Badges.profiles.BadgeProfilesEvent
+import com.vitorpamplona.quartz.nip58Badges.profile.ProfileBadgesEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
@@ -268,6 +269,7 @@ class EventFactory {
             sig: HexKey,
         ): T =
             when (kind) {
+                AcceptedBadgeSetEvent.KIND -> AcceptedBadgeSetEvent(id, pubKey, createdAt, tags, content, sig)
                 AdvertisedRelayListEvent.KIND -> AdvertisedRelayListEvent(id, pubKey, createdAt, tags, content, sig)
                 AppDefinitionEvent.KIND -> AppDefinitionEvent(id, pubKey, createdAt, tags, content, sig)
                 AppRecommendationEvent.KIND -> AppRecommendationEvent(id, pubKey, createdAt, tags, content, sig)
@@ -281,7 +283,6 @@ class EventFactory {
                 AudioTrackEvent.KIND -> AudioTrackEvent(id, pubKey, createdAt, tags, content, sig)
                 BadgeAwardEvent.KIND -> BadgeAwardEvent(id, pubKey, createdAt, tags, content, sig)
                 BadgeDefinitionEvent.KIND -> BadgeDefinitionEvent(id, pubKey, createdAt, tags, content, sig)
-                BadgeProfilesEvent.KIND -> BadgeProfilesEvent(id, pubKey, createdAt, tags, content, sig)
                 BidEvent.KIND -> BidEvent(id, pubKey, createdAt, tags, content, sig)
                 BidConfirmationEvent.KIND -> BidConfirmationEvent(id, pubKey, createdAt, tags, content, sig)
                 BlockedRelayListEvent.KIND -> BlockedRelayListEvent(id, pubKey, createdAt, tags, content, sig)
@@ -439,6 +440,7 @@ class EventFactory {
                 P2POrderEvent.KIND -> P2POrderEvent(id, pubKey, createdAt, tags, content, sig)
                 PictureEvent.KIND -> PictureEvent(id, pubKey, createdAt, tags, content, sig)
                 PinListEvent.KIND -> PinListEvent(id, pubKey, createdAt, tags, content, sig)
+                ProfileBadgesEvent.KIND -> ProfileBadgesEvent(id, pubKey, createdAt, tags, content, sig)
                 ZapPollEvent.KIND -> ZapPollEvent(id, pubKey, createdAt, tags, content, sig)
                 PollEvent.KIND -> PollEvent(id, pubKey, createdAt, tags, content, sig)
                 PollResponseEvent.KIND -> PollResponseEvent(id, pubKey, createdAt, tags, content, sig)

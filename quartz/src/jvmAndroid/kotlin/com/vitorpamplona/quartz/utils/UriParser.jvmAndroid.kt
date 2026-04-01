@@ -22,22 +22,32 @@ package com.vitorpamplona.quartz.utils
 
 import java.net.URI
 import java.net.URLDecoder
+import kotlin.getValue
 
 actual class UriParser actual constructor(
     uri: String,
 ) {
     private val myUri = URI.create(uri)
 
-    private val queryParameters: Map<String, String> by lazy {
-        myUri.query?.ifBlank { null }?.let { query ->
-            query.split('&').associate { paramValue ->
+    private val queryParameters: Map<String, List<String>> by lazy {
+        myUri.rawQuery?.ifBlank { null }?.let { query ->
+            val params = mutableMapOf<String, MutableList<String>>()
+
+            query.split('&').forEach { paramValue ->
                 val parts = paramValue.split("=", limit = 2)
+                val currentValue =
+                    params.getOrPut(parts[0]) {
+                        mutableListOf()
+                    }
+
                 if (parts.size == 2) {
-                    parts[0] to URLDecoder.decode(parts[1], "UTF-8")
+                    currentValue.add(URLDecoder.decode(parts[1], "UTF-8"))
                 } else {
-                    parts[0] to "" // Handle parameters without a value
+                    currentValue.add("")
                 }
             }
+
+            params
         } ?: emptyMap()
     }
 
@@ -67,7 +77,7 @@ actual class UriParser actual constructor(
 
     actual fun queryParameterNames(): Set<String> = queryParameters.keys
 
-    actual fun getQueryParameter(param: String): String? = queryParameters[param]
+    actual fun getQueryParameter(param: String): List<String>? = queryParameters[param]
 
     actual fun fragments(): Map<String, String> = fragments
 }

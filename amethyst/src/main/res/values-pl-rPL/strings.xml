@@ -385,6 +385,7 @@
     <string name="polls">Ankiety</string>
     <string name="pictures">Zdjęcia</string>
     <string name="shorts">Filmiki</string>
+    <string name="longs">Filmy wideo</string>
     <string name="private_bookmarks">Prywatne Zakładki</string>
     <string name="public_bookmarks">Publiczne zakładki</string>
     <string name="add_to_private_bookmarks">Dodaj do prywatnych zakładek</string>
@@ -1489,6 +1490,7 @@
     <string name="kind_audio_track">Ścieżka audio</string>
     <string name="kind_badge_awards">Odznaki</string>
     <string name="kind_badge_definitions">Definicje odznak</string>
+    <string name="kind_accepted_badge_set">Zestaw odznak „Przyjęty”</string>
     <string name="kind_profile_badges">Odznaki profilowe</string>
     <string name="kind_blocked_relays">Zablokowane Transmitery</string>
     <string name="kind_blossom_servers">Serwery Blossom</string>
@@ -1692,6 +1694,7 @@
     <string name="events">wydarzeń</string>
     <string name="events_from_you">wydarzenia od Ciebie</string>
     <string name="events_to_you">wydarzenia dla Ciebie</string>
+    <string name="searchable_events">wydarzenia podlegające wyszukiwaniu</string>
     <string name="dms">DMs</string>
     <string name="profiles">profile</string>
     <string name="relay_settings_lower2">lista transmiterów wysyłających</string>

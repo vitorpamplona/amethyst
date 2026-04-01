@@ -168,9 +168,10 @@ import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip58Badges.accepted.AcceptedBadgeSetEvent
 import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
-import com.vitorpamplona.quartz.nip58Badges.profiles.BadgeProfilesEvent
+import com.vitorpamplona.quartz.nip58Badges.profile.ProfileBadgesEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
@@ -843,7 +844,12 @@ object LocalCache : ILocalCache, ICacheProvider {
                     event.taggedAddresses().map { getOrCreateAddressableNote(it) }
             }
 
-            is BadgeProfilesEvent -> {
+            is AcceptedBadgeSetEvent -> {
+                event.badgeAwardEvents().mapNotNull { checkGetOrCreateNote(it) } +
+                    event.badgeAwardDefinitions().map { getOrCreateAddressableNote(it) }
+            }
+
+            is ProfileBadgesEvent -> {
                 event.badgeAwardEvents().mapNotNull { checkGetOrCreateNote(it) } +
                     event.badgeAwardDefinitions().map { getOrCreateAddressableNote(it) }
             }
@@ -2539,6 +2545,7 @@ object LocalCache : ILocalCache, ICacheProvider {
     ): Boolean =
         try {
             when (event) {
+                is AcceptedBadgeSetEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is AdvertisedRelayListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is AppDefinitionEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is AppRecommendationEvent -> consumeBaseReplaceable(event, relay, wasVerified)
@@ -2551,7 +2558,6 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is AudioTrackEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is BadgeAwardEvent -> consumeRegularEvent(event, relay, wasVerified)
                 is BadgeDefinitionEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is BadgeProfilesEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is BlockedRelayListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is BlossomServersEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is BroadcastRelayListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
@@ -2635,6 +2641,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is PictureEvent -> consumeRegularEvent(event, relay, wasVerified)
                 is PrivateDmEvent -> consumeRegularEvent(event, relay, wasVerified)
                 is PrivateOutboxRelayListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
+                is ProfileBadgesEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is ProxyRelayListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is PinListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is PublicMessageEvent -> consumeRegularEvent(event, relay, wasVerified)

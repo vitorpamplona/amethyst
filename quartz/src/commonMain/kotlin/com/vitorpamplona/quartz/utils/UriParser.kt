@@ -33,7 +33,7 @@ expect class UriParser(
 
     fun queryParameterNames(): Set<String>
 
-    fun getQueryParameter(param: String): String?
+    fun getQueryParameter(param: String): List<String>?
 
     fun fragments(): Map<String, String>
 }

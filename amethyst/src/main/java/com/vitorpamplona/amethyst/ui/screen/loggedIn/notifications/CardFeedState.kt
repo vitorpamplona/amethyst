@@ -104,3 +104,37 @@ class MessageSetCard(
 
     override fun id() = note.idHex
 }
+
+/**
+ * Checks if this card contains a specific event ID.
+ * Used for scrolling to a notification from a push notification intent.
+ */
+fun Card.containsEventId(eventId: String): Boolean =
+    when (this) {
+        is NoteCard -> {
+            note.idHex == eventId
+        }
+
+        is BadgeCard -> {
+            note.idHex == eventId
+        }
+
+        is MessageSetCard -> {
+            note.idHex == eventId
+        }
+
+        is ZapUserSetCard -> {
+            zapEvents.any { it.response.idHex == eventId || it.request.idHex == eventId }
+        }
+
+        is MultiSetCard -> {
+            note.idHex == eventId ||
+                zapEvents.any { it.response.idHex == eventId || it.request.idHex == eventId } ||
+                likeEvents.any { it.idHex == eventId } ||
+                boostEvents.any { it.idHex == eventId }
+        }
+
+        else -> {
+            false
+        }
+    }
