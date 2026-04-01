@@ -24,20 +24,21 @@ import android.content.Context
 import com.vitorpamplona.quartz.utils.Log
 import info.guardianproject.arti.ArtiLogListener
 import info.guardianproject.arti.ArtiProxy
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.atomic.AtomicBoolean
 
 private const val DEFAULT_SOCKS_PORT = 19050
 private const val MAX_PORT_RETRIES = 3
-private const val STOP_SETTLE_MS = 2_000L
+private const val STOP_TIMEOUT_MS = 10_000L
 
 /**
  * Manages a single ArtiProxy instance with explicit start/stop lifecycle.
@@ -59,6 +60,10 @@ class TorService(
     private var currentPort: Int = DEFAULT_SOCKS_PORT
     private val bootstrapped = AtomicBoolean(false)
 
+    // Signalled by the log listener when Arti confirms it has stopped
+    @Volatile
+    private var stoppedSignal: CompletableDeferred<Unit>? = null
+
     private val _status = MutableStateFlow<TorServiceStatus>(TorServiceStatus.Off)
     val status: StateFlow<TorServiceStatus> = _status.asStateFlow()
 
@@ -79,6 +84,7 @@ class TorService(
                 text.contains("state changed to Stopped", ignoreCase = true) -> {
                     bootstrapped.set(false)
                     _status.value = TorServiceStatus.Off
+                    stoppedSignal?.complete(Unit)
                 }
 
                 text.contains(
@@ -160,13 +166,25 @@ class TorService(
 
                 Log.d("TorService", "Stopping Arti")
                 withContext(Dispatchers.IO) {
+                    // Set up a signal to wait for the "Stopped" log confirmation
+                    val signal = CompletableDeferred<Unit>()
+                    stoppedSignal = signal
+
                     try {
                         proxy.stop()
                     } catch (e: Exception) {
                         Log.d("TorService") { "Failed to stop Arti: ${e.message}" }
                     }
-                    // Give the native layer time to release file locks
-                    delay(STOP_SETTLE_MS)
+
+                    // Wait for the native layer to confirm stop and release file locks
+                    val confirmed = withTimeoutOrNull(STOP_TIMEOUT_MS) { signal.await() }
+                    stoppedSignal = null
+
+                    if (confirmed != null) {
+                        Log.d("TorService") { "Arti confirmed stopped" }
+                    } else {
+                        Log.w("TorService") { "Arti stop timed out after ${STOP_TIMEOUT_MS / 1000}s" }
+                    }
                 }
                 _status.value = TorServiceStatus.Off
             }
