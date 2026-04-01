@@ -41,6 +41,11 @@ class UrlUserTagOutputTransformation(
         val mentionRegex = Regex("(?:@|nostr:)(?:npub1[a-z0-9]{58}|nprofile1[a-z0-9]+)")
         val matches = mentionRegex.findAll(text).toList().reversed()
 
+        // Phase 1: Replace all mentions (reverse order keeps indices valid for replace).
+        // Collect replacement info because addStyle must be called after all text mutations.
+        // (originalStart, originalMatchLength, displayNameLength)
+        val replacements = mutableListOf<Triple<Int, Int, Int>>()
+
         for (match in matches) {
             try {
                 val bech32 =
@@ -52,16 +57,20 @@ class UrlUserTagOutputTransformation(
                 val displayName = "@${user.toBestDisplayName()}"
 
                 replace(match.range.first, match.range.last + 1, displayName)
-
-                // Apply color styling to the replaced display name
-                addStyle(
-                    SpanStyle(color = color, textDecoration = TextDecoration.None),
-                    match.range.first,
-                    match.range.first + displayName.length,
-                )
+                replacements.add(Triple(match.range.first, match.range.last + 1 - match.range.first, displayName.length))
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
             }
+        }
+
+        // Phase 2: Apply styles after all text mutations are finalized.
+        // Iterate in forward document order, tracking cumulative shift from prior replacements.
+        val style = SpanStyle(color = color, textDecoration = TextDecoration.None)
+        var cumulativeShift = 0
+        for ((originalStart, originalLen, newLen) in replacements.reversed()) {
+            val adjustedStart = originalStart + cumulativeShift
+            addStyle(style, adjustedStart, adjustedStart + newLen)
+            cumulativeShift += newLen - originalLen
         }
 
         // Highlight URLs in remaining text
