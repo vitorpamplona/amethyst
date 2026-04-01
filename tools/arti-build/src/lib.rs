@@ -47,7 +47,6 @@ fn send_log_to_java(message: String) {
 macro_rules! log_info {
     ($($arg:tt)*) => {{
         let msg = format!($($arg)*);
-        android_logger::log(&format!("Arti: {}", msg));
         send_log_to_java(msg);
     }};
 }
@@ -55,7 +54,6 @@ macro_rules! log_info {
 macro_rules! log_error {
     ($($arg:tt)*) => {{
         let msg = format!("ERROR: {}", format!($($arg)*));
-        android_logger::log(&format!("Arti: {}", msg));
         send_log_to_java(msg);
     }};
 }
@@ -385,31 +383,4 @@ pub extern "C" fn Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_stopSocksPro
 
     log_info!("SOCKS proxy stopped");
     0
-}
-
-// ============================================================================
-// Android Logger
-// ============================================================================
-
-mod android_logger {
-    use std::ffi::CString;
-
-    #[allow(non_camel_case_types)]
-    type c_int = i32;
-    #[allow(non_camel_case_types)]
-    type c_char = i8;
-
-    extern "C" {
-        fn __android_log_write(prio: c_int, tag: *const c_char, text: *const c_char) -> c_int;
-    }
-
-    const ANDROID_LOG_INFO: c_int = 4;
-
-    pub fn log(message: &str) {
-        unsafe {
-            let tag = CString::new("ArtiNative").unwrap();
-            let text = CString::new(message).unwrap();
-            __android_log_write(ANDROID_LOG_INFO, tag.as_ptr() as *const c_char, text.as_ptr() as *const c_char);
-        }
-    }
 }
