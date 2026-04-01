@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.utils.Log
 import info.guardianproject.arti.ArtiLogListener
 import info.guardianproject.arti.ArtiProxy
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -95,75 +96,84 @@ class TorService(
         }
 
     suspend fun start() {
-        mutex.withLock {
-            if (artiProxy != null) {
-                // Already running — just ensure status is up to date
-                if (bootstrapped.get()) {
-                    _status.value = TorServiceStatus.Active(currentPort)
-                } else {
-                    _status.value = TorServiceStatus.Connecting
-                }
-                return
-            }
-
-            _status.value = TorServiceStatus.Connecting
-            bootstrapped.set(false)
-            lastLogTime.set(System.currentTimeMillis())
-
-            withContext(Dispatchers.IO) {
-                var socksPort = DEFAULT_SOCKS_PORT
-                var lastError: Exception? = null
-
-                for (attempt in 0 until MAX_PORT_RETRIES) {
-                    try {
-                        val proxy =
-                            ArtiProxy
-                                .Builder(context.applicationContext)
-                                .setSocksPort(socksPort)
-                                .setDnsPort(socksPort + 1)
-                                .setLogListener(logListener)
-                                .build()
-
-                        proxy.start()
-                        artiProxy = proxy
-                        currentPort = socksPort
-                        lastError = null
-                        Log.d("TorService") { "Arti started on port $socksPort" }
-                        break
-                    } catch (e: Exception) {
-                        lastError = e
-                        Log.e("TorService") {
-                            "Failed to start Arti on port $socksPort (attempt ${attempt + 1}): ${e.message}"
-                        }
-                        socksPort++
+        // NonCancellable ensures that if the calling coroutine is cancelled
+        // (e.g., by transformLatest switching modes), we don't leak a
+        // half-started ArtiProxy with no reference to stop it.
+        withContext(NonCancellable) {
+            mutex.withLock {
+                if (artiProxy != null) {
+                    // Already running — just ensure status is up to date
+                    if (bootstrapped.get()) {
+                        _status.value = TorServiceStatus.Active(currentPort)
+                    } else {
+                        _status.value = TorServiceStatus.Connecting
                     }
+                    return@withContext
                 }
 
-                if (lastError != null) {
-                    Log.e("TorService") { "Failed to start Arti after $MAX_PORT_RETRIES attempts" }
-                    _status.value = TorServiceStatus.Off
+                _status.value = TorServiceStatus.Connecting
+                bootstrapped.set(false)
+                lastLogTime.set(System.currentTimeMillis())
+
+                withContext(Dispatchers.IO) {
+                    var socksPort = DEFAULT_SOCKS_PORT
+                    var lastError: Exception? = null
+
+                    for (attempt in 0 until MAX_PORT_RETRIES) {
+                        try {
+                            val proxy =
+                                ArtiProxy
+                                    .Builder(context.applicationContext)
+                                    .setSocksPort(socksPort)
+                                    .setDnsPort(socksPort + 1)
+                                    .setLogListener(logListener)
+                                    .build()
+
+                            proxy.start()
+                            artiProxy = proxy
+                            currentPort = socksPort
+                            lastError = null
+                            Log.d("TorService") { "Arti started on port $socksPort" }
+                            break
+                        } catch (e: Exception) {
+                            lastError = e
+                            Log.e("TorService") {
+                                "Failed to start Arti on port $socksPort (attempt ${attempt + 1}): ${e.message}"
+                            }
+                            socksPort++
+                        }
+                    }
+
+                    if (lastError != null) {
+                        Log.e("TorService") { "Failed to start Arti after $MAX_PORT_RETRIES attempts" }
+                        _status.value = TorServiceStatus.Off
+                    }
                 }
             }
         }
     }
 
     suspend fun stop() {
-        mutex.withLock {
-            val proxy = artiProxy ?: return@withLock
-            artiProxy = null
-            bootstrapped.set(false)
+        // NonCancellable ensures stop() completes fully even if the caller
+        // is cancelled, preventing leaked ArtiProxy instances and file locks.
+        withContext(NonCancellable) {
+            mutex.withLock {
+                val proxy = artiProxy ?: return@withContext
+                artiProxy = null
+                bootstrapped.set(false)
 
-            Log.d("TorService", "Stopping Arti")
-            withContext(Dispatchers.IO) {
-                try {
-                    proxy.stop()
-                } catch (e: Exception) {
-                    Log.d("TorService") { "Failed to stop Arti: ${e.message}" }
+                Log.d("TorService", "Stopping Arti")
+                withContext(Dispatchers.IO) {
+                    try {
+                        proxy.stop()
+                    } catch (e: Exception) {
+                        Log.d("TorService") { "Failed to stop Arti: ${e.message}" }
+                    }
+                    // Give the native layer time to release file locks
+                    delay(STOP_SETTLE_MS)
                 }
-                // Give the native layer time to release file locks
-                delay(STOP_SETTLE_MS)
+                _status.value = TorServiceStatus.Off
             }
-            _status.value = TorServiceStatus.Off
         }
     }
 }
