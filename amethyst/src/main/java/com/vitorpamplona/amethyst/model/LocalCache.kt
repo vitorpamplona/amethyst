@@ -96,12 +96,6 @@ import com.vitorpamplona.quartz.nip03Timestamp.VerificationStateCache
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionIndex
-import com.vitorpamplona.quartz.nip100WebRtcCalls.events.CallAnswerEvent
-import com.vitorpamplona.quartz.nip100WebRtcCalls.events.CallHangupEvent
-import com.vitorpamplona.quartz.nip100WebRtcCalls.events.CallIceCandidateEvent
-import com.vitorpamplona.quartz.nip100WebRtcCalls.events.CallOfferEvent
-import com.vitorpamplona.quartz.nip100WebRtcCalls.events.CallRejectEvent
-import com.vitorpamplona.quartz.nip100WebRtcCalls.events.CallRenegotiateEvent
 import com.vitorpamplona.quartz.nip10Notes.BaseNoteEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
