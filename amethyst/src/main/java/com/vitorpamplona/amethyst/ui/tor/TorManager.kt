@@ -58,18 +58,21 @@ class TorManager(
         }.transformLatest { (torType, externalSocksPort) ->
             when (torType) {
                 TorType.INTERNAL -> {
+                    service.start()
                     emitAll(service.status)
                 }
 
                 TorType.OFF -> {
+                    service.stop()
                     emit(TorServiceStatus.Off)
                 }
 
                 TorType.EXTERNAL -> {
+                    service.stop()
                     if (externalSocksPort > 0) {
                         emit(TorServiceStatus.Active(externalSocksPort))
                     } else {
-                        emitAll(service.status)
+                        emit(TorServiceStatus.Off)
                     }
                 }
             }
@@ -95,5 +98,5 @@ class TorManager(
 
     fun isSocksReady() = status.value is TorServiceStatus.Active
 
-    fun socksPort(): Int = (status.value as? TorServiceStatus.Active)?.port ?: 9050
+    fun socksPort(): Int = (status.value as? TorServiceStatus.Active)?.port ?: 19050
 }
