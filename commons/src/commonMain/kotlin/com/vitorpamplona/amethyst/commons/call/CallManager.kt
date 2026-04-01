@@ -51,6 +51,9 @@ class CallManager(
     private val _state = MutableStateFlow<CallState>(CallState.Idle)
     val state: StateFlow<CallState> = _state.asStateFlow()
 
+    var onAnswerReceived: ((CallAnswerEvent) -> Unit)? = null
+    var onIceCandidateReceived: ((CallIceCandidateEvent) -> Unit)? = null
+
     private var timeoutJob: Job? = null
 
     companion object {
@@ -115,6 +118,7 @@ class CallManager(
 
         _state.value = CallState.Connecting(current.callId, current.peerPubKey, current.callType)
         cancelTimeout()
+        onAnswerReceived?.invoke(event)
     }
 
     fun onCallRejected(event: CallRejectEvent) {
@@ -127,8 +131,7 @@ class CallManager(
     }
 
     fun onIceCandidate(event: CallIceCandidateEvent) {
-        // ICE candidates are handled by the WebRTC session directly.
-        // This method exists for the call manager to validate the call-id.
+        onIceCandidateReceived?.invoke(event)
     }
 
     fun onPeerConnected() {

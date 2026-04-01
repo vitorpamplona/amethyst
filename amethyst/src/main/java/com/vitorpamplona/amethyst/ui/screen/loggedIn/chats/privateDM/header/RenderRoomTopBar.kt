@@ -25,15 +25,19 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -69,6 +73,7 @@ fun RenderRoomTopBar(
     room: ChatroomKey,
     accountViewModel: AccountViewModel,
     nav: INav,
+    onCallClick: ((String) -> Unit)? = null,
 ) {
     if (room.users.size == 1) {
         TopBarExtensibleWithBackButton(
@@ -84,6 +89,20 @@ fun RenderRoomTopBar(
                         Spacer(modifier = DoubleHorzSpacer)
 
                         UsernameDisplay(baseUser, Modifier.weight(1f), fontWeight = FontWeight.Normal, accountViewModel = accountViewModel)
+
+                        if (onCallClick != null) {
+                            IconButton(
+                                onClick = { onCallClick(baseUser.pubkeyHex) },
+                                modifier = Modifier.size(40.dp),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Call,
+                                    contentDescription = "Voice call",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                            }
+                        }
                     }
                 }
             },
