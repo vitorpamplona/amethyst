@@ -63,6 +63,7 @@ class TorManager(
                 }
 
                 TorType.OFF -> {
+                    service.stop()
                     emit(TorServiceStatus.Off)
                 }
 
