@@ -148,14 +148,24 @@ The Rust wrapper (`src/lib.rs`) exposes these JNI functions to Kotlin:
 
 ## Cargo.toml features
 
-| Feature | Purpose |
+Default features are disabled (`default-features = false`) to minimize binary size.
+
+| Feature | Purpose | Why included |
+|---|---|---|
+| `tokio` | Async runtime | Required by our SOCKS proxy |
+| `rustls` | TLS via pure Rust | No OpenSSL dependency, smaller binary |
+| `compression` | zstd/deflate relay traffic | Reduces bandwidth on Tor circuits |
+| `onion-service-client` | Access .onion addresses | Amethyst routes .onion relay connections through Tor |
+| `static-sqlite` | Bundled SQLite | Android native code can't use system SQLite |
+
+**Not included:**
+
+| Feature | Why excluded |
 |---|---|
-| `tokio` | Async runtime |
-| `rustls` | TLS without OpenSSL (smaller, no system dependency) |
-| `compression` | Tor relay compression support |
-| `bridge-client` | Connect via Tor bridges |
-| `onion-service-client` | Access .onion addresses |
-| `static-sqlite` | Bundled SQLite for state storage |
+| `native-tls` | Using `rustls` instead (smaller, no system dependency) |
+| `bridge-client` | Amethyst doesn't expose bridge configuration in UI yet. Add back if needed. |
+| `pt-client` | Pluggable transports — same reason as bridges |
+| `onion-service-service` | We only connect to .onion, we don't host them |
 
 ### Release profile
 
