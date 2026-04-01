@@ -24,38 +24,36 @@ import android.content.Context
 import com.vitorpamplona.quartz.utils.Log
 import info.guardianproject.arti.ArtiLogListener
 import info.guardianproject.arti.ArtiProxy
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.atomic.AtomicBoolean
 
 private const val DEFAULT_SOCKS_PORT = 19050
-private const val STOP_TIMEOUT_MS = 10_000L
 
 /**
- * Manages a single ArtiProxy instance with explicit start/stop lifecycle.
+ * Manages a single ArtiProxy instance for the app's lifetime.
  *
- * ArtiProxy is created once and reused for the lifetime of the app.
- * Only [start] and [stop] are called on it — never recreated — to
- * avoid state file lock conflicts in the native layer.
+ * Arti's state file lock is tied to the TorClient object's lifetime —
+ * it is only released when the object is garbage collected, not when
+ * stop() is called. Calling stop()+start() on ArtiProxy creates a new
+ * internal TorClient that conflicts with the old lock.
+ *
+ * Therefore, ArtiProxy is created and started once. It runs for the
+ * entire process lifetime. When the user turns Tor "off", TorManager
+ * simply stops emitting Active status — no traffic is routed through
+ * the proxy, but the proxy itself stays alive. This is safe because
+ * an idle Arti uses negligible resources and maintains no circuits
+ * when no SOCKS connections are made.
  */
 class TorService(
     val context: Context,
 ) {
-    private val mutex = Mutex()
-    private val running = AtomicBoolean(false)
-    private val bootstrapped = AtomicBoolean(false)
     private val socksPort = DEFAULT_SOCKS_PORT
-
-    @Volatile
-    private var stoppedSignal: CompletableDeferred<Unit>? = null
+    private val bootstrapped = AtomicBoolean(false)
+    private val started = AtomicBoolean(false)
 
     private val _status = MutableStateFlow<TorServiceStatus>(TorServiceStatus.Off)
     val status: StateFlow<TorServiceStatus> = _status.asStateFlow()
@@ -74,20 +72,11 @@ class TorService(
                     }
                 }
 
-                text.contains("state changed to Stopped", ignoreCase = true) -> {
-                    bootstrapped.set(false)
-                    running.set(false)
-                    _status.value = TorServiceStatus.Off
-                    stoppedSignal?.complete(Unit)
-                }
-
                 text.contains(
                     "Another process has the lock",
                     ignoreCase = true,
                 ) -> {
                     Log.e("TorService") { "Arti state file lock conflict" }
-                    bootstrapped.set(false)
-                    _status.value = TorServiceStatus.Off
                 }
             }
         }
@@ -101,60 +90,25 @@ class TorService(
             .build()
 
     suspend fun start() {
-        withContext(NonCancellable) {
-            mutex.withLock {
-                if (running.get()) {
-                    if (bootstrapped.get()) {
-                        _status.value = TorServiceStatus.Active(socksPort)
-                    } else {
-                        _status.value = TorServiceStatus.Connecting
-                    }
-                    return@withContext
-                }
-
+        if (started.get()) {
+            // Already started — just emit current state
+            if (bootstrapped.get()) {
+                _status.value = TorServiceStatus.Active(socksPort)
+            } else {
                 _status.value = TorServiceStatus.Connecting
-                bootstrapped.set(false)
-
-                withContext(Dispatchers.IO) {
-                    try {
-                        artiProxy.start()
-                        running.set(true)
-                        Log.d("TorService") { "Arti started on port $socksPort" }
-                    } catch (e: Exception) {
-                        Log.e("TorService") { "Failed to start Arti: ${e.message}" }
-                        _status.value = TorServiceStatus.Off
-                    }
-                }
             }
+            return
         }
-    }
 
-    suspend fun stop() {
-        withContext(NonCancellable) {
-            mutex.withLock {
-                if (!running.get()) return@withContext
+        _status.value = TorServiceStatus.Connecting
 
-                Log.d("TorService", "Stopping Arti")
-                withContext(Dispatchers.IO) {
-                    val signal = CompletableDeferred<Unit>()
-                    stoppedSignal = signal
-
-                    try {
-                        artiProxy.stop()
-                    } catch (e: Exception) {
-                        Log.d("TorService") { "Failed to stop Arti: ${e.message}" }
-                    }
-
-                    val confirmed = withTimeoutOrNull(STOP_TIMEOUT_MS) { signal.await() }
-                    stoppedSignal = null
-
-                    if (confirmed != null) {
-                        Log.d("TorService") { "Arti confirmed stopped" }
-                    } else {
-                        Log.w("TorService") { "Arti stop timed out after ${STOP_TIMEOUT_MS / 1000}s" }
-                        running.set(false)
-                    }
-                }
+        withContext(Dispatchers.IO) {
+            try {
+                artiProxy.start()
+                started.set(true)
+                Log.d("TorService") { "Arti started on port $socksPort" }
+            } catch (e: Exception) {
+                Log.e("TorService") { "Failed to start Arti: ${e.message}" }
                 _status.value = TorServiceStatus.Off
             }
         }
