@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.commons.call
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip100WebRtcCalls.tags.CallType
+import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType
 
 @Immutable
 sealed interface CallState {

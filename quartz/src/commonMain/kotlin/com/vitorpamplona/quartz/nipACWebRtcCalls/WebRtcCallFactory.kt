@@ -18,19 +18,19 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip100WebRtcCalls
+package com.vitorpamplona.quartz.nipACWebRtcCalls
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip100WebRtcCalls.events.CallAnswerEvent
-import com.vitorpamplona.quartz.nip100WebRtcCalls.events.CallHangupEvent
-import com.vitorpamplona.quartz.nip100WebRtcCalls.events.CallIceCandidateEvent
-import com.vitorpamplona.quartz.nip100WebRtcCalls.events.CallOfferEvent
-import com.vitorpamplona.quartz.nip100WebRtcCalls.events.CallRejectEvent
-import com.vitorpamplona.quartz.nip100WebRtcCalls.events.CallRenegotiateEvent
-import com.vitorpamplona.quartz.nip100WebRtcCalls.tags.CallType
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallAnswerEvent
+import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallHangupEvent
+import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallIceCandidateEvent
+import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallOfferEvent
+import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallRejectEvent
+import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallRenegotiateEvent
+import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType
 
 class WebRtcCallFactory {
     data class Result(

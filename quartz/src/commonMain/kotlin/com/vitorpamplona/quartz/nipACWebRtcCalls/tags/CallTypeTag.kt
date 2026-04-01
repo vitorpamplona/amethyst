@@ -18,11 +18,38 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip100WebRtcCalls.tags
+package com.vitorpamplona.quartz.nipACWebRtcCalls.tags
 
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.utils.ensure
 
-fun <T : Event> TagArrayBuilder<T>.callId(callId: String) = addUnique(CallIdTag.assemble(callId))
+enum class CallType(
+    val value: String,
+) {
+    VOICE("voice"),
+    VIDEO("video"),
+    ;
 
-fun <T : Event> TagArrayBuilder<T>.callType(callType: CallType) = addUnique(CallTypeTag.assemble(callType))
+    companion object {
+        fun fromString(value: String): CallType? =
+            when (value) {
+                "voice" -> VOICE
+                "video" -> VIDEO
+                else -> null
+            }
+    }
+}
+
+class CallTypeTag {
+    companion object {
+        const val TAG_NAME = "call-type"
+
+        fun parse(tag: Array<String>): CallType? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            return CallType.fromString(tag[1])
+        }
+
+        fun assemble(callType: CallType) = arrayOf(TAG_NAME, callType.value)
+    }
+}

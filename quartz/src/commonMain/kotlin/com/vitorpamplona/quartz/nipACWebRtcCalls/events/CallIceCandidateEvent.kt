@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip100WebRtcCalls.events
+package com.vitorpamplona.quartz.nipACWebRtcCalls.events
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -26,17 +26,14 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
-import com.vitorpamplona.quartz.nip100WebRtcCalls.tags.CallIdTag
-import com.vitorpamplona.quartz.nip100WebRtcCalls.tags.CallType
-import com.vitorpamplona.quartz.nip100WebRtcCalls.tags.CallTypeTag
-import com.vitorpamplona.quartz.nip100WebRtcCalls.tags.callId
-import com.vitorpamplona.quartz.nip100WebRtcCalls.tags.callType
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip40Expiration.expiration
+import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallIdTag
+import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.callId
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
-class CallOfferEvent(
+class CallIceCandidateEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
@@ -46,27 +43,23 @@ class CallOfferEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
     fun callId() = tags.firstNotNullOfOrNull(CallIdTag::parse)
 
-    fun callType() = tags.firstNotNullOfOrNull(CallTypeTag::parse)
-
-    fun sdpOffer() = content
+    fun candidateJson() = content
 
     companion object {
-        const val KIND = 25050
-        const val ALT_DESCRIPTION = "WebRTC call offer"
-        const val EXPIRATION_SECONDS = 300L // 5 minutes
+        const val KIND = 25052
+        const val ALT_DESCRIPTION = "WebRTC ICE candidate"
+        const val EXPIRATION_SECONDS = 300L
 
         fun build(
-            sdpOffer: String,
-            calleePubKey: HexKey,
+            candidateJson: String,
+            peerPubKey: HexKey,
             callId: String,
-            type: CallType,
             createdAt: Long = TimeUtils.now(),
-            initializer: TagArrayBuilder<CallOfferEvent>.() -> Unit = {},
-        ) = eventTemplate(KIND, sdpOffer, createdAt) {
+            initializer: TagArrayBuilder<CallIceCandidateEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, candidateJson, createdAt) {
             alt(ALT_DESCRIPTION)
-            pTag(calleePubKey)
+            pTag(peerPubKey)
             callId(callId)
-            callType(type)
             expiration(createdAt + EXPIRATION_SECONDS)
             initializer()
         }

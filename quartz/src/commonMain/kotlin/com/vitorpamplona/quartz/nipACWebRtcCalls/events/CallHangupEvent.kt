@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip100WebRtcCalls.events
+package com.vitorpamplona.quartz.nipACWebRtcCalls.events
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -26,10 +26,10 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
-import com.vitorpamplona.quartz.nip100WebRtcCalls.tags.CallIdTag
-import com.vitorpamplona.quartz.nip100WebRtcCalls.tags.callId
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip40Expiration.expiration
+import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallIdTag
+import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.callId
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable

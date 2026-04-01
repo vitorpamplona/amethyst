@@ -50,12 +50,6 @@ import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
-import com.vitorpamplona.quartz.nip100WebRtcCalls.events.CallAnswerEvent
-import com.vitorpamplona.quartz.nip100WebRtcCalls.events.CallHangupEvent
-import com.vitorpamplona.quartz.nip100WebRtcCalls.events.CallIceCandidateEvent
-import com.vitorpamplona.quartz.nip100WebRtcCalls.events.CallOfferEvent
-import com.vitorpamplona.quartz.nip100WebRtcCalls.events.CallRejectEvent
-import com.vitorpamplona.quartz.nip100WebRtcCalls.events.CallRenegotiateEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip15Marketplace.auction.AuctionEvent
 import com.vitorpamplona.quartz.nip15Marketplace.bid.BidEvent
@@ -244,6 +238,12 @@ import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
+import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallAnswerEvent
+import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallHangupEvent
+import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallIceCandidateEvent
+import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallOfferEvent
+import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallRejectEvent
+import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallRenegotiateEvent
 import com.vitorpamplona.quartz.nipB0WebBookmarks.WebBookmarkEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
