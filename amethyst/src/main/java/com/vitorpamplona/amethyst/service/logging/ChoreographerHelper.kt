@@ -25,28 +25,39 @@ import com.vitorpamplona.quartz.utils.Log
 
 object ChoreographerHelper {
     var lastFrameTimeNanos: Long = 0
+    private var running = false
 
-    fun start() {
-        Choreographer.getInstance().postFrameCallback(
-            object : Choreographer.FrameCallback {
-                override fun doFrame(frameTimeNanos: Long) {
-                    // Last callback time
-                    if (lastFrameTimeNanos == 0L) {
-                        lastFrameTimeNanos = frameTimeNanos
-                        Choreographer.getInstance().postFrameCallback(this)
-                        return
-                    }
-                    val diff = (frameTimeNanos - lastFrameTimeNanos) / 1000000
-                    // only report after 30ms because videos play at 30fps
-                    if (diff > 35) {
-                        // Follow the frame number
-                        val droppedCount = (diff / 16.6).toInt()
-                        Log.w("block-canary") { "Dropped $droppedCount frames. Skipped $diff ms" }
-                    }
+    private val frameCallback =
+        object : Choreographer.FrameCallback {
+            override fun doFrame(frameTimeNanos: Long) {
+                if (!running) return
+
+                // Last callback time
+                if (lastFrameTimeNanos == 0L) {
                     lastFrameTimeNanos = frameTimeNanos
                     Choreographer.getInstance().postFrameCallback(this)
+                    return
                 }
-            },
-        )
+                val diff = (frameTimeNanos - lastFrameTimeNanos) / 1000000
+                // only report after 30ms because videos play at 30fps
+                if (diff > 35) {
+                    // Follow the frame number
+                    val droppedCount = (diff / 16.6).toInt()
+                    Log.w("block-canary") { "Dropped $droppedCount frames. Skipped $diff ms" }
+                }
+                lastFrameTimeNanos = frameTimeNanos
+                Choreographer.getInstance().postFrameCallback(this)
+            }
+        }
+
+    fun start() {
+        running = true
+        lastFrameTimeNanos = 0
+        Choreographer.getInstance().postFrameCallback(frameCallback)
+    }
+
+    fun stop() {
+        running = false
+        Choreographer.getInstance().removeFrameCallback(frameCallback)
     }
 }

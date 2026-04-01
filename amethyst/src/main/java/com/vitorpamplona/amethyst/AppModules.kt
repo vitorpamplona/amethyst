@@ -54,6 +54,8 @@ import com.vitorpamplona.amethyst.service.okhttp.EncryptionKeyCache
 import com.vitorpamplona.amethyst.service.okhttp.OkHttpWebSocket
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCache
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCacheFactory
+import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
+import com.vitorpamplona.amethyst.service.playback.service.PlaybackServiceClient
 import com.vitorpamplona.amethyst.service.relayClient.CacheClientConnector
 import com.vitorpamplona.amethyst.service.relayClient.RelayProxyClientConnector
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.AuthCoordinator
@@ -485,6 +487,8 @@ class AppModules(
 
     fun terminate(appContext: Context) {
         pokeyReceiver.unregister(appContext)
+        BackgroundMedia.removeBackgroundControllerAndReleaseIt()
+        PlaybackServiceClient.shutdown()
         applicationIOScope.cancel("Application onTerminate $appContext")
         accountsCache.clear()
     }
