@@ -160,7 +160,13 @@ fun SinglePaneLayout(
                     modifier = Modifier.padding(bottom = 4.dp),
                 )
 
-                // Tor status indicator
+                BunkerHeartbeatIndicator(
+                    signerConnectionState = signerConnectionState,
+                    lastPingTimeSec = lastPingTimeSec,
+                    modifier = Modifier.padding(bottom = 4.dp),
+                )
+
+                // Tor status — always last so it's never pushed off screen
                 val torState = LocalTorState.current
                 TorStatusIndicator(
                     status = torState.status,
@@ -168,12 +174,6 @@ fun SinglePaneLayout(
                         currentColumnType = DeckColumnType.Settings
                         navState.clear()
                     },
-                    modifier = Modifier.padding(bottom = 4.dp),
-                )
-
-                BunkerHeartbeatIndicator(
-                    signerConnectionState = signerConnectionState,
-                    lastPingTimeSec = lastPingTimeSec,
                     modifier = Modifier.padding(bottom = 12.dp),
                 )
             }
