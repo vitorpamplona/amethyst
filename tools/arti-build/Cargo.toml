@@ -1,0 +1,30 @@
+[package]
+name = "arti-android"
+version = "1.2.3"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[workspace]
+
+[dependencies]
+arti-client = { version = "0.25", features = [
+    "tokio",
+    "rustls",
+    "compression",
+    "bridge-client",
+    "onion-service-client",
+    "static-sqlite",
+] }
+tor-rtcompat = { version = "0.25", features = ["tokio", "rustls"] }
+jni = "0.21"
+tokio = { version = "1", features = ["full"] }
+anyhow = "1"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"
