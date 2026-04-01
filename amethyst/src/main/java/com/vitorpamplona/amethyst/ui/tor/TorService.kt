@@ -39,6 +39,9 @@ private const val DEFAULT_SOCKS_PORT = 19050
  * lifetime — its state file lock is never released until the process exits.
  * The SOCKS proxy can be started/stopped independently without affecting
  * the TorClient or its file locks.
+ *
+ * All JNI calls (including System.loadLibrary) run on [Dispatchers.IO]
+ * to avoid blocking the main thread.
  */
 class TorService(
     val context: Context,
@@ -50,28 +53,9 @@ class TorService(
     private val _status = MutableStateFlow<TorServiceStatus>(TorServiceStatus.Off)
     val status: StateFlow<TorServiceStatus> = _status.asStateFlow()
 
-    init {
-        ArtiNative.setLogCallback { text ->
-            Log.d("TorService") {
-                val newLine = text.indexOf('\n')
-                if (newLine > 1) {
-                    "Arti: ${text.substring(0, newLine)}"
-                } else {
-                    "Arti: $text"
-                }
-            }
-
-            when {
-                text.contains("Sufficiently bootstrapped", ignoreCase = true) -> {
-                    _status.value = TorServiceStatus.Active(socksPort)
-                    Log.d("TorService") { "Arti SOCKS proxy active on port $socksPort" }
-                }
-            }
-        }
-    }
-
     /**
      * Initialize the TorClient (once) and start the SOCKS proxy.
+     * Must be called from a coroutine on [Dispatchers.IO].
      */
     suspend fun start() {
         if (proxyRunning.get()) {
@@ -83,8 +67,28 @@ class TorService(
         _status.value = TorServiceStatus.Connecting
 
         withContext(Dispatchers.IO) {
-            // Initialize TorClient once — this bootstraps the Tor network
+            // Initialize TorClient once — this bootstraps the Tor network.
+            // setLogCallback and initialize are the first ArtiNative calls,
+            // which triggers System.loadLibrary on this IO thread.
             if (initialized.compareAndSet(false, true)) {
+                ArtiNative.setLogCallback { text ->
+                    Log.d("TorService") {
+                        val newLine = text.indexOf('\n')
+                        if (newLine > 1) {
+                            "Arti: ${text.substring(0, newLine)}"
+                        } else {
+                            "Arti: $text"
+                        }
+                    }
+
+                    when {
+                        text.contains("Sufficiently bootstrapped", ignoreCase = true) -> {
+                            _status.value = TorServiceStatus.Active(socksPort)
+                            Log.d("TorService") { "Arti SOCKS proxy active on port $socksPort" }
+                        }
+                    }
+                }
+
                 val dataDir = File(context.filesDir, "arti").absolutePath
                 Log.d("TorService") { "Initializing Arti with data dir: $dataDir" }
 
