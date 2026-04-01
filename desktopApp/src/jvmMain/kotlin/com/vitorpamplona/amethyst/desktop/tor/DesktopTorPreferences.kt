@@ -37,19 +37,19 @@ object DesktopTorPreferences : ITorSettingsPersistence {
 
     override fun load(): TorSettings =
         TorSettings(
-            torType = TorType.entries.firstOrNull { it.name == prefs.get("tor_type", TorType.OFF.name) } ?: TorType.OFF,
+            torType = TorType.entries.firstOrNull { it.name == prefs.get("tor_type", TorType.INTERNAL.name) } ?: TorType.INTERNAL,
             externalSocksPort = prefs.getInt("tor_external_port", 9050),
             onionRelaysViaTor = prefs.getBoolean("tor_onion_relays", true),
-            dmRelaysViaTor = prefs.getBoolean("tor_dm_relays", false),
-            newRelaysViaTor = prefs.getBoolean("tor_new_relays", false),
-            trustedRelaysViaTor = prefs.getBoolean("tor_trusted_relays", false),
-            urlPreviewsViaTor = prefs.getBoolean("tor_url_previews", false),
-            profilePicsViaTor = prefs.getBoolean("tor_profile_pics", false),
-            imagesViaTor = prefs.getBoolean("tor_images", false),
-            videosViaTor = prefs.getBoolean("tor_videos", false),
-            moneyOperationsViaTor = prefs.getBoolean("tor_money", false),
-            nip05VerificationsViaTor = prefs.getBoolean("tor_nip05", false),
-            mediaUploadsViaTor = prefs.getBoolean("tor_media_uploads", false),
+            dmRelaysViaTor = prefs.getBoolean("tor_dm_relays", true),
+            newRelaysViaTor = prefs.getBoolean("tor_new_relays", true),
+            trustedRelaysViaTor = prefs.getBoolean("tor_trusted_relays", true),
+            urlPreviewsViaTor = prefs.getBoolean("tor_url_previews", true),
+            profilePicsViaTor = prefs.getBoolean("tor_profile_pics", true),
+            imagesViaTor = prefs.getBoolean("tor_images", true),
+            videosViaTor = prefs.getBoolean("tor_videos", true),
+            moneyOperationsViaTor = prefs.getBoolean("tor_money", true),
+            nip05VerificationsViaTor = prefs.getBoolean("tor_nip05", true),
+            mediaUploadsViaTor = prefs.getBoolean("tor_media_uploads", true),
         )
 
     override fun save(settings: TorSettings) {

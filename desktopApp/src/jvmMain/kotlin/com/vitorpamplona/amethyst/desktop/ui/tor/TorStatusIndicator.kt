@@ -30,6 +30,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -43,12 +44,13 @@ import com.vitorpamplona.amethyst.commons.tor.TorServiceStatus
 
 /**
  * Small shield icon showing Tor connection status in the sidebar footer.
- * Tooltip shows status text (no port number for security).
+ * Clickable to open Tor settings. Tooltip shows status text.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun TorStatusIndicator(
     status: TorServiceStatus,
+    onClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val (icon, tint, tooltip) =
@@ -86,11 +88,22 @@ fun TorStatusIndicator(
         },
         tooltipPlacement = TooltipPlacement.CursorPoint(alignment = Alignment.BottomEnd, offset = DpOffset(0.dp, 16.dp)),
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = tooltip,
-            tint = tint,
-            modifier = modifier.size(20.dp),
-        )
+        if (onClick != null) {
+            IconButton(onClick = onClick, modifier = modifier.size(28.dp)) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = tooltip,
+                    tint = tint,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+        } else {
+            Icon(
+                imageVector = icon,
+                contentDescription = tooltip,
+                tint = tint,
+                modifier = modifier.size(20.dp),
+            )
+        }
     }
 }

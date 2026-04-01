@@ -90,12 +90,10 @@ fun DeckSidebar(
             lastPingTimeSec = lastPingTimeSec,
         )
 
-        if (torStatus !is TorServiceStatus.Off) {
-            Spacer(Modifier.size(4.dp))
-            TorStatusIndicator(status = torStatus)
-        }
+        Spacer(Modifier.size(4.dp))
+        TorStatusIndicator(status = torStatus, onClick = onOpenSettings)
 
-        Spacer(Modifier.size(8.dp))
+        Spacer(Modifier.size(4.dp))
 
         IconButton(onClick = onOpenSettings) {
             Icon(

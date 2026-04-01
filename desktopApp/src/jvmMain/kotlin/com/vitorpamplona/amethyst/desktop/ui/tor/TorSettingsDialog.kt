@@ -77,114 +77,119 @@ fun TorSettingsDialog(
         state = rememberDialogState(size = DpSize(480.dp, 640.dp)),
     ) {
         Surface(color = MaterialTheme.colorScheme.background) {
-            Column(
-                modifier =
-                    Modifier
-                        .padding(24.dp)
-                        .verticalScroll(rememberScrollState()),
-            ) {
-                // Status
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    TorStatusIndicator(status = torStatus)
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        when (torStatus) {
-                            is TorServiceStatus.Off -> "Tor is off"
-                            is TorServiceStatus.Connecting -> "Connecting to Tor..."
-                            is TorServiceStatus.Active -> "Connected via Tor"
-                            is TorServiceStatus.Error -> "Error: ${torStatus.message}"
-                        },
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
-                }
+            Column(modifier = Modifier.padding(24.dp)) {
+                // Scrollable content
+                Column(
+                    modifier =
+                        Modifier
+                            .weight(1f)
+                            .verticalScroll(rememberScrollState()),
+                ) {
+                    // Status
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        TorStatusIndicator(status = torStatus)
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            when (torStatus) {
+                                is TorServiceStatus.Off -> "Tor is off"
+                                is TorServiceStatus.Connecting -> "Connecting to Tor..."
+                                is TorServiceStatus.Active -> "Connected via Tor"
+                                is TorServiceStatus.Error -> "Error: ${torStatus.message}"
+                            },
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                    }
 
-                Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(16.dp))
 
-                // Mode selector
-                Text("Mode", style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(8.dp))
-                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                    TorType.entries.forEachIndexed { index, torType ->
-                        SegmentedButton(
-                            shape = SegmentedButtonDefaults.itemShape(index, TorType.entries.size),
-                            onClick = { editSettings = editSettings.copy(torType = torType) },
-                            selected = editSettings.torType == torType,
-                        ) {
-                            Text(torType.name.lowercase().replaceFirstChar { it.uppercase() })
+                    // Mode selector
+                    Text("Mode", style = MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.height(8.dp))
+                    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                        TorType.entries.forEachIndexed { index, torType ->
+                            SegmentedButton(
+                                shape = SegmentedButtonDefaults.itemShape(index, TorType.entries.size),
+                                onClick = { editSettings = editSettings.copy(torType = torType) },
+                                selected = editSettings.torType == torType,
+                            ) {
+                                Text(torType.name.lowercase().replaceFirstChar { it.uppercase() })
+                            }
                         }
                     }
-                }
 
-                if (editSettings.torType == TorType.EXTERNAL) {
-                    Spacer(Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = editSettings.externalSocksPort.toString(),
-                        onValueChange = { text ->
-                            text.toIntOrNull()?.let { port ->
-                                if (port in 1..65535) {
-                                    editSettings = editSettings.copy(externalSocksPort = port)
+                    if (editSettings.torType == TorType.EXTERNAL) {
+                        Spacer(Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = editSettings.externalSocksPort.toString(),
+                            onValueChange = { text ->
+                                text.toIntOrNull()?.let { port ->
+                                    if (port in 1..65535) {
+                                        editSettings = editSettings.copy(externalSocksPort = port)
+                                    }
                                 }
-                            }
-                        },
-                        label = { Text("SOCKS Port") },
-                        singleLine = true,
-                        modifier = Modifier.width(150.dp),
-                    )
-                }
+                            },
+                            label = { Text("SOCKS Port") },
+                            singleLine = true,
+                            modifier = Modifier.width(150.dp),
+                        )
+                    }
 
-                Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(16.dp))
+                    HorizontalDivider()
+                    Spacer(Modifier.height(16.dp))
+
+                    // Presets
+                    Text("Preset", style = MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.height(8.dp))
+
+                    val currentPreset = whichPreset(editSettings)
+                    PresetRow("Only When Needed", TorPresetType.ONLY_WHEN_NEEDED, currentPreset) {
+                        editSettings = torOnlyWhenNeededPreset.copy(torType = editSettings.torType, externalSocksPort = editSettings.externalSocksPort)
+                    }
+                    PresetRow("Default", TorPresetType.DEFAULT, currentPreset) {
+                        editSettings = torDefaultPreset.copy(torType = editSettings.torType, externalSocksPort = editSettings.externalSocksPort)
+                    }
+                    PresetRow("Small Payloads", TorPresetType.SMALL_PAYLOADS, currentPreset) {
+                        editSettings = torSmallPayloadsPreset.copy(torType = editSettings.torType, externalSocksPort = editSettings.externalSocksPort)
+                    }
+                    PresetRow("Full Privacy", TorPresetType.FULL_PRIVACY, currentPreset) {
+                        editSettings = torFullyPrivate.copy(torType = editSettings.torType, externalSocksPort = editSettings.externalSocksPort)
+                    }
+                    PresetRow("Custom", TorPresetType.CUSTOM, currentPreset) {}
+
+                    Spacer(Modifier.height(16.dp))
+                    HorizontalDivider()
+                    Spacer(Modifier.height(16.dp))
+
+                    // Relay Routing
+                    Text("Relay Routing", style = MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.height(8.dp))
+                    ToggleRow(".onion relays via Tor", editSettings.onionRelaysViaTor) { editSettings = editSettings.copy(onionRelaysViaTor = it) }
+                    ToggleRow("DM relays via Tor", editSettings.dmRelaysViaTor) { editSettings = editSettings.copy(dmRelaysViaTor = it) }
+                    ToggleRow("Trusted relays via Tor", editSettings.trustedRelaysViaTor) { editSettings = editSettings.copy(trustedRelaysViaTor = it) }
+                    ToggleRow("New/unknown relays via Tor", editSettings.newRelaysViaTor) { editSettings = editSettings.copy(newRelaysViaTor = it) }
+
+                    Spacer(Modifier.height(16.dp))
+                    HorizontalDivider()
+                    Spacer(Modifier.height(16.dp))
+
+                    // Content Routing
+                    Text("Content Routing", style = MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.height(8.dp))
+                    ToggleRow("URL previews via Tor", editSettings.urlPreviewsViaTor) { editSettings = editSettings.copy(urlPreviewsViaTor = it) }
+                    ToggleRow("Profile pictures via Tor", editSettings.profilePicsViaTor) { editSettings = editSettings.copy(profilePicsViaTor = it) }
+                    ToggleRow("Images via Tor", editSettings.imagesViaTor) { editSettings = editSettings.copy(imagesViaTor = it) }
+                    ToggleRow("Videos via Tor", editSettings.videosViaTor) { editSettings = editSettings.copy(videosViaTor = it) }
+                    ToggleRow("NIP-05 verifications via Tor", editSettings.nip05VerificationsViaTor) { editSettings = editSettings.copy(nip05VerificationsViaTor = it) }
+                    ToggleRow("Money operations via Tor", editSettings.moneyOperationsViaTor) { editSettings = editSettings.copy(moneyOperationsViaTor = it) }
+                    ToggleRow("Media uploads via Tor", editSettings.mediaUploadsViaTor) { editSettings = editSettings.copy(mediaUploadsViaTor = it) }
+
+                    Spacer(Modifier.height(16.dp))
+                } // end scrollable content
+
+                // Sticky bottom buttons — always visible
                 HorizontalDivider()
-                Spacer(Modifier.height(16.dp))
-
-                // Presets
-                Text("Preset", style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(8.dp))
-
-                val currentPreset = whichPreset(editSettings)
-                PresetRow("Only When Needed", TorPresetType.ONLY_WHEN_NEEDED, currentPreset) {
-                    editSettings = torOnlyWhenNeededPreset.copy(torType = editSettings.torType, externalSocksPort = editSettings.externalSocksPort)
-                }
-                PresetRow("Default", TorPresetType.DEFAULT, currentPreset) {
-                    editSettings = torDefaultPreset.copy(torType = editSettings.torType, externalSocksPort = editSettings.externalSocksPort)
-                }
-                PresetRow("Small Payloads", TorPresetType.SMALL_PAYLOADS, currentPreset) {
-                    editSettings = torSmallPayloadsPreset.copy(torType = editSettings.torType, externalSocksPort = editSettings.externalSocksPort)
-                }
-                PresetRow("Full Privacy", TorPresetType.FULL_PRIVACY, currentPreset) {
-                    editSettings = torFullyPrivate.copy(torType = editSettings.torType, externalSocksPort = editSettings.externalSocksPort)
-                }
-                PresetRow("Custom", TorPresetType.CUSTOM, currentPreset) {}
-
-                Spacer(Modifier.height(16.dp))
-                HorizontalDivider()
-                Spacer(Modifier.height(16.dp))
-
-                // Relay Routing
-                Text("Relay Routing", style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(8.dp))
-                ToggleRow(".onion relays via Tor", editSettings.onionRelaysViaTor) { editSettings = editSettings.copy(onionRelaysViaTor = it) }
-                ToggleRow("DM relays via Tor", editSettings.dmRelaysViaTor) { editSettings = editSettings.copy(dmRelaysViaTor = it) }
-                ToggleRow("Trusted relays via Tor", editSettings.trustedRelaysViaTor) { editSettings = editSettings.copy(trustedRelaysViaTor = it) }
-                ToggleRow("New/unknown relays via Tor", editSettings.newRelaysViaTor) { editSettings = editSettings.copy(newRelaysViaTor = it) }
-
-                Spacer(Modifier.height(16.dp))
-                HorizontalDivider()
-                Spacer(Modifier.height(16.dp))
-
-                // Content Routing
-                Text("Content Routing", style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(8.dp))
-                ToggleRow("URL previews via Tor", editSettings.urlPreviewsViaTor) { editSettings = editSettings.copy(urlPreviewsViaTor = it) }
-                ToggleRow("Profile pictures via Tor", editSettings.profilePicsViaTor) { editSettings = editSettings.copy(profilePicsViaTor = it) }
-                ToggleRow("Images via Tor", editSettings.imagesViaTor) { editSettings = editSettings.copy(imagesViaTor = it) }
-                ToggleRow("Videos via Tor", editSettings.videosViaTor) { editSettings = editSettings.copy(videosViaTor = it) }
-                ToggleRow("NIP-05 verifications via Tor", editSettings.nip05VerificationsViaTor) { editSettings = editSettings.copy(nip05VerificationsViaTor = it) }
-                ToggleRow("Money operations via Tor", editSettings.moneyOperationsViaTor) { editSettings = editSettings.copy(moneyOperationsViaTor = it) }
-                ToggleRow("Media uploads via Tor", editSettings.mediaUploadsViaTor) { editSettings = editSettings.copy(mediaUploadsViaTor = it) }
-
-                Spacer(Modifier.height(24.dp))
-
-                // Buttons
+                Spacer(Modifier.height(12.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End,
