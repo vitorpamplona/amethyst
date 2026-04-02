@@ -98,9 +98,32 @@ class CallActivity : AppCompatActivity() {
         enterPipIfActive()
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean) {
         super.onPictureInPictureModeChanged(isInPictureInPictureMode)
         isInPipMode.value = isInPictureInPictureMode
+
+        if (!isInPictureInPictureMode) {
+            // User pressed the X button on PiP or expanded it.
+            // If the activity is finishing (user dismissed PiP), hang up.
+            if (isFinishing) {
+                GlobalScope.launch { ActiveCallHolder.callManager?.hangup() }
+            }
+        }
+    }
+
+    @OptIn(DelicateCoroutinesApi::class)
+    override fun onStop() {
+        super.onStop()
+        // When PiP is dismissed (X button), Android stops the activity.
+        // If we're not in PiP anymore and the activity is stopping, hang up and finish.
+        if (!isInPictureInPictureMode) {
+            val state = ActiveCallHolder.callManager?.state?.value
+            if (state is CallState.Connected || state is CallState.Connecting || state is CallState.Offering) {
+                GlobalScope.launch { ActiveCallHolder.callManager?.hangup() }
+            }
+            finishAndRemoveTask()
+        }
     }
 
     @OptIn(DelicateCoroutinesApi::class)
@@ -148,7 +171,7 @@ class CallActivity : AppCompatActivity() {
         val builder =
             PictureInPictureParams
                 .Builder()
-                .setAspectRatio(Rational(16, 9))
+                .setAspectRatio(Rational(9, 16))
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             builder.setActions(buildPipActions())
