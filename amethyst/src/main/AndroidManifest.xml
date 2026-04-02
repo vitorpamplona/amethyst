@@ -206,6 +206,17 @@
             tools:ignore="DiscouragedApi" />
 
         <activity
+            android:name=".ui.call.CallActivity"
+            android:autoRemoveFromRecents="true"
+            android:configChanges="orientation|screenLayout|screenSize|smallestScreenSize|keyboardHidden|keyboard|uiMode"
+            android:supportsPictureInPicture="true"
+            android:launchMode="singleTop"
+            android:exported="false"
+            android:resizeableActivity="true"
+            android:theme="@style/Theme.Amethyst"
+        />
+
+        <activity
             android:name=".service.playback.pip.PipVideoActivity"
             android:autoRemoveFromRecents="true"
             android:configChanges="orientation|screenLayout|screenSize|smallestScreenSize|keyboardHidden|keyboard|uiMode"

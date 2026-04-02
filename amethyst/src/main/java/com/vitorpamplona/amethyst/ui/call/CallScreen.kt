@@ -106,7 +106,6 @@ fun CallScreen(
     }
 
     KeepScreenOn()
-    EnterPipOnLeave(callState)
 
     Box(modifier = Modifier.fillMaxSize()) {
         when (val state = callState) {
@@ -566,39 +565,6 @@ private fun KeepScreenOn() {
         window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         onDispose {
             window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        }
-    }
-}
-
-@Composable
-private fun EnterPipOnLeave(callState: CallState) {
-    val context = LocalContext.current
-    val activity = context as? android.app.Activity ?: return
-    val isActiveCall =
-        callState is CallState.Connected ||
-            callState is CallState.Connecting ||
-            callState is CallState.Offering
-
-    if (isActiveCall && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-        val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
-        DisposableEffect(lifecycleOwner) {
-            val observer =
-                object : androidx.lifecycle.DefaultLifecycleObserver {
-                    override fun onStop(owner: androidx.lifecycle.LifecycleOwner) {
-                        try {
-                            val params =
-                                android.app.PictureInPictureParams
-                                    .Builder()
-                                    .setAspectRatio(android.util.Rational(9, 16))
-                                    .build()
-                            activity.enterPictureInPictureMode(params)
-                        } catch (_: Exception) {
-                            // PiP not supported or activity not in correct state
-                        }
-                    }
-                }
-            lifecycleOwner.lifecycle.addObserver(observer)
-            onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
         }
     }
 }
