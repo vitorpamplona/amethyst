@@ -164,7 +164,15 @@ class WebRtcCallSession(
         videoSource = peerConnectionFactory?.createVideoSource(false)
         localVideoTrack =
             peerConnectionFactory?.createVideoTrack("video0", videoSource).also {
-                peerConnection?.addTrack(it)
+                val sender = peerConnection?.addTrack(it)
+                // Set max bitrate to 1.5 Mbps for good 720p quality
+                sender?.let { s ->
+                    val params = s.parameters
+                    params.encodings.forEach { encoding ->
+                        encoding.maxBitrateBps = 1_500_000
+                    }
+                    s.parameters = params
+                }
             }
         startCamera()
     }
@@ -183,7 +191,7 @@ class WebRtcCallSession(
                     context,
                     source.capturerObserver,
                 )
-                it.startCapture(640, 480, 30)
+                it.startCapture(1280, 720, 30)
             }
     }
 
