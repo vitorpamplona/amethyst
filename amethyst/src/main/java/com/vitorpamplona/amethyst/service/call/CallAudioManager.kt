@@ -127,7 +127,11 @@ class CallAudioManager(
     fun restoreAudioMode() {
         stopBluetoothSco()
         unregisterBluetoothScoReceiver()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            audioManager.clearCommunicationDevice()
+        }
         audioManager.mode = previousAudioMode
+        @Suppress("DEPRECATION")
         audioManager.isSpeakerphoneOn = false
     }
 
@@ -189,17 +193,47 @@ class CallAudioManager(
 
     private fun routeToEarpiece() {
         stopBluetoothSco()
-        audioManager.isSpeakerphoneOn = false
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val earpiece =
+                audioManager
+                    .availableCommunicationDevices
+                    .firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_EARPIECE }
+            earpiece?.let { audioManager.setCommunicationDevice(it) }
+        } else {
+            @Suppress("DEPRECATION")
+            audioManager.isSpeakerphoneOn = false
+        }
     }
 
     private fun routeToSpeaker() {
         stopBluetoothSco()
-        audioManager.isSpeakerphoneOn = true
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val speaker =
+                audioManager
+                    .availableCommunicationDevices
+                    .firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
+            speaker?.let { audioManager.setCommunicationDevice(it) }
+        } else {
+            @Suppress("DEPRECATION")
+            audioManager.isSpeakerphoneOn = true
+        }
     }
 
     private fun routeToBluetooth() {
-        audioManager.isSpeakerphoneOn = false
-        startBluetoothSco()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val btDevice =
+                audioManager
+                    .availableCommunicationDevices
+                    .firstOrNull {
+                        it.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
+                            it.type == AudioDeviceInfo.TYPE_BLE_HEADSET
+                    }
+            btDevice?.let { audioManager.setCommunicationDevice(it) }
+        } else {
+            @Suppress("DEPRECATION")
+            audioManager.isSpeakerphoneOn = false
+            startBluetoothSco()
+        }
     }
 
     private fun hasBluetoothDevice(): Boolean =
