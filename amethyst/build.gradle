@@ -349,9 +349,6 @@ dependencies {
     implementation libs.vico.charts.compose
     implementation libs.vico.charts.m3
 
-    // GeoHash
-    implementation libs.drfonfon.geohash
-
     // Waveform visualizer
     implementation libs.audiowaveform
 

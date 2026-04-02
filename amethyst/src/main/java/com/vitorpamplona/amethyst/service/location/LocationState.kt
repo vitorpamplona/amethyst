@@ -21,8 +21,6 @@
 package com.vitorpamplona.amethyst.service.location
 
 import android.content.Context
-import com.fonfon.kgeohash.GeoHash
-import com.fonfon.kgeohash.toGeoHash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeohashPrecision
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope

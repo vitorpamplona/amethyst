@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe
 
-import com.fonfon.kgeohash.GeoHash
+import com.vitorpamplona.amethyst.service.location.GeoHash
 
 fun compute50kmLine(geoHash: GeoHash): List<String> {
     val hashes = mutableListOf<String>()
