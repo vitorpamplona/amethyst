@@ -38,6 +38,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
+import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -55,7 +57,7 @@ import kotlin.coroutines.cancellation.CancellationException
  * Syncs the user's events across all known relays:
  *  1. Downloads all events authored by the user and sends them to their outbox relays.
  *  2. Downloads all events that p-tag the user (non-DM) and sends them to their inbox relays.
- *  3. Downloads kind-4 and kind-1059 events that p-tag the user and sends them to DM relays.
+ *  3. Downloads kind-4, kind-1059 and kind-21059 events that p-tag the user and sends them to DM relays.
  *
  * Up to [MAX_CONCURRENT_RELAYS] relays are queried in parallel. As soon as one relay is fully
  * exhausted (all pages retrieved) the next relay from the list starts immediately, keeping the
@@ -512,7 +514,7 @@ class EventSync(
                     onEvent = { event, sourceRelay ->
                         val isMyEvent = event.pubKey == myPubKey
                         val mentionsMe = event.tags.isTaggedUser(myPubKey)
-                        val isDmKind = event.kind == 4 || event.kind == 1059
+                        val isDmKind = event.kind == 4 || event.kind == GiftWrapEvent.KIND || event.kind == EphemeralGiftWrapEvent.KIND
 
                         val live = liveActivity.value
 

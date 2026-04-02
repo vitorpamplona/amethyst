@@ -238,6 +238,7 @@ import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.nip58Badges.profile.ProfileBadgesEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
 import com.vitorpamplona.quartz.nip64Chess.challenge.accept.LiveChessGameAcceptEvent
@@ -615,6 +616,7 @@ fun kindDisplayName(kind: Int): Int =
         GenericRepostEvent.KIND -> R.string.kind_reposts_16
         GeohashListEvent.KIND -> R.string.kind_geohash_follows
         GiftWrapEvent.KIND -> R.string.kind_gift_wraps
+        EphemeralGiftWrapEvent.KIND -> R.string.kind_gift_wraps
         GitIssueEvent.KIND -> R.string.kind_git_issue
         GitPatchEvent.KIND -> R.string.kind_git_patch
         GitRepositoryEvent.KIND -> R.string.kind_git_repo
@@ -693,7 +695,7 @@ fun kindDisplayName(kind: Int): Int =
 
 val posts = setOf(0, 1, 6, 7, 16, 30023)
 val settings = setOf(3, 10002, 10000, 10001, 10003, 10004, 30000)
-val dms = setOf(4, 1059, 10050)
+val dms = setOf(4, GiftWrapEvent.KIND, EphemeralGiftWrapEvent.KIND, 10050)
 val zaps = setOf(9734, 9735, 9041, 17375, 23194, 23195)
 val reports = setOf(ReportEvent.KIND, MuteListEvent.KIND, DeletionEvent.KIND, RequestToVanishEvent.KIND)
 
