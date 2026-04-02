@@ -30,7 +30,8 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
 
-private const val DEFAULT_SOCKS_PORT = 19050
+private const val DEFAULT_SOCKS_PORT = 17392
+private const val MAX_PORT_RETRIES = 10
 
 /**
  * Manages the Arti Tor client via custom JNI bindings.
@@ -46,7 +47,7 @@ private const val DEFAULT_SOCKS_PORT = 19050
 class TorService(
     val context: Context,
 ) {
-    private val socksPort = DEFAULT_SOCKS_PORT
+    private var socksPort = DEFAULT_SOCKS_PORT
     private val initialized = AtomicBoolean(false)
     private val proxyRunning = AtomicBoolean(false)
 
@@ -101,10 +102,22 @@ class TorService(
                 }
             }
 
-            // Start the SOCKS proxy (can be called multiple times safely)
-            val proxyResult = ArtiNative.startSocksProxy(socksPort)
-            if (proxyResult != 0) {
-                Log.e("TorService") { "Failed to start SOCKS proxy: error $proxyResult" }
+            // Start the SOCKS proxy, retrying on next port if address is in use
+            var port = socksPort
+            var started = false
+            for (attempt in 0 until MAX_PORT_RETRIES) {
+                val proxyResult = ArtiNative.startSocksProxy(port)
+                if (proxyResult == 0) {
+                    socksPort = port
+                    started = true
+                    break
+                }
+                Log.w("TorService") { "Port $port in use, trying ${port + 1}" }
+                port++
+            }
+
+            if (!started) {
+                Log.e("TorService") { "Failed to start SOCKS proxy after $MAX_PORT_RETRIES attempts" }
                 _status.value = TorServiceStatus.Off
                 return@withContext
             }
