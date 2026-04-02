@@ -35,6 +35,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.mutableStateOf
+import androidx.lifecycle.lifecycleScope
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.call.CallState
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
@@ -79,6 +80,7 @@ class CallActivity : AppCompatActivity() {
         }
 
         registerPipReceiver()
+        observeVideoStateForPip(callController)
 
         setContent {
             AmethystTheme {
@@ -140,6 +142,15 @@ class CallActivity : AppCompatActivity() {
         super.onDestroy()
     }
 
+    private fun observeVideoStateForPip(controller: com.vitorpamplona.amethyst.service.call.CallController?) {
+        controller ?: return
+        lifecycleScope.launch {
+            controller.isRemoteVideoActive.collect {
+                updatePipParams()
+            }
+        }
+    }
+
     private fun enterPipIfActive() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val callManager = ActiveCallHolder.callManager ?: return
@@ -168,16 +179,33 @@ class CallActivity : AppCompatActivity() {
     }
 
     private fun buildPipParams(): PictureInPictureParams {
+        val aspectRatio = computePipAspectRatio()
         val builder =
             PictureInPictureParams
                 .Builder()
-                .setAspectRatio(Rational(9, 16))
+                .setAspectRatio(aspectRatio)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             builder.setActions(buildPipActions())
         }
 
         return builder.build()
+    }
+
+    private fun computePipAspectRatio(): Rational {
+        val controller = ActiveCallHolder.callController ?: return Rational(9, 16)
+        val isVideoActive = controller.isRemoteVideoActive.value
+        val videoRatio = controller.remoteVideoAspectRatio.value
+
+        if (isVideoActive && videoRatio != null && videoRatio > 0f) {
+            // Clamp to Android's allowed PiP range (roughly 1:2.39 to 2.39:1)
+            val clamped = videoRatio.coerceIn(0.42f, 2.39f)
+            val num = (clamped * 1000).toInt()
+            return Rational(num, 1000)
+        }
+
+        // No active video — use portrait ratio
+        return Rational(9, 16)
     }
 
     private fun buildPipActions(): List<RemoteAction> {

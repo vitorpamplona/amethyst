@@ -82,11 +82,18 @@ class CallController(
     // Remote video frame monitoring — detects when peer stops sending video
     private val _isRemoteVideoActive = MutableStateFlow(false)
     val isRemoteVideoActive: StateFlow<Boolean> = _isRemoteVideoActive.asStateFlow()
+    private val _remoteVideoAspectRatio = MutableStateFlow<Float?>(null)
+    val remoteVideoAspectRatio: StateFlow<Float?> = _remoteVideoAspectRatio.asStateFlow()
     private val lastRemoteFrameTimeMs = AtomicLong(0L)
     private var remoteVideoMonitorJob: kotlinx.coroutines.Job? = null
     private val remoteFrameSink =
-        VideoSink { _: VideoFrame ->
+        VideoSink { frame: VideoFrame ->
             lastRemoteFrameTimeMs.set(System.currentTimeMillis())
+            val w = frame.rotatedWidth
+            val h = frame.rotatedHeight
+            if (w > 0 && h > 0) {
+                _remoteVideoAspectRatio.value = w.toFloat() / h.toFloat()
+            }
         }
 
     // Audio/video toggle state (UI concerns, not domain state)
@@ -358,6 +365,7 @@ class CallController(
         _isAudioMuted.value = false
         _isVideoEnabled.value = false
         _isRemoteVideoActive.value = false
+        _remoteVideoAspectRatio.value = null
         videoPausedByProximity = false
         webRtcSession?.dispose()
         webRtcSession = null
