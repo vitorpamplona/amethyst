@@ -46,6 +46,10 @@ import kotlinx.coroutines.launch
 class CallActivity : AppCompatActivity() {
     val isInPipMode = mutableStateOf(false)
 
+    // Tracks whether we entered PiP at least once, so we can distinguish
+    // "user swiped PiP away" from "user pressed Home from full-screen call".
+    private var wasInPipMode = false
+
     private val pipActionReceiver =
         object : BroadcastReceiver() {
             @OptIn(DelicateCoroutinesApi::class)
@@ -112,26 +116,24 @@ class CallActivity : AppCompatActivity() {
         enterPipIfActive()
     }
 
-    @OptIn(DelicateCoroutinesApi::class)
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean) {
         super.onPictureInPictureModeChanged(isInPictureInPictureMode)
         isInPipMode.value = isInPictureInPictureMode
 
-        if (!isInPictureInPictureMode) {
-            // User pressed the X button on PiP or expanded it.
-            // If the activity is finishing (user dismissed PiP), hang up.
-            if (isFinishing) {
-                GlobalScope.launch { ActiveCallHolder.callManager?.hangup() }
-            }
+        if (isInPictureInPictureMode) {
+            wasInPipMode = true
         }
     }
 
     @OptIn(DelicateCoroutinesApi::class)
     override fun onStop() {
         super.onStop()
-        // When PiP is dismissed (X button), Android stops the activity.
-        // If we're not in PiP anymore and the activity is stopping, hang up and finish.
-        if (!isInPictureInPictureMode) {
+        // Only hang up if the user dismissed PiP (swiped it away).
+        // When PiP is dismissed, Android calls onStop with isInPictureInPictureMode == false
+        // after the activity was previously in PiP mode.
+        // We must NOT hang up when the user simply presses Home from the full-screen
+        // call UI (that enters PiP via onUserLeaveHint instead).
+        if (wasInPipMode && !isInPictureInPictureMode) {
             val state = ActiveCallHolder.callManager?.state?.value
             if (state is CallState.Connected || state is CallState.Connecting || state is CallState.Offering) {
                 GlobalScope.launch { ActiveCallHolder.callManager?.hangup() }
@@ -140,17 +142,8 @@ class CallActivity : AppCompatActivity() {
         }
     }
 
-    @OptIn(DelicateCoroutinesApi::class)
     override fun onDestroy() {
         unregisterPipReceiver()
-
-        // If the activity is being destroyed while still in an active call
-        // (e.g. user swiped PiP away), hang up the call.
-        val state = ActiveCallHolder.callManager?.state?.value
-        if (state is CallState.Connected || state is CallState.Connecting || state is CallState.Offering) {
-            GlobalScope.launch { ActiveCallHolder.callManager?.hangup() }
-        }
-
         super.onDestroy()
     }
 

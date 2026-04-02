@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.call
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import com.vitorpamplona.amethyst.commons.call.CallState
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
@@ -36,22 +37,26 @@ class CallNotificationReceiver : BroadcastReceiver() {
     ) {
         when (intent.action) {
             ACTION_ACCEPT_CALL -> {
+                NotificationUtils.cancelCallNotification(context)
+
                 val callController = ActiveCallHolder.callController
                 val callManager = ActiveCallHolder.callManager
-                val state = callManager?.state?.value
-                if (state is com.vitorpamplona.amethyst.commons.call.CallState.IncomingCall) {
-                    callController?.acceptIncomingCall(state.sdpOffer)
+                if (callController == null || callManager == null) return
+
+                val state = callManager.state.value
+                if (state is CallState.IncomingCall) {
+                    callController.acceptIncomingCall(state.sdpOffer)
+                    CallActivity.launch(context)
                 }
-                NotificationUtils.cancelCallNotification(context)
-                CallActivity.launch(context)
             }
 
             ACTION_REJECT_CALL -> {
-                val callManager = ActiveCallHolder.callManager
-                GlobalScope.launch {
-                    callManager?.rejectCall()
-                }
                 NotificationUtils.cancelCallNotification(context)
+
+                val callManager = ActiveCallHolder.callManager ?: return
+                GlobalScope.launch {
+                    callManager.rejectCall()
+                }
             }
         }
     }
