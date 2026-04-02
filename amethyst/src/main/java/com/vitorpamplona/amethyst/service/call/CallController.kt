@@ -93,6 +93,9 @@ class CallController(
     val audioRoute: StateFlow<AudioRoute> = audioManager.audioRoute
     val isBluetoothAvailable: StateFlow<Boolean> = audioManager.isBluetoothAvailable
 
+    // Tracks whether video is paused because the phone is near the ear
+    private var videoPausedByProximity = false
+
     init {
         callManager.onRenegotiationOfferReceived = { event -> onRenegotiationOfferReceived(event) }
 
@@ -123,6 +126,22 @@ class CallController(
                     }
 
                     else -> {}
+                }
+            }
+        }
+
+        // Pause outgoing video when the phone is held near the ear
+        scope.launch {
+            audioManager.isNearEar.collect { nearEar ->
+                val session = webRtcSession ?: return@collect
+                if (nearEar && _isVideoEnabled.value && !videoPausedByProximity) {
+                    videoPausedByProximity = true
+                    session.setVideoEnabled(false)
+                    session.stopCamera()
+                } else if (!nearEar && videoPausedByProximity) {
+                    videoPausedByProximity = false
+                    session.setVideoEnabled(true)
+                    session.startCamera()
                 }
             }
         }
@@ -323,6 +342,7 @@ class CallController(
         _isAudioMuted.value = false
         _isVideoEnabled.value = false
         _isRemoteVideoActive.value = false
+        videoPausedByProximity = false
         webRtcSession?.dispose()
         webRtcSession = null
         remoteDescriptionSet.set(false)
