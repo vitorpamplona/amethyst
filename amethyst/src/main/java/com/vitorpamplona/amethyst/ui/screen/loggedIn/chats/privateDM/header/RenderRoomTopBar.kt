@@ -33,6 +33,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.EditNote
+import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -74,6 +75,7 @@ fun RenderRoomTopBar(
     accountViewModel: AccountViewModel,
     nav: INav,
     onCallClick: ((String) -> Unit)? = null,
+    onVideoCallClick: ((String) -> Unit)? = null,
 ) {
     if (room.users.size == 1) {
         TopBarExtensibleWithBackButton(
@@ -89,6 +91,20 @@ fun RenderRoomTopBar(
                         Spacer(modifier = DoubleHorzSpacer)
 
                         UsernameDisplay(baseUser, Modifier.weight(1f), fontWeight = FontWeight.Normal, accountViewModel = accountViewModel)
+
+                        if (onVideoCallClick != null) {
+                            IconButton(
+                                onClick = { onVideoCallClick(baseUser.pubkeyHex) },
+                                modifier = Modifier.size(40.dp),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Videocam,
+                                    contentDescription = "Video call",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                            }
+                        }
 
                         if (onCallClick != null) {
                             IconButton(

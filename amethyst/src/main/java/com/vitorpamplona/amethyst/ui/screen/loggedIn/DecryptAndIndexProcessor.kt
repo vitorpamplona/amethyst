@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
+import com.vitorpamplona.amethyst.commons.call.CallManager
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -36,6 +37,12 @@ import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip57Zaps.PrivateZapCache
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallAnswerEvent
+import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallHangupEvent
+import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallIceCandidateEvent
+import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallOfferEvent
+import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallRejectEvent
+import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallRenegotiateEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 
@@ -51,6 +58,8 @@ class EventProcessor(
 
     private val zapRequest = LnZapRequestEventHandler(account.privateZapsDecryptionCache)
     private val zapEvent = LnZapEventHandler(account.privateZapsDecryptionCache)
+
+    var callManager: CallManager? = null
 
     suspend fun consume(note: Note) {
         note.event?.let { event ->
@@ -68,10 +77,22 @@ class EventProcessor(
         publicNote: Note,
     ) {
         when (event) {
+            is CallOfferEvent,
+            is CallAnswerEvent,
+            is CallIceCandidateEvent,
+            is CallHangupEvent,
+            is CallRejectEvent,
+            is CallRenegotiateEvent,
+            -> callManager?.onSignalingEvent(event)
+
             is ChatroomKeyable -> chatHandler.add(event, eventNote, publicNote)
+
             is DraftWrapEvent -> draftHandler.add(event, eventNote, publicNote)
+
             is GiftWrapEvent -> giftWrapHandler.add(event, eventNote, publicNote)
+
             is SealedRumorEvent -> sealHandler.add(event, eventNote, publicNote)
+
             is LnZapRequestEvent -> zapRequest.add(event, eventNote, publicNote)
         }
     }

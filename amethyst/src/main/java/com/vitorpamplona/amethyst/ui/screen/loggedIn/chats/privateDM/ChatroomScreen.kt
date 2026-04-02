@@ -48,10 +48,16 @@ fun ChatroomScreen(
     nav: INav,
 ) {
     val context = LocalContext.current
-    val startCall =
+    val startVoiceCall =
         rememberCallWithPermission(context) {
             val peerPubKey = roomId.users.firstOrNull() ?: return@rememberCallWithPermission
             accountViewModel.callController?.initiateCall(peerPubKey, CallType.VOICE)
+            nav.nav(Route.ActiveCall(callId = "", peerPubKey = peerPubKey))
+        }
+    val startVideoCall =
+        rememberCallWithPermission(context) {
+            val peerPubKey = roomId.users.firstOrNull() ?: return@rememberCallWithPermission
+            accountViewModel.callController?.initiateCall(peerPubKey, CallType.VIDEO)
             nav.nav(Route.ActiveCall(callId = "", peerPubKey = peerPubKey))
         }
 
@@ -62,7 +68,8 @@ fun ChatroomScreen(
                 room = roomId,
                 accountViewModel = accountViewModel,
                 nav = nav,
-                onCallClick = { _ -> startCall() },
+                onCallClick = { _ -> startVoiceCall() },
+                onVideoCallClick = { _ -> startVideoCall() },
             )
         },
         accountViewModel = accountViewModel,
