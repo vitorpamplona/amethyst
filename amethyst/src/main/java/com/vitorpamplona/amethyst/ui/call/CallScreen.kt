@@ -107,7 +107,14 @@ fun CallScreen(
     Box(modifier = Modifier.fillMaxSize()) {
         when (val state = callState) {
             is CallState.Idle -> {
-                LaunchedEffect(Unit) { onCallEnded() }
+                // Wait briefly — initiateCall runs async and state may not have
+                // transitioned yet when navigating to this screen
+                LaunchedEffect(Unit) {
+                    delay(500)
+                    if (callManager.state.value is CallState.Idle) {
+                        onCallEnded()
+                    }
+                }
             }
 
             is CallState.Offering -> {
