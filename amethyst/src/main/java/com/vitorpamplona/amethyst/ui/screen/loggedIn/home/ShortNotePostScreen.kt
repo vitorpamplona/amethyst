@@ -186,7 +186,7 @@ fun ShortNotePostScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun NewPostScreenInner(
+internal fun NewPostScreenInner(
     postViewModel: ShortNotePostViewModel,
     accountViewModel: AccountViewModel,
     nav: Nav,

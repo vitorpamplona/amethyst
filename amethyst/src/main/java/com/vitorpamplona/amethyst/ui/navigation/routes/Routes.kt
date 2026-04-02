@@ -363,6 +363,18 @@ sealed class Route {
     ) : Route()
 
     @Serializable
+    data class NewPoll(
+        val message: String? = null,
+        val draft: String? = null,
+    ) : Route()
+
+    @Serializable
+    data class NewZapPoll(
+        val message: String? = null,
+        val draft: String? = null,
+    ) : Route()
+
+    @Serializable
     data class VoiceReply(
         val replyToNoteId: String,
         val recordingFilePath: String,
