@@ -52,12 +52,30 @@ class CallController(
     private var currentPeerPubKey: HexKey? = null
     private var remoteDescriptionSet = false
     private val pendingIceCandidates = CopyOnWriteArrayList<IceCandidate>()
+    val audioManager = CallAudioManager(context)
 
     init {
         scope.launch {
             callManager.state.collect { state ->
-                if (state is CallState.Ended && webRtcSession != null) {
-                    cleanup()
+                when (state) {
+                    is CallState.IncomingCall -> {
+                        audioManager.startRinging()
+                    }
+
+                    is CallState.Connecting -> {
+                        audioManager.stopRinging()
+                        audioManager.acquireProximityWakeLock()
+                    }
+
+                    is CallState.Connected -> {
+                        audioManager.acquireProximityWakeLock()
+                    }
+
+                    is CallState.Ended -> {
+                        cleanup()
+                    }
+
+                    else -> {}
                 }
             }
         }
@@ -161,6 +179,7 @@ class CallController(
     }
 
     fun cleanup() {
+        audioManager.release()
         stopForegroundService()
         NotificationUtils.cancelCallNotification(context)
         webRtcSession?.dispose()
