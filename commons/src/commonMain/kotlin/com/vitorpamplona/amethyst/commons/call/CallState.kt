@@ -68,4 +68,5 @@ enum class EndReason {
     ERROR,
     PEER_HANGUP,
     PEER_REJECTED,
+    ANSWERED_ELSEWHERE,
 }
