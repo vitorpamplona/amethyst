@@ -263,6 +263,8 @@ class WebRtcCallSession(
         peerConnection?.addIceCandidate(candidate)
     }
 
+    fun getSignalingState(): PeerConnection.SignalingState? = peerConnection?.signalingState()
+
     fun setAudioEnabled(enabled: Boolean) {
         localAudioTrack?.setEnabled(enabled)
     }

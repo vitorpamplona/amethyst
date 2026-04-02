@@ -24,6 +24,10 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.media.AudioAttributes
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
@@ -61,6 +65,25 @@ class CallAudioManager(
 
     private val _isBluetoothAvailable = MutableStateFlow(false)
     val isBluetoothAvailable: StateFlow<Boolean> = _isBluetoothAvailable.asStateFlow()
+
+    // Proximity sensor — detects when the phone is held near the ear
+    private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
+    private val proximitySensor: Sensor? = sensorManager?.getDefaultSensor(Sensor.TYPE_PROXIMITY)
+    private val _isNearEar = MutableStateFlow(false)
+    val isNearEar: StateFlow<Boolean> = _isNearEar.asStateFlow()
+
+    private val proximityListener =
+        object : SensorEventListener {
+            override fun onSensorChanged(event: SensorEvent) {
+                val maxRange = event.sensor.maximumRange
+                _isNearEar.value = event.values[0] < maxRange
+            }
+
+            override fun onAccuracyChanged(
+                sensor: Sensor?,
+                accuracy: Int,
+            ) {}
+        }
 
     fun startRinging() {
         startRingtone()
@@ -104,7 +127,11 @@ class CallAudioManager(
     fun restoreAudioMode() {
         stopBluetoothSco()
         unregisterBluetoothScoReceiver()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            audioManager.clearCommunicationDevice()
+        }
         audioManager.mode = previousAudioMode
+        @Suppress("DEPRECATION")
         audioManager.isSpeakerphoneOn = false
     }
 
@@ -137,11 +164,24 @@ class CallAudioManager(
                 "amethyst:call_proximity",
             )
         proximityWakeLock?.acquire(60 * 60 * 1000L)
+        registerProximitySensor()
     }
 
     fun releaseProximityWakeLock() {
         proximityWakeLock?.let { if (it.isHeld) it.release() }
         proximityWakeLock = null
+        unregisterProximitySensor()
+    }
+
+    private fun registerProximitySensor() {
+        proximitySensor?.let {
+            sensorManager?.registerListener(proximityListener, it, SensorManager.SENSOR_DELAY_NORMAL)
+        }
+    }
+
+    private fun unregisterProximitySensor() {
+        sensorManager?.unregisterListener(proximityListener)
+        _isNearEar.value = false
     }
 
     fun release() {
@@ -153,17 +193,47 @@ class CallAudioManager(
 
     private fun routeToEarpiece() {
         stopBluetoothSco()
-        audioManager.isSpeakerphoneOn = false
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val earpiece =
+                audioManager
+                    .availableCommunicationDevices
+                    .firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_EARPIECE }
+            earpiece?.let { audioManager.setCommunicationDevice(it) }
+        } else {
+            @Suppress("DEPRECATION")
+            audioManager.isSpeakerphoneOn = false
+        }
     }
 
     private fun routeToSpeaker() {
         stopBluetoothSco()
-        audioManager.isSpeakerphoneOn = true
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val speaker =
+                audioManager
+                    .availableCommunicationDevices
+                    .firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
+            speaker?.let { audioManager.setCommunicationDevice(it) }
+        } else {
+            @Suppress("DEPRECATION")
+            audioManager.isSpeakerphoneOn = true
+        }
     }
 
     private fun routeToBluetooth() {
-        audioManager.isSpeakerphoneOn = false
-        startBluetoothSco()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val btDevice =
+                audioManager
+                    .availableCommunicationDevices
+                    .firstOrNull {
+                        it.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
+                            it.type == AudioDeviceInfo.TYPE_BLE_HEADSET
+                    }
+            btDevice?.let { audioManager.setCommunicationDevice(it) }
+        } else {
+            @Suppress("DEPRECATION")
+            audioManager.isSpeakerphoneOn = false
+            startBluetoothSco()
+        }
     }
 
     private fun hasBluetoothDevice(): Boolean =

@@ -24,7 +24,10 @@ import android.content.Context
 import android.content.Intent
 import com.vitorpamplona.amethyst.commons.call.CallManager
 import com.vitorpamplona.amethyst.commons.call.CallState
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.WebRtcCallFactory
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallIceCandidateEvent
@@ -40,6 +43,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.webrtc.IceCandidate
+import org.webrtc.PeerConnection
 import org.webrtc.SessionDescription
 import org.webrtc.VideoFrame
 import org.webrtc.VideoSink
@@ -93,6 +97,9 @@ class CallController(
     val audioRoute: StateFlow<AudioRoute> = audioManager.audioRoute
     val isBluetoothAvailable: StateFlow<Boolean> = audioManager.isBluetoothAvailable
 
+    // Tracks whether video is paused because the phone is near the ear
+    private var videoPausedByProximity = false
+
     init {
         callManager.onRenegotiationOfferReceived = { event -> onRenegotiationOfferReceived(event) }
 
@@ -101,6 +108,7 @@ class CallController(
                 when (state) {
                     is CallState.IncomingCall -> {
                         audioManager.startRinging()
+                        showIncomingCallNotification(state.callerPubKey)
                     }
 
                     is CallState.Offering -> {
@@ -123,6 +131,22 @@ class CallController(
                     }
 
                     else -> {}
+                }
+            }
+        }
+
+        // Pause outgoing video when the phone is held near the ear
+        scope.launch {
+            audioManager.isNearEar.collect { nearEar ->
+                val session = webRtcSession ?: return@collect
+                if (nearEar && _isVideoEnabled.value && !videoPausedByProximity) {
+                    videoPausedByProximity = true
+                    session.setVideoEnabled(false)
+                    session.stopCamera()
+                } else if (!nearEar && videoPausedByProximity) {
+                    videoPausedByProximity = false
+                    session.setVideoEnabled(true)
+                    session.startCamera()
                 }
             }
         }
@@ -209,8 +233,18 @@ class CallController(
     }
 
     fun onCallAnswerReceived(sdpAnswer: String) {
-        Log.d(TAG) { "Answer received, SDP length=${sdpAnswer.length}, session=${webRtcSession != null}" }
-        webRtcSession?.setRemoteDescription(SessionDescription(SessionDescription.Type.ANSWER, sdpAnswer))
+        val session = webRtcSession ?: return
+        val signalingState = session.getSignalingState()
+        Log.d(TAG) { "Answer received, SDP length=${sdpAnswer.length}, signalingState=$signalingState" }
+
+        // An answer is only valid when we have a pending local offer.
+        // Ignore stale answers (e.g. our own renegotiation answer echoed back by the relay).
+        if (signalingState != PeerConnection.SignalingState.HAVE_LOCAL_OFFER) {
+            Log.d(TAG) { "Ignoring answer in $signalingState state (no pending local offer)" }
+            return
+        }
+
+        session.setRemoteDescription(SessionDescription(SessionDescription.Type.ANSWER, sdpAnswer))
         flushPendingIceCandidates()
     }
 
@@ -323,6 +357,7 @@ class CallController(
         _isAudioMuted.value = false
         _isVideoEnabled.value = false
         _isRemoteVideoActive.value = false
+        videoPausedByProximity = false
         webRtcSession?.dispose()
         webRtcSession = null
         remoteDescriptionSet.set(false)
@@ -416,5 +451,18 @@ class CallController(
             context.startService(intent)
         } catch (_: Exception) {
         }
+    }
+
+    private fun showIncomingCallNotification(callerPubKey: String) {
+        val callerUser = LocalCache.getUserIfExists(callerPubKey)
+        val callerName = callerUser?.toBestDisplayName() ?: callerPubKey.take(8) + "..."
+        val uri = "nostr:${callerPubKey.hexToByteArray().toNpub()}"
+
+        NotificationUtils.sendCallNotification(
+            callerName = callerName,
+            callerBitmap = null,
+            uri = uri,
+            applicationContext = context,
+        )
     }
 }
