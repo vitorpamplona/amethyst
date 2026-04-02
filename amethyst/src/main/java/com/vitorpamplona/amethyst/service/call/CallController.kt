@@ -38,7 +38,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.webrtc.IceCandidate
-import org.webrtc.MediaStream
 import org.webrtc.SessionDescription
 import org.webrtc.VideoTrack
 import java.util.UUID
@@ -274,9 +273,7 @@ class CallController(
                     callManager.onPeerConnected()
                     startForegroundService()
                 },
-                onRemoteStream = { stream: MediaStream ->
-                    stream.videoTracks?.firstOrNull()?.let { _remoteVideoTrack.value = it }
-                },
+                onRemoteVideoTrack = { track -> _remoteVideoTrack.value = track },
                 onDisconnected = { scope.launch { callManager.hangup() } },
                 onError = { error -> _errorMessage.value = error },
             )

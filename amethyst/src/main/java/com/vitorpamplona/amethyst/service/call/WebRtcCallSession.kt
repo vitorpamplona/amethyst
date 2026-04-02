@@ -49,7 +49,7 @@ class WebRtcCallSession(
     private val iceServers: List<PeerConnection.IceServer>,
     private val onIceCandidate: (IceCandidate) -> Unit,
     private val onPeerConnected: () -> Unit,
-    private val onRemoteStream: (MediaStream) -> Unit,
+    private val onRemoteVideoTrack: (VideoTrack) -> Unit,
     private val onDisconnected: () -> Unit,
     private val onError: (String) -> Unit = {},
 ) {
@@ -123,7 +123,8 @@ class WebRtcCallSession(
                     override fun onIceGatheringChange(state: PeerConnection.IceGatheringState?) {}
 
                     override fun onAddStream(stream: MediaStream?) {
-                        stream?.let { onRemoteStream(it) }
+                        // Fallback for Plan B SDP — Unified Plan uses onAddTrack
+                        stream?.videoTracks?.firstOrNull()?.let { onRemoteVideoTrack(it) }
                     }
 
                     override fun onRemoveStream(stream: MediaStream?) {}
@@ -135,7 +136,13 @@ class WebRtcCallSession(
                     override fun onAddTrack(
                         receiver: RtpReceiver?,
                         streams: Array<out MediaStream>?,
-                    ) {}
+                    ) {
+                        // Unified Plan: extract video track from receiver
+                        val track = receiver?.track()
+                        if (track is VideoTrack) {
+                            onRemoteVideoTrack(track)
+                        }
+                    }
                 },
             )
     }
