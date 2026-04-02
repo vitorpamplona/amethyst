@@ -46,11 +46,11 @@ import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.compose.Disp
 import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataScreen
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.AllMediaServersScreen
 import com.vitorpamplona.amethyst.ui.broadcast.DisplayBroadcastProgress
-import com.vitorpamplona.amethyst.ui.call.CallScreen
+import com.vitorpamplona.amethyst.ui.call.ActiveCallHolder
+import com.vitorpamplona.amethyst.ui.call.CallActivity
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.components.toasts.DisplayErrorMessages
 import com.vitorpamplona.amethyst.ui.navigation.composableFromEnd
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.navs.rememberNav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -167,20 +167,19 @@ fun AppNavigation(
     DisplayCrashMessages(accountViewModel, nav)
     DisplayBroadcastProgress(accountViewModel)
 
-    ObserveIncomingCalls(accountViewModel, nav)
+    ObserveIncomingCalls(accountViewModel)
 }
 
 @Composable
-private fun ObserveIncomingCalls(
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
+private fun ObserveIncomingCalls(accountViewModel: AccountViewModel) {
+    val context = LocalContext.current
     val callState by accountViewModel.callManager.state.collectAsState()
 
     LaunchedEffect(callState) {
         val state = callState
         if (state is CallState.IncomingCall) {
-            nav.nav(Route.ActiveCall(state.callId, state.callerPubKey))
+            ActiveCallHolder.set(accountViewModel.callManager, accountViewModel.callController, accountViewModel)
+            CallActivity.launch(context)
         }
     }
 }
@@ -280,15 +279,6 @@ fun BuildNavigation(
 
         composableFromEndArgs<Route.Room> { ChatroomScreen(it.toKey(), it.message, it.replyId, it.draftId, it.expiresDays, accountViewModel, nav) }
         composableFromEndArgs<Route.RoomByAuthor> { ChatroomByAuthorScreen(it.id, null, accountViewModel, nav) }
-
-        composableFromEndArgs<Route.ActiveCall> {
-            CallScreen(
-                callManager = accountViewModel.callManager,
-                callController = accountViewModel.callController,
-                accountViewModel = accountViewModel,
-                onCallEnded = { nav.popBack() },
-            )
-        }
 
         composableFromEndArgs<Route.PublicChatChannel> {
             PublicChatChannelScreen(it.id, it.draftId, it.replyTo, accountViewModel, nav)

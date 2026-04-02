@@ -224,6 +224,11 @@ class AccountViewModel(
         callManager.onAnswerReceived = { event -> controller.onCallAnswerReceived(event.sdpAnswer()) }
         callManager.onIceCandidateReceived = { event -> controller.onIceCandidateReceived(event) }
         callController = controller
+
+        // Populate ActiveCallHolder so CallActivity can launch even when the app
+        // is in the background (e.g. full-screen incoming call intent).
+        com.vitorpamplona.amethyst.ui.call.ActiveCallHolder
+            .set(callManager, controller, this)
     }
 
     val eventSync =
