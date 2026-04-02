@@ -167,6 +167,7 @@
     <string name="mark_all_new_as_read">Tüm yenileri okundu olarak işaretle</string>
     <string name="mark_all_as_read">Tümünü okundu olarak işaretle</string>
     <string name="biometric_error">Hata</string>
+    <!-- Call notifications and UI -->
     <!-- Kind display names for relay subscription filter chips -->
     <!-- M3 Action Dialog titles -->
     <!-- NIP-75 Zap Goals -->

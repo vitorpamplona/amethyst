@@ -380,6 +380,7 @@
     <string name="app_notification_zaps_channel_message">%1$s聰</string>
     <string name="app_notification_zaps_channel_message_from">來自%1$s</string>
     <string name="app_notification_zaps_channel_message_for">為 %1$s</string>
+    <!-- Call notifications and UI -->
     <string name="reply_notify">通知： </string>
     <string name="channel_list_join_conversation">加入對話</string>
     <string name="channel_list_user_or_group_id">用戶或群組 ID</string>

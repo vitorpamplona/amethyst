@@ -126,6 +126,7 @@
     <string name="follow_set_rename_dialog_indicator_second_part"> uz..</string>
     <string name="connect_through_your_orbot_setup_short">Noklusējuma ports ir 9050</string>
     <string name="invalid_port_number">Nederīgs porta numurs</string>
+    <!-- Call notifications and UI -->
     <string name="show_sensitive_content_explainer">Parāda brīdinājuma ziņojumu, ja autors atzīmējis ierakstu kā jutīgu</string>
     <string name="version">Versija</string>
     <string name="countries">Valstis</string>

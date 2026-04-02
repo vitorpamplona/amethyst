@@ -389,6 +389,7 @@
     <string name="app_notification_zaps_channel_message">%1$s sats</string>
     <string name="app_notification_zaps_channel_message_from">จาก %1$s</string>
     <string name="app_notification_zaps_channel_message_for">ถึง %1$s</string>
+    <!-- Call notifications and UI -->
     <string name="reply_notify">การแจ้งเตือน: </string>
     <string name="channel_list_join_conversation">เข้าร่วมการสนทนา</string>
     <string name="channel_list_user_or_group_id">ผู้ใช้ หรือ Group\'s ID</string>

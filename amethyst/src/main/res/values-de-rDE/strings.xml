@@ -672,6 +672,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="app_notification_chess_challenge_accepted">%1$s hat deine Schachherausforderung angenommen</string>
     <string name="app_notification_chess_your_turn">%1$s hat gezogen — du bist dran</string>
     <string name="app_notification_chess_summary">Schach-Updates</string>
+    <!-- Call notifications and UI -->
     <string name="reply_notify">Benachrichtigen: </string>
     <string name="channel_list_join_conversation">Unterhaltung beitreten</string>
     <string name="channel_list_user_or_group_id">Benutzer- oder Gruppen-ID</string>

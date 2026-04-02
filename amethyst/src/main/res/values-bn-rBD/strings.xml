@@ -378,6 +378,7 @@
     <string name="app_notification_zaps_channel_message">%1$s স্যাট</string>
     <string name="app_notification_zaps_channel_message_from">%1$s থেকে</string>
     <string name="app_notification_zaps_channel_message_for">%1$s এর জন্য</string>
+    <!-- Call notifications and UI -->
     <string name="reply_notify">অবহিত করুন: </string>
     <string name="channel_list_join_conversation">আলোচনায় যুক্ত হোন</string>
     <string name="channel_list_user_or_group_id">ব্যবহারকারী কিংবা গ্রুপের আইডি</string>
