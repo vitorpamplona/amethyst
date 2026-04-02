@@ -8,7 +8,7 @@ WebRTC Calls
 
 This NIP defines a protocol for establishing private peer-to-peer voice and video calls between Nostr
 users using WebRTC, with Nostr relays serving as the signaling transport and public STUN servers for
-NAT traversal — no custom server infrastructure is required
+NAT traversal — no custom server infrastructure is required.
 
 ## Overview
 
@@ -44,6 +44,8 @@ All signaling events MUST include:
 |---------------|-------------------------------------------------------|----------|
 | `p`           | Hex pubkey of the recipient                           | YES      |
 | `call-id`     | UUID identifying the call session                     | YES      |
+| `expiration`  | Unix timestamp ([NIP-40](https://github.com/nostr-protocol/nips/blob/master/40.md)), SHOULD be `created_at + 20` seconds | YES |
+| `alt`         | Human-readable description ([NIP-31](https://github.com/nostr-protocol/nips/blob/master/31.md)) | YES |
 
 Additional tags for **Call Offer** (kind 25050):
 
@@ -57,16 +59,21 @@ Additional tags for **Call Offer** (kind 25050):
 
 The `content` field contains the SDP offer string.
 
-```yaml
+```json
 {
   "kind": 25050,
+  "pubkey": "<caller-hex-pubkey>",
+  "created_at": 1234567890,
   "content": "v=0\r\no=- 4611731400430051336 2 IN IP4 127.0.0.1\r\n...",
   "tags": [
     ["p", "<callee-hex-pubkey>"],
     ["call-id", "550e8400-e29b-41d4-a716-446655440000"],
-    ["call-type", "video"]
+    ["call-type", "video"],
+    ["expiration", "1234567910"],
+    ["alt", "WebRTC call offer"]
   ],
-  # other fields
+  "id": "<event-id>",
+  "sig": "<signature>"
 }
 ```
 
@@ -74,31 +81,41 @@ The `content` field contains the SDP offer string.
 
 The `content` field contains the SDP answer string.
 
-```yaml
+```json
 {
   "kind": 25051,
+  "pubkey": "<callee-hex-pubkey>",
+  "created_at": 1234567895,
   "content": "v=0\r\no=- 4611731400430051337 2 IN IP4 127.0.0.1\r\n...",
   "tags": [
     ["p", "<caller-hex-pubkey>"],
     ["call-id", "550e8400-e29b-41d4-a716-446655440000"],
+    ["expiration", "1234567915"],
+    ["alt", "WebRTC call answer"]
   ],
-  # other fields
+  "id": "<event-id>",
+  "sig": "<signature>"
 }
 ```
 
 ### ICE Candidate (kind 25052)
 
-The `content` field contains the ICE candidate as a JSON string with the fields `candidate`, `sdpMid`, and `sdpMLineIndex`.
+The `content` field contains the ICE candidate as a JSON string with the fields `candidate`, `sdpMid`, and `sdpMLineIndex`. Special characters in the SDP string MUST be properly JSON-escaped.
 
-```yaml
+```json
 {
   "kind": 25052,
+  "pubkey": "<sender-hex-pubkey>",
+  "created_at": 1234567896,
   "content": "{\"candidate\":\"candidate:842163049 1 udp 1677729535 203.0.113.1 44323 typ srflx raddr 0.0.0.0 rport 0 generation 0\",\"sdpMid\":\"0\",\"sdpMLineIndex\":0}",
   "tags": [
     ["p", "<peer-hex-pubkey>"],
     ["call-id", "550e8400-e29b-41d4-a716-446655440000"],
+    ["expiration", "1234567916"],
+    ["alt", "WebRTC ICE candidate"]
   ],
-  # other fields
+  "id": "<event-id>",
+  "sig": "<signature>"
 }
 ```
 
@@ -106,15 +123,20 @@ The `content` field contains the ICE candidate as a JSON string with the fields 
 
 The `content` field MAY contain a human-readable reason or be empty.
 
-```yaml
+```json
 {
   "kind": 25053,
+  "pubkey": "<sender-hex-pubkey>",
+  "created_at": 1234568000,
   "content": "",
   "tags": [
     ["p", "<peer-hex-pubkey>"],
     ["call-id", "550e8400-e29b-41d4-a716-446655440000"],
+    ["expiration", "1234568020"],
+    ["alt", "WebRTC call hangup"]
   ],
-  # other fields
+  "id": "<event-id>",
+  "sig": "<signature>"
 }
 ```
 
@@ -122,15 +144,20 @@ The `content` field MAY contain a human-readable reason or be empty.
 
 The `content` field MAY contain a reason or be empty.
 
-```yaml
+```json
 {
   "kind": 25054,
+  "pubkey": "<callee-hex-pubkey>",
+  "created_at": 1234567893,
   "content": "",
   "tags": [
     ["p", "<caller-hex-pubkey>"],
     ["call-id", "550e8400-e29b-41d4-a716-446655440000"],
+    ["expiration", "1234567913"],
+    ["alt", "WebRTC call rejection"]
   ],
-  # other fields
+  "id": "<event-id>",
+  "sig": "<signature>"
 }
 ```
 
@@ -138,15 +165,20 @@ The `content` field MAY contain a reason or be empty.
 
 Used for mid-call changes such as toggling video on/off. The `content` field contains a new SDP offer.
 
-```yaml
+```json
 {
   "kind": 25055,
+  "pubkey": "<sender-hex-pubkey>",
+  "created_at": 1234568100,
   "content": "v=0\r\no=- 4611731400430051338 3 IN IP4 127.0.0.1\r\n...",
   "tags": [
     ["p", "<peer-hex-pubkey>"],
     ["call-id", "550e8400-e29b-41d4-a716-446655440000"],
+    ["expiration", "1234568120"],
+    ["alt", "WebRTC call renegotiation"]
   ],
-  # other fields
+  "id": "<event-id>",
+  "sig": "<signature>"
 }
 ```
 
@@ -156,13 +188,15 @@ All signaling events MUST be delivered using [NIP-59](https://github.com/nostr-p
 
 1. **Sign** the signaling event with the sender's key
 2. **Gift-wrap** the signed event directly using `GiftWrapEvent` (kind 1059) with NIP-44 encryption
-3. **Publish** the gift wrap to the recipient's relay list
+3. **Set expiration on the gift wrap** — the outer gift wrap MUST include an `expiration` tag matching the inner event's expiration (adjusted for the randomized `created_at`). This allows relays to garbage-collect ephemeral signaling data.
+4. **Publish** the gift wrap to the recipient's relay list
 
 The seal layer (`SealedRumorEvent`) is NOT used. The gift wrap already provides:
 
 - **NIP-44 encryption** — content is unreadable to relay operators
 - **Random ephemeral pubkey** — the relay cannot identify the sender
 - **`p` tag** — reveals only the recipient (necessary for delivery)
+- **`expiration` tag** — allows relays to delete the wrap after the signaling window
 
 Recipients unwrap the gift, verify the inner event's signature against the sender's pubkey, and then process the signaling message.
 
@@ -188,6 +222,10 @@ Caller                          Relay                           Callee
   |                 (relay no longer involved)                     |
 ```
 
+### ICE Candidate Buffering
+
+ICE candidates may arrive before the WebRTC peer connection is ready (e.g., the callee is still ringing). Clients MUST buffer incoming ICE candidates and apply them after `setRemoteDescription()` succeeds. Candidates buffered while ringing MUST NOT be cleared when accepting the call.
+
 ### Ending a Call
 
 Either party may send a `CallHangup` (kind 25053) at any time. The recipient SHOULD close the WebRTC peer connection and release media resources upon receiving it.
@@ -201,25 +239,55 @@ The callee may send a `CallReject` (kind 25054) instead of a `CallAnswer`. The c
 Clients SHOULD implement call filtering:
 
 - **Follow-gated ringing**: Only display incoming call notifications for users in the recipient's follow list. Calls from non-followed users SHOULD be silently ignored.
+- **Staleness check**: Clients MUST discard signaling events older than the expiration window (20 seconds). This prevents old cached events from triggering phantom calls on app restart or relay reconnect.
+- **Deduplication**: Clients MUST track processed event IDs to prevent the same signaling event (delivered by multiple relays) from being processed twice.
 - **Rate limiting**: Clients SHOULD ignore duplicate call offers from the same pubkey within a short window.
-- **Expiration enforcement**: Clients MUST check the `expiration` tag and discard signaling events that have expired.
 
 ## NAT Traversal
 
 This NIP does not mandate specific STUN or TURN servers. Clients SHOULD:
 
 - Ship with a default set of public STUN servers (e.g., `stun:stun.l.google.com:19302`)
+- Ship with default TURN servers for relay fallback when direct P2P fails (~20% of cases, including devices on the same WiFi network where hairpin NAT is not supported)
 - Allow users to configure custom TURN servers for restrictive network environments
 - Use trickle ICE (sending candidates as they are discovered) rather than waiting for all candidates before sending the offer/answer
+- Use `GATHER_CONTINUALLY` policy for ongoing ICE candidate discovery
 
 ## Implementation Notes
 
+### Event Lifecycle
+
 - The `call-id` tag MUST be a UUID that is unique per call session. All signaling events for the same call share the same `call-id`.
-- Events SHOULD have short expiration times (~20 seconds) since signaling data is ephemeral and has no long-term value.
+- Both inner events and outer gift wraps SHOULD have short expiration times (~20 seconds) since signaling data is ephemeral and has no long-term value. This allows relays to garbage-collect call signaling events.
 - Clients SHOULD implement a ringing timeout (e.g., 60 seconds). If no answer is received, the call transitions to a "timed out" state.
-- Clients SHOULD use a foreground service or equivalent mechanism to keep calls active when the app is backgrounded.
+- After a call ends, the call state SHOULD auto-reset to idle after a brief display period (e.g., 2 seconds) to ensure the client is ready for subsequent calls.
+
+### WebRTC Configuration
+
 - The WebRTC `PeerConnection` SHOULD use Unified Plan SDP semantics.
 - Clients MAY support call renegotiation (kind 25055) for toggling video on/off mid-call without tearing down the connection.
+- ICE candidate JSON content MUST be properly escaped — SDP strings can contain quotes and backslashes that break naive string interpolation.
+
+### Audio and Media
+
+- Clients SHOULD switch `AudioManager` to `MODE_IN_COMMUNICATION` when a call connects and restore to `MODE_NORMAL` when the call ends.
+- Clients SHOULD support audio routing between earpiece, speaker, and Bluetooth SCO headsets. If a Bluetooth headset disconnects mid-call, the client SHOULD fall back to earpiece automatically.
+- Clients SHOULD play a ringback tone (e.g., `TONE_SUP_RINGTONE`) for the caller while waiting for the callee to answer.
+- Clients SHOULD play the device's default ringtone and vibrate when an incoming call arrives from a followed user.
+
+### Platform Integration
+
+- Clients SHOULD use a foreground service (type `microphone`) to keep calls alive when the app is backgrounded.
+- Clients SHOULD acquire a proximity wake lock during active calls to turn off the screen when held to the ear.
+- Clients SHOULD keep the screen on during active calls.
+- Clients MAY enter Picture-in-Picture mode when the user navigates away from the call screen during an active call.
+- Clients SHOULD request `RECORD_AUDIO` permission (and `CAMERA` for video calls) at runtime before initiating or accepting a call.
+
+### Error Handling
+
+- If WebRTC session creation fails, the client SHOULD display an error to the user and transition to an ended state.
+- If SDP offer/answer creation fails, the client SHOULD surface the error instead of hanging silently.
+- Clients SHOULD handle `ICE_CONNECTION_FAILED` state by ending the call and notifying the user of a connection failure.
 
 ## References
 
