@@ -146,6 +146,34 @@ fun RenderRoomTopBar(
                     )
 
                     RoomNameOnlyDisplay(room, Modifier.padding(start = 10.dp).weight(1f), FontWeight.Normal, accountViewModel)
+
+                    if (onVideoCallClick != null) {
+                        IconButton(
+                            onClick = { onVideoCallClick(room.users.joinToString(",")) },
+                            modifier = Modifier.size(40.dp),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Videocam,
+                                contentDescription = stringRes(R.string.call_video),
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
+                    }
+
+                    if (onCallClick != null) {
+                        IconButton(
+                            onClick = { onCallClick(room.users.joinToString(",")) },
+                            modifier = Modifier.size(40.dp),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Call,
+                                contentDescription = stringRes(R.string.call_voice),
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
+                    }
                 }
             },
             extendableRow = {
