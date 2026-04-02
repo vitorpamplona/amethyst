@@ -323,6 +323,7 @@
     <string name="app_notification_zaps_channel_description">Σας ειδοποιεί όταν κάποιος σας zapάρει</string>
     <string name="app_notification_zaps_channel_message_from">Από %1$s</string>
     <string name="app_notification_zaps_channel_message_for">για %1$s</string>
+    <!-- Call notifications and UI -->
     <string name="reply_notify">Ειδοποίηση: </string>
     <string name="channel_list_join_conversation">Συμμετοχή στη Συζήτηση</string>
     <string name="channel_list_user_or_group_id">ID Χρήστη ή Ομάδας</string>

@@ -683,6 +683,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="app_notification_chess_challenge_accepted">%1$s je sprejel vaš šahovski izziv</string>
     <string name="app_notification_chess_your_turn">Poteza uporabnika %1$s — vi ste na vrsti</string>
     <string name="app_notification_chess_summary">Šahovske novosti</string>
+    <!-- Call notifications and UI -->
     <string name="reply_notify">Obvesti: </string>
     <string name="channel_list_join_conversation">Pridruži se pogovoru</string>
     <string name="channel_list_user_or_group_id">ID uporabnika ali skupine</string>

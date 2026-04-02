@@ -655,6 +655,7 @@
     <string name="app_notification_mark_read_label">पढा हुआ चिह्नित करें</string>
     <string name="app_notification_dms_summary">नए सन्देश</string>
     <string name="app_notification_zaps_summary">नए ज्साप</string>
+    <!-- Call notifications and UI -->
     <string name="reply_notify">सूचित करें : </string>
     <string name="channel_list_join_conversation">संवाद में जुड जाएँ</string>
     <string name="channel_list_user_or_group_id">उपयोगकर्ता अथवा झुण्ड विभेदक</string>

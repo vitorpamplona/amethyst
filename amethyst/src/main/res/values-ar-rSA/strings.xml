@@ -417,6 +417,7 @@
     <string name="app_notification_zaps_channel_message">ساتوشي %1$s</string>
     <string name="app_notification_zaps_channel_message_from">من طرف %1$s</string>
     <string name="app_notification_zaps_channel_message_for">ل %1$s</string>
+    <!-- Call notifications and UI -->
     <string name="reply_notify">تنبيه: </string>
     <string name="channel_list_join_conversation">الانضمام إلى المحادثة</string>
     <string name="channel_list_user_or_group_id">معرف المستخدم أو المجموعة</string>

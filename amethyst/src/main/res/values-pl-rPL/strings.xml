@@ -669,6 +669,7 @@
     <string name="app_notification_chess_challenge_accepted">%1$s zaakceptował Twoją ofertę</string>
     <string name="app_notification_chess_your_turn">%1$s wykonał ruch — teraz Twoja kolej</string>
     <string name="app_notification_chess_summary">Aktualizacje szachów</string>
+    <!-- Call notifications and UI -->
     <string name="reply_notify">Powiadom: </string>
     <string name="channel_list_join_conversation">Dołącz do dyskusji</string>
     <string name="channel_list_user_or_group_id">ID Użytkownika lub Grupy</string>

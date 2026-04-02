@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Call notifications and UI -->
     <!-- Kind display names for relay subscription filter chips -->
     <!-- M3 Action Dialog titles -->
     <!-- NIP-75 Zap Goals -->

@@ -313,6 +313,7 @@
     <string name="app_notification_zaps_channel_description">Inakuarifu wakati mtu anapokuzap</string>
     <string name="app_notification_zaps_channel_message_from">Kutoka kwa %1$s</string>
     <string name="app_notification_zaps_channel_message_for">kwa %1$s</string>
+    <!-- Call notifications and UI -->
     <string name="reply_notify">Taarifa: </string>
     <string name="channel_list_join_conversation">jiunge kwenye mazungumzo</string>
     <string name="channel_list_user_or_group_id">Kitambulisho cha Mtumiaji au Kikundi</string>

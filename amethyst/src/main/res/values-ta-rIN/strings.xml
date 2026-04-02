@@ -309,6 +309,7 @@
     <string name="app_notification_zaps_channel_message">%1$s ஸாட்ஸ்</string>
     <string name="app_notification_zaps_channel_message_from">%1$s -இடமிருந்து</string>
     <string name="app_notification_zaps_channel_message_for">%1$s -க்கு</string>
+    <!-- Call notifications and UI -->
     <string name="reply_notify">தெரிவிக்க</string>
     <string name="channel_list_join_conversation">உரையாடலில் இணைக</string>
     <string name="channel_list_user_or_group_id">பயனர் அல்லது குழுவின் ID</string>
