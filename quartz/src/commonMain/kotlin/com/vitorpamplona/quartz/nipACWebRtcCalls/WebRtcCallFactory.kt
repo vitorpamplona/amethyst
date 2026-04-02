@@ -38,6 +38,10 @@ class WebRtcCallFactory {
         val wrap: GiftWrapEvent,
     )
 
+    companion object {
+        const val WRAP_EXPIRATION_SECONDS = 20L
+    }
+
     suspend fun createCallOffer(
         sdpOffer: String,
         calleePubKey: HexKey,
@@ -47,7 +51,7 @@ class WebRtcCallFactory {
     ): Result {
         val template = CallOfferEvent.build(sdpOffer, calleePubKey, callId, callType)
         val signed = signer.sign(template)
-        val wrap = GiftWrapEvent.create(event = signed, recipientPubKey = calleePubKey)
+        val wrap = GiftWrapEvent.create(event = signed, recipientPubKey = calleePubKey, expirationDelta = WRAP_EXPIRATION_SECONDS)
         return Result(signed, wrap)
     }
 
@@ -59,7 +63,7 @@ class WebRtcCallFactory {
     ): Result {
         val template = CallAnswerEvent.build(sdpAnswer, callerPubKey, callId)
         val signed = signer.sign(template)
-        val wrap = GiftWrapEvent.create(event = signed, recipientPubKey = callerPubKey)
+        val wrap = GiftWrapEvent.create(event = signed, recipientPubKey = callerPubKey, expirationDelta = WRAP_EXPIRATION_SECONDS)
         return Result(signed, wrap)
     }
 
@@ -71,7 +75,7 @@ class WebRtcCallFactory {
     ): Result {
         val template = CallIceCandidateEvent.build(candidateJson, peerPubKey, callId)
         val signed = signer.sign(template)
-        val wrap = GiftWrapEvent.create(event = signed, recipientPubKey = peerPubKey)
+        val wrap = GiftWrapEvent.create(event = signed, recipientPubKey = peerPubKey, expirationDelta = WRAP_EXPIRATION_SECONDS)
         return Result(signed, wrap)
     }
 
@@ -83,7 +87,7 @@ class WebRtcCallFactory {
     ): Result {
         val template = CallHangupEvent.build(peerPubKey, callId, reason)
         val signed = signer.sign(template)
-        val wrap = GiftWrapEvent.create(event = signed, recipientPubKey = peerPubKey)
+        val wrap = GiftWrapEvent.create(event = signed, recipientPubKey = peerPubKey, expirationDelta = WRAP_EXPIRATION_SECONDS)
         return Result(signed, wrap)
     }
 
@@ -95,7 +99,7 @@ class WebRtcCallFactory {
     ): Result {
         val template = CallRejectEvent.build(callerPubKey, callId, reason)
         val signed = signer.sign(template)
-        val wrap = GiftWrapEvent.create(event = signed, recipientPubKey = callerPubKey)
+        val wrap = GiftWrapEvent.create(event = signed, recipientPubKey = callerPubKey, expirationDelta = WRAP_EXPIRATION_SECONDS)
         return Result(signed, wrap)
     }
 
@@ -107,7 +111,7 @@ class WebRtcCallFactory {
     ): Result {
         val template = CallRenegotiateEvent.build(sdpOffer, peerPubKey, callId)
         val signed = signer.sign(template)
-        val wrap = GiftWrapEvent.create(event = signed, recipientPubKey = peerPubKey)
+        val wrap = GiftWrapEvent.create(event = signed, recipientPubKey = peerPubKey, expirationDelta = WRAP_EXPIRATION_SECONDS)
         return Result(signed, wrap)
     }
 }
