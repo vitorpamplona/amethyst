@@ -111,14 +111,25 @@ import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcInfoEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcNotificationEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
+import com.vitorpamplona.quartz.nip51Lists.appCurationSet.AppCurationSetEvent
+import com.vitorpamplona.quartz.nip51Lists.articleCurationSet.ArticleCurationSetEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
+import com.vitorpamplona.quartz.nip51Lists.gitAuthorList.GitAuthorListEvent
+import com.vitorpamplona.quartz.nip51Lists.gitRepositoryList.GitRepositoryListEvent
+import com.vitorpamplona.quartz.nip51Lists.goodWikiAuthorList.GoodWikiAuthorListEvent
+import com.vitorpamplona.quartz.nip51Lists.goodWikiRelayList.GoodWikiRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
+import com.vitorpamplona.quartz.nip51Lists.interestSet.InterestSetEvent
+import com.vitorpamplona.quartz.nip51Lists.kindMuteSet.KindMuteSetEvent
 import com.vitorpamplona.quartz.nip51Lists.labeledBookmarkList.LabeledBookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.mediaFollowList.MediaFollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.mediaStarterPack.MediaStarterPackEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
+import com.vitorpamplona.quartz.nip51Lists.pictureCurationSet.PictureCurationSetEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BroadcastRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
@@ -126,6 +137,9 @@ import com.vitorpamplona.quartz.nip51Lists.relayLists.ProxyRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relaySets.RelaySetEvent
+import com.vitorpamplona.quartz.nip51Lists.releaseArtifactSet.ReleaseArtifactSetEvent
+import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.SimpleGroupListEvent
+import com.vitorpamplona.quartz.nip51Lists.videoCurationSet.VideoCurationSetEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
@@ -271,6 +285,7 @@ class EventFactory {
             when (kind) {
                 AcceptedBadgeSetEvent.KIND -> AcceptedBadgeSetEvent(id, pubKey, createdAt, tags, content, sig)
                 AdvertisedRelayListEvent.KIND -> AdvertisedRelayListEvent(id, pubKey, createdAt, tags, content, sig)
+                AppCurationSetEvent.KIND -> AppCurationSetEvent(id, pubKey, createdAt, tags, content, sig)
                 AppDefinitionEvent.KIND -> AppDefinitionEvent(id, pubKey, createdAt, tags, content, sig)
                 AppRecommendationEvent.KIND -> AppRecommendationEvent(id, pubKey, createdAt, tags, content, sig)
                 AppSpecificDataEvent.KIND -> AppSpecificDataEvent(id, pubKey, createdAt, tags, content, sig)
@@ -278,6 +293,7 @@ class EventFactory {
                 AttestationRequestEvent.KIND -> AttestationRequestEvent(id, pubKey, createdAt, tags, content, sig)
                 AttestorRecommendationEvent.KIND -> AttestorRecommendationEvent(id, pubKey, createdAt, tags, content, sig)
                 AttestorProficiencyEvent.KIND -> AttestorProficiencyEvent(id, pubKey, createdAt, tags, content, sig)
+                ArticleCurationSetEvent.KIND -> ArticleCurationSetEvent(id, pubKey, createdAt, tags, content, sig)
                 AudioHeaderEvent.KIND -> AudioHeaderEvent(id, pubKey, createdAt, tags, content, sig)
                 AuctionEvent.KIND -> AuctionEvent(id, pubKey, createdAt, tags, content, sig)
                 AudioTrackEvent.KIND -> AudioTrackEvent(id, pubKey, createdAt, tags, content, sig)
@@ -356,19 +372,25 @@ class EventFactory {
                 GenericRepostEvent.KIND -> GenericRepostEvent(id, pubKey, createdAt, tags, content, sig)
                 GeohashListEvent.KIND -> GeohashListEvent(id, pubKey, createdAt, tags, content, sig)
                 GiftWrapEvent.KIND -> GiftWrapEvent(id, pubKey, createdAt, tags, content, sig)
+                GitAuthorListEvent.KIND -> GitAuthorListEvent(id, pubKey, createdAt, tags, content, sig)
+                GitRepositoryListEvent.KIND -> GitRepositoryListEvent(id, pubKey, createdAt, tags, content, sig)
                 GitIssueEvent.KIND -> GitIssueEvent(id, pubKey, createdAt, tags, content, sig)
                 GitReplyEvent.KIND -> GitReplyEvent(id, pubKey, createdAt, tags, content, sig)
                 GitPatchEvent.KIND -> GitPatchEvent(id, pubKey, createdAt, tags, content, sig)
                 GitRepositoryEvent.KIND -> GitRepositoryEvent(id, pubKey, createdAt, tags, content, sig)
+                GoodWikiAuthorListEvent.KIND -> GoodWikiAuthorListEvent(id, pubKey, createdAt, tags, content, sig)
+                GoodWikiRelayListEvent.KIND -> GoodWikiRelayListEvent(id, pubKey, createdAt, tags, content, sig)
                 GoalEvent.KIND -> GoalEvent(id, pubKey, createdAt, tags, content, sig)
                 HashtagListEvent.KIND -> HashtagListEvent(id, pubKey, createdAt, tags, content, sig)
                 HighlightEvent.KIND -> HighlightEvent(id, pubKey, createdAt, tags, content, sig)
                 HTTPAuthorizationEvent.KIND -> HTTPAuthorizationEvent(id, pubKey, createdAt, tags, content, sig)
                 IndexerRelayListEvent.KIND -> IndexerRelayListEvent(id, pubKey, createdAt, tags, content, sig)
+                InterestSetEvent.KIND -> InterestSetEvent(id, pubKey, createdAt, tags, content, sig)
                 InteractiveStoryPrologueEvent.KIND -> InteractiveStoryPrologueEvent(id, pubKey, createdAt, tags, content, sig)
                 InteractiveStorySceneEvent.KIND -> InteractiveStorySceneEvent(id, pubKey, createdAt, tags, content, sig)
                 InteractiveStoryReadingStateEvent.KIND -> InteractiveStoryReadingStateEvent(id, pubKey, createdAt, tags, content, sig)
                 LabelEvent.KIND -> LabelEvent(id, pubKey, createdAt, tags, content, sig)
+                KindMuteSetEvent.KIND -> KindMuteSetEvent(id, pubKey, createdAt, tags, content, sig)
                 LabeledBookmarkListEvent.KIND -> LabeledBookmarkListEvent(id, pubKey, createdAt, tags, content, sig)
                 LiveActivitiesChatMessageEvent.KIND -> LiveActivitiesChatMessageEvent(id, pubKey, createdAt, tags, content, sig)
                 LiveActivitiesEvent.KIND -> LiveActivitiesEvent(id, pubKey, createdAt, tags, content, sig)
@@ -386,6 +408,8 @@ class EventFactory {
                 MeetingRoomPresenceEvent.KIND -> MeetingRoomPresenceEvent(id, pubKey, createdAt, tags, content, sig)
                 MeetingSpaceEvent.KIND -> MeetingSpaceEvent(id, pubKey, createdAt, tags, content, sig)
                 MintRecommendationEvent.KIND -> MintRecommendationEvent(id, pubKey, createdAt, tags, content, sig)
+                MediaFollowListEvent.KIND -> MediaFollowListEvent(id, pubKey, createdAt, tags, content, sig)
+                MediaStarterPackEvent.KIND -> MediaStarterPackEvent(id, pubKey, createdAt, tags, content, sig)
                 MetadataEvent.KIND -> MetadataEvent(id, pubKey, createdAt, tags, content, sig)
                 MuteListEvent.KIND -> MuteListEvent(id, pubKey, createdAt, tags, content, sig)
                 NamedSiteEvent.KIND -> NamedSiteEvent(id, pubKey, createdAt, tags, content, sig)
@@ -437,6 +461,7 @@ class EventFactory {
                 OtsEvent.KIND -> OtsEvent(id, pubKey, createdAt, tags, content, sig)
                 PaymentTargetsEvent.KIND -> PaymentTargetsEvent(id, pubKey, createdAt, tags, content, sig)
                 PeopleListEvent.KIND -> PeopleListEvent(id, pubKey, createdAt, tags, content, sig)
+                PictureCurationSetEvent.KIND -> PictureCurationSetEvent(id, pubKey, createdAt, tags, content, sig)
                 P2POrderEvent.KIND -> P2POrderEvent(id, pubKey, createdAt, tags, content, sig)
                 PictureEvent.KIND -> PictureEvent(id, pubKey, createdAt, tags, content, sig)
                 PinListEvent.KIND -> PinListEvent(id, pubKey, createdAt, tags, content, sig)
@@ -463,6 +488,7 @@ class EventFactory {
                 RelayAuthEvent.KIND -> RelayAuthEvent(id, pubKey, createdAt, tags, content, sig)
                 RelayDiscoveryEvent.KIND -> RelayDiscoveryEvent(id, pubKey, createdAt, tags, content, sig)
                 RelayMonitorEvent.KIND -> RelayMonitorEvent(id, pubKey, createdAt, tags, content, sig)
+                ReleaseArtifactSetEvent.KIND -> ReleaseArtifactSetEvent(id, pubKey, createdAt, tags, content, sig)
                 RelaySetEvent.KIND -> RelaySetEvent(id, pubKey, createdAt, tags, content, sig)
                 ReportEvent.KIND -> ReportEvent(id, pubKey, createdAt, tags, content, sig)
                 RootSiteEvent.KIND -> RootSiteEvent(id, pubKey, createdAt, tags, content, sig)
@@ -470,6 +496,7 @@ class EventFactory {
                 RequestToVanishEvent.KIND -> RequestToVanishEvent(id, pubKey, createdAt, tags, content, sig)
                 SealedRumorEvent.KIND -> SealedRumorEvent(id, pubKey, createdAt, tags, content, sig)
                 SearchRelayListEvent.KIND -> SearchRelayListEvent(id, pubKey, createdAt, tags, content, sig)
+                SimpleGroupListEvent.KIND -> SimpleGroupListEvent(id, pubKey, createdAt, tags, content, sig)
                 StallEvent.KIND -> StallEvent(id, pubKey, createdAt, tags, content, sig)
                 StatusEvent.KIND -> StatusEvent(id, pubKey, createdAt, tags, content, sig)
                 TextNoteEvent.KIND -> TextNoteEvent(id, pubKey, createdAt, tags, content, sig)
@@ -480,6 +507,7 @@ class EventFactory {
                 TorrentCommentEvent.KIND -> TorrentCommentEvent(id, pubKey, createdAt, tags, content, sig)
                 TrustedRelayListEvent.KIND -> TrustedRelayListEvent(id, pubKey, createdAt, tags, content, sig)
                 TrustProviderListEvent.KIND -> TrustProviderListEvent(id, pubKey, createdAt, tags, content, sig)
+                VideoCurationSetEvent.KIND -> VideoCurationSetEvent(id, pubKey, createdAt, tags, content, sig)
                 VideoHorizontalEvent.KIND -> VideoHorizontalEvent(id, pubKey, createdAt, tags, content, sig)
                 VideoVerticalEvent.KIND -> VideoVerticalEvent(id, pubKey, createdAt, tags, content, sig)
                 VideoNormalEvent.KIND -> VideoNormalEvent(id, pubKey, createdAt, tags, content, sig)
