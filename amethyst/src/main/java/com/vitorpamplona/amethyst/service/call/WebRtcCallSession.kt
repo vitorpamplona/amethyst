@@ -24,6 +24,8 @@ import android.content.Context
 import com.vitorpamplona.quartz.utils.Log
 import org.webrtc.AudioSource
 import org.webrtc.AudioTrack
+import org.webrtc.Camera2Enumerator
+import org.webrtc.CameraVideoCapturer
 import org.webrtc.DataChannel
 import org.webrtc.DefaultVideoDecoderFactory
 import org.webrtc.DefaultVideoEncoderFactory
@@ -36,6 +38,7 @@ import org.webrtc.PeerConnectionFactory
 import org.webrtc.RtpReceiver
 import org.webrtc.SdpObserver
 import org.webrtc.SessionDescription
+import org.webrtc.SurfaceTextureHelper
 import org.webrtc.VideoSource
 import org.webrtc.VideoTrack
 
@@ -55,6 +58,7 @@ class WebRtcCallSession(
     private var localVideoTrack: VideoTrack? = null
     private var audioSource: AudioSource? = null
     private var videoSource: VideoSource? = null
+    private var cameraCapturer: CameraVideoCapturer? = null
 
     val eglBase: EglBase = EglBase.create()
 
@@ -147,6 +151,30 @@ class WebRtcCallSession(
             peerConnectionFactory?.createVideoTrack("video0", videoSource).also {
                 peerConnection?.addTrack(it)
             }
+        startCamera()
+    }
+
+    private fun startCamera() {
+        val source = videoSource ?: return
+        val enumerator = Camera2Enumerator(context)
+        val frontCamera = enumerator.deviceNames.firstOrNull { enumerator.isFrontFacing(it) }
+        val camera = frontCamera ?: enumerator.deviceNames.firstOrNull() ?: return
+
+        cameraCapturer =
+            enumerator.createCapturer(camera, null)?.also {
+                it.initialize(
+                    SurfaceTextureHelper.create("CaptureThread", eglBase.eglBaseContext),
+                    context,
+                    source.capturerObserver,
+                )
+                it.startCapture(640, 480, 30)
+            }
+    }
+
+    fun stopCamera() {
+        cameraCapturer?.stopCapture()
+        cameraCapturer?.dispose()
+        cameraCapturer = null
     }
 
     fun getLocalVideoSource(): VideoSource? = videoSource
@@ -226,6 +254,7 @@ class WebRtcCallSession(
     }
 
     fun dispose() {
+        stopCamera()
         localAudioTrack?.dispose()
         localVideoTrack?.dispose()
         audioSource?.dispose()

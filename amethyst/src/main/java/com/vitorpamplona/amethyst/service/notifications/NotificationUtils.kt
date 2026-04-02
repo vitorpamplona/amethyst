@@ -555,6 +555,20 @@ object NotificationUtils {
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
             )
 
+        val fullScreenIntent =
+            Intent(applicationContext, MainActivity::class.java).apply {
+                data = uri.toUri()
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            }
+
+        val fullScreenPendingIntent =
+            PendingIntent.getActivity(
+                applicationContext,
+                CALL_NOTIFICATION_ID + 1,
+                fullScreenIntent,
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+
         val builder =
             NotificationCompat
                 .Builder(applicationContext, channel.id)
@@ -563,11 +577,13 @@ object NotificationUtils {
                 .setContentText(callerName)
                 .setLargeIcon(callerBitmap)
                 .setContentIntent(contentPendingIntent)
+                .setFullScreenIntent(fullScreenPendingIntent, true)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setCategory(NotificationCompat.CATEGORY_CALL)
                 .setAutoCancel(true)
                 .setOngoing(true)
                 .setTimeoutAfter(60_000)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
 
         notificationManager.notify("call", CALL_NOTIFICATION_ID, builder.build())
     }
