@@ -53,7 +53,7 @@ class CallOfferEvent(
     companion object {
         const val KIND = 25050
         const val ALT_DESCRIPTION = "WebRTC call offer"
-        const val EXPIRATION_SECONDS = 300L // 5 minutes
+        const val EXPIRATION_SECONDS = 20L
 
         fun build(
             sdpOffer: String,

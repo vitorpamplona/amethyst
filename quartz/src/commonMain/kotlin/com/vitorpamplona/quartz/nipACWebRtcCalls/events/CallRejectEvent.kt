@@ -48,7 +48,7 @@ class CallRejectEvent(
     companion object {
         const val KIND = 25054
         const val ALT_DESCRIPTION = "WebRTC call rejection"
-        const val EXPIRATION_SECONDS = 300L
+        const val EXPIRATION_SECONDS = 20L
 
         fun build(
             callerPubKey: HexKey,

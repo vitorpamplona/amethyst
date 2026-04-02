@@ -61,7 +61,7 @@ class CallManager(
     companion object {
         const val CALL_TIMEOUT_MS = 60_000L // 60 seconds ringing timeout
         const val ENDED_DISPLAY_MS = 2_000L // show "call ended" briefly before resetting
-        const val MAX_EVENT_AGE_SECONDS = 30L // discard signaling events older than this
+        const val MAX_EVENT_AGE_SECONDS = 20L // discard signaling events older than this
     }
 
     private fun isEventTooOld(event: Event): Boolean = TimeUtils.now() - event.createdAt > MAX_EVENT_AGE_SECONDS

@@ -48,7 +48,7 @@ class CallRenegotiateEvent(
     companion object {
         const val KIND = 25055
         const val ALT_DESCRIPTION = "WebRTC call renegotiation"
-        const val EXPIRATION_SECONDS = 300L
+        const val EXPIRATION_SECONDS = 20L
 
         fun build(
             sdpOffer: String,
