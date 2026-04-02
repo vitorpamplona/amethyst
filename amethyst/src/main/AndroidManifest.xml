@@ -42,6 +42,9 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_PHONE_CALL" />
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
 
+    <!-- Phone calls -->
+    <uses-permission android:name="android.permission.VIBRATE"/>
+
     <!-- Keeps screen on while playing videos -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
