@@ -94,6 +94,7 @@ fun CallScreen(
     callController: CallController?,
     accountViewModel: AccountViewModel,
     onCallEnded: () -> Unit,
+    isInPipMode: Boolean = false,
 ) {
     val callState by callManager.state.collectAsState()
     val scope = rememberCoroutineScope()
@@ -121,73 +122,97 @@ fun CallScreen(
             }
 
             is CallState.Offering -> {
-                CallInProgressUI(
-                    peerPubKey = state.peerPubKey,
-                    statusText = stringRes(R.string.call_calling),
-                    accountViewModel = accountViewModel,
-                    onHangup = { scope.launch { callManager.hangup() } },
-                )
+                if (isInPipMode) {
+                    PipCallUI(peerPubKey = state.peerPubKey, statusText = stringRes(R.string.call_calling), accountViewModel = accountViewModel)
+                } else {
+                    CallInProgressUI(
+                        peerPubKey = state.peerPubKey,
+                        statusText = stringRes(R.string.call_calling),
+                        accountViewModel = accountViewModel,
+                        onHangup = { scope.launch { callManager.hangup() } },
+                    )
+                }
             }
 
             is CallState.IncomingCall -> {
-                val isVideoCall = state.callType == com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType.VIDEO
-                val acceptWithPermission =
-                    rememberCallWithPermission(context, isVideo = isVideoCall) {
-                        callController?.acceptIncomingCall(state.sdpOffer)
-                    }
-                IncomingCallUI(
-                    callerPubKey = state.callerPubKey,
-                    callType = state.callType,
-                    accountViewModel = accountViewModel,
-                    onAccept = acceptWithPermission,
-                    onReject = { scope.launch { callManager.rejectCall() } },
-                )
+                if (isInPipMode) {
+                    PipCallUI(callerPubKey = state.callerPubKey, statusText = stringRes(R.string.call_incoming), accountViewModel = accountViewModel)
+                } else {
+                    val isVideoCall = state.callType == com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType.VIDEO
+                    val acceptWithPermission =
+                        rememberCallWithPermission(context, isVideo = isVideoCall) {
+                            callController?.acceptIncomingCall(state.sdpOffer)
+                        }
+                    IncomingCallUI(
+                        callerPubKey = state.callerPubKey,
+                        callType = state.callType,
+                        accountViewModel = accountViewModel,
+                        onAccept = acceptWithPermission,
+                        onReject = { scope.launch { callManager.rejectCall() } },
+                    )
+                }
             }
 
             is CallState.Connecting -> {
-                CallInProgressUI(
-                    peerPubKey = state.peerPubKey,
-                    statusText = stringRes(R.string.call_connecting),
-                    accountViewModel = accountViewModel,
-                    onHangup = { scope.launch { callManager.hangup() } },
-                )
+                if (isInPipMode) {
+                    PipCallUI(peerPubKey = state.peerPubKey, statusText = stringRes(R.string.call_connecting), accountViewModel = accountViewModel)
+                } else {
+                    CallInProgressUI(
+                        peerPubKey = state.peerPubKey,
+                        statusText = stringRes(R.string.call_connecting),
+                        accountViewModel = accountViewModel,
+                        onHangup = { scope.launch { callManager.hangup() } },
+                    )
+                }
             }
 
             is CallState.Connected -> {
-                ConnectedCallUI(
-                    state = state,
-                    callController = callController,
-                    accountViewModel = accountViewModel,
-                    onHangup = { scope.launch { callManager.hangup() } },
-                    onToggleMute = { callController?.toggleAudioMute() },
-                    onToggleVideo = { callController?.toggleVideo() },
-                    onCycleAudioRoute = { callController?.cycleAudioRoute() },
-                )
+                if (isInPipMode) {
+                    PipConnectedCallUI(state = state, callController = callController, accountViewModel = accountViewModel)
+                } else {
+                    ConnectedCallUI(
+                        state = state,
+                        callController = callController,
+                        accountViewModel = accountViewModel,
+                        onHangup = { scope.launch { callManager.hangup() } },
+                        onToggleMute = { callController?.toggleAudioMute() },
+                        onToggleVideo = { callController?.toggleVideo() },
+                        onCycleAudioRoute = { callController?.cycleAudioRoute() },
+                    )
+                }
             }
 
             is CallState.Ended -> {
-                CallInProgressUI(
-                    peerPubKey = state.peerPubKey,
-                    statusText = stringRes(R.string.call_ended),
-                    accountViewModel = accountViewModel,
-                    onHangup = { onCallEnded() },
-                )
+                if (!isInPipMode) {
+                    CallInProgressUI(
+                        peerPubKey = state.peerPubKey,
+                        statusText = stringRes(R.string.call_ended),
+                        accountViewModel = accountViewModel,
+                        onHangup = { onCallEnded() },
+                    )
+                }
+                LaunchedEffect(Unit) {
+                    delay(2000)
+                    onCallEnded()
+                }
             }
         }
 
-        errorMessage?.let { error ->
-            Snackbar(
-                modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),
-                action = {
-                    Text(
-                        stringRes(R.string.call_dismiss),
-                        modifier =
-                            Modifier.padding(8.dp),
-                        color = MaterialTheme.colorScheme.inversePrimary,
-                    )
-                },
-            ) {
-                Text(error)
+        if (!isInPipMode) {
+            errorMessage?.let { error ->
+                Snackbar(
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),
+                    action = {
+                        Text(
+                            stringRes(R.string.call_dismiss),
+                            modifier =
+                                Modifier.padding(8.dp),
+                            color = MaterialTheme.colorScheme.inversePrimary,
+                        )
+                    },
+                ) {
+                    Text(error)
+                }
             }
         }
     }
@@ -555,6 +580,120 @@ private fun formatDuration(seconds: Long): String {
     val mins = seconds / 60
     val secs = seconds % 60
     return "%02d:%02d".format(mins, secs)
+}
+
+@Composable
+private fun PipCallUI(
+    peerPubKey: String = "",
+    callerPubKey: String = "",
+    statusText: String,
+    accountViewModel: AccountViewModel,
+) {
+    val pubKey = peerPubKey.ifEmpty { callerPubKey }
+    Box(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.surface),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            LoadUser(baseUserHex = pubKey, accountViewModel = accountViewModel) { user ->
+                if (user != null) {
+                    ClickableUserPicture(
+                        baseUser = user,
+                        size = 48.dp,
+                        accountViewModel = accountViewModel,
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = statusText,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 10.sp,
+            )
+        }
+    }
+}
+
+@Composable
+private fun PipConnectedCallUI(
+    state: CallState.Connected,
+    callController: CallController?,
+    accountViewModel: AccountViewModel,
+) {
+    var elapsed by remember { mutableLongStateOf(0L) }
+
+    LaunchedEffect(state.startedAtEpoch) {
+        while (true) {
+            elapsed = TimeUtils.now() - state.startedAtEpoch
+            delay(1000)
+        }
+    }
+
+    val emptyVideoFlow = remember { kotlinx.coroutines.flow.MutableStateFlow<VideoTrack?>(null) }
+    val remoteVideoTrack by (callController?.remoteVideoTrack ?: emptyVideoFlow).collectAsState()
+    val defaultFalse = remember { kotlinx.coroutines.flow.MutableStateFlow(false) }
+    val isRemoteVideoActive by (callController?.isRemoteVideoActive ?: defaultFalse).collectAsState()
+
+    Box(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(Color.Black),
+    ) {
+        // Remote video full screen in PiP
+        if (isRemoteVideoActive) {
+            remoteVideoTrack?.let { track ->
+                VideoRenderer(
+                    videoTrack = track,
+                    eglBase = callController?.getEglBase(),
+                    modifier = Modifier.fillMaxSize(),
+                    mirror = false,
+                )
+            }
+        }
+
+        if (!isRemoteVideoActive) {
+            // Show small avatar + timer in PiP
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                LoadUser(baseUserHex = state.peerPubKey, accountViewModel = accountViewModel) { user ->
+                    if (user != null) {
+                        ClickableUserPicture(
+                            baseUser = user,
+                            size = 48.dp,
+                            accountViewModel = accountViewModel,
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = formatDuration(elapsed),
+                    color = Color.White.copy(alpha = 0.7f),
+                    fontSize = 10.sp,
+                )
+            }
+        } else {
+            // Timer overlay
+            Text(
+                text = formatDuration(elapsed),
+                color = Color.White.copy(alpha = 0.7f),
+                fontSize = 10.sp,
+                modifier =
+                    Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 4.dp),
+            )
+        }
+    }
 }
 
 @Composable

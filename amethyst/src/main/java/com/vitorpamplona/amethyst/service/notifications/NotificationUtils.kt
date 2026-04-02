@@ -523,6 +523,9 @@ object NotificationUtils {
                 NotificationManager.IMPORTANCE_HIGH,
             ).apply {
                 description = stringRes(applicationContext, R.string.app_notification_calls_channel_description)
+                // Silence the notification sound — CallAudioManager plays the ringtone
+                setSound(null, null)
+                enableVibration(false)
             }
 
         val notificationManager: NotificationManager =
@@ -544,8 +547,11 @@ object NotificationUtils {
 
         val channel = getOrCreateCallChannel(applicationContext)
 
+        // Tapping the notification opens the CallActivity
         val contentIntent =
-            Intent(applicationContext, MainActivity::class.java).apply { data = uri.toUri() }
+            Intent(applicationContext, com.vitorpamplona.amethyst.ui.call.CallActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            }
 
         val contentPendingIntent =
             PendingIntent.getActivity(
@@ -555,17 +561,29 @@ object NotificationUtils {
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
             )
 
-        val fullScreenIntent =
-            Intent(applicationContext, MainActivity::class.java).apply {
-                data = uri.toUri()
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+        val acceptIntent =
+            Intent(applicationContext, com.vitorpamplona.amethyst.ui.call.CallNotificationReceiver::class.java).apply {
+                action = com.vitorpamplona.amethyst.ui.call.CallNotificationReceiver.ACTION_ACCEPT_CALL
             }
 
-        val fullScreenPendingIntent =
-            PendingIntent.getActivity(
+        val acceptPendingIntent =
+            PendingIntent.getBroadcast(
                 applicationContext,
                 CALL_NOTIFICATION_ID + 1,
-                fullScreenIntent,
+                acceptIntent,
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+
+        val rejectIntent =
+            Intent(applicationContext, com.vitorpamplona.amethyst.ui.call.CallNotificationReceiver::class.java).apply {
+                action = com.vitorpamplona.amethyst.ui.call.CallNotificationReceiver.ACTION_REJECT_CALL
+            }
+
+        val rejectPendingIntent =
+            PendingIntent.getBroadcast(
+                applicationContext,
+                CALL_NOTIFICATION_ID + 2,
+                rejectIntent,
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
             )
 
@@ -577,15 +595,16 @@ object NotificationUtils {
                 .setContentText(callerName)
                 .setLargeIcon(callerBitmap)
                 .setContentIntent(contentPendingIntent)
-                .setFullScreenIntent(fullScreenPendingIntent, true)
+                .setFullScreenIntent(contentPendingIntent, true)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setCategory(NotificationCompat.CATEGORY_CALL)
                 .setAutoCancel(true)
                 .setOngoing(true)
                 .setTimeoutAfter(60_000)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-                .addAction(R.drawable.amethyst, stringRes(applicationContext, R.string.call_reject), contentPendingIntent)
-                .addAction(R.drawable.amethyst, stringRes(applicationContext, R.string.call_accept), fullScreenPendingIntent)
+                .setSilent(true)
+                .addAction(R.drawable.amethyst, stringRes(applicationContext, R.string.call_reject), rejectPendingIntent)
+                .addAction(R.drawable.amethyst, stringRes(applicationContext, R.string.call_accept), acceptPendingIntent)
 
         notificationManager.notify("call", CALL_NOTIFICATION_ID, builder.build())
     }

@@ -269,6 +269,10 @@
             android:name=".service.notifications.NotificationReplyReceiver"
             android:exported="false" />
 
+        <receiver
+            android:name=".ui.call.CallNotificationReceiver"
+            android:exported="false" />
+
     </application>
 
 

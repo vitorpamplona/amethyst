@@ -120,6 +120,7 @@ class CallController(
                         audioManager.stopRingbackTone()
                         audioManager.switchToCallAudioMode()
                         audioManager.acquireProximityWakeLock()
+                        NotificationUtils.cancelCallNotification(context)
                     }
 
                     is CallState.Connected -> {

@@ -20,19 +20,51 @@
  */
 package com.vitorpamplona.amethyst.ui.call
 
+import android.app.PendingIntent
 import android.app.PictureInPictureParams
+import android.app.RemoteAction
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.graphics.drawable.Icon
 import android.os.Build
 import android.os.Bundle
 import android.util.Rational
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.runtime.mutableStateOf
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.call.CallState
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 
 class CallActivity : AppCompatActivity() {
+    val isInPipMode = mutableStateOf(false)
+
+    private val pipActionReceiver =
+        object : BroadcastReceiver() {
+            @OptIn(DelicateCoroutinesApi::class)
+            override fun onReceive(
+                context: Context,
+                intent: Intent,
+            ) {
+                when (intent.action) {
+                    ACTION_PIP_HANGUP -> {
+                        GlobalScope.launch { ActiveCallHolder.callManager?.hangup() }
+                    }
+
+                    ACTION_PIP_TOGGLE_MUTE -> {
+                        ActiveCallHolder.callController?.toggleAudioMute()
+                        updatePipParams()
+                    }
+                }
+            }
+        }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
@@ -46,6 +78,8 @@ class CallActivity : AppCompatActivity() {
             return
         }
 
+        registerPipReceiver()
+
         setContent {
             AmethystTheme {
                 CallScreen(
@@ -53,6 +87,7 @@ class CallActivity : AppCompatActivity() {
                     callController = callController,
                     accountViewModel = accountViewModel,
                     onCallEnded = { finish() },
+                    isInPipMode = isInPipMode.value,
                 )
             }
         }
@@ -65,12 +100,25 @@ class CallActivity : AppCompatActivity() {
 
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean) {
         super.onPictureInPictureModeChanged(isInPictureInPictureMode)
-        if (!isInPictureInPictureMode) {
-            // User expanded from PiP — bring the full call UI back
+        isInPipMode.value = isInPictureInPictureMode
+    }
+
+    @OptIn(DelicateCoroutinesApi::class)
+    override fun onDestroy() {
+        unregisterPipReceiver()
+
+        // If the activity is being destroyed while still in an active call
+        // (e.g. user swiped PiP away), hang up the call.
+        val state = ActiveCallHolder.callManager?.state?.value
+        if (state is CallState.Connected || state is CallState.Connecting || state is CallState.Offering) {
+            GlobalScope.launch { ActiveCallHolder.callManager?.hangup() }
         }
+
+        super.onDestroy()
     }
 
     private fun enterPipIfActive() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val callManager = ActiveCallHolder.callManager ?: return
         val state = callManager.state.value
         val isActive =
@@ -78,21 +126,103 @@ class CallActivity : AppCompatActivity() {
                 state is CallState.Connecting ||
                 state is CallState.Offering
 
-        if (isActive && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        if (isActive) {
             try {
-                val params =
-                    PictureInPictureParams
-                        .Builder()
-                        .setAspectRatio(Rational(9, 16))
-                        .build()
-                enterPictureInPictureMode(params)
+                enterPictureInPictureMode(buildPipParams())
             } catch (_: Exception) {
                 // PiP not supported or activity not in correct state
             }
         }
     }
 
+    private fun updatePipParams() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+        if (!isInPipMode.value) return
+        try {
+            setPictureInPictureParams(buildPipParams())
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun buildPipParams(): PictureInPictureParams {
+        val builder =
+            PictureInPictureParams
+                .Builder()
+                .setAspectRatio(Rational(16, 9))
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            builder.setActions(buildPipActions())
+        }
+
+        return builder.build()
+    }
+
+    private fun buildPipActions(): List<RemoteAction> {
+        val actions = mutableListOf<RemoteAction>()
+
+        // Mute / Unmute toggle
+        val isMuted = ActiveCallHolder.callController?.isAudioMuted?.value == true
+        val muteIntent =
+            PendingIntent.getBroadcast(
+                this,
+                PIP_MUTE_REQUEST_CODE,
+                Intent(ACTION_PIP_TOGGLE_MUTE).setPackage(packageName),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+        val muteAction =
+            RemoteAction(
+                Icon.createWithResource(
+                    this,
+                    if (isMuted) R.drawable.ic_mic_off else R.drawable.ic_mic_on,
+                ),
+                getString(if (isMuted) R.string.call_unmute else R.string.call_mute),
+                getString(if (isMuted) R.string.call_unmute else R.string.call_mute),
+                muteIntent,
+            )
+        actions.add(muteAction)
+
+        // Hangup
+        val hangupIntent =
+            PendingIntent.getBroadcast(
+                this,
+                PIP_HANGUP_REQUEST_CODE,
+                Intent(ACTION_PIP_HANGUP).setPackage(packageName),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+        val hangupAction =
+            RemoteAction(
+                Icon.createWithResource(this, R.drawable.ic_call_end),
+                getString(R.string.call_hangup),
+                getString(R.string.call_hangup),
+                hangupIntent,
+            )
+        actions.add(hangupAction)
+
+        return actions
+    }
+
+    private fun registerPipReceiver() {
+        val filter =
+            IntentFilter().apply {
+                addAction(ACTION_PIP_HANGUP)
+                addAction(ACTION_PIP_TOGGLE_MUTE)
+            }
+        registerReceiver(pipActionReceiver, filter, RECEIVER_NOT_EXPORTED)
+    }
+
+    private fun unregisterPipReceiver() {
+        try {
+            unregisterReceiver(pipActionReceiver)
+        } catch (_: Exception) {
+        }
+    }
+
     companion object {
+        private const val ACTION_PIP_HANGUP = "com.vitorpamplona.amethyst.PIP_HANGUP"
+        private const val ACTION_PIP_TOGGLE_MUTE = "com.vitorpamplona.amethyst.PIP_TOGGLE_MUTE"
+        private const val PIP_HANGUP_REQUEST_CODE = 0x60001
+        private const val PIP_MUTE_REQUEST_CODE = 0x60002
+
         fun launch(context: Context) {
             context.startActivity(
                 Intent(context, CallActivity::class.java).apply {
