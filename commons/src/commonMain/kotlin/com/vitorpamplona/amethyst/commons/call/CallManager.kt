@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallIceCandidateEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallOfferEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallRejectEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -198,8 +199,13 @@ class CallManager(
     }
 
     fun onSignalingEvent(event: Event) {
-        if (isEventTooOld(event)) return
+        if (isEventTooOld(event)) {
+            Log.d("CallManager") { "Discarding old event kind=${event.kind} age=${TimeUtils.now() - event.createdAt}s" }
+            return
+        }
         if (!processedEventIds.add(event.id)) return
+
+        Log.d("CallManager") { "Processing signaling event kind=${event.kind} id=${event.id.take(8)} state=${_state.value::class.simpleName}" }
 
         when (event) {
             is CallOfferEvent -> onIncomingCallEvent(event)

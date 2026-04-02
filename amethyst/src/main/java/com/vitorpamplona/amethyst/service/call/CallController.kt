@@ -177,6 +177,7 @@ class CallController(
     }
 
     fun onCallAnswerReceived(sdpAnswer: String) {
+        Log.d(TAG) { "Answer received, SDP length=${sdpAnswer.length}, session=${webRtcSession != null}" }
         webRtcSession?.setRemoteDescription(
             SessionDescription(SessionDescription.Type.ANSWER, sdpAnswer),
         )
@@ -188,12 +189,14 @@ class CallController(
         try {
             val candidate = parseIceCandidate(json)
             if (webRtcSession != null && remoteDescriptionSet) {
+                Log.d(TAG) { "Adding ICE candidate directly: ${candidate.sdp.take(50)}" }
                 webRtcSession?.addIceCandidate(candidate)
             } else {
+                Log.d(TAG) { "Buffering ICE candidate (session=${webRtcSession != null}, remoteSet=$remoteDescriptionSet)" }
                 pendingIceCandidates.add(candidate)
             }
-        } catch (_: Exception) {
-            // Ignore malformed ICE candidates
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to parse ICE candidate: $json", e)
         }
     }
 
@@ -201,6 +204,7 @@ class CallController(
         remoteDescriptionSet = true
         val session = webRtcSession ?: return
         val candidates = pendingIceCandidates.toList()
+        Log.d(TAG) { "Flushing ${candidates.size} buffered ICE candidates" }
         pendingIceCandidates.clear()
         candidates.forEach { session.addIceCandidate(it) }
     }
@@ -309,6 +313,7 @@ class CallController(
     }
 
     private fun onLocalIceCandidate(candidate: IceCandidate) {
+        Log.d(TAG) { "Local ICE candidate: ${candidate.sdp.take(50)}" }
         val callId = currentCallId ?: return
         val peerPubKey = currentPeerPubKey ?: return
         val candidateJson = serializeIceCandidate(candidate)
