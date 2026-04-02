@@ -146,6 +146,8 @@ class LongFormPostViewModel :
     var summary by mutableStateOf(TextFieldValue(""))
     var coverImageUrl by mutableStateOf("")
     var publishedAt by mutableLongStateOf(TimeUtils.now())
+    var tags by mutableStateOf(listOf<String>())
+    var slug by mutableStateOf("")
 
     var isUploadingCoverImage by mutableStateOf(false)
 
@@ -245,6 +247,8 @@ class LongFormPostViewModel :
                 coverImageUrl = noteEvent.image() ?: ""
                 message.setTextAndPlaceCursorAtEnd(noteEvent.content)
                 existingDTag = noteEvent.dTag()
+                tags = noteEvent.topics()
+                slug = noteEvent.dTag()
             }
 
             val user = account.userProfile()
@@ -269,6 +273,8 @@ class LongFormPostViewModel :
         coverImageUrl = draftEvent.image() ?: ""
         message.setTextAndPlaceCursorAtEnd(draftEvent.content)
         existingDTag = draftEvent.dTag()
+        tags = draftEvent.topics()
+        slug = draftEvent.dTag()
 
         canAddInvoice = accountViewModel.userProfile().lnAddress() != null
         canAddZapRaiser = accountViewModel.userProfile().lnAddress() != null
@@ -376,9 +382,9 @@ class LongFormPostViewModel :
             summary = summary.text.trim().ifBlank { null },
             image = coverImageUrl.trim().ifBlank { null },
             publishedAt = publishedAt,
-            dTag = existingDTag ?: RandomInstance.randomChars(16),
+            dTag = existingDTag ?: slug.ifBlank { RandomInstance.randomChars(16) },
         ) {
-            hashtags(findHashtags(tagger.message))
+            hashtags(findHashtags(tagger.message) + tags)
             references(findURLs(tagger.message))
             quotes(findNostrUris(tagger.message))
 
@@ -571,6 +577,8 @@ class LongFormPostViewModel :
         showPreview = false
 
         existingDTag = null
+        tags = emptyList()
+        slug = ""
 
         multiOrchestrator = null
         mediaUploadTracker.finishUpload()

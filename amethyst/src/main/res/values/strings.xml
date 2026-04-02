@@ -1347,6 +1347,14 @@
     <string name="write_your_article_in_markdown">Write your article in markdown…</string>
     <string name="markdown_preview">Preview</string>
     <string name="markdown_edit">Edit</string>
+    <string name="add_header_image">Add a header image</string>
+    <string name="your_article_title">Your article title\u2026</string>
+    <string name="article_description_placeholder">A brief description of your article\u2026</string>
+    <string name="url_slug">URL Slug</string>
+    <string name="url_slug_placeholder">article-url-slug</string>
+    <string name="tags_label"># Tags</string>
+    <string name="add_a_tag">Add a tag\u2026</string>
+    <string name="start_writing_article">Start writing your article\u2026</string>
 
     <string name="open_all_reactions_to_this_post">Open all reactions to this post</string>
     <string name="close_all_reactions_to_this_post">Close all reactions to this post</string>
