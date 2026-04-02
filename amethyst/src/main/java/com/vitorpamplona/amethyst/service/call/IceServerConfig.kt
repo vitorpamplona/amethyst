@@ -30,8 +30,27 @@ object IceServerConfig {
             PeerConnection.IceServer.builder("stun:stun.cloudflare.com:3478").createIceServer(),
         )
 
+    val defaultTurnServers =
+        listOf(
+            PeerConnection.IceServer
+                .builder("turn:openrelay.metered.ca:80")
+                .setUsername("openrelayproject")
+                .setPassword("openrelayproject")
+                .createIceServer(),
+            PeerConnection.IceServer
+                .builder("turn:openrelay.metered.ca:443")
+                .setUsername("openrelayproject")
+                .setPassword("openrelayproject")
+                .createIceServer(),
+            PeerConnection.IceServer
+                .builder("turn:openrelay.metered.ca:443?transport=tcp")
+                .setUsername("openrelayproject")
+                .setPassword("openrelayproject")
+                .createIceServer(),
+        )
+
     fun buildIceServers(userTurnServers: List<TurnServerConfig> = emptyList()): List<PeerConnection.IceServer> {
-        val servers = defaultStunServers.toMutableList()
+        val servers = (defaultStunServers + defaultTurnServers).toMutableList()
         userTurnServers.forEach { turn ->
             servers.add(
                 PeerConnection.IceServer
