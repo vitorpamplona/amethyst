@@ -374,18 +374,20 @@ private fun ConnectedCallUI(
             )
         }
 
-        // Local video (small pip in corner)
-        localVideoTrack?.let { track ->
-            VideoRenderer(
-                videoTrack = track,
-                eglBase = callController?.getEglBase(),
-                modifier =
-                    Modifier
-                        .size(120.dp, 160.dp)
-                        .align(Alignment.TopEnd)
-                        .padding(16.dp),
-                mirror = true,
-            )
+        // Local video (small pip in corner) — only when camera is active
+        if (isVideoEnabled) {
+            localVideoTrack?.let { track ->
+                VideoRenderer(
+                    videoTrack = track,
+                    eglBase = callController?.getEglBase(),
+                    modifier =
+                        Modifier
+                            .size(120.dp, 160.dp)
+                            .align(Alignment.TopEnd)
+                            .padding(16.dp),
+                    mirror = true,
+                )
+            }
         }
 
         // If no video, show avatar
