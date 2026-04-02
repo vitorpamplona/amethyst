@@ -73,6 +73,7 @@ fun CallScreen(
 ) {
     val callState by callManager.state.collectAsState()
     val scope = rememberCoroutineScope()
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     when (val state = callState) {
         is CallState.Idle -> {
@@ -89,11 +90,15 @@ fun CallScreen(
         }
 
         is CallState.IncomingCall -> {
+            val acceptWithPermission =
+                rememberCallWithPermission(context) {
+                    callController?.acceptIncomingCall(state.sdpOffer)
+                }
             IncomingCallUI(
                 callerPubKey = state.callerPubKey,
                 callType = state.callType,
                 accountViewModel = accountViewModel,
-                onAccept = { callController?.acceptIncomingCall(state.sdpOffer) },
+                onAccept = acceptWithPermission,
                 onReject = { scope.launch { callManager.rejectCall() } },
             )
         }
@@ -112,9 +117,18 @@ fun CallScreen(
                 state = state,
                 accountViewModel = accountViewModel,
                 onHangup = { scope.launch { callManager.hangup() } },
-                onToggleMute = { callManager.toggleAudioMute() },
-                onToggleVideo = { callManager.toggleVideo() },
-                onToggleSpeaker = { callManager.toggleSpeaker() },
+                onToggleMute = {
+                    callManager.toggleAudioMute()
+                    callController?.setAudioMuted(!state.isAudioMuted)
+                },
+                onToggleVideo = {
+                    callManager.toggleVideo()
+                    callController?.setVideoEnabled(!state.isVideoEnabled)
+                },
+                onToggleSpeaker = {
+                    callManager.toggleSpeaker()
+                    callController?.setSpeakerOn(!state.isSpeakerOn)
+                },
             )
         }
 

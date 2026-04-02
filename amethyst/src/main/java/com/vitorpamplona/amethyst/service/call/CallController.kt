@@ -22,8 +22,10 @@ package com.vitorpamplona.amethyst.service.call
 
 import android.content.Context
 import android.content.Intent
+import android.media.AudioManager
 import com.vitorpamplona.amethyst.commons.call.CallManager
 import com.vitorpamplona.amethyst.commons.call.CallState
+import com.vitorpamplona.amethyst.service.notifications.NotificationUtils
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.WebRtcCallFactory
@@ -140,6 +142,19 @@ class CallController(
         candidates.forEach { session.addIceCandidate(it) }
     }
 
+    fun setAudioMuted(muted: Boolean) {
+        webRtcSession?.setAudioEnabled(!muted)
+    }
+
+    fun setVideoEnabled(enabled: Boolean) {
+        webRtcSession?.setVideoEnabled(enabled)
+    }
+
+    fun setSpeakerOn(on: Boolean) {
+        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        audioManager.isSpeakerphoneOn = on
+    }
+
     fun hangup() {
         scope.launch { callManager.hangup() }
         cleanup()
@@ -147,6 +162,7 @@ class CallController(
 
     fun cleanup() {
         stopForegroundService()
+        NotificationUtils.cancelCallNotification(context)
         webRtcSession?.dispose()
         webRtcSession = null
         currentCallId = null
