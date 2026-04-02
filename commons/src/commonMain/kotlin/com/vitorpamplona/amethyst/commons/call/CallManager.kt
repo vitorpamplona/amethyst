@@ -108,6 +108,12 @@ class CallManager(
         _state.value = CallState.Connecting(current.callId, current.callerPubKey, current.callType)
         cancelTimeout()
         publishEvent(result.wrap)
+
+        // Notify other devices of this user that the call was answered here.
+        // This gift-wraps an answer event to our own pubkey so other logged-in
+        // devices see it and stop ringing.
+        val selfNotify = factory.createCallAnswer(sdpAnswer, signer.pubKey, current.callId, signer)
+        publishEvent(selfNotify.wrap)
     }
 
     suspend fun rejectCall() {
@@ -117,6 +123,10 @@ class CallManager(
         val result = factory.createReject(current.callerPubKey, current.callId, signer = signer)
         transitionToEnded(current.callId, current.callerPubKey, EndReason.REJECTED)
         publishEvent(result.wrap)
+
+        // Notify other devices of this user that the call was rejected here.
+        val selfNotify = factory.createReject(signer.pubKey, current.callId, signer = signer)
+        publishEvent(selfNotify.wrap)
     }
 
     fun onCallAnswered(event: CallAnswerEvent) {
@@ -129,6 +139,12 @@ class CallManager(
                 _state.value = CallState.Connecting(current.callId, current.peerPubKey, current.callType)
                 cancelTimeout()
                 onAnswerReceived?.invoke(event)
+            }
+
+            is CallState.IncomingCall -> {
+                // Another device of this user answered the call — stop ringing.
+                if (callId != current.callId) return
+                transitionToEnded(current.callId, current.callerPubKey, EndReason.ANSWERED_ELSEWHERE)
             }
 
             is CallState.Connected -> {
@@ -145,10 +161,24 @@ class CallManager(
 
     fun onCallRejected(event: CallRejectEvent) {
         val current = _state.value
-        if (current !is CallState.Offering) return
-        if (event.callId() != current.callId) return
+        val callId = event.callId()
 
-        transitionToEnded(current.callId, current.peerPubKey, EndReason.PEER_REJECTED)
+        when (current) {
+            is CallState.Offering -> {
+                if (callId != current.callId) return
+                transitionToEnded(current.callId, current.peerPubKey, EndReason.PEER_REJECTED)
+            }
+
+            is CallState.IncomingCall -> {
+                // Another device of this user rejected the call — stop ringing.
+                if (callId != current.callId) return
+                transitionToEnded(current.callId, current.callerPubKey, EndReason.REJECTED)
+            }
+
+            else -> {
+                return
+            }
+        }
     }
 
     fun onIceCandidate(event: CallIceCandidateEvent) {
