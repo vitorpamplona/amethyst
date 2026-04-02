@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.service.call
 
 import android.content.Context
 import android.content.Intent
-import android.media.AudioManager
 import com.vitorpamplona.amethyst.commons.call.CallManager
 import com.vitorpamplona.amethyst.commons.call.CallState
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils
@@ -75,8 +74,8 @@ class CallController(
     val isAudioMuted: StateFlow<Boolean> = _isAudioMuted.asStateFlow()
     private val _isVideoEnabled = MutableStateFlow(true)
     val isVideoEnabled: StateFlow<Boolean> = _isVideoEnabled.asStateFlow()
-    private val _isSpeakerOn = MutableStateFlow(false)
-    val isSpeakerOn: StateFlow<Boolean> = _isSpeakerOn.asStateFlow()
+    val audioRoute: StateFlow<AudioRoute> = audioManager.audioRoute
+    val isBluetoothAvailable: StateFlow<Boolean> = audioManager.isBluetoothAvailable
 
     init {
         scope.launch {
@@ -232,11 +231,8 @@ class CallController(
         webRtcSession?.setVideoEnabled(enabled)
     }
 
-    fun toggleSpeaker() {
-        val on = !_isSpeakerOn.value
-        _isSpeakerOn.value = on
-        val am = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-        am.isSpeakerphoneOn = on
+    fun cycleAudioRoute() {
+        audioManager.cycleAudioRoute()
     }
 
     fun getEglBase() = webRtcSession?.eglBase
@@ -258,7 +254,6 @@ class CallController(
         _localVideoTrack.value = null
         _isAudioMuted.value = false
         _isVideoEnabled.value = true
-        _isSpeakerOn.value = false
         webRtcSession?.dispose()
         webRtcSession = null
         remoteDescriptionSet = false

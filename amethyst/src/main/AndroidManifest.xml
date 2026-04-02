@@ -44,6 +44,7 @@
 
     <!-- Phone calls -->
     <uses-permission android:name="android.permission.VIBRATE"/>
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
 
     <!-- Keeps screen on while playing videos -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />

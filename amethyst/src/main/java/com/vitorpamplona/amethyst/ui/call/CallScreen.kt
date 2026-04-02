@@ -35,6 +35,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BluetoothAudio
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CallEnd
 import androidx.compose.material.icons.filled.Mic
@@ -69,6 +70,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.call.CallManager
 import com.vitorpamplona.amethyst.commons.call.CallState
+import com.vitorpamplona.amethyst.service.call.AudioRoute
 import com.vitorpamplona.amethyst.service.call.CallController
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
@@ -148,7 +150,7 @@ fun CallScreen(
                     onHangup = { scope.launch { callManager.hangup() } },
                     onToggleMute = { callController?.toggleAudioMute() },
                     onToggleVideo = { callController?.toggleVideo() },
-                    onToggleSpeaker = { callController?.toggleSpeaker() },
+                    onCycleAudioRoute = { callController?.cycleAudioRoute() },
                 )
             }
 
@@ -327,7 +329,7 @@ private fun ConnectedCallUI(
     onHangup: () -> Unit,
     onToggleMute: () -> Unit,
     onToggleVideo: () -> Unit,
-    onToggleSpeaker: () -> Unit,
+    onCycleAudioRoute: () -> Unit,
 ) {
     var elapsed by remember { mutableLongStateOf(0L) }
 
@@ -343,9 +345,10 @@ private fun ConnectedCallUI(
     val localVideoTrack by (callController?.localVideoTrack ?: emptyVideoFlow).collectAsState()
     val defaultFalse = remember { kotlinx.coroutines.flow.MutableStateFlow(false) }
     val defaultTrue = remember { kotlinx.coroutines.flow.MutableStateFlow(true) }
+    val defaultRoute = remember { kotlinx.coroutines.flow.MutableStateFlow(AudioRoute.EARPIECE) }
     val isAudioMuted by (callController?.isAudioMuted ?: defaultFalse).collectAsState()
     val isVideoEnabled by (callController?.isVideoEnabled ?: defaultTrue).collectAsState()
-    val isSpeakerOn by (callController?.isSpeakerOn ?: defaultFalse).collectAsState()
+    val currentAudioRoute by (callController?.audioRoute ?: defaultRoute).collectAsState()
 
     Box(
         modifier =
@@ -455,13 +458,30 @@ private fun ConnectedCallUI(
                     )
                 }
                 IconButton(
-                    onClick = onToggleSpeaker,
+                    onClick = onCycleAudioRoute,
                     modifier = Modifier.size(56.dp),
                 ) {
                     Icon(
-                        imageVector = if (isSpeakerOn) Icons.Default.VolumeUp else Icons.Default.VolumeOff,
-                        contentDescription = stringRes(if (isSpeakerOn) R.string.call_earpiece else R.string.call_speaker),
-                        tint = if (isSpeakerOn) Color.Cyan else Color.White,
+                        imageVector =
+                            when (currentAudioRoute) {
+                                AudioRoute.EARPIECE -> Icons.Default.VolumeOff
+                                AudioRoute.SPEAKER -> Icons.Default.VolumeUp
+                                AudioRoute.BLUETOOTH -> Icons.Default.BluetoothAudio
+                            },
+                        contentDescription =
+                            stringRes(
+                                when (currentAudioRoute) {
+                                    AudioRoute.EARPIECE -> R.string.call_earpiece
+                                    AudioRoute.SPEAKER -> R.string.call_speaker
+                                    AudioRoute.BLUETOOTH -> R.string.call_bluetooth
+                                },
+                            ),
+                        tint =
+                            when (currentAudioRoute) {
+                                AudioRoute.EARPIECE -> Color.White
+                                AudioRoute.SPEAKER -> Color.Cyan
+                                AudioRoute.BLUETOOTH -> Color(0xFF2196F3)
+                            },
                         modifier = Modifier.size(28.dp),
                     )
                 }

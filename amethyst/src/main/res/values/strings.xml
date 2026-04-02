@@ -793,6 +793,7 @@
     <string name="call_camera_off">Camera off</string>
     <string name="call_speaker">Speaker</string>
     <string name="call_earpiece">Earpiece</string>
+    <string name="call_bluetooth">Bluetooth</string>
     <string name="call_voice">Voice call</string>
     <string name="call_video">Video call</string>
     <string name="call_failed_start">Failed to start call</string>
