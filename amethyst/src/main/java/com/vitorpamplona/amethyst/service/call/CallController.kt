@@ -22,6 +22,9 @@ package com.vitorpamplona.amethyst.service.call
 
 import android.content.Context
 import android.content.Intent
+import coil3.ImageLoader
+import coil3.asDrawable
+import coil3.request.ImageRequest
 import com.vitorpamplona.amethyst.commons.call.CallManager
 import com.vitorpamplona.amethyst.commons.call.CallState
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -462,14 +465,27 @@ class CallController(
         }
     }
 
-    private fun showIncomingCallNotification(callerPubKey: String) {
+    private suspend fun showIncomingCallNotification(callerPubKey: String) {
         val callerUser = LocalCache.getUserIfExists(callerPubKey)
         val callerName = callerUser?.toBestDisplayName() ?: callerPubKey.take(8) + "..."
         val uri = "nostr:${callerPubKey.hexToByteArray().toNpub()}"
 
+        val callerBitmap =
+            callerUser?.profilePicture()?.let { pictureUrl ->
+                withContext(Dispatchers.IO) {
+                    try {
+                        val request = ImageRequest.Builder(context).data(pictureUrl).build()
+                        val result = ImageLoader(context).execute(request)
+                        (result.image?.asDrawable(context.resources) as? android.graphics.drawable.BitmapDrawable)?.bitmap
+                    } catch (_: Exception) {
+                        null
+                    }
+                }
+            }
+
         NotificationUtils.sendCallNotification(
             callerName = callerName,
-            callerBitmap = null,
+            callerBitmap = callerBitmap,
             uri = uri,
             applicationContext = context,
         )

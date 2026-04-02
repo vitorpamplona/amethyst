@@ -22,7 +22,11 @@ package com.vitorpamplona.amethyst.service.notifications
 
 import android.app.NotificationManager
 import android.content.Context
+import android.graphics.drawable.BitmapDrawable
 import androidx.core.content.ContextCompat
+import coil3.ImageLoader
+import coil3.asDrawable
+import coil3.request.ImageRequest
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
@@ -625,7 +629,7 @@ class EventNotificationConsumer(
         }
     }
 
-    private fun notifyIncomingCall(
+    private suspend fun notifyIncomingCall(
         event: CallOfferEvent,
         account: Account,
     ) {
@@ -636,10 +640,23 @@ class EventNotificationConsumer(
         val callerUser = LocalCache.getUserIfExists(event.pubKey)
         val callerName = callerUser?.toBestDisplayName() ?: event.pubKey.take(8) + "..."
 
+        val callerBitmap =
+            callerUser?.profilePicture()?.let { pictureUrl ->
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    try {
+                        val request = ImageRequest.Builder(applicationContext).data(pictureUrl).build()
+                        val result = ImageLoader(applicationContext).execute(request)
+                        (result.image?.asDrawable(applicationContext.resources) as? BitmapDrawable)?.bitmap
+                    } catch (_: Exception) {
+                        null
+                    }
+                }
+            }
+
         NotificationUtils
             .sendCallNotification(
                 callerName = callerName,
-                callerBitmap = null,
+                callerBitmap = callerBitmap,
                 uri = "nostr:${event.pubKey.hexToByteArray().toNpub()}",
                 applicationContext = applicationContext,
             )
