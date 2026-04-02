@@ -53,6 +53,7 @@ import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip64Chess.baseEvent.BaseChessEvent
 import com.vitorpamplona.quartz.nip64Chess.challenge.accept.LiveChessGameAcceptEvent
 import com.vitorpamplona.quartz.nip64Chess.move.LiveChessMoveEvent
+import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallOfferEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import java.math.BigDecimal
@@ -137,6 +138,10 @@ class EventNotificationConsumer(
 
                     is LiveChessMoveEvent -> {
                         notifyChessEvent(innerEvent, account, R.string.app_notification_chess_your_turn)
+                    }
+
+                    is CallOfferEvent -> {
+                        notifyIncomingCall(innerEvent, account)
                     }
                 }
             }
@@ -618,6 +623,26 @@ class EventNotificationConsumer(
                     applicationContext,
                 )
         }
+    }
+
+    private fun notifyIncomingCall(
+        event: CallOfferEvent,
+        account: Account,
+    ) {
+        if (!account.isFollowing(event.pubKey)) return
+
+        if (TimeUtils.now() - event.createdAt > 30) return
+
+        val callerUser = LocalCache.getUserIfExists(event.pubKey)
+        val callerName = callerUser?.toBestDisplayName() ?: event.pubKey.take(8) + "..."
+
+        NotificationUtils
+            .sendCallNotification(
+                callerName = callerName,
+                callerBitmap = null,
+                uri = "nostr:${event.pubKey.hexToByteArray().toNpub()}",
+                applicationContext = applicationContext,
+            )
     }
 
     fun notificationManager(): NotificationManager =

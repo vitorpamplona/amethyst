@@ -26,12 +26,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import com.vitorpamplona.amethyst.ui.call.rememberCallWithPermission
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.RenderRoomTopBar
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
+import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType
 
 @Composable
 fun ChatroomScreen(
@@ -43,6 +47,14 @@ fun ChatroomScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val context = LocalContext.current
+    val startCall =
+        rememberCallWithPermission(context) {
+            val peerPubKey = roomId.users.firstOrNull() ?: return@rememberCallWithPermission
+            accountViewModel.callController?.initiateCall(peerPubKey, CallType.VOICE)
+            nav.nav(Route.ActiveCall(callId = "", peerPubKey = peerPubKey))
+        }
+
     DisappearingScaffold(
         isInvertedLayout = true,
         topBar = {
@@ -50,18 +62,7 @@ fun ChatroomScreen(
                 room = roomId,
                 accountViewModel = accountViewModel,
                 nav = nav,
-                onCallClick = { peerPubKey ->
-                    accountViewModel.callController?.initiateCall(
-                        peerPubKey,
-                        com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType.VOICE,
-                    )
-                    nav.nav(
-                        com.vitorpamplona.amethyst.ui.navigation.routes.Route.ActiveCall(
-                            callId = "",
-                            peerPubKey = peerPubKey,
-                        ),
-                    )
-                },
+                onCallClick = { _ -> startCall() },
             )
         },
         accountViewModel = accountViewModel,
