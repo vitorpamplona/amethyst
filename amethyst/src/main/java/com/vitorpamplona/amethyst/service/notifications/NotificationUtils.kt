@@ -33,7 +33,7 @@ import androidx.core.app.Person
 import androidx.core.app.RemoteInput
 import androidx.core.graphics.drawable.IconCompat
 import androidx.core.net.toUri
-import coil3.ImageLoader
+import coil3.SingletonImageLoader
 import coil3.asDrawable
 import coil3.request.ImageRequest
 import com.vitorpamplona.amethyst.R
@@ -273,7 +273,7 @@ object NotificationUtils {
         withContext(Dispatchers.IO) {
             try {
                 val request = ImageRequest.Builder(applicationContext).data(pictureUrl).build()
-                val imageLoader = ImageLoader(applicationContext)
+                val imageLoader = SingletonImageLoader.get(applicationContext)
                 val result = imageLoader.execute(request)
                 (result.image?.asDrawable(applicationContext.resources) as? BitmapDrawable)?.bitmap
             } catch (_: Exception) {

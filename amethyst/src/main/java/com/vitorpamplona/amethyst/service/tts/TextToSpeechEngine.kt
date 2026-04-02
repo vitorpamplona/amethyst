@@ -160,6 +160,11 @@ class TextToSpeechEngine private constructor() {
         tts?.stop()
         tts?.shutdown()
         tts = null
+        onStartListener = null
+        onDoneListener = null
+        onErrorListener = null
+        onHighlightListener = null
+        message = null
         instance = null
     }
 }

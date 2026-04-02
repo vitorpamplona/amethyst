@@ -91,7 +91,7 @@ class MainActivity : AppCompatActivity() {
 
         @OptIn(DelicateCoroutinesApi::class)
         GlobalScope.launch(Dispatchers.IO) {
-            debugState(this@MainActivity)
+            debugState(applicationContext)
             Amethyst.instance.relayReqStats?.printStats()
         }
 

@@ -236,7 +236,6 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -1744,8 +1743,7 @@ object LocalCache : ILocalCache, ICacheProvider {
 
             requestNote?.let { request -> zappedNote?.addZapPayment(request, note) }
 
-            @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
-            GlobalScope.launch(Dispatchers.IO) {
+            Amethyst.instance.applicationIOScope.launch {
                 responseCallback(event)
             }
 

@@ -29,6 +29,7 @@ import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -93,11 +94,14 @@ class ExoPlayerPool(
     }
 
     fun destroy() {
-        scope.launch {
-            mutex.withLock {
-                playerPool.forEach { it.release() }
-                playerPool.clear()
+        scope
+            .launch {
+                mutex.withLock {
+                    playerPool.forEach { it.release() }
+                    playerPool.clear()
+                }
+            }.invokeOnCompletion {
+                scope.cancel()
             }
-        }
     }
 }
