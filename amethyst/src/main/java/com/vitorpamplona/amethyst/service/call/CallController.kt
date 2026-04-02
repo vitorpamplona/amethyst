@@ -227,9 +227,20 @@ class CallController(
     }
 
     fun toggleVideo() {
+        val session = webRtcSession ?: return
         val enabled = !_isVideoEnabled.value
         _isVideoEnabled.value = enabled
-        webRtcSession?.setVideoEnabled(enabled)
+
+        if (enabled && session.getLocalVideoTrack() == null) {
+            // Video track doesn't exist yet (voice call upgraded to video)
+            session.addVideoTrack()
+            _localVideoTrack.value = session.getLocalVideoTrack()
+        } else {
+            session.setVideoEnabled(enabled)
+            if (!enabled) {
+                session.stopCamera()
+            }
+        }
     }
 
     fun cycleAudioRoute() {
