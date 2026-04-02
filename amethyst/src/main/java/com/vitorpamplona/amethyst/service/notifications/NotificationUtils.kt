@@ -561,13 +561,16 @@ object NotificationUtils {
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
             )
 
+        // Accept launches CallActivity directly (not via BroadcastReceiver)
+        // to comply with Android 12+ notification trampoline restrictions.
         val acceptIntent =
-            Intent(applicationContext, com.vitorpamplona.amethyst.ui.call.CallNotificationReceiver::class.java).apply {
-                action = com.vitorpamplona.amethyst.ui.call.CallNotificationReceiver.ACTION_ACCEPT_CALL
+            Intent(applicationContext, com.vitorpamplona.amethyst.ui.call.CallActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                putExtra(com.vitorpamplona.amethyst.ui.call.CallActivity.EXTRA_ACCEPT_CALL, true)
             }
 
         val acceptPendingIntent =
-            PendingIntent.getBroadcast(
+            PendingIntent.getActivity(
                 applicationContext,
                 CALL_NOTIFICATION_ID + 1,
                 acceptIntent,

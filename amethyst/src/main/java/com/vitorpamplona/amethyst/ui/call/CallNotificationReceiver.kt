@@ -23,12 +23,17 @@ package com.vitorpamplona.amethyst.ui.call
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import com.vitorpamplona.amethyst.commons.call.CallState
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 
+/**
+ * Handles the Reject action from the incoming call notification.
+ *
+ * The Accept action launches [CallActivity] directly via PendingIntent.getActivity
+ * to comply with Android 12+ notification trampoline restrictions.
+ */
 class CallNotificationReceiver : BroadcastReceiver() {
     @OptIn(DelicateCoroutinesApi::class)
     override fun onReceive(
@@ -36,20 +41,6 @@ class CallNotificationReceiver : BroadcastReceiver() {
         intent: Intent,
     ) {
         when (intent.action) {
-            ACTION_ACCEPT_CALL -> {
-                NotificationUtils.cancelCallNotification(context)
-
-                val callController = ActiveCallHolder.callController
-                val callManager = ActiveCallHolder.callManager
-                if (callController == null || callManager == null) return
-
-                val state = callManager.state.value
-                if (state is CallState.IncomingCall) {
-                    callController.acceptIncomingCall(state.sdpOffer)
-                    CallActivity.launch(context)
-                }
-            }
-
             ACTION_REJECT_CALL -> {
                 NotificationUtils.cancelCallNotification(context)
 
@@ -62,7 +53,6 @@ class CallNotificationReceiver : BroadcastReceiver() {
     }
 
     companion object {
-        const val ACTION_ACCEPT_CALL = "com.vitorpamplona.amethyst.ACCEPT_CALL"
         const val ACTION_REJECT_CALL = "com.vitorpamplona.amethyst.REJECT_CALL"
     }
 }

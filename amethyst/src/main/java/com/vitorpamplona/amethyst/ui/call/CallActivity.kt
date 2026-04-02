@@ -97,6 +97,7 @@ class CallActivity : AppCompatActivity() {
 
         registerPipReceiver()
         observeVideoStateForPip(callController)
+        handleAcceptCallIntent(intent)
 
         setContent {
             AmethystTheme {
@@ -108,6 +109,27 @@ class CallActivity : AppCompatActivity() {
                     isInPipMode = isInPipMode.value,
                 )
             }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleAcceptCallIntent(intent)
+    }
+
+    private fun handleAcceptCallIntent(intent: Intent?) {
+        if (intent?.getBooleanExtra(EXTRA_ACCEPT_CALL, false) != true) return
+        // Clear the extra so it doesn't re-trigger on config changes
+        intent.removeExtra(EXTRA_ACCEPT_CALL)
+
+        com.vitorpamplona.amethyst.service.notifications.NotificationUtils
+            .cancelCallNotification(this)
+
+        val callController = ActiveCallHolder.callController ?: return
+        val callManager = ActiveCallHolder.callManager ?: return
+        val state = callManager.state.value
+        if (state is CallState.IncomingCall) {
+            callController.acceptIncomingCall(state.sdpOffer)
         }
     }
 
@@ -274,6 +296,7 @@ class CallActivity : AppCompatActivity() {
     }
 
     companion object {
+        const val EXTRA_ACCEPT_CALL = "com.vitorpamplona.amethyst.EXTRA_ACCEPT_CALL"
         private const val ACTION_PIP_HANGUP = "com.vitorpamplona.amethyst.PIP_HANGUP"
         private const val ACTION_PIP_TOGGLE_MUTE = "com.vitorpamplona.amethyst.PIP_TOGGLE_MUTE"
         private const val PIP_HANGUP_REQUEST_CODE = 0x60001
