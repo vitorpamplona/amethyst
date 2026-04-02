@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.service.notifications.NotificationUtils
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.WebRtcCallFactory
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallIceCandidateEvent
+import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallRenegotiateEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
@@ -93,6 +94,8 @@ class CallController(
     val isBluetoothAvailable: StateFlow<Boolean> = audioManager.isBluetoothAvailable
 
     init {
+        callManager.onRenegotiationOfferReceived = { event -> onRenegotiationOfferReceived(event) }
+
         scope.launch {
             callManager.state.collect { state ->
                 when (state) {
@@ -282,6 +285,34 @@ class CallController(
         _errorMessage.value = null
     }
 
+    private fun onRenegotiationOfferReceived(event: CallRenegotiateEvent) {
+        val session = webRtcSession ?: return
+        val sdpOffer = event.sdpOffer()
+        Log.d(TAG) { "Renegotiation offer received, SDP length=${sdpOffer.length}" }
+
+        scope.launch {
+            session.setRemoteDescription(SessionDescription(SessionDescription.Type.OFFER, sdpOffer))
+            session.createAnswer { sdp ->
+                scope.launch {
+                    callManager.sendRenegotiationAnswer(sdp.description)
+                }
+            }
+        }
+    }
+
+    private fun performRenegotiation() {
+        val session = webRtcSession ?: return
+        val state = callManager.state.value
+        if (state !is CallState.Connected && state !is CallState.Connecting) return
+
+        Log.d(TAG) { "Starting renegotiation" }
+        session.createOffer { sdp ->
+            scope.launch {
+                callManager.sendRenegotiation(sdp.description)
+            }
+        }
+    }
+
     fun cleanup() {
         audioManager.release()
         stopForegroundService()
@@ -337,6 +368,7 @@ class CallController(
                 },
                 onDisconnected = { scope.launch { callManager.hangup() } },
                 onError = { error -> _errorMessage.value = error },
+                onRenegotiationNeeded = { performRenegotiation() },
             )
         try {
             session.initialize()
