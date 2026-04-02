@@ -363,6 +363,9 @@ dependencies {
     // Voice anonymization DSP
     implementation libs.tarsosdsp
 
+    // WebRTC for voice/video calls
+    implementation libs.stream.webrtc.android
+
     // Cbor for cashuB format
     implementation libs.kotlinx.serialization.cbor
 

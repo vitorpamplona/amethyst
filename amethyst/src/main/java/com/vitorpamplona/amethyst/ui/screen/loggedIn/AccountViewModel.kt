@@ -41,6 +41,7 @@ import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.call.CallManager
 import com.vitorpamplona.amethyst.commons.compose.GenericBaseCache
 import com.vitorpamplona.amethyst.commons.compose.GenericBaseCacheAsync
 import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
@@ -65,6 +66,7 @@ import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilde
 import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.broadcast.BroadcastTracker
+import com.vitorpamplona.amethyst.service.call.CallController
 import com.vitorpamplona.amethyst.service.cashu.CashuToken
 import com.vitorpamplona.amethyst.service.cashu.melt.MeltProcessor
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
@@ -186,6 +188,43 @@ class AccountViewModel(
     val toastManager = ToastManager()
     val broadcastTracker = BroadcastTracker()
     val feedStates = AccountFeedContentStates(account, viewModelScope)
+
+    val callManager =
+        CallManager(
+            signer = account.signer,
+            scope = viewModelScope,
+            isFollowing = { account.isFollowing(it) },
+            publishEvent = { wrap ->
+                viewModelScope.launch {
+                    account.publishCallSignaling(wrap)
+                }
+            },
+        )
+
+    var callController: CallController? = null
+        private set
+
+    @Synchronized
+    fun initCallController(context: Context) {
+        if (callController != null) return
+
+        // Wire EventProcessor before creating CallController so events aren't dropped
+        account.newNotesPreProcessor.callManager = callManager
+
+        val controller =
+            CallController(
+                context = context,
+                callManager = callManager,
+                scope = viewModelScope,
+                publishWrap = { wrap -> account.publishCallSignaling(wrap) },
+                signerProvider = { account.signer },
+            )
+
+        // Set callbacks before exposing controller to avoid timing races
+        callManager.onAnswerReceived = { event -> controller.onCallAnswerReceived(event.sdpAnswer()) }
+        callManager.onIceCandidateReceived = { event -> controller.onIceCandidateReceived(event) }
+        callController = controller
+    }
 
     val eventSync =
         EventSync(

@@ -252,6 +252,12 @@ import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
+import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallAnswerEvent
+import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallHangupEvent
+import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallIceCandidateEvent
+import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallOfferEvent
+import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallRejectEvent
+import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallRenegotiateEvent
 import com.vitorpamplona.quartz.nipB0WebBookmarks.WebBookmarkEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
@@ -311,6 +317,12 @@ class EventFactory {
                 CalendarEvent.KIND -> CalendarEvent(id, pubKey, createdAt, tags, content, sig)
                 CalendarTimeSlotEvent.KIND -> CalendarTimeSlotEvent(id, pubKey, createdAt, tags, content, sig)
                 CalendarRSVPEvent.KIND -> CalendarRSVPEvent(id, pubKey, createdAt, tags, content, sig)
+                CallAnswerEvent.KIND -> CallAnswerEvent(id, pubKey, createdAt, tags, content, sig)
+                CallHangupEvent.KIND -> CallHangupEvent(id, pubKey, createdAt, tags, content, sig)
+                CallIceCandidateEvent.KIND -> CallIceCandidateEvent(id, pubKey, createdAt, tags, content, sig)
+                CallOfferEvent.KIND -> CallOfferEvent(id, pubKey, createdAt, tags, content, sig)
+                CallRejectEvent.KIND -> CallRejectEvent(id, pubKey, createdAt, tags, content, sig)
+                CallRenegotiateEvent.KIND -> CallRenegotiateEvent(id, pubKey, createdAt, tags, content, sig)
                 CashuMintEvent.KIND -> CashuMintEvent(id, pubKey, createdAt, tags, content, sig)
                 CashuMintQuoteEvent.KIND -> CashuMintQuoteEvent(id, pubKey, createdAt, tags, content, sig)
                 CashuTokenEvent.KIND -> CashuTokenEvent(id, pubKey, createdAt, tags, content, sig)

@@ -47,11 +47,14 @@ object NotificationUtils {
     private var zapChannel: NotificationChannel? = null
     private var reactionChannel: NotificationChannel? = null
     private var chessChannel: NotificationChannel? = null
+    private var callChannel: NotificationChannel? = null
 
     private const val DM_GROUP_KEY = "com.vitorpamplona.amethyst.DM_NOTIFICATION"
     private const val ZAP_GROUP_KEY = "com.vitorpamplona.amethyst.ZAP_NOTIFICATION"
     private const val REACTION_GROUP_KEY = "com.vitorpamplona.amethyst.REACTION_NOTIFICATION"
     private const val CHESS_GROUP_KEY = "com.vitorpamplona.amethyst.CHESS_NOTIFICATION"
+    private const val CALL_CHANNEL_ID = "com.vitorpamplona.amethyst.CALL_CHANNEL"
+    private const val CALL_NOTIFICATION_ID = 0x50000
 
     const val REPLY_ACTION = "com.vitorpamplona.amethyst.REPLY_ACTION"
     const val MARK_READ_ACTION = "com.vitorpamplona.amethyst.MARK_READ_ACTION"
@@ -508,6 +511,89 @@ object NotificationUtils {
                 )
 
         notify(summaryId, summaryBuilder.build())
+    }
+
+    fun getOrCreateCallChannel(applicationContext: Context): NotificationChannel {
+        if (callChannel != null) return callChannel!!
+
+        callChannel =
+            NotificationChannel(
+                CALL_CHANNEL_ID,
+                stringRes(applicationContext, R.string.app_notification_calls_channel_name),
+                NotificationManager.IMPORTANCE_HIGH,
+            ).apply {
+                description = stringRes(applicationContext, R.string.app_notification_calls_channel_description)
+            }
+
+        val notificationManager: NotificationManager =
+            applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        notificationManager.createNotificationChannel(callChannel!!)
+
+        return callChannel!!
+    }
+
+    fun sendCallNotification(
+        callerName: String,
+        callerBitmap: Bitmap?,
+        uri: String,
+        applicationContext: Context,
+    ) {
+        val notificationManager: NotificationManager =
+            applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        val channel = getOrCreateCallChannel(applicationContext)
+
+        val contentIntent =
+            Intent(applicationContext, MainActivity::class.java).apply { data = uri.toUri() }
+
+        val contentPendingIntent =
+            PendingIntent.getActivity(
+                applicationContext,
+                CALL_NOTIFICATION_ID,
+                contentIntent,
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+
+        val fullScreenIntent =
+            Intent(applicationContext, MainActivity::class.java).apply {
+                data = uri.toUri()
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            }
+
+        val fullScreenPendingIntent =
+            PendingIntent.getActivity(
+                applicationContext,
+                CALL_NOTIFICATION_ID + 1,
+                fullScreenIntent,
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+
+        val builder =
+            NotificationCompat
+                .Builder(applicationContext, channel.id)
+                .setSmallIcon(R.drawable.amethyst)
+                .setContentTitle(stringRes(applicationContext, R.string.call_incoming))
+                .setContentText(callerName)
+                .setLargeIcon(callerBitmap)
+                .setContentIntent(contentPendingIntent)
+                .setFullScreenIntent(fullScreenPendingIntent, true)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setCategory(NotificationCompat.CATEGORY_CALL)
+                .setAutoCancel(true)
+                .setOngoing(true)
+                .setTimeoutAfter(60_000)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                .addAction(R.drawable.amethyst, stringRes(applicationContext, R.string.call_reject), contentPendingIntent)
+                .addAction(R.drawable.amethyst, stringRes(applicationContext, R.string.call_accept), fullScreenPendingIntent)
+
+        notificationManager.notify("call", CALL_NOTIFICATION_ID, builder.build())
+    }
+
+    fun cancelCallNotification(applicationContext: Context) {
+        val notificationManager: NotificationManager =
+            applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.cancel("call", CALL_NOTIFICATION_ID)
     }
 
     private fun NotificationManager.isDuplicate(notId: Int): Boolean {

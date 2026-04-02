@@ -219,6 +219,12 @@ import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
+import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallAnswerEvent
+import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallHangupEvent
+import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallIceCandidateEvent
+import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallOfferEvent
+import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallRejectEvent
+import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallRenegotiateEvent
 import com.vitorpamplona.quartz.nipB0WebBookmarks.WebBookmarkEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
@@ -2570,6 +2576,12 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is CalendarDateSlotEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is CalendarTimeSlotEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is CalendarRSVPEvent -> consumeBaseReplaceable(event, relay, wasVerified)
+                is CallAnswerEvent -> consumeRegularEvent(event, relay, wasVerified)
+                is CallHangupEvent -> consumeRegularEvent(event, relay, wasVerified)
+                is CallIceCandidateEvent -> consumeRegularEvent(event, relay, wasVerified)
+                is CallOfferEvent -> consumeRegularEvent(event, relay, wasVerified)
+                is CallRejectEvent -> consumeRegularEvent(event, relay, wasVerified)
+                is CallRenegotiateEvent -> consumeRegularEvent(event, relay, wasVerified)
                 is ChannelCreateEvent -> consume(event, relay, wasVerified)
                 is ChannelListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is ChannelHideMessageEvent -> consume(event, relay, wasVerified)

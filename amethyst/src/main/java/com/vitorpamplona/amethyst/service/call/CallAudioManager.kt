@@ -1,0 +1,291 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.service.call
+
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.media.AudioAttributes
+import android.media.AudioDeviceInfo
+import android.media.AudioManager
+import android.media.Ringtone
+import android.media.RingtoneManager
+import android.media.ToneGenerator
+import android.os.Build
+import android.os.PowerManager
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+
+enum class AudioRoute {
+    EARPIECE,
+    SPEAKER,
+    BLUETOOTH,
+}
+
+class CallAudioManager(
+    private val context: Context,
+) {
+    private var ringtone: Ringtone? = null
+    private var vibrator: Vibrator? = null
+    private var proximityWakeLock: PowerManager.WakeLock? = null
+    private var ringbackTone: ToneGenerator? = null
+    private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+    private var previousAudioMode: Int = AudioManager.MODE_NORMAL
+    private var scoReceiver: BroadcastReceiver? = null
+
+    private val _audioRoute = MutableStateFlow(AudioRoute.EARPIECE)
+    val audioRoute: StateFlow<AudioRoute> = _audioRoute.asStateFlow()
+
+    private val _isBluetoothAvailable = MutableStateFlow(false)
+    val isBluetoothAvailable: StateFlow<Boolean> = _isBluetoothAvailable.asStateFlow()
+
+    fun startRinging() {
+        startRingtone()
+        startVibration()
+    }
+
+    fun stopRinging() {
+        stopRingtone()
+        stopVibration()
+    }
+
+    fun startRingbackTone() {
+        try {
+            ringbackTone =
+                ToneGenerator(AudioManager.STREAM_VOICE_CALL, 80).also {
+                    it.startTone(ToneGenerator.TONE_SUP_RINGTONE)
+                }
+        } catch (_: Exception) {
+        }
+    }
+
+    fun stopRingbackTone() {
+        ringbackTone?.stopTone()
+        ringbackTone?.release()
+        ringbackTone = null
+    }
+
+    fun switchToCallAudioMode() {
+        previousAudioMode = audioManager.mode
+        audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
+
+        _isBluetoothAvailable.value = hasBluetoothDevice()
+        if (_isBluetoothAvailable.value) {
+            startBluetoothSco()
+        } else {
+            routeToEarpiece()
+        }
+        registerBluetoothScoReceiver()
+    }
+
+    fun restoreAudioMode() {
+        stopBluetoothSco()
+        unregisterBluetoothScoReceiver()
+        audioManager.mode = previousAudioMode
+        audioManager.isSpeakerphoneOn = false
+    }
+
+    fun cycleAudioRoute() {
+        val hasBt = _isBluetoothAvailable.value
+        val next =
+            when (_audioRoute.value) {
+                AudioRoute.EARPIECE -> if (hasBt) AudioRoute.BLUETOOTH else AudioRoute.SPEAKER
+                AudioRoute.BLUETOOTH -> AudioRoute.SPEAKER
+                AudioRoute.SPEAKER -> AudioRoute.EARPIECE
+            }
+        setAudioRoute(next)
+    }
+
+    fun setAudioRoute(route: AudioRoute) {
+        _audioRoute.value = route
+        when (route) {
+            AudioRoute.EARPIECE -> routeToEarpiece()
+            AudioRoute.SPEAKER -> routeToSpeaker()
+            AudioRoute.BLUETOOTH -> routeToBluetooth()
+        }
+    }
+
+    fun acquireProximityWakeLock() {
+        if (proximityWakeLock != null) return
+        val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+        proximityWakeLock =
+            powerManager.newWakeLock(
+                PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK,
+                "amethyst:call_proximity",
+            )
+        proximityWakeLock?.acquire(60 * 60 * 1000L)
+    }
+
+    fun releaseProximityWakeLock() {
+        proximityWakeLock?.let { if (it.isHeld) it.release() }
+        proximityWakeLock = null
+    }
+
+    fun release() {
+        stopRinging()
+        stopRingbackTone()
+        restoreAudioMode()
+        releaseProximityWakeLock()
+    }
+
+    private fun routeToEarpiece() {
+        stopBluetoothSco()
+        audioManager.isSpeakerphoneOn = false
+    }
+
+    private fun routeToSpeaker() {
+        stopBluetoothSco()
+        audioManager.isSpeakerphoneOn = true
+    }
+
+    private fun routeToBluetooth() {
+        audioManager.isSpeakerphoneOn = false
+        startBluetoothSco()
+    }
+
+    private fun hasBluetoothDevice(): Boolean =
+        try {
+            audioManager
+                .getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+                .any {
+                    it.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
+                        it.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP ||
+                        it.type == AudioDeviceInfo.TYPE_BLE_HEADSET
+                }
+        } catch (_: Exception) {
+            false
+        }
+
+    @Suppress("DEPRECATION")
+    private fun startBluetoothSco() {
+        try {
+            if (!audioManager.isBluetoothScoOn) {
+                audioManager.startBluetoothSco()
+                audioManager.isBluetoothScoOn = true
+            }
+        } catch (_: Exception) {
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun stopBluetoothSco() {
+        try {
+            if (audioManager.isBluetoothScoOn) {
+                audioManager.isBluetoothScoOn = false
+                audioManager.stopBluetoothSco()
+            }
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun registerBluetoothScoReceiver() {
+        if (scoReceiver != null) return
+        scoReceiver =
+            object : BroadcastReceiver() {
+                override fun onReceive(
+                    ctx: Context?,
+                    intent: Intent?,
+                ) {
+                    val state = intent?.getIntExtra(AudioManager.EXTRA_SCO_AUDIO_STATE, -1)
+                    when (state) {
+                        AudioManager.SCO_AUDIO_STATE_CONNECTED -> {
+                            _isBluetoothAvailable.value = true
+                            if (_audioRoute.value == AudioRoute.BLUETOOTH) {
+                                audioManager.isBluetoothScoOn = true
+                            }
+                        }
+
+                        AudioManager.SCO_AUDIO_STATE_DISCONNECTED -> {
+                            _isBluetoothAvailable.value = hasBluetoothDevice()
+                            if (_audioRoute.value == AudioRoute.BLUETOOTH) {
+                                _audioRoute.value = AudioRoute.EARPIECE
+                                routeToEarpiece()
+                            }
+                        }
+                    }
+                }
+            }
+        @Suppress("DEPRECATION")
+        context.registerReceiver(
+            scoReceiver,
+            IntentFilter(AudioManager.ACTION_SCO_AUDIO_STATE_UPDATED),
+        )
+    }
+
+    private fun unregisterBluetoothScoReceiver() {
+        scoReceiver?.let {
+            try {
+                context.unregisterReceiver(it)
+            } catch (_: Exception) {
+            }
+        }
+        scoReceiver = null
+    }
+
+    private fun startRingtone() {
+        try {
+            val ringtoneUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
+            ringtone =
+                RingtoneManager.getRingtone(context, ringtoneUri)?.apply {
+                    audioAttributes =
+                        AudioAttributes
+                            .Builder()
+                            .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                            .build()
+                    isLooping = true
+                    play()
+                }
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun stopRingtone() {
+        ringtone?.stop()
+        ringtone = null
+    }
+
+    private fun startVibration() {
+        try {
+            vibrator =
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+                    vibratorManager.defaultVibrator
+                } else {
+                    @Suppress("DEPRECATION")
+                    context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+                }
+            val pattern = longArrayOf(0, 1000, 1000)
+            vibrator?.vibrate(VibrationEffect.createWaveform(pattern, 0))
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun stopVibration() {
+        vibrator?.cancel()
+        vibrator = null
+    }
+}

@@ -28,6 +28,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,14 +40,17 @@ import androidx.core.util.Consumer
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.call.CallState
 import com.vitorpamplona.amethyst.service.crashreports.DisplayCrashMessages
 import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.compose.DisplayNotifyMessages
 import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataScreen
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.AllMediaServersScreen
 import com.vitorpamplona.amethyst.ui.broadcast.DisplayBroadcastProgress
+import com.vitorpamplona.amethyst.ui.call.CallScreen
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.components.toasts.DisplayErrorMessages
 import com.vitorpamplona.amethyst.ui.navigation.composableFromEnd
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.navs.rememberNav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -162,6 +166,23 @@ fun AppNavigation(
     DisplayNotifyMessages(accountViewModel, nav)
     DisplayCrashMessages(accountViewModel, nav)
     DisplayBroadcastProgress(accountViewModel)
+
+    ObserveIncomingCalls(accountViewModel, nav)
+}
+
+@Composable
+private fun ObserveIncomingCalls(
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val callState by accountViewModel.callManager.state.collectAsState()
+
+    LaunchedEffect(callState) {
+        val state = callState
+        if (state is CallState.IncomingCall) {
+            nav.nav(Route.ActiveCall(state.callId, state.callerPubKey))
+        }
+    }
 }
 
 @Composable
@@ -169,6 +190,11 @@ fun BuildNavigation(
     accountViewModel: AccountViewModel,
     nav: Nav,
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        accountViewModel.initCallController(context)
+    }
+
     NavHost(
         navController = nav.controller,
         startDestination = Route.Home,
@@ -254,6 +280,15 @@ fun BuildNavigation(
 
         composableFromEndArgs<Route.Room> { ChatroomScreen(it.toKey(), it.message, it.replyId, it.draftId, it.expiresDays, accountViewModel, nav) }
         composableFromEndArgs<Route.RoomByAuthor> { ChatroomByAuthorScreen(it.id, null, accountViewModel, nav) }
+
+        composableFromEndArgs<Route.ActiveCall> {
+            CallScreen(
+                callManager = accountViewModel.callManager,
+                callController = accountViewModel.callController,
+                accountViewModel = accountViewModel,
+                onCallEnded = { nav.popBack() },
+            )
+        }
 
         composableFromEndArgs<Route.PublicChatChannel> {
             PublicChatChannelScreen(it.id, it.draftId, it.replyTo, accountViewModel, nav)
