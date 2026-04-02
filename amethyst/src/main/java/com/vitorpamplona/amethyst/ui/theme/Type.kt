@@ -61,9 +61,9 @@ val Font14SP = 14.sp
 val Font17SP = 17.sp
 val Font18SP = 18.sp
 
-val MarkdownTextStyle = TextStyle(lineHeight = 1.30.em)
+val MarkdownTextStyle = TextStyle(lineHeight = 1.50.em)
 
-val DefaultParagraphSpacing: TextUnit = 18.sp
+val DefaultParagraphSpacing: TextUnit = 20.sp
 
 internal val DefaultHeadingStyle: HeadingStyle = { level, textStyle ->
     when (level) {
@@ -71,48 +71,57 @@ internal val DefaultHeadingStyle: HeadingStyle = { level, textStyle ->
             Typography.displayLarge.copy(
                 fontSize = 32.sp,
                 lineHeight = 40.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = (-0.5).sp,
             )
         }
 
         1 -> {
             Typography.displayMedium.copy(
-                fontSize = 28.sp,
-                lineHeight = 36.sp,
+                fontSize = 26.sp,
+                lineHeight = 34.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = (-0.25).sp,
             )
         }
 
         2 -> {
             Typography.displaySmall.copy(
-                fontSize = 26.sp,
-                lineHeight = 34.sp,
+                fontSize = 22.sp,
+                lineHeight = 30.sp,
+                fontWeight = FontWeight.SemiBold,
             )
         }
 
         3 -> {
             Typography.displaySmall.copy(
-                fontSize = 24.sp,
-                lineHeight = 32.sp,
+                fontSize = 20.sp,
+                lineHeight = 28.sp,
+                fontWeight = FontWeight.SemiBold,
             )
         }
 
         4 -> {
             Typography.headlineLarge.copy(
-                fontSize = 22.sp,
-                lineHeight = 26.sp,
+                fontSize = 18.sp,
+                lineHeight = 24.sp,
+                fontWeight = FontWeight.Medium,
             )
         }
 
         5 -> {
             Typography.headlineMedium.copy(
-                fontSize = 20.sp,
-                lineHeight = 24.sp,
+                fontSize = 16.sp,
+                lineHeight = 22.sp,
+                fontWeight = FontWeight.Medium,
             )
         }
 
         6 -> {
             Typography.headlineSmall.copy(
-                fontSize = 18.sp,
-                lineHeight = 22.sp,
+                fontSize = 15.sp,
+                lineHeight = 20.sp,
+                fontWeight = FontWeight.Medium,
             )
         }
 
