@@ -22,8 +22,10 @@ package com.vitorpamplona.amethyst.service.call
 
 import android.content.Context
 import android.media.AudioAttributes
+import android.media.AudioManager
 import android.media.Ringtone
 import android.media.RingtoneManager
+import android.media.ToneGenerator
 import android.os.Build
 import android.os.PowerManager
 import android.os.VibrationEffect
@@ -36,6 +38,9 @@ class CallAudioManager(
     private var ringtone: Ringtone? = null
     private var vibrator: Vibrator? = null
     private var proximityWakeLock: PowerManager.WakeLock? = null
+    private var ringbackTone: ToneGenerator? = null
+    private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+    private var previousAudioMode: Int = AudioManager.MODE_NORMAL
 
     fun startRinging() {
         startRingtone()
@@ -45,6 +50,34 @@ class CallAudioManager(
     fun stopRinging() {
         stopRingtone()
         stopVibration()
+    }
+
+    fun startRingbackTone() {
+        try {
+            ringbackTone =
+                ToneGenerator(AudioManager.STREAM_VOICE_CALL, 80).also {
+                    it.startTone(ToneGenerator.TONE_SUP_RINGTONE)
+                }
+        } catch (_: Exception) {
+            // ToneGenerator may not be available
+        }
+    }
+
+    fun stopRingbackTone() {
+        ringbackTone?.stopTone()
+        ringbackTone?.release()
+        ringbackTone = null
+    }
+
+    fun switchToCallAudioMode() {
+        previousAudioMode = audioManager.mode
+        audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
+        audioManager.isSpeakerphoneOn = false
+    }
+
+    fun restoreAudioMode() {
+        audioManager.mode = previousAudioMode
+        audioManager.isSpeakerphoneOn = false
     }
 
     fun acquireProximityWakeLock() {
@@ -67,6 +100,8 @@ class CallAudioManager(
 
     fun release() {
         stopRinging()
+        stopRingbackTone()
+        restoreAudioMode()
         releaseProximityWakeLock()
     }
 

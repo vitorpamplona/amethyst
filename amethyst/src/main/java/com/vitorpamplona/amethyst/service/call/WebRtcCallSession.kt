@@ -51,6 +51,7 @@ class WebRtcCallSession(
     private val onPeerConnected: () -> Unit,
     private val onRemoteStream: (MediaStream) -> Unit,
     private val onDisconnected: () -> Unit,
+    private val onError: (String) -> Unit = {},
 ) {
     private var peerConnectionFactory: PeerConnectionFactory? = null
     private var peerConnection: PeerConnection? = null
@@ -104,9 +105,12 @@ class WebRtcCallSession(
                                 onPeerConnected()
                             }
 
-                            PeerConnection.IceConnectionState.DISCONNECTED,
-                            PeerConnection.IceConnectionState.FAILED,
-                            -> {
+                            PeerConnection.IceConnectionState.FAILED -> {
+                                onError("Connection failed - check network")
+                                onDisconnected()
+                            }
+
+                            PeerConnection.IceConnectionState.DISCONNECTED -> {
                                 onDisconnected()
                             }
 
@@ -278,12 +282,14 @@ class WebRtcCallSession(
 
             override fun onCreateFailure(error: String?) {
                 Log.e(TAG, "SDP operation failed: $error")
+                error?.let { onError("SDP error: $it") }
             }
 
             override fun onSetSuccess() {}
 
             override fun onSetFailure(error: String?) {
                 Log.e(TAG, "SDP set failed: $error")
+                error?.let { onError("SDP error: $it") }
             }
         }
 }

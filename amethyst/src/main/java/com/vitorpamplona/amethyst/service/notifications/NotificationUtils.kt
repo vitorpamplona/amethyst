@@ -584,6 +584,8 @@ object NotificationUtils {
                 .setOngoing(true)
                 .setTimeoutAfter(60_000)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                .addAction(R.drawable.amethyst, "Reject", contentPendingIntent)
+                .addAction(R.drawable.amethyst, "Accept", fullScreenPendingIntent)
 
         notificationManager.notify("call", CALL_NOTIFICATION_ID, builder.build())
     }

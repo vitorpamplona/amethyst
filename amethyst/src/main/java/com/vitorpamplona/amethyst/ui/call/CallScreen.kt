@@ -31,15 +31,23 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CallEnd
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.MicOff
+import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material.icons.filled.VideocamOff
+import androidx.compose.material.icons.filled.VolumeOff
+import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Snackbar
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -57,6 +65,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import com.vitorpamplona.amethyst.commons.call.CallManager
 import com.vitorpamplona.amethyst.commons.call.CallState
 import com.vitorpamplona.amethyst.service.call.CallController
@@ -67,6 +76,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.webrtc.RendererCommon
+import org.webrtc.SurfaceViewRenderer
+import org.webrtc.VideoTrack
 
 @Composable
 fun CallScreen(
@@ -78,6 +90,7 @@ fun CallScreen(
     val callState by callManager.state.collectAsState()
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val errorMessage by (callController?.errorMessage ?: kotlinx.coroutines.flow.MutableStateFlow(null)).collectAsState()
 
     BackHandler(enabled = callState !is CallState.Idle && callState !is CallState.Ended) {
         scope.launch { callManager.hangup() }
@@ -85,70 +98,89 @@ fun CallScreen(
 
     KeepScreenOn()
 
-    when (val state = callState) {
-        is CallState.Idle -> {
-            LaunchedEffect(Unit) { onCallEnded() }
+    Box(modifier = Modifier.fillMaxSize()) {
+        when (val state = callState) {
+            is CallState.Idle -> {
+                LaunchedEffect(Unit) { onCallEnded() }
+            }
+
+            is CallState.Offering -> {
+                CallInProgressUI(
+                    peerPubKey = state.peerPubKey,
+                    statusText = "Calling...",
+                    accountViewModel = accountViewModel,
+                    onHangup = { scope.launch { callManager.hangup() } },
+                )
+            }
+
+            is CallState.IncomingCall -> {
+                val acceptWithPermission =
+                    rememberCallWithPermission(context) {
+                        callController?.acceptIncomingCall(state.sdpOffer)
+                    }
+                IncomingCallUI(
+                    callerPubKey = state.callerPubKey,
+                    callType = state.callType,
+                    accountViewModel = accountViewModel,
+                    onAccept = acceptWithPermission,
+                    onReject = { scope.launch { callManager.rejectCall() } },
+                )
+            }
+
+            is CallState.Connecting -> {
+                CallInProgressUI(
+                    peerPubKey = state.peerPubKey,
+                    statusText = "Connecting...",
+                    accountViewModel = accountViewModel,
+                    onHangup = { scope.launch { callManager.hangup() } },
+                )
+            }
+
+            is CallState.Connected -> {
+                ConnectedCallUI(
+                    state = state,
+                    callController = callController,
+                    accountViewModel = accountViewModel,
+                    onHangup = { scope.launch { callManager.hangup() } },
+                    onToggleMute = {
+                        callManager.toggleAudioMute()
+                        callController?.setAudioMuted(!state.isAudioMuted)
+                    },
+                    onToggleVideo = {
+                        callManager.toggleVideo()
+                        callController?.setVideoEnabled(!state.isVideoEnabled)
+                    },
+                    onToggleSpeaker = {
+                        callManager.toggleSpeaker()
+                        callController?.setSpeakerOn(!state.isSpeakerOn)
+                    },
+                )
+            }
+
+            is CallState.Ended -> {
+                CallInProgressUI(
+                    peerPubKey = state.peerPubKey,
+                    statusText = "Call ended",
+                    accountViewModel = accountViewModel,
+                    onHangup = { onCallEnded() },
+                )
+            }
         }
 
-        is CallState.Offering -> {
-            CallInProgressUI(
-                peerPubKey = state.peerPubKey,
-                statusText = "Calling...",
-                accountViewModel = accountViewModel,
-                onHangup = { scope.launch { callManager.hangup() } },
-            )
-        }
-
-        is CallState.IncomingCall -> {
-            val acceptWithPermission =
-                rememberCallWithPermission(context) {
-                    callController?.acceptIncomingCall(state.sdpOffer)
-                }
-            IncomingCallUI(
-                callerPubKey = state.callerPubKey,
-                callType = state.callType,
-                accountViewModel = accountViewModel,
-                onAccept = acceptWithPermission,
-                onReject = { scope.launch { callManager.rejectCall() } },
-            )
-        }
-
-        is CallState.Connecting -> {
-            CallInProgressUI(
-                peerPubKey = state.peerPubKey,
-                statusText = "Connecting...",
-                accountViewModel = accountViewModel,
-                onHangup = { scope.launch { callManager.hangup() } },
-            )
-        }
-
-        is CallState.Connected -> {
-            ConnectedCallUI(
-                state = state,
-                accountViewModel = accountViewModel,
-                onHangup = { scope.launch { callManager.hangup() } },
-                onToggleMute = {
-                    callManager.toggleAudioMute()
-                    callController?.setAudioMuted(!state.isAudioMuted)
+        errorMessage?.let { error ->
+            Snackbar(
+                modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),
+                action = {
+                    Text(
+                        "Dismiss",
+                        modifier =
+                            Modifier.padding(8.dp),
+                        color = MaterialTheme.colorScheme.inversePrimary,
+                    )
                 },
-                onToggleVideo = {
-                    callManager.toggleVideo()
-                    callController?.setVideoEnabled(!state.isVideoEnabled)
-                },
-                onToggleSpeaker = {
-                    callManager.toggleSpeaker()
-                    callController?.setSpeakerOn(!state.isSpeakerOn)
-                },
-            )
-        }
-
-        is CallState.Ended -> {
-            CallInProgressUI(
-                peerPubKey = state.peerPubKey,
-                statusText = "Call ended",
-                accountViewModel = accountViewModel,
-                onHangup = { onCallEnded() },
-            )
+            ) {
+                Text(error)
+            }
         }
     }
 }
@@ -288,6 +320,7 @@ private fun IncomingCallUI(
 @Composable
 private fun ConnectedCallUI(
     state: CallState.Connected,
+    callController: CallController?,
     accountViewModel: AccountViewModel,
     onHangup: () -> Unit,
     onToggleMute: () -> Unit,
@@ -303,51 +336,126 @@ private fun ConnectedCallUI(
         }
     }
 
+    val remoteVideoTrack by (callController?.remoteVideoTrack ?: kotlinx.coroutines.flow.MutableStateFlow(null)).collectAsState()
+    val localVideoTrack by (callController?.localVideoTrack ?: kotlinx.coroutines.flow.MutableStateFlow(null)).collectAsState()
+
     Box(
         modifier =
             Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.surface),
-        contentAlignment = Alignment.Center,
+                .background(Color.Black),
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            LoadUser(baseUserHex = state.peerPubKey, accountViewModel = accountViewModel) { user ->
-                if (user != null) {
-                    ClickableUserPicture(
-                        baseUser = user,
-                        size = 120.dp,
-                        accountViewModel = accountViewModel,
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    UsernameDisplay(
-                        baseUser = user,
-                        accountViewModel = accountViewModel,
-                        fontWeight = FontWeight.Bold,
-                    )
+        // Remote video (full screen background)
+        remoteVideoTrack?.let { track ->
+            VideoRenderer(
+                videoTrack = track,
+                eglBase = callController?.getEglBase(),
+                modifier = Modifier.fillMaxSize(),
+                mirror = false,
+            )
+        }
+
+        // Local video (small pip in corner)
+        localVideoTrack?.let { track ->
+            VideoRenderer(
+                videoTrack = track,
+                eglBase = callController?.getEglBase(),
+                modifier =
+                    Modifier
+                        .size(120.dp, 160.dp)
+                        .align(Alignment.TopEnd)
+                        .padding(16.dp),
+                mirror = true,
+            )
+        }
+
+        // If no video, show avatar
+        if (remoteVideoTrack == null) {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                LoadUser(baseUserHex = state.peerPubKey, accountViewModel = accountViewModel) { user ->
+                    if (user != null) {
+                        ClickableUserPicture(
+                            baseUser = user,
+                            size = 120.dp,
+                            accountViewModel = accountViewModel,
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        UsernameDisplay(
+                            baseUser = user,
+                            accountViewModel = accountViewModel,
+                            fontWeight = FontWeight.Bold,
+                            textColor = Color.White,
+                        )
+                    }
                 }
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = formatDuration(elapsed),
+                    color = Color.White.copy(alpha = 0.7f),
+                    fontSize = 16.sp,
+                )
             }
-            Spacer(modifier = Modifier.height(8.dp))
+        } else {
+            // Timer overlay
             Text(
                 text = formatDuration(elapsed),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 16.sp,
+                color = Color.White.copy(alpha = 0.7f),
+                fontSize = 14.sp,
+                modifier =
+                    Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 48.dp),
             )
-            Spacer(modifier = Modifier.height(48.dp))
+        }
+
+        // Controls at bottom
+        Column(
+            modifier =
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 48.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly,
             ) {
-                IconButton(onClick = onToggleMute) {
-                    Text(if (state.isAudioMuted) "Unmute" else "Mute")
+                IconButton(
+                    onClick = onToggleMute,
+                    modifier = Modifier.size(56.dp),
+                ) {
+                    Icon(
+                        imageVector = if (state.isAudioMuted) Icons.Default.MicOff else Icons.Default.Mic,
+                        contentDescription = if (state.isAudioMuted) "Unmute" else "Mute",
+                        tint = if (state.isAudioMuted) Color.Red else Color.White,
+                        modifier = Modifier.size(28.dp),
+                    )
                 }
-                IconButton(onClick = onToggleVideo) {
-                    Text(if (state.isVideoEnabled) "Cam Off" else "Cam On")
+                IconButton(
+                    onClick = onToggleVideo,
+                    modifier = Modifier.size(56.dp),
+                ) {
+                    Icon(
+                        imageVector = if (state.isVideoEnabled) Icons.Default.Videocam else Icons.Default.VideocamOff,
+                        contentDescription = if (state.isVideoEnabled) "Camera off" else "Camera on",
+                        tint = if (!state.isVideoEnabled) Color.Red else Color.White,
+                        modifier = Modifier.size(28.dp),
+                    )
                 }
-                IconButton(onClick = onToggleSpeaker) {
-                    Text(if (state.isSpeakerOn) "Earpiece" else "Speaker")
+                IconButton(
+                    onClick = onToggleSpeaker,
+                    modifier = Modifier.size(56.dp),
+                ) {
+                    Icon(
+                        imageVector = if (state.isSpeakerOn) Icons.Default.VolumeUp else Icons.Default.VolumeOff,
+                        contentDescription = if (state.isSpeakerOn) "Earpiece" else "Speaker",
+                        tint = if (state.isSpeakerOn) Color.Cyan else Color.White,
+                        modifier = Modifier.size(28.dp),
+                    )
                 }
             }
             Spacer(modifier = Modifier.height(24.dp))
@@ -366,6 +474,30 @@ private fun ConnectedCallUI(
             }
         }
     }
+}
+
+@Composable
+private fun VideoRenderer(
+    videoTrack: VideoTrack,
+    eglBase: org.webrtc.EglBase?,
+    modifier: Modifier = Modifier,
+    mirror: Boolean = false,
+) {
+    AndroidView(
+        modifier = modifier,
+        factory = { ctx ->
+            SurfaceViewRenderer(ctx).apply {
+                setMirror(mirror)
+                setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FILL)
+                eglBase?.eglBaseContext?.let { init(it, null) }
+                videoTrack.addSink(this)
+            }
+        },
+        onRelease = { renderer ->
+            videoTrack.removeSink(renderer)
+            renderer.release()
+        },
+    )
 }
 
 private fun formatDuration(seconds: Long): String {
