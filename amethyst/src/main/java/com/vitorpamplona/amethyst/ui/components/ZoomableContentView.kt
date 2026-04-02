@@ -109,7 +109,7 @@ import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.utils.Log
-import com.vitorpamplona.quartz.utils.sha256.sha256
+import com.vitorpamplona.quartz.utils.sha256.sha256StreamWithCount
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.CancellationException
@@ -1035,8 +1035,8 @@ private fun verifyHash(content: MediaUrlContent): Boolean? {
     if (content.hash == null) return null
 
     Amethyst.instance.diskCache.openSnapshot(content.url)?.use { snapshot ->
-        val hash = sha256(snapshot.data.toFile().readBytes()).toHexKey()
-        return hash == content.hash
+        val (hashBytes, _) = sha256StreamWithCount(snapshot.data.toFile().inputStream())
+        return hashBytes.toHexKey() == content.hash
     }
 
     return null
