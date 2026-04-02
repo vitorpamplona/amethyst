@@ -62,7 +62,7 @@ class CallForegroundService : Service() {
                     NOTIFICATION_ID,
                     notification,
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                        ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL
+                        ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
                     } else {
                         0
                     },
