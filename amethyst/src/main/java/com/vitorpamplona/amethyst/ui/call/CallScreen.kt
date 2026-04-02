@@ -90,7 +90,8 @@ fun CallScreen(
     val callState by callManager.state.collectAsState()
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
-    val errorMessage by (callController?.errorMessage ?: kotlinx.coroutines.flow.MutableStateFlow(null)).collectAsState()
+    val emptyStringFlow = remember { kotlinx.coroutines.flow.MutableStateFlow<String?>(null) }
+    val errorMessage by (callController?.errorMessage ?: emptyStringFlow).collectAsState()
 
     BackHandler(enabled = callState !is CallState.Idle && callState !is CallState.Ended) {
         scope.launch { callManager.hangup() }
@@ -327,11 +328,14 @@ private fun ConnectedCallUI(
         }
     }
 
-    val remoteVideoTrack by (callController?.remoteVideoTrack ?: kotlinx.coroutines.flow.MutableStateFlow(null)).collectAsState()
-    val localVideoTrack by (callController?.localVideoTrack ?: kotlinx.coroutines.flow.MutableStateFlow(null)).collectAsState()
-    val isAudioMuted by (callController?.isAudioMuted ?: kotlinx.coroutines.flow.MutableStateFlow(false)).collectAsState()
-    val isVideoEnabled by (callController?.isVideoEnabled ?: kotlinx.coroutines.flow.MutableStateFlow(true)).collectAsState()
-    val isSpeakerOn by (callController?.isSpeakerOn ?: kotlinx.coroutines.flow.MutableStateFlow(false)).collectAsState()
+    val emptyVideoFlow = remember { kotlinx.coroutines.flow.MutableStateFlow<VideoTrack?>(null) }
+    val remoteVideoTrack by (callController?.remoteVideoTrack ?: emptyVideoFlow).collectAsState()
+    val localVideoTrack by (callController?.localVideoTrack ?: emptyVideoFlow).collectAsState()
+    val defaultFalse = remember { kotlinx.coroutines.flow.MutableStateFlow(false) }
+    val defaultTrue = remember { kotlinx.coroutines.flow.MutableStateFlow(true) }
+    val isAudioMuted by (callController?.isAudioMuted ?: defaultFalse).collectAsState()
+    val isVideoEnabled by (callController?.isVideoEnabled ?: defaultTrue).collectAsState()
+    val isSpeakerOn by (callController?.isSpeakerOn ?: defaultFalse).collectAsState()
 
     Box(
         modifier =

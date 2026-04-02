@@ -23,14 +23,9 @@ package com.vitorpamplona.amethyst.service.call
 import android.content.Context
 import android.content.Intent
 import android.media.AudioManager
-import android.net.ConnectivityManager
-import android.net.Network
-import android.net.NetworkCapabilities
-import android.net.NetworkRequest
 import com.vitorpamplona.amethyst.commons.call.CallManager
 import com.vitorpamplona.amethyst.commons.call.CallState
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.WebRtcCallFactory
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallIceCandidateEvent
@@ -52,38 +47,34 @@ private const val TAG = "CallController"
 
 class CallController(
     private val context: Context,
-    private val callManager: CallManager,
+    val callManager: CallManager,
     private val scope: CoroutineScope,
     private val publishWrap: suspend (GiftWrapEvent) -> Unit,
     private val signerProvider: suspend () -> com.vitorpamplona.quartz.nip01Core.signers.NostrSigner,
 ) {
     private var webRtcSession: WebRtcCallSession? = null
     private val callFactory = WebRtcCallFactory()
-    private var currentCallId: String? = null
-    private var currentPeerPubKey: HexKey? = null
     private var remoteDescriptionSet = false
     private val pendingIceCandidates = CopyOnWriteArrayList<IceCandidate>()
     val audioManager = CallAudioManager(context)
 
+    // Video tracks exposed to UI
     private val _remoteVideoTrack = MutableStateFlow<VideoTrack?>(null)
     val remoteVideoTrack: StateFlow<VideoTrack?> = _remoteVideoTrack.asStateFlow()
-
     private val _localVideoTrack = MutableStateFlow<VideoTrack?>(null)
     val localVideoTrack: StateFlow<VideoTrack?> = _localVideoTrack.asStateFlow()
 
+    // Error state exposed to UI
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
+    // Audio/video toggle state (UI concerns, not domain state)
     private val _isAudioMuted = MutableStateFlow(false)
     val isAudioMuted: StateFlow<Boolean> = _isAudioMuted.asStateFlow()
-
     private val _isVideoEnabled = MutableStateFlow(true)
     val isVideoEnabled: StateFlow<Boolean> = _isVideoEnabled.asStateFlow()
-
     private val _isSpeakerOn = MutableStateFlow(false)
     val isSpeakerOn: StateFlow<Boolean> = _isSpeakerOn.asStateFlow()
-
-    private var networkCallback: ConnectivityManager.NetworkCallback? = null
 
     init {
         scope.launch {
@@ -102,7 +93,6 @@ class CallController(
                         audioManager.stopRingbackTone()
                         audioManager.switchToCallAudioMode()
                         audioManager.acquireProximityWakeLock()
-                        registerNetworkCallback()
                     }
 
                     is CallState.Connected -> {
@@ -120,76 +110,82 @@ class CallController(
     }
 
     fun initiateCall(
-        peerPubKey: HexKey,
+        peerPubKey: String,
         callType: CallType,
     ) {
+        val callId = UUID.randomUUID().toString()
+        _errorMessage.value = null
+        remoteDescriptionSet = false
+        pendingIceCandidates.clear()
+
         try {
-            val callId = UUID.randomUUID().toString()
-            currentCallId = callId
-            currentPeerPubKey = peerPubKey
-            remoteDescriptionSet = false
-            pendingIceCandidates.clear()
-            _errorMessage.value = null
-
             createWebRtcSession()
-            webRtcSession?.addAudioTrack()
-            if (callType == CallType.VIDEO) {
-                webRtcSession?.addVideoTrack()
-                _localVideoTrack.value = webRtcSession?.getLocalVideoTrack()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to create WebRTC session", e)
+            _errorMessage.value = "Failed to start call: ${e.message}"
+            return
+        }
+
+        val session =
+            webRtcSession ?: run {
+                _errorMessage.value = "Failed to create WebRTC session"
+                return
             }
 
-            webRtcSession?.createOffer { sdp ->
-                scope.launch {
-                    callManager.initiateCall(peerPubKey, callType, callId, sdp.description)
-                }
+        session.addAudioTrack()
+        if (callType == CallType.VIDEO) {
+            session.addVideoTrack()
+            _localVideoTrack.value = session.getLocalVideoTrack()
+        }
+
+        session.createOffer { sdp ->
+            scope.launch {
+                callManager.initiateCall(peerPubKey, callType, callId, sdp.description)
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to initiate call", e)
-            _errorMessage.value = "Failed to start call: ${e.message}"
-            cleanup()
         }
     }
 
     fun acceptIncomingCall(sdpOffer: String) {
+        val state = callManager.state.value
+        if (state !is CallState.IncomingCall) return
+
+        _errorMessage.value = null
+        remoteDescriptionSet = false
+        pendingIceCandidates.clear()
+
         try {
-            val state = callManager.state.value
-            if (state !is CallState.IncomingCall) return
-
-            currentCallId = state.callId
-            currentPeerPubKey = state.callerPubKey
-            remoteDescriptionSet = false
-            pendingIceCandidates.clear()
-            _errorMessage.value = null
-
             createWebRtcSession()
-            webRtcSession?.addAudioTrack()
-            if (state.callType == CallType.VIDEO) {
-                webRtcSession?.addVideoTrack()
-                _localVideoTrack.value = webRtcSession?.getLocalVideoTrack()
-            }
-
-            webRtcSession?.setRemoteDescription(
-                SessionDescription(SessionDescription.Type.OFFER, sdpOffer),
-            )
-            flushPendingIceCandidates()
-
-            webRtcSession?.createAnswer { sdp ->
-                scope.launch {
-                    callManager.acceptCall(sdp.description)
-                }
-            }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to accept call", e)
+            Log.e(TAG, "Failed to create WebRTC session", e)
             _errorMessage.value = "Failed to accept call: ${e.message}"
-            cleanup()
+            return
+        }
+
+        val session =
+            webRtcSession ?: run {
+                _errorMessage.value = "Failed to create WebRTC session"
+                return
+            }
+
+        session.addAudioTrack()
+        if (state.callType == CallType.VIDEO) {
+            session.addVideoTrack()
+            _localVideoTrack.value = session.getLocalVideoTrack()
+        }
+
+        session.setRemoteDescription(SessionDescription(SessionDescription.Type.OFFER, sdpOffer))
+        flushPendingIceCandidates()
+
+        session.createAnswer { sdp ->
+            scope.launch {
+                callManager.acceptCall(sdp.description)
+            }
         }
     }
 
     fun onCallAnswerReceived(sdpAnswer: String) {
         Log.d(TAG) { "Answer received, SDP length=${sdpAnswer.length}, session=${webRtcSession != null}" }
-        webRtcSession?.setRemoteDescription(
-            SessionDescription(SessionDescription.Type.ANSWER, sdpAnswer),
-        )
+        webRtcSession?.setRemoteDescription(SessionDescription(SessionDescription.Type.ANSWER, sdpAnswer))
         flushPendingIceCandidates()
     }
 
@@ -217,6 +213,7 @@ class CallController(
         candidates.forEach { session.addIceCandidate(it) }
     }
 
+    // UI toggle controls
     fun toggleAudioMute() {
         val muted = !_isAudioMuted.value
         _isAudioMuted.value = muted
@@ -249,7 +246,6 @@ class CallController(
 
     fun cleanup() {
         audioManager.release()
-        unregisterNetworkCallback()
         stopForegroundService()
         NotificationUtils.cancelCallNotification(context)
         _remoteVideoTrack.value = null
@@ -259,80 +255,34 @@ class CallController(
         _isSpeakerOn.value = false
         webRtcSession?.dispose()
         webRtcSession = null
-        currentCallId = null
-        currentPeerPubKey = null
         remoteDescriptionSet = false
         pendingIceCandidates.clear()
     }
 
     private fun createWebRtcSession() {
-        val iceServers = IceServerConfig.buildIceServers()
-
         webRtcSession =
             WebRtcCallSession(
                 context = context,
-                iceServers = iceServers,
+                iceServers = IceServerConfig.buildIceServers(),
                 onIceCandidate = { candidate -> onLocalIceCandidate(candidate) },
                 onPeerConnected = {
                     callManager.onPeerConnected()
                     startForegroundService()
                 },
                 onRemoteStream = { stream: MediaStream ->
-                    stream.videoTracks?.firstOrNull()?.let {
-                        _remoteVideoTrack.value = it
-                    }
+                    stream.videoTracks?.firstOrNull()?.let { _remoteVideoTrack.value = it }
                 },
-                onDisconnected = {
-                    scope.launch { callManager.hangup() }
-                },
-                onError = { error ->
-                    _errorMessage.value = error
-                },
+                onDisconnected = { scope.launch { callManager.hangup() } },
+                onError = { error -> _errorMessage.value = error },
             )
         webRtcSession?.initialize()
         webRtcSession?.createPeerConnection()
     }
 
-    private fun registerNetworkCallback() {
-        try {
-            val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-            val request =
-                NetworkRequest
-                    .Builder()
-                    .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-                    .build()
-            val callback =
-                object : ConnectivityManager.NetworkCallback() {
-                    override fun onAvailable(network: Network) {
-                        Log.d(TAG) { "Network available, ICE restart may be needed" }
-                    }
-
-                    override fun onLost(network: Network) {
-                        Log.d(TAG) { "Network lost during call" }
-                    }
-                }
-            connectivityManager.registerNetworkCallback(request, callback)
-            networkCallback = callback
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to register network callback", e)
-        }
-    }
-
-    private fun unregisterNetworkCallback() {
-        try {
-            networkCallback?.let {
-                val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-                connectivityManager.unregisterNetworkCallback(it)
-            }
-        } catch (_: Exception) {
-        }
-        networkCallback = null
-    }
-
     private fun onLocalIceCandidate(candidate: IceCandidate) {
         Log.d(TAG) { "Local ICE candidate: ${candidate.sdp.take(50)}" }
-        val callId = currentCallId ?: return
-        val peerPubKey = currentPeerPubKey ?: return
+        val callId = callManager.currentCallId() ?: return
+        val peerPubKey = callManager.currentPeerPubKey() ?: return
         val candidateJson = CallIceCandidateEvent.serializeCandidate(candidate.sdp, candidate.sdpMid, candidate.sdpMLineIndex)
 
         scope.launch {
@@ -343,12 +293,17 @@ class CallController(
     }
 
     private fun startForegroundService() {
-        val intent =
-            Intent(context, CallForegroundService::class.java).apply {
-                action = CallForegroundService.ACTION_START
-                putExtra(CallForegroundService.EXTRA_PEER_NAME, currentPeerPubKey ?: "")
-            }
-        context.startForegroundService(intent)
+        try {
+            val peerName = callManager.currentPeerPubKey() ?: ""
+            val intent =
+                Intent(context, CallForegroundService::class.java).apply {
+                    action = CallForegroundService.ACTION_START
+                    putExtra(CallForegroundService.EXTRA_PEER_NAME, peerName)
+                }
+            context.startForegroundService(intent)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to start foreground service", e)
+        }
     }
 
     private fun stopForegroundService() {

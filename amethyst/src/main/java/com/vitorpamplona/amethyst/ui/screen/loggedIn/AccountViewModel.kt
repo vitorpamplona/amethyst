@@ -204,8 +204,13 @@ class AccountViewModel(
     var callController: CallController? = null
         private set
 
+    @Synchronized
     fun initCallController(context: Context) {
         if (callController != null) return
+
+        // Wire EventProcessor before creating CallController so events aren't dropped
+        account.newNotesPreProcessor.callManager = callManager
+
         val controller =
             CallController(
                 context = context.applicationContext,
@@ -214,9 +219,10 @@ class AccountViewModel(
                 publishWrap = { wrap -> account.publishCallSignaling(wrap) },
                 signerProvider = { account.signer },
             )
+
+        // Set callbacks before exposing controller to avoid timing races
         callManager.onAnswerReceived = { event -> controller.onCallAnswerReceived(event.sdpAnswer()) }
         callManager.onIceCandidateReceived = { event -> controller.onIceCandidateReceived(event) }
-        account.newNotesPreProcessor.callManager = callManager
         callController = controller
     }
 
