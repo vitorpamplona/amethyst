@@ -119,11 +119,6 @@ fun CallScreen(
         }
 
         is CallState.Ended -> {
-            LaunchedEffect(Unit) {
-                delay(2000)
-                callManager.reset()
-                onCallEnded()
-            }
             CallInProgressUI(
                 peerPubKey = state.peerPubKey,
                 statusText = "Call ended",

@@ -55,9 +55,11 @@ class CallManager(
     var onIceCandidateReceived: ((CallIceCandidateEvent) -> Unit)? = null
 
     private var timeoutJob: Job? = null
+    private var resetJob: Job? = null
 
     companion object {
         const val CALL_TIMEOUT_MS = 60_000L // 60 seconds ringing timeout
+        const val ENDED_DISPLAY_MS = 2_000L // show "call ended" briefly before resetting
     }
 
     suspend fun initiateCall(
@@ -106,8 +108,7 @@ class CallManager(
         if (current !is CallState.IncomingCall) return
 
         val result = factory.createReject(current.callerPubKey, current.callId, signer = signer)
-        _state.value = CallState.Ended(current.callId, current.callerPubKey, EndReason.REJECTED)
-        cancelTimeout()
+        transitionToEnded(current.callId, current.callerPubKey, EndReason.REJECTED)
         publishEvent(result.wrap)
     }
 
@@ -126,8 +127,7 @@ class CallManager(
         if (current !is CallState.Offering) return
         if (event.callId() != current.callId) return
 
-        _state.value = CallState.Ended(current.callId, current.peerPubKey, EndReason.PEER_REJECTED)
-        cancelTimeout()
+        transitionToEnded(current.callId, current.peerPubKey, EndReason.PEER_REJECTED)
     }
 
     fun onIceCandidate(event: CallIceCandidateEvent) {
@@ -172,8 +172,7 @@ class CallManager(
         }
 
         val result = factory.createHangup(peerPubKey, callId, signer = signer)
-        _state.value = CallState.Ended(callId, peerPubKey, EndReason.HANGUP)
-        cancelTimeout()
+        transitionToEnded(callId, peerPubKey, EndReason.HANGUP)
         publishEvent(result.wrap)
     }
 
@@ -191,8 +190,7 @@ class CallManager(
         if (callId != currentCallId) return
 
         val peerPubKey = event.pubKey
-        _state.value = CallState.Ended(callId, peerPubKey, EndReason.PEER_HANGUP)
-        cancelTimeout()
+        transitionToEnded(callId, peerPubKey, EndReason.PEER_HANGUP)
     }
 
     fun onSignalingEvent(event: Event) {
@@ -229,6 +227,25 @@ class CallManager(
     fun reset() {
         _state.value = CallState.Idle
         cancelTimeout()
+        resetJob?.cancel()
+        resetJob = null
+    }
+
+    private fun transitionToEnded(
+        callId: String,
+        peerPubKey: HexKey,
+        reason: EndReason,
+    ) {
+        _state.value = CallState.Ended(callId, peerPubKey, reason)
+        cancelTimeout()
+        resetJob?.cancel()
+        resetJob =
+            scope.launch {
+                delay(ENDED_DISPLAY_MS)
+                if (_state.value is CallState.Ended) {
+                    _state.value = CallState.Idle
+                }
+            }
     }
 
     private fun startTimeout(callId: String) {
@@ -250,7 +267,7 @@ class CallManager(
                             is CallState.IncomingCall -> current.callerPubKey
                             else -> return@launch
                         }
-                    _state.value = CallState.Ended(callId, peerPubKey, EndReason.TIMEOUT)
+                    transitionToEnded(callId, peerPubKey, EndReason.TIMEOUT)
                 }
             }
     }

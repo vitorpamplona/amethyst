@@ -48,6 +48,16 @@ class CallController(
     private var currentCallId: String? = null
     private var currentPeerPubKey: HexKey? = null
 
+    init {
+        scope.launch {
+            callManager.state.collect { state ->
+                if (state is CallState.Ended && webRtcSession != null) {
+                    cleanup()
+                }
+            }
+        }
+    }
+
     fun initiateCall(
         peerPubKey: HexKey,
         callType: CallType,
