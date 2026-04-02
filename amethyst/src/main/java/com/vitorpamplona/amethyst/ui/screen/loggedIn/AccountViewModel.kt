@@ -213,7 +213,7 @@ class AccountViewModel(
 
         val controller =
             CallController(
-                context = context.applicationContext,
+                context = context,
                 callManager = callManager,
                 scope = viewModelScope,
                 publishWrap = { wrap -> account.publishCallSignaling(wrap) },
