@@ -28,11 +28,15 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BluetoothAudio
@@ -201,7 +205,9 @@ private fun CallInProgressUI(
         modifier =
             Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.surface),
+                .background(MaterialTheme.colorScheme.surface)
+                .windowInsetsPadding(WindowInsets.statusBars)
+                .windowInsetsPadding(WindowInsets.navigationBars),
         contentAlignment = Alignment.Center,
     ) {
         Column(
@@ -259,7 +265,9 @@ private fun IncomingCallUI(
         modifier =
             Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.surface),
+                .background(MaterialTheme.colorScheme.surface)
+                .windowInsetsPadding(WindowInsets.statusBars)
+                .windowInsetsPadding(WindowInsets.navigationBars),
         contentAlignment = Alignment.Center,
     ) {
         Column(
@@ -387,6 +395,7 @@ private fun ConnectedCallUI(
                         Modifier
                             .size(120.dp, 160.dp)
                             .align(Alignment.TopEnd)
+                            .windowInsetsPadding(WindowInsets.statusBars)
                             .padding(16.dp),
                     mirror = true,
                 )
@@ -432,7 +441,8 @@ private fun ConnectedCallUI(
                 modifier =
                     Modifier
                         .align(Alignment.TopCenter)
-                        .padding(top = 48.dp),
+                        .windowInsetsPadding(WindowInsets.statusBars)
+                        .padding(top = 16.dp),
             )
         }
 
@@ -441,7 +451,8 @@ private fun ConnectedCallUI(
             modifier =
                 Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(bottom = 48.dp),
+                    .windowInsetsPadding(WindowInsets.navigationBars)
+                    .padding(bottom = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Row(
