@@ -66,6 +66,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.call.CallManager
 import com.vitorpamplona.amethyst.commons.call.CallState
 import com.vitorpamplona.amethyst.service.call.CallController
@@ -73,6 +74,7 @@ import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -98,6 +100,7 @@ fun CallScreen(
     }
 
     KeepScreenOn()
+    EnterPipOnLeave(callState)
 
     Box(modifier = Modifier.fillMaxSize()) {
         when (val state = callState) {
@@ -108,7 +111,7 @@ fun CallScreen(
             is CallState.Offering -> {
                 CallInProgressUI(
                     peerPubKey = state.peerPubKey,
-                    statusText = "Calling...",
+                    statusText = stringRes(R.string.call_calling),
                     accountViewModel = accountViewModel,
                     onHangup = { scope.launch { callManager.hangup() } },
                 )
@@ -131,7 +134,7 @@ fun CallScreen(
             is CallState.Connecting -> {
                 CallInProgressUI(
                     peerPubKey = state.peerPubKey,
-                    statusText = "Connecting...",
+                    statusText = stringRes(R.string.call_connecting),
                     accountViewModel = accountViewModel,
                     onHangup = { scope.launch { callManager.hangup() } },
                 )
@@ -152,7 +155,7 @@ fun CallScreen(
             is CallState.Ended -> {
                 CallInProgressUI(
                     peerPubKey = state.peerPubKey,
-                    statusText = "Call ended",
+                    statusText = stringRes(R.string.call_ended),
                     accountViewModel = accountViewModel,
                     onHangup = { onCallEnded() },
                 )
@@ -164,7 +167,7 @@ fun CallScreen(
                 modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),
                 action = {
                     Text(
-                        "Dismiss",
+                        stringRes(R.string.call_dismiss),
                         modifier =
                             Modifier.padding(8.dp),
                         color = MaterialTheme.colorScheme.inversePrimary,
@@ -225,7 +228,7 @@ private fun CallInProgressUI(
             ) {
                 Icon(
                     Icons.Default.CallEnd,
-                    contentDescription = "Hang up",
+                    contentDescription = stringRes(R.string.call_hangup),
                     tint = Color.White,
                     modifier = Modifier.size(32.dp),
                 )
@@ -270,7 +273,14 @@ private fun IncomingCallUI(
             }
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Incoming ${callType.value} call...",
+                text =
+                    stringRes(
+                        if (callType == com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType.VIDEO) {
+                            R.string.call_incoming_video
+                        } else {
+                            R.string.call_incoming_voice
+                        },
+                    ),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 16.sp,
             )
@@ -286,7 +296,7 @@ private fun IncomingCallUI(
                 ) {
                     Icon(
                         Icons.Default.CallEnd,
-                        contentDescription = "Reject",
+                        contentDescription = stringRes(R.string.call_reject),
                         tint = Color.White,
                         modifier = Modifier.size(32.dp),
                     )
@@ -299,7 +309,7 @@ private fun IncomingCallUI(
                 ) {
                     Icon(
                         Icons.Default.Call,
-                        contentDescription = "Accept",
+                        contentDescription = stringRes(R.string.call_accept),
                         tint = Color.White,
                         modifier = Modifier.size(32.dp),
                     )
@@ -428,7 +438,7 @@ private fun ConnectedCallUI(
                 ) {
                     Icon(
                         imageVector = if (isAudioMuted) Icons.Default.MicOff else Icons.Default.Mic,
-                        contentDescription = if (isAudioMuted) "Unmute" else "Mute",
+                        contentDescription = stringRes(if (isAudioMuted) R.string.call_unmute else R.string.call_mute),
                         tint = if (isAudioMuted) Color.Red else Color.White,
                         modifier = Modifier.size(28.dp),
                     )
@@ -439,7 +449,7 @@ private fun ConnectedCallUI(
                 ) {
                     Icon(
                         imageVector = if (isVideoEnabled) Icons.Default.Videocam else Icons.Default.VideocamOff,
-                        contentDescription = if (isVideoEnabled) "Camera off" else "Camera on",
+                        contentDescription = stringRes(if (isVideoEnabled) R.string.call_camera_off else R.string.call_camera_on),
                         tint = if (!isVideoEnabled) Color.Red else Color.White,
                         modifier = Modifier.size(28.dp),
                     )
@@ -450,7 +460,7 @@ private fun ConnectedCallUI(
                 ) {
                     Icon(
                         imageVector = if (isSpeakerOn) Icons.Default.VolumeUp else Icons.Default.VolumeOff,
-                        contentDescription = if (isSpeakerOn) "Earpiece" else "Speaker",
+                        contentDescription = stringRes(if (isSpeakerOn) R.string.call_earpiece else R.string.call_speaker),
                         tint = if (isSpeakerOn) Color.Cyan else Color.White,
                         modifier = Modifier.size(28.dp),
                     )
@@ -465,7 +475,7 @@ private fun ConnectedCallUI(
             ) {
                 Icon(
                     Icons.Default.CallEnd,
-                    contentDescription = "Hang up",
+                    contentDescription = stringRes(R.string.call_hangup),
                     tint = Color.White,
                     modifier = Modifier.size(32.dp),
                 )
@@ -512,6 +522,39 @@ private fun KeepScreenOn() {
         window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         onDispose {
             window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+    }
+}
+
+@Composable
+private fun EnterPipOnLeave(callState: CallState) {
+    val context = LocalContext.current
+    val activity = context as? android.app.Activity ?: return
+    val isActiveCall =
+        callState is CallState.Connected ||
+            callState is CallState.Connecting ||
+            callState is CallState.Offering
+
+    if (isActiveCall && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+        val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+        DisposableEffect(lifecycleOwner) {
+            val observer =
+                object : androidx.lifecycle.DefaultLifecycleObserver {
+                    override fun onStop(owner: androidx.lifecycle.LifecycleOwner) {
+                        try {
+                            val params =
+                                android.app.PictureInPictureParams
+                                    .Builder()
+                                    .setAspectRatio(android.util.Rational(9, 16))
+                                    .build()
+                            activity.enterPictureInPictureMode(params)
+                        } catch (_: Exception) {
+                            // PiP not supported or activity not in correct state
+                        }
+                    }
+                }
+            lifecycleOwner.lifecycle.addObserver(observer)
+            onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
         }
     }
 }

@@ -519,10 +519,10 @@ object NotificationUtils {
         callChannel =
             NotificationChannel(
                 CALL_CHANNEL_ID,
-                "Incoming calls",
+                stringRes(applicationContext, R.string.app_notification_calls_channel_name),
                 NotificationManager.IMPORTANCE_HIGH,
             ).apply {
-                description = "Notifications for incoming voice and video calls"
+                description = stringRes(applicationContext, R.string.app_notification_calls_channel_description)
             }
 
         val notificationManager: NotificationManager =
@@ -573,7 +573,7 @@ object NotificationUtils {
             NotificationCompat
                 .Builder(applicationContext, channel.id)
                 .setSmallIcon(R.drawable.amethyst)
-                .setContentTitle("Incoming call")
+                .setContentTitle(stringRes(applicationContext, R.string.call_incoming))
                 .setContentText(callerName)
                 .setLargeIcon(callerBitmap)
                 .setContentIntent(contentPendingIntent)
@@ -584,8 +584,8 @@ object NotificationUtils {
                 .setOngoing(true)
                 .setTimeoutAfter(60_000)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-                .addAction(R.drawable.amethyst, "Reject", contentPendingIntent)
-                .addAction(R.drawable.amethyst, "Accept", fullScreenPendingIntent)
+                .addAction(R.drawable.amethyst, stringRes(applicationContext, R.string.call_reject), contentPendingIntent)
+                .addAction(R.drawable.amethyst, stringRes(applicationContext, R.string.call_accept), fullScreenPendingIntent)
 
         notificationManager.notify("call", CALL_NOTIFICATION_ID, builder.build())
     }

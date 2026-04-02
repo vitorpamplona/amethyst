@@ -81,10 +81,10 @@ class CallForegroundService : Service() {
         val channel =
             NotificationChannel(
                 CHANNEL_ID,
-                "Calls",
+                getString(R.string.call_ongoing),
                 NotificationManager.IMPORTANCE_LOW,
             ).apply {
-                description = "Ongoing call notification"
+                description = getString(R.string.call_ongoing_description)
             }
         val notificationManager = getSystemService(NotificationManager::class.java)
         notificationManager.createNotificationChannel(channel)
@@ -94,7 +94,7 @@ class CallForegroundService : Service() {
         NotificationCompat
             .Builder(this, CHANNEL_ID)
             .setContentTitle(getString(R.string.app_name))
-            .setContentText("Call with $peerName")
+            .setContentText(getString(R.string.call_with, peerName))
             .setSmallIcon(R.drawable.amethyst)
             .setOngoing(true)
             .build()

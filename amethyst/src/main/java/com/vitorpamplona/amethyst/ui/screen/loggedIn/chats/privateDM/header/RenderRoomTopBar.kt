@@ -99,7 +99,7 @@ fun RenderRoomTopBar(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Videocam,
-                                    contentDescription = "Video call",
+                                    contentDescription = stringRes(R.string.call_video),
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(20.dp),
                                 )
@@ -113,7 +113,7 @@ fun RenderRoomTopBar(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Call,
-                                    contentDescription = "Voice call",
+                                    contentDescription = stringRes(R.string.call_voice),
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(20.dp),
                                 )

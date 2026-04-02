@@ -32,10 +32,12 @@ import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallIceCandidateEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.webrtc.IceCandidate
 import org.webrtc.MediaStream
 import org.webrtc.SessionDescription
@@ -113,34 +115,36 @@ class CallController(
         peerPubKey: String,
         callType: CallType,
     ) {
-        val callId = UUID.randomUUID().toString()
-        _errorMessage.value = null
-        remoteDescriptionSet = false
-        pendingIceCandidates.clear()
+        scope.launch {
+            val callId = UUID.randomUUID().toString()
+            _errorMessage.value = null
+            remoteDescriptionSet = false
+            pendingIceCandidates.clear()
 
-        try {
-            createWebRtcSession()
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to create WebRTC session", e)
-            _errorMessage.value = "Failed to start call: ${e.message}"
-            return
-        }
-
-        val session =
-            webRtcSession ?: run {
-                _errorMessage.value = "Failed to create WebRTC session"
-                return
+            try {
+                withContext(Dispatchers.IO) { createWebRtcSession() }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to create WebRTC session", e)
+                _errorMessage.value = "Failed to start call: ${e.message}"
+                return@launch
             }
 
-        session.addAudioTrack()
-        if (callType == CallType.VIDEO) {
-            session.addVideoTrack()
-            _localVideoTrack.value = session.getLocalVideoTrack()
-        }
+            val session =
+                webRtcSession ?: run {
+                    _errorMessage.value = "Failed to create WebRTC session"
+                    return@launch
+                }
 
-        session.createOffer { sdp ->
-            scope.launch {
-                callManager.initiateCall(peerPubKey, callType, callId, sdp.description)
+            session.addAudioTrack()
+            if (callType == CallType.VIDEO) {
+                session.addVideoTrack()
+                _localVideoTrack.value = session.getLocalVideoTrack()
+            }
+
+            session.createOffer { sdp ->
+                scope.launch {
+                    callManager.initiateCall(peerPubKey, callType, callId, sdp.description)
+                }
             }
         }
     }
@@ -149,36 +153,38 @@ class CallController(
         val state = callManager.state.value
         if (state !is CallState.IncomingCall) return
 
-        _errorMessage.value = null
-        remoteDescriptionSet = false
-        pendingIceCandidates.clear()
+        scope.launch {
+            _errorMessage.value = null
+            remoteDescriptionSet = false
+            // Don't clear pendingIceCandidates here — they were buffered while ringing
 
-        try {
-            createWebRtcSession()
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to create WebRTC session", e)
-            _errorMessage.value = "Failed to accept call: ${e.message}"
-            return
-        }
-
-        val session =
-            webRtcSession ?: run {
-                _errorMessage.value = "Failed to create WebRTC session"
-                return
+            try {
+                withContext(Dispatchers.IO) { createWebRtcSession() }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to create WebRTC session", e)
+                _errorMessage.value = "Failed to accept call: ${e.message}"
+                return@launch
             }
 
-        session.addAudioTrack()
-        if (state.callType == CallType.VIDEO) {
-            session.addVideoTrack()
-            _localVideoTrack.value = session.getLocalVideoTrack()
-        }
+            val session =
+                webRtcSession ?: run {
+                    _errorMessage.value = "Failed to create WebRTC session"
+                    return@launch
+                }
 
-        session.setRemoteDescription(SessionDescription(SessionDescription.Type.OFFER, sdpOffer))
-        flushPendingIceCandidates()
+            session.addAudioTrack()
+            if (state.callType == CallType.VIDEO) {
+                session.addVideoTrack()
+                _localVideoTrack.value = session.getLocalVideoTrack()
+            }
 
-        session.createAnswer { sdp ->
-            scope.launch {
-                callManager.acceptCall(sdp.description)
+            session.setRemoteDescription(SessionDescription(SessionDescription.Type.OFFER, sdpOffer))
+            flushPendingIceCandidates()
+
+            session.createAnswer { sdp ->
+                scope.launch {
+                    callManager.acceptCall(sdp.description)
+                }
             }
         }
     }

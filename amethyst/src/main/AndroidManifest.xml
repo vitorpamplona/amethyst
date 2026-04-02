@@ -80,7 +80,8 @@
             android:exported="true"
             android:launchMode="singleInstance"
             android:windowSoftInputMode="adjustResize"
-            android:configChanges="orientation|screenSize|screenLayout"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize"
+            android:supportsPictureInPicture="true"
             android:theme="@style/Theme.Amethyst">
 
             <intent-filter android:label="Amethyst">
