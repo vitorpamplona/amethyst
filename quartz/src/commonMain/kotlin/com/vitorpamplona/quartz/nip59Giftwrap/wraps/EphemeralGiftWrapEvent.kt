@@ -23,35 +23,24 @@ package com.vitorpamplona.quartz.nip59Giftwrap.wraps
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
-import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
 import com.vitorpamplona.quartz.nip40Expiration.ExpirationTag
-import com.vitorpamplona.quartz.nip59Giftwrap.HostStub
-import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
-import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
-open class GiftWrapEvent(
+class EphemeralGiftWrapEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-    kind: Int = KIND,
-) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
-    @kotlinx.serialization.Transient
-    @kotlin.jvm.Transient
-    var innerEventId: HexKey? = null
-
-    open fun copyNoContent(): GiftWrapEvent {
+) : GiftWrapEvent(id, pubKey, createdAt, tags, content, sig, KIND) {
+    override fun copyNoContent(): EphemeralGiftWrapEvent {
         val copy =
-            GiftWrapEvent(
+            EphemeralGiftWrapEvent(
                 id,
                 pubKey,
                 createdAt,
@@ -65,52 +54,20 @@ open class GiftWrapEvent(
         return copy
     }
 
-    override fun isContentEncoded() = true
-
-    suspend fun unwrapThrowing(signer: NostrSigner): Event {
-        val giftStr = plainContent(signer)
-        val gift = fromJson(giftStr)
-
-        if (gift is WrappedEvent) {
-            gift.host = HostStub(this.id, this.pubKey, this.kind)
-        }
-        innerEventId = gift.id
-
-        return gift
-    }
-
-    suspend fun unwrapOrNull(signer: NostrSigner): Event? =
-        try {
-            unwrapThrowing(signer)
-        } catch (_: Exception) {
-            Log.w("GiftWrapEvent", "Couldn't Decrypt the content " + this.toNostrUri())
-            null
-        }
-
-    private suspend fun plainContent(signer: NostrSigner): String {
-        if (content.isEmpty()) return ""
-
-        return signer.nip44Decrypt(content, pubKey)
-    }
-
-    fun recipientPubKey() = tags.firstTagValue("p")
-
     companion object {
-        const val KIND = 1059
-        const val ALT = "Encrypted event"
+        const val KIND = 21059
+        const val ALT = "Ephemeral encrypted event"
 
         fun create(
             event: Event,
             recipientPubKey: HexKey,
             expirationDelta: Long? = null,
             createdAt: Long = TimeUtils.randomWithTwoDays(),
-        ): GiftWrapEvent {
-            val signer = NostrSignerSync(KeyPair()) // GiftWrap is always a random key
+        ): EphemeralGiftWrapEvent {
+            val signer = NostrSignerSync(KeyPair())
 
             val tags =
                 expirationDelta?.let {
-                    // minimum expiration is two days in the future due to the random created at
-                    // this will make sure the even arrives and is not deleted because of the 2 days.
                     arrayOf(
                         PTag.assemble(recipientPubKey, null),
                         ExpirationTag.assemble(createdAt + it + TimeUtils.twoDays()),
