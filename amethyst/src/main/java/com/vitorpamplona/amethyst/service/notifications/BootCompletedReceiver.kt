@@ -26,7 +26,12 @@ import android.content.Intent
 import com.vitorpamplona.quartz.utils.Log
 
 /**
- * Restarts the NotificationRelayService after device reboot.
+ * Restarts the NotificationRelayService after device reboot or app update.
+ *
+ * Handles:
+ * - BOOT_COMPLETED / QUICKBOOT_POWERON: restart after device reboot
+ * - MY_PACKAGE_REPLACED: restart after app update (without this, the service
+ *   stays dead until the user manually opens the app or reboots)
  *
  * The specialUse foreground service type is allowed to start from BOOT_COMPLETED
  * on Android 15+, unlike dataSync which is restricted.
@@ -40,13 +45,16 @@ class BootCompletedReceiver : BroadcastReceiver() {
         context: Context,
         intent: Intent,
     ) {
-        if (intent.action == Intent.ACTION_BOOT_COMPLETED ||
-            intent.action == "android.intent.action.QUICKBOOT_POWERON"
-        ) {
-            Log.d(TAG, "Boot completed, checking if notification service should start")
-            if (NotificationRelayService.isEnabled(context)) {
-                Log.d(TAG, "Starting notification relay service after boot")
-                NotificationRelayService.start(context)
+        when (intent.action) {
+            Intent.ACTION_BOOT_COMPLETED,
+            "android.intent.action.QUICKBOOT_POWERON",
+            Intent.ACTION_MY_PACKAGE_REPLACED,
+            -> {
+                Log.d(TAG) { "Received ${intent.action}, checking if notification service should start" }
+                if (NotificationRelayService.isEnabled(context)) {
+                    Log.d(TAG, "Starting notification relay service")
+                    NotificationRelayService.start(context)
+                }
             }
         }
     }
