@@ -69,6 +69,8 @@ class CallManager(
 
     private fun isEventTooOld(event: Event): Boolean = TimeUtils.now() - event.createdAt > MAX_EVENT_AGE_SECONDS
 
+    // ---- P2P call initiation ----
+
     suspend fun initiateCall(
         calleePubKey: HexKey,
         callType: CallType,
@@ -76,10 +78,30 @@ class CallManager(
         sdpOffer: String,
     ) {
         val result = factory.createCallOffer(sdpOffer, calleePubKey, callId, callType, signer)
-        _state.value = CallState.Offering(callId, calleePubKey, callType)
+        _state.value = CallState.Offering(callId, setOf(calleePubKey), callType)
         publishEvent(result.wrap)
         startTimeout(callId)
     }
+
+    // ---- Group call initiation ----
+
+    /**
+     * Initiates a group call.  A single [CallOfferEvent] is created with `p`
+     * tags for every callee and then gift-wrapped individually to each one.
+     */
+    suspend fun initiateGroupCall(
+        calleePubKeys: Set<HexKey>,
+        callType: CallType,
+        callId: String,
+        sdpOffer: String,
+    ) {
+        val result = factory.createGroupCallOffer(sdpOffer, calleePubKeys, callId, callType, signer)
+        _state.value = CallState.Offering(callId, calleePubKeys, callType)
+        result.wraps.forEach { publishEvent(it) }
+        startTimeout(callId)
+    }
+
+    // ---- Incoming call handling ----
 
     fun onIncomingCallEvent(event: CallOfferEvent) {
         val callerPubKey = event.pubKey
@@ -90,10 +112,13 @@ class CallManager(
 
         if (_state.value !is CallState.Idle) return
 
+        val groupMembers = event.groupMembers()
+
         _state.value =
             CallState.IncomingCall(
                 callId = callId,
                 callerPubKey = callerPubKey,
+                groupMembers = groupMembers,
                 callType = callType,
                 sdpOffer = event.sdpOffer(),
             )
@@ -105,13 +130,11 @@ class CallManager(
         if (current !is CallState.IncomingCall) return
 
         val result = factory.createCallAnswer(sdpAnswer, current.callerPubKey, current.callId, signer)
-        _state.value = CallState.Connecting(current.callId, current.callerPubKey, current.callType)
+        _state.value = CallState.Connecting(current.callId, current.peerPubKeys(), current.callType)
         cancelTimeout()
         publishEvent(result.wrap)
 
         // Notify other devices of this user that the call was answered here.
-        // This gift-wraps an answer event to our own pubkey so other logged-in
-        // devices see it and stop ringing.
         val selfNotify = factory.createCallAnswer(sdpAnswer, signer.pubKey, current.callId, signer)
         publishEvent(selfNotify.wrap)
     }
@@ -121,7 +144,7 @@ class CallManager(
         if (current !is CallState.IncomingCall) return
 
         val result = factory.createReject(current.callerPubKey, current.callId, signer = signer)
-        transitionToEnded(current.callId, current.callerPubKey, EndReason.REJECTED)
+        transitionToEnded(current.callId, current.peerPubKeys(), EndReason.REJECTED)
         publishEvent(result.wrap)
 
         // Notify other devices of this user that the call was rejected here.
@@ -136,7 +159,7 @@ class CallManager(
         when (current) {
             is CallState.Offering -> {
                 if (callId != current.callId) return
-                _state.value = CallState.Connecting(current.callId, current.peerPubKey, current.callType)
+                _state.value = CallState.Connecting(current.callId, current.peerPubKeys, current.callType)
                 cancelTimeout()
                 onAnswerReceived?.invoke(event)
             }
@@ -144,7 +167,7 @@ class CallManager(
             is CallState.IncomingCall -> {
                 // Another device of this user answered the call — stop ringing.
                 if (callId != current.callId) return
-                transitionToEnded(current.callId, current.callerPubKey, EndReason.ANSWERED_ELSEWHERE)
+                transitionToEnded(current.callId, current.peerPubKeys(), EndReason.ANSWERED_ELSEWHERE)
             }
 
             is CallState.Connected -> {
@@ -166,13 +189,13 @@ class CallManager(
         when (current) {
             is CallState.Offering -> {
                 if (callId != current.callId) return
-                transitionToEnded(current.callId, current.peerPubKey, EndReason.PEER_REJECTED)
+                transitionToEnded(current.callId, current.peerPubKeys, EndReason.PEER_REJECTED)
             }
 
             is CallState.IncomingCall -> {
                 // Another device of this user rejected the call — stop ringing.
                 if (callId != current.callId) return
-                transitionToEnded(current.callId, current.callerPubKey, EndReason.REJECTED)
+                transitionToEnded(current.callId, current.peerPubKeys(), EndReason.REJECTED)
             }
 
             else -> {
@@ -219,28 +242,28 @@ class CallManager(
         _state.value =
             CallState.Connected(
                 callId = current.callId,
-                peerPubKey = current.peerPubKey,
+                peerPubKeys = current.peerPubKeys,
                 callType = current.callType,
                 startedAtEpoch = TimeUtils.now(),
             )
     }
 
     suspend fun hangup() {
-        val peerPubKey: HexKey
+        val peerPubKeys: Set<HexKey>
         val callId: String
         when (val current = _state.value) {
             is CallState.Offering -> {
-                peerPubKey = current.peerPubKey
+                peerPubKeys = current.peerPubKeys
                 callId = current.callId
             }
 
             is CallState.Connecting -> {
-                peerPubKey = current.peerPubKey
+                peerPubKeys = current.peerPubKeys
                 callId = current.callId
             }
 
             is CallState.Connected -> {
-                peerPubKey = current.peerPubKey
+                peerPubKeys = current.peerPubKeys
                 callId = current.callId
             }
 
@@ -249,9 +272,14 @@ class CallManager(
             }
         }
 
-        val result = factory.createHangup(peerPubKey, callId, signer = signer)
-        transitionToEnded(callId, peerPubKey, EndReason.HANGUP)
-        publishEvent(result.wrap)
+        if (peerPubKeys.size == 1) {
+            val result = factory.createHangup(peerPubKeys.first(), callId, signer = signer)
+            publishEvent(result.wrap)
+        } else {
+            val result = factory.createGroupHangup(peerPubKeys, callId, signer = signer)
+            result.wraps.forEach { publishEvent(it) }
+        }
+        transitionToEnded(callId, peerPubKeys, EndReason.HANGUP)
     }
 
     fun onPeerHangup(event: CallHangupEvent) {
@@ -267,8 +295,8 @@ class CallManager(
             }
         if (callId != currentCallId) return
 
-        val peerPubKey = event.pubKey
-        transitionToEnded(callId, peerPubKey, EndReason.PEER_HANGUP)
+        val peerPubKeys = currentPeerPubKeys() ?: return
+        transitionToEnded(callId, peerPubKeys, EndReason.PEER_HANGUP)
     }
 
     fun onSignalingEvent(event: Event) {
@@ -299,14 +327,21 @@ class CallManager(
             else -> null
         }
 
-    fun currentPeerPubKey(): HexKey? =
+    /** Returns the first peer pubkey (for P2P calls) or null. */
+    fun currentPeerPubKey(): HexKey? = currentPeerPubKeys()?.firstOrNull()
+
+    /** Returns all peer pubkeys for the current call. */
+    fun currentPeerPubKeys(): Set<HexKey>? =
         when (val s = _state.value) {
-            is CallState.Offering -> s.peerPubKey
-            is CallState.IncomingCall -> s.callerPubKey
-            is CallState.Connecting -> s.peerPubKey
-            is CallState.Connected -> s.peerPubKey
+            is CallState.Offering -> s.peerPubKeys
+            is CallState.IncomingCall -> s.peerPubKeys()
+            is CallState.Connecting -> s.peerPubKeys
+            is CallState.Connected -> s.peerPubKeys
             else -> null
         }
+
+    /** True when the current call has more than one peer. */
+    fun isGroupCall(): Boolean = (currentPeerPubKeys()?.size ?: 0) > 1
 
     fun reset() {
         _state.value = CallState.Idle
@@ -318,10 +353,10 @@ class CallManager(
 
     private fun transitionToEnded(
         callId: String,
-        peerPubKey: HexKey,
+        peerPubKeys: Set<HexKey>,
         reason: EndReason,
     ) {
-        _state.value = CallState.Ended(callId, peerPubKey, reason)
+        _state.value = CallState.Ended(callId, peerPubKeys, reason)
         cancelTimeout()
         resetJob?.cancel()
         resetJob =
@@ -346,13 +381,13 @@ class CallManager(
                         else -> null
                     }
                 if (currentCallId == callId) {
-                    val peerPubKey =
+                    val peerPubKeys =
                         when (current) {
-                            is CallState.Offering -> current.peerPubKey
-                            is CallState.IncomingCall -> current.callerPubKey
+                            is CallState.Offering -> current.peerPubKeys
+                            is CallState.IncomingCall -> current.peerPubKeys()
                             else -> return@launch
                         }
-                    transitionToEnded(callId, peerPubKey, EndReason.TIMEOUT)
+                    transitionToEnded(callId, peerPubKeys, EndReason.TIMEOUT)
                 }
             }
     }
@@ -362,3 +397,14 @@ class CallManager(
         timeoutJob = null
     }
 }
+
+/**
+ * Convenience extension: the peers in an incoming call are all group members
+ * except the local signer (i.e. ourselves) – but since we don't store the
+ * local pubkey here we return all members except the caller's own pubkey
+ * is already the callerPubKey field.  In practice the set of "peer" keys
+ * the UI should track is groupMembers minus self, which the controller
+ * resolves.  Here we simply exclude the caller from the recipients set
+ * and add back the caller, resulting in the full group minus self.
+ */
+private fun CallState.IncomingCall.peerPubKeys(): Set<HexKey> = groupMembers

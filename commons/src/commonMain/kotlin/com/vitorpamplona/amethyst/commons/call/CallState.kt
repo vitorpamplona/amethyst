@@ -30,33 +30,34 @@ sealed interface CallState {
 
     data class Offering(
         val callId: String,
-        val peerPubKey: HexKey,
+        val peerPubKeys: Set<HexKey>,
         val callType: CallType,
     ) : CallState
 
     data class IncomingCall(
         val callId: String,
         val callerPubKey: HexKey,
+        val groupMembers: Set<HexKey>,
         val callType: CallType,
         val sdpOffer: String,
     ) : CallState
 
     data class Connecting(
         val callId: String,
-        val peerPubKey: HexKey,
+        val peerPubKeys: Set<HexKey>,
         val callType: CallType,
     ) : CallState
 
     data class Connected(
         val callId: String,
-        val peerPubKey: HexKey,
+        val peerPubKeys: Set<HexKey>,
         val callType: CallType,
         val startedAtEpoch: Long,
     ) : CallState
 
     data class Ended(
         val callId: String,
-        val peerPubKey: HexKey,
+        val peerPubKeys: Set<HexKey>,
         val reason: EndReason,
     ) : CallState
 }

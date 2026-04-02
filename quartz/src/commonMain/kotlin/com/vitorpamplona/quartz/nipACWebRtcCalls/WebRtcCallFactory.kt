@@ -33,14 +33,23 @@ import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallRenegotiateEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType
 
 class WebRtcCallFactory {
+    /** Result for a single-recipient signaling message (P2P). */
     data class Result(
         val msg: Event,
         val wrap: GiftWrapEvent,
     )
 
+    /** Result for a signaling message gift-wrapped to multiple recipients (group calls). */
+    data class GroupResult(
+        val msg: Event,
+        val wraps: List<GiftWrapEvent>,
+    )
+
     companion object {
         const val WRAP_EXPIRATION_SECONDS = 20L
     }
+
+    // ---- P2P (single recipient) methods ----
 
     suspend fun createCallOffer(
         sdpOffer: String,
@@ -113,5 +122,66 @@ class WebRtcCallFactory {
         val signed = signer.sign(template)
         val wrap = GiftWrapEvent.create(event = signed, recipientPubKey = peerPubKey, expirationDelta = WRAP_EXPIRATION_SECONDS)
         return Result(signed, wrap)
+    }
+
+    // ---- Group call methods (multiple recipients) ----
+
+    /**
+     * Creates a call offer for a group call.  The signed inner event contains
+     * `p` tags for **every** callee so each recipient knows the full group.
+     * A separate [GiftWrapEvent] is produced for each callee.
+     */
+    suspend fun createGroupCallOffer(
+        sdpOffer: String,
+        calleePubKeys: Set<HexKey>,
+        callId: String,
+        callType: CallType,
+        signer: NostrSigner,
+    ): GroupResult {
+        val template = CallOfferEvent.build(sdpOffer, calleePubKeys, callId, callType)
+        val signed = signer.sign(template)
+        val wraps =
+            calleePubKeys.map { pubKey ->
+                GiftWrapEvent.create(event = signed, recipientPubKey = pubKey, expirationDelta = WRAP_EXPIRATION_SECONDS)
+            }
+        return GroupResult(signed, wraps)
+    }
+
+    /**
+     * Sends a hangup to every peer in a group call.  Each peer receives its
+     * own gift-wrapped hangup event.
+     */
+    suspend fun createGroupHangup(
+        peerPubKeys: Set<HexKey>,
+        callId: String,
+        reason: String = "",
+        signer: NostrSigner,
+    ): GroupResult {
+        val template = CallHangupEvent.build(peerPubKeys.first(), callId, reason)
+        val signed = signer.sign(template)
+        val wraps =
+            peerPubKeys.map { pubKey ->
+                GiftWrapEvent.create(event = signed, recipientPubKey = pubKey, expirationDelta = WRAP_EXPIRATION_SECONDS)
+            }
+        return GroupResult(signed, wraps)
+    }
+
+    /**
+     * Rejects a group call offer.  Sends the rejection to the caller and
+     * notifies self (for multi-device support).
+     */
+    suspend fun createGroupReject(
+        callerPubKey: HexKey,
+        callId: String,
+        reason: String = "",
+        signer: NostrSigner,
+    ): GroupResult {
+        val template = CallRejectEvent.build(callerPubKey, callId, reason)
+        val signed = signer.sign(template)
+        val wraps =
+            listOf(callerPubKey, signer.pubKey).distinct().map { pubKey ->
+                GiftWrapEvent.create(event = signed, recipientPubKey = pubKey, expirationDelta = WRAP_EXPIRATION_SECONDS)
+            }
+        return GroupResult(signed, wraps)
     }
 }

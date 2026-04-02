@@ -25,7 +25,9 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
+import com.vitorpamplona.quartz.nip01Core.tags.people.pTagIds
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallIdTag
@@ -50,6 +52,18 @@ class CallOfferEvent(
 
     fun sdpOffer() = content
 
+    /** All pubkeys referenced by `p` tags in this offer. */
+    fun recipientPubKeys(): Set<HexKey> = tags.mapNotNull(PTag::parseKey).toSet()
+
+    /**
+     * All group members for this call: the `p`-tagged recipients plus the
+     * event author (caller).  For 1-to-1 calls the set has two elements.
+     */
+    fun groupMembers(): Set<HexKey> = recipientPubKeys().plus(pubKey)
+
+    /** True when this offer targets more than one callee. */
+    fun isGroupCall(): Boolean = recipientPubKeys().size > 1
+
     companion object {
         const val KIND = 25050
         const val ALT_DESCRIPTION = "WebRTC call offer"
@@ -65,6 +79,22 @@ class CallOfferEvent(
         ) = eventTemplate(KIND, sdpOffer, createdAt) {
             alt(ALT_DESCRIPTION)
             pTag(calleePubKey)
+            callId(callId)
+            callType(type)
+            expiration(createdAt + EXPIRATION_SECONDS)
+            initializer()
+        }
+
+        fun build(
+            sdpOffer: String,
+            calleePubKeys: Set<HexKey>,
+            callId: String,
+            type: CallType,
+            createdAt: Long = TimeUtils.now(),
+            initializer: TagArrayBuilder<CallOfferEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, sdpOffer, createdAt) {
+            alt(ALT_DESCRIPTION)
+            pTagIds(calleePubKeys)
             callId(callId)
             callType(type)
             expiration(createdAt + EXPIRATION_SECONDS)

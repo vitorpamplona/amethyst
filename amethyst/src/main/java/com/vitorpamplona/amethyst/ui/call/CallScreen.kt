@@ -123,10 +123,10 @@ fun CallScreen(
 
             is CallState.Offering -> {
                 if (isInPipMode) {
-                    PipCallUI(peerPubKey = state.peerPubKey, statusText = stringRes(R.string.call_calling), accountViewModel = accountViewModel)
+                    PipCallUI(peerPubKey = state.peerPubKeys.first(), statusText = stringRes(R.string.call_calling), accountViewModel = accountViewModel)
                 } else {
                     CallInProgressUI(
-                        peerPubKey = state.peerPubKey,
+                        peerPubKey = state.peerPubKeys.first(),
                         statusText = stringRes(R.string.call_calling),
                         accountViewModel = accountViewModel,
                         onHangup = { scope.launch { callManager.hangup() } },
@@ -155,10 +155,10 @@ fun CallScreen(
 
             is CallState.Connecting -> {
                 if (isInPipMode) {
-                    PipCallUI(peerPubKey = state.peerPubKey, statusText = stringRes(R.string.call_connecting), accountViewModel = accountViewModel)
+                    PipCallUI(peerPubKey = state.peerPubKeys.first(), statusText = stringRes(R.string.call_connecting), accountViewModel = accountViewModel)
                 } else {
                     CallInProgressUI(
-                        peerPubKey = state.peerPubKey,
+                        peerPubKey = state.peerPubKeys.first(),
                         statusText = stringRes(R.string.call_connecting),
                         accountViewModel = accountViewModel,
                         onHangup = { scope.launch { callManager.hangup() } },
@@ -185,7 +185,7 @@ fun CallScreen(
             is CallState.Ended -> {
                 if (!isInPipMode) {
                     CallInProgressUI(
-                        peerPubKey = state.peerPubKey,
+                        peerPubKey = state.peerPubKeys.first(),
                         statusText = stringRes(R.string.call_ended),
                         accountViewModel = accountViewModel,
                         onHangup = { onCallEnded() },
@@ -433,7 +433,7 @@ private fun ConnectedCallUI(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
-                LoadUser(baseUserHex = state.peerPubKey, accountViewModel = accountViewModel) { user ->
+                LoadUser(baseUserHex = state.peerPubKeys.first(), accountViewModel = accountViewModel) { user ->
                     if (user != null) {
                         ClickableUserPicture(
                             baseUser = user,
@@ -665,7 +665,7 @@ private fun PipConnectedCallUI(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
-                LoadUser(baseUserHex = state.peerPubKey, accountViewModel = accountViewModel) { user ->
+                LoadUser(baseUserHex = state.peerPubKeys.first(), accountViewModel = accountViewModel) { user ->
                     if (user != null) {
                         ClickableUserPicture(
                             baseUser = user,
