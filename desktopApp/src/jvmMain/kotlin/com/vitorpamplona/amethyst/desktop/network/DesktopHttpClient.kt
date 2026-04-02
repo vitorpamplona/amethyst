@@ -56,7 +56,12 @@ class DesktopHttpClient(
     /** Returns true if user expects Tor routing (INTERNAL or EXTERNAL mode). */
     fun isTorExpected(): Boolean = torTypeProvider() != TorType.OFF
 
-    private val sharedConnectionPool = ConnectionPool()
+    val sharedConnectionPool = ConnectionPool()
+
+    /** Evict all idle connections — call on Tor state change to kill stale direct/proxy connections. */
+    fun evictConnections() {
+        sharedConnectionPool.evictAll()
+    }
 
     private val directClient: OkHttpClient by lazy {
         OkHttpClient

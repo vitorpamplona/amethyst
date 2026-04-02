@@ -500,26 +500,6 @@ fun App(
         }
     val relayManager = remember(httpClient) { DesktopRelayConnectionManager(httpClient) }
 
-    // Reconnect relays on Tor state transitions (ON→proxy, OFF→direct)
-    LaunchedEffect(torManager, relayManager) {
-        var previousStatus: com.vitorpamplona.amethyst.commons.tor.TorServiceStatus? = null
-        torManager.status.collect { status ->
-            val changed = previousStatus != null && previousStatus != status
-            // Reconnect on meaningful transitions: Active (proxy ready) or Off (switch to direct)
-            val isTransition =
-                changed &&
-                    (
-                        status is com.vitorpamplona.amethyst.commons.tor.TorServiceStatus.Active ||
-                            status is com.vitorpamplona.amethyst.commons.tor.TorServiceStatus.Off
-                    )
-            if (isTransition) {
-                kotlinx.coroutines.delay(500) // Brief delay for client state to propagate
-                relayManager.client.reconnect(onlyIfChanged = false, ignoreRetryDelays = true)
-            }
-            previousStatus = status
-        }
-    }
-
     // Subscriptions coordinator — uses default relay URLs for metadata indexing.
     // Feed subscriptions (inside MainContent) drive actual relay pool connections.
     val subscriptionsCoordinator =
