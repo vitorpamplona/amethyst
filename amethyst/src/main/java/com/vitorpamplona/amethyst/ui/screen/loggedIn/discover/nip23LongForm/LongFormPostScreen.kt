@@ -324,6 +324,7 @@ private fun MarkdownPostScreenBody(
                             .fillMaxWidth()
                             .padding(horizontal = Size10dp, vertical = Size5dp),
                     singleLine = true,
+                    enabled = !postViewModel.isEditing,
                 )
 
                 // Tags section

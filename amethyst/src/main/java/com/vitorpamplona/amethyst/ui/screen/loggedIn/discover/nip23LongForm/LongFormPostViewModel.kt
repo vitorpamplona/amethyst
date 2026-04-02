@@ -207,6 +207,8 @@ class LongFormPostViewModel :
     // Editing existing article
     var existingDTag: String? = null
 
+    val isEditing: Boolean get() = existingDTag != null
+
     fun init(accountVM: AccountViewModel) {
         this.accountViewModel = accountVM
         this.account = accountVM.account
