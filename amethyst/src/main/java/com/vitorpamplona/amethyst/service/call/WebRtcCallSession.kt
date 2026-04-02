@@ -165,7 +165,8 @@ class WebRtcCallSession(
         startCamera()
     }
 
-    private fun startCamera() {
+    fun startCamera() {
+        if (cameraCapturer != null) return // Already running
         val source = videoSource ?: return
         val enumerator = Camera2Enumerator(context)
         val frontCamera = enumerator.deviceNames.firstOrNull { enumerator.isFrontFacing(it) }

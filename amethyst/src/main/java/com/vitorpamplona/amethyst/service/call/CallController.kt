@@ -73,7 +73,7 @@ class CallController(
     // Audio/video toggle state (UI concerns, not domain state)
     private val _isAudioMuted = MutableStateFlow(false)
     val isAudioMuted: StateFlow<Boolean> = _isAudioMuted.asStateFlow()
-    private val _isVideoEnabled = MutableStateFlow(true)
+    private val _isVideoEnabled = MutableStateFlow(false)
     val isVideoEnabled: StateFlow<Boolean> = _isVideoEnabled.asStateFlow()
     val audioRoute: StateFlow<AudioRoute> = audioManager.audioRoute
     val isBluetoothAvailable: StateFlow<Boolean> = audioManager.isBluetoothAvailable
@@ -139,6 +139,7 @@ class CallController(
             if (callType == CallType.VIDEO) {
                 session.addVideoTrack()
                 _localVideoTrack.value = session.getLocalVideoTrack()
+                _isVideoEnabled.value = true
             }
 
             session.createOffer { sdp ->
@@ -176,6 +177,7 @@ class CallController(
             if (state.callType == CallType.VIDEO) {
                 session.addVideoTrack()
                 _localVideoTrack.value = session.getLocalVideoTrack()
+                _isVideoEnabled.value = true
             }
 
             session.setRemoteDescription(SessionDescription(SessionDescription.Type.OFFER, sdpOffer))
@@ -228,18 +230,24 @@ class CallController(
 
     fun toggleVideo() {
         val session = webRtcSession ?: return
-        val enabled = !_isVideoEnabled.value
-        _isVideoEnabled.value = enabled
+        val enabling = !_isVideoEnabled.value
 
-        if (enabled && session.getLocalVideoTrack() == null) {
-            // Video track doesn't exist yet (voice call upgraded to video)
-            session.addVideoTrack()
-            _localVideoTrack.value = session.getLocalVideoTrack()
-        } else {
-            session.setVideoEnabled(enabled)
-            if (!enabled) {
-                session.stopCamera()
+        if (enabling) {
+            if (session.getLocalVideoTrack() == null) {
+                // No video track yet — create one (voice → video upgrade)
+                session.addVideoTrack()
+            } else {
+                // Track exists but camera was stopped — restart it
+                session.setVideoEnabled(true)
+                session.startCamera()
             }
+            _localVideoTrack.value = session.getLocalVideoTrack()
+            _isVideoEnabled.value = true
+        } else {
+            // Disable video: stop camera and disable track
+            session.setVideoEnabled(false)
+            session.stopCamera()
+            _isVideoEnabled.value = false
         }
     }
 
@@ -267,7 +275,7 @@ class CallController(
         _remoteVideoTrack.value = null
         _localVideoTrack.value = null
         _isAudioMuted.value = false
-        _isVideoEnabled.value = true
+        _isVideoEnabled.value = false
         webRtcSession?.dispose()
         webRtcSession = null
         remoteDescriptionSet.set(false)
