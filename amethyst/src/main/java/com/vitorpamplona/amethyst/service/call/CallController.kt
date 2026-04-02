@@ -55,7 +55,9 @@ class CallController(
 ) {
     private var webRtcSession: WebRtcCallSession? = null
     private val callFactory = WebRtcCallFactory()
-    private var remoteDescriptionSet = false
+    private val remoteDescriptionSet =
+        java.util.concurrent.atomic
+            .AtomicBoolean(false)
     private val pendingIceCandidates = CopyOnWriteArrayList<IceCandidate>()
     val audioManager = CallAudioManager(context)
 
@@ -117,7 +119,7 @@ class CallController(
         scope.launch {
             val callId = UUID.randomUUID().toString()
             _errorMessage.value = null
-            remoteDescriptionSet = false
+            remoteDescriptionSet.set(false)
             pendingIceCandidates.clear()
 
             try {
@@ -154,7 +156,7 @@ class CallController(
 
         scope.launch {
             _errorMessage.value = null
-            remoteDescriptionSet = false
+            remoteDescriptionSet.set(false)
             // Don't clear pendingIceCandidates here — they were buffered while ringing
 
             try {
@@ -197,11 +199,11 @@ class CallController(
     fun onIceCandidateReceived(event: CallIceCandidateEvent) {
         try {
             val candidate = IceCandidate(event.sdpMid(), event.sdpMLineIndex(), event.candidateSdp())
-            if (webRtcSession != null && remoteDescriptionSet) {
+            if (webRtcSession != null && remoteDescriptionSet.get()) {
                 Log.d(TAG) { "Adding ICE candidate directly: ${candidate.sdp.take(50)}" }
                 webRtcSession?.addIceCandidate(candidate)
             } else {
-                Log.d(TAG) { "Buffering ICE candidate (session=${webRtcSession != null}, remoteSet=$remoteDescriptionSet)" }
+                Log.d(TAG) { "Buffering ICE candidate (session=${webRtcSession != null}, remoteSet=${remoteDescriptionSet.get()})" }
                 pendingIceCandidates.add(candidate)
             }
         } catch (e: Exception) {
@@ -210,7 +212,7 @@ class CallController(
     }
 
     private fun flushPendingIceCandidates() {
-        remoteDescriptionSet = true
+        remoteDescriptionSet.set(true)
         val session = webRtcSession ?: return
         val candidates = pendingIceCandidates.toList()
         Log.d(TAG) { "Flushing ${candidates.size} buffered ICE candidates" }
@@ -238,8 +240,10 @@ class CallController(
     fun getEglBase() = webRtcSession?.eglBase
 
     fun hangup() {
-        scope.launch { callManager.hangup() }
-        cleanup()
+        scope.launch {
+            callManager.hangup()
+            // cleanup is triggered by the state collector when Ended is reached
+        }
     }
 
     fun clearError() {
@@ -256,12 +260,12 @@ class CallController(
         _isVideoEnabled.value = true
         webRtcSession?.dispose()
         webRtcSession = null
-        remoteDescriptionSet = false
+        remoteDescriptionSet.set(false)
         pendingIceCandidates.clear()
     }
 
     private fun createWebRtcSession() {
-        webRtcSession =
+        val session =
             WebRtcCallSession(
                 context = context,
                 iceServers = IceServerConfig.buildIceServers(),
@@ -276,8 +280,14 @@ class CallController(
                 onDisconnected = { scope.launch { callManager.hangup() } },
                 onError = { error -> _errorMessage.value = error },
             )
-        webRtcSession?.initialize()
-        webRtcSession?.createPeerConnection()
+        try {
+            session.initialize()
+            session.createPeerConnection()
+            webRtcSession = session
+        } catch (e: Exception) {
+            session.dispose()
+            throw e
+        }
     }
 
     private fun onLocalIceCandidate(candidate: IceCandidate) {

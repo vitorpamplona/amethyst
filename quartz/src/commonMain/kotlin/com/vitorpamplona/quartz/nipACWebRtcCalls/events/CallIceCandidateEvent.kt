@@ -69,7 +69,11 @@ class CallIceCandidateEvent(
             sdp: String,
             sdpMid: String,
             sdpMLineIndex: Int,
-        ): String = """{"candidate":"$sdp","sdpMid":"$sdpMid","sdpMLineIndex":$sdpMLineIndex}"""
+        ): String {
+            val escapedSdp = sdp.replace("\\", "\\\\").replace("\"", "\\\"")
+            val escapedMid = sdpMid.replace("\\", "\\\\").replace("\"", "\\\"")
+            return """{"candidate":"$escapedSdp","sdpMid":"$escapedMid","sdpMLineIndex":$sdpMLineIndex}"""
+        }
 
         fun build(
             candidateJson: String,

@@ -203,6 +203,7 @@ class WebRtcCallSession(
 
                 override fun onCreateFailure(error: String?) {
                     Log.e(TAG, "Create offer failed: $error")
+                    error?.let { onError("Create offer failed: $it") }
                 }
 
                 override fun onSetSuccess() {}
@@ -231,6 +232,7 @@ class WebRtcCallSession(
 
                 override fun onCreateFailure(error: String?) {
                     Log.e(TAG, "Create answer failed: $error")
+                    error?.let { onError("Create answer failed: $it") }
                 }
 
                 override fun onSetSuccess() {}

@@ -631,7 +631,7 @@ class EventNotificationConsumer(
     ) {
         if (!account.isFollowing(event.pubKey)) return
 
-        if (TimeUtils.now() - event.createdAt > 30) return
+        if (TimeUtils.now() - event.createdAt > CallOfferEvent.EXPIRATION_SECONDS) return
 
         val callerUser = LocalCache.getUserIfExists(event.pubKey)
         val callerName = callerUser?.toBestDisplayName() ?: event.pubKey.take(8) + "..."
