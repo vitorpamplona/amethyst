@@ -40,6 +40,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.webrtc.IceCandidate
+import org.webrtc.PeerConnection
 import org.webrtc.SessionDescription
 import org.webrtc.VideoFrame
 import org.webrtc.VideoSink
@@ -228,8 +229,18 @@ class CallController(
     }
 
     fun onCallAnswerReceived(sdpAnswer: String) {
-        Log.d(TAG) { "Answer received, SDP length=${sdpAnswer.length}, session=${webRtcSession != null}" }
-        webRtcSession?.setRemoteDescription(SessionDescription(SessionDescription.Type.ANSWER, sdpAnswer))
+        val session = webRtcSession ?: return
+        val signalingState = session.getSignalingState()
+        Log.d(TAG) { "Answer received, SDP length=${sdpAnswer.length}, signalingState=$signalingState" }
+
+        // An answer is only valid when we have a pending local offer.
+        // Ignore stale answers (e.g. our own renegotiation answer echoed back by the relay).
+        if (signalingState != PeerConnection.SignalingState.HAVE_LOCAL_OFFER) {
+            Log.d(TAG) { "Ignoring answer in $signalingState state (no pending local offer)" }
+            return
+        }
+
+        session.setRemoteDescription(SessionDescription(SessionDescription.Type.ANSWER, sdpAnswer))
         flushPendingIceCandidates()
     }
 
