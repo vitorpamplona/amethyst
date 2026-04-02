@@ -56,6 +56,7 @@ class CallManager(
 
     private var timeoutJob: Job? = null
     private var resetJob: Job? = null
+    private val processedEventIds = mutableSetOf<String>()
 
     companion object {
         const val CALL_TIMEOUT_MS = 60_000L // 60 seconds ringing timeout
@@ -198,6 +199,7 @@ class CallManager(
 
     fun onSignalingEvent(event: Event) {
         if (isEventTooOld(event)) return
+        if (!processedEventIds.add(event.id)) return
 
         when (event) {
             is CallOfferEvent -> onIncomingCallEvent(event)
@@ -234,6 +236,7 @@ class CallManager(
         cancelTimeout()
         resetJob?.cancel()
         resetJob = null
+        processedEventIds.clear()
     }
 
     private fun transitionToEnded(
