@@ -26,6 +26,8 @@ import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
@@ -56,7 +58,7 @@ object KindRegistry {
             "repost" to listOf(RepostEvent.KIND),
             "profile" to listOf(MetadataEvent.KIND),
             "channel" to listOf(ChannelCreateEvent.KIND, ChannelMetadataEvent.KIND),
-            "live" to listOf(LiveActivitiesEvent.KIND),
+            "live" to listOf(LiveActivitiesEvent.KIND, MeetingSpaceEvent.KIND, MeetingRoomEvent.KIND),
             "community" to listOf(CommunityDefinitionEvent.KIND),
             "wiki" to listOf(WikiNoteEvent.KIND),
             "classified" to listOf(ClassifiedsEvent.KIND),

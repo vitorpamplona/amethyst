@@ -27,6 +27,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 
@@ -47,7 +49,7 @@ fun filterLiveActivitiesAllCommunities(
                     tags =
                         mapOf(
                             "a" to communityList,
-                            "k" to listOf(LiveActivitiesChatMessageEvent.KIND.toString(), LiveActivitiesEvent.KIND.toString()),
+                            "k" to listOf(LiveActivitiesChatMessageEvent.KIND.toString(), LiveActivitiesEvent.KIND.toString(), MeetingSpaceEvent.KIND.toString(), MeetingRoomEvent.KIND.toString()),
                         ),
                     limit = 300,
                     since = since,
@@ -59,7 +61,7 @@ fun filterLiveActivitiesAllCommunities(
             filter =
                 Filter(
                     tags = mapOf("k" to listOf("5300"), "a" to communityList),
-                    kinds = listOf(LiveActivitiesChatMessageEvent.KIND, LiveActivitiesEvent.KIND),
+                    kinds = listOf(LiveActivitiesChatMessageEvent.KIND, LiveActivitiesEvent.KIND, MeetingSpaceEvent.KIND, MeetingRoomEvent.KIND),
                     limit = 300,
                     since = since,
                 ),

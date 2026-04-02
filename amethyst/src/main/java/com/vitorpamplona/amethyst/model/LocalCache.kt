@@ -163,6 +163,9 @@ import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
 import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
@@ -2623,6 +2626,9 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is LabeledBookmarkListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is LiveActivitiesEvent -> consume(event, relay, wasVerified)
                 is LiveActivitiesChatMessageEvent -> consume(event, relay, wasVerified)
+                is MeetingSpaceEvent -> consumeBaseReplaceable(event, relay, wasVerified)
+                is MeetingRoomEvent -> consumeBaseReplaceable(event, relay, wasVerified)
+                is MeetingRoomPresenceEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is LnZapEvent -> consume(event, relay, wasVerified)
                 is LnZapRequestEvent -> consume(event, relay, wasVerified)
                 is NIP90StatusEvent -> consumeRegularEvent(event, relay, wasVerified)

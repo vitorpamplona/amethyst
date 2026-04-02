@@ -28,6 +28,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 
 fun filterLiveActivitiesAuthors(
@@ -42,7 +44,7 @@ fun filterLiveActivitiesAuthors(
             filter =
                 Filter(
                     authors = authorList,
-                    kinds = listOf(LiveActivitiesChatMessageEvent.KIND, LiveActivitiesEvent.KIND),
+                    kinds = listOf(LiveActivitiesChatMessageEvent.KIND, LiveActivitiesEvent.KIND, MeetingSpaceEvent.KIND, MeetingRoomEvent.KIND),
                     limit = 300,
                     since = since,
                 ),
@@ -53,7 +55,7 @@ fun filterLiveActivitiesAuthors(
             filter =
                 Filter(
                     tags = mapOf("p" to authorList),
-                    kinds = listOf(LiveActivitiesEvent.KIND),
+                    kinds = listOf(LiveActivitiesEvent.KIND, MeetingSpaceEvent.KIND, MeetingRoomEvent.KIND),
                     limit = 100,
                     since = since,
                 ),

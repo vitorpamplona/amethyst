@@ -69,6 +69,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutabl
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ParticipantTag
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.StatusTag
@@ -98,19 +100,69 @@ fun RenderLiveActivityThumb(
     nav: INav,
 ) {
     val card by observeNoteAndMap(baseNote, accountViewModel) {
-        val noteEvent = it.event as? LiveActivitiesEvent
+        when (val noteEvent = it.event) {
+            is LiveActivitiesEvent -> {
+                LiveActivityCard(
+                    id = noteEvent.address(),
+                    name = noteEvent.dTag(),
+                    cover = noteEvent.image()?.ifBlank { null },
+                    media = noteEvent.streaming(),
+                    subject = noteEvent.title()?.ifBlank { null },
+                    content = noteEvent.summary(),
+                    participants = noteEvent.participants().toImmutableList(),
+                    status = noteEvent.status(),
+                    starts = noteEvent.starts(),
+                )
+            }
 
-        LiveActivityCard(
-            id = noteEvent?.address(),
-            name = noteEvent?.dTag() ?: "",
-            cover = noteEvent?.image()?.ifBlank { null },
-            media = noteEvent?.streaming(),
-            subject = noteEvent?.title()?.ifBlank { null },
-            content = noteEvent?.summary(),
-            participants = noteEvent?.participants()?.toImmutableList() ?: persistentListOf(),
-            status = noteEvent?.status(),
-            starts = noteEvent?.starts(),
-        )
+            is MeetingRoomEvent -> {
+                LiveActivityCard(
+                    id = noteEvent.address(),
+                    name = noteEvent.dTag(),
+                    cover = noteEvent.image()?.ifBlank { null },
+                    media = noteEvent.streaming(),
+                    subject = noteEvent.title()?.ifBlank { null },
+                    content = noteEvent.summary(),
+                    participants = noteEvent.participants().toImmutableList(),
+                    status = noteEvent.status(),
+                    starts = noteEvent.starts(),
+                )
+            }
+
+            is MeetingSpaceEvent -> {
+                LiveActivityCard(
+                    id = noteEvent.address(),
+                    name = noteEvent.dTag(),
+                    cover = noteEvent.image()?.ifBlank { null },
+                    media = null,
+                    subject = noteEvent.room()?.ifBlank { null },
+                    content = noteEvent.summary(),
+                    participants = noteEvent.participants().toImmutableList(),
+                    status =
+                        when (noteEvent.status()) {
+                            com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag.STATUS.OPEN -> StatusTag.STATUS.LIVE
+                            com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag.STATUS.PRIVATE -> StatusTag.STATUS.PLANNED
+                            com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag.STATUS.CLOSED -> StatusTag.STATUS.ENDED
+                            else -> null
+                        },
+                    starts = null,
+                )
+            }
+
+            else -> {
+                LiveActivityCard(
+                    id = null,
+                    name = "",
+                    cover = null,
+                    media = null,
+                    subject = null,
+                    content = null,
+                    participants = persistentListOf(),
+                    status = null,
+                    starts = null,
+                )
+            }
+        }
     }
 
     RenderLiveActivityThumb(
