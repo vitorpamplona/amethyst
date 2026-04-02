@@ -500,16 +500,23 @@ fun App(
         }
     val relayManager = remember(httpClient) { DesktopRelayConnectionManager(httpClient) }
 
-    // Reconnect relays through Tor when it becomes active (prevents stale clearnet connections)
+    // Reconnect relays on Tor state transitions (ON→proxy, OFF→direct)
     LaunchedEffect(torManager, relayManager) {
-        var previouslyActive = false
+        var previousStatus: com.vitorpamplona.amethyst.commons.tor.TorServiceStatus? = null
         torManager.status.collect { status ->
-            val nowActive = status is com.vitorpamplona.amethyst.commons.tor.TorServiceStatus.Active
-            if (nowActive && !previouslyActive) {
-                kotlinx.coroutines.delay(500) // Brief delay for proxy client to propagate
+            val changed = previousStatus != null && previousStatus != status
+            // Reconnect on meaningful transitions: Active (proxy ready) or Off (switch to direct)
+            val isTransition =
+                changed &&
+                    (
+                        status is com.vitorpamplona.amethyst.commons.tor.TorServiceStatus.Active ||
+                            status is com.vitorpamplona.amethyst.commons.tor.TorServiceStatus.Off
+                    )
+            if (isTransition) {
+                kotlinx.coroutines.delay(500) // Brief delay for client state to propagate
                 relayManager.client.reconnect(onlyIfChanged = false, ignoreRetryDelays = true)
             }
-            previouslyActive = nowActive
+            previousStatus = status
         }
     }
 
