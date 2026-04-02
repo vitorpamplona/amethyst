@@ -602,7 +602,6 @@ object NotificationUtils {
                 .setOngoing(true)
                 .setTimeoutAfter(60_000)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-                .setSilent(true)
                 .addAction(R.drawable.amethyst, stringRes(applicationContext, R.string.call_reject), rejectPendingIntent)
                 .addAction(R.drawable.amethyst, stringRes(applicationContext, R.string.call_accept), acceptPendingIntent)
 

@@ -213,6 +213,8 @@
             android:launchMode="singleTop"
             android:exported="false"
             android:resizeableActivity="true"
+            android:showOnLockScreen="true"
+            android:turnScreenOn="true"
             android:theme="@style/Theme.Amethyst"
         />
 

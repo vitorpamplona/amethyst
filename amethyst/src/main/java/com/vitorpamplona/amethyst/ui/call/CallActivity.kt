@@ -70,6 +70,18 @@ class CallActivity : AppCompatActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
+        // Show over lock screen and turn screen on for incoming calls
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setShowWhenLocked(true)
+            setTurnScreenOn(true)
+        } else {
+            @Suppress("DEPRECATION")
+            window.addFlags(
+                android.view.WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+                    android.view.WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON,
+            )
+        }
+
         val callManager = ActiveCallHolder.callManager
         val callController = ActiveCallHolder.callController
         val accountViewModel = ActiveCallHolder.accountViewModel
