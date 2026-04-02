@@ -35,6 +35,7 @@ import org.webrtc.IceCandidate
 import org.webrtc.MediaStream
 import org.webrtc.SessionDescription
 import java.util.UUID
+import java.util.concurrent.CopyOnWriteArrayList
 
 class CallController(
     private val context: Context,
@@ -47,6 +48,8 @@ class CallController(
     private val callFactory = WebRtcCallFactory()
     private var currentCallId: String? = null
     private var currentPeerPubKey: HexKey? = null
+    private var remoteDescriptionSet = false
+    private val pendingIceCandidates = CopyOnWriteArrayList<IceCandidate>()
 
     init {
         scope.launch {
@@ -65,6 +68,8 @@ class CallController(
         val callId = UUID.randomUUID().toString()
         currentCallId = callId
         currentPeerPubKey = peerPubKey
+        remoteDescriptionSet = false
+        pendingIceCandidates.clear()
 
         createWebRtcSession()
         webRtcSession?.addAudioTrack()
@@ -85,6 +90,8 @@ class CallController(
 
         currentCallId = state.callId
         currentPeerPubKey = state.callerPubKey
+        remoteDescriptionSet = false
+        pendingIceCandidates.clear()
 
         createWebRtcSession()
         webRtcSession?.addAudioTrack()
@@ -95,6 +102,7 @@ class CallController(
         webRtcSession?.setRemoteDescription(
             SessionDescription(SessionDescription.Type.OFFER, sdpOffer),
         )
+        flushPendingIceCandidates()
 
         webRtcSession?.createAnswer { sdp ->
             scope.launch {
@@ -107,16 +115,29 @@ class CallController(
         webRtcSession?.setRemoteDescription(
             SessionDescription(SessionDescription.Type.ANSWER, sdpAnswer),
         )
+        flushPendingIceCandidates()
     }
 
     fun onIceCandidateReceived(event: CallIceCandidateEvent) {
         val json = event.candidateJson()
         try {
             val candidate = parseIceCandidate(json)
-            webRtcSession?.addIceCandidate(candidate)
+            if (webRtcSession != null && remoteDescriptionSet) {
+                webRtcSession?.addIceCandidate(candidate)
+            } else {
+                pendingIceCandidates.add(candidate)
+            }
         } catch (_: Exception) {
             // Ignore malformed ICE candidates
         }
+    }
+
+    private fun flushPendingIceCandidates() {
+        remoteDescriptionSet = true
+        val session = webRtcSession ?: return
+        val candidates = pendingIceCandidates.toList()
+        pendingIceCandidates.clear()
+        candidates.forEach { session.addIceCandidate(it) }
     }
 
     fun hangup() {
@@ -130,6 +151,8 @@ class CallController(
         webRtcSession = null
         currentCallId = null
         currentPeerPubKey = null
+        remoteDescriptionSet = false
+        pendingIceCandidates.clear()
     }
 
     private fun createWebRtcSession() {
@@ -147,7 +170,6 @@ class CallController(
                 onRemoteStream = { _: MediaStream -> },
                 onDisconnected = {
                     scope.launch { callManager.hangup() }
-                    cleanup()
                 },
             )
         webRtcSession?.initialize()
