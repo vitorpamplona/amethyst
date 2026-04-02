@@ -46,6 +46,8 @@ import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
@@ -149,6 +151,8 @@ fun InnerChannelCardWithReactions(
 ) {
     when (baseNote.event) {
         is LiveActivitiesEvent -> InnerCardRow(baseNote, accountViewModel, nav)
+        is MeetingSpaceEvent -> InnerCardRow(baseNote, accountViewModel, nav)
+        is MeetingRoomEvent -> InnerCardRow(baseNote, accountViewModel, nav)
         is CommunityDefinitionEvent -> InnerCardRow(baseNote, accountViewModel, nav)
         is ChannelCreateEvent -> InnerCardRow(baseNote, accountViewModel, nav)
         is ClassifiedsEvent -> InnerCardBox(baseNote, accountViewModel, nav)
@@ -202,6 +206,8 @@ private fun RenderNoteRow(
 ) {
     when (baseNote.event) {
         is LiveActivitiesEvent -> RenderLiveActivityThumb(baseNote, accountViewModel, nav)
+        is MeetingSpaceEvent -> RenderLiveActivityThumb(baseNote, accountViewModel, nav)
+        is MeetingRoomEvent -> RenderLiveActivityThumb(baseNote, accountViewModel, nav)
         is CommunityDefinitionEvent -> RenderCommunitiesThumb(baseNote, accountViewModel, nav)
         is ChannelCreateEvent -> RenderPublicChatChannelThumb(baseNote, accountViewModel, nav)
         is AppDefinitionEvent -> RenderContentDVMThumb(baseNote, accountViewModel, nav)

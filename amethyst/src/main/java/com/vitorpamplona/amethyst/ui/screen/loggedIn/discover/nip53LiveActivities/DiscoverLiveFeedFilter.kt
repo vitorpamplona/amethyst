@@ -35,6 +35,8 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthors
 import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
+import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.StatusTag
 
@@ -75,7 +77,8 @@ open class DiscoverLiveFeedFilter(
 
         return collection.filterTo(HashSet()) {
             val noteEvent = it.event
-            noteEvent is LiveActivitiesEvent && filterParams.match(noteEvent, it.relays)
+            (noteEvent is LiveActivitiesEvent || noteEvent is MeetingSpaceEvent || noteEvent is MeetingRoomEvent) &&
+                filterParams.match(noteEvent, it.relays)
         }
     }
 
@@ -106,33 +109,61 @@ open class DiscoverLiveFeedFilter(
         return items
             .sortedWith(
                 compareBy(
-                    { convertStatusToOrder((it.event as? LiveActivitiesEvent)) },
+                    { convertStatusToOrder(it.event) },
                     { participantCounts[it] },
                     { allParticipants[it] },
-                    { (it.event as? LiveActivitiesEvent)?.starts() ?: it.createdAt() },
+                    {
+                        when (val e = it.event) {
+                            is LiveActivitiesEvent -> e.starts() ?: it.createdAt()
+                            is MeetingRoomEvent -> e.starts() ?: it.createdAt()
+                            else -> it.createdAt()
+                        }
+                    },
                     { it.idHex },
                 ),
             ).reversed()
     }
 
-    fun convertStatusToOrder(event: LiveActivitiesEvent?): Int {
+    fun convertStatusToOrder(event: com.vitorpamplona.quartz.nip01Core.core.Event?): Int {
         if (event == null) return 0
-        val url = event.streaming() ?: return 0
-        return when (event.status()) {
-            StatusTag.STATUS.LIVE -> {
-                if (OnlineChecker.isCachedAndOffline(url)) {
-                    0
-                } else {
-                    2
+        return when (event) {
+            is LiveActivitiesEvent -> {
+                val url = event.streaming() ?: return 0
+                when (event.status()) {
+                    StatusTag.STATUS.LIVE -> {
+                        if (OnlineChecker.isCachedAndOffline(url)) 0 else 2
+                    }
+
+                    StatusTag.STATUS.PLANNED -> {
+                        1
+                    }
+
+                    StatusTag.STATUS.ENDED -> {
+                        0
+                    }
+
+                    else -> {
+                        0
+                    }
                 }
             }
 
-            StatusTag.STATUS.PLANNED -> {
-                1
+            is MeetingRoomEvent -> {
+                when (event.status()) {
+                    StatusTag.STATUS.LIVE -> 2
+                    StatusTag.STATUS.PLANNED -> 1
+                    StatusTag.STATUS.ENDED -> 0
+                    else -> 0
+                }
             }
 
-            StatusTag.STATUS.ENDED -> {
-                0
+            is MeetingSpaceEvent -> {
+                when (event.status()) {
+                    com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag.STATUS.OPEN -> 2
+                    com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag.STATUS.PRIVATE -> 1
+                    com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag.STATUS.CLOSED -> 0
+                    else -> 0
+                }
             }
 
             else -> {

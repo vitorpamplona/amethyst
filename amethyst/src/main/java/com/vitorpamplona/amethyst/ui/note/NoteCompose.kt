@@ -138,6 +138,8 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderLiveChessChallenge
 import com.vitorpamplona.amethyst.ui.note.types.RenderLiveChessGameEnd
 import com.vitorpamplona.amethyst.ui.note.types.RenderLnZap
 import com.vitorpamplona.amethyst.ui.note.types.RenderLongFormContent
+import com.vitorpamplona.amethyst.ui.note.types.RenderMeetingRoomEvent
+import com.vitorpamplona.amethyst.ui.note.types.RenderMeetingSpaceEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderMintRecommendation
 import com.vitorpamplona.amethyst.ui.note.types.RenderNIP90ContentDiscoveryResponse
 import com.vitorpamplona.amethyst.ui.note.types.RenderNIP90Status
@@ -251,6 +253,8 @@ import com.vitorpamplona.quartz.nip51Lists.relaySets.RelaySetEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
@@ -985,6 +989,14 @@ private fun RenderNoteRow(
 
         is LiveActivitiesEvent -> {
             RenderLiveActivityEvent(baseNote, accountViewModel, nav)
+        }
+
+        is MeetingSpaceEvent -> {
+            RenderMeetingSpaceEvent(baseNote, accountViewModel, nav)
+        }
+
+        is MeetingRoomEvent -> {
+            RenderMeetingRoomEvent(baseNote, accountViewModel, nav)
         }
 
         is GitRepositoryEvent -> {
