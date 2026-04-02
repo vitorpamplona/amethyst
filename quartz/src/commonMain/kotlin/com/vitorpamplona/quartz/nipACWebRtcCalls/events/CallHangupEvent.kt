@@ -48,7 +48,7 @@ class CallHangupEvent(
     companion object {
         const val KIND = 25053
         const val ALT_DESCRIPTION = "WebRTC call hangup"
-        const val EXPIRATION_SECONDS = 300L
+        const val EXPIRATION_SECONDS = 20L
 
         fun build(
             peerPubKey: HexKey,

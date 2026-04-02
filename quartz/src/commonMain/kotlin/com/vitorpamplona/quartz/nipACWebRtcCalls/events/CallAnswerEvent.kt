@@ -48,7 +48,7 @@ class CallAnswerEvent(
     companion object {
         const val KIND = 25051
         const val ALT_DESCRIPTION = "WebRTC call answer"
-        const val EXPIRATION_SECONDS = 300L
+        const val EXPIRATION_SECONDS = 20L
 
         fun build(
             sdpAnswer: String,

@@ -48,7 +48,7 @@ class CallIceCandidateEvent(
     companion object {
         const val KIND = 25052
         const val ALT_DESCRIPTION = "WebRTC ICE candidate"
-        const val EXPIRATION_SECONDS = 300L
+        const val EXPIRATION_SECONDS = 20L
 
         fun build(
             candidateJson: String,

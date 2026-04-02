@@ -215,7 +215,7 @@ This NIP does not mandate specific STUN or TURN servers. Clients SHOULD:
 ## Implementation Notes
 
 - The `call-id` tag MUST be a UUID that is unique per call session. All signaling events for the same call share the same `call-id`.
-- Events SHOULD have short expiration times (~5 minutes) since signaling data is ephemeral and has no long-term value.
+- Events SHOULD have short expiration times (~20 seconds) since signaling data is ephemeral and has no long-term value.
 - Clients SHOULD implement a ringing timeout (e.g., 60 seconds). If no answer is received, the call transitions to a "timed out" state.
 - Clients SHOULD use a foreground service or equivalent mechanism to keep calls active when the app is backgrounded.
 - The WebRTC `PeerConnection` SHOULD use Unified Plan SDP semantics.
