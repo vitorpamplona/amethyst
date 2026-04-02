@@ -56,7 +56,7 @@ fun ChatroomScreen(
             nav.nav(Route.ActiveCall(callId = callId, peerPubKey = peerPubKey))
         }
     val startVideoCall =
-        rememberCallWithPermission(context) {
+        rememberCallWithPermission(context, isVideo = true) {
             val peerPubKey = roomId.users.firstOrNull() ?: return@rememberCallWithPermission
             accountViewModel.callController?.initiateCall(peerPubKey, CallType.VIDEO)
             val callId = accountViewModel.callManager.currentCallId() ?: ""

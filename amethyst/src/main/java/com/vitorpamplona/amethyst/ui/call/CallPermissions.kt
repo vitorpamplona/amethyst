@@ -29,26 +29,47 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.core.content.ContextCompat
 
-fun hasAudioPermission(context: Context) = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+fun hasPermission(
+    context: Context,
+    permission: String,
+) = ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+
+fun hasCallPermissions(
+    context: Context,
+    isVideo: Boolean,
+): Boolean {
+    if (!hasPermission(context, Manifest.permission.RECORD_AUDIO)) return false
+    if (isVideo && !hasPermission(context, Manifest.permission.CAMERA)) return false
+    return true
+}
 
 @Composable
 fun rememberCallWithPermission(
-    context: android.content.Context,
+    context: Context,
+    isVideo: Boolean = false,
     onCall: () -> Unit,
 ): () -> Unit {
-    val launcher =
-        rememberLauncherForActivityResult(
-            ActivityResultContracts.RequestPermission(),
-        ) { granted ->
-            if (granted) onCall()
+    val permissions =
+        if (isVideo) {
+            arrayOf(Manifest.permission.RECORD_AUDIO, Manifest.permission.CAMERA)
+        } else {
+            arrayOf(Manifest.permission.RECORD_AUDIO)
         }
 
-    return remember(onCall) {
+    val launcher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.RequestMultiplePermissions(),
+        ) { results ->
+            val allGranted = results.values.all { it }
+            if (allGranted) onCall()
+        }
+
+    return remember(onCall, isVideo) {
         {
-            if (hasAudioPermission(context)) {
+            if (hasCallPermissions(context, isVideo)) {
                 onCall()
             } else {
-                launcher.launch(Manifest.permission.RECORD_AUDIO)
+                launcher.launch(permissions)
             }
         }
     }

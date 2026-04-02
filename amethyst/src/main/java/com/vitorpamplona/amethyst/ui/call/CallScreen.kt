@@ -127,8 +127,9 @@ fun CallScreen(
             }
 
             is CallState.IncomingCall -> {
+                val isVideoCall = state.callType == com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType.VIDEO
                 val acceptWithPermission =
-                    rememberCallWithPermission(context) {
+                    rememberCallWithPermission(context, isVideo = isVideoCall) {
                         callController?.acceptIncomingCall(state.sdpOffer)
                     }
                 IncomingCallUI(
