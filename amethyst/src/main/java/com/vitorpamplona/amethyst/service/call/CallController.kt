@@ -28,10 +28,12 @@ import com.vitorpamplona.amethyst.service.notifications.NotificationUtils
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.WebRtcCallFactory
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallIceCandidateEvent
+import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallRenegotiateEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -39,9 +41,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.webrtc.IceCandidate
 import org.webrtc.SessionDescription
+import org.webrtc.VideoFrame
+import org.webrtc.VideoSink
 import org.webrtc.VideoTrack
 import java.util.UUID
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.atomic.AtomicLong
 
 private const val TAG = "CallController"
 
@@ -70,6 +75,16 @@ class CallController(
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
+    // Remote video frame monitoring — detects when peer stops sending video
+    private val _isRemoteVideoActive = MutableStateFlow(false)
+    val isRemoteVideoActive: StateFlow<Boolean> = _isRemoteVideoActive.asStateFlow()
+    private val lastRemoteFrameTimeMs = AtomicLong(0L)
+    private var remoteVideoMonitorJob: kotlinx.coroutines.Job? = null
+    private val remoteFrameSink =
+        VideoSink { _: VideoFrame ->
+            lastRemoteFrameTimeMs.set(System.currentTimeMillis())
+        }
+
     // Audio/video toggle state (UI concerns, not domain state)
     private val _isAudioMuted = MutableStateFlow(false)
     val isAudioMuted: StateFlow<Boolean> = _isAudioMuted.asStateFlow()
@@ -79,6 +94,8 @@ class CallController(
     val isBluetoothAvailable: StateFlow<Boolean> = audioManager.isBluetoothAvailable
 
     init {
+        callManager.onRenegotiationOfferReceived = { event -> onRenegotiationOfferReceived(event) }
+
         scope.launch {
             callManager.state.collect { state ->
                 when (state) {
@@ -268,18 +285,71 @@ class CallController(
         _errorMessage.value = null
     }
 
+    private fun onRenegotiationOfferReceived(event: CallRenegotiateEvent) {
+        val session = webRtcSession ?: return
+        val sdpOffer = event.sdpOffer()
+        Log.d(TAG) { "Renegotiation offer received, SDP length=${sdpOffer.length}" }
+
+        scope.launch {
+            session.setRemoteDescription(SessionDescription(SessionDescription.Type.OFFER, sdpOffer))
+            session.createAnswer { sdp ->
+                scope.launch {
+                    callManager.sendRenegotiationAnswer(sdp.description)
+                }
+            }
+        }
+    }
+
+    private fun performRenegotiation() {
+        val session = webRtcSession ?: return
+        val state = callManager.state.value
+        if (state !is CallState.Connected && state !is CallState.Connecting) return
+
+        Log.d(TAG) { "Starting renegotiation" }
+        session.createOffer { sdp ->
+            scope.launch {
+                callManager.sendRenegotiation(sdp.description)
+            }
+        }
+    }
+
     fun cleanup() {
         audioManager.release()
         stopForegroundService()
         NotificationUtils.cancelCallNotification(context)
+        stopRemoteVideoMonitor()
         _remoteVideoTrack.value = null
         _localVideoTrack.value = null
         _isAudioMuted.value = false
         _isVideoEnabled.value = false
+        _isRemoteVideoActive.value = false
         webRtcSession?.dispose()
         webRtcSession = null
         remoteDescriptionSet.set(false)
         pendingIceCandidates.clear()
+    }
+
+    private fun startRemoteVideoMonitor(track: VideoTrack) {
+        stopRemoteVideoMonitor()
+        lastRemoteFrameTimeMs.set(System.currentTimeMillis())
+        track.addSink(remoteFrameSink)
+        remoteVideoMonitorJob =
+            scope.launch {
+                while (true) {
+                    delay(1500)
+                    val elapsed = System.currentTimeMillis() - lastRemoteFrameTimeMs.get()
+                    _isRemoteVideoActive.value = elapsed < 2000
+                }
+            }
+    }
+
+    private fun stopRemoteVideoMonitor() {
+        remoteVideoMonitorJob?.cancel()
+        remoteVideoMonitorJob = null
+        try {
+            _remoteVideoTrack.value?.removeSink(remoteFrameSink)
+        } catch (_: Exception) {
+        }
     }
 
     private fun createWebRtcSession() {
@@ -292,9 +362,13 @@ class CallController(
                     callManager.onPeerConnected()
                     startForegroundService()
                 },
-                onRemoteVideoTrack = { track -> _remoteVideoTrack.value = track },
+                onRemoteVideoTrack = { track ->
+                    _remoteVideoTrack.value = track
+                    startRemoteVideoMonitor(track)
+                },
                 onDisconnected = { scope.launch { callManager.hangup() } },
                 onError = { error -> _errorMessage.value = error },
+                onRenegotiationNeeded = { performRenegotiation() },
             )
         try {
             session.initialize()

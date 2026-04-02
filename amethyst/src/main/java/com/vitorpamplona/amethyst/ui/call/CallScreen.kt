@@ -353,6 +353,7 @@ private fun ConnectedCallUI(
     val localVideoTrack by (callController?.localVideoTrack ?: emptyVideoFlow).collectAsState()
     val defaultFalse = remember { kotlinx.coroutines.flow.MutableStateFlow(false) }
     val defaultTrue = remember { kotlinx.coroutines.flow.MutableStateFlow(true) }
+    val isRemoteVideoActive by (callController?.isRemoteVideoActive ?: defaultFalse).collectAsState()
     val defaultRoute = remember { kotlinx.coroutines.flow.MutableStateFlow(AudioRoute.EARPIECE) }
     val isAudioMuted by (callController?.isAudioMuted ?: defaultFalse).collectAsState()
     val isVideoEnabled by (callController?.isVideoEnabled ?: defaultTrue).collectAsState()
@@ -364,14 +365,16 @@ private fun ConnectedCallUI(
                 .fillMaxSize()
                 .background(Color.Black),
     ) {
-        // Remote video (full screen background)
-        remoteVideoTrack?.let { track ->
-            VideoRenderer(
-                videoTrack = track,
-                eglBase = callController?.getEglBase(),
-                modifier = Modifier.fillMaxSize(),
-                mirror = false,
-            )
+        // Remote video (full screen background) — only when peer is actively sending
+        if (isRemoteVideoActive) {
+            remoteVideoTrack?.let { track ->
+                VideoRenderer(
+                    videoTrack = track,
+                    eglBase = callController?.getEglBase(),
+                    modifier = Modifier.fillMaxSize(),
+                    mirror = false,
+                )
+            }
         }
 
         // Local video (small pip in corner) — only when camera is active
@@ -390,8 +393,8 @@ private fun ConnectedCallUI(
             }
         }
 
-        // If no video, show avatar
-        if (remoteVideoTrack == null) {
+        // If no video or peer stopped sharing, show avatar
+        if (!isRemoteVideoActive) {
             Column(
                 modifier = Modifier.fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally,

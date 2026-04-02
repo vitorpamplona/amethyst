@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallHangupEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallIceCandidateEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallOfferEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallRejectEvent
+import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallRenegotiateEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -54,6 +55,7 @@ class CallManager(
 
     var onAnswerReceived: ((CallAnswerEvent) -> Unit)? = null
     var onIceCandidateReceived: ((CallIceCandidateEvent) -> Unit)? = null
+    var onRenegotiationOfferReceived: ((CallRenegotiateEvent) -> Unit)? = null
 
     private var timeoutJob: Job? = null
     private var resetJob: Job? = null
@@ -119,12 +121,26 @@ class CallManager(
 
     fun onCallAnswered(event: CallAnswerEvent) {
         val current = _state.value
-        if (current !is CallState.Offering) return
-        if (event.callId() != current.callId) return
+        val callId = event.callId()
 
-        _state.value = CallState.Connecting(current.callId, current.peerPubKey, current.callType)
-        cancelTimeout()
-        onAnswerReceived?.invoke(event)
+        when (current) {
+            is CallState.Offering -> {
+                if (callId != current.callId) return
+                _state.value = CallState.Connecting(current.callId, current.peerPubKey, current.callType)
+                cancelTimeout()
+                onAnswerReceived?.invoke(event)
+            }
+
+            is CallState.Connected -> {
+                // Renegotiation answer (e.g., peer accepted our video upgrade offer)
+                if (callId != current.callId) return
+                onAnswerReceived?.invoke(event)
+            }
+
+            else -> {
+                return
+            }
+        }
     }
 
     fun onCallRejected(event: CallRejectEvent) {
@@ -137,6 +153,33 @@ class CallManager(
 
     fun onIceCandidate(event: CallIceCandidateEvent) {
         onIceCandidateReceived?.invoke(event)
+    }
+
+    fun onRenegotiate(event: CallRenegotiateEvent) {
+        val current = _state.value
+        val callId = event.callId()
+        val currentCallId =
+            when (current) {
+                is CallState.Connecting -> current.callId
+                is CallState.Connected -> current.callId
+                else -> return
+            }
+        if (callId != currentCallId) return
+        onRenegotiationOfferReceived?.invoke(event)
+    }
+
+    suspend fun sendRenegotiation(sdpOffer: String) {
+        val callId = currentCallId() ?: return
+        val peerPubKey = currentPeerPubKey() ?: return
+        val result = factory.createRenegotiate(sdpOffer, peerPubKey, callId, signer)
+        publishEvent(result.wrap)
+    }
+
+    suspend fun sendRenegotiationAnswer(sdpAnswer: String) {
+        val callId = currentCallId() ?: return
+        val peerPubKey = currentPeerPubKey() ?: return
+        val result = factory.createCallAnswer(sdpAnswer, peerPubKey, callId, signer)
+        publishEvent(result.wrap)
     }
 
     fun onPeerConnected() {
@@ -213,6 +256,7 @@ class CallManager(
             is CallRejectEvent -> onCallRejected(event)
             is CallHangupEvent -> onPeerHangup(event)
             is CallIceCandidateEvent -> onIceCandidate(event)
+            is CallRenegotiateEvent -> onRenegotiate(event)
         }
     }
 

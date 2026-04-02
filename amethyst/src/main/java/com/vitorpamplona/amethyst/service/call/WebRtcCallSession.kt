@@ -52,6 +52,7 @@ class WebRtcCallSession(
     private val onRemoteVideoTrack: (VideoTrack) -> Unit,
     private val onDisconnected: () -> Unit,
     private val onError: (String) -> Unit = {},
+    private val onRenegotiationNeeded: () -> Unit = {},
 ) {
     private var peerConnectionFactory: PeerConnectionFactory? = null
     private var peerConnection: PeerConnection? = null
@@ -131,7 +132,10 @@ class WebRtcCallSession(
 
                     override fun onDataChannel(channel: DataChannel?) {}
 
-                    override fun onRenegotiationNeeded() {}
+                    override fun onRenegotiationNeeded() {
+                        Log.d(TAG) { "Renegotiation needed" }
+                        this@WebRtcCallSession.onRenegotiationNeeded()
+                    }
 
                     override fun onAddTrack(
                         receiver: RtpReceiver?,
