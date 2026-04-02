@@ -71,6 +71,8 @@ fun TorSettingsDialog(
 ) {
     var editSettings by remember { mutableStateOf(currentSettings) }
 
+    var showRestartConfirm by remember { mutableStateOf(false) }
+
     DialogWindow(
         onCloseRequest = onDismiss,
         title = "Tor Settings",
@@ -196,10 +198,24 @@ fun TorSettingsDialog(
                 ) {
                     TextButton(onClick = onDismiss) { Text("Cancel") }
                     Spacer(Modifier.width(8.dp))
-                    TextButton(onClick = {
-                        onSettingsChanged(editSettings)
-                        onDismiss()
-                    }) { Text("Save") }
+                    TextButton(onClick = { showRestartConfirm = true }) { Text("Save") }
+                }
+
+                if (showRestartConfirm) {
+                    androidx.compose.material3.AlertDialog(
+                        onDismissRequest = { showRestartConfirm = false },
+                        title = { Text("Restart Required") },
+                        text = { Text("Tor changes require restarting. Proceed?") },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                onSettingsChanged(editSettings)
+                                onDismiss()
+                            }) { Text("Restart") }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showRestartConfirm = false }) { Text("Cancel") }
+                        },
+                    )
                 }
             }
         }

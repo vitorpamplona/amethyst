@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -58,6 +59,7 @@ fun TorSettingsSection(
     modifier: Modifier = Modifier,
 ) {
     var showDialog by remember { mutableStateOf(false) }
+    var pendingSettings by remember { mutableStateOf<TorSettings?>(null) }
 
     Column(modifier = modifier) {
         Row(
@@ -94,7 +96,7 @@ fun TorSettingsSection(
             TorType.entries.forEachIndexed { index, torType ->
                 SegmentedButton(
                     shape = SegmentedButtonDefaults.itemShape(index = index, count = TorType.entries.size),
-                    onClick = { onSettingsChanged(currentSettings.copy(torType = torType)) },
+                    onClick = { pendingSettings = currentSettings.copy(torType = torType) },
                     selected = currentSettings.torType == torType,
                 ) {
                     Text(torType.name.lowercase().replaceFirstChar { it.uppercase() })
@@ -134,6 +136,24 @@ fun TorSettingsSection(
             torStatus = torStatus,
             onSettingsChanged = onSettingsChanged,
             onDismiss = { showDialog = false },
+        )
+    }
+
+    // Restart confirmation dialog
+    pendingSettings?.let { settings ->
+        AlertDialog(
+            onDismissRequest = { pendingSettings = null },
+            title = { Text("Restart Required") },
+            text = { Text("Changing Tor mode requires restarting. Your session will be briefly interrupted.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    onSettingsChanged(settings)
+                    pendingSettings = null
+                }) { Text("Restart") }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingSettings = null }) { Text("Cancel") }
+            },
         )
     }
 }

@@ -55,6 +55,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -184,6 +185,7 @@ fun main() {
                 height = 800.dp,
                 position = WindowPosition.Aligned(Alignment.Center),
             )
+        var appRestartKey by remember { mutableStateOf(0) }
         var showComposeDialog by remember { mutableStateOf(false) }
         var replyToNote by remember { mutableStateOf<com.vitorpamplona.quartz.nip01Core.core.Event?>(null) }
         val deckScope = rememberCoroutineScope()
@@ -410,25 +412,28 @@ fun main() {
                 LocalAwtWindow provides window,
                 LocalIsImmersiveFullscreen provides immersiveFullscreenState,
             ) {
-                App(
-                    layoutMode = layoutMode,
-                    deckState = deckState,
-                    accountManager = accountManager,
-                    showComposeDialog = showComposeDialog,
-                    showAddColumnDialog = showAddColumnDialog,
-                    onShowComposeDialog = { showComposeDialog = true },
-                    onShowReplyDialog = { event ->
-                        replyToNote = event
-                        showComposeDialog = true
-                    },
-                    onDismissComposeDialog = {
-                        showComposeDialog = false
-                        replyToNote = null
-                    },
-                    onDismissAddColumnDialog = { showAddColumnDialog = false },
-                    onShowAddColumnDialog = { showAddColumnDialog = true },
-                    replyToNote = replyToNote,
-                )
+                key(appRestartKey) {
+                    App(
+                        layoutMode = layoutMode,
+                        deckState = deckState,
+                        accountManager = accountManager,
+                        showComposeDialog = showComposeDialog,
+                        showAddColumnDialog = showAddColumnDialog,
+                        onShowComposeDialog = { showComposeDialog = true },
+                        onShowReplyDialog = { event ->
+                            replyToNote = event
+                            showComposeDialog = true
+                        },
+                        onDismissComposeDialog = {
+                            showComposeDialog = false
+                            replyToNote = null
+                        },
+                        onDismissAddColumnDialog = { showAddColumnDialog = false },
+                        onShowAddColumnDialog = { showAddColumnDialog = true },
+                        replyToNote = replyToNote,
+                        onRestartApp = { appRestartKey++ },
+                    )
+                }
             }
         }
     }
@@ -447,6 +452,7 @@ fun App(
     onDismissAddColumnDialog: () -> Unit,
     onShowAddColumnDialog: () -> Unit,
     replyToNote: com.vitorpamplona.quartz.nip01Core.core.Event?,
+    onRestartApp: () -> Unit = {},
 ) {
     val localCache = remember { DesktopLocalCache() }
     val accountState by accountManager.accountState.collectAsState()
@@ -467,6 +473,14 @@ fun App(
                 activeTorManager = it
             }
         }
+
+    // Clean up Tor daemon on unmount (key() change triggers this)
+    DisposableEffect(torManager) {
+        onDispose {
+            torManager.stopSync()
+            activeTorManager = null
+        }
+    }
 
     // Build TorRelayEvaluation for per-relay routing
     val torRelayEvaluation =
@@ -606,6 +620,8 @@ fun App(
                                         .save(newSettings)
                                     torTypeFlow.value = newSettings.torType
                                     externalPortFlow.value = newSettings.externalSocksPort
+                                    // Rebuild app to apply Tor changes
+                                    onRestartApp()
                                 },
                             ),
                     ) {
