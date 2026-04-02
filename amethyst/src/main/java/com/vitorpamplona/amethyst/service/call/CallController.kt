@@ -24,7 +24,10 @@ import android.content.Context
 import android.content.Intent
 import com.vitorpamplona.amethyst.commons.call.CallManager
 import com.vitorpamplona.amethyst.commons.call.CallState
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.WebRtcCallFactory
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallIceCandidateEvent
@@ -105,6 +108,7 @@ class CallController(
                 when (state) {
                     is CallState.IncomingCall -> {
                         audioManager.startRinging()
+                        showIncomingCallNotification(state.callerPubKey)
                     }
 
                     is CallState.Offering -> {
@@ -447,5 +451,18 @@ class CallController(
             context.startService(intent)
         } catch (_: Exception) {
         }
+    }
+
+    private fun showIncomingCallNotification(callerPubKey: String) {
+        val callerUser = LocalCache.getUserIfExists(callerPubKey)
+        val callerName = callerUser?.toBestDisplayName() ?: callerPubKey.take(8) + "..."
+        val uri = "nostr:${callerPubKey.hexToByteArray().toNpub()}"
+
+        NotificationUtils.sendCallNotification(
+            callerName = callerName,
+            callerBitmap = null,
+            uri = uri,
+            applicationContext = context,
+        )
     }
 }
