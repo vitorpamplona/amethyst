@@ -74,6 +74,15 @@ class CallController(
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
+    private val _isAudioMuted = MutableStateFlow(false)
+    val isAudioMuted: StateFlow<Boolean> = _isAudioMuted.asStateFlow()
+
+    private val _isVideoEnabled = MutableStateFlow(true)
+    val isVideoEnabled: StateFlow<Boolean> = _isVideoEnabled.asStateFlow()
+
+    private val _isSpeakerOn = MutableStateFlow(false)
+    val isSpeakerOn: StateFlow<Boolean> = _isSpeakerOn.asStateFlow()
+
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
 
     init {
@@ -185,9 +194,8 @@ class CallController(
     }
 
     fun onIceCandidateReceived(event: CallIceCandidateEvent) {
-        val json = event.candidateJson()
         try {
-            val candidate = parseIceCandidate(json)
+            val candidate = IceCandidate(event.sdpMid(), event.sdpMLineIndex(), event.candidateSdp())
             if (webRtcSession != null && remoteDescriptionSet) {
                 Log.d(TAG) { "Adding ICE candidate directly: ${candidate.sdp.take(50)}" }
                 webRtcSession?.addIceCandidate(candidate)
@@ -196,7 +204,7 @@ class CallController(
                 pendingIceCandidates.add(candidate)
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to parse ICE candidate: $json", e)
+            Log.e(TAG, "Failed to parse ICE candidate", e)
         }
     }
 
@@ -209,15 +217,21 @@ class CallController(
         candidates.forEach { session.addIceCandidate(it) }
     }
 
-    fun setAudioMuted(muted: Boolean) {
+    fun toggleAudioMute() {
+        val muted = !_isAudioMuted.value
+        _isAudioMuted.value = muted
         webRtcSession?.setAudioEnabled(!muted)
     }
 
-    fun setVideoEnabled(enabled: Boolean) {
+    fun toggleVideo() {
+        val enabled = !_isVideoEnabled.value
+        _isVideoEnabled.value = enabled
         webRtcSession?.setVideoEnabled(enabled)
     }
 
-    fun setSpeakerOn(on: Boolean) {
+    fun toggleSpeaker() {
+        val on = !_isSpeakerOn.value
+        _isSpeakerOn.value = on
         val am = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         am.isSpeakerphoneOn = on
     }
@@ -240,6 +254,9 @@ class CallController(
         NotificationUtils.cancelCallNotification(context)
         _remoteVideoTrack.value = null
         _localVideoTrack.value = null
+        _isAudioMuted.value = false
+        _isVideoEnabled.value = true
+        _isSpeakerOn.value = false
         webRtcSession?.dispose()
         webRtcSession = null
         currentCallId = null
@@ -316,7 +333,7 @@ class CallController(
         Log.d(TAG) { "Local ICE candidate: ${candidate.sdp.take(50)}" }
         val callId = currentCallId ?: return
         val peerPubKey = currentPeerPubKey ?: return
-        val candidateJson = serializeIceCandidate(candidate)
+        val candidateJson = CallIceCandidateEvent.serializeCandidate(candidate.sdp, candidate.sdpMid, candidate.sdpMLineIndex)
 
         scope.launch {
             val signer = signerProvider()
@@ -342,27 +359,6 @@ class CallController(
                 }
             context.startService(intent)
         } catch (_: Exception) {
-        }
-    }
-
-    companion object {
-        fun serializeIceCandidate(candidate: IceCandidate): String = """{"candidate":"${candidate.sdp}","sdpMid":"${candidate.sdpMid}","sdpMLineIndex":${candidate.sdpMLineIndex}}"""
-
-        fun parseIceCandidate(json: String): IceCandidate {
-            val candidateRegex = """"candidate"\s*:\s*"([^"]*)"""".toRegex()
-            val sdpMidRegex = """"sdpMid"\s*:\s*"([^"]*)"""".toRegex()
-            val sdpMLineIndexRegex = """"sdpMLineIndex"\s*:\s*(\d+)""".toRegex()
-
-            val sdp = candidateRegex.find(json)?.groupValues?.get(1) ?: ""
-            val sdpMid = sdpMidRegex.find(json)?.groupValues?.get(1) ?: "0"
-            val sdpMLineIndex =
-                sdpMLineIndexRegex
-                    .find(json)
-                    ?.groupValues
-                    ?.get(1)
-                    ?.toIntOrNull() ?: 0
-
-            return IceCandidate(sdpMid, sdpMLineIndex, sdp)
         }
     }
 }

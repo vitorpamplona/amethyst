@@ -20,59 +20,57 @@
  */
 package com.vitorpamplona.amethyst.service.call
 
+import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallIceCandidateEvent
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class IceCandidateSerializationTest {
     @Test
-    fun parseIceCandidateFromJson() {
-        val json = """{"candidate":"candidate:842163049 1 udp 1677729535 203.0.113.1 44323 typ srflx","sdpMid":"0","sdpMLineIndex":0}"""
-        val candidate = CallController.parseIceCandidate(json)
-
-        assertEquals("candidate:842163049 1 udp 1677729535 203.0.113.1 44323 typ srflx", candidate.sdp)
-        assertEquals("0", candidate.sdpMid)
-        assertEquals(0, candidate.sdpMLineIndex)
-    }
-
-    @Test
-    fun parseIceCandidateWithDifferentIndex() {
-        val json = """{"candidate":"candidate:1 1 tcp 1234","sdpMid":"audio","sdpMLineIndex":1}"""
-        val candidate = CallController.parseIceCandidate(json)
-
-        assertEquals("candidate:1 1 tcp 1234", candidate.sdp)
-        assertEquals("audio", candidate.sdpMid)
-        assertEquals(1, candidate.sdpMLineIndex)
-    }
-
-    @Test
-    fun parseIceCandidateHandlesMissingFields() {
-        val json = """{"candidate":"test"}"""
-        val candidate = CallController.parseIceCandidate(json)
-
-        assertEquals("test", candidate.sdp)
-        assertEquals("0", candidate.sdpMid) // default
-        assertEquals(0, candidate.sdpMLineIndex) // default
-    }
-
-    @Test
-    fun serializeIceCandidateProducesValidJson() {
-        val candidate = org.webrtc.IceCandidate("audio", 1, "candidate:123 1 udp 456")
-        val json = CallController.serializeIceCandidate(candidate)
-
-        // Verify it contains the expected fields
+    fun serializeCandidateProducesValidJson() {
+        val json = CallIceCandidateEvent.serializeCandidate("candidate:123 1 udp 456", "audio", 1)
         assert(json.contains(""""candidate":"candidate:123 1 udp 456""""))
         assert(json.contains(""""sdpMid":"audio""""))
         assert(json.contains(""""sdpMLineIndex":1"""))
     }
 
     @Test
-    fun roundTripIceCandidate() {
-        val original = org.webrtc.IceCandidate("video", 2, "candidate:999 1 udp 789 10.0.0.1 5000 typ host")
-        val json = CallController.serializeIceCandidate(original)
-        val parsed = CallController.parseIceCandidate(json)
+    fun serializeAndParseRoundTrip() {
+        val sdp = "candidate:999 1 udp 789 10.0.0.1 5000 typ host"
+        val sdpMid = "video"
+        val sdpMLineIndex = 2
 
-        assertEquals(original.sdp, parsed.sdp)
-        assertEquals(original.sdpMid, parsed.sdpMid)
-        assertEquals(original.sdpMLineIndex, parsed.sdpMLineIndex)
+        val json = CallIceCandidateEvent.serializeCandidate(sdp, sdpMid, sdpMLineIndex)
+
+        // Create a minimal event to test parsing
+        val event =
+            CallIceCandidateEvent(
+                id = "test",
+                pubKey = "test",
+                createdAt = 0,
+                tags = emptyArray(),
+                content = json,
+                sig = "test",
+            )
+
+        assertEquals(sdp, event.candidateSdp())
+        assertEquals(sdpMid, event.sdpMid())
+        assertEquals(sdpMLineIndex, event.sdpMLineIndex())
+    }
+
+    @Test
+    fun parseCandidateHandlesMissingFields() {
+        val event =
+            CallIceCandidateEvent(
+                id = "test",
+                pubKey = "test",
+                createdAt = 0,
+                tags = emptyArray(),
+                content = """{"candidate":"test"}""",
+                sig = "test",
+            )
+
+        assertEquals("test", event.candidateSdp())
+        assertEquals("0", event.sdpMid()) // default
+        assertEquals(0, event.sdpMLineIndex()) // default
     }
 }

@@ -52,9 +52,6 @@ sealed interface CallState {
         val peerPubKey: HexKey,
         val callType: CallType,
         val startedAtEpoch: Long,
-        val isAudioMuted: Boolean = false,
-        val isVideoEnabled: Boolean = true,
-        val isSpeakerOn: Boolean = false,
     ) : CallState
 
     data class Ended(

@@ -216,26 +216,23 @@ class CallManager(
         }
     }
 
-    fun toggleAudioMute() {
-        val current = _state.value
-        if (current is CallState.Connected) {
-            _state.value = current.copy(isAudioMuted = !current.isAudioMuted)
+    fun currentCallId(): String? =
+        when (val s = _state.value) {
+            is CallState.Offering -> s.callId
+            is CallState.IncomingCall -> s.callId
+            is CallState.Connecting -> s.callId
+            is CallState.Connected -> s.callId
+            else -> null
         }
-    }
 
-    fun toggleVideo() {
-        val current = _state.value
-        if (current is CallState.Connected) {
-            _state.value = current.copy(isVideoEnabled = !current.isVideoEnabled)
+    fun currentPeerPubKey(): HexKey? =
+        when (val s = _state.value) {
+            is CallState.Offering -> s.peerPubKey
+            is CallState.IncomingCall -> s.callerPubKey
+            is CallState.Connecting -> s.peerPubKey
+            is CallState.Connected -> s.peerPubKey
+            else -> null
         }
-    }
-
-    fun toggleSpeaker() {
-        val current = _state.value
-        if (current is CallState.Connected) {
-            _state.value = current.copy(isSpeakerOn = !current.isSpeakerOn)
-        }
-    }
 
     fun reset() {
         _state.value = CallState.Idle

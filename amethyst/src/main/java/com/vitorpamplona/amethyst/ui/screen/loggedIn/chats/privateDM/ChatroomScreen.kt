@@ -52,13 +52,15 @@ fun ChatroomScreen(
         rememberCallWithPermission(context) {
             val peerPubKey = roomId.users.firstOrNull() ?: return@rememberCallWithPermission
             accountViewModel.callController?.initiateCall(peerPubKey, CallType.VOICE)
-            nav.nav(Route.ActiveCall(callId = "", peerPubKey = peerPubKey))
+            val callId = accountViewModel.callManager.currentCallId() ?: ""
+            nav.nav(Route.ActiveCall(callId = callId, peerPubKey = peerPubKey))
         }
     val startVideoCall =
         rememberCallWithPermission(context) {
             val peerPubKey = roomId.users.firstOrNull() ?: return@rememberCallWithPermission
             accountViewModel.callController?.initiateCall(peerPubKey, CallType.VIDEO)
-            nav.nav(Route.ActiveCall(callId = "", peerPubKey = peerPubKey))
+            val callId = accountViewModel.callManager.currentCallId() ?: ""
+            nav.nav(Route.ActiveCall(callId = callId, peerPubKey = peerPubKey))
         }
 
     DisappearingScaffold(

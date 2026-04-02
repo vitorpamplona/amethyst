@@ -142,18 +142,9 @@ fun CallScreen(
                     callController = callController,
                     accountViewModel = accountViewModel,
                     onHangup = { scope.launch { callManager.hangup() } },
-                    onToggleMute = {
-                        callManager.toggleAudioMute()
-                        callController?.setAudioMuted(!state.isAudioMuted)
-                    },
-                    onToggleVideo = {
-                        callManager.toggleVideo()
-                        callController?.setVideoEnabled(!state.isVideoEnabled)
-                    },
-                    onToggleSpeaker = {
-                        callManager.toggleSpeaker()
-                        callController?.setSpeakerOn(!state.isSpeakerOn)
-                    },
+                    onToggleMute = { callController?.toggleAudioMute() },
+                    onToggleVideo = { callController?.toggleVideo() },
+                    onToggleSpeaker = { callController?.toggleSpeaker() },
                 )
             }
 
@@ -338,6 +329,9 @@ private fun ConnectedCallUI(
 
     val remoteVideoTrack by (callController?.remoteVideoTrack ?: kotlinx.coroutines.flow.MutableStateFlow(null)).collectAsState()
     val localVideoTrack by (callController?.localVideoTrack ?: kotlinx.coroutines.flow.MutableStateFlow(null)).collectAsState()
+    val isAudioMuted by (callController?.isAudioMuted ?: kotlinx.coroutines.flow.MutableStateFlow(false)).collectAsState()
+    val isVideoEnabled by (callController?.isVideoEnabled ?: kotlinx.coroutines.flow.MutableStateFlow(true)).collectAsState()
+    val isSpeakerOn by (callController?.isSpeakerOn ?: kotlinx.coroutines.flow.MutableStateFlow(false)).collectAsState()
 
     Box(
         modifier =
@@ -429,9 +423,9 @@ private fun ConnectedCallUI(
                     modifier = Modifier.size(56.dp),
                 ) {
                     Icon(
-                        imageVector = if (state.isAudioMuted) Icons.Default.MicOff else Icons.Default.Mic,
-                        contentDescription = if (state.isAudioMuted) "Unmute" else "Mute",
-                        tint = if (state.isAudioMuted) Color.Red else Color.White,
+                        imageVector = if (isAudioMuted) Icons.Default.MicOff else Icons.Default.Mic,
+                        contentDescription = if (isAudioMuted) "Unmute" else "Mute",
+                        tint = if (isAudioMuted) Color.Red else Color.White,
                         modifier = Modifier.size(28.dp),
                     )
                 }
@@ -440,9 +434,9 @@ private fun ConnectedCallUI(
                     modifier = Modifier.size(56.dp),
                 ) {
                     Icon(
-                        imageVector = if (state.isVideoEnabled) Icons.Default.Videocam else Icons.Default.VideocamOff,
-                        contentDescription = if (state.isVideoEnabled) "Camera off" else "Camera on",
-                        tint = if (!state.isVideoEnabled) Color.Red else Color.White,
+                        imageVector = if (isVideoEnabled) Icons.Default.Videocam else Icons.Default.VideocamOff,
+                        contentDescription = if (isVideoEnabled) "Camera off" else "Camera on",
+                        tint = if (!isVideoEnabled) Color.Red else Color.White,
                         modifier = Modifier.size(28.dp),
                     )
                 }
@@ -451,9 +445,9 @@ private fun ConnectedCallUI(
                     modifier = Modifier.size(56.dp),
                 ) {
                     Icon(
-                        imageVector = if (state.isSpeakerOn) Icons.Default.VolumeUp else Icons.Default.VolumeOff,
-                        contentDescription = if (state.isSpeakerOn) "Earpiece" else "Speaker",
-                        tint = if (state.isSpeakerOn) Color.Cyan else Color.White,
+                        imageVector = if (isSpeakerOn) Icons.Default.VolumeUp else Icons.Default.VolumeOff,
+                        contentDescription = if (isSpeakerOn) "Earpiece" else "Speaker",
+                        tint = if (isSpeakerOn) Color.Cyan else Color.White,
                         modifier = Modifier.size(28.dp),
                     )
                 }

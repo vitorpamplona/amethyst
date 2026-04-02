@@ -45,10 +45,31 @@ class CallIceCandidateEvent(
 
     fun candidateJson() = content
 
+    fun candidateSdp(): String = CANDIDATE_REGEX.find(content)?.groupValues?.get(1) ?: ""
+
+    fun sdpMid(): String = SDP_MID_REGEX.find(content)?.groupValues?.get(1) ?: "0"
+
+    fun sdpMLineIndex(): Int =
+        SDP_MLINE_INDEX_REGEX
+            .find(content)
+            ?.groupValues
+            ?.get(1)
+            ?.toIntOrNull() ?: 0
+
     companion object {
         const val KIND = 25052
         const val ALT_DESCRIPTION = "WebRTC ICE candidate"
         const val EXPIRATION_SECONDS = 20L
+
+        private val CANDIDATE_REGEX = """"candidate"\s*:\s*"([^"]*)"""".toRegex()
+        private val SDP_MID_REGEX = """"sdpMid"\s*:\s*"([^"]*)"""".toRegex()
+        private val SDP_MLINE_INDEX_REGEX = """"sdpMLineIndex"\s*:\s*(\d+)""".toRegex()
+
+        fun serializeCandidate(
+            sdp: String,
+            sdpMid: String,
+            sdpMLineIndex: Int,
+        ): String = """{"candidate":"$sdp","sdpMid":"$sdpMid","sdpMLineIndex":$sdpMLineIndex}"""
 
         fun build(
             candidateJson: String,
