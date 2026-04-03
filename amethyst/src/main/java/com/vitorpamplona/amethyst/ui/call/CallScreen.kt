@@ -427,13 +427,13 @@ private fun ConnectedCallUI(
                 verticalArrangement = Arrangement.Center,
             ) {
                 GroupCallPictures(
-                    peerPubKeys = state.peerPubKeys,
+                    peerPubKeys = state.allPeerPubKeys,
                     size = 120.dp,
                     accountViewModel = accountViewModel,
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 GroupCallNames(
-                    peerPubKeys = state.peerPubKeys,
+                    peerPubKeys = state.allPeerPubKeys,
                     accountViewModel = accountViewModel,
                     textColor = Color.White,
                 )
@@ -443,6 +443,14 @@ private fun ConnectedCallUI(
                     color = Color.White.copy(alpha = 0.7f),
                     fontSize = 16.sp,
                 )
+                if (state.pendingPeerPubKeys.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = stringRes(R.string.call_waiting_for_others),
+                        color = Color.White.copy(alpha = 0.5f),
+                        fontSize = 13.sp,
+                    )
+                }
             }
         } else {
             // Timer overlay
@@ -648,7 +656,7 @@ private fun PipConnectedCallUI(
                 verticalArrangement = Arrangement.Center,
             ) {
                 GroupCallPictures(
-                    peerPubKeys = state.peerPubKeys,
+                    peerPubKeys = state.allPeerPubKeys,
                     size = 48.dp,
                     accountViewModel = accountViewModel,
                 )
