@@ -36,6 +36,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Card
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -59,6 +60,7 @@ import com.vitorpamplona.amethyst.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.BadgeCompose
+import com.vitorpamplona.amethyst.ui.note.CloseIcon
 import com.vitorpamplona.amethyst.ui.note.MessageSetCompose
 import com.vitorpamplona.amethyst.ui.note.MultiSetCompose
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
@@ -184,7 +186,19 @@ private fun FeedLoaded(
                     Card(
                         modifier = MaterialTheme.colorScheme.imageModifier,
                     ) {
-                        OpenPollsSectionHeader()
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            OpenPollsSectionHeader()
+                            IconButton(
+                                modifier = Modifier.padding(end = Size10dp),
+                                onClick = { accountViewModel.dismissPollNotification(note.idHex) },
+                            ) {
+                                CloseIcon()
+                            }
+                        }
                         Row(Modifier.fillMaxWidth().animateItem()) {
                             NoteCompose(
                                 baseNote = note,
