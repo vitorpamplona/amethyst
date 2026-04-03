@@ -168,11 +168,15 @@ fun CallScreen(
             }
 
             is CallState.Connecting -> {
+                val otherMembers =
+                    remember(state.peerPubKeys) {
+                        state.peerPubKeys - accountViewModel.account.signer.pubKey
+                    }
                 if (isInPipMode) {
-                    PipCallUI(peerPubKeys = state.peerPubKeys, statusText = stringRes(R.string.call_connecting), accountViewModel = accountViewModel)
+                    PipCallUI(peerPubKeys = otherMembers, statusText = stringRes(R.string.call_connecting), accountViewModel = accountViewModel)
                 } else {
                     CallInProgressUI(
-                        peerPubKeys = state.peerPubKeys,
+                        peerPubKeys = otherMembers,
                         statusText = stringRes(R.string.call_connecting),
                         accountViewModel = accountViewModel,
                         onHangup = { scope.launch { callManager.hangup() } },
@@ -892,7 +896,7 @@ private fun GroupCallPictures(
 private fun GroupCallNames(
     peerPubKeys: Set<String>,
     accountViewModel: AccountViewModel,
-    textColor: Color = Color.Unspecified,
+    textColor: Color = MaterialTheme.colorScheme.onSurface,
 ) {
     val userList = remember(peerPubKeys) { peerPubKeys.toList() }
 
