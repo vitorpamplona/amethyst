@@ -797,6 +797,8 @@
     <string name="call_voice">Voice call</string>
     <string name="call_video">Video call</string>
     <string name="call_waiting_for_others">Waiting for others to join\u2026</string>
+    <string name="call_add_participant">Add participant</string>
+    <string name="call_search_users">Search users\u2026</string>
     <string name="call_failed_start">Failed to start call</string>
     <string name="call_failed_accept">Failed to accept call</string>
     <string name="call_failed_session">Failed to create call session</string>

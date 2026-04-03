@@ -44,22 +44,27 @@ import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CallEnd
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
+import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.VideocamOff
 import androidx.compose.material.icons.filled.VolumeOff
 import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -81,6 +86,8 @@ import com.vitorpamplona.amethyst.service.call.CallController
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
+import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -181,6 +188,7 @@ fun CallScreen(
                         onToggleMute = { callController?.toggleAudioMute() },
                         onToggleVideo = { callController?.toggleVideo() },
                         onCycleAudioRoute = { callController?.cycleAudioRoute() },
+                        onInvitePeer = { peerPubKey -> callController?.invitePeer(peerPubKey) },
                     )
                 }
             }
@@ -363,6 +371,7 @@ private fun ConnectedCallUI(
     onToggleMute: () -> Unit,
     onToggleVideo: () -> Unit,
     onCycleAudioRoute: () -> Unit,
+    onInvitePeer: (String) -> Unit = {},
 ) {
     var elapsed by remember { mutableLongStateOf(0L) }
 
@@ -383,6 +392,20 @@ private fun ConnectedCallUI(
     val isAudioMuted by (callController?.isAudioMuted ?: defaultFalse).collectAsState()
     val isVideoEnabled by (callController?.isVideoEnabled ?: defaultTrue).collectAsState()
     val currentAudioRoute by (callController?.audioRoute ?: defaultRoute).collectAsState()
+
+    var showAddParticipant by remember { mutableStateOf(false) }
+
+    if (showAddParticipant) {
+        AddParticipantDialog(
+            accountViewModel = accountViewModel,
+            existingPeers = state.allPeerPubKeys,
+            onInvite = { peerPubKey ->
+                onInvitePeer(peerPubKey)
+                showAddParticipant = false
+            },
+            onDismiss = { showAddParticipant = false },
+        )
+    }
 
     Box(
         modifier =
@@ -526,6 +549,17 @@ private fun ConnectedCallUI(
                                 AudioRoute.SPEAKER -> Color.Cyan
                                 AudioRoute.BLUETOOTH -> Color(0xFF2196F3)
                             },
+                        modifier = Modifier.size(28.dp),
+                    )
+                }
+                IconButton(
+                    onClick = { showAddParticipant = true },
+                    modifier = Modifier.size(56.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.PersonAdd,
+                        contentDescription = stringRes(R.string.call_add_participant),
+                        tint = Color.White,
                         modifier = Modifier.size(28.dp),
                     )
                 }
@@ -680,6 +714,57 @@ private fun PipConnectedCallUI(
             )
         }
     }
+}
+
+@Composable
+private fun AddParticipantDialog(
+    accountViewModel: AccountViewModel,
+    existingPeers: Set<String>,
+    onInvite: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val userSuggestions =
+        remember {
+            UserSuggestionState(accountViewModel.account, accountViewModel.nip05ClientBuilder())
+        }
+    var searchText by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringRes(R.string.call_add_participant)) },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = searchText,
+                    onValueChange = {
+                        searchText = it
+                        userSuggestions.processCurrentWord(it)
+                    },
+                    label = { Text(stringRes(R.string.call_search_users)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Box(modifier = Modifier.height(300.dp)) {
+                    ShowUserSuggestionList(
+                        userSuggestions = userSuggestions,
+                        onSelect = { user ->
+                            if (user.pubkeyHex !in existingPeers) {
+                                onInvite(user.pubkeyHex)
+                            }
+                        },
+                        accountViewModel = accountViewModel,
+                    )
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringRes(R.string.call_dismiss))
+            }
+        },
+    )
 }
 
 @Composable

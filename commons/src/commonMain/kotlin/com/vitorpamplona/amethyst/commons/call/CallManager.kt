@@ -301,6 +301,36 @@ class CallManager(
             )
     }
 
+    /** Invites a new peer into the current call by sending them an offer. */
+    suspend fun invitePeer(
+        peerPubKey: HexKey,
+        sdpOffer: String,
+    ) {
+        val current = _state.value
+        val callId: String
+        val callType: CallType
+        when (current) {
+            is CallState.Connecting -> {
+                callId = current.callId
+                callType = current.callType
+                _state.value = current.copy(pendingPeerPubKeys = current.pendingPeerPubKeys + peerPubKey)
+            }
+
+            is CallState.Connected -> {
+                callId = current.callId
+                callType = current.callType
+                _state.value = current.copy(pendingPeerPubKeys = current.pendingPeerPubKeys + peerPubKey)
+            }
+
+            else -> {
+                return
+            }
+        }
+
+        val result = factory.createCallOffer(sdpOffer, peerPubKey, callId, callType, signer)
+        publishEvent(result.wrap)
+    }
+
     suspend fun hangup() {
         val peerPubKeys: Set<HexKey>
         val callId: String

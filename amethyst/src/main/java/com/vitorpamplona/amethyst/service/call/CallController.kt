@@ -337,6 +337,17 @@ class CallController(
 
     fun getEglBase() = webRtcSession?.eglBase
 
+    fun invitePeer(peerPubKey: String) {
+        scope.launch {
+            val session = webRtcSession ?: return@launch
+            session.createOffer { sdp ->
+                scope.launch {
+                    callManager.invitePeer(peerPubKey, sdp.description)
+                }
+            }
+        }
+    }
+
     fun hangup() {
         scope.launch {
             callManager.hangup()
