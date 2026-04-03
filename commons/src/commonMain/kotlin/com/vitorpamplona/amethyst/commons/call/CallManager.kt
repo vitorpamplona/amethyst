@@ -137,27 +137,25 @@ class CallManager(
         val current = _state.value
         if (current !is CallState.IncomingCall) return
 
-        val result = factory.createCallAnswer(sdpAnswer, current.callerPubKey, current.callId, signer)
         _state.value = CallState.Connecting(current.callId, current.peerPubKeys(), current.callType)
         cancelTimeout()
-        publishEvent(result.wrap)
 
-        // Notify other devices of this user that the call was answered here.
-        val selfNotify = factory.createCallAnswer(sdpAnswer, signer.pubKey, current.callId, signer)
-        publishEvent(selfNotify.wrap)
+        // Include all group members + self so other devices get notified too.
+        val allRecipients = current.groupMembers + signer.pubKey
+        val result = factory.createGroupCallAnswer(sdpAnswer, allRecipients, current.callId, signer)
+        result.wraps.forEach { publishEvent(it) }
     }
 
     suspend fun rejectCall() {
         val current = _state.value
         if (current !is CallState.IncomingCall) return
 
-        val result = factory.createReject(current.callerPubKey, current.callId, signer = signer)
         transitionToEnded(current.callId, current.peerPubKeys(), EndReason.REJECTED)
-        publishEvent(result.wrap)
 
-        // Notify other devices of this user that the call was rejected here.
-        val selfNotify = factory.createReject(signer.pubKey, current.callId, signer = signer)
-        publishEvent(selfNotify.wrap)
+        // Include all group members + self so other devices get notified too.
+        val allRecipients = current.groupMembers + signer.pubKey
+        val result = factory.createGroupReject(allRecipients, current.callId, signer = signer)
+        result.wraps.forEach { publishEvent(it) }
     }
 
     fun onCallAnswered(event: CallAnswerEvent) {
@@ -281,17 +279,33 @@ class CallManager(
         onRenegotiationOfferReceived?.invoke(event)
     }
 
-    suspend fun sendRenegotiation(sdpOffer: String) {
+    /**
+     * Sends a renegotiation offer to a specific peer.  SDP is per-PeerConnection
+     * so this is always addressed to a single peer.  In group calls the inner
+     * event includes `p` tags for all members for group context.
+     */
+    suspend fun sendRenegotiation(
+        sdpOffer: String,
+        peerPubKey: HexKey,
+    ) {
         val callId = currentCallId() ?: return
-        val peerPubKey = currentPeerPubKey() ?: return
-        val result = factory.createRenegotiate(sdpOffer, peerPubKey, callId, signer)
+        val peerPubKeys = currentPeerPubKeys() ?: return
+        val result = factory.createRenegotiate(sdpOffer, peerPubKey, peerPubKeys, callId, signer)
         publishEvent(result.wrap)
     }
 
-    suspend fun sendRenegotiationAnswer(sdpAnswer: String) {
+    /**
+     * Sends a renegotiation answer to a specific peer.  SDP is per-PeerConnection
+     * so this is always addressed to a single peer.  The inner event includes
+     * `p` tags for all members for group context.
+     */
+    suspend fun sendRenegotiationAnswer(
+        sdpAnswer: String,
+        peerPubKey: HexKey,
+    ) {
         val callId = currentCallId() ?: return
-        val peerPubKey = currentPeerPubKey() ?: return
-        val result = factory.createCallAnswer(sdpAnswer, peerPubKey, callId, signer)
+        val peerPubKeys = currentPeerPubKeys() ?: return
+        val result = factory.createCallAnswer(sdpAnswer, peerPubKey, peerPubKeys, callId, signer)
         publishEvent(result.wrap)
     }
 
@@ -309,7 +323,11 @@ class CallManager(
             )
     }
 
-    /** Invites a new peer into the current call by sending them an offer. */
+    /**
+     * Invites a new peer into the current call by sending them an offer.
+     * The inner event includes `p` tags for all existing group members plus
+     * the new invitee so they can see the full group composition.
+     */
     suspend fun invitePeer(
         peerPubKey: HexKey,
         sdpOffer: String,
@@ -317,16 +335,19 @@ class CallManager(
         val current = _state.value
         val callId: String
         val callType: CallType
+        val existingMembers: Set<HexKey>
         when (current) {
             is CallState.Connecting -> {
                 callId = current.callId
                 callType = current.callType
+                existingMembers = current.peerPubKeys + current.pendingPeerPubKeys
                 _state.value = current.copy(pendingPeerPubKeys = current.pendingPeerPubKeys + peerPubKey)
             }
 
             is CallState.Connected -> {
                 callId = current.callId
                 callType = current.callType
+                existingMembers = current.allPeerPubKeys
                 _state.value = current.copy(pendingPeerPubKeys = current.pendingPeerPubKeys + peerPubKey)
             }
 
@@ -335,7 +356,9 @@ class CallManager(
             }
         }
 
-        val result = factory.createCallOffer(sdpOffer, peerPubKey, callId, callType, signer)
+        // All group members: existing peers + the new invitee + ourselves
+        val allMembers = existingMembers + peerPubKey + signer.pubKey
+        val result = factory.createCallOffer(sdpOffer, peerPubKey, allMembers, callId, callType, signer)
         publishEvent(result.wrap)
     }
 
@@ -363,13 +386,8 @@ class CallManager(
             }
         }
 
-        if (peerPubKeys.size == 1) {
-            val result = factory.createHangup(peerPubKeys.first(), callId, signer = signer)
-            publishEvent(result.wrap)
-        } else {
-            val result = factory.createGroupHangup(peerPubKeys, callId, signer = signer)
-            result.wraps.forEach { publishEvent(it) }
-        }
+        val result = factory.createGroupHangup(peerPubKeys, callId, signer = signer)
+        result.wraps.forEach { publishEvent(it) }
         transitionToEnded(callId, peerPubKeys, EndReason.HANGUP)
     }
 
