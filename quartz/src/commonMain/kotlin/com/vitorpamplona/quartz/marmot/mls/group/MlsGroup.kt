@@ -231,7 +231,13 @@ class MlsGroup private constructor(
                         groupContext.copy(extensions = p.extensions)
                 }
 
-                is Proposal.Psk -> {} // PSK handling
+                is Proposal.Psk -> {}
+
+                // PSK handling
+                is Proposal.ReInit -> {}
+
+                // Handled at a higher level
+                is Proposal.ExternalInit -> {} // Handled in external commit flow
             }
         }
 
@@ -601,6 +607,27 @@ class MlsGroup private constructor(
         )
     }
 
+    /**
+     * Verify the membership_tag on a PublicMessage (RFC 9420 Section 6.2).
+     * membership_tag = HMAC(membership_key, AuthenticatedContentTBM)
+     * where AuthenticatedContentTBM = AuthenticatedContent with the membership_tag zeroed.
+     *
+     * @param authenticatedContentBytes the TLS-serialized AuthenticatedContent (without tag)
+     * @param membershipTag the received membership_tag to verify
+     * @return true if the tag is valid
+     */
+    fun verifyMembershipTag(
+        authenticatedContentBytes: ByteArray,
+        membershipTag: ByteArray,
+    ): Boolean {
+        val mac =
+            com.vitorpamplona.quartz.utils.mac
+                .MacInstance("HmacSHA256", epochSecrets.membershipKey)
+        mac.update(authenticatedContentBytes)
+        val expectedTag = mac.doFinal()
+        return expectedTag.contentEquals(membershipTag)
+    }
+
     private fun applyProposal(
         proposal: Proposal,
         senderLeafIndex: Int,
@@ -627,6 +654,11 @@ class MlsGroup private constructor(
             }
 
             is Proposal.Psk -> {}
+
+            is Proposal.ReInit -> {}
+
+            // Handled at a higher level
+            is Proposal.ExternalInit -> {} // Handled in external commit flow
         }
     }
 

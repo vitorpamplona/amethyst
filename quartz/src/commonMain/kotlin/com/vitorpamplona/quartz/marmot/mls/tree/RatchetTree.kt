@@ -296,8 +296,16 @@ class RatchetTree(
      */
     fun encodeTls(writer: TlsWriter) {
         val totalNodes = if (_leafCount > 0) BinaryTree.nodeCount(_leafCount) else 0
+
+        // Find rightmost non-blank node to trim trailing blanks (RFC 9420 Section 7.8)
+        var lastPresent = totalNodes - 1
+        while (lastPresent >= 0 && getNode(lastPresent) == null) {
+            lastPresent--
+        }
+        val serializeCount = lastPresent + 1
+
         val inner = TlsWriter()
-        for (i in 0 until totalNodes) {
+        for (i in 0 until serializeCount) {
             val node = getNode(i)
             if (node != null) {
                 inner.putUint8(1)

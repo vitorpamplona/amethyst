@@ -46,6 +46,36 @@ sealed class Credential : TlsSerializable {
         override fun hashCode(): Int = identity.contentHashCode()
     }
 
+    /**
+     * X.509 credential (RFC 9420 Section 5.3).
+     * Contains a chain of DER-encoded X.509 certificates.
+     */
+    data class X509(
+        val certChain: List<ByteArray>,
+    ) : Credential() {
+        override fun encodeTls(writer: TlsWriter) {
+            writer.putUint16(CREDENTIAL_TYPE_X509)
+            writer.putVectorVarInt(
+                certChain.map { cert ->
+                    object : TlsSerializable {
+                        override fun encodeTls(w: TlsWriter) {
+                            w.putOpaqueVarInt(cert)
+                        }
+                    }
+                },
+            )
+        }
+
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other !is X509) return false
+            if (certChain.size != other.certChain.size) return false
+            return certChain.zip(other.certChain).all { (a, b) -> a.contentEquals(b) }
+        }
+
+        override fun hashCode(): Int = certChain.fold(0) { acc, c -> 31 * acc + c.contentHashCode() }
+    }
+
     companion object {
         const val CREDENTIAL_TYPE_BASIC = 1
         const val CREDENTIAL_TYPE_X509 = 2
@@ -54,6 +84,7 @@ sealed class Credential : TlsSerializable {
             val type = reader.readUint16()
             return when (type) {
                 CREDENTIAL_TYPE_BASIC -> Basic(reader.readOpaqueVarInt())
+                CREDENTIAL_TYPE_X509 -> X509(reader.readVectorVarInt { it.readOpaqueVarInt() })
                 else -> throw IllegalArgumentException("Unknown credential type: $type")
             }
         }
