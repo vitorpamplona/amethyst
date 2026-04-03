@@ -1429,6 +1429,7 @@ class AccountViewModel(
 
     override fun onCleared() {
         Log.d("AccountViewModel", "onCleared")
+        callController?.cleanup()
         feedStates.destroy()
         super.onCleared()
     }
