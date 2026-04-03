@@ -349,6 +349,7 @@ class CallManager(
                     transitionToEnded(current.callId, current.peerPubKeys, EndReason.PEER_REJECTED)
                 } else {
                     _state.value = current.copy(peerPubKeys = remaining)
+                    onPeerLeft?.invoke(rejectingPeer)
                 }
             }
 
@@ -356,12 +357,14 @@ class CallManager(
                 if (callId != current.callId) return
                 _state.value =
                     current.copy(pendingPeerPubKeys = current.pendingPeerPubKeys - rejectingPeer)
+                onPeerLeft?.invoke(rejectingPeer)
             }
 
             is CallState.Connected -> {
                 if (callId != current.callId) return
                 _state.value =
                     current.copy(pendingPeerPubKeys = current.pendingPeerPubKeys - rejectingPeer)
+                onPeerLeft?.invoke(rejectingPeer)
             }
 
             is CallState.IncomingCall -> {
