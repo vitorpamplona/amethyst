@@ -507,7 +507,12 @@ class CallController(
             callerUser?.profilePicture()?.let { pictureUrl ->
                 withContext(Dispatchers.IO) {
                     try {
-                        val request = ImageRequest.Builder(context).data(pictureUrl).build()
+                        val request =
+                            ImageRequest
+                                .Builder(context)
+                                .data(pictureUrl)
+                                .allowHardware(false)
+                                .build()
                         val result = ImageLoader(context).execute(request)
                         (result.image?.asDrawable(context.resources) as? android.graphics.drawable.BitmapDrawable)?.bitmap
                     } catch (_: Exception) {

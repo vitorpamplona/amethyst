@@ -644,7 +644,12 @@ class EventNotificationConsumer(
             callerUser?.profilePicture()?.let { pictureUrl ->
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                     try {
-                        val request = ImageRequest.Builder(applicationContext).data(pictureUrl).build()
+                        val request =
+                            ImageRequest
+                                .Builder(applicationContext)
+                                .data(pictureUrl)
+                                .allowHardware(false)
+                                .build()
                         val result = ImageLoader(applicationContext).execute(request)
                         (result.image?.asDrawable(applicationContext.resources) as? BitmapDrawable)?.bitmap
                     } catch (_: Exception) {

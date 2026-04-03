@@ -272,7 +272,12 @@ object NotificationUtils {
     ): Bitmap? =
         withContext(Dispatchers.IO) {
             try {
-                val request = ImageRequest.Builder(applicationContext).data(pictureUrl).build()
+                val request =
+                    ImageRequest
+                        .Builder(applicationContext)
+                        .data(pictureUrl)
+                        .allowHardware(false)
+                        .build()
                 val imageLoader = SingletonImageLoader.get(applicationContext)
                 val result = imageLoader.execute(request)
                 (result.image?.asDrawable(applicationContext.resources) as? BitmapDrawable)?.bitmap
