@@ -181,6 +181,7 @@ class CallController(
         peerPubKeys: Set<String>,
         callType: CallType,
     ) {
+        Log.d(TAG) { "initiateCallInternal: peers=${peerPubKeys.map { it.take(8) }}, callType=$callType" }
         scope.launch {
             val callId = UUID.randomUUID().toString()
             _errorMessage.value = null
@@ -189,6 +190,7 @@ class CallController(
 
             try {
                 withContext(Dispatchers.IO) { createWebRtcSession() }
+                Log.d(TAG) { "initiateCall: WebRTC session created" }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to create WebRTC session", e)
                 _errorMessage.value = "Failed to start call: ${e.message}"
@@ -208,13 +210,16 @@ class CallController(
                 _isVideoEnabled.value = true
             }
 
+            Log.d(TAG) { "initiateCall: creating offer..." }
             session.createOffer { sdp ->
+                Log.d(TAG) { "initiateCall: offer created, sdpLength=${sdp.description.length}, publishing..." }
                 scope.launch {
                     if (peerPubKeys.size == 1) {
                         callManager.initiateCall(peerPubKeys.first(), callType, callId, sdp.description)
                     } else {
                         callManager.initiateGroupCall(peerPubKeys, callType, callId, sdp.description)
                     }
+                    Log.d(TAG) { "initiateCall: offer published, callId=$callId, state=${callManager.state.value::class.simpleName}" }
                 }
             }
         }
@@ -222,7 +227,12 @@ class CallController(
 
     fun acceptIncomingCall(sdpOffer: String) {
         val state = callManager.state.value
-        if (state !is CallState.IncomingCall) return
+        if (state !is CallState.IncomingCall) {
+            Log.d(TAG) { "acceptIncomingCall: state is ${state::class.simpleName}, not IncomingCall — ignoring" }
+            return
+        }
+
+        Log.d(TAG) { "acceptIncomingCall: callId=${state.callId}, callType=${state.callType}, sdpOfferLength=${sdpOffer.length}, pendingICE=${pendingIceCandidates.size}" }
 
         scope.launch {
             _errorMessage.value = null
@@ -231,6 +241,7 @@ class CallController(
 
             try {
                 withContext(Dispatchers.IO) { createWebRtcSession() }
+                Log.d(TAG) { "acceptIncomingCall: WebRTC session created" }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to create WebRTC session", e)
                 _errorMessage.value = "Failed to accept call: ${e.message}"
@@ -239,32 +250,48 @@ class CallController(
 
             val session =
                 webRtcSession ?: run {
+                    Log.e(TAG, "acceptIncomingCall: webRtcSession is null after creation")
                     _errorMessage.value = "Failed to create WebRTC session"
                     return@launch
                 }
 
             session.addAudioTrack()
+            Log.d(TAG) { "acceptIncomingCall: audio track added" }
             if (state.callType == CallType.VIDEO) {
                 session.addVideoTrack()
                 _localVideoTrack.value = session.getLocalVideoTrack()
                 _isVideoEnabled.value = true
+                Log.d(TAG) { "acceptIncomingCall: video track added" }
             }
 
+            Log.d(TAG) { "acceptIncomingCall: setting remote description (OFFER)..." }
             session.setRemoteDescription(SessionDescription(SessionDescription.Type.OFFER, sdpOffer))
+            Log.d(TAG) { "acceptIncomingCall: flushing ${pendingIceCandidates.size} pending ICE candidates..." }
             flushPendingIceCandidates()
 
+            Log.d(TAG) { "acceptIncomingCall: creating answer..." }
             session.createAnswer { sdp ->
+                Log.d(TAG) { "acceptIncomingCall: answer created, sdpLength=${sdp.description.length}, publishing..." }
                 scope.launch {
                     callManager.acceptCall(sdp.description)
+                    Log.d(TAG) { "acceptIncomingCall: answer published, state=${callManager.state.value::class.simpleName}" }
                 }
             }
         }
     }
 
     fun onCallAnswerReceived(sdpAnswer: String) {
-        val session = webRtcSession ?: return
+        val session = webRtcSession
+        if (session == null) {
+            Log.e(TAG, "Answer received but webRtcSession is NULL — cannot set remote description")
+            return
+        }
         val signalingState = session.getSignalingState()
-        Log.d(TAG) { "Answer received, SDP length=${sdpAnswer.length}, signalingState=$signalingState" }
+        Log.d(TAG) {
+            "Answer received, SDP length=${sdpAnswer.length}, signalingState=$signalingState, " +
+                "remoteDescriptionSet=${remoteDescriptionSet.get()}, pendingICE=${pendingIceCandidates.size}, " +
+                "callState=${callManager.state.value::class.simpleName}"
+        }
 
         // An answer is only valid when we have a pending local offer.
         // Ignore stale answers (e.g. our own renegotiation answer echoed back by the relay).
@@ -273,7 +300,9 @@ class CallController(
             return
         }
 
+        Log.d(TAG) { "Setting remote description (ANSWER)..." }
         session.setRemoteDescription(SessionDescription(SessionDescription.Type.ANSWER, sdpAnswer))
+        Log.d(TAG) { "Flushing pending ICE candidates after answer..." }
         flushPendingIceCandidates()
     }
 

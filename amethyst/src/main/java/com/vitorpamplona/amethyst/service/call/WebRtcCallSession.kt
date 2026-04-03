@@ -97,16 +97,32 @@ class WebRtcCallSession(
 
                     override fun onIceCandidatesRemoved(candidates: Array<out IceCandidate>?) {}
 
-                    override fun onSignalingChange(state: PeerConnection.SignalingState?) {}
+                    override fun onSignalingChange(state: PeerConnection.SignalingState?) {
+                        Log.d(TAG) { "Signaling state changed: $state" }
+                    }
 
                     override fun onIceConnectionChange(state: PeerConnection.IceConnectionState?) {
                         Log.d(TAG) { "ICE connection state: $state" }
                         when (state) {
+                            PeerConnection.IceConnectionState.NEW -> {
+                                Log.d(TAG) { "ICE: NEW - waiting for candidates" }
+                            }
+
+                            PeerConnection.IceConnectionState.CHECKING -> {
+                                Log.d(TAG) { "ICE: CHECKING - testing candidate pairs" }
+                            }
+
                             PeerConnection.IceConnectionState.CONNECTED -> {
+                                Log.d(TAG) { "ICE: CONNECTED - peer connection established!" }
                                 onPeerConnected()
                             }
 
+                            PeerConnection.IceConnectionState.COMPLETED -> {
+                                Log.d(TAG) { "ICE: COMPLETED - all candidate pairs tested, connection stable" }
+                            }
+
                             PeerConnection.IceConnectionState.FAILED -> {
+                                Log.e(TAG, "ICE: FAILED - could not establish connection")
                                 onError("Connection failed - check network")
                                 onDisconnected()
                             }
@@ -115,16 +131,24 @@ class WebRtcCallSession(
                                 // DISCONNECTED is often transient (network switch, brief
                                 // packet loss). WebRTC will transition to FAILED if
                                 // recovery is impossible, so we only act on FAILED above.
-                                Log.d(TAG) { "ICE disconnected (transient, waiting for recovery or FAILED)" }
+                                Log.d(TAG) { "ICE: DISCONNECTED (transient, waiting for recovery or FAILED)" }
+                            }
+
+                            PeerConnection.IceConnectionState.CLOSED -> {
+                                Log.d(TAG) { "ICE: CLOSED" }
                             }
 
                             else -> {}
                         }
                     }
 
-                    override fun onIceConnectionReceivingChange(receiving: Boolean) {}
+                    override fun onIceConnectionReceivingChange(receiving: Boolean) {
+                        Log.d(TAG) { "ICE receiving change: $receiving" }
+                    }
 
-                    override fun onIceGatheringChange(state: PeerConnection.IceGatheringState?) {}
+                    override fun onIceGatheringChange(state: PeerConnection.IceGatheringState?) {
+                        Log.d(TAG) { "ICE gathering state: $state" }
+                    }
 
                     override fun onAddStream(stream: MediaStream?) {
                         // Fallback for Plan B SDP — Unified Plan uses onAddTrack
@@ -219,7 +243,8 @@ class WebRtcCallSession(
             object : SdpObserver {
                 override fun onCreateSuccess(sdp: SessionDescription?) {
                     sdp?.let {
-                        peerConnection?.setLocalDescription(noOpSdpObserver(), it)
+                        Log.d(TAG) { "Offer created, sdpLength=${it.description.length}, setting local description" }
+                        peerConnection?.setLocalDescription(loggingSdpObserver("setLocalDescription(OFFER)"), it)
                         onSdpCreated(it)
                     }
                 }
@@ -248,7 +273,8 @@ class WebRtcCallSession(
             object : SdpObserver {
                 override fun onCreateSuccess(sdp: SessionDescription?) {
                     sdp?.let {
-                        peerConnection?.setLocalDescription(noOpSdpObserver(), it)
+                        Log.d(TAG) { "Answer created, sdpLength=${it.description.length}, setting local description" }
+                        peerConnection?.setLocalDescription(loggingSdpObserver("setLocalDescription(ANSWER)"), it)
                         onSdpCreated(it)
                     }
                 }
@@ -267,11 +293,29 @@ class WebRtcCallSession(
     }
 
     fun setRemoteDescription(sdp: SessionDescription) {
-        peerConnection?.setRemoteDescription(noOpSdpObserver(), sdp)
+        Log.d(TAG) { "setRemoteDescription type=${sdp.type} sdpLength=${sdp.description.length}" }
+        peerConnection?.setRemoteDescription(
+            object : SdpObserver {
+                override fun onCreateSuccess(sdp: SessionDescription?) {}
+
+                override fun onCreateFailure(error: String?) {}
+
+                override fun onSetSuccess() {
+                    Log.d(TAG) { "setRemoteDescription SUCCESS (type=${sdp.type})" }
+                }
+
+                override fun onSetFailure(error: String?) {
+                    Log.e(TAG, "setRemoteDescription FAILED: $error (type=${sdp.type})")
+                    error?.let { onError("SDP error: $it") }
+                }
+            },
+            sdp,
+        )
     }
 
     fun addIceCandidate(candidate: IceCandidate) {
-        peerConnection?.addIceCandidate(candidate)
+        val added = peerConnection?.addIceCandidate(candidate)
+        Log.d(TAG) { "addIceCandidate result=$added sdpMid=${candidate.sdpMid} sdp=${candidate.sdp.take(60)}" }
     }
 
     fun getSignalingState(): PeerConnection.SignalingState? = peerConnection?.signalingState()
@@ -303,19 +347,23 @@ class WebRtcCallSession(
         peerConnectionFactory = null
     }
 
-    private fun noOpSdpObserver() =
+    private fun loggingSdpObserver(label: String) =
         object : SdpObserver {
-            override fun onCreateSuccess(sdp: SessionDescription?) {}
+            override fun onCreateSuccess(sdp: SessionDescription?) {
+                Log.d(TAG) { "$label onCreateSuccess" }
+            }
 
             override fun onCreateFailure(error: String?) {
-                Log.e(TAG, "SDP operation failed: $error")
+                Log.e(TAG, "$label onCreateFailure: $error")
                 error?.let { onError("SDP error: $it") }
             }
 
-            override fun onSetSuccess() {}
+            override fun onSetSuccess() {
+                Log.d(TAG) { "$label onSetSuccess" }
+            }
 
             override fun onSetFailure(error: String?) {
-                Log.e(TAG, "SDP set failed: $error")
+                Log.e(TAG, "$label onSetFailure: $error")
                 error?.let { onError("SDP error: $it") }
             }
         }
