@@ -141,6 +141,11 @@ class CallController(
     // Per-peer video activity monitoring for group calls
     private val perPeerFrameSinks = ConcurrentHashMap<HexKey, VideoSink>()
     private val perPeerLastFrameTimeMs = ConcurrentHashMap<HexKey, AtomicLong>()
+    private var groupVideoMonitorJob: kotlinx.coroutines.Job? = null
+
+    // Set of peer pubkeys that are actively sending video frames
+    private val _activePeerVideos = MutableStateFlow<Set<HexKey>>(emptySet())
+    val activePeerVideos: StateFlow<Set<HexKey>> = _activePeerVideos.asStateFlow()
 
     private val _isAudioMuted = MutableStateFlow(false)
     val isAudioMuted: StateFlow<Boolean> = _isAudioMuted.asStateFlow()
@@ -762,13 +767,20 @@ class CallController(
     }
 
     private fun ensureGroupVideoMonitorRunning() {
-        if (remoteVideoMonitorJob != null) return
-        remoteVideoMonitorJob =
+        if (groupVideoMonitorJob != null) return
+        groupVideoMonitorJob =
             scope.launch {
                 while (true) {
                     delay(1500)
                     val now = System.currentTimeMillis()
-                    val anyActive = perPeerLastFrameTimeMs.values.any { now - it.get() < 2000 }
+                    val activePeers = mutableSetOf<HexKey>()
+                    for ((peerKey, lastFrame) in perPeerLastFrameTimeMs) {
+                        if (now - lastFrame.get() < 2000) {
+                            activePeers.add(peerKey)
+                        }
+                    }
+                    _activePeerVideos.value = activePeers
+                    val anyActive = activePeers.isNotEmpty()
                     _isRemoteVideoActive.value = anyActive || (now - lastRemoteFrameTimeMs.get() < 2000)
                 }
             }
@@ -925,6 +937,7 @@ class CallController(
         _isVideoEnabled.value = false
         _isRemoteVideoActive.value = false
         _remoteVideoAspectRatio.value = null
+        _activePeerVideos.value = emptySet()
         videoPausedByProximity = false
     }
 
@@ -947,6 +960,8 @@ class CallController(
     private fun stopRemoteVideoMonitor() {
         remoteVideoMonitorJob?.cancel()
         remoteVideoMonitorJob = null
+        groupVideoMonitorJob?.cancel()
+        groupVideoMonitorJob = null
         try {
             _remoteVideoTrack.value?.removeSink(remoteFrameSink)
         } catch (_: Exception) {
