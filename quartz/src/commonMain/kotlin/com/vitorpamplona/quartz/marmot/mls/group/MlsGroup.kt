@@ -200,7 +200,38 @@ class MlsGroup private constructor(
         // Check if we need an UpdatePath (required unless only SelfRemove)
         val needsPath = proposals.any { it.proposal !is Proposal.SelfRemove }
 
-        // Generate new path secrets
+        // Apply proposals to tree FIRST (RFC 9420 Section 12.4.1)
+        // The UpdatePath is computed after proposals are applied.
+        val addedMembers = mutableListOf<Pair<Int, MlsKeyPackage>>()
+        for (pending in proposals) {
+            when (val p = pending.proposal) {
+                is Proposal.Add -> {
+                    val leafIdx = tree.addLeaf(p.keyPackage.leafNode)
+                    addedMembers.add(leafIdx to p.keyPackage)
+                }
+
+                is Proposal.Remove -> {
+                    tree.removeLeaf(p.removedLeafIndex)
+                }
+
+                is Proposal.SelfRemove -> {
+                    tree.removeLeaf(pending.senderLeafIndex)
+                }
+
+                is Proposal.Update -> {
+                    tree.setLeaf(pending.senderLeafIndex, p.leafNode)
+                }
+
+                is Proposal.GroupContextExtensions -> {
+                    groupContext =
+                        groupContext.copy(extensions = p.extensions)
+                }
+
+                is Proposal.Psk -> {} // PSK handling
+            }
+        }
+
+        // Generate new path secrets on the updated tree
         val leafSecret = MlsCryptoProvider.randomBytes(MlsCryptoProvider.HASH_OUTPUT_LENGTH)
         val pathSecrets = tree.derivePathSecrets(myLeafIndex, leafSecret)
 
@@ -257,36 +288,6 @@ class MlsGroup private constructor(
             }
 
         val commit = Commit(proposalOrRefs, updatePath)
-
-        // Apply proposals to tree
-        val addedMembers = mutableListOf<Pair<Int, MlsKeyPackage>>()
-        for (pending in proposals) {
-            when (val p = pending.proposal) {
-                is Proposal.Add -> {
-                    val leafIdx = tree.addLeaf(p.keyPackage.leafNode)
-                    addedMembers.add(leafIdx to p.keyPackage)
-                }
-
-                is Proposal.Remove -> {
-                    tree.removeLeaf(p.removedLeafIndex)
-                }
-
-                is Proposal.SelfRemove -> {
-                    tree.removeLeaf(pending.senderLeafIndex)
-                }
-
-                is Proposal.Update -> {
-                    tree.setLeaf(pending.senderLeafIndex, p.leafNode)
-                }
-
-                is Proposal.GroupContextExtensions -> {
-                    groupContext =
-                        groupContext.copy(extensions = p.extensions)
-                }
-
-                is Proposal.Psk -> {} // PSK handling
-            }
-        }
 
         // Apply UpdatePath to tree
         if (updatePath != null) {
