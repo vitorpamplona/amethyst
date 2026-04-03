@@ -55,14 +55,16 @@ class TranscriptHashInteropTest {
             val interimBefore = v.interimTranscriptHashBefore.hexToByteArray()
             val authenticatedContent = v.authenticatedContent.hexToByteArray()
 
-            // confirmed_transcript_hash =
-            //   Hash(interim_transcript_hash_before || AuthenticatedContent_tbm)
-            // AuthenticatedContent_tbm is the wire_format || content || auth fields
-            // In the test vectors, authenticated_content is already TLS-encoded
+            // ConfirmedTranscriptHashInput = wire_format || FramedContent || signature
+            // (everything in AuthenticatedContent EXCEPT the confirmation_tag at the end)
+            // For SHA-256, confirmation_tag = VarInt(32) + 32 bytes = 33 bytes
+            val confirmationTagSize = 1 + MlsCryptoProvider.HASH_OUTPUT_LENGTH
+            val confirmedInput = authenticatedContent.copyOfRange(0, authenticatedContent.size - confirmationTagSize)
+
+            // confirmed_transcript_hash = Hash(interim_before || ConfirmedTranscriptHashInput)
             val writer = TlsWriter()
             writer.putBytes(interimBefore)
-            writer.putBytes(authenticatedContent)
-
+            writer.putBytes(confirmedInput)
             val confirmedHash = MlsCryptoProvider.hash(writer.toByteArray())
 
             assertEquals(
@@ -79,21 +81,16 @@ class TranscriptHashInteropTest {
 
         for ((idx, v) in vectors.withIndex()) {
             val confirmedAfter = v.confirmedTranscriptHashAfter.hexToByteArray()
-            val confirmationKey = v.confirmationKey.hexToByteArray()
+            val authenticatedContent = v.authenticatedContent.hexToByteArray()
 
-            // confirmation_tag = HMAC(confirmation_key, confirmed_transcript_hash)
-            val mac =
-                com.vitorpamplona.quartz.utils.mac
-                    .MacInstance("HmacSHA256", confirmationKey)
-            mac.update(confirmedAfter)
-            val confirmationTag = mac.doFinal()
+            // InterimTranscriptHashInput = confirmation_tag (last 33 bytes of AuthenticatedContent)
+            val confirmationTagSize = 1 + MlsCryptoProvider.HASH_OUTPUT_LENGTH
+            val confirmationTag = authenticatedContent.copyOfRange(authenticatedContent.size - confirmationTagSize, authenticatedContent.size)
 
-            // interim_transcript_hash =
-            //   Hash(confirmed_transcript_hash || confirmation_tag)
+            // interim_transcript_hash = Hash(confirmed_hash || InterimTranscriptHashInput)
             val writer = TlsWriter()
             writer.putBytes(confirmedAfter)
             writer.putBytes(confirmationTag)
-
             val interimHash = MlsCryptoProvider.hash(writer.toByteArray())
 
             assertEquals(
