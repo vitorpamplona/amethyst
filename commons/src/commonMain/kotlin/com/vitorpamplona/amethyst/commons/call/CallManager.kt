@@ -77,10 +77,12 @@ class CallManager(
         callId: String,
         sdpOffer: String,
     ) {
+        Log.d("CallManager") { "initiateCall: callId=$callId, callee=${calleePubKey.take(8)}, type=$callType, sdpLength=${sdpOffer.length}" }
         val result = factory.createCallOffer(sdpOffer, calleePubKey, callId, callType, signer)
         _state.value = CallState.Offering(callId, setOf(calleePubKey), callType)
         publishEvent(result.wrap)
         startTimeout(callId)
+        Log.d("CallManager") { "initiateCall: offer published, timeout started" }
     }
 
     // ---- Group call initiation ----
@@ -108,7 +110,12 @@ class CallManager(
         val callId = event.callId() ?: return
         val callType = event.callType() ?: CallType.VOICE
 
-        if (!isFollowing(callerPubKey)) return
+        Log.d("CallManager") { "onIncomingCallEvent: from=${callerPubKey.take(8)}, callId=$callId, type=$callType, sdpOfferLength=${event.sdpOffer().length}" }
+
+        if (!isFollowing(callerPubKey)) {
+            Log.d("CallManager") { "onIncomingCallEvent: caller not followed — ignoring" }
+            return
+        }
 
         if (_state.value !is CallState.Idle) {
             // Already in a call — send a "busy" reject so the caller gets
@@ -135,15 +142,21 @@ class CallManager(
 
     suspend fun acceptCall(sdpAnswer: String) {
         val current = _state.value
-        if (current !is CallState.IncomingCall) return
+        if (current !is CallState.IncomingCall) {
+            Log.d("CallManager") { "acceptCall: state is ${current::class.simpleName}, not IncomingCall — ignoring" }
+            return
+        }
 
+        Log.d("CallManager") { "acceptCall: callId=${current.callId}, transitioning to Connecting, sdpAnswerLength=${sdpAnswer.length}" }
         _state.value = CallState.Connecting(current.callId, current.peerPubKeys(), current.callType)
         cancelTimeout()
 
         // Include all group members + self so other devices get notified too.
         val allRecipients = current.groupMembers + signer.pubKey
+        Log.d("CallManager") { "acceptCall: publishing answer to ${allRecipients.size} recipients" }
         val result = factory.createGroupCallAnswer(sdpAnswer, allRecipients, current.callId, signer)
         result.wraps.forEach { publishEvent(it) }
+        Log.d("CallManager") { "acceptCall: answer published, now in Connecting state" }
     }
 
     suspend fun rejectCall() {
@@ -163,9 +176,17 @@ class CallManager(
         val callId = event.callId()
         val answeringPeer = event.pubKey
 
+        Log.d("CallManager") {
+            "onCallAnswered: from=${answeringPeer.take(8)}, callId=$callId, " +
+                "currentState=${current::class.simpleName}, sdpAnswerLength=${event.sdpAnswer().length}"
+        }
+
         when (current) {
             is CallState.Offering -> {
-                if (callId != current.callId) return
+                if (callId != current.callId) {
+                    Log.d("CallManager") { "onCallAnswered: callId mismatch (got=$callId, expected=${current.callId})" }
+                    return
+                }
                 // First answer: start the call immediately. Remaining peers stay pending.
                 val pending = current.peerPubKeys - answeringPeer
                 _state.value =
@@ -176,6 +197,7 @@ class CallManager(
                         pendingPeerPubKeys = pending,
                     )
                 cancelTimeout()
+                Log.d("CallManager") { "onCallAnswered: Offering -> Connecting, invoking onAnswerReceived callback (isNull=${onAnswerReceived == null})" }
                 onAnswerReceived?.invoke(event)
             }
 
@@ -311,8 +333,12 @@ class CallManager(
 
     fun onPeerConnected() {
         val current = _state.value
-        if (current !is CallState.Connecting) return
+        if (current !is CallState.Connecting) {
+            Log.d("CallManager") { "onPeerConnected: state is ${current::class.simpleName}, not Connecting — ignoring" }
+            return
+        }
 
+        Log.d("CallManager") { "onPeerConnected: Connecting -> Connected! callId=${current.callId}" }
         _state.value =
             CallState.Connected(
                 callId = current.callId,
