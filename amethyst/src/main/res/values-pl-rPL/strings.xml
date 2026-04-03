@@ -694,6 +694,9 @@
     <string name="call_bluetooth">Bluetooth</string>
     <string name="call_voice">Połączenie głosowe</string>
     <string name="call_video">Połączenie wideo</string>
+    <string name="call_waiting_for_others">Czekam, aż dołączą inni</string>
+    <string name="call_add_participant">Dodaj uczestnika</string>
+    <string name="call_search_users">Szukaj użytkowników\u2026</string>
     <string name="call_failed_start">Nie udało się nawiązać połączenia</string>
     <string name="call_failed_accept">Nie udało się przyjąć połączenia</string>
     <string name="call_failed_session">Nie udało się utworzyć sesji połączenia</string>
