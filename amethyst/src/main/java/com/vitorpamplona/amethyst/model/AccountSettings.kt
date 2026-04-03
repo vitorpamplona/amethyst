@@ -424,6 +424,14 @@ class AccountSettings(
         }
     }
 
+    fun changeSendKind0EventsToLocalRelay(send: Boolean): Boolean {
+        if (syncedSettings.security.updateSendKind0EventsToLocalRelay(send)) {
+            saveAccountSettings()
+            return true
+        }
+        return false
+    }
+
     fun updateUserMetadata(newMetadata: MetadataEvent?) {
         if (newMetadata == null) return
 

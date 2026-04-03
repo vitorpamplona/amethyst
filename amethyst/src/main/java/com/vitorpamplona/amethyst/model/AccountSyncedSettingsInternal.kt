@@ -106,4 +106,5 @@ class AccountSecurityPreferencesInternal(
     var warnAboutPostsWithReports: Boolean = true,
     var filterSpamFromStrangers: Boolean = true,
     val maxHashtagLimit: Int = 5,
+    var sendKind0EventsToLocalRelay: Boolean = false,
 )

@@ -37,6 +37,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -88,6 +89,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.search.SearchRelayLi
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.search.renderSearchItems
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.trusted.TrustedRelayListViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.trusted.renderTrustedItems
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
@@ -350,6 +352,24 @@ fun MappedAllRelayListView(
                     R.string.local_section_explainer,
                     SettingsCategorySpacingModifier,
                 )
+            }
+            item {
+                val sendKind0 by accountViewModel.account.settings.syncedSettings.security.sendKind0EventsToLocalRelay
+                    .collectAsStateWithLifecycle()
+                var checked by remember(sendKind0) { mutableStateOf(sendKind0) }
+
+                SettingsRow(
+                    R.string.send_kind0_to_local_relay_title,
+                    R.string.send_kind0_to_local_relay_description,
+                ) {
+                    Switch(
+                        checked = checked,
+                        onCheckedChange = {
+                            checked = it
+                            accountViewModel.toggleSendKind0ToLocalRelay(it)
+                        },
+                    )
+                }
             }
             renderLocalItems(localFeedState, localViewModel, accountViewModel, nav)
 

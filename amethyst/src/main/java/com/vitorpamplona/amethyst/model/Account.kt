@@ -39,6 +39,7 @@ import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListDecryptionCache
 import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListState
+import com.vitorpamplona.amethyst.model.localRelays.ForwardKind0ToLocalRelayState
 import com.vitorpamplona.amethyst.model.localRelays.LocalRelayListState
 import com.vitorpamplona.amethyst.model.nip01UserMetadata.AccountHomeRelayState
 import com.vitorpamplona.amethyst.model.nip01UserMetadata.AccountOutboxRelayState
@@ -267,6 +268,8 @@ class Account(
     val nip65RelayList = Nip65RelayListState(signer, cache, scope, settings)
     val localRelayList = LocalRelayListState(signer, cache, scope, settings)
 
+    val forwardKind0ToLocalRelay = ForwardKind0ToLocalRelayState(client, localRelayList, settings)
+
     val dmRelayList = DmRelayListState(signer, cache, scope, settings)
 
     val privateStorageDecryptionCache = PrivateStorageRelayListDecryptionCache(signer)
@@ -427,6 +430,14 @@ class Account(
 
     suspend fun updateWarnReports(warnReports: Boolean): Boolean {
         if (settings.updateWarnReports(warnReports)) {
+            sendNewAppSpecificData()
+            return true
+        }
+        return false
+    }
+
+    suspend fun updateSendKind0EventsToLocalRelay(send: Boolean): Boolean {
+        if (settings.changeSendKind0EventsToLocalRelay(send)) {
             sendNewAppSpecificData()
             return true
         }
