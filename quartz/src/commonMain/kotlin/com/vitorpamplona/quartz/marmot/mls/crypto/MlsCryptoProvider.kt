@@ -139,22 +139,14 @@ object MlsCryptoProvider {
         nonce: ByteArray,
         aad: ByteArray,
         plaintext: ByteArray,
-    ): ByteArray {
-        val cipher = AESGCM(key, nonce)
-        // AESGCM doesn't support AAD directly; for MLS we need raw AES-GCM with AAD
-        // TODO: extend AESGCM to support AAD or use platform-specific AES-GCM with AAD
-        return cipher.encrypt(plaintext)
-    }
+    ): ByteArray = AESGCM(key, nonce).encrypt(plaintext, aad)
 
     fun aeadDecrypt(
         key: ByteArray,
         nonce: ByteArray,
         aad: ByteArray,
         ciphertext: ByteArray,
-    ): ByteArray {
-        val cipher = AESGCM(key, nonce)
-        return cipher.decrypt(ciphertext)
-    }
+    ): ByteArray = AESGCM(key, nonce).decrypt(ciphertext, aad)
 
     // --- Random ---
 

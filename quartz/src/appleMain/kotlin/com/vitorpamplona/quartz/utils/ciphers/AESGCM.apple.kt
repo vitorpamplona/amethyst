@@ -63,4 +63,22 @@ actual class AESGCM actual constructor(
             Log.w("AESGCM", "Failed to decrypt", e)
             null
         }
+
+    @OptIn(DelicateCryptographyApi::class)
+    actual fun encrypt(
+        bytesToEncrypt: ByteArray,
+        aad: ByteArray,
+    ): ByteArray =
+        with(cipher()) {
+            encryptWithIvBlocking(nonce, bytesToEncrypt, aad)
+        }
+
+    @OptIn(DelicateCryptographyApi::class)
+    actual fun decrypt(
+        bytesToDecrypt: ByteArray,
+        aad: ByteArray,
+    ): ByteArray =
+        with(cipher()) {
+            decryptWithIvBlocking(nonce, bytesToDecrypt, aad)
+        }
 }

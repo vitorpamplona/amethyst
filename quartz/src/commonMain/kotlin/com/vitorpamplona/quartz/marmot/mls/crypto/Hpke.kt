@@ -197,20 +197,12 @@ object Hpke {
         nonce: ByteArray,
         aad: ByteArray,
         plaintext: ByteArray,
-    ): ByteArray {
-        val cipher = AESGCM(key, nonce)
-        // Note: Current AESGCM doesn't support AAD. For HPKE base mode with empty AAD this works.
-        // TODO: Add AAD support to AESGCM for full compliance
-        return cipher.encrypt(plaintext)
-    }
+    ): ByteArray = AESGCM(key, nonce).encrypt(plaintext, aad)
 
     private fun aeadOpen(
         key: ByteArray,
         nonce: ByteArray,
         aad: ByteArray,
         ciphertext: ByteArray,
-    ): ByteArray {
-        val cipher = AESGCM(key, nonce)
-        return cipher.decrypt(ciphertext)
-    }
+    ): ByteArray = AESGCM(key, nonce).decrypt(ciphertext, aad)
 }
