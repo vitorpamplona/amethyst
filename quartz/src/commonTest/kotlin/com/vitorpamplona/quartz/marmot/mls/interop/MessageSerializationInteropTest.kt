@@ -176,15 +176,15 @@ class MessageSerializationInteropTest {
     @Test
     fun testAddProposalDeserialization() {
         for ((idx, v) in vectors.withIndex()) {
-            // add_proposal in messages.json is a full Proposal with type prefix
+            // add_proposal in messages.json is a raw KeyPackage (the body of an Add proposal)
             val bytes = v.addProposal.hexToByteArray()
-            val reader = TlsReader(bytes)
-            // Read proposal type
-            val type = reader.readUint16()
-            assertEquals(1, type, "Add proposal type should be 1 at vector $idx")
-            // Read the KeyPackage from the remaining bytes
-            val kp = MlsKeyPackage.decodeTls(reader)
+            val kp = MlsKeyPackage.decodeTls(TlsReader(bytes))
             assertNotNull(kp, "Add proposal KeyPackage decode failed at vector $idx")
+            assertContentEquals(
+                bytes,
+                kp.toTlsBytes(),
+                "Add proposal KeyPackage round-trip mismatch at vector $idx",
+            )
         }
     }
 
