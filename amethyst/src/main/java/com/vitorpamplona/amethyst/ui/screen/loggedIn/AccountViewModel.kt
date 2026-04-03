@@ -221,8 +221,10 @@ class AccountViewModel(
             )
 
         // Set callbacks before exposing controller to avoid timing races
-        callManager.onAnswerReceived = { event -> controller.onCallAnswerReceived(event.sdpAnswer()) }
+        callManager.onAnswerReceived = { event -> controller.onCallAnswerReceived(event.pubKey, event.sdpAnswer()) }
         callManager.onIceCandidateReceived = { event -> controller.onIceCandidateReceived(event) }
+        callManager.onNewPeerInGroupCall = { peerPubKey -> controller.onNewPeerInGroupCall(peerPubKey) }
+        callManager.onMidCallOfferReceived = { peerPubKey, sdpOffer -> controller.onMidCallOfferReceived(peerPubKey, sdpOffer) }
         callController = controller
 
         // Populate ActiveCallHolder so CallActivity can launch even when the app
