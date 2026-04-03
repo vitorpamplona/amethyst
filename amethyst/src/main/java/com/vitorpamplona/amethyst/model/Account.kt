@@ -39,6 +39,7 @@ import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListDecryptionCache
 import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListState
+import com.vitorpamplona.amethyst.model.localRelays.ForwardKind0ToLocalRelayState
 import com.vitorpamplona.amethyst.model.localRelays.LocalRelayListState
 import com.vitorpamplona.amethyst.model.nip01UserMetadata.AccountHomeRelayState
 import com.vitorpamplona.amethyst.model.nip01UserMetadata.AccountOutboxRelayState
@@ -261,6 +262,8 @@ class Account(
     override val spammersHashCodes: Set<Int> get() = hiddenUsers.flow.value.spammersHashCodes
 
     val userMetadata = UserMetadataState(signer, cache, scope, settings)
+
+    val forwardKind0ToLocalRelay = ForwardKind0ToLocalRelayState(client, localRelayList, settings)
 
     override val nip47SignerState = NwcSignerState(signer, nwcFilterAssembler, cache, scope, settings.zapPaymentRequest)
 

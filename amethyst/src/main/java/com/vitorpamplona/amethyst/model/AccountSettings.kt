@@ -159,6 +159,7 @@ class AccountSettings(
     val transientAccount: Boolean = false,
     var externalSignerPackageName: String? = null,
     var localRelayServers: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
+    val sendKind0EventsToLocalRelay: MutableStateFlow<Boolean> = MutableStateFlow(false),
     var defaultFileServer: ServerName = DEFAULT_MEDIA_SERVERS[0],
     var stripLocationOnUpload: Boolean = true,
     val defaultHomeFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.AllFollows),
@@ -420,6 +421,13 @@ class AccountSettings(
     fun updateLocalRelayServers(servers: Set<String>) {
         if (localRelayServers.value != servers) {
             localRelayServers.update { servers }
+            saveAccountSettings()
+        }
+    }
+
+    fun changeSendKind0EventsToLocalRelay(send: Boolean) {
+        if (sendKind0EventsToLocalRelay.value != send) {
+            sendKind0EventsToLocalRelay.tryEmit(send)
             saveAccountSettings()
         }
     }
