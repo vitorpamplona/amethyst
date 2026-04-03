@@ -20,17 +20,23 @@
  */
 package com.vitorpamplona.amethyst.service.call
 
+import android.Manifest
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
+import androidx.core.content.ContextCompat
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.quartz.utils.Log
+
+private const val TAG = "CallForegroundService"
 
 class CallForegroundService : Service() {
     companion object {
@@ -57,16 +63,26 @@ class CallForegroundService : Service() {
             ACTION_START -> {
                 val peerName = intent.getStringExtra(EXTRA_PEER_NAME) ?: "Unknown"
                 val notification = buildNotification(peerName)
-                ServiceCompat.startForeground(
-                    this,
-                    NOTIFICATION_ID,
-                    notification,
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                        ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
-                    } else {
-                        0
-                    },
-                )
+                val hasAudioPermission =
+                    ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) ==
+                        PackageManager.PERMISSION_GRANTED
+                try {
+                    val fgsType =
+                        if (hasAudioPermission && Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                            ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+                        } else {
+                            0
+                        }
+                    ServiceCompat.startForeground(this, NOTIFICATION_ID, notification, fgsType)
+                } catch (e: SecurityException) {
+                    Log.e(TAG, "Cannot start microphone foreground service, falling back", e)
+                    try {
+                        ServiceCompat.startForeground(this, NOTIFICATION_ID, notification, 0)
+                    } catch (e2: Exception) {
+                        Log.e(TAG, "Foreground service start failed entirely", e2)
+                        stopSelf()
+                    }
+                }
             }
 
             ACTION_STOP -> {

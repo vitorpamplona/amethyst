@@ -188,4 +188,77 @@ class CallEventsTest {
         assertEquals("new-sdp-offer", template.content)
         assertEquals(CallRenegotiateEvent.KIND, template.kind)
     }
+
+    // ---- Group call offer tests ----
+
+    @Test
+    fun groupCallOfferBuildIncludesAllPTags() {
+        val callees = setOf("alice", "bob", "carol")
+        val template =
+            CallOfferEvent.build(
+                sdpOffer = "group-sdp",
+                calleePubKeys = callees,
+                callId = "group-call-1",
+                type = CallType.VIDEO,
+            )
+        val pTagValues =
+            template.tags
+                .filter { it[0] == "p" }
+                .map { it[1] }
+                .toSet()
+        assertEquals(callees, pTagValues)
+    }
+
+    @Test
+    fun groupCallOfferBuildIncludesCallIdTag() {
+        val template =
+            CallOfferEvent.build(
+                sdpOffer = "sdp",
+                calleePubKeys = setOf("alice", "bob"),
+                callId = "group-call-id",
+                type = CallType.VOICE,
+            )
+        val callIdTag = template.tags.firstOrNull { it[0] == "call-id" }
+        assertEquals("group-call-id", callIdTag?.get(1))
+    }
+
+    @Test
+    fun groupCallOfferBuildIncludesCallTypeTag() {
+        val template =
+            CallOfferEvent.build(
+                sdpOffer = "sdp",
+                calleePubKeys = setOf("alice", "bob"),
+                callId = "id",
+                type = CallType.VIDEO,
+            )
+        val callTypeTag = template.tags.firstOrNull { it[0] == "call-type" }
+        assertEquals("video", callTypeTag?.get(1))
+    }
+
+    @Test
+    fun groupCallOfferBuildIncludesExpirationTag() {
+        val template =
+            CallOfferEvent.build(
+                sdpOffer = "sdp",
+                calleePubKeys = setOf("alice", "bob"),
+                callId = "id",
+                type = CallType.VOICE,
+                createdAt = 2000L,
+            )
+        val expirationTag = template.tags.firstOrNull { it[0] == "expiration" }
+        assertEquals((2000L + CallOfferEvent.EXPIRATION_SECONDS).toString(), expirationTag?.get(1))
+    }
+
+    @Test
+    fun singleCalleeOfferIsNotGroupCall() {
+        val template =
+            CallOfferEvent.build(
+                sdpOffer = "sdp",
+                calleePubKey = "alice",
+                callId = "id",
+                type = CallType.VOICE,
+            )
+        val pTags = template.tags.filter { it[0] == "p" }
+        assertEquals(1, pTags.size)
+    }
 }
