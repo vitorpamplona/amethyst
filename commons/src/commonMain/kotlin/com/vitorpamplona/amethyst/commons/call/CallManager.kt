@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.commons.call
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.WebRtcCallFactory
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallAnswerEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallHangupEvent
@@ -46,7 +46,7 @@ class CallManager(
     private val signer: NostrSigner,
     private val scope: CoroutineScope,
     private val isFollowing: (HexKey) -> Boolean,
-    private val publishEvent: (GiftWrapEvent) -> Unit,
+    private val publishEvent: (EphemeralGiftWrapEvent) -> Unit,
 ) {
     private val factory = WebRtcCallFactory()
 

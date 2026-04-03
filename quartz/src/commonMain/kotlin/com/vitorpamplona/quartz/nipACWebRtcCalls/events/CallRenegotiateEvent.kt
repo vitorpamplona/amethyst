@@ -29,10 +29,8 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTagIds
 import com.vitorpamplona.quartz.nip31Alts.alt
-import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallIdTag
 import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.callId
-import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
 class CallRenegotiateEvent(
@@ -56,19 +54,16 @@ class CallRenegotiateEvent(
     companion object {
         const val KIND = 25055
         const val ALT_DESCRIPTION = "WebRTC call renegotiation"
-        const val EXPIRATION_SECONDS = 20L
 
         fun build(
             sdpOffer: String,
             peerPubKey: HexKey,
             callId: String,
-            createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<CallRenegotiateEvent>.() -> Unit = {},
-        ) = eventTemplate(KIND, sdpOffer, createdAt) {
+        ) = eventTemplate(KIND, sdpOffer) {
             alt(ALT_DESCRIPTION)
             pTag(peerPubKey)
             callId(callId)
-            expiration(createdAt + EXPIRATION_SECONDS)
             initializer()
         }
 
@@ -76,13 +71,11 @@ class CallRenegotiateEvent(
             sdpOffer: String,
             memberPubKeys: Set<HexKey>,
             callId: String,
-            createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<CallRenegotiateEvent>.() -> Unit = {},
-        ) = eventTemplate(KIND, sdpOffer, createdAt) {
+        ) = eventTemplate(KIND, sdpOffer) {
             alt(ALT_DESCRIPTION)
             pTagIds(memberPubKeys)
             callId(callId)
-            expiration(createdAt + EXPIRATION_SECONDS)
             initializer()
         }
     }

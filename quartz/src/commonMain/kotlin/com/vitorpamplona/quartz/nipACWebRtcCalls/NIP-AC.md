@@ -15,15 +15,17 @@ NAT traversal — no custom server infrastructure is required.
 The protocol works as follows:
 
 1. **Caller** creates a signed call offer event containing an SDP offer
-2. The event is **gift-wrapped** ([NIP-59](https://github.com/nostr-protocol/nips/blob/master/59.md)) and published to relays
+2. The event is wrapped in an **Ephemeral Gift Wrap** (kind `21059`) and published to relays
 3. **Callee** unwraps the event, verifies the signature, and decides whether to accept
 4. If accepted, callee sends back a gift-wrapped call answer event containing an SDP answer
 5. Both parties exchange **ICE candidates** as gift-wrapped events for NAT traversal
 6. A **direct WebRTC peer connection** is established for audio/video
 
-All signaling events MUST be gift-wrapped using [NIP-59](https://github.com/nostr-protocol/nips/blob/master/59.md) for metadata privacy.
-Events are signed by the sender's key and wrapped directly (without the seal layer) — the gift wrap's
-random ephemeral key already hides the sender from relay operators.
+All signaling events MUST be delivered using **Ephemeral Gift Wraps** (kind `21059`), an ephemeral
+variant of [NIP-59](https://github.com/nostr-protocol/nips/blob/master/59.md) Gift Wraps. Events are
+signed by the sender's key and wrapped directly (without the seal layer) — the ephemeral gift wrap's
+random ephemeral key already hides the sender from relay operators. Relays SHOULD treat kind `21059`
+events as ephemeral and not persist them to long-term storage.
 
 ## Event Kinds
 
@@ -44,7 +46,6 @@ All signaling events MUST include:
 |---------------|-------------------------------------------------------|----------|
 | `p`           | Hex pubkey of the recipient (group calls: one per member) | YES  |
 | `call-id`     | UUID identifying the call session                     | YES      |
-| `expiration`  | Unix timestamp ([NIP-40](https://github.com/nostr-protocol/nips/blob/master/40.md)), SHOULD be `created_at + 20` seconds | YES |
 | `alt`         | Human-readable description ([NIP-31](https://github.com/nostr-protocol/nips/blob/master/31.md)) | YES |
 
 Additional tags for **Call Offer** (kind 25050):
@@ -69,7 +70,6 @@ The `content` field contains the SDP offer string.
     ["p", "<callee-hex-pubkey>"],
     ["call-id", "550e8400-e29b-41d4-a716-446655440000"],
     ["call-type", "video"],
-    ["expiration", "1234567910"],
     ["alt", "WebRTC call offer"]
   ],
   "id": "<event-id>",
@@ -90,7 +90,6 @@ The `content` field contains the SDP answer string.
   "tags": [
     ["p", "<caller-hex-pubkey>"],
     ["call-id", "550e8400-e29b-41d4-a716-446655440000"],
-    ["expiration", "1234567915"],
     ["alt", "WebRTC call answer"]
   ],
   "id": "<event-id>",
@@ -111,7 +110,6 @@ The `content` field contains the ICE candidate as a JSON string with the fields 
   "tags": [
     ["p", "<peer-hex-pubkey>"],
     ["call-id", "550e8400-e29b-41d4-a716-446655440000"],
-    ["expiration", "1234567916"],
     ["alt", "WebRTC ICE candidate"]
   ],
   "id": "<event-id>",
@@ -132,7 +130,6 @@ The `content` field MAY contain a human-readable reason or be empty.
   "tags": [
     ["p", "<peer-hex-pubkey>"],
     ["call-id", "550e8400-e29b-41d4-a716-446655440000"],
-    ["expiration", "1234568020"],
     ["alt", "WebRTC call hangup"]
   ],
   "id": "<event-id>",
@@ -153,7 +150,6 @@ The `content` field MAY contain a reason or be empty.
   "tags": [
     ["p", "<caller-hex-pubkey>"],
     ["call-id", "550e8400-e29b-41d4-a716-446655440000"],
-    ["expiration", "1234567913"],
     ["alt", "WebRTC call rejection"]
   ],
   "id": "<event-id>",
@@ -174,7 +170,6 @@ Used for mid-call changes such as toggling video on/off. The `content` field con
   "tags": [
     ["p", "<peer-hex-pubkey>"],
     ["call-id", "550e8400-e29b-41d4-a716-446655440000"],
-    ["expiration", "1234568120"],
     ["alt", "WebRTC call renegotiation"]
   ],
   "id": "<event-id>",
@@ -184,21 +179,22 @@ Used for mid-call changes such as toggling video on/off. The `content` field con
 
 ## Encryption and Delivery
 
-All signaling events MUST be delivered using [NIP-59](https://github.com/nostr-protocol/nips/blob/master/59.md) Gift Wraps:
+All signaling events MUST be delivered using **Ephemeral Gift Wraps** (kind `21059`):
 
 1. **Sign** the signaling event with the sender's key
-2. **Gift-wrap** the signed event directly using `GiftWrapEvent` (kind 1059) with NIP-44 encryption
-3. **Set expiration on the gift wrap** — the outer gift wrap MUST include an `expiration` tag matching the inner event's expiration (adjusted for the randomized `created_at`). This allows relays to garbage-collect ephemeral signaling data.
-4. **Publish** the gift wrap to the recipient's relay list
+2. **Wrap** the signed event directly using `EphemeralGiftWrapEvent` (kind `21059`) with NIP-44 encryption
+3. **Publish** the ephemeral gift wrap to the recipient's relay list
 
-The seal layer (`SealedRumorEvent`) is NOT used. The gift wrap already provides:
+The seal layer (`SealedRumorEvent`) is NOT used. The ephemeral gift wrap already provides:
 
 - **NIP-44 encryption** — content is unreadable to relay operators
 - **Random ephemeral pubkey** — the relay cannot identify the sender
 - **`p` tag** — reveals only the recipient (necessary for delivery)
-- **`expiration` tag** — allows relays to delete the wrap after the signaling window
+- **Ephemeral kind (`21059`)** — signals to relays that this event is transient and SHOULD NOT be persisted to long-term storage
 
-Recipients unwrap the gift, verify the inner event's signature against the sender's pubkey, and then process the signaling message.
+No `expiration` tag is needed on the inner signaling events or the outer wrap. The ephemeral kind itself communicates the transient nature of the data. Clients MUST still perform staleness checks (see Spam Prevention) to discard old events.
+
+Recipients unwrap the ephemeral gift, verify the inner event's signature against the sender's pubkey, and then process the signaling message.
 
 ## Protocol Flow
 
@@ -207,16 +203,16 @@ Recipients unwrap the gift, verify the inner event's signature against the sende
 ```
 Caller                          Relay                           Callee
   |                               |                               |
-  |-- GiftWrap(CallOffer) ------->|                               |
-  |                               |-- GiftWrap(CallOffer) ------->|
+  |-- EphemeralGiftWrap(CallOffer) ------->|                               |
+  |                               |-- EphemeralGiftWrap(CallOffer) ------->|
   |                               |                               |
   |                               |         [Callee unwraps, verifies signature]
   |                               |         [Checks: is caller followed?]
   |                               |         [YES → ring / NO → ignore]
   |                               |                               |
-  |<-- GiftWrap(CallAnswer) ------|<-- GiftWrap(CallAnswer) ------|
+  |<-- EphemeralGiftWrap(CallAnswer) ------|<-- EphemeralGiftWrap(CallAnswer) ------|
   |                               |                               |
-  |<-> GiftWrap(IceCandidate) <-->|<-> GiftWrap(IceCandidate) <-->|
+  |<-> EphemeralGiftWrap(IceCandidate) <-->|<-> EphemeralGiftWrap(IceCandidate) <-->|
   |                               |                               |
   |============= WebRTC P2P Connection Established ===============|
   |                 (relay no longer involved)                     |
@@ -233,12 +229,12 @@ Either party may send a `CallRenegotiate` (kind 25055) during an active call to 
 ```
 Party A                         Relay                           Party B
   |                               |                               |
-  |-- GiftWrap(Renegotiate) ----->|                               |
-  |                               |-- GiftWrap(Renegotiate) ----->|
+  |-- EphemeralGiftWrap(Renegotiate) ----->|                               |
+  |                               |-- EphemeralGiftWrap(Renegotiate) ----->|
   |                               |                               |
   |                               |  [Party B creates SDP answer] |
   |                               |                               |
-  |<-- GiftWrap(CallAnswer) ------|<-- GiftWrap(CallAnswer) ------|
+  |<-- EphemeralGiftWrap(CallAnswer) ------|<-- EphemeralGiftWrap(CallAnswer) ------|
   |                               |                               |
   |========= Updated WebRTC P2P Connection ========================|
 ```
@@ -298,7 +294,6 @@ The Call Offer (kind 25050) initiating a group call contains multiple `p` tags:
     ["p", "<callee-3-hex-pubkey>"],
     ["call-id", "550e8400-e29b-41d4-a716-446655440000"],
     ["call-type", "video"],
-    ["expiration", "1234567910"],
     ["alt", "WebRTC call offer"]
   ]
 }
@@ -315,7 +310,7 @@ To invite a new peer into an active group call, send a Call Offer (kind 25050) w
 Clients SHOULD implement call filtering:
 
 - **Follow-gated ringing**: Only display incoming call notifications for users in the recipient's follow list. Calls from non-followed users SHOULD be silently ignored.
-- **Staleness check**: Clients MUST discard signaling events older than the expiration window (20 seconds). This prevents old cached events from triggering phantom calls on app restart or relay reconnect.
+- **Staleness check**: Clients MUST discard signaling events older than 20 seconds (based on `created_at`). This prevents old cached events from triggering phantom calls on app restart or relay reconnect.
 - **Deduplication**: Clients MUST track processed event IDs to prevent the same signaling event (delivered by multiple relays) from being processed twice.
 - **Rate limiting**: Clients SHOULD ignore duplicate call offers from the same pubkey within a short window.
 
@@ -334,7 +329,7 @@ This NIP does not mandate specific STUN or TURN servers. Clients SHOULD:
 ### Event Lifecycle
 
 - The `call-id` tag MUST be a UUID that is unique per call session. All signaling events for the same call share the same `call-id`.
-- Both inner events and outer gift wraps SHOULD have short expiration times (~20 seconds) since signaling data is ephemeral and has no long-term value. This allows relays to garbage-collect call signaling events.
+- Signaling data is ephemeral and has no long-term value. Using kind `21059` (Ephemeral Gift Wrap) signals to relays that these events are transient and SHOULD NOT be persisted.
 - Clients SHOULD implement a ringing timeout (e.g., 60 seconds). If no answer is received, the call transitions to a "timed out" state.
 - After a call ends, the call state SHOULD auto-reset to idle after a brief display period (e.g., 2 seconds) to ensure the client is ready for subsequent calls.
 
@@ -380,7 +375,6 @@ These self-notification events use the same `call-id` as the original call and f
 
 - [NIP-01: Basic Protocol](https://github.com/nostr-protocol/nips/blob/master/01.md) — Event structure
 - [NIP-31: Alt Tag](https://github.com/nostr-protocol/nips/blob/master/31.md) — Human-readable event descriptions
-- [NIP-40: Expiration](https://github.com/nostr-protocol/nips/blob/master/40.md) — Event expiration timestamps
 - [NIP-44: Encryption](https://github.com/nostr-protocol/nips/blob/master/44.md) — XChaCha20-Poly1305 encryption
 - [NIP-59: Gift Wraps](https://github.com/nostr-protocol/nips/blob/master/59.md) — Encrypted event delivery
 - [WebRTC Specification](https://www.w3.org/TR/webrtc/) — Peer-to-peer real-time communication

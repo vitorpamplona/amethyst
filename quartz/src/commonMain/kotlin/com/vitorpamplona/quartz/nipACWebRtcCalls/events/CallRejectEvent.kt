@@ -29,10 +29,8 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTagIds
 import com.vitorpamplona.quartz.nip31Alts.alt
-import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallIdTag
 import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.callId
-import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
 class CallRejectEvent(
@@ -56,19 +54,16 @@ class CallRejectEvent(
     companion object {
         const val KIND = 25054
         const val ALT_DESCRIPTION = "WebRTC call rejection"
-        const val EXPIRATION_SECONDS = 20L
 
         fun build(
             callerPubKey: HexKey,
             callId: String,
             reason: String = "",
-            createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<CallRejectEvent>.() -> Unit = {},
-        ) = eventTemplate(KIND, reason, createdAt) {
+        ) = eventTemplate(KIND, reason) {
             alt(ALT_DESCRIPTION)
             pTag(callerPubKey)
             callId(callId)
-            expiration(createdAt + EXPIRATION_SECONDS)
             initializer()
         }
 
@@ -76,13 +71,11 @@ class CallRejectEvent(
             memberPubKeys: Set<HexKey>,
             callId: String,
             reason: String = "",
-            createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<CallRejectEvent>.() -> Unit = {},
-        ) = eventTemplate(KIND, reason, createdAt) {
+        ) = eventTemplate(KIND, reason) {
             alt(ALT_DESCRIPTION)
             pTagIds(memberPubKeys)
             callId(callId)
-            expiration(createdAt + EXPIRATION_SECONDS)
             initializer()
         }
     }

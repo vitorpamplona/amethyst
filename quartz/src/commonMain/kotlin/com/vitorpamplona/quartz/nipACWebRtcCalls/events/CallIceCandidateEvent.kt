@@ -27,10 +27,8 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
 import com.vitorpamplona.quartz.nip31Alts.alt
-import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallIdTag
 import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.callId
-import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
 class CallIceCandidateEvent(
@@ -59,7 +57,6 @@ class CallIceCandidateEvent(
     companion object {
         const val KIND = 25052
         const val ALT_DESCRIPTION = "WebRTC ICE candidate"
-        const val EXPIRATION_SECONDS = 20L
 
         private val CANDIDATE_REGEX = """"candidate"\s*:\s*"([^"]*)"""".toRegex()
         private val SDP_MID_REGEX = """"sdpMid"\s*:\s*"([^"]*)"""".toRegex()
@@ -79,13 +76,11 @@ class CallIceCandidateEvent(
             candidateJson: String,
             peerPubKey: HexKey,
             callId: String,
-            createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<CallIceCandidateEvent>.() -> Unit = {},
-        ) = eventTemplate(KIND, candidateJson, createdAt) {
+        ) = eventTemplate(KIND, candidateJson) {
             alt(ALT_DESCRIPTION)
             pTag(peerPubKey)
             callId(callId)
-            expiration(createdAt + EXPIRATION_SECONDS)
             initializer()
         }
     }

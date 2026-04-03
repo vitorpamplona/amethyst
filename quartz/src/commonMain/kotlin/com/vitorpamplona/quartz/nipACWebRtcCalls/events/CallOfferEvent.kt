@@ -29,13 +29,11 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTagIds
 import com.vitorpamplona.quartz.nip31Alts.alt
-import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallIdTag
 import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType
 import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallTypeTag
 import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.callId
 import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.callType
-import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
 class CallOfferEvent(
@@ -67,21 +65,18 @@ class CallOfferEvent(
     companion object {
         const val KIND = 25050
         const val ALT_DESCRIPTION = "WebRTC call offer"
-        const val EXPIRATION_SECONDS = 20L
 
         fun build(
             sdpOffer: String,
             calleePubKey: HexKey,
             callId: String,
             type: CallType,
-            createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<CallOfferEvent>.() -> Unit = {},
-        ) = eventTemplate(KIND, sdpOffer, createdAt) {
+        ) = eventTemplate(KIND, sdpOffer) {
             alt(ALT_DESCRIPTION)
             pTag(calleePubKey)
             callId(callId)
             callType(type)
-            expiration(createdAt + EXPIRATION_SECONDS)
             initializer()
         }
 
@@ -90,14 +85,12 @@ class CallOfferEvent(
             calleePubKeys: Set<HexKey>,
             callId: String,
             type: CallType,
-            createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<CallOfferEvent>.() -> Unit = {},
-        ) = eventTemplate(KIND, sdpOffer, createdAt) {
+        ) = eventTemplate(KIND, sdpOffer) {
             alt(ALT_DESCRIPTION)
             pTagIds(calleePubKeys)
             callId(callId)
             callType(type)
-            expiration(createdAt + EXPIRATION_SECONDS)
             initializer()
         }
     }
