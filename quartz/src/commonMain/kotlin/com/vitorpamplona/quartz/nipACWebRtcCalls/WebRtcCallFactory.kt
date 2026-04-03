@@ -64,6 +64,26 @@ class WebRtcCallFactory {
         return Result(signed, wrap)
     }
 
+    /**
+     * Offer with group context.  The inner event includes `p` tags for
+     * **all** group members so the invitee knows the full group, but the
+     * SDP is specific to one [PeerConnection][org.webrtc.PeerConnection]
+     * so the wrap is addressed only to [calleePubKey].
+     */
+    suspend fun createCallOffer(
+        sdpOffer: String,
+        calleePubKey: HexKey,
+        memberPubKeys: Set<HexKey>,
+        callId: String,
+        callType: CallType,
+        signer: NostrSigner,
+    ): Result {
+        val template = CallOfferEvent.build(sdpOffer, memberPubKeys, callId, callType)
+        val signed = signer.sign(template)
+        val wrap = GiftWrapEvent.create(event = signed, recipientPubKey = calleePubKey, expirationDelta = WRAP_EXPIRATION_SECONDS)
+        return Result(signed, wrap)
+    }
+
     suspend fun createCallAnswer(
         sdpAnswer: String,
         callerPubKey: HexKey,
@@ -73,6 +93,25 @@ class WebRtcCallFactory {
         val template = CallAnswerEvent.build(sdpAnswer, callerPubKey, callId)
         val signed = signer.sign(template)
         val wrap = GiftWrapEvent.create(event = signed, recipientPubKey = callerPubKey, expirationDelta = WRAP_EXPIRATION_SECONDS)
+        return Result(signed, wrap)
+    }
+
+    /**
+     * Answer with group context.  The inner event includes `p` tags for
+     * **all** group members, but the SDP is specific to one
+     * [PeerConnection][org.webrtc.PeerConnection] so the wrap is addressed
+     * only to [peerPubKey].
+     */
+    suspend fun createCallAnswer(
+        sdpAnswer: String,
+        peerPubKey: HexKey,
+        memberPubKeys: Set<HexKey>,
+        callId: String,
+        signer: NostrSigner,
+    ): Result {
+        val template = CallAnswerEvent.build(sdpAnswer, memberPubKeys, callId)
+        val signed = signer.sign(template)
+        val wrap = GiftWrapEvent.create(event = signed, recipientPubKey = peerPubKey, expirationDelta = WRAP_EXPIRATION_SECONDS)
         return Result(signed, wrap)
     }
 
@@ -119,6 +158,25 @@ class WebRtcCallFactory {
         signer: NostrSigner,
     ): Result {
         val template = CallRenegotiateEvent.build(sdpOffer, peerPubKey, callId)
+        val signed = signer.sign(template)
+        val wrap = GiftWrapEvent.create(event = signed, recipientPubKey = peerPubKey, expirationDelta = WRAP_EXPIRATION_SECONDS)
+        return Result(signed, wrap)
+    }
+
+    /**
+     * Renegotiation with group context.  The inner event includes `p` tags
+     * for **all** group members, but the SDP is specific to one
+     * [PeerConnection][org.webrtc.PeerConnection] so the wrap is addressed
+     * only to [peerPubKey].
+     */
+    suspend fun createRenegotiate(
+        sdpOffer: String,
+        peerPubKey: HexKey,
+        memberPubKeys: Set<HexKey>,
+        callId: String,
+        signer: NostrSigner,
+    ): Result {
+        val template = CallRenegotiateEvent.build(sdpOffer, memberPubKeys, callId)
         val signed = signer.sign(template)
         val wrap = GiftWrapEvent.create(event = signed, recipientPubKey = peerPubKey, expirationDelta = WRAP_EXPIRATION_SECONDS)
         return Result(signed, wrap)
@@ -199,26 +257,6 @@ class WebRtcCallFactory {
         signer: NostrSigner,
     ): GroupResult {
         val template = CallRejectEvent.build(memberPubKeys, callId, reason)
-        val signed = signer.sign(template)
-        val wraps =
-            memberPubKeys.map { pubKey ->
-                GiftWrapEvent.create(event = signed, recipientPubKey = pubKey, expirationDelta = WRAP_EXPIRATION_SECONDS)
-            }
-        return GroupResult(signed, wraps)
-    }
-
-    /**
-     * Sends a renegotiation offer to every peer in a group call.  The signed
-     * inner event contains `p` tags for **every** member so each recipient
-     * knows the full group.  A separate [GiftWrapEvent] is produced for each member.
-     */
-    suspend fun createGroupRenegotiate(
-        sdpOffer: String,
-        memberPubKeys: Set<HexKey>,
-        callId: String,
-        signer: NostrSigner,
-    ): GroupResult {
-        val template = CallRenegotiateEvent.build(sdpOffer, memberPubKeys, callId)
         val signed = signer.sign(template)
         val wraps =
             memberPubKeys.map { pubKey ->

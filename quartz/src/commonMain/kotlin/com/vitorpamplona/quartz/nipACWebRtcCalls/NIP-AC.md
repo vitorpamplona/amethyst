@@ -263,7 +263,7 @@ ICE candidates (kind 25052) remain addressed to a single peer because WebRTC con
 
 ### Sign Once, Wrap Per Recipient
 
-Because all group members are listed in the inner event's `p` tags, the event is **signed once** and then gift-wrapped individually for each recipient:
+For events whose content is identical for all recipients (hangup, reject), the event is **signed once** and then gift-wrapped individually for each recipient:
 
 1. **Build** the signaling event with `p` tags for all group members
 2. **Sign** the event once with the sender's key
@@ -271,6 +271,18 @@ Because all group members are listed in the inner event's `p` tags, the event is
 4. **Publish** each gift wrap to the corresponding member's relay list
 
 This is more efficient than signing a separate event per recipient and ensures cryptographic consistency — every member receives the exact same signed inner event.
+
+### Per-Peer SDP with Group P-Tags
+
+Events carrying SDP payloads (offer, answer, renegotiate) contain session descriptions that are specific to a single `PeerConnection`. In a full-mesh group call, each participant maintains a separate `PeerConnection` per peer, so SDP content differs per connection.
+
+For these events, the inner event still includes `p` tags for **all** group members (so any recipient can see the full group), but:
+
+1. **Build** the event with `p` tags for all group members and the per-peer SDP content
+2. **Sign** the event (signed per peer, since the SDP content differs)
+3. **Gift-wrap** and send **only to the specific peer** the SDP is intended for
+
+This means offer, answer, and renegotiate events in group calls are signed per-peer but still carry the full group membership in their `p` tags.
 
 ### Group Call Offer
 
@@ -293,6 +305,10 @@ The Call Offer (kind 25050) initiating a group call contains multiple `p` tags:
 ```
 
 Recipients detect a group call by the presence of multiple `p` tags. The full group is the union of all `p`-tagged pubkeys plus the event's `pubkey` (the caller).
+
+### Inviting New Peers
+
+To invite a new peer into an active group call, send a Call Offer (kind 25050) with `p` tags listing **all** existing group members plus the new invitee. This allows the invitee to immediately see the full group composition. The SDP in the offer is specific to the new PeerConnection being established, so the wrap is addressed only to the invitee.
 
 ## Spam Prevention
 

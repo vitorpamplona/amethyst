@@ -299,30 +299,46 @@ class CallManager(
         onRenegotiationOfferReceived?.invoke(event)
     }
 
-    suspend fun sendRenegotiation(sdpOffer: String) {
+    /**
+     * Sends a renegotiation offer to a specific peer.  SDP is per-PeerConnection
+     * so this is always addressed to a single peer.  In group calls the inner
+     * event includes `p` tags for all members for group context.
+     */
+    suspend fun sendRenegotiation(
+        sdpOffer: String,
+        peerPubKey: HexKey,
+    ) {
         val callId = currentCallId() ?: return
         val peerPubKeys = currentPeerPubKeys() ?: return
 
-        if (peerPubKeys.size > 1) {
-            val result = factory.createGroupRenegotiate(sdpOffer, peerPubKeys, callId, signer)
-            result.wraps.forEach { publishEvent(it) }
-        } else {
-            val result = factory.createRenegotiate(sdpOffer, peerPubKeys.first(), callId, signer)
-            publishEvent(result.wrap)
-        }
+        val result =
+            if (peerPubKeys.size > 1) {
+                factory.createRenegotiate(sdpOffer, peerPubKey, peerPubKeys, callId, signer)
+            } else {
+                factory.createRenegotiate(sdpOffer, peerPubKey, callId, signer)
+            }
+        publishEvent(result.wrap)
     }
 
-    suspend fun sendRenegotiationAnswer(sdpAnswer: String) {
+    /**
+     * Sends a renegotiation answer to a specific peer.  SDP is per-PeerConnection
+     * so this is always addressed to a single peer.  In group calls the inner
+     * event includes `p` tags for all members for group context.
+     */
+    suspend fun sendRenegotiationAnswer(
+        sdpAnswer: String,
+        peerPubKey: HexKey,
+    ) {
         val callId = currentCallId() ?: return
         val peerPubKeys = currentPeerPubKeys() ?: return
 
-        if (peerPubKeys.size > 1) {
-            val result = factory.createGroupCallAnswer(sdpAnswer, peerPubKeys, callId, signer)
-            result.wraps.forEach { publishEvent(it) }
-        } else {
-            val result = factory.createCallAnswer(sdpAnswer, peerPubKeys.first(), callId, signer)
-            publishEvent(result.wrap)
-        }
+        val result =
+            if (peerPubKeys.size > 1) {
+                factory.createCallAnswer(sdpAnswer, peerPubKey, peerPubKeys, callId, signer)
+            } else {
+                factory.createCallAnswer(sdpAnswer, peerPubKey, callId, signer)
+            }
+        publishEvent(result.wrap)
     }
 
     fun onPeerConnected() {
@@ -339,7 +355,11 @@ class CallManager(
             )
     }
 
-    /** Invites a new peer into the current call by sending them an offer. */
+    /**
+     * Invites a new peer into the current call by sending them an offer.
+     * The inner event includes `p` tags for all existing group members plus
+     * the new invitee so they can see the full group composition.
+     */
     suspend fun invitePeer(
         peerPubKey: HexKey,
         sdpOffer: String,
@@ -347,16 +367,19 @@ class CallManager(
         val current = _state.value
         val callId: String
         val callType: CallType
+        val existingMembers: Set<HexKey>
         when (current) {
             is CallState.Connecting -> {
                 callId = current.callId
                 callType = current.callType
+                existingMembers = current.peerPubKeys + current.pendingPeerPubKeys
                 _state.value = current.copy(pendingPeerPubKeys = current.pendingPeerPubKeys + peerPubKey)
             }
 
             is CallState.Connected -> {
                 callId = current.callId
                 callType = current.callType
+                existingMembers = current.allPeerPubKeys
                 _state.value = current.copy(pendingPeerPubKeys = current.pendingPeerPubKeys + peerPubKey)
             }
 
@@ -365,7 +388,9 @@ class CallManager(
             }
         }
 
-        val result = factory.createCallOffer(sdpOffer, peerPubKey, callId, callType, signer)
+        // All group members: existing peers + the new invitee + ourselves
+        val allMembers = existingMembers + peerPubKey + signer.pubKey
+        val result = factory.createCallOffer(sdpOffer, peerPubKey, allMembers, callId, callType, signer)
         publishEvent(result.wrap)
     }
 

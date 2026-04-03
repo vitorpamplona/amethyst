@@ -362,13 +362,14 @@ class CallController(
     private fun onRenegotiationOfferReceived(event: CallRenegotiateEvent) {
         val session = webRtcSession ?: return
         val sdpOffer = event.sdpOffer()
+        val peerPubKey = event.pubKey
         Log.d(TAG) { "Renegotiation offer received, SDP length=${sdpOffer.length}" }
 
         scope.launch {
             session.setRemoteDescription(SessionDescription(SessionDescription.Type.OFFER, sdpOffer))
             session.createAnswer { sdp ->
                 scope.launch {
-                    callManager.sendRenegotiationAnswer(sdp.description)
+                    callManager.sendRenegotiationAnswer(sdp.description, peerPubKey)
                 }
             }
         }
@@ -378,11 +379,12 @@ class CallController(
         val session = webRtcSession ?: return
         val state = callManager.state.value
         if (state !is CallState.Connected && state !is CallState.Connecting) return
+        val peerPubKey = callManager.currentPeerPubKey() ?: return
 
         Log.d(TAG) { "Starting renegotiation" }
         session.createOffer { sdp ->
             scope.launch {
-                callManager.sendRenegotiation(sdp.description)
+                callManager.sendRenegotiation(sdp.description, peerPubKey)
             }
         }
     }
