@@ -53,6 +53,7 @@ class AccountSyncedSettings(
             MutableStateFlow(internalSettings.security.showSensitiveContent),
             internalSettings.security.warnAboutPostsWithReports,
             MutableStateFlow(internalSettings.security.filterSpamFromStrangers),
+            MutableStateFlow(internalSettings.security.maxHashtagLimit),
         )
 
     fun toInternal(): AccountSyncedSettingsInternal =
@@ -74,6 +75,7 @@ class AccountSyncedSettings(
                     security.showSensitiveContent.value,
                     security.warnAboutPostsWithReports,
                     security.filterSpamFromStrangers.value,
+                    security.maxHashtagLimit.value,
                 ),
         )
 
@@ -119,6 +121,10 @@ class AccountSyncedSettings(
 
         if (security.warnAboutPostsWithReports != syncedSettingsInternal.security.warnAboutPostsWithReports) {
             security.warnAboutPostsWithReports = syncedSettingsInternal.security.warnAboutPostsWithReports
+        }
+
+        if (security.maxHashtagLimit.value != syncedSettingsInternal.security.maxHashtagLimit) {
+            security.maxHashtagLimit.tryEmit(syncedSettingsInternal.security.maxHashtagLimit)
         }
     }
 
@@ -204,6 +210,7 @@ class AccountSecurityPreferences(
     val showSensitiveContent: MutableStateFlow<Boolean?> = MutableStateFlow(null),
     var warnAboutPostsWithReports: Boolean = true,
     var filterSpamFromStrangers: MutableStateFlow<Boolean> = MutableStateFlow(true),
+    val maxHashtagLimit: MutableStateFlow<Int> = MutableStateFlow(5),
 ) {
     fun updateShowSensitiveContent(show: Boolean?): Boolean {
         if (showSensitiveContent.value != show) {
@@ -224,6 +231,14 @@ class AccountSecurityPreferences(
     fun updateFilterSpam(filterSpam: Boolean): Boolean =
         if (filterSpam != filterSpamFromStrangers.value) {
             filterSpamFromStrangers.tryEmit(filterSpam)
+            true
+        } else {
+            false
+        }
+
+    fun updateMaxHashtagLimit(limit: Int): Boolean =
+        if (maxHashtagLimit.value != limit) {
+            maxHashtagLimit.update { limit }
             true
         } else {
             false

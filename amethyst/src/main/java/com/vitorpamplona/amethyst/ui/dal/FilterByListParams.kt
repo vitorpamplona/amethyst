@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.countHashtags
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -42,6 +43,8 @@ class FilterByListParams(
     fun isNotHidden(userHex: String) = !(hiddenLists.hiddenUsers.contains(userHex) || hiddenLists.spammers.contains(userHex))
 
     fun isNotInTheFuture(noteEvent: Event) = noteEvent.createdAt <= now
+
+    fun hasExcessiveHashtags(noteEvent: Event) = hiddenLists.maxHashtagLimit > 0 && noteEvent.countHashtags() > hiddenLists.maxHashtagLimit
 
     fun isEventInList(noteEvent: Event): Boolean {
         if (followLists == null) return false
@@ -70,7 +73,8 @@ class FilterByListParams(
         comingFrom: List<NormalizedRelayUrl>,
     ) = ((isGlobal(comingFrom)) || isEventInList(noteEvent)) &&
         (isHiddenList || isNotHidden(noteEvent.pubKey)) &&
-        isNotInTheFuture(noteEvent)
+        isNotInTheFuture(noteEvent) &&
+        !hasExcessiveHashtags(noteEvent)
 
     fun match(
         address: Address?,

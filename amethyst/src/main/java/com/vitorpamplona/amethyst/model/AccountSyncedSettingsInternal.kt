@@ -105,4 +105,5 @@ class AccountSecurityPreferencesInternal(
     val showSensitiveContent: Boolean? = null,
     var warnAboutPostsWithReports: Boolean = true,
     var filterSpamFromStrangers: Boolean = true,
+    val maxHashtagLimit: Int = 5,
 )
