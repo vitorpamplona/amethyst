@@ -157,13 +157,17 @@ class WebRtcCallFactory {
         reason: String = "",
         signer: NostrSigner,
     ): GroupResult {
-        val template = CallHangupEvent.build(peerPubKeys.first(), callId, reason)
-        val signed = signer.sign(template)
+        // Each peer gets its own signed hangup with the correct `p` tag
+        // targeting that specific recipient.
+        var firstSigned: Event? = null
         val wraps =
             peerPubKeys.map { pubKey ->
+                val template = CallHangupEvent.build(pubKey, callId, reason)
+                val signed = signer.sign(template)
+                if (firstSigned == null) firstSigned = signed
                 GiftWrapEvent.create(event = signed, recipientPubKey = pubKey, expirationDelta = WRAP_EXPIRATION_SECONDS)
             }
-        return GroupResult(signed, wraps)
+        return GroupResult(firstSigned!!, wraps)
     }
 
     /**
