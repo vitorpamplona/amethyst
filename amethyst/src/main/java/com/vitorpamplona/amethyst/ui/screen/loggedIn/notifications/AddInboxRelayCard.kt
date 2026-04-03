@@ -20,11 +20,14 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -41,10 +44,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.note.CloseIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BigPadding
+import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
@@ -55,6 +60,7 @@ import com.vitorpamplona.amethyst.ui.theme.imageModifier
 fun AddInboxRelayCardPreview() {
     ThemeComparisonColumn {
         AddInboxRelayCard(
+            onDismiss = {},
             accountViewModel = mockAccountViewModel(),
             nav = EmptyNav(),
         )
@@ -66,11 +72,17 @@ fun ObserveInboxRelayListAndDisplayIfNotFound(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val dismissed by accountViewModel.account.settings.dismissedInboxRelayCard
+        .collectAsStateWithLifecycle()
+
+    if (dismissed) return
+
     val inboxRelayList by accountViewModel.account.nip65RelayList.inboxFlowNoDefaults
         .collectAsStateWithLifecycle()
 
     if (inboxRelayList.isEmpty()) {
         AddInboxRelayCard(
+            onDismiss = { accountViewModel.dismissInboxRelayCard() },
             accountViewModel = accountViewModel,
             nav = nav,
         )
@@ -79,6 +91,7 @@ fun ObserveInboxRelayListAndDisplayIfNotFound(
 
 @Composable
 fun AddInboxRelayCard(
+    onDismiss: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -89,15 +102,27 @@ fun AddInboxRelayCard(
             Column(
                 modifier = BigPadding,
             ) {
-                // Title
-                Text(
-                    text = stringRes(id = R.string.inbox_relays_not_found),
-                    style =
-                        TextStyle(
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                        ),
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(
+                        text = stringRes(id = R.string.inbox_relays_not_found),
+                        modifier = Modifier.weight(1f),
+                        style =
+                            TextStyle(
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold,
+                            ),
+                    )
+
+                    IconButton(
+                        modifier = Size20Modifier,
+                        onClick = onDismiss,
+                    ) {
+                        CloseIcon()
+                    }
+                }
 
                 Spacer(modifier = StdVertSpacer)
 

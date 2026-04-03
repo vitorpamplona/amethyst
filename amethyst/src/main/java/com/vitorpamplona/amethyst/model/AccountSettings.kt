@@ -193,6 +193,7 @@ class AccountSettings(
     var backupTrustProviderList: TrustProviderListEvent? = null,
     val lastReadPerRoute: MutableStateFlow<Map<String, MutableStateFlow<Long>>> = MutableStateFlow(mapOf()),
     val hasDonatedInVersion: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
+    val dismissedInboxRelayCard: MutableStateFlow<Boolean> = MutableStateFlow(false),
     val pendingAttestations: MutableStateFlow<Map<HexKey, String>> = MutableStateFlow(mapOf()),
     var backupNipA3PaymentTargets: PaymentTargetsEvent? = null,
 ) : EphemeralChatRepository,
@@ -677,6 +678,17 @@ class AccountSettings(
             return true
         }
         return false
+    }
+
+    // ----
+    // inbox relay card
+    // ----
+
+    fun dismissInboxRelayCard() {
+        if (!dismissedInboxRelayCard.value) {
+            dismissedInboxRelayCard.value = true
+            saveAccountSettings()
+        }
     }
 
     // ----

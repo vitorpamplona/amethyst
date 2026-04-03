@@ -56,6 +56,7 @@ import com.vitorpamplona.amethyst.ui.theme.imageModifier
 fun AddOutboxRelayCardPreview() {
     ThemeComparisonColumn {
         AddInboxRelayCard(
+            onDismiss = {},
             accountViewModel = mockAccountViewModel(),
             nav = EmptyNav(),
         )

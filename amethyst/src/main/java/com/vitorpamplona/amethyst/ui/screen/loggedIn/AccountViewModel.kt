@@ -1126,6 +1126,8 @@ class AccountViewModel(
 
     fun markDonatedInThisVersion() = account.markDonatedInThisVersion()
 
+    fun dismissInboxRelayCard() = account.dismissInboxRelayCard()
+
     fun dontTranslateFrom() = account.settings.syncedSettings.languages.dontTranslateFrom.value
 
     fun translateTo() = account.settings.syncedSettings.languages.translateTo.value

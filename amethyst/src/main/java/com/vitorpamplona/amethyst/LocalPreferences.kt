@@ -130,6 +130,7 @@ private object PrefKeys {
     const val LOGIN_WITH_EXTERNAL_SIGNER = "login_with_external_signer"
     const val SIGNER_PACKAGE_NAME = "signer_package_name"
     const val HAS_DONATED_IN_VERSION = "has_donated_in_version"
+    const val DISMISSED_INBOX_RELAY_CARD = "dismissed_inbox_relay_card"
     const val PENDING_ATTESTATIONS = "pending_attestations"
 
     const val ALL_ACCOUNT_INFO = "all_saved_accounts_info"
@@ -389,6 +390,7 @@ object LocalPreferences {
                         JsonMapper.toJson(regularMap),
                     )
                     putStringSet(PrefKeys.HAS_DONATED_IN_VERSION, settings.hasDonatedInVersion.value)
+                    putBoolean(PrefKeys.DISMISSED_INBOX_RELAY_CARD, settings.dismissedInboxRelayCard.value)
 
                     putString(
                         PrefKeys.PENDING_ATTESTATIONS,
@@ -473,6 +475,7 @@ object LocalPreferences {
                     val hideBlockAlertDialog = getBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, false)
                     val hideNIP17WarningDialog = getBoolean(PrefKeys.HIDE_NIP_17_WARNING_DIALOG, false)
                     val hasDonatedInVersion = getStringSet(PrefKeys.HAS_DONATED_IN_VERSION, null) ?: setOf()
+                    val dismissedInboxRelayCard = getBoolean(PrefKeys.DISMISSED_INBOX_RELAY_CARD, false)
                     val localRelayServers = getStringSet(PrefKeys.LOCAL_RELAY_SERVERS, null) ?: setOf()
 
                     val defaultHomeFollowListStr = getString(PrefKeys.DEFAULT_HOME_FOLLOW_LIST, null)
@@ -594,6 +597,7 @@ object LocalPreferences {
                         backupTrustProviderList = latestTrustProviderList.await(),
                         lastReadPerRoute = MutableStateFlow(lastReadPerRoute.await()),
                         hasDonatedInVersion = MutableStateFlow(hasDonatedInVersion),
+                        dismissedInboxRelayCard = MutableStateFlow(dismissedInboxRelayCard),
                         pendingAttestations = MutableStateFlow(pendingAttestations.await()),
                         backupNipA3PaymentTargets = latestPaymentTargets.await(),
                     )
