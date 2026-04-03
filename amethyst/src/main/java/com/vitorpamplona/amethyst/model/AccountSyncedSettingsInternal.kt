@@ -63,7 +63,7 @@ val DefaultReactionRowItems =
         ReactionRowItem(ReactionRowAction.Like),
         ReactionRowItem(ReactionRowAction.Zap),
         ReactionRowItem(ReactionRowAction.Share, showCounter = false),
-        ReactionRowItem(ReactionRowAction.Pay, enabled = false, showCounter = false),
+        ReactionRowItem(ReactionRowAction.Pay, showCounter = false),
     )
 
 fun getLanguagesSpokenByUser(): Set<String> {

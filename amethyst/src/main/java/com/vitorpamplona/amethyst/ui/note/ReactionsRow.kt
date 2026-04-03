@@ -56,8 +56,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -127,6 +125,9 @@ import com.vitorpamplona.amethyst.ui.components.AnimatedBorderTextCornerRadius
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
+import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
+import com.vitorpamplona.amethyst.ui.components.M3ActionRow
+import com.vitorpamplona.amethyst.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.ui.components.toasts.multiline.UserBasedErrorMessage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -360,35 +361,36 @@ fun PayReaction(
         val uri = LocalUriHandler.current
         var expanded by remember { mutableStateOf(false) }
 
-        Box {
-            ClickableBox(
+        ClickableBox(
+            modifier = iconSizeModifier,
+            onClick = { expanded = true },
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.AccountBalanceWallet,
+                contentDescription = stringRes(R.string.payment_targets),
+                tint = grayTint,
                 modifier = iconSizeModifier,
-                onClick = { expanded = true },
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.AccountBalanceWallet,
-                    contentDescription = stringRes(R.string.payment_targets),
-                    tint = grayTint,
-                    modifier = iconSizeModifier,
-                )
-            }
+            )
+        }
 
-            DropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false },
+        if (expanded) {
+            M3ActionDialog(
+                title = stringRes(R.string.payment_targets),
+                onDismiss = { expanded = false },
             ) {
-                targets.forEach { target ->
-                    DropdownMenuItem(
-                        text = {
-                            Text("${target.type.replaceFirstChar(Char::titlecase)}: ${target.authority}")
-                        },
-                        onClick = {
-                            expanded = false
-                            runCatching {
-                                uri.openUri("payto://${target.type}/${target.authority}")
-                            }
-                        },
-                    )
+                M3ActionSection {
+                    targets.forEach { target ->
+                        M3ActionRow(
+                            icon = Icons.Outlined.AccountBalanceWallet,
+                            text = "${target.type.replaceFirstChar(Char::titlecase)}: ${target.authority}",
+                            onClick = {
+                                expanded = false
+                                runCatching {
+                                    uri.openUri("payto://${target.type}/${target.authority}")
+                                }
+                            },
+                        )
+                    }
                 }
             }
         }

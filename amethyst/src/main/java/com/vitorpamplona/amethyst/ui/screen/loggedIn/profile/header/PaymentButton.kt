@@ -20,16 +20,12 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -40,6 +36,9 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
+import com.vitorpamplona.amethyst.ui.components.M3ActionRow
+import com.vitorpamplona.amethyst.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -73,37 +72,38 @@ fun PaymentButtonWithTargets(targets: List<PaymentTarget>) {
     val uri = LocalUriHandler.current
     var expanded by remember { mutableStateOf(false) }
 
-    Box {
-        FilledTonalButton(
-            modifier =
-                Modifier
-                    .padding(horizontal = 3.dp)
-                    .width(50.dp),
-            onClick = { expanded = true },
-            contentPadding = ZeroPadding,
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.AccountBalanceWallet,
-                contentDescription = stringRes(R.string.payment_targets),
-            )
-        }
+    FilledTonalButton(
+        modifier =
+            Modifier
+                .padding(horizontal = 3.dp)
+                .width(50.dp),
+        onClick = { expanded = true },
+        contentPadding = ZeroPadding,
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.AccountBalanceWallet,
+            contentDescription = stringRes(R.string.payment_targets),
+        )
+    }
 
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
+    if (expanded) {
+        M3ActionDialog(
+            title = stringRes(R.string.payment_targets),
+            onDismiss = { expanded = false },
         ) {
-            targets.forEach { target ->
-                DropdownMenuItem(
-                    text = {
-                        Text("${target.type.replaceFirstChar(Char::titlecase)}: ${target.authority}")
-                    },
-                    onClick = {
-                        expanded = false
-                        runCatching {
-                            uri.openUri("payto://${target.type}/${target.authority}")
-                        }
-                    },
-                )
+            M3ActionSection {
+                targets.forEach { target ->
+                    M3ActionRow(
+                        icon = Icons.Outlined.AccountBalanceWallet,
+                        text = "${target.type.replaceFirstChar(Char::titlecase)}: ${target.authority}",
+                        onClick = {
+                            expanded = false
+                            runCatching {
+                                uri.openUri("payto://${target.type}/${target.authority}")
+                            }
+                        },
+                    )
+                }
             }
         }
     }
