@@ -117,7 +117,7 @@ class CallController(
             callManager.state.collect { state ->
                 when (state) {
                     is CallState.IncomingCall -> {
-                        audioManager.startRinging()
+                        withContext(Dispatchers.IO) { audioManager.startRinging() }
                         showIncomingCallNotification(state.callerPubKey)
                     }
 
@@ -128,7 +128,7 @@ class CallController(
                     is CallState.Connecting -> {
                         audioManager.stopRinging()
                         audioManager.stopRingbackTone()
-                        audioManager.switchToCallAudioMode()
+                        withContext(Dispatchers.IO) { audioManager.switchToCallAudioMode() }
                         audioManager.acquireProximityWakeLock()
                         NotificationUtils.cancelCallNotification(context)
                     }
