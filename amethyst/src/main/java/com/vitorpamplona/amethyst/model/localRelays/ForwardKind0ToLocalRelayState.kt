@@ -39,8 +39,4 @@ class ForwardKind0ToLocalRelayState(
                 }
             }
         }
-
-    fun destroy() {
-        eventCollector.destroy()
-    }
 }
