@@ -69,14 +69,14 @@ class KeySchedule(
         val prk = MlsCryptoProvider.hkdfExtract(initSecret, commitSecret)
         val joinerSecret = MlsCryptoProvider.expandWithLabel(prk, "joiner", groupContext, MlsCryptoProvider.HASH_OUTPUT_LENGTH)
 
-        // welcome_secret = DeriveSecret(joiner_secret, "welcome")
-        val welcomeSecret = MlsCryptoProvider.deriveSecret(joinerSecret, "welcome")
+        // member_secret = HKDF-Extract(joiner_secret, psk_secret)
+        val memberSecret = MlsCryptoProvider.hkdfExtract(joinerSecret, pskSecret)
 
-        // epoch_secret = ExpandWithLabel(
-        //     HKDF-Extract(joiner_secret, psk_secret),
-        //     "epoch", GroupContext, Nh)
-        val epochPrk = MlsCryptoProvider.hkdfExtract(joinerSecret, pskSecret)
-        val epochSecret = MlsCryptoProvider.expandWithLabel(epochPrk, "epoch", groupContext, MlsCryptoProvider.HASH_OUTPUT_LENGTH)
+        // welcome_secret = DeriveSecret(member_secret, "welcome")
+        val welcomeSecret = MlsCryptoProvider.deriveSecret(memberSecret, "welcome")
+
+        // epoch_secret = ExpandWithLabel(member_secret, "epoch", GroupContext, Nh)
+        val epochSecret = MlsCryptoProvider.expandWithLabel(memberSecret, "epoch", groupContext, MlsCryptoProvider.HASH_OUTPUT_LENGTH)
 
         // Derive individual secrets from epoch_secret
         val senderDataSecret = MlsCryptoProvider.deriveSecret(epochSecret, "sender data")
