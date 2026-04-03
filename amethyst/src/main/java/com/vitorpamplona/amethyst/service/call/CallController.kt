@@ -138,6 +138,10 @@ class CallController(
             }
         }
 
+    // Per-peer video activity monitoring for group calls
+    private val perPeerFrameSinks = ConcurrentHashMap<HexKey, VideoSink>()
+    private val perPeerLastFrameTimeMs = ConcurrentHashMap<HexKey, AtomicLong>()
+
     private val _isAudioMuted = MutableStateFlow(false)
     val isAudioMuted: StateFlow<Boolean> = _isAudioMuted.asStateFlow()
     private val _isVideoEnabled = MutableStateFlow(false)
@@ -725,6 +729,49 @@ class CallController(
             _remoteVideoTrack.value = track
             startRemoteVideoMonitor(track)
         }
+        // Monitor this peer's video activity for group call UI
+        startPeerVideoMonitor(peerPubKey, track)
+    }
+
+    private fun startPeerVideoMonitor(
+        peerPubKey: HexKey,
+        track: VideoTrack,
+    ) {
+        // Remove any existing sink for this peer
+        stopPeerVideoMonitor(peerPubKey)
+
+        val lastFrameTime = AtomicLong(System.currentTimeMillis())
+        perPeerLastFrameTimeMs[peerPubKey] = lastFrameTime
+        val sink =
+            VideoSink { frame: VideoFrame ->
+                lastFrameTime.set(System.currentTimeMillis())
+            }
+        perPeerFrameSinks[peerPubKey] = sink
+        track.addSink(sink)
+        ensureGroupVideoMonitorRunning()
+    }
+
+    private fun stopPeerVideoMonitor(peerPubKey: HexKey) {
+        val sink = perPeerFrameSinks.remove(peerPubKey) ?: return
+        perPeerLastFrameTimeMs.remove(peerPubKey)
+        val track = _remoteVideoTracks.value[peerPubKey]
+        try {
+            track?.removeSink(sink)
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun ensureGroupVideoMonitorRunning() {
+        if (remoteVideoMonitorJob != null) return
+        remoteVideoMonitorJob =
+            scope.launch {
+                while (true) {
+                    delay(1500)
+                    val now = System.currentTimeMillis()
+                    val anyActive = perPeerLastFrameTimeMs.values.any { now - it.get() < 2000 }
+                    _isRemoteVideoActive.value = anyActive || (now - lastRemoteFrameTimeMs.get() < 2000)
+                }
+            }
     }
 
     private fun onPeerDisconnected(peerPubKey: HexKey) {
@@ -764,6 +811,8 @@ class CallController(
             } catch (e: Exception) {
                 Log.e(TAG, "disposePeerSession: dispose() failed for ${peerPubKey.take(8)}", e)
             }
+            // Clean up per-peer video monitor
+            stopPeerVideoMonitor(peerPubKey)
             // Update remote video tracks
             val currentTracks = _remoteVideoTracks.value
             if (peerPubKey in currentTracks) {
@@ -806,6 +855,11 @@ class CallController(
         foregroundServiceStarted = false
         NotificationUtils.cancelCallNotification(context)
         stopRemoteVideoMonitor()
+
+        // Clean up per-peer video monitors
+        for (peerPubKey in perPeerFrameSinks.keys.toList()) {
+            stopPeerVideoMonitor(peerPubKey)
+        }
 
         // Dispose all peer sessions
         for (ps in peerSessions.values) {

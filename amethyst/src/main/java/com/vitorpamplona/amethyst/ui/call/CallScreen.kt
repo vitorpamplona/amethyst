@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -399,7 +400,8 @@ private fun ConnectedCallUI(
     }
 
     val emptyVideoFlow = remember { kotlinx.coroutines.flow.MutableStateFlow<VideoTrack?>(null) }
-    val remoteVideoTrack by (callController?.remoteVideoTrack ?: emptyVideoFlow).collectAsState()
+    val emptyTracksFlow = remember { kotlinx.coroutines.flow.MutableStateFlow<Map<String, VideoTrack>>(emptyMap()) }
+    val remoteVideoTracks by (callController?.remoteVideoTracks ?: emptyTracksFlow).collectAsState()
     val localVideoTrack by (callController?.localVideoTrack ?: emptyVideoFlow).collectAsState()
     val defaultFalse = remember { kotlinx.coroutines.flow.MutableStateFlow(false) }
     val defaultTrue = remember { kotlinx.coroutines.flow.MutableStateFlow(true) }
@@ -429,16 +431,13 @@ private fun ConnectedCallUI(
                 .fillMaxSize()
                 .background(Color.Black),
     ) {
-        // Remote video (full screen background) — only when peer is actively sending
-        if (isRemoteVideoActive) {
-            remoteVideoTrack?.let { track ->
-                VideoRenderer(
-                    videoTrack = track,
-                    eglBase = callController?.getEglBase(),
-                    modifier = Modifier.fillMaxSize(),
-                    mirror = false,
-                )
-            }
+        // Remote video(s) — render all peers in a grid when actively sending
+        if (isRemoteVideoActive && remoteVideoTracks.isNotEmpty()) {
+            RemoteVideoGrid(
+                remoteVideoTracks = remoteVideoTracks,
+                eglBase = callController?.getEglBase(),
+                modifier = Modifier.fillMaxSize(),
+            )
         }
 
         // Local video (small pip in corner) — only when camera is active
@@ -597,6 +596,53 @@ private fun ConnectedCallUI(
                     tint = Color.White,
                     modifier = Modifier.size(32.dp),
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun RemoteVideoGrid(
+    remoteVideoTracks: Map<String, VideoTrack>,
+    eglBase: org.webrtc.EglBase?,
+    modifier: Modifier = Modifier,
+) {
+    val tracks = remember(remoteVideoTracks) { remoteVideoTracks.entries.toList() }
+
+    if (tracks.size == 1) {
+        // Single peer: full screen
+        VideoRenderer(
+            videoTrack = tracks[0].value,
+            eglBase = eglBase,
+            modifier = modifier,
+            mirror = false,
+        )
+    } else {
+        val columns =
+            when {
+                tracks.size <= 2 -> 1
+                tracks.size <= 4 -> 2
+                else -> 2
+            }
+
+        Column(modifier = modifier) {
+            tracks.chunked(columns).forEach { row ->
+                Row(
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                ) {
+                    row.forEach { (_, track) ->
+                        VideoRenderer(
+                            videoTrack = track,
+                            eglBase = eglBase,
+                            modifier = Modifier.weight(1f).fillMaxHeight(),
+                            mirror = false,
+                        )
+                    }
+                    // Fill empty cells in the last row
+                    repeat(columns - row.size) {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+                }
             }
         }
     }
