@@ -185,11 +185,17 @@ class CallManager(
     fun onCallRejected(event: CallRejectEvent) {
         val current = _state.value
         val callId = event.callId()
+        val rejectingPeer = event.pubKey
 
         when (current) {
             is CallState.Offering -> {
                 if (callId != current.callId) return
-                transitionToEnded(current.callId, current.peerPubKeys, EndReason.PEER_REJECTED)
+                val remaining = current.peerPubKeys - rejectingPeer
+                if (remaining.isEmpty()) {
+                    transitionToEnded(current.callId, current.peerPubKeys, EndReason.PEER_REJECTED)
+                } else {
+                    _state.value = current.copy(peerPubKeys = remaining)
+                }
             }
 
             is CallState.IncomingCall -> {
@@ -285,18 +291,58 @@ class CallManager(
     fun onPeerHangup(event: CallHangupEvent) {
         val current = _state.value
         val callId = event.callId() ?: return
-        val currentCallId =
-            when (current) {
-                is CallState.Offering -> current.callId
-                is CallState.Connecting -> current.callId
-                is CallState.Connected -> current.callId
-                is CallState.IncomingCall -> current.callId
-                else -> return
-            }
-        if (callId != currentCallId) return
+        val leavingPeer = event.pubKey
 
-        val peerPubKeys = currentPeerPubKeys() ?: return
-        transitionToEnded(callId, peerPubKeys, EndReason.PEER_HANGUP)
+        when (current) {
+            is CallState.Connected -> {
+                if (callId != current.callId) return
+                val remaining = current.peerPubKeys - leavingPeer
+                if (remaining.isEmpty()) {
+                    transitionToEnded(callId, current.peerPubKeys, EndReason.PEER_HANGUP)
+                } else {
+                    _state.value = current.copy(peerPubKeys = remaining)
+                }
+            }
+
+            is CallState.Connecting -> {
+                if (callId != current.callId) return
+                val remaining = current.peerPubKeys - leavingPeer
+                if (remaining.isEmpty()) {
+                    transitionToEnded(callId, current.peerPubKeys, EndReason.PEER_HANGUP)
+                } else {
+                    _state.value = current.copy(peerPubKeys = remaining)
+                }
+            }
+
+            is CallState.Offering -> {
+                if (callId != current.callId) return
+                val remaining = current.peerPubKeys - leavingPeer
+                if (remaining.isEmpty()) {
+                    transitionToEnded(callId, current.peerPubKeys, EndReason.PEER_HANGUP)
+                } else {
+                    _state.value = current.copy(peerPubKeys = remaining)
+                }
+            }
+
+            is CallState.IncomingCall -> {
+                if (callId != current.callId) return
+                // If the caller hung up, end the incoming call
+                if (leavingPeer == current.callerPubKey) {
+                    transitionToEnded(callId, current.groupMembers, EndReason.PEER_HANGUP)
+                } else {
+                    val remaining = current.groupMembers - leavingPeer
+                    if (remaining.size <= 1) {
+                        transitionToEnded(callId, current.groupMembers, EndReason.PEER_HANGUP)
+                    } else {
+                        _state.value = current.copy(groupMembers = remaining)
+                    }
+                }
+            }
+
+            else -> {
+                return
+            }
+        }
     }
 
     fun onSignalingEvent(event: Event) {
