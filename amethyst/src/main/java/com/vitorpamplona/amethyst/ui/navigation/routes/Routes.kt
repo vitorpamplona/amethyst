@@ -302,6 +302,11 @@ sealed class Route {
         val id: String,
     ) : Route()
 
+    @Serializable data class ActiveCall(
+        val callId: String,
+        val peerPubKey: HexKey,
+    ) : Route()
+
     @Serializable data class EventRedirect(
         val id: String,
     ) : Route()
@@ -359,6 +364,18 @@ sealed class Route {
         val quote: String? = null,
         val fork: String? = null,
         val version: String? = null,
+        val draft: String? = null,
+    ) : Route()
+
+    @Serializable
+    data class NewPoll(
+        val message: String? = null,
+        val draft: String? = null,
+    ) : Route()
+
+    @Serializable
+    data class NewZapPoll(
+        val message: String? = null,
         val draft: String? = null,
     ) : Route()
 

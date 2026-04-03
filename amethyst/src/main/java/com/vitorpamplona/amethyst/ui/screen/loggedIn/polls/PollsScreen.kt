@@ -76,6 +76,9 @@ fun PollsScreen(
                 }
             }
         },
+        floatingButton = {
+            NewPollButton(nav)
+        },
         accountViewModel = accountViewModel,
     ) { paddingValues ->
         Column(Modifier.padding(paddingValues)) {

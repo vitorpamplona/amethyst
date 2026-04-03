@@ -14,8 +14,9 @@
     </queries>
 
 
-    <!-- Doesn't require a camera -->
+    <!-- Doesn't require a camera or microphone -->
     <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
 
     <!-- To connect with relays -->
     <uses-permission android:name="android.permission.INTERNET"/>
@@ -39,6 +40,15 @@
     <!-- Audio/Video Playback -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+
+    <!-- Phone calls -->
+    <uses-permission android:name="android.permission.VIBRATE"/>
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
 
     <!-- Keeps screen on while playing videos -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
@@ -75,7 +85,8 @@
             android:exported="true"
             android:launchMode="singleInstance"
             android:windowSoftInputMode="adjustResize"
-            android:configChanges="orientation|screenSize|screenLayout"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize"
+            android:supportsPictureInPicture="true"
             android:theme="@style/Theme.Amethyst">
 
             <intent-filter android:label="Amethyst">
@@ -199,6 +210,19 @@
             tools:ignore="DiscouragedApi" />
 
         <activity
+            android:name=".ui.call.CallActivity"
+            android:autoRemoveFromRecents="true"
+            android:configChanges="orientation|screenLayout|screenSize|smallestScreenSize|keyboardHidden|keyboard|uiMode"
+            android:supportsPictureInPicture="true"
+            android:launchMode="singleTop"
+            android:exported="false"
+            android:resizeableActivity="true"
+            android:showOnLockScreen="true"
+            android:turnScreenOn="true"
+            android:theme="@style/Theme.Amethyst"
+        />
+
+        <activity
             android:name=".service.playback.pip.PipVideoActivity"
             android:autoRemoveFromRecents="true"
             android:configChanges="orientation|screenLayout|screenSize|smallestScreenSize|keyboardHidden|keyboard|uiMode"
@@ -220,6 +244,12 @@
                 <action android:name="android.media.browse.MediaBrowserService"/>
             </intent-filter>
         </service>
+
+        <service
+            android:name=".service.call.CallForegroundService"
+            android:foregroundServiceType="microphone|camera"
+            android:stopWithTask="true"
+            android:exported="false" />
 
         <provider
             android:name="androidx.core.content.FileProvider"
@@ -243,6 +273,10 @@
 
         <receiver
             android:name=".service.notifications.NotificationReplyReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".ui.call.CallNotificationReceiver"
             android:exported="false" />
 
     </application>

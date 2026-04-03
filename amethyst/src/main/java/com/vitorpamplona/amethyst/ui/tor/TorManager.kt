@@ -98,5 +98,5 @@ class TorManager(
 
     fun isSocksReady() = status.value is TorServiceStatus.Active
 
-    fun socksPort(): Int = (status.value as? TorServiceStatus.Active)?.port ?: 19050
+    fun socksPort(): Int = (status.value as? TorServiceStatus.Active)?.port ?: 17392
 }

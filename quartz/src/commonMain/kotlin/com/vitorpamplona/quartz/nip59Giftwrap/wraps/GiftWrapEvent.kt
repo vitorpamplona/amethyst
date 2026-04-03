@@ -36,19 +36,20 @@ import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
-class GiftWrapEvent(
+open class GiftWrapEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+    kind: Int = KIND,
+) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
     @kotlinx.serialization.Transient
     @kotlin.jvm.Transient
     var innerEventId: HexKey? = null
 
-    fun copyNoContent(): GiftWrapEvent {
+    open fun copyNoContent(): GiftWrapEvent {
         val copy =
             GiftWrapEvent(
                 id,

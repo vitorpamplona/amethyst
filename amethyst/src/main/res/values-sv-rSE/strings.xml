@@ -667,6 +667,7 @@
     <string name="app_notification_chess_challenge_accepted">%1$s accepterade din schackutmaning</string>
     <string name="app_notification_chess_your_turn">%1$s drog — din tur</string>
     <string name="app_notification_chess_summary">Schackuppdateringar</string>
+    <!-- Call notifications and UI -->
     <string name="reply_notify">Meddela: </string>
     <string name="channel_list_join_conversation">Gå med i konversation</string>
     <string name="channel_list_user_or_group_id">Användare eller grupp ID</string>

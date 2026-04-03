@@ -7,6 +7,7 @@
     <string name="scan_qr">Scan QR</string>
     <string name="show_anyway">Show Anyway</string>
     <string name="post_not_found_short">👀</string>
+    <!-- Call notifications and UI -->
     <!-- Kind display names for relay subscription filter chips -->
     <!-- M3 Action Dialog titles -->
     <!-- NIP-75 Zap Goals -->

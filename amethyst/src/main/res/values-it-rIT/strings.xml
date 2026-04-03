@@ -306,6 +306,7 @@
     <string name="app_notification_zaps_channel_description">Notifica quando qualcuno ti invia uno zap</string>
     <string name="app_notification_zaps_channel_message_from">Da %1$s</string>
     <string name="app_notification_zaps_channel_message_for">per %1$s</string>
+    <!-- Call notifications and UI -->
     <string name="reply_notify">Notificare: </string>
     <string name="channel_list_join_conversation">Unisciti Alla Conversazione</string>
     <string name="channel_list_user_or_group_id">ID utente o di gruppo</string>

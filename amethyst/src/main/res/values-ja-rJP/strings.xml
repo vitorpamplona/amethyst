@@ -316,6 +316,7 @@
     <string name="app_notification_zaps_channel_description">誰かがあなたにザップしたら通知する</string>
     <string name="app_notification_zaps_channel_message_from">%1$sから</string>
     <string name="app_notification_zaps_channel_message_for">%1$sに</string>
+    <!-- Call notifications and UI -->
     <string name="reply_notify">通知: </string>
     <string name="channel_list_join_conversation">会話に参加</string>
     <string name="channel_list_user_or_group_id">ユーザIDまたはグループID</string>

@@ -22,7 +22,11 @@ package com.vitorpamplona.amethyst.service.notifications
 
 import android.app.NotificationManager
 import android.content.Context
+import android.graphics.drawable.BitmapDrawable
 import androidx.core.content.ContextCompat
+import coil3.ImageLoader
+import coil3.asDrawable
+import coil3.request.ImageRequest
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
@@ -53,6 +57,7 @@ import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip64Chess.baseEvent.BaseChessEvent
 import com.vitorpamplona.quartz.nip64Chess.challenge.accept.LiveChessGameAcceptEvent
 import com.vitorpamplona.quartz.nip64Chess.move.LiveChessMoveEvent
+import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallOfferEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import java.math.BigDecimal
@@ -137,6 +142,10 @@ class EventNotificationConsumer(
 
                     is LiveChessMoveEvent -> {
                         notifyChessEvent(innerEvent, account, R.string.app_notification_chess_your_turn)
+                    }
+
+                    is CallOfferEvent -> {
+                        notifyIncomingCall(innerEvent, account)
                     }
                 }
             }
@@ -618,6 +627,39 @@ class EventNotificationConsumer(
                     applicationContext,
                 )
         }
+    }
+
+    private suspend fun notifyIncomingCall(
+        event: CallOfferEvent,
+        account: Account,
+    ) {
+        if (!account.isFollowing(event.pubKey)) return
+
+        if (TimeUtils.now() - event.createdAt > CallOfferEvent.EXPIRATION_SECONDS) return
+
+        val callerUser = LocalCache.getUserIfExists(event.pubKey)
+        val callerName = callerUser?.toBestDisplayName() ?: event.pubKey.take(8) + "..."
+
+        val callerBitmap =
+            callerUser?.profilePicture()?.let { pictureUrl ->
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    try {
+                        val request = ImageRequest.Builder(applicationContext).data(pictureUrl).build()
+                        val result = ImageLoader(applicationContext).execute(request)
+                        (result.image?.asDrawable(applicationContext.resources) as? BitmapDrawable)?.bitmap
+                    } catch (_: Exception) {
+                        null
+                    }
+                }
+            }
+
+        NotificationUtils
+            .sendCallNotification(
+                callerName = callerName,
+                callerBitmap = callerBitmap,
+                uri = "nostr:${event.pubKey.hexToByteArray().toNpub()}",
+                applicationContext = applicationContext,
+            )
     }
 
     fun notificationManager(): NotificationManager =

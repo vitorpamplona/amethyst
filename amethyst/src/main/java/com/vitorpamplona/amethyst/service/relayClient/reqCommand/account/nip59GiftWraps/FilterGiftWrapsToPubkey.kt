@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -39,7 +40,7 @@ fun filterGiftWrapsToPubkey(
             relay = relay,
             filter =
                 Filter(
-                    kinds = listOf(GiftWrapEvent.KIND),
+                    kinds = listOf(GiftWrapEvent.KIND, EphemeralGiftWrapEvent.KIND),
                     tags = mapOf("p" to listOf(pubkey)),
                     since = since?.minus(TimeUtils.twoDays()),
                 ),

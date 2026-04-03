@@ -771,6 +771,38 @@
     <string name="app_notification_chess_your_turn">%1$s moved — your turn</string>
     <string name="app_notification_chess_summary">Chess updates</string>
 
+    <!-- Call notifications and UI -->
+    <string name="app_notification_calls_channel_name">Incoming calls</string>
+    <string name="app_notification_calls_channel_description">Notifications for incoming voice and video calls</string>
+    <string name="call_incoming">Incoming call</string>
+    <string name="call_incoming_voice">Incoming voice call\u2026</string>
+    <string name="call_incoming_video">Incoming video call\u2026</string>
+    <string name="call_calling">Calling\u2026</string>
+    <string name="call_connecting">Connecting\u2026</string>
+    <string name="call_ended">Call ended</string>
+    <string name="call_with">Call with %1$s</string>
+    <string name="call_ongoing">Calls</string>
+    <string name="call_ongoing_description">Ongoing call notification</string>
+    <string name="call_hangup">Hang up</string>
+    <string name="call_accept">Accept</string>
+    <string name="call_reject">Reject</string>
+    <string name="call_dismiss">Dismiss</string>
+    <string name="call_mute">Mute</string>
+    <string name="call_unmute">Unmute</string>
+    <string name="call_camera_on">Camera on</string>
+    <string name="call_camera_off">Camera off</string>
+    <string name="call_speaker">Speaker</string>
+    <string name="call_earpiece">Earpiece</string>
+    <string name="call_bluetooth">Bluetooth</string>
+    <string name="call_voice">Voice call</string>
+    <string name="call_video">Video call</string>
+    <string name="call_waiting_for_others">Waiting for others to join\u2026</string>
+    <string name="call_add_participant">Add participant</string>
+    <string name="call_search_users">Search users\u2026</string>
+    <string name="call_failed_start">Failed to start call</string>
+    <string name="call_failed_accept">Failed to accept call</string>
+    <string name="call_failed_session">Failed to create call session</string>
+
     <string name="reply_notify">Notify: </string>
 
     <string name="channel_list_join_conversation">Join Conversation</string>
@@ -919,6 +951,9 @@
 
     <string name="live_stream_is_offline">Livestream is Offline</string>
     <string name="live_stream_has_ended">Livestream Ended</string>
+    <string name="meeting_space_open_tag">OPEN</string>
+    <string name="meeting_space_private_tag">PRIVATE</string>
+    <string name="meeting_space_closed_tag">CLOSED</string>
     <string name="are_you_sure_you_want_to_log_out">Logging out deletes all your local information. Make sure to have your private keys backed up to avoid losing your account. Do you want to continue?</string>
     <string name="followed_tags">Followed Tags</string>
 
@@ -1340,6 +1375,12 @@
     <string name="new_product">New Product</string>
     <string name="new_exclusive_geo_note">New Geo-Exclusive Post</string>
     <string name="new_long_form_post">New Article</string>
+    <string name="new_poll">New Poll</string>
+    <string name="new_zap_poll">New Zap Poll</string>
+    <string name="new_regular_poll">New Regular Poll</string>
+    <string name="new_picture">New Picture</string>
+    <string name="new_short_video">New Short Video</string>
+    <string name="new_long_video">New Long Video</string>
 
     <string name="article_title">Title</string>
     <string name="article_summary">Summary (optional)</string>
@@ -1347,6 +1388,14 @@
     <string name="write_your_article_in_markdown">Write your article in markdown…</string>
     <string name="markdown_preview">Preview</string>
     <string name="markdown_edit">Edit</string>
+    <string name="add_header_image">Add a header image</string>
+    <string name="your_article_title">Your article title\u2026</string>
+    <string name="article_description_placeholder">A brief description of your article\u2026</string>
+    <string name="url_slug">URL Slug</string>
+    <string name="url_slug_placeholder">article-url-slug</string>
+    <string name="tags_label"># Tags</string>
+    <string name="add_a_tag">Add a tag\u2026</string>
+    <string name="start_writing_article">Start writing your article\u2026</string>
 
     <string name="open_all_reactions_to_this_post">Open all reactions to this post</string>
     <string name="close_all_reactions_to_this_post">Close all reactions to this post</string>

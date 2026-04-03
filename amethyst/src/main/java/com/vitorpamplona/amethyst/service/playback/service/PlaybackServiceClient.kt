@@ -38,6 +38,10 @@ import kotlin.uuid.Uuid
 object PlaybackServiceClient {
     val executorService: ExecutorService = Executors.newCachedThreadPool()
 
+    fun shutdown() {
+        executorService.shutdown()
+    }
+
     @OptIn(ExperimentalUuidApi::class)
     fun controllerAsFlow(
         videoUri: String,

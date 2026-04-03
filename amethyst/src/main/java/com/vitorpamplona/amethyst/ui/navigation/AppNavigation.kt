@@ -28,6 +28,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,11 +40,14 @@ import androidx.core.util.Consumer
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.call.CallState
 import com.vitorpamplona.amethyst.service.crashreports.DisplayCrashMessages
 import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.compose.DisplayNotifyMessages
 import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataScreen
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.AllMediaServersScreen
 import com.vitorpamplona.amethyst.ui.broadcast.DisplayBroadcastProgress
+import com.vitorpamplona.amethyst.ui.call.ActiveCallHolder
+import com.vitorpamplona.amethyst.ui.call.CallActivity
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.components.toasts.DisplayErrorMessages
 import com.vitorpamplona.amethyst.ui.navigation.composableFromEnd
@@ -105,6 +109,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.newUser.ImportFollowListSel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NotificationScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.publicMessages.NewPublicMessageScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.PicturesScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.PollPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.PollsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.privacy.PrivacyOptionsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.ProfileScreen
@@ -161,6 +166,22 @@ fun AppNavigation(
     DisplayNotifyMessages(accountViewModel, nav)
     DisplayCrashMessages(accountViewModel, nav)
     DisplayBroadcastProgress(accountViewModel)
+
+    ObserveIncomingCalls(accountViewModel)
+}
+
+@Composable
+private fun ObserveIncomingCalls(accountViewModel: AccountViewModel) {
+    val context = LocalContext.current
+    val callState by accountViewModel.callManager.state.collectAsState()
+
+    LaunchedEffect(callState) {
+        val state = callState
+        if (state is CallState.IncomingCall) {
+            ActiveCallHolder.set(accountViewModel.callManager, accountViewModel.callController, accountViewModel)
+            CallActivity.launch(context)
+        }
+    }
 }
 
 @Composable
@@ -168,6 +189,11 @@ fun BuildNavigation(
     accountViewModel: AccountViewModel,
     nav: Nav,
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        accountViewModel.initCallController(context)
+    }
+
     NavHost(
         navController = nav.controller,
         startDestination = Route.Home,
@@ -368,6 +394,26 @@ fun BuildNavigation(
                 quoteId = it.quote,
                 forkId = it.fork,
                 versionId = it.version,
+                draftId = it.draft,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+
+        composableFromBottomArgs<Route.NewPoll> {
+            PollPostScreen(
+                isZapPoll = false,
+                message = it.message,
+                draftId = it.draft,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+
+        composableFromBottomArgs<Route.NewZapPoll> {
+            PollPostScreen(
+                isZapPoll = true,
+                message = it.message,
                 draftId = it.draft,
                 accountViewModel = accountViewModel,
                 nav = nav,

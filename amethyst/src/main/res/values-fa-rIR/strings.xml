@@ -471,6 +471,7 @@
     <string name="app_notification_zaps_channel_message">%1$s ساتوشی</string>
     <string name="app_notification_zaps_channel_message_from">از %1$s</string>
     <string name="app_notification_zaps_channel_message_for">برای %1$s</string>
+    <!-- Call notifications and UI -->
     <string name="reply_notify">اعلان: </string>
     <string name="channel_list_join_conversation">پیوستن به گفتگو</string>
     <string name="channel_list_user_or_group_id">شناسه گروه یا کاربر</string>

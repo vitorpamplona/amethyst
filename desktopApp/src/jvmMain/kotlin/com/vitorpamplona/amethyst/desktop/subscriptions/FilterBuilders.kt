@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.desktop.subscriptions
 
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 
 /**
  * Type-safe builders for common Nostr filter patterns.
@@ -540,7 +542,7 @@ object FilterBuilders {
         since: Long? = null,
     ): Filter =
         Filter(
-            kinds = listOf(1059), // GiftWrapEvent.KIND
+            kinds = listOf(GiftWrapEvent.KIND, EphemeralGiftWrapEvent.KIND),
             tags = mapOf("p" to listOf(pubKeyHex)),
             since = since,
         )

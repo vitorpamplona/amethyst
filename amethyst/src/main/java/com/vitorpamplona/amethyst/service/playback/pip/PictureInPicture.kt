@@ -26,6 +26,14 @@ import android.graphics.Rect
 import android.os.Build
 import android.util.Rational
 
+private const val MIN_PIP_RATIO = 0.42f
+private const val MAX_PIP_RATIO = 2.39f
+
+private fun Float.toPipRational(): Rational {
+    val clamped = coerceIn(MIN_PIP_RATIO, MAX_PIP_RATIO)
+    return Rational((clamped * 1000).toInt(), 1000)
+}
+
 fun makePipParams(
     ratio: Float?,
     bounds: Rect?,
@@ -37,7 +45,7 @@ fun makePipParams(
                 setAutoEnterEnabled(true)
             }
             bounds?.let { setSourceRectHint(bounds) }
-            ratio?.let { setAspectRatio(Rational((it * 1000).toInt(), 1000)) }
+            ratio?.let { setAspectRatio(it.toPipRational()) }
         }.build()
 
 fun Activity.makePipParams(
@@ -60,5 +68,5 @@ fun Activity.makePipParams(
                 ),
             )
             bounds?.let { setSourceRectHint(bounds) }
-            ratio?.let { setAspectRatio(Rational((it * 1000).toInt(), 1000)) }
+            ratio?.let { setAspectRatio(it.toPipRational()) }
         }.build()

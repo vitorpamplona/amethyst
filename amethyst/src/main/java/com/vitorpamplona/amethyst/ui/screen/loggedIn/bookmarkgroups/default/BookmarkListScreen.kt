@@ -31,8 +31,10 @@ import androidx.compose.material3.SecondaryScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -40,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
@@ -89,6 +92,9 @@ fun BookmarkListScreen(
     LaunchedEffect(pinState) {
         pinnedNotesFeedViewModel.invalidateData()
     }
+
+    // Preload all bookmarked and pinned events so they don't load one-by-one when scrolling
+    PreloadBookmarkEvents(bookmarkState, pinState, accountViewModel)
 
     RenderBookmarkScreen(publicFeedViewModel, privateFeedViewModel, pinnedNotesFeedViewModel, accountViewModel, nav)
 }
@@ -168,6 +174,31 @@ private fun RenderBookmarkScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun PreloadBookmarkEvents(
+    bookmarkState: com.vitorpamplona.amethyst.commons.model.nip51Lists.BookmarkListState.BookmarkList?,
+    pinState: List<com.vitorpamplona.amethyst.model.Note>?,
+    accountViewModel: AccountViewModel,
+) {
+    val eventFinder = accountViewModel.dataSources().eventFinder
+    val account = accountViewModel.account
+
+    val queries =
+        remember(bookmarkState, pinState) {
+            val allNotes = (bookmarkState?.public.orEmpty() + bookmarkState?.private.orEmpty() + pinState.orEmpty())
+            allNotes
+                .filter { it.event == null }
+                .map { EventFinderQueryState(it, account) }
+        }
+
+    DisposableEffect(queries) {
+        eventFinder.subscribe(queries)
+        onDispose {
+            eventFinder.unsubscribe(queries)
         }
     }
 }

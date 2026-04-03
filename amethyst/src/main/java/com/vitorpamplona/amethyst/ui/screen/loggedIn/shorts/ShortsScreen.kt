@@ -76,6 +76,9 @@ fun ShortsScreen(
                 }
             }
         },
+        floatingButton = {
+            NewShortVideoButton(accountViewModel, nav, shortsFeedContentState::sendToTop)
+        },
         accountViewModel = accountViewModel,
     ) { paddingValues ->
         Column(Modifier.padding(paddingValues)) {

@@ -21,20 +21,39 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip23LongForm
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -47,13 +66,19 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
@@ -63,11 +88,13 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
+import com.vitorpamplona.amethyst.ui.actions.uploads.GallerySelectSingle
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromFiles
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
-import com.vitorpamplona.amethyst.ui.actions.uploads.SelectSingleFromGallery
+import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakePictureButton
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakeVideoButton
+import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.components.markdown.RenderContentAsMarkdown
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
@@ -162,6 +189,7 @@ fun LongFormPostScreen(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 private fun MarkdownPostScreenBody(
     postViewModel: LongFormPostViewModel,
@@ -170,8 +198,7 @@ private fun MarkdownPostScreenBody(
 ) {
     val scrollState = rememberScrollState()
     Column(
-        modifier =
-            Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize(),
     ) {
         ObserveInboxRelayListAndDisplayIfNotFound(accountViewModel, nav)
 
@@ -190,21 +217,44 @@ private fun MarkdownPostScreenBody(
                         .fillMaxWidth()
                         .verticalScroll(scrollState, reverseScrolling = true),
             ) {
-                // Title field
+                val context = LocalContext.current
+
+                // Banner image area
+                BannerImageArea(
+                    coverImageUrl = postViewModel.coverImageUrl,
+                    isUploading = postViewModel.isUploadingCoverImage,
+                    accountViewModel = accountViewModel,
+                    onImageSelected = {
+                        postViewModel.uploadCoverImage(it, context, onError = accountViewModel.toastManager::toast)
+                    },
+                    onClear = {
+                        postViewModel.coverImageUrl = ""
+                        postViewModel.draftTag.newVersion()
+                    },
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Title field — large, borderless
                 OutlinedTextField(
                     value = postViewModel.title,
                     onValueChange = {
                         postViewModel.title = it
                         postViewModel.draftTag.newVersion()
                     },
-                    label = { Text(stringRes(R.string.article_title)) },
+                    placeholder = {
+                        Text(
+                            text = stringRes(R.string.your_article_title),
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = MaterialTheme.colorScheme.placeholderText,
+                        )
+                    },
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = Size10dp, vertical = Size5dp),
+                            .padding(horizontal = Size10dp),
                     textStyle =
-                        LocalTextStyle.current.copy(
-                            fontSize = 18.sp,
+                        MaterialTheme.typography.headlineSmall.copy(
                             textDirection = TextDirection.Content,
                         ),
                     singleLine = true,
@@ -212,16 +262,32 @@ private fun MarkdownPostScreenBody(
                         KeyboardOptions.Default.copy(
                             capitalization = KeyboardCapitalization.Words,
                         ),
+                    colors =
+                        OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Color.Transparent,
+                            unfocusedBorderColor = Color.Transparent,
+                        ),
                 )
 
-                // Summary field
+                // Summary section
+                Text(
+                    text = stringRes(R.string.article_summary),
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.padding(start = Size10dp, top = 8.dp),
+                )
+
                 OutlinedTextField(
                     value = postViewModel.summary,
                     onValueChange = {
                         postViewModel.summary = it
                         postViewModel.draftTag.newVersion()
                     },
-                    label = { Text(stringRes(R.string.article_summary)) },
+                    placeholder = {
+                        Text(
+                            text = stringRes(R.string.article_description_placeholder),
+                            color = MaterialTheme.colorScheme.placeholderText,
+                        )
+                    },
                     modifier =
                         Modifier
                             .fillMaxWidth()
@@ -234,35 +300,45 @@ private fun MarkdownPostScreenBody(
                         ),
                 )
 
-                val context = LocalContext.current
+                // URL Slug field
+                Text(
+                    text = stringRes(R.string.url_slug),
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.padding(start = Size10dp, top = 8.dp),
+                )
 
-                // Cover image URL field
                 OutlinedTextField(
-                    value = postViewModel.coverImageUrl,
+                    value = postViewModel.slug,
                     onValueChange = {
-                        postViewModel.coverImageUrl = it
+                        postViewModel.slug = it
                         postViewModel.draftTag.newVersion()
                     },
-                    label = { Text(stringRes(R.string.article_cover_image_url)) },
+                    placeholder = {
+                        Text(
+                            text = stringRes(R.string.url_slug_placeholder),
+                            color = MaterialTheme.colorScheme.placeholderText,
+                        )
+                    },
                     modifier =
                         Modifier
                             .fillMaxWidth()
                             .padding(horizontal = Size10dp, vertical = Size5dp),
                     singleLine = true,
-                    placeholder = {
-                        Text(
-                            text = "https://mywebsite.com/mypost.jpg",
-                            color = MaterialTheme.colorScheme.placeholderText,
-                        )
-                    },
-                    leadingIcon = {
-                        SelectSingleFromGallery(
-                            isUploading = postViewModel.isUploadingCoverImage,
-                            tint = MaterialTheme.colorScheme.placeholderText,
-                            modifier = Modifier.padding(start = 5.dp),
-                        ) {
-                            postViewModel.uploadCoverImage(it, context, onError = accountViewModel.toastManager::toast)
-                        }
+                    enabled = !postViewModel.isEditing,
+                )
+
+                // Tags section
+                Text(
+                    text = stringRes(R.string.tags_label),
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.padding(start = Size10dp, top = 8.dp),
+                )
+
+                TagInputSection(
+                    tags = postViewModel.tags,
+                    onTagsChange = {
+                        postViewModel.tags = it
+                        postViewModel.draftTag.newVersion()
                     },
                 )
 
@@ -285,7 +361,7 @@ private fun MarkdownPostScreenBody(
                 }
 
                 if (postViewModel.showPreview) {
-                    // Markdown preview (scrollable)
+                    // Markdown preview
                     val backgroundColor = remember { mutableStateOf(Color.Transparent) }
                     Column(
                         modifier =
@@ -314,7 +390,7 @@ private fun MarkdownPostScreenBody(
                                 .padding(horizontal = Size10dp, vertical = Size5dp),
                         placeholder = {
                             Text(
-                                text = stringRes(R.string.write_your_article_in_markdown),
+                                text = stringRes(R.string.start_writing_article),
                                 color = MaterialTheme.colorScheme.placeholderText,
                             )
                         },
@@ -391,13 +467,13 @@ private fun MarkdownPostScreenBody(
                         verticalAlignment = CenterVertically,
                         modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
                     ) {
-                        val context = LocalContext.current
+                        val uploadContext = LocalContext.current
                         ImageVideoDescription(
                             it,
                             accountViewModel.account.settings.defaultFileServer,
                             isUploading = postViewModel.mediaUploadTracker.isUploading,
                             onAdd = { alt, server, sensitiveContent, mediaQuality, useH265, stripMetadata ->
-                                postViewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, server, accountViewModel.toastManager::toast, context, useH265, stripMetadata)
+                                postViewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, server, accountViewModel.toastManager::toast, uploadContext, useH265, stripMetadata)
                                 accountViewModel.account.settings.changeDefaultFileServer(server)
                             },
                             onDelete = postViewModel::deleteMediaToUpload,
@@ -480,6 +556,183 @@ private fun MarkdownPostScreenBody(
 
         // Bottom action bar
         MarkdownBottomRowActions(postViewModel)
+    }
+}
+
+@Composable
+private fun BannerImageArea(
+    coverImageUrl: String,
+    isUploading: Boolean,
+    accountViewModel: AccountViewModel,
+    onImageSelected: (SelectedMedia) -> Unit,
+    onClear: () -> Unit,
+) {
+    var showGallerySelect by remember { mutableStateOf(false) }
+    if (showGallerySelect) {
+        GallerySelectSingle(
+            onImageUri = { media ->
+                showGallerySelect = false
+                if (media != null) {
+                    onImageSelected(media)
+                }
+            },
+        )
+    }
+
+    if (coverImageUrl.isNotBlank()) {
+        // Show the uploaded banner image
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(200.dp)
+                    .padding(horizontal = Size10dp, vertical = Size5dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable { showGallerySelect = true },
+        ) {
+            MyAsyncImage(
+                imageUrl = coverImageUrl,
+                contentDescription = stringRes(R.string.add_header_image),
+                contentScale = ContentScale.Crop,
+                mainImageModifier = Modifier.fillMaxSize(),
+                loadedImageModifier = Modifier.fillMaxSize(),
+                accountViewModel = accountViewModel,
+                onLoadingBackground = null,
+                onError = null,
+            )
+            // Close button to remove the image
+            IconButton(
+                onClick = onClear,
+                modifier =
+                    Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(4.dp),
+            ) {
+                Icon(
+                    Icons.Default.Close,
+                    contentDescription = "Remove header image",
+                    tint = Color.White,
+                )
+            }
+        }
+    } else {
+        // Dashed border placeholder — clickable to open gallery
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(180.dp)
+                    .padding(horizontal = Size10dp, vertical = Size5dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .border(
+                        BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                        RoundedCornerShape(12.dp),
+                    ).clickable(enabled = !isUploading) { showGallerySelect = true },
+            contentAlignment = Alignment.Center,
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                Icon(
+                    Icons.Default.Image,
+                    contentDescription = null,
+                    modifier = Modifier.size(48.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = stringRes(R.string.add_header_image),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun TagInputSection(
+    tags: List<String>,
+    onTagsChange: (List<String>) -> Unit,
+) {
+    var tagInput by remember { mutableStateOf("") }
+
+    Row(
+        verticalAlignment = CenterVertically,
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Size10dp, vertical = Size5dp),
+    ) {
+        OutlinedTextField(
+            value = tagInput,
+            onValueChange = { tagInput = it },
+            placeholder = {
+                Text(
+                    text = stringRes(R.string.add_a_tag),
+                    color = MaterialTheme.colorScheme.placeholderText,
+                )
+            },
+            singleLine = true,
+            modifier = Modifier.weight(1f),
+            keyboardOptions =
+                KeyboardOptions.Default.copy(
+                    imeAction = ImeAction.Done,
+                ),
+            keyboardActions =
+                KeyboardActions(
+                    onDone = {
+                        val newTag = tagInput.trim().lowercase()
+                        if (newTag.isNotBlank() && newTag !in tags) {
+                            onTagsChange(tags + newTag)
+                        }
+                        tagInput = ""
+                    },
+                ),
+        )
+
+        Spacer(modifier = Modifier.width(8.dp))
+
+        IconButton(
+            onClick = {
+                val newTag = tagInput.trim().lowercase()
+                if (newTag.isNotBlank() && newTag !in tags) {
+                    onTagsChange(tags + newTag)
+                }
+                tagInput = ""
+            },
+        ) {
+            Icon(
+                Icons.Default.Add,
+                contentDescription = "Add tag",
+            )
+        }
+    }
+
+    if (tags.isNotEmpty()) {
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = Size10dp, vertical = 4.dp),
+        ) {
+            tags.forEach { tag ->
+                AssistChip(
+                    onClick = { onTagsChange(tags - tag) },
+                    label = { Text(tag) },
+                    trailingIcon = {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = "Remove $tag",
+                            modifier = Modifier.size(16.dp),
+                        )
+                    },
+                )
+            }
+        }
     }
 }
 

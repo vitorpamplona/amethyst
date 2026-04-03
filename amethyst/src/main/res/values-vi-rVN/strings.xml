@@ -11,6 +11,7 @@
     <string name="pay">Thanh toán</string>
     <string name="note_to_receiver">Lưu ý cho người nhận</string>
     <string name="thank_you_so_much">Cảm ơn rất nhiều!</string>
+    <!-- Call notifications and UI -->
     <!-- Kind display names for relay subscription filter chips -->
     <!-- M3 Action Dialog titles -->
     <!-- NIP-75 Zap Goals -->

@@ -329,6 +329,7 @@
     <string name="app_notification_zaps_channel_description">Ilmoittaa sinulle, kun joku zappaa sinua</string>
     <string name="app_notification_zaps_channel_message_from">Lähettäjä: %1$s</string>
     <string name="app_notification_zaps_channel_message_for">saaja: %1$s</string>
+    <!-- Call notifications and UI -->
     <string name="reply_notify">Ilmoitus: </string>
     <string name="channel_list_join_conversation">Liity keskusteluun</string>
     <string name="channel_list_user_or_group_id">Käyttäjän tai ryhmän tunniste</string>

@@ -37,9 +37,11 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 class SessionListener(
@@ -60,6 +62,14 @@ class MediaSessionPool(
     val appContext: Context,
     val reset: (MediaSession, Boolean) -> Unit,
 ) {
+    private val exceptionHandler =
+        CoroutineExceptionHandler { _, throwable ->
+            com.vitorpamplona.quartz.utils.Log
+                .e("MediaSessionPool", "Caught exception: ${throwable.message}", throwable)
+        }
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main + exceptionHandler)
+
     val globalCallback = MediaSessionCallback(this, appContext)
     var lastCleanup = TimeUtils.now()
 
@@ -133,17 +143,11 @@ class MediaSessionPool(
     fun cleanupUnused() {
         if (lastCleanup < TimeUtils.oneMinuteAgo()) {
             lastCleanup = TimeUtils.now()
-            @kotlin.OptIn(DelicateCoroutinesApi::class)
-            GlobalScope.launch(Dispatchers.Main) {
-                var counter = 0
+            scope.launch {
                 val snap = cache.snapshot()
-                // makes a copy and awaits 10 seconds in case a new token was just created
-                // but not connected yet.
-                // delay(10000)
                 snap.values.forEach {
                     if (it.session.connectedControllers.isEmpty()) {
                         releaseSession(it.session)
-                        counter++
                     }
                 }
                 lastCleanup = TimeUtils.now()
@@ -152,8 +156,7 @@ class MediaSessionPool(
     }
 
     fun destroy() {
-        @kotlin.OptIn(DelicateCoroutinesApi::class)
-        GlobalScope.launch(Dispatchers.Main) {
+        scope.launch {
             cache.evictAll()
             playingMap.forEach {
                 it.value.removeListeners()
@@ -164,6 +167,7 @@ class MediaSessionPool(
         }
 
         exoPlayerPool.destroy()
+        scope.cancel()
     }
 
     fun getSession(

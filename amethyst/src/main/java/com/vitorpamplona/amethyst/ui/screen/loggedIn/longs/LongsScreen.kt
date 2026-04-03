@@ -76,6 +76,9 @@ fun LongsScreen(
                 }
             }
         },
+        floatingButton = {
+            NewLongVideoButton(accountViewModel, nav, longsFeedContentState::sendToTop)
+        },
         accountViewModel = accountViewModel,
     ) { paddingValues ->
         Column(Modifier.padding(paddingValues)) {

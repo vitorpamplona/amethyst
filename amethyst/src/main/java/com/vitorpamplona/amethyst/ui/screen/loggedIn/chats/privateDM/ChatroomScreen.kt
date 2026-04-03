@@ -26,12 +26,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import com.vitorpamplona.amethyst.ui.call.ActiveCallHolder
+import com.vitorpamplona.amethyst.ui.call.CallActivity
+import com.vitorpamplona.amethyst.ui.call.rememberCallWithPermission
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.RenderRoomTopBar
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
+import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType
 
 @Composable
 fun ChatroomScreen(
@@ -43,10 +48,41 @@ fun ChatroomScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val context = LocalContext.current
+    val isGroupChat = roomId.users.size > 1
+    val startVoiceCall =
+        rememberCallWithPermission(context) {
+            ActiveCallHolder.set(accountViewModel.callManager, accountViewModel.callController, accountViewModel)
+            if (isGroupChat) {
+                accountViewModel.callController?.initiateGroupCall(roomId.users.toSet(), CallType.VOICE)
+            } else {
+                val peerPubKey = roomId.users.firstOrNull() ?: return@rememberCallWithPermission
+                accountViewModel.callController?.initiateCall(peerPubKey, CallType.VOICE)
+            }
+            CallActivity.launch(context)
+        }
+    val startVideoCall =
+        rememberCallWithPermission(context, isVideo = true) {
+            ActiveCallHolder.set(accountViewModel.callManager, accountViewModel.callController, accountViewModel)
+            if (isGroupChat) {
+                accountViewModel.callController?.initiateGroupCall(roomId.users.toSet(), CallType.VIDEO)
+            } else {
+                val peerPubKey = roomId.users.firstOrNull() ?: return@rememberCallWithPermission
+                accountViewModel.callController?.initiateCall(peerPubKey, CallType.VIDEO)
+            }
+            CallActivity.launch(context)
+        }
+
     DisappearingScaffold(
         isInvertedLayout = true,
         topBar = {
-            RenderRoomTopBar(roomId, accountViewModel, nav)
+            RenderRoomTopBar(
+                room = roomId,
+                accountViewModel = accountViewModel,
+                nav = nav,
+                onCallClick = { _ -> startVoiceCall() },
+                onVideoCallClick = { _ -> startVideoCall() },
+            )
         },
         accountViewModel = accountViewModel,
     ) {

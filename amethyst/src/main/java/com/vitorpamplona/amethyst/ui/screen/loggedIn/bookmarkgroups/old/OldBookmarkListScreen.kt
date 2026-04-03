@@ -36,8 +36,10 @@ import androidx.compose.material3.SecondaryTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -45,6 +47,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
@@ -80,6 +83,9 @@ fun OldBookmarkListScreen(
         publicFeedViewModel.invalidateData()
         privateFeedViewModel.invalidateData()
     }
+
+    // Preload all bookmarked events so they don't load one-by-one when scrolling
+    PreloadOldBookmarkEvents(bookmarkState, accountViewModel)
 
     RenderOldBookmarkScreen(publicFeedViewModel, privateFeedViewModel, accountViewModel, nav)
 }
@@ -169,6 +175,30 @@ private fun RenderOldBookmarkScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun PreloadOldBookmarkEvents(
+    bookmarkState: com.vitorpamplona.amethyst.commons.model.nip51Lists.OldBookmarkListState.BookmarkList?,
+    accountViewModel: AccountViewModel,
+) {
+    val eventFinder = accountViewModel.dataSources().eventFinder
+    val account = accountViewModel.account
+
+    val queries =
+        remember(bookmarkState) {
+            val allNotes = bookmarkState?.public.orEmpty() + bookmarkState?.private.orEmpty()
+            allNotes
+                .filter { it.event == null }
+                .map { EventFinderQueryState(it, account) }
+        }
+
+    DisposableEffect(queries) {
+        eventFinder.subscribe(queries)
+        onDispose {
+            eventFinder.unsubscribe(queries)
         }
     }
 }

@@ -37,6 +37,7 @@ enum class ROLE(
     HOST("host"),
     MODERATOR("moderator"),
     SPEAKER("speaker"),
+    PARTICIPANT("participant"),
 }
 
 @Immutable
@@ -58,7 +59,7 @@ data class ParticipantTag(
             ensure(tag.has(3)) { return false }
             ensure(tag[0] == TAG_NAME) { return false }
             ensure(tag[1].length == 64) { return false }
-            ensure(tag[3] == ROLE.HOST.code) { return false }
+            ensure(tag[3].equals(ROLE.HOST.code, ignoreCase = true)) { return false }
             return true
         }
 
@@ -76,7 +77,7 @@ data class ParticipantTag(
             ensure(tag.has(3)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].length == 64) { return null }
-            ensure(tag[3] == ROLE.HOST.code) { return null }
+            ensure(tag[3].equals(ROLE.HOST.code, ignoreCase = true)) { return null }
 
             val hint = RelayUrlNormalizer.normalizeOrNull(tag[2])
 
