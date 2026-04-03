@@ -349,6 +349,7 @@ class CallController(
         peerPubKey: HexKey,
         sdpAnswer: String,
     ) {
+        Log.d(TAG) { "onCallAnswerReceived: from=${peerPubKey.take(8)}, knownSessions=${peerSessions.keys.map { it.take(8) }}" }
         val ps = peerSessions[peerPubKey]
         if (ps != null) {
             // We have a PeerConnection for this peer — set remote description
@@ -437,10 +438,14 @@ class CallController(
      * peer with the lexicographically lower pubkey initiates.
      */
     fun onNewPeerInGroupCall(peerPubKey: HexKey) {
-        if (peerSessions.containsKey(peerPubKey)) return // already connected/connecting
+        if (peerSessions.containsKey(peerPubKey)) {
+            Log.d(TAG) { "onNewPeerInGroupCall: session already exists for ${peerPubKey.take(8)} — skipping" }
+            return
+        }
 
         scope.launch {
             val myPubKey = signerProvider().pubKey
+            Log.d(TAG) { "onNewPeerInGroupCall: peer=${peerPubKey.take(8)}, myPubKey=${myPubKey.take(8)}, iAmLower=${myPubKey < peerPubKey}" }
             if (myPubKey < peerPubKey) {
                 Log.d(TAG) { "Initiating callee-to-callee connection to ${peerPubKey.take(8)} (I have lower pubkey)" }
                 createAndOfferToPeer(peerPubKey)
@@ -671,6 +676,7 @@ class CallController(
     // ---- Per-peer PeerConnection creation ----
 
     private fun createPeerSession(peerPubKey: HexKey): PeerSessionState {
+        Log.d(TAG) { "createPeerSession: ${peerPubKey.take(8)}, existing sessions=${peerSessions.keys.map { it.take(8) }}" }
         val factory = peerConnectionFactory ?: throw IllegalStateException("PeerConnectionFactory not initialized")
 
         val session =
@@ -722,20 +728,62 @@ class CallController(
     }
 
     private fun onPeerDisconnected(peerPubKey: HexKey) {
-        Log.d(TAG) { "Peer ${peerPubKey.take(8)} disconnected" }
+        Log.d(TAG) { "Peer ${peerPubKey.take(8)} disconnected (ICE FAILED)" }
         // If all peers disconnected, hang up
+        val sessionStates = peerSessions.map { (key, ps) -> "${key.take(8)}=${ps.session.getSignalingState()}" }
+        Log.d(TAG) { "onPeerDisconnected: checking remaining sessions: $sessionStates" }
         val allDisconnected =
             peerSessions.keys.all { key ->
                 key == peerPubKey || peerSessions[key]?.session?.getSignalingState() == PeerConnection.SignalingState.CLOSED
             }
         if (allDisconnected) {
+            Log.d(TAG) { "onPeerDisconnected: all peers disconnected, hanging up" }
             scope.launch { callManager.hangup() }
+        } else {
+            Log.d(TAG) { "onPeerDisconnected: other peers still active, continuing call" }
         }
+    }
+
+    // ---- Per-peer cleanup ----
+
+    /**
+     * Disposes a single peer's WebRTC session when they leave the call
+     * but the call continues with remaining peers.
+     */
+    fun disposePeerSession(peerPubKey: HexKey) {
+        val ps = peerSessions.remove(peerPubKey)
+        if (ps != null) {
+            Log.d(TAG) { "disposePeerSession: closing session for ${peerPubKey.take(8)}, remaining sessions=${peerSessions.keys.map { it.take(8) }}" }
+            try {
+                ps.session.dispose()
+            } catch (e: Exception) {
+                Log.e(TAG, "disposePeerSession: dispose() failed for ${peerPubKey.take(8)}", e)
+            }
+            // Update remote video tracks
+            val currentTracks = _remoteVideoTracks.value
+            if (peerPubKey in currentTracks) {
+                _remoteVideoTracks.value = currentTracks - peerPubKey
+                // If the disposed peer was the primary remote track, pick a new one
+                if (_remoteVideoTrack.value == currentTracks[peerPubKey]) {
+                    stopRemoteVideoMonitor()
+                    val nextTrack = _remoteVideoTracks.value.values.firstOrNull()
+                    _remoteVideoTrack.value = nextTrack
+                    if (nextTrack != null) {
+                        startRemoteVideoMonitor(nextTrack)
+                    }
+                }
+            }
+        } else {
+            Log.d(TAG) { "disposePeerSession: no session for ${peerPubKey.take(8)} (already disposed or never created)" }
+        }
+        // Clean up any buffered ICE candidates for this peer
+        globalPendingIce.remove(peerPubKey)
     }
 
     // ---- Cleanup ----
 
     fun cleanup() {
+        Log.d(TAG) { "cleanup: disposing ${peerSessions.size} peer sessions, state=${callManager.state.value::class.simpleName}" }
         // Each block is wrapped individually so that a failure in one
         // (e.g. a WebRTC native crash) does not prevent the rest from
         // running.  Without this, a single exception could leave the
