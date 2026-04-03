@@ -49,18 +49,27 @@ fun ChatroomScreen(
     nav: INav,
 ) {
     val context = LocalContext.current
+    val isGroupChat = roomId.users.size > 1
     val startVoiceCall =
         rememberCallWithPermission(context) {
-            val peerPubKey = roomId.users.firstOrNull() ?: return@rememberCallWithPermission
             ActiveCallHolder.set(accountViewModel.callManager, accountViewModel.callController, accountViewModel)
-            accountViewModel.callController?.initiateCall(peerPubKey, CallType.VOICE)
+            if (isGroupChat) {
+                accountViewModel.callController?.initiateGroupCall(roomId.users.toSet(), CallType.VOICE)
+            } else {
+                val peerPubKey = roomId.users.firstOrNull() ?: return@rememberCallWithPermission
+                accountViewModel.callController?.initiateCall(peerPubKey, CallType.VOICE)
+            }
             CallActivity.launch(context)
         }
     val startVideoCall =
         rememberCallWithPermission(context, isVideo = true) {
-            val peerPubKey = roomId.users.firstOrNull() ?: return@rememberCallWithPermission
             ActiveCallHolder.set(accountViewModel.callManager, accountViewModel.callController, accountViewModel)
-            accountViewModel.callController?.initiateCall(peerPubKey, CallType.VIDEO)
+            if (isGroupChat) {
+                accountViewModel.callController?.initiateGroupCall(roomId.users.toSet(), CallType.VIDEO)
+            } else {
+                val peerPubKey = roomId.users.firstOrNull() ?: return@rememberCallWithPermission
+                accountViewModel.callController?.initiateCall(peerPubKey, CallType.VIDEO)
+            }
             CallActivity.launch(context)
         }
 

@@ -163,7 +163,7 @@ The `content` field MAY contain a reason or be empty.
 
 ### Call Renegotiate (kind 25055)
 
-Used for mid-call changes such as toggling video on/off. The `content` field contains a new SDP offer.
+Used for mid-call changes such as toggling video on/off. The `content` field contains a new SDP offer. The recipient MUST respond with a `Call Answer` (kind 25051) containing the SDP answer for the renegotiation.
 
 ```json
 {
@@ -226,6 +226,23 @@ Caller                          Relay                           Callee
 
 ICE candidates may arrive before the WebRTC peer connection is ready (e.g., the callee is still ringing). Clients MUST buffer incoming ICE candidates and apply them after `setRemoteDescription()` succeeds. Candidates buffered while ringing MUST NOT be cleared when accepting the call.
 
+### Mid-Call Renegotiation
+
+Either party may send a `CallRenegotiate` (kind 25055) during an active call to change media parameters (e.g., toggling video on/off). The recipient responds with a `CallAnswer` (kind 25051):
+
+```
+Party A                         Relay                           Party B
+  |                               |                               |
+  |-- GiftWrap(Renegotiate) ----->|                               |
+  |                               |-- GiftWrap(Renegotiate) ----->|
+  |                               |                               |
+  |                               |  [Party B creates SDP answer] |
+  |                               |                               |
+  |<-- GiftWrap(CallAnswer) ------|<-- GiftWrap(CallAnswer) ------|
+  |                               |                               |
+  |========= Updated WebRTC P2P Connection ========================|
+```
+
 ### Ending a Call
 
 Either party may send a `CallHangup` (kind 25053) at any time. The recipient SHOULD close the WebRTC peer connection and release media resources upon receiving it.
@@ -265,8 +282,17 @@ This NIP does not mandate specific STUN or TURN servers. Clients SHOULD:
 ### WebRTC Configuration
 
 - The WebRTC `PeerConnection` SHOULD use Unified Plan SDP semantics.
-- Clients MAY support call renegotiation (kind 25055) for toggling video on/off mid-call without tearing down the connection.
+- Clients MAY support call renegotiation (kind 25055) for toggling video on/off mid-call without tearing down the connection. When a `Call Renegotiate` event is received, the recipient creates a new SDP answer for the renegotiated session and sends it back as a `Call Answer` (kind 25051) with the same `call-id`. The initiator applies this answer via `setRemoteDescription()` to complete the renegotiation.
 - ICE candidate JSON content MUST be properly escaped — SDP strings can contain quotes and backslashes that break naive string interpolation.
+
+### Multi-Device Support
+
+When a user is logged in on multiple devices, all devices will receive and ring for incoming calls. To prevent all devices from continuing to ring after one device handles the call:
+
+- When **accepting** a call, the callee SHOULD gift-wrap and publish an additional `Call Answer` (kind 25051) addressed to their **own pubkey** (the `p` tag set to self). Other devices of the same user that receive this self-addressed answer SHOULD stop ringing and transition to an "answered elsewhere" state.
+- When **rejecting** a call, the callee SHOULD gift-wrap and publish an additional `Call Reject` (kind 25054) addressed to their **own pubkey**. Other devices SHOULD stop ringing.
+
+These self-notification events use the same `call-id` as the original call and follow the same gift-wrapping rules. Clients receiving a self-addressed answer or reject MUST verify the `call-id` matches the currently ringing call before acting on it.
 
 ### Audio and Media
 

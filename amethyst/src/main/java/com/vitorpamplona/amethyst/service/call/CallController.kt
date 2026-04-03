@@ -167,6 +167,20 @@ class CallController(
         peerPubKey: String,
         callType: CallType,
     ) {
+        initiateCallInternal(setOf(peerPubKey), callType)
+    }
+
+    fun initiateGroupCall(
+        peerPubKeys: Set<String>,
+        callType: CallType,
+    ) {
+        initiateCallInternal(peerPubKeys, callType)
+    }
+
+    private fun initiateCallInternal(
+        peerPubKeys: Set<String>,
+        callType: CallType,
+    ) {
         scope.launch {
             val callId = UUID.randomUUID().toString()
             _errorMessage.value = null
@@ -196,7 +210,11 @@ class CallController(
 
             session.createOffer { sdp ->
                 scope.launch {
-                    callManager.initiateCall(peerPubKey, callType, callId, sdp.description)
+                    if (peerPubKeys.size == 1) {
+                        callManager.initiateCall(peerPubKeys.first(), callType, callId, sdp.description)
+                    } else {
+                        callManager.initiateGroupCall(peerPubKeys, callType, callId, sdp.description)
+                    }
                 }
             }
         }
