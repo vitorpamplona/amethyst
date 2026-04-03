@@ -145,8 +145,12 @@ fun CallScreen(
             }
 
             is CallState.IncomingCall -> {
+                val otherMembers =
+                    remember(state.groupMembers) {
+                        state.groupMembers - accountViewModel.account.signer.pubKey
+                    }
                 if (isInPipMode) {
-                    PipCallUI(peerPubKeys = state.groupMembers, statusText = stringRes(R.string.call_incoming), accountViewModel = accountViewModel)
+                    PipCallUI(peerPubKeys = otherMembers, statusText = stringRes(R.string.call_incoming), accountViewModel = accountViewModel)
                 } else {
                     val isVideoCall = state.callType == com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType.VIDEO
                     val acceptWithPermission =
@@ -154,7 +158,7 @@ fun CallScreen(
                             callController?.acceptIncomingCall(state.sdpOffer)
                         }
                     IncomingCallUI(
-                        groupMembers = state.groupMembers,
+                        groupMembers = otherMembers,
                         callType = state.callType,
                         accountViewModel = accountViewModel,
                         onAccept = acceptWithPermission,
