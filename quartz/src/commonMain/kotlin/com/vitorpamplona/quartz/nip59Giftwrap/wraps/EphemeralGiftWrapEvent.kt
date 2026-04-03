@@ -26,7 +26,6 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
-import com.vitorpamplona.quartz.nip40Expiration.ExpirationTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -61,18 +60,12 @@ class EphemeralGiftWrapEvent(
         fun create(
             event: Event,
             recipientPubKey: HexKey,
-            expirationDelta: Long? = null,
-            createdAt: Long = TimeUtils.randomWithTwoDays(),
+            createdAt: Long = TimeUtils.now(),
         ): EphemeralGiftWrapEvent {
             val signer = NostrSignerSync(KeyPair())
 
             val tags =
-                expirationDelta?.let {
-                    arrayOf(
-                        PTag.assemble(recipientPubKey, null),
-                        ExpirationTag.assemble(createdAt + it + TimeUtils.twoDays()),
-                    )
-                } ?: arrayOf(
+                arrayOf(
                     PTag.assemble(recipientPubKey, null),
                 )
 
