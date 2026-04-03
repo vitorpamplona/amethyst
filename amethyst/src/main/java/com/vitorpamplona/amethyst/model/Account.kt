@@ -143,6 +143,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.countHashtags
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 import com.vitorpamplona.quartz.nip01Core.tags.references.references
@@ -446,6 +447,12 @@ class Account(
 
     suspend fun updateShowSensitiveContent(show: Boolean?) {
         if (settings.updateShowSensitiveContent(show)) {
+            sendNewAppSpecificData()
+        }
+    }
+
+    suspend fun updateMaxHashtagLimit(limit: Int) {
+        if (settings.updateMaxHashtagLimit(limit)) {
             sendNewAppSpecificData()
         }
     }
@@ -2024,10 +2031,16 @@ class Account(
 
     fun isKnown(user: HexKey): Boolean = user in allFollows.flow.value.authors
 
+    private fun hasExcessiveHashtags(note: Note): Boolean {
+        val limit = settings.syncedSettings.security.maxHashtagLimit.value
+        return limit > 0 && (note.event?.countHashtags() ?: 0) > limit
+    }
+
     override fun isAcceptable(note: Note): Boolean {
         return note.author?.let { isAcceptable(it) } ?: true &&
             // if user hasn't hided this author
             isAcceptableDirect(note) &&
+            !hasExcessiveHashtags(note) &&
             (
                 (note.event !is RepostEvent && note.event !is GenericRepostEvent) ||
                     (

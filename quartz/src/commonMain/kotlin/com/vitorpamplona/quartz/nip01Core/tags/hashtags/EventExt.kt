@@ -24,6 +24,8 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 
 fun Event.anyHashTag(onEach: (str: String) -> Boolean) = tags.anyHashTag(onEach)
 
+fun Event.countHashtags() = tags.countHashtags()
+
 fun Event.hasHashtags() = tags.hasHashtags()
 
 fun Event.hashtags() = tags.hashtags()

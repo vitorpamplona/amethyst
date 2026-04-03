@@ -753,4 +753,12 @@ class AccountSettings(
         } else {
             false
         }
+
+    fun updateMaxHashtagLimit(limit: Int): Boolean =
+        if (syncedSettings.security.updateMaxHashtagLimit(limit)) {
+            saveAccountSettings()
+            true
+        } else {
+            false
+        }
 }

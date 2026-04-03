@@ -58,6 +58,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -264,6 +265,34 @@ private fun HeaderOptions(accountViewModel: AccountViewModel) {
                 onSelect = {
                     accountViewModel.updateShowSensitiveContent(parseWarningType(it).prefCode)
                 },
+            )
+        }
+
+        SettingsRow(
+            R.string.max_hashtag_limit_title,
+            R.string.max_hashtag_limit_explainer,
+        ) {
+            var maxHashtags by remember {
+                mutableStateOf(
+                    accountViewModel.account.settings.syncedSettings.security.maxHashtagLimit.value.let {
+                        if (it == 0) "" else it.toString()
+                    },
+                )
+            }
+
+            OutlinedTextField(
+                value = maxHashtags,
+                onValueChange = {
+                    maxHashtags = it
+                    accountViewModel.updateMaxHashtagLimit(it.toIntOrNull() ?: 0)
+                },
+                keyboardOptions =
+                    KeyboardOptions.Default.copy(
+                        keyboardType = KeyboardType.Number,
+                        imeAction = ImeAction.Done,
+                    ),
+                singleLine = true,
+                modifier = Modifier.padding(start = 8.dp),
             )
         }
     }

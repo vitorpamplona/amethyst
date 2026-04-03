@@ -1152,6 +1152,8 @@ class AccountViewModel(
 
     fun updateShowSensitiveContent(show: Boolean?) = launchSigner { account.updateShowSensitiveContent(show) }
 
+    fun updateMaxHashtagLimit(limit: Int) = launchSigner { account.updateMaxHashtagLimit(limit) }
+
     fun changeReactionTypes(
         reactionSet: List<String>,
         onDone: () -> Unit,

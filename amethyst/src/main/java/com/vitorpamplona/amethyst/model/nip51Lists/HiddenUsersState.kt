@@ -52,6 +52,7 @@ class HiddenUsersState(
         muteList: List<MuteTag>,
         transientHiddenUsers: Set<String>,
         showSensitiveContent: Boolean?,
+        maxHashtagLimit: Int,
     ): LiveHiddenUsers {
         val hiddenUsers = blockList.mapNotNullTo(mutableSetOf()) { if (it is UserTag) it.pubKey else null } + muteList.mapNotNull { if (it is UserTag) it.pubKey else null }
         val hiddenWords = blockList.mapNotNullTo(mutableSetOf()) { if (it is WordTag) it.word else null } + muteList.mapNotNull { if (it is WordTag) it.word else null }
@@ -64,6 +65,7 @@ class HiddenUsersState(
             hiddenUsers = hiddenUsers,
             spammers = transientHiddenUsers,
             hiddenWords = hiddenWords,
+            maxHashtagLimit = maxHashtagLimit,
         )
     }
 
@@ -73,9 +75,10 @@ class HiddenUsersState(
             muteList,
             transientHiddenUsers,
             settings.syncedSettings.security.showSensitiveContent,
-        ) { blockList, muteList, transientHiddenUsers, showSensitiveContent ->
+            settings.syncedSettings.security.maxHashtagLimit,
+        ) { blockList, muteList, transientHiddenUsers, showSensitiveContent, maxHashtagLimit ->
             checkNotInMainThread()
-            emit(assembleLiveHiddenUsers(blockList, muteList, transientHiddenUsers, showSensitiveContent))
+            emit(assembleLiveHiddenUsers(blockList, muteList, transientHiddenUsers, showSensitiveContent, maxHashtagLimit))
         }.onStart {
             emit(
                 assembleLiveHiddenUsers(
@@ -83,6 +86,7 @@ class HiddenUsersState(
                     muteList.value,
                     transientHiddenUsers.value,
                     settings.syncedSettings.security.showSensitiveContent.value,
+                    settings.syncedSettings.security.maxHashtagLimit.value,
                 ),
             )
         }.flowOn(Dispatchers.IO)
