@@ -112,7 +112,10 @@ class WebRtcCallSession(
                             }
 
                             PeerConnection.IceConnectionState.DISCONNECTED -> {
-                                onDisconnected()
+                                // DISCONNECTED is often transient (network switch, brief
+                                // packet loss). WebRTC will transition to FAILED if
+                                // recovery is impossible, so we only act on FAILED above.
+                                Log.d(TAG) { "ICE disconnected (transient, waiting for recovery or FAILED)" }
                             }
 
                             else -> {}

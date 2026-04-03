@@ -110,7 +110,15 @@ class CallManager(
 
         if (!isFollowing(callerPubKey)) return
 
-        if (_state.value !is CallState.Idle) return
+        if (_state.value !is CallState.Idle) {
+            // Already in a call — send a "busy" reject so the caller gets
+            // immediate feedback instead of waiting for the 60s timeout.
+            scope.launch {
+                val result = factory.createReject(callerPubKey, callId, "busy", signer = signer)
+                publishEvent(result.wrap)
+            }
+            return
+        }
 
         val groupMembers = event.groupMembers()
 
@@ -341,12 +349,12 @@ class CallManager(
             }
 
             is CallState.Connecting -> {
-                peerPubKeys = current.peerPubKeys
+                peerPubKeys = current.peerPubKeys + current.pendingPeerPubKeys
                 callId = current.callId
             }
 
             is CallState.Connected -> {
-                peerPubKeys = current.peerPubKeys
+                peerPubKeys = current.allPeerPubKeys
                 callId = current.callId
             }
 
