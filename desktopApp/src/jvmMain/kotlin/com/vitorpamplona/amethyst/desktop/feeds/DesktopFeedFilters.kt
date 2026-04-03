@@ -117,7 +117,7 @@ class DesktopThreadFilter(
         val seen = LinkedHashSet<Note>()
         seen.add(root)
         collectReplies(root, seen)
-        return seen.sortedWith(compareBy { it.createdAt() ?: 0 })
+        return seen.sortedWith(compareBy { it.createdAt() ?: 0L })
     }
 
     private fun collectReplies(
