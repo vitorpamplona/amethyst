@@ -14,8 +14,9 @@
     </queries>
 
 
-    <!-- Doesn't require a camera -->
+    <!-- Doesn't require a camera or microphone -->
     <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
 
     <!-- To connect with relays -->
     <uses-permission android:name="android.permission.INTERNET"/>
@@ -40,10 +41,13 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
 
     <!-- Phone calls -->
     <uses-permission android:name="android.permission.VIBRATE"/>
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
 
     <!-- Keeps screen on while playing videos -->
@@ -243,7 +247,7 @@
 
         <service
             android:name=".service.call.CallForegroundService"
-            android:foregroundServiceType="microphone"
+            android:foregroundServiceType="microphone|camera"
             android:stopWithTask="true"
             android:exported="false" />
 

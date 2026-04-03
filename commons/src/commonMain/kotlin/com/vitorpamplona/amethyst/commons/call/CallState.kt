@@ -46,6 +46,7 @@ sealed interface CallState {
         val callId: String,
         val peerPubKeys: Set<HexKey>,
         val callType: CallType,
+        val pendingPeerPubKeys: Set<HexKey> = emptySet(),
     ) : CallState
 
     data class Connected(
@@ -53,7 +54,11 @@ sealed interface CallState {
         val peerPubKeys: Set<HexKey>,
         val callType: CallType,
         val startedAtEpoch: Long,
-    ) : CallState
+        val pendingPeerPubKeys: Set<HexKey> = emptySet(),
+    ) : CallState {
+        /** All peers: connected + still pending. */
+        val allPeerPubKeys: Set<HexKey> get() = peerPubKeys + pendingPeerPubKeys
+    }
 
     data class Ended(
         val callId: String,

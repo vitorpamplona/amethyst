@@ -45,6 +45,7 @@ class CallForegroundService : Service() {
         const val ACTION_START = "com.vitorpamplona.amethyst.CALL_START"
         const val ACTION_STOP = "com.vitorpamplona.amethyst.CALL_STOP"
         const val EXTRA_PEER_NAME = "peer_name"
+        const val EXTRA_IS_VIDEO = "is_video"
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -62,14 +63,25 @@ class CallForegroundService : Service() {
         when (intent?.action) {
             ACTION_START -> {
                 val peerName = intent.getStringExtra(EXTRA_PEER_NAME) ?: "Unknown"
+                val isVideo = intent.getBooleanExtra(EXTRA_IS_VIDEO, false)
                 val notification = buildNotification(peerName)
                 val hasAudioPermission =
                     ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) ==
                         PackageManager.PERMISSION_GRANTED
+                val hasCameraPermission =
+                    ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) ==
+                        PackageManager.PERMISSION_GRANTED
                 try {
                     val fgsType =
-                        if (hasAudioPermission && Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                            ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                            var type = 0
+                            if (hasAudioPermission) {
+                                type = type or ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+                            }
+                            if (isVideo && hasCameraPermission) {
+                                type = type or ServiceInfo.FOREGROUND_SERVICE_TYPE_CAMERA
+                            }
+                            type
                         } else {
                             0
                         }

@@ -117,7 +117,7 @@ class CallController(
             callManager.state.collect { state ->
                 when (state) {
                     is CallState.IncomingCall -> {
-                        audioManager.startRinging()
+                        withContext(Dispatchers.IO) { audioManager.startRinging() }
                         showIncomingCallNotification(state.callerPubKey)
                     }
 
@@ -128,7 +128,7 @@ class CallController(
                     is CallState.Connecting -> {
                         audioManager.stopRinging()
                         audioManager.stopRingbackTone()
-                        audioManager.switchToCallAudioMode()
+                        withContext(Dispatchers.IO) { audioManager.switchToCallAudioMode() }
                         audioManager.acquireProximityWakeLock()
                         NotificationUtils.cancelCallNotification(context)
                     }
@@ -337,6 +337,17 @@ class CallController(
 
     fun getEglBase() = webRtcSession?.eglBase
 
+    fun invitePeer(peerPubKey: String) {
+        scope.launch {
+            val session = webRtcSession ?: return@launch
+            session.createOffer { sdp ->
+                scope.launch {
+                    callManager.invitePeer(peerPubKey, sdp.description)
+                }
+            }
+        }
+    }
+
     fun hangup() {
         scope.launch {
             callManager.hangup()
@@ -461,10 +472,12 @@ class CallController(
     private fun startForegroundService() {
         try {
             val peerName = callManager.currentPeerPubKey() ?: ""
+            val isVideo = _isVideoEnabled.value
             val intent =
                 Intent(context, CallForegroundService::class.java).apply {
                     action = CallForegroundService.ACTION_START
                     putExtra(CallForegroundService.EXTRA_PEER_NAME, peerName)
+                    putExtra(CallForegroundService.EXTRA_IS_VIDEO, isVideo)
                 }
             context.startForegroundService(intent)
         } catch (e: Exception) {

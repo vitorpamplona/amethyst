@@ -155,13 +155,35 @@ class CallManager(
     fun onCallAnswered(event: CallAnswerEvent) {
         val current = _state.value
         val callId = event.callId()
+        val answeringPeer = event.pubKey
 
         when (current) {
             is CallState.Offering -> {
                 if (callId != current.callId) return
-                _state.value = CallState.Connecting(current.callId, current.peerPubKeys, current.callType)
+                // First answer: start the call immediately. Remaining peers stay pending.
+                val pending = current.peerPubKeys - answeringPeer
+                _state.value =
+                    CallState.Connecting(
+                        current.callId,
+                        setOf(answeringPeer),
+                        current.callType,
+                        pendingPeerPubKeys = pending,
+                    )
                 cancelTimeout()
                 onAnswerReceived?.invoke(event)
+            }
+
+            is CallState.Connecting -> {
+                // Another peer answered while we're still connecting with the first
+                if (callId != current.callId) return
+                if (answeringPeer in current.pendingPeerPubKeys) {
+                    _state.value =
+                        current.copy(
+                            peerPubKeys = current.peerPubKeys + answeringPeer,
+                            pendingPeerPubKeys = current.pendingPeerPubKeys - answeringPeer,
+                        )
+                }
+                // TODO: establish additional WebRTC peer connection for this peer
             }
 
             is CallState.IncomingCall -> {
@@ -171,9 +193,19 @@ class CallManager(
             }
 
             is CallState.Connected -> {
-                // Renegotiation answer (e.g., peer accepted our video upgrade offer)
                 if (callId != current.callId) return
-                onAnswerReceived?.invoke(event)
+                if (answeringPeer in current.pendingPeerPubKeys) {
+                    // A pending peer just joined the group call
+                    _state.value =
+                        current.copy(
+                            peerPubKeys = current.peerPubKeys + answeringPeer,
+                            pendingPeerPubKeys = current.pendingPeerPubKeys - answeringPeer,
+                        )
+                    // TODO: establish additional WebRTC peer connection for this peer
+                } else {
+                    // Renegotiation answer (e.g., peer accepted our video upgrade offer)
+                    onAnswerReceived?.invoke(event)
+                }
             }
 
             else -> {
@@ -185,11 +217,31 @@ class CallManager(
     fun onCallRejected(event: CallRejectEvent) {
         val current = _state.value
         val callId = event.callId()
+        val rejectingPeer = event.pubKey
 
         when (current) {
             is CallState.Offering -> {
                 if (callId != current.callId) return
-                transitionToEnded(current.callId, current.peerPubKeys, EndReason.PEER_REJECTED)
+                val remaining = current.peerPubKeys - rejectingPeer
+                if (remaining.isEmpty()) {
+                    transitionToEnded(current.callId, current.peerPubKeys, EndReason.PEER_REJECTED)
+                } else {
+                    _state.value = current.copy(peerPubKeys = remaining)
+                }
+            }
+
+            is CallState.Connecting -> {
+                // A pending peer rejected while we're already connecting with another
+                if (callId != current.callId) return
+                _state.value =
+                    current.copy(pendingPeerPubKeys = current.pendingPeerPubKeys - rejectingPeer)
+            }
+
+            is CallState.Connected -> {
+                // A pending peer rejected while we're already in the call
+                if (callId != current.callId) return
+                _state.value =
+                    current.copy(pendingPeerPubKeys = current.pendingPeerPubKeys - rejectingPeer)
             }
 
             is CallState.IncomingCall -> {
@@ -245,7 +297,38 @@ class CallManager(
                 peerPubKeys = current.peerPubKeys,
                 callType = current.callType,
                 startedAtEpoch = TimeUtils.now(),
+                pendingPeerPubKeys = current.pendingPeerPubKeys,
             )
+    }
+
+    /** Invites a new peer into the current call by sending them an offer. */
+    suspend fun invitePeer(
+        peerPubKey: HexKey,
+        sdpOffer: String,
+    ) {
+        val current = _state.value
+        val callId: String
+        val callType: CallType
+        when (current) {
+            is CallState.Connecting -> {
+                callId = current.callId
+                callType = current.callType
+                _state.value = current.copy(pendingPeerPubKeys = current.pendingPeerPubKeys + peerPubKey)
+            }
+
+            is CallState.Connected -> {
+                callId = current.callId
+                callType = current.callType
+                _state.value = current.copy(pendingPeerPubKeys = current.pendingPeerPubKeys + peerPubKey)
+            }
+
+            else -> {
+                return
+            }
+        }
+
+        val result = factory.createCallOffer(sdpOffer, peerPubKey, callId, callType, signer)
+        publishEvent(result.wrap)
     }
 
     suspend fun hangup() {
@@ -285,18 +368,67 @@ class CallManager(
     fun onPeerHangup(event: CallHangupEvent) {
         val current = _state.value
         val callId = event.callId() ?: return
-        val currentCallId =
-            when (current) {
-                is CallState.Offering -> current.callId
-                is CallState.Connecting -> current.callId
-                is CallState.Connected -> current.callId
-                is CallState.IncomingCall -> current.callId
-                else -> return
-            }
-        if (callId != currentCallId) return
+        val leavingPeer = event.pubKey
 
-        val peerPubKeys = currentPeerPubKeys() ?: return
-        transitionToEnded(callId, peerPubKeys, EndReason.PEER_HANGUP)
+        when (current) {
+            is CallState.Connected -> {
+                if (callId != current.callId) return
+                val connectedRemaining = current.peerPubKeys - leavingPeer
+                val pendingRemaining = current.pendingPeerPubKeys - leavingPeer
+                if (connectedRemaining.isEmpty() && pendingRemaining.isEmpty()) {
+                    transitionToEnded(callId, current.allPeerPubKeys, EndReason.PEER_HANGUP)
+                } else {
+                    _state.value =
+                        current.copy(
+                            peerPubKeys = connectedRemaining,
+                            pendingPeerPubKeys = pendingRemaining,
+                        )
+                }
+            }
+
+            is CallState.Connecting -> {
+                if (callId != current.callId) return
+                val connectedRemaining = current.peerPubKeys - leavingPeer
+                val pendingRemaining = current.pendingPeerPubKeys - leavingPeer
+                if (connectedRemaining.isEmpty() && pendingRemaining.isEmpty()) {
+                    transitionToEnded(callId, current.peerPubKeys + current.pendingPeerPubKeys, EndReason.PEER_HANGUP)
+                } else {
+                    _state.value =
+                        current.copy(
+                            peerPubKeys = connectedRemaining,
+                            pendingPeerPubKeys = pendingRemaining,
+                        )
+                }
+            }
+
+            is CallState.Offering -> {
+                if (callId != current.callId) return
+                val remaining = current.peerPubKeys - leavingPeer
+                if (remaining.isEmpty()) {
+                    transitionToEnded(callId, current.peerPubKeys, EndReason.PEER_HANGUP)
+                } else {
+                    _state.value = current.copy(peerPubKeys = remaining)
+                }
+            }
+
+            is CallState.IncomingCall -> {
+                if (callId != current.callId) return
+                if (leavingPeer == current.callerPubKey) {
+                    transitionToEnded(callId, current.groupMembers, EndReason.PEER_HANGUP)
+                } else {
+                    val remaining = current.groupMembers - leavingPeer
+                    if (remaining.size <= 1) {
+                        transitionToEnded(callId, current.groupMembers, EndReason.PEER_HANGUP)
+                    } else {
+                        _state.value = current.copy(groupMembers = remaining)
+                    }
+                }
+            }
+
+            else -> {
+                return
+            }
+        }
     }
 
     fun onSignalingEvent(event: Event) {
@@ -330,13 +462,13 @@ class CallManager(
     /** Returns the first peer pubkey (for P2P calls) or null. */
     fun currentPeerPubKey(): HexKey? = currentPeerPubKeys()?.firstOrNull()
 
-    /** Returns all peer pubkeys for the current call. */
+    /** Returns all peer pubkeys for the current call (connected + pending). */
     fun currentPeerPubKeys(): Set<HexKey>? =
         when (val s = _state.value) {
             is CallState.Offering -> s.peerPubKeys
             is CallState.IncomingCall -> s.peerPubKeys()
-            is CallState.Connecting -> s.peerPubKeys
-            is CallState.Connected -> s.peerPubKeys
+            is CallState.Connecting -> s.peerPubKeys + s.pendingPeerPubKeys
+            is CallState.Connected -> s.allPeerPubKeys
             else -> null
         }
 
