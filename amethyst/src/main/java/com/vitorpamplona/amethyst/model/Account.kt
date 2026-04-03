@@ -122,6 +122,7 @@ import com.vitorpamplona.quartz.experimental.nip95.header.dimension
 import com.vitorpamplona.quartz.experimental.nip95.header.fileSize
 import com.vitorpamplona.quartz.experimental.nip95.header.hash
 import com.vitorpamplona.quartz.experimental.nip95.header.mimeType
+import com.vitorpamplona.quartz.experimental.nipA3.PaymentTarget
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.blurhash
 import com.vitorpamplona.quartz.experimental.profileGallery.dimension
@@ -2126,6 +2127,8 @@ class Account(
     suspend fun sendNip65RelayList(relays: List<AdvertisedRelayInfo>) = sendLiterallyEverywhere(nip65RelayList.saveRelayList(relays))
 
     suspend fun sendBlossomServersList(servers: List<String>) = sendMyPublicAndPrivateOutbox(blossomServers.saveBlossomServersList(servers))
+
+    suspend fun savePaymentTargets(targets: List<PaymentTarget>) = sendMyPublicAndPrivateOutbox(paymentTargetsState.savePaymentTargets(targets))
 
     fun markAsRead(
         route: String,

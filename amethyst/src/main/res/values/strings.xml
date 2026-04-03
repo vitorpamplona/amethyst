@@ -576,6 +576,15 @@
     <string name="use_default_servers">Use Default List</string>
     <string name="add_media_server">Add media server</string>
     <string name="delete_media_server">Delete media server</string>
+    <string name="payment_targets">Payment Targets</string>
+    <string name="payment_targets_explainer">Publish your payment addresses so others can send you funds directly.</string>
+    <string name="payment_targets_section_explainer">Add payment addresses for different networks (e.g. bitcoin, lightning, ethereum).</string>
+    <string name="no_payment_targets_message">No payment targets set. Add one below ↓</string>
+    <string name="payment_target_type">Network type (e.g. bitcoin)</string>
+    <string name="payment_target_authority">Address</string>
+    <string name="delete_payment_target">Delete payment target</string>
+    <string name="no_payment_app_found">No app found to handle this payment. Please install a compatible wallet.</string>
+    <string name="error_dialog_payment_error">Unable to open payment</string>
 
     <string name="uploading_state_ready">Not Started</string>
     <string name="uploading_state_compressing">Compressing</string>
@@ -1424,6 +1433,8 @@
     <string name="reactions_settings_zap_description">Send a lightning payment to the author</string>
     <string name="reactions_settings_share">Share</string>
     <string name="reactions_settings_share_description">Share this note externally</string>
+    <string name="reactions_settings_pay">Pay</string>
+    <string name="reactions_settings_pay_description">Send a payment to the author via their payment targets</string>
 
     <string name="profile_image_of_user">Profile Picture of %1$s</string>
     <string name="relay_info">Relay %1$s</string>

@@ -330,7 +330,7 @@ private fun ReactionRowItemCard(
                 )
             }
 
-            if (item.action != ReactionRowAction.Share) {
+            if (item.action != ReactionRowAction.Share && item.action != ReactionRowAction.Pay) {
                 Row(
                     modifier = Modifier.weight(1f),
                     verticalAlignment = Alignment.CenterVertically,
@@ -362,6 +362,7 @@ fun reactionActionName(action: ReactionRowAction): String =
         ReactionRowAction.Like -> stringRes(R.string.reactions_settings_like)
         ReactionRowAction.Zap -> stringRes(R.string.reactions_settings_zap)
         ReactionRowAction.Share -> stringRes(R.string.reactions_settings_share)
+        ReactionRowAction.Pay -> stringRes(R.string.reactions_settings_pay)
     }
 
 @Composable
@@ -372,4 +373,5 @@ fun reactionActionDescription(action: ReactionRowAction): String =
         ReactionRowAction.Like -> stringRes(R.string.reactions_settings_like_description)
         ReactionRowAction.Zap -> stringRes(R.string.reactions_settings_zap_description)
         ReactionRowAction.Share -> stringRes(R.string.reactions_settings_share_description)
+        ReactionRowAction.Pay -> stringRes(R.string.reactions_settings_pay_description)
     }
