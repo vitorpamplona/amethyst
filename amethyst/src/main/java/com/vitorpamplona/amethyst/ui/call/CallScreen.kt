@@ -132,11 +132,15 @@ fun CallScreen(
             }
 
             is CallState.Offering -> {
+                val otherMembers =
+                    remember(state.peerPubKeys) {
+                        state.peerPubKeys - accountViewModel.account.signer.pubKey
+                    }
                 if (isInPipMode) {
-                    PipCallUI(peerPubKeys = state.peerPubKeys, statusText = stringRes(R.string.call_calling), accountViewModel = accountViewModel)
+                    PipCallUI(peerPubKeys = otherMembers, statusText = stringRes(R.string.call_calling), accountViewModel = accountViewModel)
                 } else {
                     CallInProgressUI(
-                        peerPubKeys = state.peerPubKeys,
+                        peerPubKeys = otherMembers,
                         statusText = stringRes(R.string.call_calling),
                         accountViewModel = accountViewModel,
                         onHangup = { scope.launch { callManager.hangup() } },
@@ -202,9 +206,13 @@ fun CallScreen(
             }
 
             is CallState.Ended -> {
+                val otherMembers =
+                    remember(state.peerPubKeys) {
+                        state.peerPubKeys - accountViewModel.account.signer.pubKey
+                    }
                 if (!isInPipMode) {
                     CallInProgressUI(
-                        peerPubKeys = state.peerPubKeys,
+                        peerPubKeys = otherMembers,
                         statusText = stringRes(R.string.call_ended),
                         accountViewModel = accountViewModel,
                         onHangup = { onCallEnded() },
@@ -451,6 +459,10 @@ private fun ConnectedCallUI(
         }
 
         // If no video or peer stopped sharing, show avatar
+        val otherMembers =
+            remember(state.allPeerPubKeys) {
+                state.allPeerPubKeys - accountViewModel.account.signer.pubKey
+            }
         if (!isRemoteVideoActive) {
             Column(
                 modifier = Modifier.fillMaxSize(),
@@ -458,13 +470,13 @@ private fun ConnectedCallUI(
                 verticalArrangement = Arrangement.Center,
             ) {
                 GroupCallPictures(
-                    peerPubKeys = state.allPeerPubKeys,
+                    peerPubKeys = otherMembers,
                     size = 120.dp,
                     accountViewModel = accountViewModel,
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 GroupCallNames(
-                    peerPubKeys = state.allPeerPubKeys,
+                    peerPubKeys = otherMembers,
                     accountViewModel = accountViewModel,
                     textColor = Color.White,
                 )
@@ -690,6 +702,10 @@ private fun PipConnectedCallUI(
             }
         }
 
+        val otherMembers =
+            remember(state.allPeerPubKeys) {
+                state.allPeerPubKeys - accountViewModel.account.signer.pubKey
+            }
         if (!isRemoteVideoActive) {
             // Show small avatar + timer in PiP
             Column(
@@ -698,7 +714,7 @@ private fun PipConnectedCallUI(
                 verticalArrangement = Arrangement.Center,
             ) {
                 GroupCallPictures(
-                    peerPubKeys = state.allPeerPubKeys,
+                    peerPubKeys = otherMembers,
                     size = 48.dp,
                     accountViewModel = accountViewModel,
                 )
