@@ -723,6 +723,8 @@
     <string name="warn_when_posts_have_reports_from_your_follows_explainer">Mostra uma mensagem de aviso quando as postagens tiverem 5 ou mais relatórios de suas seguintes</string>
     <string name="show_sensitive_content_title">Mostrar conteúdo sensível</string>
     <string name="show_sensitive_content_explainer">Mostra uma mensagem de aviso quando o autor da publicação a marcar como sensível</string>
+    <string name="max_hashtag_limit_title">Máximo de hashtags por postagem</string>
+    <string name="max_hashtag_limit_explainer">Oculta postagens com mais hashtags do que este limite. Defina como 0 para desativar</string>
     <string name="new_reaction_symbol">Novo símbolo de reação</string>
     <string name="no_reaction_type_setup_long_press_to_change">Nenhum tipo de reação selecionado. Pressione e segure para alterar</string>
     <string name="zapraiser">Arrecadação de Zaps</string>
@@ -1914,7 +1916,4 @@
     <string name="relay_members_removed">%1$d membros removidos do relay</string>
     <string name="relay_join_request">Solicitação de entrada no relay</string>
     <string name="relay_leave_request">Solicitação de saída do relay</string>
-    <string name="call_bluetooth">Bluetooth</string>
-    <string name="max_hashtag_limit_explainer">Oculta postagens com mais hashtags do que este limite. Defina como 0 para desativar</string>
-    <string name="max_hashtag_limit_title">Máximo de hashtags por postagem</string>
 </resources>

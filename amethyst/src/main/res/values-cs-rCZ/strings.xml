@@ -723,6 +723,8 @@
     <string name="warn_when_posts_have_reports_from_your_follows_explainer">Zobrazí varovnou zprávu, když příspěvky mají 5 nebo více hlášení od vašich sledovaných</string>
     <string name="show_sensitive_content_title">Zobrazit citlivý obsah</string>
     <string name="show_sensitive_content_explainer">Zobrazí varovnou zprávu, když ji autor příspěvku označil jako citlivý</string>
+    <string name="max_hashtag_limit_title">Max. hashtagů na příspěvek</string>
+    <string name="max_hashtag_limit_explainer">Skryje příspěvky s více hashtagy, než je tento limit. Nastavte 0 pro deaktivaci</string>
     <string name="new_reaction_symbol">Nový symbol reakce</string>
     <string name="no_reaction_type_setup_long_press_to_change">Nebyly vybrány žádné typy reakcí. Dlouhým stiskem změňte</string>
     <string name="zapraiser">Zap-sběr</string>
@@ -1915,7 +1917,4 @@
     <string name="relay_members_removed">%1$d členů odebráno z relé</string>
     <string name="relay_join_request">Žádost o připojení k relé</string>
     <string name="relay_leave_request">Žádost o opuštění relé</string>
-    <string name="call_bluetooth">Bluetooth</string>
-    <string name="max_hashtag_limit_explainer">Skryje příspěvky s více hashtagy, než je tento limit. Nastavte 0 pro deaktivaci</string>
-    <string name="max_hashtag_limit_title">Max. hashtagů na příspěvek</string>
 </resources>

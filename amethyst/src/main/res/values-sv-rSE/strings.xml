@@ -722,6 +722,8 @@
     <string name="warn_when_posts_have_reports_from_your_follows_explainer">Visar ett varningsmeddelande när inlägg har 5 eller fler rapporter från följande</string>
     <string name="show_sensitive_content_title">Visa känsligt innehåll</string>
     <string name="show_sensitive_content_explainer">Visar ett varningsmeddelande när författaren till inlägget markerar det som känsligt</string>
+    <string name="max_hashtag_limit_title">Max hashtags per inlägg</string>
+    <string name="max_hashtag_limit_explainer">Döljer inlägg med fler hashtaggar än denna gräns. Sätt till 0 för att inaktivera</string>
     <string name="new_reaction_symbol">Ny reaktionssymbol</string>
     <string name="no_reaction_type_setup_long_press_to_change">Inga reaktionstyper valda. Håll ned för att ändra</string>
     <string name="zapraiser">Zap insamling</string>
@@ -1914,7 +1916,4 @@
     <string name="relay_members_removed">%1$d medlemmar borttagna från relä</string>
     <string name="relay_join_request">Begäran om att gå med i relä</string>
     <string name="relay_leave_request">Begäran om att lämna relä</string>
-    <string name="call_bluetooth">Bluetooth</string>
-    <string name="max_hashtag_limit_explainer">Döljer inlägg med fler hashtaggar än denna gräns. Sätt till 0 för att inaktivera</string>
-    <string name="max_hashtag_limit_title">Max hashtags per inlägg</string>
 </resources>
