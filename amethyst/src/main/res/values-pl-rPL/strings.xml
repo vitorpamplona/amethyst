@@ -725,6 +725,8 @@
     <string name="warn_when_posts_have_reports_from_your_follows_explainer">Wyświetla komunikat ostrzegawczy, gdy posty zostały zgłoszone przez 5 lub więcej obserwowanych osób</string>
     <string name="show_sensitive_content_title">Pokaż wrażliwe treści</string>
     <string name="show_sensitive_content_explainer">Pokazuje komunikat ostrzegawczy, gdy autor oznaczył wpis jako wrażliwy</string>
+    <string name="max_hashtag_limit_title">Maks ilość hashtagów na post</string>
+    <string name="max_hashtag_limit_explainer">Ukrywa posty zawierające więcej hashtagów niż ten limit. Ustaw wartość 0, aby wyłączyć tę funkcję</string>
     <string name="new_reaction_symbol">Nowy Symbol Odzewu</string>
     <string name="no_reaction_type_setup_long_press_to_change">Brak wstępnie wybranych typów reakcji dla tego użytkownika. Przytrzymaj przycisk serce, aby zmienić</string>
     <string name="zapraiser">Zapraiser</string>
