@@ -576,6 +576,13 @@
     <string name="use_default_servers">Use Default List</string>
     <string name="add_media_server">Add media server</string>
     <string name="delete_media_server">Delete media server</string>
+    <string name="payment_targets">Payment Targets</string>
+    <string name="payment_targets_explainer">Publish your payment addresses so others can send you funds directly.</string>
+    <string name="payment_targets_section_explainer">Add payment addresses for different networks (e.g. bitcoin, lightning, ethereum).</string>
+    <string name="no_payment_targets_message">No payment targets set. Add one below ↓</string>
+    <string name="payment_target_type">Network type (e.g. bitcoin)</string>
+    <string name="payment_target_authority">Address</string>
+    <string name="delete_payment_target">Delete payment target</string>
 
     <string name="uploading_state_ready">Not Started</string>
     <string name="uploading_state_compressing">Compressing</string>

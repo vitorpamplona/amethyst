@@ -65,6 +65,7 @@ import com.vitorpamplona.amethyst.ui.components.appendLink
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.DrawPlayName
+import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.ObserveAndRenderNIP05VerifiedSymbol
 import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.painterRes
@@ -79,6 +80,8 @@ import com.vitorpamplona.amethyst.ui.theme.SpacedBy3dp
 import com.vitorpamplona.amethyst.ui.theme.SpacedBy5dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.experimental.nipA3.PaymentTarget
+import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip39ExtIdentities.GitHubIdentity
@@ -216,6 +219,8 @@ fun DrawAdditionalInfo(
                     ?: userState?.info?.lud06?.trim()
             }
         DisplayLNAddress(lud16, baseUser, accountViewModel, nav)
+
+        DisplayPaymentTargets(baseUser, accountViewModel)
 
         val website = user.info.website
         if (!website.isNullOrEmpty()) {
@@ -369,3 +374,46 @@ fun getIdentityClaimDescription(identity: IdentityClaimTag): Int =
         is GitHubIdentity -> R.string.github
         else -> R.string.github
     }
+
+@Composable
+fun DisplayPaymentTargets(
+    baseUser: User,
+    accountViewModel: AccountViewModel,
+) {
+    val address =
+        remember(baseUser.pubkeyHex) {
+            PaymentTargetsEvent.createAddress(baseUser.pubkeyHex)
+        }
+
+    LoadAddressableNote(address, accountViewModel) { note ->
+        val targets =
+            remember(note) {
+                (note?.event as? PaymentTargetsEvent)?.paymentTargets() ?: emptyList()
+            }
+        targets.forEach { target ->
+            PaymentTargetRow(target)
+        }
+    }
+}
+
+@Composable
+fun PaymentTargetRow(target: PaymentTarget) {
+    val uri = LocalUriHandler.current
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = target.type.replaceFirstChar(Char::titlecase),
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+            modifier = Modifier.padding(end = 4.dp),
+        )
+        ClickableTextPrimary(
+            text = target.authority,
+            onClick = {
+                runCatching {
+                    uri.openUri("payto://${target.type}/${target.authority}")
+                }
+            },
+            modifier = Modifier.padding(vertical = 1.dp),
+        )
+    }
+}

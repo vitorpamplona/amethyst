@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.datasource
 
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -41,6 +42,7 @@ val UserProfileListKinds =
         FollowListEvent.KIND,
         HashtagListEvent.KIND,
         AppRecommendationEvent.KIND,
+        PaymentTargetsEvent.KIND,
     )
 
 fun filterUserProfileLists(
