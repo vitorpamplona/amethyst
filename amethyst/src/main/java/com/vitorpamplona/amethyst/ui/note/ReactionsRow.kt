@@ -87,7 +87,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.style.TextAlign
@@ -99,6 +98,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
+import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.vitorpamplona.amethyst.R
@@ -132,6 +132,7 @@ import com.vitorpamplona.amethyst.ui.components.toasts.multiline.UserBasedErrorM
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeReplyTo
+import com.vitorpamplona.amethyst.ui.note.ErrorMessageDialog
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.types.EditState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -346,20 +347,14 @@ fun PayReaction(
     iconSizeModifier: Modifier = Size20Modifier,
 ) {
     val authorPubkey = baseNote.author?.pubkeyHex ?: return
-    val address =
-        remember(authorPubkey) {
-            PaymentTargetsEvent.createAddress(authorPubkey)
-        }
+    val address = remember(authorPubkey) { PaymentTargetsEvent.createAddress(authorPubkey) }
+    val context = LocalContext.current
 
     LoadAddressableNote(address, accountViewModel) { note ->
-        val targets =
-            remember(note) {
-                (note?.event as? PaymentTargetsEvent)?.paymentTargets() ?: emptyList()
-            }
-        if (targets.isEmpty()) return@LoadAddressableNote
+        val targets = remember(note) { (note?.event as? PaymentTargetsEvent)?.paymentTargets() ?: emptyList() }
 
-        val uri = LocalUriHandler.current
         var expanded by remember { mutableStateOf(false) }
+        var errorMessage by remember { mutableStateOf<String?>(null) }
 
         ClickableBox(
             modifier = iconSizeModifier,
@@ -379,20 +374,42 @@ fun PayReaction(
                 onDismiss = { expanded = false },
             ) {
                 M3ActionSection {
-                    targets.forEach { target ->
+                    if (targets.isEmpty()) {
                         M3ActionRow(
                             icon = Icons.Outlined.AccountBalanceWallet,
-                            text = "${target.type.replaceFirstChar(Char::titlecase)}: ${target.authority}",
-                            onClick = {
-                                expanded = false
-                                runCatching {
-                                    uri.openUri("payto://${target.type}/${target.authority}")
-                                }
-                            },
+                            text = stringRes(R.string.no_payment_targets_message),
+                            enabled = false,
+                            onClick = {},
                         )
+                    } else {
+                        targets.forEach { target ->
+                            M3ActionRow(
+                                icon = Icons.Outlined.AccountBalanceWallet,
+                                text = "${target.type.replaceFirstChar(Char::titlecase)}: ${target.authority}",
+                                onClick = {
+                                    expanded = false
+                                    try {
+                                        val intent = Intent(Intent.ACTION_VIEW, "payto://${target.type}/${target.authority}".toUri())
+                                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                                        context.startActivity(intent)
+                                    } catch (e: Exception) {
+                                        if (e is kotlinx.coroutines.CancellationException) throw e
+                                        errorMessage = stringRes(context, R.string.no_payment_app_found)
+                                    }
+                                },
+                            )
+                        }
                     }
                 }
             }
+        }
+
+        errorMessage?.let { msg ->
+            ErrorMessageDialog(
+                title = stringRes(R.string.error_dialog_payment_error),
+                textContent = msg,
+                onDismiss = { errorMessage = null },
+            )
         }
     }
 }
