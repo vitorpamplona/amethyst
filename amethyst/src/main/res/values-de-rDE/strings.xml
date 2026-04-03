@@ -1920,4 +1920,18 @@ anz der Bedingungen ist erforderlich</string>
     <string name="relay_members_removed">%1$d Mitglieder aus Relay entfernt</string>
     <string name="relay_join_request">Relay-Beitrittsanfrage</string>
     <string name="relay_leave_request">Relay-Austrittsanfrage</string>
+    <string name="call_bluetooth">Bluetooth</string>
+    <string name="delete_payment_target">Zahlungsziel löschen</string>
+    <string name="error_dialog_payment_error">Zahlung konnte nicht geöffnet werden</string>
+    <string name="no_payment_app_found">Keine App gefunden, die diese Zahlung verarbeiten kann. Bitte installieren Sie eine kompatible Wallet.</string>
+    <string name="no_payment_targets_message">Keine Zahlungsziele festgelegt. Fügen Sie unten eines hinzu ↓</string>
+    <string name="payment_target_authority">Adresse</string>
+    <string name="payment_target_type">Netzwerktyp (z.B. Bitcoin)</string>
+    <string name="payment_targets">Zahlungsziele</string>
+    <string name="payment_targets_explainer">Veröffentlichen Sie Ihre Zahlungsadressen, damit andere Ihnen direkt Mittel senden können.</string>
+    <string name="payment_targets_section_explainer">Fügen Sie Zahlungsadressen für verschiedene Netzwerke hinzu (z.B. Bitcoin, Lightning, Ethereum).</string>
+    <string name="reactions_settings_pay">Bezahlen</string>
+    <string name="reactions_settings_pay_description">Eine Zahlung an den Autor über seine Zahlungsziele senden</string>
+    <string name="send_kind0_to_local_relay_description">Alle empfangenen Profilereignisse (kind 0) an Ihren lokalen Relay senden</string>
+    <string name="send_kind0_to_local_relay_title">Profile an lokalen Relay weiterleiten</string>
 </resources>

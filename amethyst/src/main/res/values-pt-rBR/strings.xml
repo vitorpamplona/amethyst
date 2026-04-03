@@ -1916,4 +1916,18 @@
     <string name="relay_members_removed">%1$d membros removidos do relay</string>
     <string name="relay_join_request">Solicitação de entrada no relay</string>
     <string name="relay_leave_request">Solicitação de saída do relay</string>
+    <string name="call_bluetooth">Bluetooth</string>
+    <string name="delete_payment_target">Excluir destino de pagamento</string>
+    <string name="error_dialog_payment_error">Não foi possível abrir o pagamento</string>
+    <string name="no_payment_app_found">Nenhum aplicativo encontrado para processar este pagamento. Por favor, instale uma carteira compatível.</string>
+    <string name="no_payment_targets_message">Nenhum destino de pagamento definido. Adicione um abaixo ↓</string>
+    <string name="payment_target_authority">Endereço</string>
+    <string name="payment_target_type">Tipo de rede (ex.: bitcoin)</string>
+    <string name="payment_targets">Destinos de pagamento</string>
+    <string name="payment_targets_explainer">Publique seus endereços de pagamento para que outros possam enviar fundos diretamente para você.</string>
+    <string name="payment_targets_section_explainer">Adicione endereços de pagamento para diferentes redes (ex.: bitcoin, lightning, ethereum).</string>
+    <string name="reactions_settings_pay">Pagar</string>
+    <string name="reactions_settings_pay_description">Enviar um pagamento ao autor por meio de seus destinos de pagamento</string>
+    <string name="send_kind0_to_local_relay_description">Enviar todos os eventos de perfil recebidos (kind 0) para o seu relay local</string>
+    <string name="send_kind0_to_local_relay_title">Encaminhar perfis para relay local</string>
 </resources>

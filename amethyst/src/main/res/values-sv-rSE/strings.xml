@@ -1916,4 +1916,18 @@
     <string name="relay_members_removed">%1$d medlemmar borttagna från relä</string>
     <string name="relay_join_request">Begäran om att gå med i relä</string>
     <string name="relay_leave_request">Begäran om att lämna relä</string>
+    <string name="call_bluetooth">Bluetooth</string>
+    <string name="delete_payment_target">Ta bort betalningsmottagare</string>
+    <string name="error_dialog_payment_error">Det gick inte att öppna betalningen</string>
+    <string name="no_payment_app_found">Ingen app hittades för att hantera denna betalning. Installera en kompatibel plånbok.</string>
+    <string name="no_payment_targets_message">Inga betalningsmottagare inställda. Lägg till en nedan ↓</string>
+    <string name="payment_target_authority">Adress</string>
+    <string name="payment_target_type">Nätverkstyp (t.ex. bitcoin)</string>
+    <string name="payment_targets">Betalningsmottagare</string>
+    <string name="payment_targets_explainer">Publicera dina betalningsadresser så att andra kan skicka pengar direkt till dig.</string>
+    <string name="payment_targets_section_explainer">Lägg till betalningsadresser för olika nätverk (t.ex. bitcoin, lightning, ethereum).</string>
+    <string name="reactions_settings_pay">Betala</string>
+    <string name="reactions_settings_pay_description">Skicka en betalning till författaren via deras betalningsmottagare</string>
+    <string name="send_kind0_to_local_relay_description">Skicka alla mottagna profilhändelser (kind 0) till ditt lokala relä</string>
+    <string name="send_kind0_to_local_relay_title">Vidarebefordra profiler till lokalt relä</string>
 </resources>
