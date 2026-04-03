@@ -155,7 +155,13 @@ class CallController(
                 when (state) {
                     is CallState.IncomingCall -> {
                         withContext(Dispatchers.IO) { audioManager.startRinging() }
-                        showIncomingCallNotification(state.callerPubKey)
+                        // Launch notification in a separate coroutine so that
+                        // long-running network I/O (profile picture download)
+                        // does not block the state collector.  StateFlow is
+                        // conflated — if the collector is suspended when the
+                        // state transitions Ended → Idle, the Ended emission
+                        // is lost and cleanup/stopRinging never runs.
+                        scope.launch { showIncomingCallNotification(state.callerPubKey) }
                     }
 
                     is CallState.Offering -> {
@@ -178,7 +184,14 @@ class CallController(
                         cleanup()
                     }
 
-                    else -> {}
+                    is CallState.Idle -> {
+                        // Safety net: ensure ringing and notifications are
+                        // stopped even if the Ended state was missed due to
+                        // StateFlow conflation.
+                        audioManager.stopRinging()
+                        audioManager.stopRingbackTone()
+                        NotificationUtils.cancelCallNotification(context)
+                    }
                 }
             }
         }
