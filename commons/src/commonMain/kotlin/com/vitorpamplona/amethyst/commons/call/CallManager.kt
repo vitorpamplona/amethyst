@@ -606,6 +606,7 @@ class CallManager(
                 delay(ENDED_DISPLAY_MS)
                 if (_state.value is CallState.Ended) {
                     _state.value = CallState.Idle
+                    processedEventIds.clear()
                 }
             }
     }

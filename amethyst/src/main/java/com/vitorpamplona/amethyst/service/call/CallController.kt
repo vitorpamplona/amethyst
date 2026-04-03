@@ -193,12 +193,11 @@ class CallController(
                     }
 
                     is CallState.Idle -> {
-                        // Safety net: ensure ringing and notifications are
-                        // stopped even if the Ended state was missed due to
-                        // StateFlow conflation.
-                        audioManager.stopRinging()
-                        audioManager.stopRingbackTone()
-                        NotificationUtils.cancelCallNotification(context)
+                        // Safety net: full cleanup in case the Ended state
+                        // was missed due to StateFlow conflation.  cleanup()
+                        // is idempotent — calling it twice is harmless because
+                        // each resource is null-checked and nulled out.
+                        cleanup()
                     }
                 }
             }
@@ -737,24 +736,71 @@ class CallController(
     // ---- Cleanup ----
 
     fun cleanup() {
-        audioManager.release()
-        stopForegroundService()
+        // Each block is wrapped individually so that a failure in one
+        // (e.g. a WebRTC native crash) does not prevent the rest from
+        // running.  Without this, a single exception could leave the
+        // camera open, audio mode stuck, or the foreground service alive.
+        try {
+            audioManager.release()
+        } catch (e: Exception) {
+            Log.e(TAG, "cleanup: audioManager.release() failed", e)
+        }
+        try {
+            stopForegroundService()
+        } catch (e: Exception) {
+            Log.e(TAG, "cleanup: stopForegroundService() failed", e)
+        }
         foregroundServiceStarted = false
         NotificationUtils.cancelCallNotification(context)
         stopRemoteVideoMonitor()
 
         // Dispose all peer sessions
-        peerSessions.values.forEach { it.session.dispose() }
+        for (ps in peerSessions.values) {
+            try {
+                ps.session.dispose()
+            } catch (e: Exception) {
+                Log.e(TAG, "cleanup: PeerSession.dispose() failed", e)
+            }
+        }
         peerSessions.clear()
 
-        // Dispose shared resources
-        stopCamera()
-        localAudioTrackInternal?.dispose()
-        localVideoTrackInternal?.dispose()
-        localAudioSource?.dispose()
-        localVideoSource?.dispose()
-        peerConnectionFactory?.dispose()
-        sharedEglBase?.release()
+        // Dispose shared resources — each in its own try-catch so one
+        // failure does not prevent the others from being released.
+        try {
+            stopCamera()
+        } catch (e: Exception) {
+            Log.e(TAG, "cleanup: stopCamera() failed", e)
+        }
+        try {
+            localAudioTrackInternal?.dispose()
+        } catch (e: Exception) {
+            Log.e(TAG, "cleanup: localAudioTrack.dispose() failed", e)
+        }
+        try {
+            localVideoTrackInternal?.dispose()
+        } catch (e: Exception) {
+            Log.e(TAG, "cleanup: localVideoTrack.dispose() failed", e)
+        }
+        try {
+            localAudioSource?.dispose()
+        } catch (e: Exception) {
+            Log.e(TAG, "cleanup: localAudioSource.dispose() failed", e)
+        }
+        try {
+            localVideoSource?.dispose()
+        } catch (e: Exception) {
+            Log.e(TAG, "cleanup: localVideoSource.dispose() failed", e)
+        }
+        try {
+            peerConnectionFactory?.dispose()
+        } catch (e: Exception) {
+            Log.e(TAG, "cleanup: peerConnectionFactory.dispose() failed", e)
+        }
+        try {
+            sharedEglBase?.release()
+        } catch (e: Exception) {
+            Log.e(TAG, "cleanup: sharedEglBase.release() failed", e)
+        }
 
         localAudioTrackInternal = null
         localVideoTrackInternal = null
