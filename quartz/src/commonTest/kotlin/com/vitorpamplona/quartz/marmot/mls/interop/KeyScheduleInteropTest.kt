@@ -139,14 +139,14 @@ class KeyScheduleInteropTest {
                 val secrets = ks.deriveEpochSecrets(commitSecret, initSecret, pskSecret)
 
                 // Test MLS-Exporter
-                // The exporter label in test vectors is hex-encoded raw bytes (may not be valid UTF-8).
-                val exporterLabel = epoch.exporter.label.hexToByteArray()
+                // The exporter label and context in the test vectors are hex-encoded strings.
+                // The label is used as a literal string (not decoded from hex to bytes).
                 val exporterContext = epoch.exporter.context.hexToByteArray()
 
                 val exported =
                     KeySchedule.mlsExporter(
                         secrets.exporterSecret,
-                        exporterLabel,
+                        epoch.exporter.label,
                         exporterContext,
                         epoch.exporter.length,
                     )
