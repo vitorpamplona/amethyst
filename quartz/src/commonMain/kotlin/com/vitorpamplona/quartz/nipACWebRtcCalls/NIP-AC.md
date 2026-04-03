@@ -353,6 +353,8 @@ When a user is logged in on multiple devices, all devices will receive and ring 
 
 These self-notification events use the same `call-id` as the original call and follow the same gift-wrapping rules. Clients receiving a self-addressed answer or reject MUST verify the `call-id` matches the currently ringing call before acting on it.
 
+**Group calls**: In group calls, the sender's own pubkey SHOULD be included in the set of recipients when gift-wrapping answer and reject events. This means the self-notification is implicit — no separate self-addressed event is needed. The same signed inner event (with all group member `p` tags) is simply wrapped to the sender's own pubkey along with all other members.
+
 ### Audio and Media
 
 - Clients SHOULD switch `AudioManager` to `MODE_IN_COMMUNICATION` when a call connects and restore to `MODE_NORMAL` when the call ends.
