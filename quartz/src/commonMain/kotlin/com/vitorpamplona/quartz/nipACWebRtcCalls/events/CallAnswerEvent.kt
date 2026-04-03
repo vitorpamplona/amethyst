@@ -29,10 +29,8 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTagIds
 import com.vitorpamplona.quartz.nip31Alts.alt
-import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallIdTag
 import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.callId
-import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
 class CallAnswerEvent(
@@ -56,19 +54,16 @@ class CallAnswerEvent(
     companion object {
         const val KIND = 25051
         const val ALT_DESCRIPTION = "WebRTC call answer"
-        const val EXPIRATION_SECONDS = 20L
 
         fun build(
             sdpAnswer: String,
             callerPubKey: HexKey,
             callId: String,
-            createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<CallAnswerEvent>.() -> Unit = {},
-        ) = eventTemplate(KIND, sdpAnswer, createdAt) {
+        ) = eventTemplate(KIND, sdpAnswer) {
             alt(ALT_DESCRIPTION)
             pTag(callerPubKey)
             callId(callId)
-            expiration(createdAt + EXPIRATION_SECONDS)
             initializer()
         }
 
@@ -76,13 +71,11 @@ class CallAnswerEvent(
             sdpAnswer: String,
             memberPubKeys: Set<HexKey>,
             callId: String,
-            createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<CallAnswerEvent>.() -> Unit = {},
-        ) = eventTemplate(KIND, sdpAnswer, createdAt) {
+        ) = eventTemplate(KIND, sdpAnswer) {
             alt(ALT_DESCRIPTION)
             pTagIds(memberPubKeys)
             callId(callId)
-            expiration(createdAt + EXPIRATION_SECONDS)
             initializer()
         }
     }

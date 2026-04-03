@@ -29,10 +29,8 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTagIds
 import com.vitorpamplona.quartz.nip31Alts.alt
-import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallIdTag
 import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.callId
-import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
 class CallHangupEvent(
@@ -56,19 +54,16 @@ class CallHangupEvent(
     companion object {
         const val KIND = 25053
         const val ALT_DESCRIPTION = "WebRTC call hangup"
-        const val EXPIRATION_SECONDS = 20L
 
         fun build(
             peerPubKey: HexKey,
             callId: String,
             reason: String = "",
-            createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<CallHangupEvent>.() -> Unit = {},
-        ) = eventTemplate(KIND, reason, createdAt) {
+        ) = eventTemplate(KIND, reason) {
             alt(ALT_DESCRIPTION)
             pTag(peerPubKey)
             callId(callId)
-            expiration(createdAt + EXPIRATION_SECONDS)
             initializer()
         }
 
@@ -76,13 +71,11 @@ class CallHangupEvent(
             memberPubKeys: Set<HexKey>,
             callId: String,
             reason: String = "",
-            createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<CallHangupEvent>.() -> Unit = {},
-        ) = eventTemplate(KIND, reason, createdAt) {
+        ) = eventTemplate(KIND, reason) {
             alt(ALT_DESCRIPTION)
             pTagIds(memberPubKeys)
             callId(callId)
-            expiration(createdAt + EXPIRATION_SECONDS)
             initializer()
         }
     }
