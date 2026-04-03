@@ -323,18 +323,18 @@ class RatchetTree(
 
             val tree = RatchetTree()
             tree.nodes.addAll(nodesList)
-            // Compute leaf count from the rightmost non-blank node.
-            // Trees may be serialized with trailing blank nodes that should be trimmed.
-            var rightmost = nodesList.size - 1
-            while (rightmost >= 0 && nodesList[rightmost] == null) {
-                rightmost--
+            // Compute leaf count: trim trailing blank nodes to find logical tree size.
+            // RFC 9420 Section 7.8: trees are right-trimmed during serialization,
+            // but some implementations may include trailing blanks.
+            var lastNode = nodesList.size - 1
+            while (lastNode >= 0 && nodesList[lastNode] == null) {
+                lastNode--
             }
-            // The rightmost non-blank node determines the minimum tree size
             tree._leafCount =
-                if (rightmost < 0) {
+                if (lastNode < 0) {
                     0
                 } else {
-                    (rightmost / 2) + 1
+                    (lastNode / 2) + 1
                 }
             return tree
         }
