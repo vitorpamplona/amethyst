@@ -263,12 +263,12 @@ class Account(
 
     val userMetadata = UserMetadataState(signer, cache, scope, settings)
 
-    val forwardKind0ToLocalRelay = ForwardKind0ToLocalRelayState(client, localRelayList, settings)
-
     override val nip47SignerState = NwcSignerState(signer, nwcFilterAssembler, cache, scope, settings.zapPaymentRequest)
 
     val nip65RelayList = Nip65RelayListState(signer, cache, scope, settings)
     val localRelayList = LocalRelayListState(signer, cache, scope, settings)
+
+    val forwardKind0ToLocalRelay = ForwardKind0ToLocalRelayState(client, localRelayList, settings)
 
     val dmRelayList = DmRelayListState(signer, cache, scope, settings)
 

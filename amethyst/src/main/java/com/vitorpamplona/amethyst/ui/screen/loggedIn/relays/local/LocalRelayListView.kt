@@ -25,16 +25,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.material3.Switch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.navs.rememberExtendedNav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -42,7 +37,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySet
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayUrlEditField
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 
@@ -71,25 +65,6 @@ fun LazyListScope.renderLocalItems(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    item {
-        val sendKind0 by accountViewModel.account.settings.sendKind0EventsToLocalRelay
-            .collectAsStateWithLifecycle()
-        var checked by remember(sendKind0) { mutableStateOf(sendKind0) }
-
-        SettingsRow(
-            R.string.send_kind0_to_local_relay_title,
-            R.string.send_kind0_to_local_relay_description,
-        ) {
-            Switch(
-                checked = checked,
-                onCheckedChange = {
-                    checked = it
-                    accountViewModel.toggleSendKind0ToLocalRelay(it)
-                },
-            )
-        }
-    }
-
     itemsIndexed(feedState, key = { _, item -> "Local" + item.relay.url }) { index, item ->
         BasicRelaySetupInfoDialog(
             item,

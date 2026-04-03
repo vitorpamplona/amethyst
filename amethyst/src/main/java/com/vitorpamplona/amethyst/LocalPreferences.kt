@@ -91,7 +91,6 @@ private object PrefKeys {
     const val NOSTR_PRIVKEY = "nostr_privkey"
     const val NOSTR_PUBKEY = "nostr_pubkey"
     const val LOCAL_RELAY_SERVERS = "localRelayServers"
-    const val SEND_KIND0_TO_LOCAL_RELAY = "sendKind0ToLocalRelay"
     const val DEFAULT_FILE_SERVER = "defaultFileServer"
     const val STRIP_LOCATION_ON_UPLOAD = "stripLocationOnUpload"
     const val DEFAULT_HOME_FOLLOW_LIST = "defaultHomeFollowList"
@@ -360,8 +359,6 @@ object LocalPreferences {
                         remove(PrefKeys.LOCAL_RELAY_SERVERS)
                     }
 
-                    putBoolean(PrefKeys.SEND_KIND0_TO_LOCAL_RELAY, settings.sendKind0EventsToLocalRelay.value)
-
                     putOrRemove(PrefKeys.LATEST_MUTE_LIST, settings.backupMuteList)
                     putOrRemove(PrefKeys.LATEST_PRIVATE_HOME_RELAY_LIST, settings.backupPrivateHomeRelayList)
                     putOrRemove(PrefKeys.LATEST_APP_SPECIFIC_DATA, settings.backupAppSpecificData)
@@ -477,7 +474,6 @@ object LocalPreferences {
                     val hideNIP17WarningDialog = getBoolean(PrefKeys.HIDE_NIP_17_WARNING_DIALOG, false)
                     val hasDonatedInVersion = getStringSet(PrefKeys.HAS_DONATED_IN_VERSION, null) ?: setOf()
                     val localRelayServers = getStringSet(PrefKeys.LOCAL_RELAY_SERVERS, null) ?: setOf()
-                    val sendKind0ToLocalRelay = getBoolean(PrefKeys.SEND_KIND0_TO_LOCAL_RELAY, false)
 
                     val defaultHomeFollowListStr = getString(PrefKeys.DEFAULT_HOME_FOLLOW_LIST, null)
                     val defaultStoriesFollowListStr = getString(PrefKeys.DEFAULT_STORIES_FOLLOW_LIST, null)
@@ -564,7 +560,6 @@ object LocalPreferences {
                         transientAccount = false,
                         externalSignerPackageName = externalSignerPackageName,
                         localRelayServers = MutableStateFlow(localRelayServers),
-                        sendKind0EventsToLocalRelay = MutableStateFlow(sendKind0ToLocalRelay),
                         defaultFileServer = defaultFileServer.await(),
                         stripLocationOnUpload = stripLocationOnUpload,
                         defaultHomeFollowList = MutableStateFlow(defaultHomeFollowList.await()),

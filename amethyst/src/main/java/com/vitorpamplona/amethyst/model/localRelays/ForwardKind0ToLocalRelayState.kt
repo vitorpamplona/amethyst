@@ -32,7 +32,7 @@ class ForwardKind0ToLocalRelayState(
 ) {
     private val eventCollector =
         EventCollector(client) { event, _ ->
-            if (event is MetadataEvent && settings.sendKind0EventsToLocalRelay.value) {
+            if (event is MetadataEvent && settings.syncedSettings.security.sendKind0EventsToLocalRelay.value) {
                 val localRelays = localRelayList.flow.value
                 if (localRelays.isNotEmpty()) {
                     client.publish(event, localRelays)
