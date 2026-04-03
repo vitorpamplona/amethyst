@@ -107,6 +107,7 @@ class CallAudioManager(
     }
 
     fun startRingbackTone() {
+        stopRingbackTone()
         try {
             ringbackTone =
                 ToneGenerator(AudioManager.STREAM_VOICE_CALL, 80).also {
@@ -123,6 +124,7 @@ class CallAudioManager(
     }
 
     fun switchToCallAudioMode() {
+        if (audioManager.mode == AudioManager.MODE_IN_COMMUNICATION) return
         previousAudioMode = audioManager.mode
         audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
 

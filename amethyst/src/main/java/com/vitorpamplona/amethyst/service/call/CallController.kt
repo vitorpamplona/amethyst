@@ -177,7 +177,15 @@ class CallController(
                     }
 
                     is CallState.Connected -> {
+                        // Stop ringing/ringback in case the Connecting state
+                        // was skipped due to StateFlow conflation (the value
+                        // can change Offering → Connecting → Connected before
+                        // the collector processes Connecting).
+                        audioManager.stopRinging()
+                        audioManager.stopRingbackTone()
+                        withContext(Dispatchers.IO) { audioManager.switchToCallAudioMode() }
                         audioManager.acquireProximityWakeLock()
+                        NotificationUtils.cancelCallNotification(context)
                     }
 
                     is CallState.Ended -> {
