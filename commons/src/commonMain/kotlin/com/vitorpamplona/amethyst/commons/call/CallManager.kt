@@ -148,7 +148,7 @@ class CallManager(
         }
 
         Log.d("CallManager") { "acceptCall: callId=${current.callId}, transitioning to Connecting, sdpAnswerLength=${sdpAnswer.length}" }
-        _state.value = CallState.Connecting(current.callId, current.peerPubKeys(), current.callType)
+        _state.value = CallState.Connecting(current.callId, current.peerPubKeys() - signer.pubKey, current.callType)
         cancelTimeout()
 
         // Include all group members + self so other devices get notified too.

@@ -491,13 +491,15 @@ class CallController(
     private fun onLocalIceCandidate(candidate: IceCandidate) {
         Log.d(TAG) { "Local ICE candidate: ${candidate.sdp.take(50)}" }
         val callId = callManager.currentCallId() ?: return
-        val peerPubKey = callManager.currentPeerPubKey() ?: return
+        val peerPubKeys = callManager.currentPeerPubKeys()?.takeIf { it.isNotEmpty() } ?: return
         val candidateJson = CallIceCandidateEvent.serializeCandidate(candidate.sdp, candidate.sdpMid, candidate.sdpMLineIndex)
 
         scope.launch {
             val signer = signerProvider()
-            val result = callFactory.createIceCandidate(candidateJson, peerPubKey, callId, signer)
-            publishWrap(result.wrap)
+            for (peerPubKey in peerPubKeys) {
+                val result = callFactory.createIceCandidate(candidateJson, peerPubKey, callId, signer)
+                publishWrap(result.wrap)
+            }
         }
     }
 
