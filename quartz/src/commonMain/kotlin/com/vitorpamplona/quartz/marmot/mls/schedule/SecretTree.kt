@@ -65,12 +65,12 @@ class SecretTree(
         val state = getOrInitSender(leafIndex)
         val result = deriveKeyNonce(state.applicationSecret, state.applicationGeneration)
 
-        // Advance ratchet
+        // Advance ratchet: DeriveTreeSecret(secret_[N], "secret", N, Nh)
         val nextSecret =
             MlsCryptoProvider.expandWithLabel(
                 state.applicationSecret,
                 "secret",
-                ByteArray(0),
+                generationContext(state.applicationGeneration),
                 MlsCryptoProvider.HASH_OUTPUT_LENGTH,
             )
         senderState[leafIndex] =
@@ -93,7 +93,7 @@ class SecretTree(
             MlsCryptoProvider.expandWithLabel(
                 state.handshakeSecret,
                 "secret",
-                ByteArray(0),
+                generationContext(state.handshakeGeneration),
                 MlsCryptoProvider.HASH_OUTPUT_LENGTH,
             )
         senderState[leafIndex] =
@@ -123,14 +123,14 @@ class SecretTree(
         var secret = state.applicationSecret
         var gen = state.applicationGeneration
         while (gen < generation) {
-            secret = MlsCryptoProvider.expandWithLabel(secret, "secret", ByteArray(0), MlsCryptoProvider.HASH_OUTPUT_LENGTH)
+            secret = MlsCryptoProvider.expandWithLabel(secret, "secret", generationContext(gen), MlsCryptoProvider.HASH_OUTPUT_LENGTH)
             gen++
         }
 
         val result = deriveKeyNonce(secret, generation)
 
         // Advance past this generation
-        val nextSecret = MlsCryptoProvider.expandWithLabel(secret, "secret", ByteArray(0), MlsCryptoProvider.HASH_OUTPUT_LENGTH)
+        val nextSecret = MlsCryptoProvider.expandWithLabel(secret, "secret", generationContext(generation), MlsCryptoProvider.HASH_OUTPUT_LENGTH)
         senderState[leafIndex] =
             state.copy(
                 applicationSecret = nextSecret,
@@ -140,22 +140,38 @@ class SecretTree(
         return result
     }
 
+    /**
+     * Encode a generation counter as a 4-byte big-endian uint32 for DeriveTreeSecret context.
+     */
+    private fun generationContext(generation: Int): ByteArray =
+        byteArrayOf(
+            (generation shr 24).toByte(),
+            (generation shr 16).toByte(),
+            (generation shr 8).toByte(),
+            generation.toByte(),
+        )
+
+    /**
+     * DeriveTreeSecret(Secret, Label, Generation, Length) =
+     *     ExpandWithLabel(Secret, Label, uint32(Generation), Length)
+     */
     private fun deriveKeyNonce(
         secret: ByteArray,
         generation: Int,
     ): KeyNonceGeneration {
+        val genCtx = generationContext(generation)
         val key =
             MlsCryptoProvider.expandWithLabel(
                 secret,
                 "key",
-                ByteArray(0),
+                genCtx,
                 MlsCryptoProvider.AEAD_KEY_LENGTH,
             )
         val nonce =
             MlsCryptoProvider.expandWithLabel(
                 secret,
                 "nonce",
-                ByteArray(0),
+                genCtx,
                 MlsCryptoProvider.AEAD_NONCE_LENGTH,
             )
         return KeyNonceGeneration(key, nonce, generation)

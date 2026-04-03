@@ -106,6 +106,8 @@ data class TreeMathVector(
 @Serializable
 data class KeyScheduleVector(
     @SerialName("cipher_suite") val cipherSuite: Int,
+    @SerialName("group_id") val groupId: String,
+    @SerialName("initial_init_secret") val initialInitSecret: String,
     val epochs: List<KeyScheduleEpoch>,
 )
 

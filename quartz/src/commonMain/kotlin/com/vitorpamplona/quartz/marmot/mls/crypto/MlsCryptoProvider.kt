@@ -69,10 +69,11 @@ object MlsCryptoProvider {
      *
      * struct {
      *     uint16 length;
-     *     opaque label<7..255>;   // "MLS 1.0 " + Label
-     *     opaque context<0..2^32-1>;
-     * } HkdfLabel;
+     *     opaque label<V> = "MLS 1.0 " + Label;
+     *     opaque context<V> = Context;
+     * } KDFLabel;
      * ```
+     * Label and context lengths use QUIC-style variable-length integer encoding.
      */
     fun expandWithLabel(
         secret: ByteArray,
@@ -83,8 +84,8 @@ object MlsCryptoProvider {
         val fullLabel = "MLS 1.0 $label".encodeToByteArray()
         val hkdfLabel = TlsWriter(4 + fullLabel.size + context.size)
         hkdfLabel.putUint16(length)
-        hkdfLabel.putOpaque1(fullLabel)
-        hkdfLabel.putOpaque4(context)
+        hkdfLabel.putOpaqueVarInt(fullLabel)
+        hkdfLabel.putOpaqueVarInt(context)
         return hkdfExpand(secret, hkdfLabel.toByteArray(), length)
     }
 
@@ -106,9 +107,9 @@ object MlsCryptoProvider {
         value: ByteArray,
     ): ByteArray {
         val labelBytes = label.encodeToByteArray()
-        val writer = TlsWriter(2 + labelBytes.size + 2 + value.size)
-        writer.putOpaque2(labelBytes)
-        writer.putOpaque2(value)
+        val writer = TlsWriter(2 + labelBytes.size + value.size)
+        writer.putOpaqueVarInt(labelBytes)
+        writer.putOpaqueVarInt(value)
         return hash(writer.toByteArray())
     }
 
@@ -204,8 +205,8 @@ object MlsCryptoProvider {
      * MLS SignContent structure:
      * ```
      * struct {
-     *     opaque label<7..255>;   // "MLS 1.0 " + Label
-     *     opaque content<0..2^32-1>;
+     *     opaque label<V> = "MLS 1.0 " + Label;
+     *     opaque content<V> = Content;
      * } SignContent;
      * ```
      */
@@ -215,8 +216,8 @@ object MlsCryptoProvider {
     ): ByteArray {
         val fullLabel = "MLS 1.0 $label".encodeToByteArray()
         val writer = TlsWriter(2 + fullLabel.size + 4 + content.size)
-        writer.putOpaque1(fullLabel)
-        writer.putOpaque4(content)
+        writer.putOpaqueVarInt(fullLabel)
+        writer.putOpaqueVarInt(content)
         return writer.toByteArray()
     }
 
@@ -234,8 +235,8 @@ object MlsCryptoProvider {
     ): HpkeCiphertext {
         val fullLabel = "MLS 1.0 $label".encodeToByteArray()
         val info = TlsWriter()
-        info.putOpaque1(fullLabel)
-        info.putOpaque4(context)
+        info.putOpaqueVarInt(fullLabel)
+        info.putOpaqueVarInt(context)
         return Hpke.seal(publicKey, info.toByteArray(), ByteArray(0), plaintext)
     }
 
@@ -252,8 +253,8 @@ object MlsCryptoProvider {
     ): ByteArray {
         val fullLabel = "MLS 1.0 $label".encodeToByteArray()
         val info = TlsWriter()
-        info.putOpaque1(fullLabel)
-        info.putOpaque4(context)
+        info.putOpaqueVarInt(fullLabel)
+        info.putOpaqueVarInt(context)
         return Hpke.open(privateKey, kemOutput, info.toByteArray(), ByteArray(0), ciphertext)
     }
 }

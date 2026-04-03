@@ -21,7 +21,6 @@
 package com.vitorpamplona.quartz.marmot.mls.interop
 
 import com.vitorpamplona.quartz.TestResourceLoader
-import com.vitorpamplona.quartz.marmot.mls.crypto.MlsCryptoProvider
 import com.vitorpamplona.quartz.marmot.mls.schedule.KeySchedule
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
@@ -51,8 +50,8 @@ class KeyScheduleInteropTest {
         assertTrue(vectors.isNotEmpty(), "No cipher_suite==1 key-schedule vectors found")
 
         for (v in vectors) {
-            // For the first epoch, init_secret is all zeros
-            var initSecret = ByteArray(MlsCryptoProvider.HASH_OUTPUT_LENGTH)
+            // Use the initial_init_secret from the test vector
+            var initSecret = v.initialInitSecret.hexToByteArray()
 
             for ((epochIdx, epoch) in v.epochs.withIndex()) {
                 val groupContext = epoch.groupContext.hexToByteArray()
@@ -129,7 +128,7 @@ class KeyScheduleInteropTest {
         assertTrue(vectors.isNotEmpty(), "No cipher_suite==1 key-schedule vectors found")
 
         for (v in vectors) {
-            var initSecret = ByteArray(MlsCryptoProvider.HASH_OUTPUT_LENGTH)
+            var initSecret = v.initialInitSecret.hexToByteArray()
 
             for ((epochIdx, epoch) in v.epochs.withIndex()) {
                 val groupContext = epoch.groupContext.hexToByteArray()
