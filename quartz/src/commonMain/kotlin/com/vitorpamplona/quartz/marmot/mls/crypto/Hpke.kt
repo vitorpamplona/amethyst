@@ -156,7 +156,7 @@ object Hpke {
 
         val ksContext = mode + pskIdHash + infoHash
 
-        val secret = labeledExtract(suiteId, sharedSecret, "secret", ByteArray(N_H)) // default PSK = zeros
+        val secret = labeledExtract(suiteId, sharedSecret, "secret", ByteArray(0)) // default PSK = "" (empty)
 
         val key = labeledExpand(suiteId, secret, "key", ksContext, N_K)
         val baseNonce = labeledExpand(suiteId, secret, "base_nonce", ksContext, N_N)
