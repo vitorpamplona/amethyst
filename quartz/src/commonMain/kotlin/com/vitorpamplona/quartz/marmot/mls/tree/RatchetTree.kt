@@ -146,18 +146,20 @@ class RatchetTree(
     /**
      * Recursive tree hash computation per RFC 9420 Section 7.9.
      *
-     * For leaf i:   H(uint8(leaf_type) || leaf_node_or_empty)
-     * For parent i: H(uint8(parent_type) || parent_node_or_empty || left_hash || right_hash)
+     * Leaf:   H(uint32(leaf_index) || optional<LeafNode>)
+     * Parent: H(optional<ParentNode> || opaque left_hash<V> || opaque right_hash<V>)
      */
     private fun treeHashNode(nodeIndex: Int): ByteArray {
         if (BinaryTree.isLeaf(nodeIndex)) {
+            val leafIndex = BinaryTree.nodeToLeaf(nodeIndex)
             val writer = TlsWriter()
+            writer.putUint32(leafIndex.toLong())
             val leaf = getNode(nodeIndex)
             if (leaf != null) {
-                writer.putUint8(1) // leaf present
+                writer.putUint8(1) // present
                 (leaf as TreeNode.Leaf).leafNode.encodeTls(writer)
             } else {
-                writer.putUint8(0) // leaf blank
+                writer.putUint8(0) // blank
             }
             return MlsCryptoProvider.hash(writer.toByteArray())
         }
@@ -168,13 +170,13 @@ class RatchetTree(
         val writer = TlsWriter()
         val parent = getNode(nodeIndex)
         if (parent != null) {
-            writer.putUint8(1) // parent present
+            writer.putUint8(1) // present
             (parent as TreeNode.Parent).parentNode.encodeTls(writer)
         } else {
-            writer.putUint8(0) // parent blank
+            writer.putUint8(0) // blank
         }
-        writer.putBytes(leftHash)
-        writer.putBytes(rightHash)
+        writer.putOpaqueVarInt(leftHash)
+        writer.putOpaqueVarInt(rightHash)
 
         return MlsCryptoProvider.hash(writer.toByteArray())
     }
