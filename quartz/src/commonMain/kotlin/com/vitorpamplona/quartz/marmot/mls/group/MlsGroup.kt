@@ -95,6 +95,7 @@ class MlsGroup private constructor(
     private var signingPrivateKey: ByteArray,
     private var encryptionPrivateKey: ByteArray,
     private val pendingProposals: MutableList<PendingProposal> = mutableListOf(),
+    private val sentKeys: MutableMap<Int, com.vitorpamplona.quartz.marmot.mls.schedule.KeyNonceGeneration> = mutableMapOf(),
 ) {
     val groupId: ByteArray get() = groupContext.groupId
     val epoch: Long get() = groupContext.epoch
@@ -323,6 +324,7 @@ class MlsGroup private constructor(
             }
 
         pendingProposals.clear()
+        sentKeys.clear()
 
         val commitBytes = commit.toTlsBytes()
         return CommitResult(commitBytes, welcomeBytes, null)
@@ -335,6 +337,7 @@ class MlsGroup private constructor(
      */
     fun encrypt(plaintext: ByteArray): ByteArray {
         val kng = secretTree.nextApplicationKeyNonce(myLeafIndex)
+        sentKeys[kng.generation] = kng
         val ciphertext = MlsCryptoProvider.aeadEncrypt(kng.key, kng.nonce, ByteArray(0), plaintext)
 
         // Encrypt sender data
@@ -406,7 +409,13 @@ class MlsGroup private constructor(
         val generation = senderReader.readUint32().toInt()
 
         // Get the key/nonce for this sender+generation
-        val kng = secretTree.applicationKeyNonceForGeneration(senderLeafIndex, generation)
+        // If we sent this message ourselves, use the cached key to avoid ratchet conflict
+        val kng =
+            if (senderLeafIndex == myLeafIndex && sentKeys.containsKey(generation)) {
+                sentKeys.remove(generation)!!
+            } else {
+                secretTree.applicationKeyNonceForGeneration(senderLeafIndex, generation)
+            }
 
         // Decrypt content
         val plaintext = MlsCryptoProvider.aeadDecrypt(kng.key, kng.nonce, ByteArray(0), privMsg.ciphertext)
@@ -504,6 +513,7 @@ class MlsGroup private constructor(
         secretTree = SecretTree(epochSecrets.encryptionSecret, tree.leafCount)
 
         pendingProposals.clear()
+        sentKeys.clear()
     }
 
     // --- Exporter ---
