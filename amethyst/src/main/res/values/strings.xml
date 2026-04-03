@@ -1426,6 +1426,8 @@
     <string name="reactions_settings_zap_description">Send a lightning payment to the author</string>
     <string name="reactions_settings_share">Share</string>
     <string name="reactions_settings_share_description">Share this note externally</string>
+    <string name="reactions_settings_pay">Pay</string>
+    <string name="reactions_settings_pay_description">Send a payment to the author via their payment targets</string>
 
     <string name="profile_image_of_user">Profile Picture of %1$s</string>
     <string name="relay_info">Relay %1$s</string>

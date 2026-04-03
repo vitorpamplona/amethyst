@@ -50,11 +50,16 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProgressIndicatorDefaults
@@ -84,6 +89,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.style.TextAlign
@@ -125,6 +131,7 @@ import com.vitorpamplona.amethyst.ui.components.toasts.multiline.UserBasedErrorM
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeReplyTo
+import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.types.EditState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -161,6 +168,7 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.reactionBox
 import com.vitorpamplona.amethyst.ui.theme.ripple24dp
 import com.vitorpamplona.amethyst.ui.theme.selectedReactionBoxModifier
+import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
@@ -279,6 +287,14 @@ private fun InnerReactionRow(
                         grayTint = MaterialTheme.colorScheme.placeholderText,
                     )
                 }
+
+                ReactionRowAction.Pay -> {
+                    PayReaction(
+                        baseNote = baseNote,
+                        grayTint = MaterialTheme.colorScheme.placeholderText,
+                        accountViewModel = accountViewModel,
+                    )
+                }
             }
         },
     )
@@ -318,6 +334,64 @@ fun ShareReaction(
         },
     ) {
         ShareIcon(barChartModifier, grayTint)
+    }
+}
+
+@Composable
+fun PayReaction(
+    baseNote: Note,
+    grayTint: Color,
+    accountViewModel: AccountViewModel,
+    iconSizeModifier: Modifier = Size20Modifier,
+) {
+    val authorPubkey = baseNote.author?.pubkeyHex ?: return
+    val address =
+        remember(authorPubkey) {
+            PaymentTargetsEvent.createAddress(authorPubkey)
+        }
+
+    LoadAddressableNote(address, accountViewModel) { note ->
+        val targets =
+            remember(note) {
+                (note?.event as? PaymentTargetsEvent)?.paymentTargets() ?: emptyList()
+            }
+        if (targets.isEmpty()) return@LoadAddressableNote
+
+        val uri = LocalUriHandler.current
+        var expanded by remember { mutableStateOf(false) }
+
+        Box {
+            ClickableBox(
+                modifier = iconSizeModifier,
+                onClick = { expanded = true },
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.AccountBalanceWallet,
+                    contentDescription = stringRes(R.string.payment_targets),
+                    tint = grayTint,
+                    modifier = iconSizeModifier,
+                )
+            }
+
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+            ) {
+                targets.forEach { target ->
+                    DropdownMenuItem(
+                        text = {
+                            Text("${target.type.replaceFirstChar(Char::titlecase)}: ${target.authority}")
+                        },
+                        onClick = {
+                            expanded = false
+                            runCatching {
+                                uri.openUri("payto://${target.type}/${target.authority}")
+                            }
+                        },
+                    )
+                }
+            }
+        }
     }
 }
 
