@@ -342,7 +342,20 @@ class CallManager(
             is CallState.IncomingCall -> {
                 if (callId != current.callId) return
                 if (rejectingPeer == signer.pubKey) {
+                    // Own rejection from another device
                     transitionToEnded(current.callId, current.peerPubKeys(), EndReason.REJECTED)
+                } else if (rejectingPeer == current.callerPubKey) {
+                    // Caller rejected/cancelled the call
+                    transitionToEnded(current.callId, current.groupMembers, EndReason.PEER_REJECTED)
+                } else {
+                    // Another group member rejected — remove them from the group
+                    val remaining = current.groupMembers - rejectingPeer
+                    if (remaining.size <= 1) {
+                        // Only us left, no one to call with
+                        transitionToEnded(current.callId, current.groupMembers, EndReason.PEER_REJECTED)
+                    } else {
+                        _state.value = current.copy(groupMembers = remaining)
+                    }
                 }
             }
 
