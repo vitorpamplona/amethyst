@@ -50,6 +50,7 @@ fun ChatroomScreen(
 ) {
     val context = LocalContext.current
     val isGroupChat = roomId.users.size > 1
+    val isCallSupported = roomId.users.size <= 5
     val startVoiceCall =
         rememberCallWithPermission(context) {
             ActiveCallHolder.set(accountViewModel.callManager, accountViewModel.callController, accountViewModel)
@@ -80,8 +81,8 @@ fun ChatroomScreen(
                 room = roomId,
                 accountViewModel = accountViewModel,
                 nav = nav,
-                onCallClick = { _ -> startVoiceCall() },
-                onVideoCallClick = { _ -> startVideoCall() },
+                onCallClick = if (isCallSupported) ({ _ -> startVoiceCall() }) else null,
+                onVideoCallClick = if (isCallSupported) ({ _ -> startVideoCall() }) else null,
             )
         },
         accountViewModel = accountViewModel,
