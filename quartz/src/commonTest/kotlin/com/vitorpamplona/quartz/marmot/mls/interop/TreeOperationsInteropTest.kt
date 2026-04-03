@@ -53,14 +53,17 @@ class TreeOperationsInteropTest {
         assertTrue(vectors.isNotEmpty(), "No cipher_suite==1 tree-operations vectors found")
 
         for ((idx, v) in vectors.withIndex()) {
-            val treeBytes = v.treeBefore.hexToByteArray()
-            val tree = RatchetTree.decodeTls(TlsReader(treeBytes))
+            val treeBeforeBytes = v.treeBefore.hexToByteArray()
+            val treeBefore = RatchetTree.decodeTls(TlsReader(treeBeforeBytes))
+            val treeAfterBytes = v.treeAfter.hexToByteArray()
+            val treeAfterParsed = RatchetTree.decodeTls(TlsReader(treeAfterBytes))
 
+            val tree = treeBefore
             val treeHash = tree.treeHash()
             assertEquals(
                 v.treeHashBefore,
                 treeHash.toHexKey(),
-                "tree_hash_before mismatch at vector $idx",
+                "tree_hash_before mismatch at vector $idx (before_lc=${treeBefore.leafCount}, after_lc=${treeAfterParsed.leafCount}, before_bytes=${v.treeBefore.length / 2}, after_bytes=${v.treeAfter.length / 2})",
             )
         }
     }
@@ -73,14 +76,7 @@ class TreeOperationsInteropTest {
             val treeBytes = v.treeAfter.hexToByteArray()
             val tree = RatchetTree.decodeTls(TlsReader(treeBytes))
 
-            val treeHash = tree.treeHash()
-            assertEquals(
-                v.treeHashAfter,
-                treeHash.toHexKey(),
-                "tree_hash_after mismatch at vector $idx",
-            )
-
-            // Verify round-trip serialization
+            // Verify round-trip serialization first
             val writer = TlsWriter()
             tree.encodeTls(writer)
             val reEncoded = writer.toByteArray()
@@ -88,6 +84,13 @@ class TreeOperationsInteropTest {
                 v.treeAfter,
                 reEncoded.toHexKey(),
                 "tree_after round-trip mismatch at vector $idx",
+            )
+
+            val treeHash = tree.treeHash()
+            assertEquals(
+                v.treeHashAfter,
+                treeHash.toHexKey(),
+                "tree_hash_after mismatch at vector $idx (leafCount=${tree.leafCount}, nodeCount=${tree.leafCount * 2 - 1})",
             )
         }
     }

@@ -77,9 +77,11 @@ class TreeValidationInteropTest {
             val treeBytes = v.tree.hexToByteArray()
             val tree = RatchetTree.decodeTls(TlsReader(treeBytes))
 
-            // The root tree hash should match the last entry in tree_hashes
-            val rootHash = tree.treeHash()
-            val rootIdx = BinaryTree.root(tree.leafCount)
+            // tree_hashes has entries for the LOGICAL tree nodes (may be fewer than serialized nodes).
+            // The logical leaf count = (treeHashes.size + 1) / 2
+            val logicalLeafCount = (v.treeHashes.size + 1) / 2
+            val rootIdx = BinaryTree.root(logicalLeafCount)
+            val rootHash = tree.treeHashWithLeafCount(logicalLeafCount)
             assertEquals(
                 v.treeHashes[rootIdx],
                 rootHash.toHexKey(),
@@ -96,7 +98,8 @@ class TreeValidationInteropTest {
             val treeBytes = v.tree.hexToByteArray()
             val tree = RatchetTree.decodeTls(TlsReader(treeBytes))
 
-            val nodeCount = BinaryTree.nodeCount(tree.leafCount)
+            // Use the logical node count from resolutions
+            val nodeCount = v.resolutions.size
             for (nodeIdx in 0 until nodeCount) {
                 if (nodeIdx < v.resolutions.size) {
                     val expected = v.resolutions[nodeIdx]

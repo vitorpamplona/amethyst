@@ -119,9 +119,10 @@ object BinaryTree {
 
     /** Root node index for a tree with [leafCount] leaves */
     fun root(leafCount: Int): Int {
-        val n = nodeCount(leafCount)
-        // Root is the node with the highest level
-        return (1 shl log2(leafCount)) - 1
+        if (leafCount <= 1) return 0
+        // Root of a left-balanced tree: (1 << ceil(log2(n))) - 1
+        val ceilLog2 = if (leafCount and (leafCount - 1) == 0) log2(leafCount) else log2(leafCount) + 1
+        return (1 shl ceilLog2) - 1
     }
 
     /**

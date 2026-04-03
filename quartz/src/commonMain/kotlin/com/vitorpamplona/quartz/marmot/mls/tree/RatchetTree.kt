@@ -144,6 +144,15 @@ class RatchetTree(
     }
 
     /**
+     * Compute tree hash using a specific logical leaf count.
+     * Used when the serialized tree has more nodes than the logical tree.
+     */
+    fun treeHashWithLeafCount(logicalLeafCount: Int): ByteArray {
+        val rootIdx = BinaryTree.root(logicalLeafCount)
+        return treeHashNode(rootIdx)
+    }
+
+    /**
      * Recursive tree hash computation per RFC 9420 Section 7.9.
      *
      * Leaf:   H(uint8(1) || uint32(leaf_index) || optional<LeafNode>)
@@ -323,19 +332,9 @@ class RatchetTree(
 
             val tree = RatchetTree()
             tree.nodes.addAll(nodesList)
-            // Compute leaf count: trim trailing blank nodes to find logical tree size.
-            // RFC 9420 Section 7.8: trees are right-trimmed during serialization,
-            // but some implementations may include trailing blanks.
-            var lastNode = nodesList.size - 1
-            while (lastNode >= 0 && nodesList[lastNode] == null) {
-                lastNode--
-            }
-            tree._leafCount =
-                if (lastNode < 0) {
-                    0
-                } else {
-                    (lastNode / 2) + 1
-                }
+            // Leaf count is derived from the total serialized node count.
+            // nodeCount = 2 * leafCount - 1
+            tree._leafCount = (nodesList.size + 1) / 2
             return tree
         }
     }
