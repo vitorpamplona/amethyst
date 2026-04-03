@@ -401,7 +401,9 @@ private fun ConnectedCallUI(
 
     val emptyVideoFlow = remember { kotlinx.coroutines.flow.MutableStateFlow<VideoTrack?>(null) }
     val emptyTracksFlow = remember { kotlinx.coroutines.flow.MutableStateFlow<Map<String, VideoTrack>>(emptyMap()) }
+    val emptySetFlow = remember { kotlinx.coroutines.flow.MutableStateFlow<Set<String>>(emptySet()) }
     val remoteVideoTracks by (callController?.remoteVideoTracks ?: emptyTracksFlow).collectAsState()
+    val activePeerVideos by (callController?.activePeerVideos ?: emptySetFlow).collectAsState()
     val localVideoTrack by (callController?.localVideoTrack ?: emptyVideoFlow).collectAsState()
     val defaultFalse = remember { kotlinx.coroutines.flow.MutableStateFlow(false) }
     val defaultTrue = remember { kotlinx.coroutines.flow.MutableStateFlow(true) }
@@ -410,6 +412,7 @@ private fun ConnectedCallUI(
     val isAudioMuted by (callController?.isAudioMuted ?: defaultFalse).collectAsState()
     val isVideoEnabled by (callController?.isVideoEnabled ?: defaultTrue).collectAsState()
     val currentAudioRoute by (callController?.audioRoute ?: defaultRoute).collectAsState()
+    val isVideoCall = state.callType == com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType.VIDEO
 
     var showAddParticipant by remember { mutableStateOf(false) }
 
@@ -431,38 +434,65 @@ private fun ConnectedCallUI(
                 .fillMaxSize()
                 .background(Color.Black),
     ) {
-        // Remote video(s) — render all peers in a grid when actively sending
-        if (isRemoteVideoActive && remoteVideoTracks.isNotEmpty()) {
-            RemoteVideoGrid(
-                remoteVideoTracks = remoteVideoTracks,
-                eglBase = callController?.getEglBase(),
-                modifier = Modifier.fillMaxSize(),
-            )
-        }
-
-        // Local video (small pip in corner) — only when camera is active
-        if (isVideoEnabled) {
-            localVideoTrack?.let { track ->
-                VideoRenderer(
-                    videoTrack = track,
-                    eglBase = callController?.getEglBase(),
-                    modifier =
-                        Modifier
-                            .size(120.dp, 160.dp)
-                            .align(Alignment.TopEnd)
-                            .windowInsetsPadding(WindowInsets.statusBars)
-                            .padding(16.dp),
-                    mirror = true,
-                )
-            }
-        }
-
-        // If no video or peer stopped sharing, show avatar
         val otherMembers =
             remember(state.allPeerPubKeys) {
                 state.allPeerPubKeys - accountViewModel.account.signer.pubKey
             }
-        if (!isRemoteVideoActive) {
+
+        if (isVideoCall) {
+            // Video call: always show the peer grid with video for active peers, avatar for inactive
+            PeerVideoGrid(
+                peerPubKeys = otherMembers,
+                remoteVideoTracks = remoteVideoTracks,
+                activePeerVideos = activePeerVideos,
+                eglBase = callController?.getEglBase(),
+                accountViewModel = accountViewModel,
+                modifier = Modifier.fillMaxSize(),
+            )
+
+            // Local video (small pip in corner) — only when camera is active
+            if (isVideoEnabled) {
+                localVideoTrack?.let { track ->
+                    VideoRenderer(
+                        videoTrack = track,
+                        eglBase = callController?.getEglBase(),
+                        modifier =
+                            Modifier
+                                .size(120.dp, 160.dp)
+                                .align(Alignment.TopEnd)
+                                .windowInsetsPadding(WindowInsets.statusBars)
+                                .padding(16.dp),
+                        mirror = true,
+                    )
+                }
+            }
+
+            // Timer overlay
+            Text(
+                text = formatDuration(elapsed),
+                color = Color.White.copy(alpha = 0.7f),
+                fontSize = 14.sp,
+                modifier =
+                    Modifier
+                        .align(Alignment.TopCenter)
+                        .windowInsetsPadding(WindowInsets.statusBars)
+                        .padding(top = 16.dp),
+            )
+
+            if (state.pendingPeerPubKeys.isNotEmpty()) {
+                Text(
+                    text = stringRes(R.string.call_waiting_for_others),
+                    color = Color.White.copy(alpha = 0.5f),
+                    fontSize = 13.sp,
+                    modifier =
+                        Modifier
+                            .align(Alignment.TopCenter)
+                            .windowInsetsPadding(WindowInsets.statusBars)
+                            .padding(top = 38.dp),
+                )
+            }
+        } else {
+            // Voice call: show avatars and names
             Column(
                 modifier = Modifier.fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -494,18 +524,6 @@ private fun ConnectedCallUI(
                     )
                 }
             }
-        } else {
-            // Timer overlay
-            Text(
-                text = formatDuration(elapsed),
-                color = Color.White.copy(alpha = 0.7f),
-                fontSize = 14.sp,
-                modifier =
-                    Modifier
-                        .align(Alignment.TopCenter)
-                        .windowInsetsPadding(WindowInsets.statusBars)
-                        .padding(top = 16.dp),
-            )
         }
 
         // Controls at bottom
@@ -602,46 +620,99 @@ private fun ConnectedCallUI(
 }
 
 @Composable
-private fun RemoteVideoGrid(
+private fun PeerVideoGrid(
+    peerPubKeys: Set<String>,
     remoteVideoTracks: Map<String, VideoTrack>,
+    activePeerVideos: Set<String>,
     eglBase: org.webrtc.EglBase?,
+    accountViewModel: AccountViewModel,
     modifier: Modifier = Modifier,
 ) {
-    val tracks = remember(remoteVideoTracks) { remoteVideoTracks.entries.toList() }
+    val peers = remember(peerPubKeys) { peerPubKeys.toList() }
 
-    if (tracks.size == 1) {
-        // Single peer: full screen
-        VideoRenderer(
-            videoTrack = tracks[0].value,
-            eglBase = eglBase,
-            modifier = modifier,
-            mirror = false,
-        )
+    if (peers.size == 1) {
+        val peerKey = peers[0]
+        val track = remoteVideoTracks[peerKey]
+        if (track != null && peerKey in activePeerVideos) {
+            VideoRenderer(
+                videoTrack = track,
+                eglBase = eglBase,
+                modifier = modifier,
+                mirror = false,
+            )
+        } else {
+            PeerAvatarCell(
+                peerPubKey = peerKey,
+                accountViewModel = accountViewModel,
+                modifier = modifier,
+            )
+        }
     } else {
         val columns =
             when {
-                tracks.size <= 2 -> 1
-                tracks.size <= 4 -> 2
+                peers.size <= 2 -> 1
                 else -> 2
             }
 
         Column(modifier = modifier) {
-            tracks.chunked(columns).forEach { row ->
+            peers.chunked(columns).forEach { row ->
                 Row(
                     modifier = Modifier.weight(1f).fillMaxWidth(),
                 ) {
-                    row.forEach { (_, track) ->
-                        VideoRenderer(
-                            videoTrack = track,
-                            eglBase = eglBase,
-                            modifier = Modifier.weight(1f).fillMaxHeight(),
-                            mirror = false,
-                        )
+                    row.forEach { peerKey ->
+                        val track = remoteVideoTracks[peerKey]
+                        if (track != null && peerKey in activePeerVideos) {
+                            VideoRenderer(
+                                videoTrack = track,
+                                eglBase = eglBase,
+                                modifier = Modifier.weight(1f).fillMaxHeight(),
+                                mirror = false,
+                            )
+                        } else {
+                            PeerAvatarCell(
+                                peerPubKey = peerKey,
+                                accountViewModel = accountViewModel,
+                                modifier = Modifier.weight(1f).fillMaxHeight(),
+                            )
+                        }
                     }
-                    // Fill empty cells in the last row
                     repeat(columns - row.size) {
                         Spacer(modifier = Modifier.weight(1f))
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PeerAvatarCell(
+    peerPubKey: String,
+    accountViewModel: AccountViewModel,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier.background(Color.DarkGray),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            LoadUser(baseUserHex = peerPubKey, accountViewModel = accountViewModel) { user ->
+                if (user != null) {
+                    ClickableUserPicture(
+                        baseUser = user,
+                        size = 80.dp,
+                        accountViewModel = accountViewModel,
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    UsernameDisplay(
+                        baseUser = user,
+                        accountViewModel = accountViewModel,
+                        fontWeight = FontWeight.Bold,
+                        textColor = Color.White,
+                    )
                 }
             }
         }
@@ -725,10 +796,18 @@ private fun PipConnectedCallUI(
         }
     }
 
-    val emptyVideoFlow = remember { kotlinx.coroutines.flow.MutableStateFlow<VideoTrack?>(null) }
-    val remoteVideoTrack by (callController?.remoteVideoTrack ?: emptyVideoFlow).collectAsState()
+    val emptyTracksFlow = remember { kotlinx.coroutines.flow.MutableStateFlow<Map<String, VideoTrack>>(emptyMap()) }
+    val emptySetFlow = remember { kotlinx.coroutines.flow.MutableStateFlow<Set<String>>(emptySet()) }
+    val remoteVideoTracks by (callController?.remoteVideoTracks ?: emptyTracksFlow).collectAsState()
+    val activePeerVideos by (callController?.activePeerVideos ?: emptySetFlow).collectAsState()
     val defaultFalse = remember { kotlinx.coroutines.flow.MutableStateFlow(false) }
     val isRemoteVideoActive by (callController?.isRemoteVideoActive ?: defaultFalse).collectAsState()
+    val isVideoCall = state.callType == com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType.VIDEO
+
+    val otherMembers =
+        remember(state.allPeerPubKeys) {
+            state.allPeerPubKeys - accountViewModel.account.signer.pubKey
+        }
 
     Box(
         modifier =
@@ -736,24 +815,31 @@ private fun PipConnectedCallUI(
                 .fillMaxSize()
                 .background(Color.Black),
     ) {
-        // Remote video full screen in PiP
-        if (isRemoteVideoActive) {
-            remoteVideoTrack?.let { track ->
+        if (isVideoCall) {
+            // Video call: show first active peer's video or avatar
+            val firstActivePeer = otherMembers.firstOrNull { it in activePeerVideos }
+            val activeTrack = firstActivePeer?.let { remoteVideoTracks[it] }
+            if (activeTrack != null) {
                 VideoRenderer(
-                    videoTrack = track,
+                    videoTrack = activeTrack,
                     eglBase = callController?.getEglBase(),
                     modifier = Modifier.fillMaxSize(),
                     mirror = false,
                 )
+            } else {
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    GroupCallPictures(
+                        peerPubKeys = otherMembers,
+                        size = 48.dp,
+                        accountViewModel = accountViewModel,
+                    )
+                }
             }
-        }
-
-        val otherMembers =
-            remember(state.allPeerPubKeys) {
-                state.allPeerPubKeys - accountViewModel.account.signer.pubKey
-            }
-        if (!isRemoteVideoActive) {
-            // Show small avatar + timer in PiP
+        } else if (!isRemoteVideoActive) {
             Column(
                 modifier = Modifier.fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -771,18 +857,18 @@ private fun PipConnectedCallUI(
                     fontSize = 10.sp,
                 )
             }
-        } else {
-            // Timer overlay
-            Text(
-                text = formatDuration(elapsed),
-                color = Color.White.copy(alpha = 0.7f),
-                fontSize = 10.sp,
-                modifier =
-                    Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(top = 4.dp),
-            )
         }
+
+        // Timer overlay
+        Text(
+            text = formatDuration(elapsed),
+            color = Color.White.copy(alpha = 0.7f),
+            fontSize = 10.sp,
+            modifier =
+                Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 4.dp),
+        )
     }
 }
 
@@ -814,7 +900,6 @@ private fun AddParticipantDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
-                Spacer(modifier = Modifier.height(8.dp))
                 Box(modifier = Modifier.height(300.dp)) {
                     ShowUserSuggestionList(
                         userSuggestions = userSuggestions,
