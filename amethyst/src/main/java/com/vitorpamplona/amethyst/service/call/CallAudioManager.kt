@@ -20,10 +20,12 @@
  */
 package com.vitorpamplona.amethyst.service.call
 
+import android.Manifest
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -39,6 +41,7 @@ import android.os.PowerManager
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import androidx.core.content.ContextCompat
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -62,6 +65,14 @@ class CallAudioManager(
 
     private val _audioRoute = MutableStateFlow(AudioRoute.EARPIECE)
     val audioRoute: StateFlow<AudioRoute> = _audioRoute.asStateFlow()
+
+    private fun hasBluetoothPermission(): Boolean =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) ==
+                PackageManager.PERMISSION_GRANTED
+        } else {
+            true
+        }
 
     private val _isBluetoothAvailable = MutableStateFlow(false)
     val isBluetoothAvailable: StateFlow<Boolean> = _isBluetoothAvailable.asStateFlow()
@@ -115,13 +126,18 @@ class CallAudioManager(
         previousAudioMode = audioManager.mode
         audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
 
-        _isBluetoothAvailable.value = hasBluetoothDevice()
-        if (_isBluetoothAvailable.value) {
-            startBluetoothSco()
+        if (hasBluetoothPermission()) {
+            _isBluetoothAvailable.value = hasBluetoothDevice()
+            if (_isBluetoothAvailable.value) {
+                startBluetoothSco()
+            } else {
+                routeToEarpiece()
+            }
+            registerBluetoothScoReceiver()
         } else {
+            _isBluetoothAvailable.value = false
             routeToEarpiece()
         }
-        registerBluetoothScoReceiver()
     }
 
     fun restoreAudioMode() {
@@ -220,6 +236,7 @@ class CallAudioManager(
     }
 
     private fun routeToBluetooth() {
+        if (!hasBluetoothPermission()) return
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val btDevice =
                 audioManager

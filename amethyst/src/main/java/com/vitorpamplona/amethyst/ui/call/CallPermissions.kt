@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.call
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
@@ -43,30 +44,42 @@ fun hasCallPermissions(
     return true
 }
 
+fun buildCallPermissions(isVideo: Boolean): Array<String> {
+    val permissions = mutableListOf(Manifest.permission.RECORD_AUDIO)
+    if (isVideo) {
+        permissions.add(Manifest.permission.CAMERA)
+    }
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        permissions.add(Manifest.permission.BLUETOOTH_CONNECT)
+    }
+    return permissions.toTypedArray()
+}
+
 @Composable
 fun rememberCallWithPermission(
     context: Context,
     isVideo: Boolean = false,
     onCall: () -> Unit,
 ): () -> Unit {
-    val permissions =
-        if (isVideo) {
-            arrayOf(Manifest.permission.RECORD_AUDIO, Manifest.permission.CAMERA)
-        } else {
-            arrayOf(Manifest.permission.RECORD_AUDIO)
-        }
+    val permissions = remember(isVideo) { buildCallPermissions(isVideo) }
 
     val launcher =
         rememberLauncherForActivityResult(
             ActivityResultContracts.RequestMultiplePermissions(),
         ) { results ->
-            val allGranted = results.values.all { it }
-            if (allGranted) onCall()
+            // Bluetooth is optional — proceed if core permissions are granted
+            if (hasCallPermissions(context, isVideo)) onCall()
         }
 
     return remember(onCall, isVideo) {
         {
             if (hasCallPermissions(context, isVideo)) {
+                // Core permissions granted; still request BT if missing
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                    !hasPermission(context, Manifest.permission.BLUETOOTH_CONNECT)
+                ) {
+                    launcher.launch(arrayOf(Manifest.permission.BLUETOOTH_CONNECT))
+                }
                 onCall()
             } else {
                 launcher.launch(permissions)
