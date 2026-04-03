@@ -26,6 +26,7 @@ import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -42,12 +43,14 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Poll
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -108,7 +111,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
-import com.vitorpamplona.amethyst.ui.theme.Size19Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size30Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
@@ -334,21 +336,39 @@ private fun NewPostScreenBody(
                     }
                 }
 
-                if (postViewModel.wantsPoll) {
-                    Row(
-                        verticalAlignment = CenterVertically,
+                if (postViewModel.wantsPoll || postViewModel.wantsZapPoll) {
+                    Column(
                         modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
                     ) {
-                        PollOptionsField(postViewModel)
-                    }
-                }
-
-                if (postViewModel.wantsZapPoll) {
-                    Row(
-                        verticalAlignment = CenterVertically,
-                        modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
-                    ) {
-                        ZapPollField(postViewModel)
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            FilterChip(
+                                selected = postViewModel.wantsPoll,
+                                onClick = {
+                                    postViewModel.wantsPoll = true
+                                    postViewModel.wantsZapPoll = false
+                                },
+                                label = { Text(stringRes(R.string.kind_poll)) },
+                            )
+                            FilterChip(
+                                selected = postViewModel.wantsZapPoll,
+                                onClick = {
+                                    postViewModel.wantsZapPoll = true
+                                    postViewModel.wantsPoll = false
+                                },
+                                label = { Text(stringRes(R.string.kind_zap_poll)) },
+                            )
+                        }
+                        if (postViewModel.wantsPoll) {
+                            Row(verticalAlignment = CenterVertically) {
+                                PollOptionsField(postViewModel)
+                            }
+                        } else {
+                            Row(verticalAlignment = CenterVertically) {
+                                ZapPollField(postViewModel)
+                            }
+                        }
                     }
                 }
 
@@ -588,24 +608,14 @@ private fun BottomRowActions(postViewModel: ShortNotePostViewModel) {
             maxDurationSeconds = MAX_VOICE_RECORD_SECONDS,
         )
 
-        if (postViewModel.canUsePoll) {
-            AddPollButton(postViewModel.wantsPoll) {
-                postViewModel.wantsPoll = !postViewModel.wantsPoll
-                if (postViewModel.wantsPoll) {
-                    if (postViewModel.wantsZapPoll) {
-                        postViewModel.wantsZapPoll = false
-                    }
-                }
-            }
-        }
-
-        if (postViewModel.canUseZapPoll) {
-            AddZapPollButton(postViewModel.wantsZapPoll) {
-                postViewModel.wantsZapPoll = !postViewModel.wantsZapPoll
-                if (postViewModel.wantsZapPoll) {
-                    if (postViewModel.wantsPoll) {
-                        postViewModel.wantsPoll = false
-                    }
+        if (postViewModel.canUsePoll || postViewModel.canUseZapPoll) {
+            AddPollButton(postViewModel.wantsPoll || postViewModel.wantsZapPoll) {
+                val isActive = postViewModel.wantsPoll || postViewModel.wantsZapPoll
+                if (isActive) {
+                    postViewModel.wantsPoll = false
+                    postViewModel.wantsZapPoll = false
+                } else {
+                    postViewModel.wantsPoll = true
                 }
             }
         }
@@ -652,32 +662,6 @@ private fun BottomRowActionsPreview() {
     model.canUsePoll = true
     ThemeComparisonColumn {
         BottomRowActions(model)
-    }
-}
-
-@Composable
-private fun AddZapPollButton(
-    isPollActive: Boolean,
-    onClick: () -> Unit,
-) {
-    IconButton(
-        onClick = { onClick() },
-    ) {
-        if (!isPollActive) {
-            Icon(
-                painter = painterRes(R.drawable.ic_poll, 1),
-                contentDescription = stringRes(id = R.string.poll),
-                modifier = Size19Modifier,
-                tint = MaterialTheme.colorScheme.onBackground,
-            )
-        } else {
-            Icon(
-                painter = painterRes(R.drawable.ic_poll, 1),
-                contentDescription = stringRes(id = R.string.disable_poll),
-                modifier = Size19Modifier,
-                tint = MaterialTheme.colorScheme.primary,
-            )
-        }
     }
 }
 

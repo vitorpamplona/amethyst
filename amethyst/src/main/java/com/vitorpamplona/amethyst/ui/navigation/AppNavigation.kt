@@ -402,17 +402,6 @@ fun BuildNavigation(
 
         composableFromBottomArgs<Route.NewPoll> {
             PollPostScreen(
-                isZapPoll = false,
-                message = it.message,
-                draftId = it.draft,
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
-        }
-
-        composableFromBottomArgs<Route.NewZapPoll> {
-            PollPostScreen(
-                isZapPoll = true,
                 message = it.message,
                 draftId = it.draft,
                 accountViewModel = accountViewModel,
