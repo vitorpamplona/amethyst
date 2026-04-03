@@ -148,8 +148,29 @@ class WebRtcCallFactory {
     }
 
     /**
-     * Sends a hangup to every peer in a group call.  Each peer receives its
-     * own gift-wrapped hangup event.
+     * Creates a call answer for a group call.  The signed inner event contains
+     * `p` tags for **every** member so each recipient knows the full group.
+     * A separate [GiftWrapEvent] is produced for each member.
+     */
+    suspend fun createGroupCallAnswer(
+        sdpAnswer: String,
+        memberPubKeys: Set<HexKey>,
+        callId: String,
+        signer: NostrSigner,
+    ): GroupResult {
+        val template = CallAnswerEvent.build(sdpAnswer, memberPubKeys, callId)
+        val signed = signer.sign(template)
+        val wraps =
+            memberPubKeys.map { pubKey ->
+                GiftWrapEvent.create(event = signed, recipientPubKey = pubKey, expirationDelta = WRAP_EXPIRATION_SECONDS)
+            }
+        return GroupResult(signed, wraps)
+    }
+
+    /**
+     * Sends a hangup to every peer in a group call.  The signed inner event
+     * contains `p` tags for **every** member so each recipient knows the
+     * full group.  A separate [GiftWrapEvent] is produced for each member.
      */
     suspend fun createGroupHangup(
         peerPubKeys: Set<HexKey>,
@@ -157,33 +178,50 @@ class WebRtcCallFactory {
         reason: String = "",
         signer: NostrSigner,
     ): GroupResult {
-        // Each peer gets its own signed hangup with the correct `p` tag
-        // targeting that specific recipient.
-        var firstSigned: Event? = null
+        val template = CallHangupEvent.build(peerPubKeys, callId, reason)
+        val signed = signer.sign(template)
         val wraps =
             peerPubKeys.map { pubKey ->
-                val template = CallHangupEvent.build(pubKey, callId, reason)
-                val signed = signer.sign(template)
-                if (firstSigned == null) firstSigned = signed
                 GiftWrapEvent.create(event = signed, recipientPubKey = pubKey, expirationDelta = WRAP_EXPIRATION_SECONDS)
             }
-        return GroupResult(firstSigned!!, wraps)
+        return GroupResult(signed, wraps)
     }
 
     /**
-     * Rejects a group call offer.  Sends the rejection to the caller and
-     * notifies self (for multi-device support).
+     * Rejects a group call offer.  The signed inner event contains `p` tags
+     * for **every** member so each recipient knows the full group.
+     * A separate [GiftWrapEvent] is produced for each member.
      */
     suspend fun createGroupReject(
-        callerPubKey: HexKey,
+        memberPubKeys: Set<HexKey>,
         callId: String,
         reason: String = "",
         signer: NostrSigner,
     ): GroupResult {
-        val template = CallRejectEvent.build(callerPubKey, callId, reason)
+        val template = CallRejectEvent.build(memberPubKeys, callId, reason)
         val signed = signer.sign(template)
         val wraps =
-            listOf(callerPubKey, signer.pubKey).distinct().map { pubKey ->
+            memberPubKeys.map { pubKey ->
+                GiftWrapEvent.create(event = signed, recipientPubKey = pubKey, expirationDelta = WRAP_EXPIRATION_SECONDS)
+            }
+        return GroupResult(signed, wraps)
+    }
+
+    /**
+     * Sends a renegotiation offer to every peer in a group call.  The signed
+     * inner event contains `p` tags for **every** member so each recipient
+     * knows the full group.  A separate [GiftWrapEvent] is produced for each member.
+     */
+    suspend fun createGroupRenegotiate(
+        sdpOffer: String,
+        memberPubKeys: Set<HexKey>,
+        callId: String,
+        signer: NostrSigner,
+    ): GroupResult {
+        val template = CallRenegotiateEvent.build(sdpOffer, memberPubKeys, callId)
+        val signed = signer.sign(template)
+        val wraps =
+            memberPubKeys.map { pubKey ->
                 GiftWrapEvent.create(event = signed, recipientPubKey = pubKey, expirationDelta = WRAP_EXPIRATION_SECONDS)
             }
         return GroupResult(signed, wraps)

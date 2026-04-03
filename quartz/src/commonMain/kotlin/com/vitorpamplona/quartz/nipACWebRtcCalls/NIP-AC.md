@@ -42,7 +42,7 @@ All signaling events MUST include:
 
 | Tag           | Description                                           | Required |
 |---------------|-------------------------------------------------------|----------|
-| `p`           | Hex pubkey of the recipient                           | YES      |
+| `p`           | Hex pubkey of the recipient (group calls: one per member) | YES  |
 | `call-id`     | UUID identifying the call session                     | YES      |
 | `expiration`  | Unix timestamp ([NIP-40](https://github.com/nostr-protocol/nips/blob/master/40.md)), SHOULD be `created_at + 20` seconds | YES |
 | `alt`         | Human-readable description ([NIP-31](https://github.com/nostr-protocol/nips/blob/master/31.md)) | YES |
@@ -250,6 +250,49 @@ Either party may send a `CallHangup` (kind 25053) at any time. The recipient SHO
 ### Rejecting a Call
 
 The callee may send a `CallReject` (kind 25054) instead of a `CallAnswer`. The caller SHOULD stop ringing and display a "call rejected" state.
+
+## Group Calls
+
+Group calls (calls with more than two participants) use the same event kinds but differ in how `p` tags and gift wraps are structured.
+
+### P-Tag Convention
+
+In a group call, all signaling events (except ICE candidates, kind 25052) MUST include a `p` tag for **every** group member. This allows each recipient to know the full group composition from any signaling event.
+
+ICE candidates (kind 25052) remain addressed to a single peer because WebRTC connections are peer-to-peer — each ICE candidate is relevant only to the specific connection it belongs to.
+
+### Sign Once, Wrap Per Recipient
+
+Because all group members are listed in the inner event's `p` tags, the event is **signed once** and then gift-wrapped individually for each recipient:
+
+1. **Build** the signaling event with `p` tags for all group members
+2. **Sign** the event once with the sender's key
+3. **Gift-wrap** the same signed event separately for each member (each wrap encrypted to that member's pubkey)
+4. **Publish** each gift wrap to the corresponding member's relay list
+
+This is more efficient than signing a separate event per recipient and ensures cryptographic consistency — every member receives the exact same signed inner event.
+
+### Group Call Offer
+
+The Call Offer (kind 25050) initiating a group call contains multiple `p` tags:
+
+```json
+{
+  "kind": 25050,
+  "pubkey": "<caller-hex-pubkey>",
+  "tags": [
+    ["p", "<callee-1-hex-pubkey>"],
+    ["p", "<callee-2-hex-pubkey>"],
+    ["p", "<callee-3-hex-pubkey>"],
+    ["call-id", "550e8400-e29b-41d4-a716-446655440000"],
+    ["call-type", "video"],
+    ["expiration", "1234567910"],
+    ["alt", "WebRTC call offer"]
+  ]
+}
+```
+
+Recipients detect a group call by the presence of multiple `p` tags. The full group is the union of all `p`-tagged pubkeys plus the event's `pubkey` (the caller).
 
 ## Spam Prevention
 

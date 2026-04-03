@@ -250,6 +250,72 @@ class CallEventsTest {
     }
 
     @Test
+    fun groupCallAnswerBuildIncludesAllPTags() {
+        val members = setOf("alice", "bob", "carol")
+        val template =
+            CallAnswerEvent.build(
+                sdpAnswer = "answer-sdp",
+                memberPubKeys = members,
+                callId = "group-call-1",
+            )
+        val pTagValues =
+            template.tags
+                .filter { it[0] == "p" }
+                .map { it[1] }
+                .toSet()
+        assertEquals(members, pTagValues)
+    }
+
+    @Test
+    fun groupCallHangupBuildIncludesAllPTags() {
+        val members = setOf("alice", "bob", "carol")
+        val template =
+            CallHangupEvent.build(
+                memberPubKeys = members,
+                callId = "group-call-1",
+            )
+        val pTagValues =
+            template.tags
+                .filter { it[0] == "p" }
+                .map { it[1] }
+                .toSet()
+        assertEquals(members, pTagValues)
+    }
+
+    @Test
+    fun groupCallRejectBuildIncludesAllPTags() {
+        val members = setOf("alice", "bob", "carol")
+        val template =
+            CallRejectEvent.build(
+                memberPubKeys = members,
+                callId = "group-call-1",
+            )
+        val pTagValues =
+            template.tags
+                .filter { it[0] == "p" }
+                .map { it[1] }
+                .toSet()
+        assertEquals(members, pTagValues)
+    }
+
+    @Test
+    fun groupCallRenegotiateBuildIncludesAllPTags() {
+        val members = setOf("alice", "bob", "carol")
+        val template =
+            CallRenegotiateEvent.build(
+                sdpOffer = "new-sdp-offer",
+                memberPubKeys = members,
+                callId = "group-call-1",
+            )
+        val pTagValues =
+            template.tags
+                .filter { it[0] == "p" }
+                .map { it[1] }
+                .toSet()
+        assertEquals(members, pTagValues)
+    }
+
+    @Test
     fun singleCalleeOfferIsNotGroupCall() {
         val template =
             CallOfferEvent.build(

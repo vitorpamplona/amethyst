@@ -137,27 +137,45 @@ class CallManager(
         val current = _state.value
         if (current !is CallState.IncomingCall) return
 
-        val result = factory.createCallAnswer(sdpAnswer, current.callerPubKey, current.callId, signer)
         _state.value = CallState.Connecting(current.callId, current.peerPubKeys(), current.callType)
         cancelTimeout()
-        publishEvent(result.wrap)
 
-        // Notify other devices of this user that the call was answered here.
-        val selfNotify = factory.createCallAnswer(sdpAnswer, signer.pubKey, current.callId, signer)
-        publishEvent(selfNotify.wrap)
+        if (current.groupMembers.size > 2) {
+            // Group call: include all members in p-tags, sign once, wrap for each.
+            // Include self so other devices get notified too.
+            val allRecipients = current.groupMembers + signer.pubKey
+            val result = factory.createGroupCallAnswer(sdpAnswer, allRecipients, current.callId, signer)
+            result.wraps.forEach { publishEvent(it) }
+        } else {
+            val result = factory.createCallAnswer(sdpAnswer, current.callerPubKey, current.callId, signer)
+            publishEvent(result.wrap)
+
+            // Notify other devices of this user that the call was answered here.
+            val selfNotify = factory.createCallAnswer(sdpAnswer, signer.pubKey, current.callId, signer)
+            publishEvent(selfNotify.wrap)
+        }
     }
 
     suspend fun rejectCall() {
         val current = _state.value
         if (current !is CallState.IncomingCall) return
 
-        val result = factory.createReject(current.callerPubKey, current.callId, signer = signer)
         transitionToEnded(current.callId, current.peerPubKeys(), EndReason.REJECTED)
-        publishEvent(result.wrap)
 
-        // Notify other devices of this user that the call was rejected here.
-        val selfNotify = factory.createReject(signer.pubKey, current.callId, signer = signer)
-        publishEvent(selfNotify.wrap)
+        if (current.groupMembers.size > 2) {
+            // Group call: include all members in p-tags, sign once, wrap for each.
+            // Include self so other devices get notified too.
+            val allRecipients = current.groupMembers + signer.pubKey
+            val result = factory.createGroupReject(allRecipients, current.callId, signer = signer)
+            result.wraps.forEach { publishEvent(it) }
+        } else {
+            val result = factory.createReject(current.callerPubKey, current.callId, signer = signer)
+            publishEvent(result.wrap)
+
+            // Notify other devices of this user that the call was rejected here.
+            val selfNotify = factory.createReject(signer.pubKey, current.callId, signer = signer)
+            publishEvent(selfNotify.wrap)
+        }
     }
 
     fun onCallAnswered(event: CallAnswerEvent) {
@@ -283,16 +301,28 @@ class CallManager(
 
     suspend fun sendRenegotiation(sdpOffer: String) {
         val callId = currentCallId() ?: return
-        val peerPubKey = currentPeerPubKey() ?: return
-        val result = factory.createRenegotiate(sdpOffer, peerPubKey, callId, signer)
-        publishEvent(result.wrap)
+        val peerPubKeys = currentPeerPubKeys() ?: return
+
+        if (peerPubKeys.size > 1) {
+            val result = factory.createGroupRenegotiate(sdpOffer, peerPubKeys, callId, signer)
+            result.wraps.forEach { publishEvent(it) }
+        } else {
+            val result = factory.createRenegotiate(sdpOffer, peerPubKeys.first(), callId, signer)
+            publishEvent(result.wrap)
+        }
     }
 
     suspend fun sendRenegotiationAnswer(sdpAnswer: String) {
         val callId = currentCallId() ?: return
-        val peerPubKey = currentPeerPubKey() ?: return
-        val result = factory.createCallAnswer(sdpAnswer, peerPubKey, callId, signer)
-        publishEvent(result.wrap)
+        val peerPubKeys = currentPeerPubKeys() ?: return
+
+        if (peerPubKeys.size > 1) {
+            val result = factory.createGroupCallAnswer(sdpAnswer, peerPubKeys, callId, signer)
+            result.wraps.forEach { publishEvent(it) }
+        } else {
+            val result = factory.createCallAnswer(sdpAnswer, peerPubKeys.first(), callId, signer)
+            publishEvent(result.wrap)
+        }
     }
 
     fun onPeerConnected() {

@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
+import com.vitorpamplona.quartz.nip01Core.tags.people.pTagIds
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallIdTag
@@ -59,6 +60,20 @@ class CallAnswerEvent(
         ) = eventTemplate(KIND, sdpAnswer, createdAt) {
             alt(ALT_DESCRIPTION)
             pTag(callerPubKey)
+            callId(callId)
+            expiration(createdAt + EXPIRATION_SECONDS)
+            initializer()
+        }
+
+        fun build(
+            sdpAnswer: String,
+            memberPubKeys: Set<HexKey>,
+            callId: String,
+            createdAt: Long = TimeUtils.now(),
+            initializer: TagArrayBuilder<CallAnswerEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, sdpAnswer, createdAt) {
+            alt(ALT_DESCRIPTION)
+            pTagIds(memberPubKeys)
             callId(callId)
             expiration(createdAt + EXPIRATION_SECONDS)
             initializer()
