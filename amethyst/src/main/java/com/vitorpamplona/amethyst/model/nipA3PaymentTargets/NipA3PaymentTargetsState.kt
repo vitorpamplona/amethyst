@@ -23,13 +23,18 @@ package com.vitorpamplona.amethyst.model.nipA3PaymentTargets
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.NoteState
+import com.vitorpamplona.quartz.experimental.nipA3.PaymentTarget
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class NipA3PaymentTargetsState(
@@ -43,6 +48,23 @@ class NipA3PaymentTargetsState(
     fun getNipA3PaymentTargetsFlow(): StateFlow<NoteState> = nipA3PaymentTargetsNote.flow().metadata.stateFlow
 
     fun getNipA3PaymentTargetsState() = PaymentTargetsEvent.createAddress(signer.pubKey)
+
+    fun getPaymentTargetsEvent(): PaymentTargetsEvent? = nipA3PaymentTargetsNote.event as? PaymentTargetsEvent
+
+    val flow: StateFlow<List<PaymentTarget>> =
+        getNipA3PaymentTargetsFlow()
+            .map { (it.note.event as? PaymentTargetsEvent)?.paymentTargets() ?: emptyList() }
+            .flowOn(Dispatchers.IO)
+            .stateIn(scope, SharingStarted.Eagerly, emptyList())
+
+    suspend fun savePaymentTargets(targets: List<PaymentTarget>): PaymentTargetsEvent {
+        val existing = getPaymentTargetsEvent()
+        return if (existing != null && existing.tags.isNotEmpty()) {
+            PaymentTargetsEvent.updatePaymentTargets(existing, targets, signer)
+        } else {
+            PaymentTargetsEvent.create(targets, signer)
+        }
+    }
 
     init {
         settings.backupNipA3PaymentTargets?.let {

@@ -221,8 +221,11 @@ class AccountViewModel(
             )
 
         // Set callbacks before exposing controller to avoid timing races
-        callManager.onAnswerReceived = { event -> controller.onCallAnswerReceived(event.sdpAnswer()) }
+        callManager.onAnswerReceived = { event -> controller.onCallAnswerReceived(event.pubKey, event.sdpAnswer()) }
         callManager.onIceCandidateReceived = { event -> controller.onIceCandidateReceived(event) }
+        callManager.onNewPeerInGroupCall = { peerPubKey -> controller.onNewPeerInGroupCall(peerPubKey) }
+        callManager.onMidCallOfferReceived = { peerPubKey, sdpOffer -> controller.onMidCallOfferReceived(peerPubKey, sdpOffer) }
+        callManager.onPeerLeft = { peerPubKey -> controller.disposePeerSession(peerPubKey) }
         callController = controller
 
         // Populate ActiveCallHolder so CallActivity can launch even when the app
@@ -1141,6 +1144,8 @@ class AccountViewModel(
 
     fun filterSpamFromStrangers() = account.settings.syncedSettings.security.filterSpamFromStrangers
 
+    fun toggleSendKind0ToLocalRelay(enabled: Boolean) = launchSigner { account.updateSendKind0EventsToLocalRelay(enabled) }
+
     fun updateWarnReports(warnReports: Boolean) = launchSigner { account.updateWarnReports(warnReports) }
 
     fun updateFilterSpam(filterSpam: Boolean) =
@@ -1151,6 +1156,8 @@ class AccountViewModel(
         }
 
     fun updateShowSensitiveContent(show: Boolean?) = launchSigner { account.updateShowSensitiveContent(show) }
+
+    fun updateMaxHashtagLimit(limit: Int) = launchSigner { account.updateMaxHashtagLimit(limit) }
 
     fun changeReactionTypes(
         reactionSet: List<String>,
@@ -1425,6 +1432,7 @@ class AccountViewModel(
 
     override fun onCleared() {
         Log.d("AccountViewModel", "onCleared")
+        callController?.cleanup()
         feedStates.destroy()
         super.onCleared()
     }

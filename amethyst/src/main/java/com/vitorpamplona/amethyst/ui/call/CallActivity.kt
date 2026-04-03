@@ -38,6 +38,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.lifecycleScope
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.call.CallState
+import com.vitorpamplona.amethyst.service.relayClient.authCommand.compose.RelayAuthSubscription
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.ui.StringResSetup
+import com.vitorpamplona.amethyst.ui.screen.ManageRelayServices
+import com.vitorpamplona.amethyst.ui.screen.ManageWebOkHttp
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
@@ -101,6 +106,18 @@ class CallActivity : AppCompatActivity() {
 
         setContent {
             AmethystTheme {
+                StringResSetup()
+
+                // Pauses relay services when the app pauses
+                ManageRelayServices()
+                ManageWebOkHttp()
+
+                // Adds this account to the authentication procedures for relays.
+                RelayAuthSubscription(accountViewModel)
+
+                // Loads account information + DMs and Notifications from Relays.
+                AccountFilterAssemblerSubscription(accountViewModel)
+
                 CallScreen(
                     callManager = callManager,
                     callController = callController,

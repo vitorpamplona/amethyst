@@ -424,6 +424,14 @@ class AccountSettings(
         }
     }
 
+    fun changeSendKind0EventsToLocalRelay(send: Boolean): Boolean {
+        if (syncedSettings.security.updateSendKind0EventsToLocalRelay(send)) {
+            saveAccountSettings()
+            return true
+        }
+        return false
+    }
+
     fun updateUserMetadata(newMetadata: MetadataEvent?) {
         if (newMetadata == null) return
 
@@ -748,6 +756,14 @@ class AccountSettings(
 
     fun updateFilterSpam(filterSpam: Boolean): Boolean =
         if (syncedSettings.security.updateFilterSpam(filterSpam)) {
+            saveAccountSettings()
+            true
+        } else {
+            false
+        }
+
+    fun updateMaxHashtagLimit(limit: Int): Boolean =
+        if (syncedSettings.security.updateMaxHashtagLimit(limit)) {
             saveAccountSettings()
             true
         } else {

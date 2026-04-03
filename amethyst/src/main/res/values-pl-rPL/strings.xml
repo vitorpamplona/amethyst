@@ -694,6 +694,9 @@
     <string name="call_bluetooth">Bluetooth</string>
     <string name="call_voice">Połączenie głosowe</string>
     <string name="call_video">Połączenie wideo</string>
+    <string name="call_waiting_for_others">Czekam, aż dołączą inni</string>
+    <string name="call_add_participant">Dodaj uczestnika</string>
+    <string name="call_search_users">Szukaj użytkowników\u2026</string>
     <string name="call_failed_start">Nie udało się nawiązać połączenia</string>
     <string name="call_failed_accept">Nie udało się przyjąć połączenia</string>
     <string name="call_failed_session">Nie udało się utworzyć sesji połączenia</string>
@@ -722,6 +725,8 @@
     <string name="warn_when_posts_have_reports_from_your_follows_explainer">Wyświetla komunikat ostrzegawczy, gdy posty zostały zgłoszone przez 5 lub więcej obserwowanych osób</string>
     <string name="show_sensitive_content_title">Pokaż wrażliwe treści</string>
     <string name="show_sensitive_content_explainer">Pokazuje komunikat ostrzegawczy, gdy autor oznaczył wpis jako wrażliwy</string>
+    <string name="max_hashtag_limit_title">Maks ilość hashtagów na post</string>
+    <string name="max_hashtag_limit_explainer">Ukrywa posty zawierające więcej hashtagów niż ten limit. Ustaw wartość 0, aby wyłączyć tę funkcję</string>
     <string name="new_reaction_symbol">Nowy Symbol Odzewu</string>
     <string name="no_reaction_type_setup_long_press_to_change">Brak wstępnie wybranych typów reakcji dla tego użytkownika. Przytrzymaj przycisk serce, aby zmienić</string>
     <string name="zapraiser">Zapraiser</string>

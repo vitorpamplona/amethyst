@@ -53,6 +53,8 @@ class AccountSyncedSettings(
             MutableStateFlow(internalSettings.security.showSensitiveContent),
             internalSettings.security.warnAboutPostsWithReports,
             MutableStateFlow(internalSettings.security.filterSpamFromStrangers),
+            MutableStateFlow(internalSettings.security.maxHashtagLimit),
+            MutableStateFlow(internalSettings.security.sendKind0EventsToLocalRelay),
         )
 
     fun toInternal(): AccountSyncedSettingsInternal =
@@ -74,6 +76,8 @@ class AccountSyncedSettings(
                     security.showSensitiveContent.value,
                     security.warnAboutPostsWithReports,
                     security.filterSpamFromStrangers.value,
+                    security.maxHashtagLimit.value,
+                    security.sendKind0EventsToLocalRelay.value,
                 ),
         )
 
@@ -119,6 +123,14 @@ class AccountSyncedSettings(
 
         if (security.warnAboutPostsWithReports != syncedSettingsInternal.security.warnAboutPostsWithReports) {
             security.warnAboutPostsWithReports = syncedSettingsInternal.security.warnAboutPostsWithReports
+        }
+
+        if (security.maxHashtagLimit.value != syncedSettingsInternal.security.maxHashtagLimit) {
+            security.maxHashtagLimit.tryEmit(syncedSettingsInternal.security.maxHashtagLimit)
+        }
+
+        if (security.sendKind0EventsToLocalRelay.value != syncedSettingsInternal.security.sendKind0EventsToLocalRelay) {
+            security.sendKind0EventsToLocalRelay.tryEmit(syncedSettingsInternal.security.sendKind0EventsToLocalRelay)
         }
     }
 
@@ -204,6 +216,8 @@ class AccountSecurityPreferences(
     val showSensitiveContent: MutableStateFlow<Boolean?> = MutableStateFlow(null),
     var warnAboutPostsWithReports: Boolean = true,
     var filterSpamFromStrangers: MutableStateFlow<Boolean> = MutableStateFlow(true),
+    val maxHashtagLimit: MutableStateFlow<Int> = MutableStateFlow(5),
+    var sendKind0EventsToLocalRelay: MutableStateFlow<Boolean> = MutableStateFlow(false),
 ) {
     fun updateShowSensitiveContent(show: Boolean?): Boolean {
         if (showSensitiveContent.value != show) {
@@ -224,6 +238,22 @@ class AccountSecurityPreferences(
     fun updateFilterSpam(filterSpam: Boolean): Boolean =
         if (filterSpam != filterSpamFromStrangers.value) {
             filterSpamFromStrangers.tryEmit(filterSpam)
+            true
+        } else {
+            false
+        }
+
+    fun updateMaxHashtagLimit(limit: Int): Boolean =
+        if (maxHashtagLimit.value != limit) {
+            maxHashtagLimit.update { limit }
+            true
+        } else {
+            false
+        }
+
+    fun updateSendKind0EventsToLocalRelay(send: Boolean): Boolean =
+        if (send != sendKind0EventsToLocalRelay.value) {
+            sendKind0EventsToLocalRelay.tryEmit(send)
             true
         } else {
             false

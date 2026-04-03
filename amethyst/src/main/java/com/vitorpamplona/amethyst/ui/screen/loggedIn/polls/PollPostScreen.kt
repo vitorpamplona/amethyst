@@ -35,7 +35,6 @@ import kotlinx.coroutines.FlowPreview
 @OptIn(ExperimentalMaterial3Api::class, FlowPreview::class)
 @Composable
 fun PollPostScreen(
-    isZapPoll: Boolean,
     message: String? = null,
     draftId: HexKey? = null,
     accountViewModel: AccountViewModel,
@@ -51,11 +50,7 @@ fun PollPostScreen(
             postViewModel.message.setTextAndPlaceCursorAtEnd(it)
             postViewModel.onMessageChanged()
         }
-        if (isZapPoll) {
-            postViewModel.wantsZapPoll = true
-        } else {
-            postViewModel.wantsPoll = true
-        }
+        postViewModel.wantsPoll = true
     }
 
     NewPostScreenInner(postViewModel, accountViewModel, nav)

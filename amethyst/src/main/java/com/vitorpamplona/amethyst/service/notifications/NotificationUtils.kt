@@ -36,6 +36,7 @@ import androidx.core.net.toUri
 import coil3.SingletonImageLoader
 import coil3.asDrawable
 import coil3.request.ImageRequest
+import coil3.request.allowHardware
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -272,7 +273,12 @@ object NotificationUtils {
     ): Bitmap? =
         withContext(Dispatchers.IO) {
             try {
-                val request = ImageRequest.Builder(applicationContext).data(pictureUrl).build()
+                val request =
+                    ImageRequest
+                        .Builder(applicationContext)
+                        .data(pictureUrl)
+                        .allowHardware(false)
+                        .build()
                 val imageLoader = SingletonImageLoader.get(applicationContext)
                 val result = imageLoader.execute(request)
                 (result.image?.asDrawable(applicationContext.resources) as? BitmapDrawable)?.bitmap

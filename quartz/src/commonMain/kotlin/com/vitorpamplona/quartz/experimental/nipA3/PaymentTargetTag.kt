@@ -35,11 +35,10 @@ class PaymentTargetTag {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].isNotEmpty()) { return null }
+            ensure(tag.has(2)) { return null }
             ensure(tag[2].isNotEmpty()) { return null }
 
-            val paymentTarget = PaymentTarget(tag[1], tag[2])
-
-            return paymentTarget
+            return PaymentTarget(tag[1], tag[2])
         }
 
         fun assemble(paymentTarget: PaymentTarget) = arrayOf(TAG_NAME, paymentTarget.type, paymentTarget.authority)

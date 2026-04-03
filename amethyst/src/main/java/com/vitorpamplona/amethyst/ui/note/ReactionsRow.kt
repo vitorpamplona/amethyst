@@ -50,11 +50,14 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProgressIndicatorDefaults
@@ -95,6 +98,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
+import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.vitorpamplona.amethyst.R
@@ -121,10 +125,15 @@ import com.vitorpamplona.amethyst.ui.components.AnimatedBorderTextCornerRadius
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
+import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
+import com.vitorpamplona.amethyst.ui.components.M3ActionRow
+import com.vitorpamplona.amethyst.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.ui.components.toasts.multiline.UserBasedErrorMessage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeReplyTo
+import com.vitorpamplona.amethyst.ui.note.ErrorMessageDialog
+import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.types.EditState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -161,6 +170,7 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.reactionBox
 import com.vitorpamplona.amethyst.ui.theme.ripple24dp
 import com.vitorpamplona.amethyst.ui.theme.selectedReactionBoxModifier
+import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
@@ -279,6 +289,14 @@ private fun InnerReactionRow(
                         grayTint = MaterialTheme.colorScheme.placeholderText,
                     )
                 }
+
+                ReactionRowAction.Pay -> {
+                    PayReaction(
+                        baseNote = baseNote,
+                        grayTint = MaterialTheme.colorScheme.placeholderText,
+                        accountViewModel = accountViewModel,
+                    )
+                }
             }
         },
     )
@@ -318,6 +336,81 @@ fun ShareReaction(
         },
     ) {
         ShareIcon(barChartModifier, grayTint)
+    }
+}
+
+@Composable
+fun PayReaction(
+    baseNote: Note,
+    grayTint: Color,
+    accountViewModel: AccountViewModel,
+    iconSizeModifier: Modifier = Size20Modifier,
+) {
+    val authorPubkey = baseNote.author?.pubkeyHex ?: return
+    val address = remember(authorPubkey) { PaymentTargetsEvent.createAddress(authorPubkey) }
+    val context = LocalContext.current
+
+    LoadAddressableNote(address, accountViewModel) { note ->
+        val targets = remember(note) { (note?.event as? PaymentTargetsEvent)?.paymentTargets() ?: emptyList() }
+
+        var expanded by remember { mutableStateOf(false) }
+        var errorMessage by remember { mutableStateOf<String?>(null) }
+
+        ClickableBox(
+            modifier = iconSizeModifier,
+            onClick = { expanded = true },
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.AccountBalanceWallet,
+                contentDescription = stringRes(R.string.payment_targets),
+                tint = grayTint,
+                modifier = iconSizeModifier,
+            )
+        }
+
+        if (expanded) {
+            M3ActionDialog(
+                title = stringRes(R.string.payment_targets),
+                onDismiss = { expanded = false },
+            ) {
+                M3ActionSection {
+                    if (targets.isEmpty()) {
+                        M3ActionRow(
+                            icon = Icons.Outlined.AccountBalanceWallet,
+                            text = stringRes(R.string.no_payment_targets_message),
+                            enabled = false,
+                            onClick = {},
+                        )
+                    } else {
+                        targets.forEach { target ->
+                            M3ActionRow(
+                                icon = Icons.Outlined.AccountBalanceWallet,
+                                text = "${target.type.replaceFirstChar(Char::titlecase)}: ${target.authority}",
+                                onClick = {
+                                    expanded = false
+                                    try {
+                                        val intent = Intent(Intent.ACTION_VIEW, "payto://${target.type}/${target.authority}".toUri())
+                                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                                        context.startActivity(intent)
+                                    } catch (e: Exception) {
+                                        if (e is kotlinx.coroutines.CancellationException) throw e
+                                        errorMessage = stringRes(context, R.string.no_payment_app_found)
+                                    }
+                                },
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        errorMessage?.let { msg ->
+            ErrorMessageDialog(
+                title = stringRes(R.string.error_dialog_payment_error),
+                textContent = msg,
+                onDismiss = { errorMessage = null },
+            )
+        }
     }
 }
 

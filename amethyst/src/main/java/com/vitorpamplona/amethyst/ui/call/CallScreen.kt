@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -132,11 +133,15 @@ fun CallScreen(
             }
 
             is CallState.Offering -> {
+                val otherMembers =
+                    remember(state.peerPubKeys) {
+                        state.peerPubKeys - accountViewModel.account.signer.pubKey
+                    }
                 if (isInPipMode) {
-                    PipCallUI(peerPubKeys = state.peerPubKeys, statusText = stringRes(R.string.call_calling), accountViewModel = accountViewModel)
+                    PipCallUI(peerPubKeys = otherMembers, statusText = stringRes(R.string.call_calling), accountViewModel = accountViewModel)
                 } else {
                     CallInProgressUI(
-                        peerPubKeys = state.peerPubKeys,
+                        peerPubKeys = otherMembers,
                         statusText = stringRes(R.string.call_calling),
                         accountViewModel = accountViewModel,
                         onHangup = { scope.launch { callManager.hangup() } },
@@ -145,8 +150,12 @@ fun CallScreen(
             }
 
             is CallState.IncomingCall -> {
+                val otherMembers =
+                    remember(state.groupMembers) {
+                        state.groupMembers - accountViewModel.account.signer.pubKey
+                    }
                 if (isInPipMode) {
-                    PipCallUI(peerPubKeys = state.groupMembers, statusText = stringRes(R.string.call_incoming), accountViewModel = accountViewModel)
+                    PipCallUI(peerPubKeys = otherMembers, statusText = stringRes(R.string.call_incoming), accountViewModel = accountViewModel)
                 } else {
                     val isVideoCall = state.callType == com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType.VIDEO
                     val acceptWithPermission =
@@ -154,7 +163,7 @@ fun CallScreen(
                             callController?.acceptIncomingCall(state.sdpOffer)
                         }
                     IncomingCallUI(
-                        groupMembers = state.groupMembers,
+                        groupMembers = otherMembers,
                         callType = state.callType,
                         accountViewModel = accountViewModel,
                         onAccept = acceptWithPermission,
@@ -164,11 +173,15 @@ fun CallScreen(
             }
 
             is CallState.Connecting -> {
+                val otherMembers =
+                    remember(state.peerPubKeys) {
+                        state.peerPubKeys - accountViewModel.account.signer.pubKey
+                    }
                 if (isInPipMode) {
-                    PipCallUI(peerPubKeys = state.peerPubKeys, statusText = stringRes(R.string.call_connecting), accountViewModel = accountViewModel)
+                    PipCallUI(peerPubKeys = otherMembers, statusText = stringRes(R.string.call_connecting), accountViewModel = accountViewModel)
                 } else {
                     CallInProgressUI(
-                        peerPubKeys = state.peerPubKeys,
+                        peerPubKeys = otherMembers,
                         statusText = stringRes(R.string.call_connecting),
                         accountViewModel = accountViewModel,
                         onHangup = { scope.launch { callManager.hangup() } },
@@ -194,9 +207,13 @@ fun CallScreen(
             }
 
             is CallState.Ended -> {
+                val otherMembers =
+                    remember(state.peerPubKeys) {
+                        state.peerPubKeys - accountViewModel.account.signer.pubKey
+                    }
                 if (!isInPipMode) {
                     CallInProgressUI(
-                        peerPubKeys = state.peerPubKeys,
+                        peerPubKeys = otherMembers,
                         statusText = stringRes(R.string.call_ended),
                         accountViewModel = accountViewModel,
                         onHangup = { onCallEnded() },
@@ -383,7 +400,8 @@ private fun ConnectedCallUI(
     }
 
     val emptyVideoFlow = remember { kotlinx.coroutines.flow.MutableStateFlow<VideoTrack?>(null) }
-    val remoteVideoTrack by (callController?.remoteVideoTrack ?: emptyVideoFlow).collectAsState()
+    val emptyTracksFlow = remember { kotlinx.coroutines.flow.MutableStateFlow<Map<String, VideoTrack>>(emptyMap()) }
+    val remoteVideoTracks by (callController?.remoteVideoTracks ?: emptyTracksFlow).collectAsState()
     val localVideoTrack by (callController?.localVideoTrack ?: emptyVideoFlow).collectAsState()
     val defaultFalse = remember { kotlinx.coroutines.flow.MutableStateFlow(false) }
     val defaultTrue = remember { kotlinx.coroutines.flow.MutableStateFlow(true) }
@@ -413,16 +431,13 @@ private fun ConnectedCallUI(
                 .fillMaxSize()
                 .background(Color.Black),
     ) {
-        // Remote video (full screen background) — only when peer is actively sending
-        if (isRemoteVideoActive) {
-            remoteVideoTrack?.let { track ->
-                VideoRenderer(
-                    videoTrack = track,
-                    eglBase = callController?.getEglBase(),
-                    modifier = Modifier.fillMaxSize(),
-                    mirror = false,
-                )
-            }
+        // Remote video(s) — render all peers in a grid when actively sending
+        if (isRemoteVideoActive && remoteVideoTracks.isNotEmpty()) {
+            RemoteVideoGrid(
+                remoteVideoTracks = remoteVideoTracks,
+                eglBase = callController?.getEglBase(),
+                modifier = Modifier.fillMaxSize(),
+            )
         }
 
         // Local video (small pip in corner) — only when camera is active
@@ -443,6 +458,10 @@ private fun ConnectedCallUI(
         }
 
         // If no video or peer stopped sharing, show avatar
+        val otherMembers =
+            remember(state.allPeerPubKeys) {
+                state.allPeerPubKeys - accountViewModel.account.signer.pubKey
+            }
         if (!isRemoteVideoActive) {
             Column(
                 modifier = Modifier.fillMaxSize(),
@@ -450,13 +469,13 @@ private fun ConnectedCallUI(
                 verticalArrangement = Arrangement.Center,
             ) {
                 GroupCallPictures(
-                    peerPubKeys = state.allPeerPubKeys,
+                    peerPubKeys = otherMembers,
                     size = 120.dp,
                     accountViewModel = accountViewModel,
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 GroupCallNames(
-                    peerPubKeys = state.allPeerPubKeys,
+                    peerPubKeys = otherMembers,
                     accountViewModel = accountViewModel,
                     textColor = Color.White,
                 )
@@ -583,6 +602,53 @@ private fun ConnectedCallUI(
 }
 
 @Composable
+private fun RemoteVideoGrid(
+    remoteVideoTracks: Map<String, VideoTrack>,
+    eglBase: org.webrtc.EglBase?,
+    modifier: Modifier = Modifier,
+) {
+    val tracks = remember(remoteVideoTracks) { remoteVideoTracks.entries.toList() }
+
+    if (tracks.size == 1) {
+        // Single peer: full screen
+        VideoRenderer(
+            videoTrack = tracks[0].value,
+            eglBase = eglBase,
+            modifier = modifier,
+            mirror = false,
+        )
+    } else {
+        val columns =
+            when {
+                tracks.size <= 2 -> 1
+                tracks.size <= 4 -> 2
+                else -> 2
+            }
+
+        Column(modifier = modifier) {
+            tracks.chunked(columns).forEach { row ->
+                Row(
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                ) {
+                    row.forEach { (_, track) ->
+                        VideoRenderer(
+                            videoTrack = track,
+                            eglBase = eglBase,
+                            modifier = Modifier.weight(1f).fillMaxHeight(),
+                            mirror = false,
+                        )
+                    }
+                    // Fill empty cells in the last row
+                    repeat(columns - row.size) {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun VideoRenderer(
     videoTrack: VideoTrack,
     eglBase: org.webrtc.EglBase?,
@@ -682,6 +748,10 @@ private fun PipConnectedCallUI(
             }
         }
 
+        val otherMembers =
+            remember(state.allPeerPubKeys) {
+                state.allPeerPubKeys - accountViewModel.account.signer.pubKey
+            }
         if (!isRemoteVideoActive) {
             // Show small avatar + timer in PiP
             Column(
@@ -690,7 +760,7 @@ private fun PipConnectedCallUI(
                 verticalArrangement = Arrangement.Center,
             ) {
                 GroupCallPictures(
-                    peerPubKeys = state.allPeerPubKeys,
+                    peerPubKeys = otherMembers,
                     size = 48.dp,
                     accountViewModel = accountViewModel,
                 )
@@ -888,7 +958,7 @@ private fun GroupCallPictures(
 private fun GroupCallNames(
     peerPubKeys: Set<String>,
     accountViewModel: AccountViewModel,
-    textColor: Color = Color.Unspecified,
+    textColor: Color = MaterialTheme.colorScheme.onSurface,
 ) {
     val userList = remember(peerPubKeys) { peerPubKeys.toList() }
 

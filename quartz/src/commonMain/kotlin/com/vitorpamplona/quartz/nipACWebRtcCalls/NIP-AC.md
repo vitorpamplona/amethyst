@@ -42,7 +42,7 @@ All signaling events MUST include:
 
 | Tag           | Description                                           | Required |
 |---------------|-------------------------------------------------------|----------|
-| `p`           | Hex pubkey of the recipient                           | YES      |
+| `p`           | Hex pubkey of the recipient (group calls: one per member) | YES  |
 | `call-id`     | UUID identifying the call session                     | YES      |
 | `expiration`  | Unix timestamp ([NIP-40](https://github.com/nostr-protocol/nips/blob/master/40.md)), SHOULD be `created_at + 20` seconds | YES |
 | `alt`         | Human-readable description ([NIP-31](https://github.com/nostr-protocol/nips/blob/master/31.md)) | YES |
@@ -251,6 +251,65 @@ Either party may send a `CallHangup` (kind 25053) at any time. The recipient SHO
 
 The callee may send a `CallReject` (kind 25054) instead of a `CallAnswer`. The caller SHOULD stop ringing and display a "call rejected" state.
 
+## Group Calls
+
+Group calls (calls with more than two participants) use the same event kinds but differ in how `p` tags and gift wraps are structured.
+
+### P-Tag Convention
+
+In a group call, all signaling events (except ICE candidates, kind 25052) MUST include a `p` tag for **every** group member. This allows each recipient to know the full group composition from any signaling event.
+
+ICE candidates (kind 25052) remain addressed to a single peer because WebRTC connections are peer-to-peer — each ICE candidate is relevant only to the specific connection it belongs to.
+
+### Sign Once, Wrap Per Recipient
+
+For events whose content is identical for all recipients (hangup, reject), the event is **signed once** and then gift-wrapped individually for each recipient:
+
+1. **Build** the signaling event with `p` tags for all group members
+2. **Sign** the event once with the sender's key
+3. **Gift-wrap** the same signed event separately for each member (each wrap encrypted to that member's pubkey)
+4. **Publish** each gift wrap to the corresponding member's relay list
+
+This is more efficient than signing a separate event per recipient and ensures cryptographic consistency — every member receives the exact same signed inner event.
+
+### Per-Peer SDP with Group P-Tags
+
+Events carrying SDP payloads (offer, answer, renegotiate) contain session descriptions that are specific to a single `PeerConnection`. In a full-mesh group call, each participant maintains a separate `PeerConnection` per peer, so SDP content differs per connection.
+
+For these events, the inner event still includes `p` tags for **all** group members (so any recipient can see the full group), but:
+
+1. **Build** the event with `p` tags for all group members and the per-peer SDP content
+2. **Sign** the event (signed per peer, since the SDP content differs)
+3. **Gift-wrap** and send **only to the specific peer** the SDP is intended for
+
+This means offer, answer, and renegotiate events in group calls are signed per-peer but still carry the full group membership in their `p` tags.
+
+### Group Call Offer
+
+The Call Offer (kind 25050) initiating a group call contains multiple `p` tags:
+
+```json
+{
+  "kind": 25050,
+  "pubkey": "<caller-hex-pubkey>",
+  "tags": [
+    ["p", "<callee-1-hex-pubkey>"],
+    ["p", "<callee-2-hex-pubkey>"],
+    ["p", "<callee-3-hex-pubkey>"],
+    ["call-id", "550e8400-e29b-41d4-a716-446655440000"],
+    ["call-type", "video"],
+    ["expiration", "1234567910"],
+    ["alt", "WebRTC call offer"]
+  ]
+}
+```
+
+Recipients detect a group call by the presence of multiple `p` tags. The full group is the union of all `p`-tagged pubkeys plus the event's `pubkey` (the caller).
+
+### Inviting New Peers
+
+To invite a new peer into an active group call, send a Call Offer (kind 25050) with `p` tags listing **all** existing group members plus the new invitee. This allows the invitee to immediately see the full group composition. The SDP in the offer is specific to the new PeerConnection being established, so the wrap is addressed only to the invitee.
+
 ## Spam Prevention
 
 Clients SHOULD implement call filtering:
@@ -293,6 +352,8 @@ When a user is logged in on multiple devices, all devices will receive and ring 
 - When **rejecting** a call, the callee SHOULD gift-wrap and publish an additional `Call Reject` (kind 25054) addressed to their **own pubkey**. Other devices SHOULD stop ringing.
 
 These self-notification events use the same `call-id` as the original call and follow the same gift-wrapping rules. Clients receiving a self-addressed answer or reject MUST verify the `call-id` matches the currently ringing call before acting on it.
+
+**Group calls**: In group calls, the sender's own pubkey SHOULD be included in the set of recipients when gift-wrapping answer and reject events. This means the self-notification is implicit — no separate self-addressed event is needed. The same signed inner event (with all group member `p` tags) is simply wrapped to the sender's own pubkey along with all other members.
 
 ### Audio and Media
 

@@ -156,6 +156,8 @@ sealed class Route {
 
     @Serializable object EditMediaServers : Route()
 
+    @Serializable object EditPaymentTargets : Route()
+
     @Serializable object UpdateReactionType : Route()
 
     @Serializable data class Nip47NWCSetup(
@@ -369,12 +371,6 @@ sealed class Route {
 
     @Serializable
     data class NewPoll(
-        val message: String? = null,
-        val draft: String? = null,
-    ) : Route()
-
-    @Serializable
-    data class NewZapPoll(
         val message: String? = null,
         val draft: String? = null,
     ) : Route()

@@ -34,6 +34,8 @@ class PaymentTargetsEvent(
     content: String,
     sig: HexKey,
 ) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+    fun paymentTargets(): List<PaymentTarget> = tags.mapNotNull { PaymentTargetTag.parse(it) }
+
     companion object {
         const val KIND = 10133
 
