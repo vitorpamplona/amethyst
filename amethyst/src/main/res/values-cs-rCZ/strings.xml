@@ -1915,4 +1915,7 @@
     <string name="relay_members_removed">%1$d členů odebráno z relé</string>
     <string name="relay_join_request">Žádost o připojení k relé</string>
     <string name="relay_leave_request">Žádost o opuštění relé</string>
+    <string name="call_bluetooth">Bluetooth</string>
+    <string name="max_hashtag_limit_explainer">Skryje příspěvky s více hashtagy, než je tento limit. Nastavte 0 pro deaktivaci</string>
+    <string name="max_hashtag_limit_title">Max. hashtagů na příspěvek</string>
 </resources>

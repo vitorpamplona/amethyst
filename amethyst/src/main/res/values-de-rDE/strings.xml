@@ -1918,4 +1918,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="relay_members_removed">%1$d Mitglieder aus Relay entfernt</string>
     <string name="relay_join_request">Relay-Beitrittsanfrage</string>
     <string name="relay_leave_request">Relay-Austrittsanfrage</string>
+    <string name="call_bluetooth">Bluetooth</string>
+    <string name="max_hashtag_limit_explainer">Blendet Beiträge mit mehr Hashtags als dieses Limit aus. Auf 0 setzen zum Deaktivieren</string>
+    <string name="max_hashtag_limit_title">Max. Hashtags pro Beitrag</string>
 </resources>

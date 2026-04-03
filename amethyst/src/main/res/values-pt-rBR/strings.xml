@@ -1914,4 +1914,7 @@
     <string name="relay_members_removed">%1$d membros removidos do relay</string>
     <string name="relay_join_request">Solicitação de entrada no relay</string>
     <string name="relay_leave_request">Solicitação de saída do relay</string>
+    <string name="call_bluetooth">Bluetooth</string>
+    <string name="max_hashtag_limit_explainer">Oculta postagens com mais hashtags do que este limite. Defina como 0 para desativar</string>
+    <string name="max_hashtag_limit_title">Máximo de hashtags por postagem</string>
 </resources>
