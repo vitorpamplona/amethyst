@@ -116,10 +116,10 @@ data class FramedContentTbs(
     override fun encodeTls(writer: TlsWriter) {
         writer.putUint16(version)
         writer.putUint16(wireFormat.value)
-        writer.putOpaque1(groupId)
+        writer.putOpaqueVarInt(groupId)
         writer.putUint64(epoch)
         encodeSender(writer, sender)
-        writer.putOpaque4(authenticatedData)
+        writer.putOpaqueVarInt(authenticatedData)
         writer.putUint8(contentType.value)
         writer.putBytes(content)
 
@@ -156,22 +156,22 @@ data class PublicMessage(
     val membershipTag: ByteArray? = null,
 ) : TlsSerializable {
     override fun encodeTls(writer: TlsWriter) {
-        writer.putOpaque1(groupId)
+        writer.putOpaqueVarInt(groupId)
         writer.putUint64(epoch)
         encodeSender(writer, sender)
-        writer.putOpaque4(authenticatedData)
+        writer.putOpaqueVarInt(authenticatedData)
         writer.putUint8(contentType.value)
         writer.putBytes(content)
 
         // FramedContentAuthData
-        writer.putOpaque2(signature)
+        writer.putOpaqueVarInt(signature)
         if (contentType == ContentType.COMMIT) {
-            writer.putOpaque1(confirmationTag ?: ByteArray(0))
+            writer.putOpaqueVarInt(confirmationTag ?: ByteArray(0))
         }
 
         // membership_tag (only for member senders)
         if (sender.senderType == SenderType.MEMBER) {
-            writer.putOpaque1(membershipTag ?: ByteArray(0))
+            writer.putOpaqueVarInt(membershipTag ?: ByteArray(0))
         }
     }
 
@@ -185,27 +185,27 @@ data class PublicMessage(
 
     companion object {
         fun decodeTls(reader: TlsReader): PublicMessage {
-            val groupId = reader.readOpaque1()
+            val groupId = reader.readOpaqueVarInt()
             val epoch = reader.readUint64()
             val sender = decodeSender(reader)
-            val authenticatedData = reader.readOpaque4()
+            val authenticatedData = reader.readOpaqueVarInt()
             val contentType = ContentType.fromValue(reader.readUint8())
 
             // Content is variable based on content_type, read remaining content
             // For now, read as opaque
-            val content = reader.readOpaque4()
-            val signature = reader.readOpaque2()
+            val content = reader.readOpaqueVarInt()
+            val signature = reader.readOpaqueVarInt()
 
             val confirmationTag =
                 if (contentType == ContentType.COMMIT) {
-                    reader.readOpaque1()
+                    reader.readOpaqueVarInt()
                 } else {
                     null
                 }
 
             val membershipTag =
                 if (sender.senderType == SenderType.MEMBER && reader.hasRemaining) {
-                    reader.readOpaque1()
+                    reader.readOpaqueVarInt()
                 } else {
                     null
                 }
@@ -239,12 +239,12 @@ data class PrivateMessage(
     val ciphertext: ByteArray,
 ) : TlsSerializable {
     override fun encodeTls(writer: TlsWriter) {
-        writer.putOpaque1(groupId)
+        writer.putOpaqueVarInt(groupId)
         writer.putUint64(epoch)
         writer.putUint8(contentType.value)
-        writer.putOpaque4(authenticatedData)
-        writer.putOpaque1(encryptedSenderData)
-        writer.putOpaque4(ciphertext)
+        writer.putOpaqueVarInt(authenticatedData)
+        writer.putOpaqueVarInt(encryptedSenderData)
+        writer.putOpaqueVarInt(ciphertext)
     }
 
     override fun equals(other: Any?): Boolean {
@@ -258,12 +258,12 @@ data class PrivateMessage(
     companion object {
         fun decodeTls(reader: TlsReader): PrivateMessage =
             PrivateMessage(
-                groupId = reader.readOpaque1(),
+                groupId = reader.readOpaqueVarInt(),
                 epoch = reader.readUint64(),
                 contentType = ContentType.fromValue(reader.readUint8()),
-                authenticatedData = reader.readOpaque4(),
-                encryptedSenderData = reader.readOpaque1(),
-                ciphertext = reader.readOpaque4(),
+                authenticatedData = reader.readOpaqueVarInt(),
+                encryptedSenderData = reader.readOpaqueVarInt(),
+                ciphertext = reader.readOpaqueVarInt(),
             )
     }
 }

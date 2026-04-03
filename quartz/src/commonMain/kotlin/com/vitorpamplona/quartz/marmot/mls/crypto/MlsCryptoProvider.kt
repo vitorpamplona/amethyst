@@ -90,6 +90,25 @@ object MlsCryptoProvider {
     }
 
     /**
+     * ExpandWithLabel variant that accepts a raw byte array label.
+     * The "MLS 1.0 " prefix is prepended to the raw label bytes.
+     */
+    fun expandWithLabelRaw(
+        secret: ByteArray,
+        label: ByteArray,
+        context: ByteArray,
+        length: Int,
+    ): ByteArray {
+        val prefix = "MLS 1.0 ".encodeToByteArray()
+        val fullLabel = prefix + label
+        val hkdfLabel = TlsWriter(4 + fullLabel.size + context.size)
+        hkdfLabel.putUint16(length)
+        hkdfLabel.putOpaqueVarInt(fullLabel)
+        hkdfLabel.putOpaqueVarInt(context)
+        return hkdfExpand(secret, hkdfLabel.toByteArray(), length)
+    }
+
+    /**
      * MLS DeriveSecret (RFC 9420 Section 8):
      * DeriveSecret(Secret, Label) = ExpandWithLabel(Secret, Label, "", Nh)
      */
@@ -268,8 +287,8 @@ data class HpkeCiphertext(
     val ciphertext: ByteArray,
 ) : TlsSerializable {
     override fun encodeTls(writer: TlsWriter) {
-        writer.putOpaque2(kemOutput)
-        writer.putOpaque2(ciphertext)
+        writer.putOpaqueVarInt(kemOutput)
+        writer.putOpaqueVarInt(ciphertext)
     }
 
     override fun equals(other: Any?): Boolean {
@@ -287,8 +306,8 @@ data class HpkeCiphertext(
     companion object {
         fun decodeTls(reader: TlsReader): HpkeCiphertext =
             HpkeCiphertext(
-                kemOutput = reader.readOpaque2(),
-                ciphertext = reader.readOpaque2(),
+                kemOutput = reader.readOpaqueVarInt(),
+                ciphertext = reader.readOpaqueVarInt(),
             )
     }
 }

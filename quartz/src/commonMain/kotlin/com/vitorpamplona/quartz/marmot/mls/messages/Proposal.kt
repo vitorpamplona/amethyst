@@ -127,7 +127,7 @@ sealed class Proposal : TlsSerializable {
 
         override fun encodeTls(writer: TlsWriter) {
             writer.putUint16(proposalType.value)
-            writer.putVector4(extensions)
+            writer.putVectorVarInt(extensions)
         }
     }
 
@@ -144,8 +144,8 @@ sealed class Proposal : TlsSerializable {
         override fun encodeTls(writer: TlsWriter) {
             writer.putUint16(proposalType.value)
             writer.putUint8(pskType)
-            writer.putOpaque2(pskId)
-            writer.putOpaque1(pskNonce)
+            writer.putOpaqueVarInt(pskId)
+            writer.putOpaqueVarInt(pskNonce)
         }
 
         override fun equals(other: Any?): Boolean {
@@ -178,11 +178,11 @@ sealed class Proposal : TlsSerializable {
                 }
 
                 ProposalType.GROUP_CONTEXT_EXTENSIONS -> {
-                    GroupContextExtensions(reader.readVector4 { Extension.decodeTls(it) })
+                    GroupContextExtensions(reader.readVectorVarInt { Extension.decodeTls(it) })
                 }
 
                 ProposalType.PSK -> {
-                    Psk(reader.readUint8(), reader.readOpaque2(), reader.readOpaque1())
+                    Psk(reader.readUint8(), reader.readOpaqueVarInt(), reader.readOpaqueVarInt())
                 }
 
                 else -> {
@@ -211,7 +211,7 @@ sealed class ProposalOrRef : TlsSerializable {
     ) : ProposalOrRef() {
         override fun encodeTls(writer: TlsWriter) {
             writer.putUint8(2) // reference
-            writer.putOpaque1(proposalRef)
+            writer.putOpaqueVarInt(proposalRef)
         }
 
         override fun equals(other: Any?): Boolean {
@@ -228,7 +228,7 @@ sealed class ProposalOrRef : TlsSerializable {
             val type = reader.readUint8()
             return when (type) {
                 1 -> Inline(Proposal.decodeTls(reader))
-                2 -> Reference(reader.readOpaque1())
+                2 -> Reference(reader.readOpaqueVarInt())
                 else -> throw IllegalArgumentException("Unknown ProposalOrRef type: $type")
             }
         }

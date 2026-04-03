@@ -59,10 +59,10 @@ data class MlsKeyPackage(
     override fun encodeTls(writer: TlsWriter) {
         writer.putUint16(version)
         writer.putUint16(cipherSuite)
-        writer.putOpaque2(initKey)
+        writer.putOpaqueVarInt(initKey)
         leafNode.encodeTls(writer)
-        writer.putVector4(extensions)
-        writer.putOpaque2(signature)
+        writer.putVectorVarInt(extensions)
+        writer.putOpaqueVarInt(signature)
     }
 
     /**
@@ -81,9 +81,9 @@ data class MlsKeyPackage(
         val writer = TlsWriter()
         writer.putUint16(version)
         writer.putUint16(cipherSuite)
-        writer.putOpaque2(initKey)
+        writer.putOpaqueVarInt(initKey)
         leafNode.encodeTls(writer)
-        writer.putVector4(extensions)
+        writer.putVectorVarInt(extensions)
         return writer.toByteArray()
     }
 
@@ -108,10 +108,10 @@ data class MlsKeyPackage(
             MlsKeyPackage(
                 version = reader.readUint16(),
                 cipherSuite = reader.readUint16(),
-                initKey = reader.readOpaque2(),
+                initKey = reader.readOpaqueVarInt(),
                 leafNode = LeafNode.decodeTls(reader),
-                extensions = reader.readVector4 { Extension.decodeTls(it) },
-                signature = reader.readOpaque2(),
+                extensions = reader.readVectorVarInt { Extension.decodeTls(it) },
+                signature = reader.readOpaqueVarInt(),
             )
     }
 }

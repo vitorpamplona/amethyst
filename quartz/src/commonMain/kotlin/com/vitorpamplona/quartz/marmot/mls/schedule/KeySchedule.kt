@@ -125,8 +125,18 @@ class KeySchedule(
             label: String,
             context: ByteArray,
             length: Int,
+        ): ByteArray = mlsExporter(exporterSecret, label.encodeToByteArray(), context, length)
+
+        /**
+         * MLS-Exporter with raw byte label for non-UTF-8 labels.
+         */
+        fun mlsExporter(
+            exporterSecret: ByteArray,
+            label: ByteArray,
+            context: ByteArray,
+            length: Int,
         ): ByteArray {
-            val derivedSecret = MlsCryptoProvider.deriveSecret(exporterSecret, label)
+            val derivedSecret = MlsCryptoProvider.expandWithLabelRaw(exporterSecret, label, ByteArray(0), MlsCryptoProvider.HASH_OUTPUT_LENGTH)
             val contextHash = MlsCryptoProvider.hash(context)
             return MlsCryptoProvider.expandWithLabel(derivedSecret, "exported", contextHash, length)
         }

@@ -142,6 +142,17 @@ class TlsWriter(
     }
 
     /**
+     * Write a variable-length vector with VarInt length prefix.
+     */
+    fun putVectorVarInt(items: List<TlsSerializable>) {
+        val inner = TlsWriter()
+        for (item in items) {
+            item.encodeTls(inner)
+        }
+        putOpaqueVarInt(inner.toByteArray())
+    }
+
+    /**
      * Write a variable-length vector of TLS-serializable items with a 2-byte length prefix.
      */
     fun putVector2(items: List<TlsSerializable>) {

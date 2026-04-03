@@ -291,7 +291,7 @@ class RatchetTree(
                 inner.putUint8(0)
             }
         }
-        writer.putOpaque4(inner.toByteArray())
+        writer.putOpaqueVarInt(inner.toByteArray())
     }
 
     private fun ensureCapacity(nodeIndex: Int) {
@@ -302,7 +302,7 @@ class RatchetTree(
 
     companion object {
         fun decodeTls(reader: TlsReader): RatchetTree {
-            val treeBytes = reader.readOpaque4()
+            val treeBytes = reader.readOpaqueVarInt()
             val treeReader = TlsReader(treeBytes)
             val nodesList = mutableListOf<TreeNode?>()
 
@@ -365,8 +365,8 @@ data class UpdatePathNode(
     val encryptedPathSecret: List<com.vitorpamplona.quartz.marmot.mls.crypto.HpkeCiphertext>,
 ) : TlsSerializable {
     override fun encodeTls(writer: TlsWriter) {
-        writer.putOpaque2(encryptionKey)
-        writer.putVector4(encryptedPathSecret)
+        writer.putOpaqueVarInt(encryptionKey)
+        writer.putVectorVarInt(encryptedPathSecret)
     }
 
     override fun equals(other: Any?): Boolean {
@@ -384,9 +384,9 @@ data class UpdatePathNode(
     companion object {
         fun decodeTls(reader: TlsReader): UpdatePathNode =
             UpdatePathNode(
-                encryptionKey = reader.readOpaque2(),
+                encryptionKey = reader.readOpaqueVarInt(),
                 encryptedPathSecret =
-                    reader.readVector4 {
+                    reader.readVectorVarInt {
                         com.vitorpamplona.quartz.marmot.mls.crypto.HpkeCiphertext
                             .decodeTls(it)
                     },

@@ -218,8 +218,8 @@ class SecretTree(
         val leftIdx = BinaryTree.left(parentIdx)
         val rightIdx = BinaryTree.right(parentIdx)
 
-        val leftSecret = MlsCryptoProvider.expandWithLabel(parentSecret, "tree", byteArrayOf(0), MlsCryptoProvider.HASH_OUTPUT_LENGTH)
-        val rightSecret = MlsCryptoProvider.expandWithLabel(parentSecret, "tree", byteArrayOf(1), MlsCryptoProvider.HASH_OUTPUT_LENGTH)
+        val leftSecret = MlsCryptoProvider.expandWithLabel(parentSecret, "tree", "left".encodeToByteArray(), MlsCryptoProvider.HASH_OUTPUT_LENGTH)
+        val rightSecret = MlsCryptoProvider.expandWithLabel(parentSecret, "tree", "right".encodeToByteArray(), MlsCryptoProvider.HASH_OUTPUT_LENGTH)
 
         treeSecrets[leftIdx] = leftSecret
         treeSecrets[rightIdx] = rightSecret
