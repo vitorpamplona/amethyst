@@ -90,6 +90,9 @@ class CallController(
 
     private val peerSessions = ConcurrentHashMap<HexKey, PeerSessionState>()
 
+    // Candidates received before a PeerSession exists for the sender
+    private val globalPendingIce = ConcurrentHashMap<HexKey, CopyOnWriteArrayList<IceCandidate>>()
+
     // ---- Shared WebRTC resources ----
 
     private var peerConnectionFactory: PeerConnectionFactory? = null
@@ -397,9 +400,6 @@ class CallController(
             Log.e(TAG, "Failed to parse ICE candidate", e)
         }
     }
-
-    // Candidates received before a PeerSession exists for the sender
-    private val globalPendingIce = ConcurrentHashMap<HexKey, CopyOnWriteArrayList<IceCandidate>>()
 
     private fun getGlobalPendingCandidates(peerPubKey: HexKey): List<IceCandidate> = globalPendingIce.remove(peerPubKey)?.toList() ?: emptyList()
 
