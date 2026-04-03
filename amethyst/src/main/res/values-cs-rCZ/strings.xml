@@ -516,6 +516,15 @@
     <string name="use_default_servers">Použít výchozí seznam</string>
     <string name="add_media_server">Přidat server médií</string>
     <string name="delete_media_server">Odstranit server médií</string>
+    <string name="payment_targets">Platební cíle</string>
+    <string name="payment_targets_explainer">Zveřejněte své platební adresy, aby vám ostatní mohli přímo posílat prostředky.</string>
+    <string name="payment_targets_section_explainer">Přidejte platební adresy pro různé sítě (např. bitcoin, lightning, ethereum).</string>
+    <string name="no_payment_targets_message">Žádné platební cíle nastaveny. Přidejte jeden níže ↓</string>
+    <string name="payment_target_type">Typ sítě (např. bitcoin)</string>
+    <string name="payment_target_authority">Adresa</string>
+    <string name="delete_payment_target">Smazat platební cíl</string>
+    <string name="no_payment_app_found">Nebyla nalezena žádná aplikace pro zpracování této platby. Nainstalujte prosím kompatibilní peněženku.</string>
+    <string name="error_dialog_payment_error">Nelze otevřít platbu</string>
     <string name="uploading_state_ready">Nezačaté</string>
     <string name="uploading_state_compressing">Kompresuje</string>
     <string name="uploading_state_uploading">Nahrávání</string>
@@ -1220,6 +1229,8 @@
     <string name="reactions_settings_zap_description">Poslat lightning platbu autorovi</string>
     <string name="reactions_settings_share">Sdílet</string>
     <string name="reactions_settings_share_description">Sdílet tuto poznámku externě</string>
+    <string name="reactions_settings_pay">Zaplatit</string>
+    <string name="reactions_settings_pay_description">Odeslat platbu autorovi prostřednictvím jeho platebních cílů</string>
     <string name="profile_image_of_user">Obrázek profilu %1$s</string>
     <string name="relay_info">Relé %1$s</string>
     <string name="expand_relay_list">Rozbalit seznam relací</string>
@@ -1297,6 +1308,8 @@
     <string name="search_section_explainer">Seznam relé, která se používají k vyhledávání a označování uživatelů. Označování a vyhledávání nebude fungovat, pokud nejsou k dispozici žádné možnosti.</string>
     <string name="local_section">Lokální relé</string>
     <string name="local_section_explainer">Seznam relací, které jsou v tomto zařízení spuštěny.</string>
+    <string name="send_kind0_to_local_relay_title">Přeposílat profily do místního relé</string>
+    <string name="send_kind0_to_local_relay_description">Odeslat všechny přijaté profilové události (kind 0) do místního relé</string>
     <string name="trusted_relays_title">Důvěryhodné Relé</string>
     <string name="trusted_section">Důvěryhodné přenašeče</string>
     <string name="trusted_section_explainer">Přenašeče, kterým důvěřujete a nepotřebujete Tor</string>
@@ -1917,18 +1930,4 @@
     <string name="relay_members_removed">%1$d členů odebráno z relé</string>
     <string name="relay_join_request">Žádost o připojení k relé</string>
     <string name="relay_leave_request">Žádost o opuštění relé</string>
-    <string name="call_bluetooth">Bluetooth</string>
-    <string name="delete_payment_target">Smazat platební cíl</string>
-    <string name="error_dialog_payment_error">Nelze otevřít platbu</string>
-    <string name="no_payment_app_found">Nebyla nalezena žádná aplikace pro zpracování této platby. Nainstalujte prosím kompatibilní peněženku.</string>
-    <string name="no_payment_targets_message">Žádné platební cíle nastaveny. Přidejte jeden níže ↓</string>
-    <string name="payment_target_authority">Adresa</string>
-    <string name="payment_target_type">Typ sítě (např. bitcoin)</string>
-    <string name="payment_targets">Platební cíle</string>
-    <string name="payment_targets_explainer">Zveřejněte své platební adresy, aby vám ostatní mohli přímo posílat prostředky.</string>
-    <string name="payment_targets_section_explainer">Přidejte platební adresy pro různé sítě (např. bitcoin, lightning, ethereum).</string>
-    <string name="reactions_settings_pay">Zaplatit</string>
-    <string name="reactions_settings_pay_description">Odeslat platbu autorovi prostřednictvím jeho platebních cílů</string>
-    <string name="send_kind0_to_local_relay_description">Odeslat všechny přijaté profilové události (kind 0) do místního relé</string>
-    <string name="send_kind0_to_local_relay_title">Přeposílat profily do místního relé</string>
 </resources>

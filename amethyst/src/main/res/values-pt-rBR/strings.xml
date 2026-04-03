@@ -516,6 +516,15 @@
     <string name="use_default_servers">Usar Lista Padrão</string>
     <string name="add_media_server">Adicionar servidor de mídia</string>
     <string name="delete_media_server">Apagar servidor de mídia</string>
+    <string name="payment_targets">Destinos de pagamento</string>
+    <string name="payment_targets_explainer">Publique seus endereços de pagamento para que outros possam enviar fundos diretamente para você.</string>
+    <string name="payment_targets_section_explainer">Adicione endereços de pagamento para diferentes redes (ex.: bitcoin, lightning, ethereum).</string>
+    <string name="no_payment_targets_message">Nenhum destino de pagamento definido. Adicione um abaixo ↓</string>
+    <string name="payment_target_type">Tipo de rede (ex.: bitcoin)</string>
+    <string name="payment_target_authority">Endereço</string>
+    <string name="delete_payment_target">Excluir destino de pagamento</string>
+    <string name="no_payment_app_found">Nenhum aplicativo encontrado para processar este pagamento. Por favor, instale uma carteira compatível.</string>
+    <string name="error_dialog_payment_error">Não foi possível abrir o pagamento</string>
     <string name="uploading_state_ready">Não iniciado</string>
     <string name="uploading_state_compressing">Compactando</string>
     <string name="uploading_state_uploading">Enviando</string>
@@ -1219,6 +1228,8 @@
     <string name="reactions_settings_zap_description">Enviar um pagamento lightning ao autor</string>
     <string name="reactions_settings_share">Compartilhar</string>
     <string name="reactions_settings_share_description">Compartilhar esta nota externamente</string>
+    <string name="reactions_settings_pay">Pagar</string>
+    <string name="reactions_settings_pay_description">Enviar um pagamento ao autor por meio de seus destinos de pagamento</string>
     <string name="profile_image_of_user">Foto de perfil de %1$s</string>
     <string name="relay_info">Repassar %1$s</string>
     <string name="expand_relay_list">Expandir lista de repasse</string>
@@ -1296,6 +1307,8 @@
     <string name="search_section_explainer">Lista de relés para usar em pesquisas e marcação de usuários. A marcação e a pesquisa não funcionarão se não houver opções disponíveis.</string>
     <string name="local_section">Relés locais</string>
     <string name="local_section_explainer">Lista de relés que estão sendo executados neste dispositivo.</string>
+    <string name="send_kind0_to_local_relay_title">Encaminhar perfis para relay local</string>
+    <string name="send_kind0_to_local_relay_description">Enviar todos os eventos de perfil recebidos (kind 0) para o seu relay local</string>
     <string name="trusted_relays_title">Relays confiáveis</string>
     <string name="trusted_section">Relays confiáveis</string>
     <string name="trusted_section_explainer">Relays em que você confia e que não precisam de conexão via Tor</string>
@@ -1916,18 +1929,4 @@
     <string name="relay_members_removed">%1$d membros removidos do relay</string>
     <string name="relay_join_request">Solicitação de entrada no relay</string>
     <string name="relay_leave_request">Solicitação de saída do relay</string>
-    <string name="call_bluetooth">Bluetooth</string>
-    <string name="delete_payment_target">Excluir destino de pagamento</string>
-    <string name="error_dialog_payment_error">Não foi possível abrir o pagamento</string>
-    <string name="no_payment_app_found">Nenhum aplicativo encontrado para processar este pagamento. Por favor, instale uma carteira compatível.</string>
-    <string name="no_payment_targets_message">Nenhum destino de pagamento definido. Adicione um abaixo ↓</string>
-    <string name="payment_target_authority">Endereço</string>
-    <string name="payment_target_type">Tipo de rede (ex.: bitcoin)</string>
-    <string name="payment_targets">Destinos de pagamento</string>
-    <string name="payment_targets_explainer">Publique seus endereços de pagamento para que outros possam enviar fundos diretamente para você.</string>
-    <string name="payment_targets_section_explainer">Adicione endereços de pagamento para diferentes redes (ex.: bitcoin, lightning, ethereum).</string>
-    <string name="reactions_settings_pay">Pagar</string>
-    <string name="reactions_settings_pay_description">Enviar um pagamento ao autor por meio de seus destinos de pagamento</string>
-    <string name="send_kind0_to_local_relay_description">Enviar todos os eventos de perfil recebidos (kind 0) para o seu relay local</string>
-    <string name="send_kind0_to_local_relay_title">Encaminhar perfis para relay local</string>
 </resources>
