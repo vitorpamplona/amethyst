@@ -412,7 +412,10 @@ private fun ConnectedCallUI(
     val isAudioMuted by (callController?.isAudioMuted ?: defaultFalse).collectAsState()
     val isVideoEnabled by (callController?.isVideoEnabled ?: defaultTrue).collectAsState()
     val currentAudioRoute by (callController?.audioRoute ?: defaultRoute).collectAsState()
-    val isVideoCall = state.callType == com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType.VIDEO
+    val hasActiveVideo =
+        state.callType == com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType.VIDEO ||
+            isVideoEnabled ||
+            remoteVideoTracks.isNotEmpty()
 
     var showAddParticipant by remember { mutableStateOf(false) }
 
@@ -439,7 +442,7 @@ private fun ConnectedCallUI(
                 state.allPeerPubKeys - accountViewModel.account.signer.pubKey
             }
 
-        if (isVideoCall) {
+        if (hasActiveVideo) {
             // Video call: always show the peer grid with video for active peers, avatar for inactive
             PeerVideoGrid(
                 peerPubKeys = otherMembers,
@@ -802,7 +805,11 @@ private fun PipConnectedCallUI(
     val activePeerVideos by (callController?.activePeerVideos ?: emptySetFlow).collectAsState()
     val defaultFalse = remember { kotlinx.coroutines.flow.MutableStateFlow(false) }
     val isRemoteVideoActive by (callController?.isRemoteVideoActive ?: defaultFalse).collectAsState()
-    val isVideoCall = state.callType == com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType.VIDEO
+    val isVideoEnabled by (callController?.isVideoEnabled ?: defaultFalse).collectAsState()
+    val hasActiveVideo =
+        state.callType == com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType.VIDEO ||
+            isVideoEnabled ||
+            remoteVideoTracks.isNotEmpty()
 
     val otherMembers =
         remember(state.allPeerPubKeys) {
@@ -815,8 +822,8 @@ private fun PipConnectedCallUI(
                 .fillMaxSize()
                 .background(Color.Black),
     ) {
-        if (isVideoCall) {
-            // Video call: show first active peer's video or avatar
+        if (hasActiveVideo) {
+            // Video active: show first active peer's video or avatar
             val firstActivePeer = otherMembers.firstOrNull { it in activePeerVideos }
             val activeTrack = firstActivePeer?.let { remoteVideoTracks[it] }
             if (activeTrack != null) {
