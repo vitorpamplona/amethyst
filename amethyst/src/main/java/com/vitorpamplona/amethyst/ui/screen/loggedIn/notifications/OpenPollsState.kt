@@ -31,6 +31,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -47,10 +48,14 @@ class OpenPollsState(
         )
 
     val flow: StateFlow<List<Note>> =
-        account.cache
-            .observeNotes(filter)
-            .map { notes -> filterOpenPolls(notes) }
-            .flowOn(Dispatchers.IO)
+        combine(
+            account.cache
+                .observeNotes(filter)
+                .map { notes -> filterOpenPolls(notes) },
+            account.settings.dismissedPollNoteIds,
+        ) { polls, dismissed ->
+            polls.filter { it.idHex !in dismissed }
+        }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,

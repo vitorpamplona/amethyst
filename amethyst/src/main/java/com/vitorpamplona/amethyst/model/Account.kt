@@ -2149,6 +2149,8 @@ class Account(
 
     fun markDonatedInThisVersion() = settings.markDonatedInThisVersion(BuildConfig.VERSION_NAME)
 
+    fun dismissPollNotification(noteId: String) = settings.dismissPollNotification(noteId)
+
     init {
         Log.d("AccountRegisterObservers", "Init")
 

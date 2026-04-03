@@ -193,6 +193,7 @@ class AccountSettings(
     var backupTrustProviderList: TrustProviderListEvent? = null,
     val lastReadPerRoute: MutableStateFlow<Map<String, MutableStateFlow<Long>>> = MutableStateFlow(mapOf()),
     val hasDonatedInVersion: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
+    val dismissedPollNoteIds: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
     val pendingAttestations: MutableStateFlow<Map<HexKey, String>> = MutableStateFlow(mapOf()),
     var backupNipA3PaymentTargets: PaymentTargetsEvent? = null,
 ) : EphemeralChatRepository,
@@ -677,6 +678,21 @@ class AccountSettings(
             return true
         }
         return false
+    }
+
+    // ---
+    // dismissed polls
+    // ---
+
+    fun isDismissedPoll(noteId: String) = dismissedPollNoteIds.value.contains(noteId)
+
+    fun dismissPollNotification(noteId: String) {
+        if (!dismissedPollNoteIds.value.contains(noteId)) {
+            dismissedPollNoteIds.update {
+                it + noteId
+            }
+            saveAccountSettings()
+        }
     }
 
     // ----
