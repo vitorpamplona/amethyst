@@ -539,11 +539,37 @@ class CallController(
         Log.d(TAG) { "Renegotiation offer from ${peerPubKey.take(8)}, sdpLength=${sdpOffer.length}" }
 
         scope.launch {
-            ps.session.setRemoteDescription(SessionDescription(SessionDescription.Type.OFFER, sdpOffer))
-            ps.session.createAnswer { sdp ->
-                scope.launch {
-                    callManager.sendRenegotiationAnswer(sdp.description, peerPubKey)
+            val signalingState = ps.session.getSignalingState()
+
+            if (signalingState == PeerConnection.SignalingState.HAVE_LOCAL_OFFER) {
+                // Glare: both sides sent offers simultaneously.
+                // Use pubkey comparison as tiebreaker — higher pubkey wins.
+                val myPubKey = signerProvider().pubKey
+                if (myPubKey > peerPubKey) {
+                    Log.d(TAG) { "Glare with ${peerPubKey.take(8)}: I win (my offer takes priority), ignoring remote offer" }
+                    return@launch
                 }
+                Log.d(TAG) { "Glare with ${peerPubKey.take(8)}: I lose, rolling back my offer" }
+                ps.session.rollback {
+                    scope.launch {
+                        applyRenegotiationOffer(ps, peerPubKey, sdpOffer)
+                    }
+                }
+            } else {
+                applyRenegotiationOffer(ps, peerPubKey, sdpOffer)
+            }
+        }
+    }
+
+    private fun applyRenegotiationOffer(
+        ps: PeerSessionState,
+        peerPubKey: HexKey,
+        sdpOffer: String,
+    ) {
+        ps.session.setRemoteDescription(SessionDescription(SessionDescription.Type.OFFER, sdpOffer))
+        ps.session.createAnswer { sdp ->
+            scope.launch {
+                callManager.sendRenegotiationAnswer(sdp.description, peerPubKey)
             }
         }
     }

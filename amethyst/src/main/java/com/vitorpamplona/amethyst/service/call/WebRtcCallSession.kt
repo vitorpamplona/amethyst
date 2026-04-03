@@ -257,6 +257,32 @@ class WebRtcCallSession(
 
     fun getSignalingState(): PeerConnection.SignalingState? = peerConnection?.signalingState()
 
+    /**
+     * Rolls back a local offer so an incoming remote offer can be accepted
+     * (WebRTC offe glare handling).
+     */
+    fun rollback(onDone: () -> Unit) {
+        val rollbackSdp = SessionDescription(SessionDescription.Type.ROLLBACK, "")
+        peerConnection?.setLocalDescription(
+            object : SdpObserver {
+                override fun onCreateSuccess(sdp: SessionDescription?) {}
+
+                override fun onCreateFailure(error: String?) {}
+
+                override fun onSetSuccess() {
+                    Log.d(TAG) { "Rollback SUCCESS" }
+                    onDone()
+                }
+
+                override fun onSetFailure(error: String?) {
+                    Log.e(TAG, "Rollback FAILED: $error")
+                    error?.let { onError("Rollback failed: $it") }
+                }
+            },
+            rollbackSdp,
+        )
+    }
+
     fun dispose() {
         peerConnection?.close()
         peerConnection?.dispose()
