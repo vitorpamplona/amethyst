@@ -436,6 +436,14 @@ class Account(
         return false
     }
 
+    suspend fun updateSendKind0EventsToLocalRelay(send: Boolean): Boolean {
+        if (settings.changeSendKind0EventsToLocalRelay(send)) {
+            sendNewAppSpecificData()
+            return true
+        }
+        return false
+    }
+
     suspend fun updateFilterSpam(filterSpam: Boolean): Boolean {
         if (settings.updateFilterSpam(filterSpam)) {
             if (!settings.syncedSettings.security.filterSpamFromStrangers.value) {

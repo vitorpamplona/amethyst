@@ -1144,9 +1144,7 @@ class AccountViewModel(
 
     fun filterSpamFromStrangers() = account.settings.syncedSettings.security.filterSpamFromStrangers
 
-    fun toggleSendKind0ToLocalRelay(enabled: Boolean) {
-        account.settings.changeSendKind0EventsToLocalRelay(enabled)
-    }
+    fun toggleSendKind0ToLocalRelay(enabled: Boolean) = launchSigner { account.updateSendKind0EventsToLocalRelay(enabled) }
 
     fun updateWarnReports(warnReports: Boolean) = launchSigner { account.updateWarnReports(warnReports) }
 
