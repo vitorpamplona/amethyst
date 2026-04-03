@@ -729,12 +729,17 @@ class CallController(
 
     private fun onPeerDisconnected(peerPubKey: HexKey) {
         Log.d(TAG) { "Peer ${peerPubKey.take(8)} disconnected (ICE FAILED)" }
-        // If all peers disconnected, hang up
-        val sessionStates = peerSessions.map { (key, ps) -> "${key.take(8)}=${ps.session.getSignalingState()}" }
+        // If all peers disconnected, hang up.
+        // A session counts as "not active" if it is the one that just failed,
+        // if it was already closed, or if it never received a remote description
+        // (e.g. the peer rejected before answering).
+        val sessionStates = peerSessions.map { (key, ps) -> "${key.take(8)}=${ps.session.getSignalingState()},remoteSet=${ps.remoteDescriptionSet.get()}" }
         Log.d(TAG) { "onPeerDisconnected: checking remaining sessions: $sessionStates" }
         val allDisconnected =
             peerSessions.keys.all { key ->
-                key == peerPubKey || peerSessions[key]?.session?.getSignalingState() == PeerConnection.SignalingState.CLOSED
+                key == peerPubKey ||
+                    peerSessions[key]?.session?.getSignalingState() == PeerConnection.SignalingState.CLOSED ||
+                    peerSessions[key]?.remoteDescriptionSet?.get() != true
             }
         if (allDisconnected) {
             Log.d(TAG) { "onPeerDisconnected: all peers disconnected, hanging up" }
