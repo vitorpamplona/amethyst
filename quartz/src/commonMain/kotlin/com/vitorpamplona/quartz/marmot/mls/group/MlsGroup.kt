@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.marmot.mls.group
 
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsReader
+import com.vitorpamplona.quartz.marmot.mls.codec.TlsWriter
 import com.vitorpamplona.quartz.marmot.mls.crypto.Ed25519
 import com.vitorpamplona.quartz.marmot.mls.crypto.MlsCryptoProvider
 import com.vitorpamplona.quartz.marmot.mls.crypto.X25519
@@ -46,11 +47,13 @@ import com.vitorpamplona.quartz.marmot.mls.schedule.SecretTree
 import com.vitorpamplona.quartz.marmot.mls.tree.BinaryTree
 import com.vitorpamplona.quartz.marmot.mls.tree.Capabilities
 import com.vitorpamplona.quartz.marmot.mls.tree.Credential
+import com.vitorpamplona.quartz.marmot.mls.tree.Extension
 import com.vitorpamplona.quartz.marmot.mls.tree.LeafNode
 import com.vitorpamplona.quartz.marmot.mls.tree.LeafNodeSource
 import com.vitorpamplona.quartz.marmot.mls.tree.Lifetime
 import com.vitorpamplona.quartz.marmot.mls.tree.RatchetTree
 import com.vitorpamplona.quartz.marmot.mls.tree.UpdatePathNode
+import com.vitorpamplona.quartz.utils.mac.MacInstance
 
 /**
  * MLS Group state and operations (RFC 9420 Section 8, 12).
@@ -94,6 +97,7 @@ class MlsGroup private constructor(
     private var initSecret: ByteArray,
     private var signingPrivateKey: ByteArray,
     private var encryptionPrivateKey: ByteArray,
+    private var interimTranscriptHash: ByteArray,
     private val pendingProposals: MutableList<PendingProposal> = mutableListOf(),
     private val sentKeys: MutableMap<Int, com.vitorpamplona.quartz.marmot.mls.schedule.KeyNonceGeneration> = mutableMapOf(),
 ) {
@@ -302,6 +306,14 @@ class MlsGroup private constructor(
                 ByteArray(MlsCryptoProvider.HASH_OUTPUT_LENGTH)
             }
 
+        // Update transcript hashes (RFC 9420 Section 8.2)
+        // For the committer, we use the commit content to update the transcript
+        val commitTlsBytes = commit.toTlsBytes()
+        val confirmedInput = TlsWriter()
+        confirmedInput.putBytes(interimTranscriptHash)
+        confirmedInput.putBytes(commitTlsBytes) // Simplified: use commit bytes as ConfirmedTranscriptHashInput
+        val newConfirmedTranscriptHash = MlsCryptoProvider.hash(confirmedInput.toByteArray())
+
         val newTreeHash = tree.treeHash()
         val newEpoch = groupContext.epoch + 1
 
@@ -309,12 +321,20 @@ class MlsGroup private constructor(
             groupContext.copy(
                 epoch = newEpoch,
                 treeHash = newTreeHash,
+                confirmedTranscriptHash = newConfirmedTranscriptHash,
             )
 
         val keySchedule = KeySchedule(groupContext.toTlsBytes())
         epochSecrets = keySchedule.deriveEpochSecrets(commitSecret, initSecret)
         initSecret = epochSecrets.initSecret
         secretTree = SecretTree(epochSecrets.encryptionSecret, tree.leafCount)
+
+        // Compute confirmation_tag and interim_transcript_hash
+        val confirmationTag = computeConfirmationTag(epochSecrets.confirmationKey, newConfirmedTranscriptHash)
+        val interimInput = TlsWriter()
+        interimInput.putBytes(newConfirmedTranscriptHash)
+        interimInput.putOpaqueVarInt(confirmationTag)
+        interimTranscriptHash = MlsCryptoProvider.hash(interimInput.toByteArray())
 
         // Build Welcome for added members
         val welcomeBytes =
@@ -458,6 +478,10 @@ class MlsGroup private constructor(
         var commitSecret = ByteArray(MlsCryptoProvider.HASH_OUTPUT_LENGTH)
         if (commit.updatePath != null) {
             val updatePath = commit.updatePath
+            // Verify LeafNode signature (RFC 9420 Section 7.3)
+            require(verifyLeafNodeSignature(updatePath.leafNode, groupId, senderLeafIndex)) {
+                "Invalid LeafNode signature in UpdatePath"
+            }
             tree.setLeaf(senderLeafIndex, updatePath.leafNode)
             tree.applyUpdatePath(senderLeafIndex, updatePath.nodes)
 
@@ -498,6 +522,13 @@ class MlsGroup private constructor(
             }
         }
 
+        // Update transcript hashes (RFC 9420 Section 8.2)
+        val commitTlsBytes = commit.toTlsBytes()
+        val confirmedInput = TlsWriter()
+        confirmedInput.putBytes(interimTranscriptHash)
+        confirmedInput.putBytes(commitTlsBytes) // Simplified: use commit bytes as ConfirmedTranscriptHashInput
+        val newConfirmedTranscriptHash = MlsCryptoProvider.hash(confirmedInput.toByteArray())
+
         // Advance epoch
         val newTreeHash = tree.treeHash()
         val newEpoch = groupContext.epoch + 1
@@ -506,12 +537,25 @@ class MlsGroup private constructor(
             groupContext.copy(
                 epoch = newEpoch,
                 treeHash = newTreeHash,
+                confirmedTranscriptHash = newConfirmedTranscriptHash,
             )
 
         val keySchedule = KeySchedule(groupContext.toTlsBytes())
         epochSecrets = keySchedule.deriveEpochSecrets(commitSecret, initSecret)
         initSecret = epochSecrets.initSecret
         secretTree = SecretTree(epochSecrets.encryptionSecret, tree.leafCount)
+
+        // TODO: Verify confirmation tag (RFC 9420 Section 8.1)
+        // Full verification requires the PublicMessage's confirmation_tag,
+        // which would be passed as a parameter in a complete implementation.
+        // confirmation_tag = MAC(confirmation_key, confirmed_transcript_hash)
+
+        // Update interim_transcript_hash for next epoch
+        val confirmationTag = computeConfirmationTag(epochSecrets.confirmationKey, newConfirmedTranscriptHash)
+        val interimInput = TlsWriter()
+        interimInput.putBytes(newConfirmedTranscriptHash)
+        interimInput.putOpaqueVarInt(confirmationTag)
+        interimTranscriptHash = MlsCryptoProvider.hash(interimInput.toByteArray())
 
         pendingProposals.clear()
         sentKeys.clear()
@@ -533,6 +577,29 @@ class MlsGroup private constructor(
     ): ByteArray = KeySchedule.mlsExporter(epochSecrets.exporterSecret, label, context, length)
 
     // --- Private Helpers ---
+
+    private fun computeConfirmationTag(
+        confirmationKey: ByteArray,
+        confirmedTranscriptHash: ByteArray,
+    ): ByteArray {
+        val mac = MacInstance("HmacSHA256", confirmationKey)
+        mac.update(confirmedTranscriptHash)
+        return mac.doFinal()
+    }
+
+    private fun verifyLeafNodeSignature(
+        leafNode: LeafNode,
+        groupId: ByteArray,
+        leafIndex: Int,
+    ): Boolean {
+        val tbs = leafNode.encodeTbs(groupId, leafIndex)
+        return MlsCryptoProvider.verifyWithLabel(
+            leafNode.signatureKey,
+            "LeafNodeTBS",
+            tbs,
+            leafNode.signature,
+        )
+    }
 
     private fun applyProposal(
         proposal: Proposal,
@@ -564,11 +631,20 @@ class MlsGroup private constructor(
     }
 
     private fun buildWelcome(addedMembers: List<Pair<Int, MlsKeyPackage>>): ByteArray {
+        // Add ratchet tree as GroupInfo extension (RFC 9420 Section 12.4.3.3)
+        val treeWriter = TlsWriter()
+        tree.encodeTls(treeWriter)
+        val ratchetTreeExtension =
+            Extension(
+                extensionType = RATCHET_TREE_EXTENSION_TYPE,
+                extensionData = treeWriter.toByteArray(),
+            )
+
         // Build GroupInfo
         val groupInfo =
             GroupInfo(
                 groupContext = groupContext,
-                extensions = emptyList(),
+                extensions = listOf(ratchetTreeExtension),
                 confirmationTag =
                     MlsCryptoProvider.expandWithLabel(
                         epochSecrets.confirmationKey,
@@ -639,6 +715,8 @@ class MlsGroup private constructor(
     }
 
     companion object {
+        private const val RATCHET_TREE_EXTENSION_TYPE = 0x0001
+
         /**
          * Create a new MLS group with a single member (the creator).
          */
@@ -695,6 +773,7 @@ class MlsGroup private constructor(
                 initSecret = epochSecrets.initSecret,
                 signingPrivateKey = sigKp.privateKey,
                 encryptionPrivateKey = encKp.privateKey,
+                interimTranscriptHash = ByteArray(0),
             )
         }
 
@@ -737,8 +816,9 @@ class MlsGroup private constructor(
             val pskSecret = ByteArray(MlsCryptoProvider.HASH_OUTPUT_LENGTH)
 
             // Derive welcome_key/nonce from joiner_secret
-            // welcome_secret = DeriveSecret(joiner_secret, "welcome")
-            val welcomeSecret = MlsCryptoProvider.deriveSecret(groupSecrets.joinerSecret, "welcome")
+            // welcome_secret = DeriveSecret(Extract(joiner_secret, psk_secret), "welcome")
+            val memberSecret = MlsCryptoProvider.hkdfExtract(groupSecrets.joinerSecret, pskSecret)
+            val welcomeSecret = MlsCryptoProvider.deriveSecret(memberSecret, "welcome")
             val welcomeKey =
                 MlsCryptoProvider.expandWithLabel(
                     welcomeSecret,
@@ -759,24 +839,58 @@ class MlsGroup private constructor(
             val groupInfo = GroupInfo.decodeTls(TlsReader(groupInfoBytes))
             val groupContext = groupInfo.groupContext
 
-            // Reconstruct the ratchet tree (from GroupInfo extensions or separate delivery)
-            val tree = RatchetTree(1) // Start with minimal tree
+            // Reconstruct ratchet tree from GroupInfo extensions
+            val ratchetTreeExt = groupInfo.extensions.find { it.extensionType == RATCHET_TREE_EXTENSION_TYPE }
+            val tree =
+                if (ratchetTreeExt != null) {
+                    RatchetTree.decodeTls(TlsReader(ratchetTreeExt.extensionData))
+                } else {
+                    // Fallback: minimal tree (for groups delivered without inline tree)
+                    RatchetTree(1)
+                }
 
             // Find our leaf index by matching our signature key
-            val myLeafIndex = 0 // Will be determined from the tree
+            val mySignatureKey = Ed25519.publicFromPrivate(bundle.signaturePrivateKey)
+            var myLeafIndex = 0
+            for (i in 0 until tree.leafCount) {
+                val leaf = tree.getLeaf(i)
+                if (leaf != null && leaf.signatureKey.contentEquals(mySignatureKey)) {
+                    myLeafIndex = i
+                    break
+                }
+            }
 
-            // Derive epoch secrets
-            val commitSecret = groupSecrets.pathSecret ?: ByteArray(MlsCryptoProvider.HASH_OUTPUT_LENGTH)
-            val initSecret = ByteArray(MlsCryptoProvider.HASH_OUTPUT_LENGTH) // Derived from previous epoch
-
-            // For Welcome, we compute:
-            // epoch_secret = ExpandWithLabel(HKDF-Extract(joiner_secret, psk_secret), "epoch", ctx, Nh)
-            val epochPrk = MlsCryptoProvider.hkdfExtract(groupSecrets.joinerSecret, pskSecret)
+            // Derive epoch secrets directly from memberSecret (RFC 9420 Section 8.3)
+            // For Welcome, epoch_secret = ExpandWithLabel(member_secret, "epoch", GroupContext, Nh)
             val epochSecret =
-                MlsCryptoProvider.expandWithLabel(epochPrk, "epoch", groupContext.toTlsBytes(), MlsCryptoProvider.HASH_OUTPUT_LENGTH)
+                MlsCryptoProvider.expandWithLabel(memberSecret, "epoch", groupContext.toTlsBytes(), MlsCryptoProvider.HASH_OUTPUT_LENGTH)
 
-            val keySchedule = KeySchedule(groupContext.toTlsBytes())
-            val epochSecrets = keySchedule.deriveEpochSecrets(commitSecret, initSecret)
+            // Derive all sub-secrets from epochSecret
+            val senderDataSecret = MlsCryptoProvider.deriveSecret(epochSecret, "sender data")
+            val encryptionSecret = MlsCryptoProvider.deriveSecret(epochSecret, "encryption")
+            val exporterSecret = MlsCryptoProvider.deriveSecret(epochSecret, "exporter")
+            val epochAuthenticator = MlsCryptoProvider.deriveSecret(epochSecret, "authentication")
+            val externalSecret = MlsCryptoProvider.deriveSecret(epochSecret, "external")
+            val confirmationKey = MlsCryptoProvider.deriveSecret(epochSecret, "confirm")
+            val membershipKey = MlsCryptoProvider.deriveSecret(epochSecret, "membership")
+            val resumptionPsk = MlsCryptoProvider.deriveSecret(epochSecret, "resumption")
+            val initSecret = MlsCryptoProvider.deriveSecret(epochSecret, "init")
+
+            val epochSecrets =
+                EpochSecrets(
+                    joinerSecret = groupSecrets.joinerSecret,
+                    welcomeSecret = welcomeSecret,
+                    epochSecret = epochSecret,
+                    senderDataSecret = senderDataSecret,
+                    encryptionSecret = encryptionSecret,
+                    exporterSecret = exporterSecret,
+                    epochAuthenticator = epochAuthenticator,
+                    externalSecret = externalSecret,
+                    confirmationKey = confirmationKey,
+                    membershipKey = membershipKey,
+                    resumptionPsk = resumptionPsk,
+                    initSecret = initSecret,
+                )
 
             val secretTree = SecretTree(epochSecrets.encryptionSecret, tree.leafCount)
 
@@ -789,6 +903,7 @@ class MlsGroup private constructor(
                 initSecret = epochSecrets.initSecret,
                 signingPrivateKey = bundle.signaturePrivateKey,
                 encryptionPrivateKey = bundle.encryptionPrivateKey,
+                interimTranscriptHash = ByteArray(0),
             )
         }
 
