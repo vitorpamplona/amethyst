@@ -215,9 +215,12 @@ class CallManager(
             }
 
             is CallState.IncomingCall -> {
-                // Another device of this user answered the call — stop ringing.
                 if (callId != current.callId) return
-                transitionToEnded(current.callId, current.peerPubKeys(), EndReason.ANSWERED_ELSEWHERE)
+                if (answeringPeer == signer.pubKey) {
+                    // Another device of this user answered the call — stop ringing.
+                    transitionToEnded(current.callId, current.peerPubKeys(), EndReason.ANSWERED_ELSEWHERE)
+                }
+                // Otherwise another group member answered — we keep ringing.
             }
 
             is CallState.Connected -> {
@@ -273,9 +276,12 @@ class CallManager(
             }
 
             is CallState.IncomingCall -> {
-                // Another device of this user rejected the call — stop ringing.
                 if (callId != current.callId) return
-                transitionToEnded(current.callId, current.peerPubKeys(), EndReason.REJECTED)
+                if (rejectingPeer == signer.pubKey) {
+                    // Another device of this user rejected the call — stop ringing.
+                    transitionToEnded(current.callId, current.peerPubKeys(), EndReason.REJECTED)
+                }
+                // Otherwise another group member rejected — we keep ringing.
             }
 
             else -> {
