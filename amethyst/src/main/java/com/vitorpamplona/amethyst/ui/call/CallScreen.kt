@@ -68,6 +68,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -76,6 +78,7 @@ import com.vitorpamplona.amethyst.commons.call.CallManager
 import com.vitorpamplona.amethyst.commons.call.CallState
 import com.vitorpamplona.amethyst.service.call.AudioRoute
 import com.vitorpamplona.amethyst.service.call.CallController
+import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -123,10 +126,10 @@ fun CallScreen(
 
             is CallState.Offering -> {
                 if (isInPipMode) {
-                    PipCallUI(peerPubKey = state.peerPubKeys.first(), statusText = stringRes(R.string.call_calling), accountViewModel = accountViewModel)
+                    PipCallUI(peerPubKeys = state.peerPubKeys, statusText = stringRes(R.string.call_calling), accountViewModel = accountViewModel)
                 } else {
                     CallInProgressUI(
-                        peerPubKey = state.peerPubKeys.first(),
+                        peerPubKeys = state.peerPubKeys,
                         statusText = stringRes(R.string.call_calling),
                         accountViewModel = accountViewModel,
                         onHangup = { scope.launch { callManager.hangup() } },
@@ -136,7 +139,7 @@ fun CallScreen(
 
             is CallState.IncomingCall -> {
                 if (isInPipMode) {
-                    PipCallUI(callerPubKey = state.callerPubKey, statusText = stringRes(R.string.call_incoming), accountViewModel = accountViewModel)
+                    PipCallUI(peerPubKeys = state.groupMembers, statusText = stringRes(R.string.call_incoming), accountViewModel = accountViewModel)
                 } else {
                     val isVideoCall = state.callType == com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType.VIDEO
                     val acceptWithPermission =
@@ -144,7 +147,7 @@ fun CallScreen(
                             callController?.acceptIncomingCall(state.sdpOffer)
                         }
                     IncomingCallUI(
-                        callerPubKey = state.callerPubKey,
+                        groupMembers = state.groupMembers,
                         callType = state.callType,
                         accountViewModel = accountViewModel,
                         onAccept = acceptWithPermission,
@@ -155,10 +158,10 @@ fun CallScreen(
 
             is CallState.Connecting -> {
                 if (isInPipMode) {
-                    PipCallUI(peerPubKey = state.peerPubKeys.first(), statusText = stringRes(R.string.call_connecting), accountViewModel = accountViewModel)
+                    PipCallUI(peerPubKeys = state.peerPubKeys, statusText = stringRes(R.string.call_connecting), accountViewModel = accountViewModel)
                 } else {
                     CallInProgressUI(
-                        peerPubKey = state.peerPubKeys.first(),
+                        peerPubKeys = state.peerPubKeys,
                         statusText = stringRes(R.string.call_connecting),
                         accountViewModel = accountViewModel,
                         onHangup = { scope.launch { callManager.hangup() } },
@@ -185,7 +188,7 @@ fun CallScreen(
             is CallState.Ended -> {
                 if (!isInPipMode) {
                     CallInProgressUI(
-                        peerPubKey = state.peerPubKeys.first(),
+                        peerPubKeys = state.peerPubKeys,
                         statusText = stringRes(R.string.call_ended),
                         accountViewModel = accountViewModel,
                         onHangup = { onCallEnded() },
@@ -220,7 +223,7 @@ fun CallScreen(
 
 @Composable
 private fun CallInProgressUI(
-    peerPubKey: String,
+    peerPubKeys: Set<String>,
     statusText: String,
     accountViewModel: AccountViewModel,
     onHangup: () -> Unit,
@@ -238,21 +241,16 @@ private fun CallInProgressUI(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
-            LoadUser(baseUserHex = peerPubKey, accountViewModel = accountViewModel) { user ->
-                if (user != null) {
-                    ClickableUserPicture(
-                        baseUser = user,
-                        size = 120.dp,
-                        accountViewModel = accountViewModel,
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    UsernameDisplay(
-                        baseUser = user,
-                        accountViewModel = accountViewModel,
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
-            }
+            GroupCallPictures(
+                peerPubKeys = peerPubKeys,
+                size = 120.dp,
+                accountViewModel = accountViewModel,
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            GroupCallNames(
+                peerPubKeys = peerPubKeys,
+                accountViewModel = accountViewModel,
+            )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = statusText,
@@ -279,7 +277,7 @@ private fun CallInProgressUI(
 
 @Composable
 private fun IncomingCallUI(
-    callerPubKey: String,
+    groupMembers: Set<String>,
     callType: com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType,
     accountViewModel: AccountViewModel,
     onAccept: () -> Unit,
@@ -298,21 +296,16 @@ private fun IncomingCallUI(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
-            LoadUser(baseUserHex = callerPubKey, accountViewModel = accountViewModel) { user ->
-                if (user != null) {
-                    ClickableUserPicture(
-                        baseUser = user,
-                        size = 120.dp,
-                        accountViewModel = accountViewModel,
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    UsernameDisplay(
-                        baseUser = user,
-                        accountViewModel = accountViewModel,
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
-            }
+            GroupCallPictures(
+                peerPubKeys = groupMembers,
+                size = 120.dp,
+                accountViewModel = accountViewModel,
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            GroupCallNames(
+                peerPubKeys = groupMembers,
+                accountViewModel = accountViewModel,
+            )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text =
@@ -433,22 +426,17 @@ private fun ConnectedCallUI(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
-                LoadUser(baseUserHex = state.peerPubKeys.first(), accountViewModel = accountViewModel) { user ->
-                    if (user != null) {
-                        ClickableUserPicture(
-                            baseUser = user,
-                            size = 120.dp,
-                            accountViewModel = accountViewModel,
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        UsernameDisplay(
-                            baseUser = user,
-                            accountViewModel = accountViewModel,
-                            fontWeight = FontWeight.Bold,
-                            textColor = Color.White,
-                        )
-                    }
-                }
+                GroupCallPictures(
+                    peerPubKeys = state.peerPubKeys,
+                    size = 120.dp,
+                    accountViewModel = accountViewModel,
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                GroupCallNames(
+                    peerPubKeys = state.peerPubKeys,
+                    accountViewModel = accountViewModel,
+                    textColor = Color.White,
+                )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = formatDuration(elapsed),
@@ -584,12 +572,10 @@ private fun formatDuration(seconds: Long): String {
 
 @Composable
 private fun PipCallUI(
-    peerPubKey: String = "",
-    callerPubKey: String = "",
+    peerPubKeys: Set<String>,
     statusText: String,
     accountViewModel: AccountViewModel,
 ) {
-    val pubKey = peerPubKey.ifEmpty { callerPubKey }
     Box(
         modifier =
             Modifier
@@ -601,15 +587,11 @@ private fun PipCallUI(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
-            LoadUser(baseUserHex = pubKey, accountViewModel = accountViewModel) { user ->
-                if (user != null) {
-                    ClickableUserPicture(
-                        baseUser = user,
-                        size = 48.dp,
-                        accountViewModel = accountViewModel,
-                    )
-                }
-            }
+            GroupCallPictures(
+                peerPubKeys = peerPubKeys,
+                size = 48.dp,
+                accountViewModel = accountViewModel,
+            )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = statusText,
@@ -665,15 +647,11 @@ private fun PipConnectedCallUI(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
-                LoadUser(baseUserHex = state.peerPubKeys.first(), accountViewModel = accountViewModel) { user ->
-                    if (user != null) {
-                        ClickableUserPicture(
-                            baseUser = user,
-                            size = 48.dp,
-                            accountViewModel = accountViewModel,
-                        )
-                    }
-                }
+                GroupCallPictures(
+                    peerPubKeys = state.peerPubKeys,
+                    size = 48.dp,
+                    accountViewModel = accountViewModel,
+                )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = formatDuration(elapsed),
@@ -692,6 +670,187 @@ private fun PipConnectedCallUI(
                         .align(Alignment.TopCenter)
                         .padding(top = 4.dp),
             )
+        }
+    }
+}
+
+@Composable
+private fun GroupCallPictures(
+    peerPubKeys: Set<String>,
+    size: Dp,
+    accountViewModel: AccountViewModel,
+) {
+    val userList = remember(peerPubKeys) { peerPubKeys.toList() }
+    val displayCount = minOf(userList.size, 4)
+    val remaining = userList.size - displayCount
+
+    when (userList.size) {
+        0 -> {}
+
+        1 -> {
+            LoadUser(baseUserHex = userList[0], accountViewModel = accountViewModel) { user ->
+                if (user != null) {
+                    ClickableUserPicture(
+                        baseUser = user,
+                        size = size,
+                        accountViewModel = accountViewModel,
+                    )
+                }
+            }
+        }
+
+        else -> {
+            Box(Modifier.size(size), contentAlignment = Alignment.TopEnd) {
+                when (displayCount) {
+                    2 -> {
+                        BaseUserPicture(
+                            baseUserHex = userList[0],
+                            size = size.div(1.5f),
+                            accountViewModel = accountViewModel,
+                            outerModifier = Modifier.size(size.div(1.5f)).align(Alignment.CenterStart),
+                        )
+                        BaseUserPicture(
+                            baseUserHex = userList[1],
+                            size = size.div(1.5f),
+                            accountViewModel = accountViewModel,
+                            outerModifier = Modifier.size(size.div(1.5f)).align(Alignment.CenterEnd),
+                        )
+                    }
+
+                    3 -> {
+                        BaseUserPicture(
+                            baseUserHex = userList[0],
+                            size = size.div(1.8f),
+                            accountViewModel = accountViewModel,
+                            outerModifier = Modifier.size(size.div(1.8f)).align(Alignment.BottomStart),
+                        )
+                        BaseUserPicture(
+                            baseUserHex = userList[1],
+                            size = size.div(1.8f),
+                            accountViewModel = accountViewModel,
+                            outerModifier = Modifier.size(size.div(1.8f)).align(Alignment.TopCenter),
+                        )
+                        BaseUserPicture(
+                            baseUserHex = userList[2],
+                            size = size.div(1.8f),
+                            accountViewModel = accountViewModel,
+                            outerModifier = Modifier.size(size.div(1.8f)).align(Alignment.BottomEnd),
+                        )
+                    }
+
+                    else -> {
+                        BaseUserPicture(
+                            baseUserHex = userList[0],
+                            size = size.div(2f),
+                            accountViewModel = accountViewModel,
+                            outerModifier = Modifier.size(size.div(2f)).align(Alignment.BottomStart),
+                        )
+                        BaseUserPicture(
+                            baseUserHex = userList[1],
+                            size = size.div(2f),
+                            accountViewModel = accountViewModel,
+                            outerModifier = Modifier.size(size.div(2f)).align(Alignment.TopStart),
+                        )
+                        BaseUserPicture(
+                            baseUserHex = userList[2],
+                            size = size.div(2f),
+                            accountViewModel = accountViewModel,
+                            outerModifier = Modifier.size(size.div(2f)).align(Alignment.BottomEnd),
+                        )
+                        if (remaining > 0) {
+                            Box(
+                                modifier =
+                                    Modifier
+                                        .size(size.div(2f))
+                                        .align(Alignment.TopEnd)
+                                        .background(
+                                            MaterialTheme.colorScheme.surfaceVariant,
+                                            CircleShape,
+                                        ),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    text = "+$remaining",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontSize = (size.value / 5).sp,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                            }
+                        } else {
+                            BaseUserPicture(
+                                baseUserHex = userList[3],
+                                size = size.div(2f),
+                                accountViewModel = accountViewModel,
+                                outerModifier = Modifier.size(size.div(2f)).align(Alignment.TopEnd),
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GroupCallNames(
+    peerPubKeys: Set<String>,
+    accountViewModel: AccountViewModel,
+    textColor: Color = Color.Unspecified,
+) {
+    val userList = remember(peerPubKeys) { peerPubKeys.toList() }
+
+    when (userList.size) {
+        0 -> {}
+
+        1 -> {
+            LoadUser(baseUserHex = userList[0], accountViewModel = accountViewModel) { user ->
+                if (user != null) {
+                    UsernameDisplay(
+                        baseUser = user,
+                        accountViewModel = accountViewModel,
+                        fontWeight = FontWeight.Bold,
+                        textColor = textColor,
+                    )
+                }
+            }
+        }
+
+        else -> {
+            val displayCount = minOf(userList.size, 2)
+            val remaining = userList.size - displayCount
+
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                for (i in 0 until displayCount) {
+                    if (i > 0) {
+                        Text(
+                            text = ", ",
+                            fontWeight = FontWeight.Bold,
+                            color = textColor,
+                        )
+                    }
+                    LoadUser(baseUserHex = userList[i], accountViewModel = accountViewModel) { user ->
+                        if (user != null) {
+                            UsernameDisplay(
+                                baseUser = user,
+                                accountViewModel = accountViewModel,
+                                fontWeight = FontWeight.Bold,
+                                textColor = textColor,
+                            )
+                        }
+                    }
+                }
+                if (remaining > 0) {
+                    Text(
+                        text = " +$remaining",
+                        fontWeight = FontWeight.Bold,
+                        color = textColor,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+            }
         }
     }
 }
