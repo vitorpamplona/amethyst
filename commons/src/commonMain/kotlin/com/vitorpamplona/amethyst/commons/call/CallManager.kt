@@ -64,9 +64,16 @@ class CallManager(
     /** Called when a mid-call offer is received from another callee in a group call. */
     var onMidCallOfferReceived: ((peerPubKey: HexKey, sdpOffer: String) -> Unit)? = null
 
+    /** Called when a peer leaves the call (hangup) but the call continues with remaining peers. */
+    var onPeerLeft: ((peerPubKey: HexKey) -> Unit)? = null
+
     private var timeoutJob: Job? = null
     private var resetJob: Job? = null
     private val processedEventIds = mutableSetOf<String>()
+
+    /** Peers whose answers we saw while still ringing (IncomingCall).
+     *  After we accept, we trigger callee-to-callee mesh setup with them. */
+    private val discoveredCalleePeers = mutableSetOf<HexKey>()
 
     companion object {
         const val CALL_TIMEOUT_MS = 60_000L // 60 seconds ringing timeout
@@ -220,6 +227,17 @@ class CallManager(
         val result = factory.createGroupCallAnswer(sdpAnswer, allRecipients, current.callId, signer)
         result.wraps.forEach { publishEvent(it) }
         Log.d("CallManager") { "acceptCall: answer published, now in Connecting state" }
+
+        // Trigger callee-to-callee mesh connections with peers we discovered
+        // while still ringing (their answers arrived before we accepted).
+        val discovered = discoveredCalleePeers.toSet()
+        discoveredCalleePeers.clear()
+        if (discovered.isNotEmpty()) {
+            Log.d("CallManager") { "acceptCall: triggering mesh setup with ${discovered.size} discovered peers: ${discovered.map { it.take(8) }}" }
+            for (peer in discovered) {
+                onNewPeerInGroupCall?.invoke(peer)
+            }
+        }
     }
 
     suspend fun rejectCall() {
@@ -241,6 +259,18 @@ class CallManager(
         Log.d("CallManager") {
             "onCallAnswered: from=${answeringPeer.take(8)}, callId=$callId, " +
                 "currentState=${current::class.simpleName}, sdpAnswerLength=${event.sdpAnswer().length}"
+        }
+
+        // Self-answer: only meaningful as "answered elsewhere" in IncomingCall.
+        // In all other states it's our own echo from the relay — ignore it.
+        if (answeringPeer == signer.pubKey) {
+            if (current is CallState.IncomingCall && callId == current.callId) {
+                Log.d("CallManager") { "onCallAnswered: self-answer detected in IncomingCall — answered elsewhere" }
+                transitionToEnded(current.callId, current.peerPubKeys(), EndReason.ANSWERED_ELSEWHERE)
+            } else {
+                Log.d("CallManager") { "onCallAnswered: ignoring self-answer echo in ${current::class.simpleName}" }
+            }
+            return
         }
 
         when (current) {
@@ -272,20 +302,17 @@ class CallManager(
                         )
                 }
                 // Forward to CallController — it routes to the correct PeerSession
-                Log.d("CallManager") { "onCallAnswered: additional peer ${answeringPeer.take(8)} in Connecting, forwarding" }
+                // and internally triggers callee-to-callee mesh setup if needed.
+                Log.d("CallManager") { "onCallAnswered: additional peer ${answeringPeer.take(8)} in Connecting, forwarding to CallController" }
                 onAnswerReceived?.invoke(event)
-
-                // Notify callees about new peer for mesh setup
-                onNewPeerInGroupCall?.invoke(answeringPeer)
             }
 
             is CallState.IncomingCall -> {
                 if (callId != current.callId) return
-                if (answeringPeer == signer.pubKey) {
-                    transitionToEnded(current.callId, current.peerPubKeys(), EndReason.ANSWERED_ELSEWHERE)
-                }
-                // Another group member answered — notify for future mesh connections
-                // (we'll connect to them after we accept the call ourselves)
+                // Another group member answered — remember them for mesh setup
+                // after we accept the call ourselves.
+                Log.d("CallManager") { "onCallAnswered: peer ${answeringPeer.take(8)} answered while we're still ringing, storing for later mesh" }
+                discoveredCalleePeers.add(answeringPeer)
             }
 
             is CallState.Connected -> {
@@ -296,13 +323,11 @@ class CallManager(
                             peerPubKeys = current.peerPubKeys + answeringPeer,
                             pendingPeerPubKeys = current.pendingPeerPubKeys - answeringPeer,
                         )
-                    // Forward to CallController for routing
-                    onAnswerReceived?.invoke(event)
-                    onNewPeerInGroupCall?.invoke(answeringPeer)
-                } else {
-                    // Renegotiation answer
-                    onAnswerReceived?.invoke(event)
                 }
+                // Forward to CallController — it routes to the correct PeerSession
+                // and internally triggers callee-to-callee mesh setup if needed.
+                Log.d("CallManager") { "onCallAnswered: peer ${answeringPeer.take(8)} answer in Connected, forwarding to CallController" }
+                onAnswerReceived?.invoke(event)
             }
 
             else -> {
@@ -487,19 +512,24 @@ class CallManager(
         val callId = event.callId() ?: return
         val leavingPeer = event.pubKey
 
+        Log.d("CallManager") { "onPeerHangup: from=${leavingPeer.take(8)}, callId=$callId, state=${current::class.simpleName}" }
+
         when (current) {
             is CallState.Connected -> {
                 if (callId != current.callId) return
                 val connectedRemaining = current.peerPubKeys - leavingPeer
                 val pendingRemaining = current.pendingPeerPubKeys - leavingPeer
                 if (connectedRemaining.isEmpty() && pendingRemaining.isEmpty()) {
+                    Log.d("CallManager") { "onPeerHangup: last peer left, ending call" }
                     transitionToEnded(callId, current.allPeerPubKeys, EndReason.PEER_HANGUP)
                 } else {
+                    Log.d("CallManager") { "onPeerHangup: ${leavingPeer.take(8)} left, remaining=${connectedRemaining.map { it.take(8) }}, pending=${pendingRemaining.map { it.take(8) }}" }
                     _state.value =
                         current.copy(
                             peerPubKeys = connectedRemaining,
                             pendingPeerPubKeys = pendingRemaining,
                         )
+                    onPeerLeft?.invoke(leavingPeer)
                 }
             }
 
@@ -508,13 +538,16 @@ class CallManager(
                 val connectedRemaining = current.peerPubKeys - leavingPeer
                 val pendingRemaining = current.pendingPeerPubKeys - leavingPeer
                 if (connectedRemaining.isEmpty() && pendingRemaining.isEmpty()) {
+                    Log.d("CallManager") { "onPeerHangup: last peer left during connecting, ending call" }
                     transitionToEnded(callId, current.peerPubKeys + current.pendingPeerPubKeys, EndReason.PEER_HANGUP)
                 } else {
+                    Log.d("CallManager") { "onPeerHangup: ${leavingPeer.take(8)} left during connecting, remaining=${connectedRemaining.map { it.take(8) }}" }
                     _state.value =
                         current.copy(
                             peerPubKeys = connectedRemaining,
                             pendingPeerPubKeys = pendingRemaining,
                         )
+                    onPeerLeft?.invoke(leavingPeer)
                 }
             }
 
@@ -525,6 +558,7 @@ class CallManager(
                     transitionToEnded(callId, current.peerPubKeys, EndReason.PEER_HANGUP)
                 } else {
                     _state.value = current.copy(peerPubKeys = remaining)
+                    onPeerLeft?.invoke(leavingPeer)
                 }
             }
 
@@ -554,6 +588,16 @@ class CallManager(
             return
         }
         if (!processedEventIds.add(event.id)) return
+
+        // Filter out our own ICE candidates and hangups echoed back from relays.
+        // These are never useful: ICE candidates are for the remote peer, and
+        // hangups are already handled locally by hangup() → transitionToEnded.
+        // Self-answers and self-rejects are NOT filtered here because they serve
+        // as "answered/rejected elsewhere" signals when in IncomingCall state.
+        if (event.pubKey == signer.pubKey && (event is CallIceCandidateEvent || event is CallHangupEvent)) {
+            Log.d("CallManager") { "Ignoring self-event kind=${event.kind} id=${event.id.take(8)}" }
+            return
+        }
 
         Log.d("CallManager") { "Processing signaling event kind=${event.kind} id=${event.id.take(8)} state=${_state.value::class.simpleName}" }
 
@@ -604,6 +648,7 @@ class CallManager(
         resetJob?.cancel()
         resetJob = null
         processedEventIds.clear()
+        discoveredCalleePeers.clear()
     }
 
     private fun transitionToEnded(

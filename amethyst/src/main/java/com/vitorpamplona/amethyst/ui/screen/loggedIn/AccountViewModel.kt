@@ -225,6 +225,7 @@ class AccountViewModel(
         callManager.onIceCandidateReceived = { event -> controller.onIceCandidateReceived(event) }
         callManager.onNewPeerInGroupCall = { peerPubKey -> controller.onNewPeerInGroupCall(peerPubKey) }
         callManager.onMidCallOfferReceived = { peerPubKey, sdpOffer -> controller.onMidCallOfferReceived(peerPubKey, sdpOffer) }
+        callManager.onPeerLeft = { peerPubKey -> controller.disposePeerSession(peerPubKey) }
         callController = controller
 
         // Populate ActiveCallHolder so CallActivity can launch even when the app
