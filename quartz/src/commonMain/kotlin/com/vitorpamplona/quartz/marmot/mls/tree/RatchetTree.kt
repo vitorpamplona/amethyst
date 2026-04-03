@@ -146,13 +146,16 @@ class RatchetTree(
     /**
      * Recursive tree hash computation per RFC 9420 Section 7.9.
      *
-     * Leaf:   H(uint32(leaf_index) || optional<LeafNode>)
-     * Parent: H(optional<ParentNode> || opaque left_hash<V> || opaque right_hash<V>)
+     * Leaf:   H(uint8(1) || uint32(leaf_index) || optional<LeafNode>)
+     * Parent: H(uint8(2) || optional<ParentNode> || opaque left_hash<V> || opaque right_hash<V>)
+     *
+     * The uint8 type discriminant (1=leaf, 2=parent) is part of the hash input.
      */
     private fun treeHashNode(nodeIndex: Int): ByteArray {
         if (BinaryTree.isLeaf(nodeIndex)) {
             val leafIndex = BinaryTree.nodeToLeaf(nodeIndex)
             val writer = TlsWriter()
+            writer.putUint8(1) // TreeHashInput::Leaf discriminant
             writer.putUint32(leafIndex.toLong())
             val leaf = getNode(nodeIndex)
             if (leaf != null) {
@@ -168,6 +171,7 @@ class RatchetTree(
         val rightHash = treeHashNode(BinaryTree.right(nodeIndex))
 
         val writer = TlsWriter()
+        writer.putUint8(2) // TreeHashInput::Parent discriminant
         val parent = getNode(nodeIndex)
         if (parent != null) {
             writer.putUint8(1) // present
@@ -319,8 +323,19 @@ class RatchetTree(
 
             val tree = RatchetTree()
             tree.nodes.addAll(nodesList)
-            // Compute leaf count from node count: nodes = 2*leaves - 1
-            tree._leafCount = (nodesList.size + 1) / 2
+            // Compute leaf count from the rightmost non-blank node.
+            // Trees may be serialized with trailing blank nodes that should be trimmed.
+            var rightmost = nodesList.size - 1
+            while (rightmost >= 0 && nodesList[rightmost] == null) {
+                rightmost--
+            }
+            // The rightmost non-blank node determines the minimum tree size
+            tree._leafCount =
+                if (rightmost < 0) {
+                    0
+                } else {
+                    (rightmost / 2) + 1
+                }
             return tree
         }
     }
