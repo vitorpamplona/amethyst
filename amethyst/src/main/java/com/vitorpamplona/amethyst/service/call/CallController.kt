@@ -25,6 +25,7 @@ import android.content.Intent
 import coil3.ImageLoader
 import coil3.asDrawable
 import coil3.request.ImageRequest
+import coil3.request.allowHardware
 import com.vitorpamplona.amethyst.commons.call.CallManager
 import com.vitorpamplona.amethyst.commons.call.CallState
 import com.vitorpamplona.amethyst.model.LocalCache

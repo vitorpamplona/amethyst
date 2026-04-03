@@ -27,6 +27,7 @@ import androidx.core.content.ContextCompat
 import coil3.ImageLoader
 import coil3.asDrawable
 import coil3.request.ImageRequest
+import coil3.request.allowHardware
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R

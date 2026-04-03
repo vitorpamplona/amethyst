@@ -36,6 +36,7 @@ import androidx.core.net.toUri
 import coil3.SingletonImageLoader
 import coil3.asDrawable
 import coil3.request.ImageRequest
+import coil3.request.allowHardware
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.amethyst.ui.stringRes
