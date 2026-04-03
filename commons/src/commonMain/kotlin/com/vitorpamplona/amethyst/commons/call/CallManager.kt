@@ -53,9 +53,16 @@ class CallManager(
     private val _state = MutableStateFlow<CallState>(CallState.Idle)
     val state: StateFlow<CallState> = _state.asStateFlow()
 
+    /** Called for every answer that should be applied to a PeerConnection (includes peer pubkey). */
     var onAnswerReceived: ((CallAnswerEvent) -> Unit)? = null
     var onIceCandidateReceived: ((CallIceCandidateEvent) -> Unit)? = null
     var onRenegotiationOfferReceived: ((CallRenegotiateEvent) -> Unit)? = null
+
+    /** Called when a new peer joins the group call (callee-to-callee mesh setup). */
+    var onNewPeerInGroupCall: ((peerPubKey: HexKey) -> Unit)? = null
+
+    /** Called when a mid-call offer is received from another callee in a group call. */
+    var onMidCallOfferReceived: ((peerPubKey: HexKey, sdpOffer: String) -> Unit)? = null
 
     private var timeoutJob: Job? = null
     private var resetJob: Job? = null
@@ -69,7 +76,68 @@ class CallManager(
 
     private fun isEventTooOld(event: Event): Boolean = TimeUtils.now() - event.createdAt > MAX_EVENT_AGE_SECONDS
 
-    // ---- P2P call initiation ----
+    // ---- Call initiation (state + publish) ----
+
+    /**
+     * Sets state to Offering. Called by CallController before creating
+     * per-peer offers in group calls.
+     */
+    fun beginOffering(
+        callId: String,
+        calleePubKeys: Set<HexKey>,
+        callType: CallType,
+    ) {
+        _state.value = CallState.Offering(callId, calleePubKeys, callType)
+        startTimeout(callId)
+    }
+
+    /**
+     * Publishes a per-peer call offer (group context: p-tags for all members).
+     * Called once per callee so each gets their own SDP.
+     */
+    suspend fun publishOfferToPeer(
+        calleePubKey: HexKey,
+        allCalleePubKeys: Set<HexKey>,
+        callType: CallType,
+        callId: String,
+        sdpOffer: String,
+    ) {
+        Log.d("CallManager") { "publishOfferToPeer: to=${calleePubKey.take(8)}, sdpLength=${sdpOffer.length}" }
+        val result = factory.createCallOffer(sdpOffer, calleePubKey, allCalleePubKeys, callId, callType, signer)
+        publishEvent(result.wrap)
+    }
+
+    /**
+     * Publishes a callee-to-callee offer within an existing call.
+     * Uses the current call context for call-id, call-type, and group members.
+     */
+    suspend fun publishOfferToPeer(
+        peerPubKey: HexKey,
+        sdpOffer: String,
+    ) {
+        val callId = currentCallId() ?: return
+        val callType = currentCallType() ?: return
+        val allMembers = (currentPeerPubKeys() ?: emptySet()) + signer.pubKey
+        Log.d("CallManager") { "publishOfferToPeer (mid-call): to=${peerPubKey.take(8)}, sdpLength=${sdpOffer.length}" }
+        val result = factory.createCallOffer(sdpOffer, peerPubKey, allMembers, callId, callType, signer)
+        publishEvent(result.wrap)
+    }
+
+    /**
+     * Publishes a callee-to-callee answer within an existing call.
+     */
+    suspend fun publishAnswerToPeer(
+        peerPubKey: HexKey,
+        sdpAnswer: String,
+    ) {
+        val callId = currentCallId() ?: return
+        val allMembers = (currentPeerPubKeys() ?: emptySet()) + signer.pubKey
+        Log.d("CallManager") { "publishAnswerToPeer: to=${peerPubKey.take(8)}, sdpLength=${sdpAnswer.length}" }
+        val result = factory.createCallAnswer(sdpAnswer, peerPubKey, allMembers, callId, signer)
+        publishEvent(result.wrap)
+    }
+
+    // ---- P2P call initiation (convenience) ----
 
     suspend fun initiateCall(
         calleePubKey: HexKey,
@@ -83,24 +151,6 @@ class CallManager(
         publishEvent(result.wrap)
         startTimeout(callId)
         Log.d("CallManager") { "initiateCall: offer published, timeout started" }
-    }
-
-    // ---- Group call initiation ----
-
-    /**
-     * Initiates a group call.  A single [CallOfferEvent] is created with `p`
-     * tags for every callee and then gift-wrapped individually to each one.
-     */
-    suspend fun initiateGroupCall(
-        calleePubKeys: Set<HexKey>,
-        callType: CallType,
-        callId: String,
-        sdpOffer: String,
-    ) {
-        val result = factory.createGroupCallOffer(sdpOffer, calleePubKeys, callId, callType, signer)
-        _state.value = CallState.Offering(callId, calleePubKeys, callType)
-        result.wraps.forEach { publishEvent(it) }
-        startTimeout(callId)
     }
 
     // ---- Incoming call handling ----
@@ -117,9 +167,23 @@ class CallManager(
             return
         }
 
-        if (_state.value !is CallState.Idle) {
-            // Already in a call — send a "busy" reject so the caller gets
-            // immediate feedback instead of waiting for the 60s timeout.
+        val currentState = _state.value
+
+        // Mid-call offer: same call-id, we're already in the call
+        if (currentState is CallState.Connecting || currentState is CallState.Connected) {
+            val currentCallId =
+                when (currentState) {
+                    is CallState.Connecting -> currentState.callId
+                    is CallState.Connected -> currentState.callId
+                }
+            if (callId == currentCallId) {
+                Log.d("CallManager") { "Mid-call offer from ${callerPubKey.take(8)} for current call — callee-to-callee" }
+                onMidCallOfferReceived?.invoke(callerPubKey, event.sdpOffer())
+                return
+            }
+        }
+
+        if (currentState !is CallState.Idle) {
             scope.launch {
                 val result = factory.createReject(callerPubKey, callId, "busy", signer = signer)
                 publishEvent(result.wrap)
@@ -148,10 +212,9 @@ class CallManager(
         }
 
         Log.d("CallManager") { "acceptCall: callId=${current.callId}, transitioning to Connecting, sdpAnswerLength=${sdpAnswer.length}" }
-        _state.value = CallState.Connecting(current.callId, current.peerPubKeys(), current.callType)
+        _state.value = CallState.Connecting(current.callId, current.peerPubKeys() - signer.pubKey, current.callType)
         cancelTimeout()
 
-        // Include all group members + self so other devices get notified too.
         val allRecipients = current.groupMembers + signer.pubKey
         Log.d("CallManager") { "acceptCall: publishing answer to ${allRecipients.size} recipients" }
         val result = factory.createGroupCallAnswer(sdpAnswer, allRecipients, current.callId, signer)
@@ -165,7 +228,6 @@ class CallManager(
 
         transitionToEnded(current.callId, current.peerPubKeys(), EndReason.REJECTED)
 
-        // Include all group members + self so other devices get notified too.
         val allRecipients = current.groupMembers + signer.pubKey
         val result = factory.createGroupReject(allRecipients, current.callId, signer = signer)
         result.wraps.forEach { publishEvent(it) }
@@ -187,7 +249,6 @@ class CallManager(
                     Log.d("CallManager") { "onCallAnswered: callId mismatch (got=$callId, expected=${current.callId})" }
                     return
                 }
-                // First answer: start the call immediately. Remaining peers stay pending.
                 val pending = current.peerPubKeys - answeringPeer
                 _state.value =
                     CallState.Connecting(
@@ -197,12 +258,11 @@ class CallManager(
                         pendingPeerPubKeys = pending,
                     )
                 cancelTimeout()
-                Log.d("CallManager") { "onCallAnswered: Offering -> Connecting, invoking onAnswerReceived callback (isNull=${onAnswerReceived == null})" }
+                Log.d("CallManager") { "onCallAnswered: Offering -> Connecting, forwarding answer to CallController" }
                 onAnswerReceived?.invoke(event)
             }
 
             is CallState.Connecting -> {
-                // Another peer answered while we're still connecting with the first
                 if (callId != current.callId) return
                 if (answeringPeer in current.pendingPeerPubKeys) {
                     _state.value =
@@ -211,30 +271,36 @@ class CallManager(
                             pendingPeerPubKeys = current.pendingPeerPubKeys - answeringPeer,
                         )
                 }
-                // TODO: establish additional WebRTC peer connection for this peer
+                // Forward to CallController — it routes to the correct PeerSession
+                Log.d("CallManager") { "onCallAnswered: additional peer ${answeringPeer.take(8)} in Connecting, forwarding" }
+                onAnswerReceived?.invoke(event)
+
+                // Notify callees about new peer for mesh setup
+                onNewPeerInGroupCall?.invoke(answeringPeer)
             }
 
             is CallState.IncomingCall -> {
                 if (callId != current.callId) return
                 if (answeringPeer == signer.pubKey) {
-                    // Another device of this user answered the call — stop ringing.
                     transitionToEnded(current.callId, current.peerPubKeys(), EndReason.ANSWERED_ELSEWHERE)
                 }
-                // Otherwise another group member answered — we keep ringing.
+                // Another group member answered — notify for future mesh connections
+                // (we'll connect to them after we accept the call ourselves)
             }
 
             is CallState.Connected -> {
                 if (callId != current.callId) return
                 if (answeringPeer in current.pendingPeerPubKeys) {
-                    // A pending peer just joined the group call
                     _state.value =
                         current.copy(
                             peerPubKeys = current.peerPubKeys + answeringPeer,
                             pendingPeerPubKeys = current.pendingPeerPubKeys - answeringPeer,
                         )
-                    // TODO: establish additional WebRTC peer connection for this peer
+                    // Forward to CallController for routing
+                    onAnswerReceived?.invoke(event)
+                    onNewPeerInGroupCall?.invoke(answeringPeer)
                 } else {
-                    // Renegotiation answer (e.g., peer accepted our video upgrade offer)
+                    // Renegotiation answer
                     onAnswerReceived?.invoke(event)
                 }
             }
@@ -262,14 +328,12 @@ class CallManager(
             }
 
             is CallState.Connecting -> {
-                // A pending peer rejected while we're already connecting with another
                 if (callId != current.callId) return
                 _state.value =
                     current.copy(pendingPeerPubKeys = current.pendingPeerPubKeys - rejectingPeer)
             }
 
             is CallState.Connected -> {
-                // A pending peer rejected while we're already in the call
                 if (callId != current.callId) return
                 _state.value =
                     current.copy(pendingPeerPubKeys = current.pendingPeerPubKeys - rejectingPeer)
@@ -278,10 +342,8 @@ class CallManager(
             is CallState.IncomingCall -> {
                 if (callId != current.callId) return
                 if (rejectingPeer == signer.pubKey) {
-                    // Another device of this user rejected the call — stop ringing.
                     transitionToEnded(current.callId, current.peerPubKeys(), EndReason.REJECTED)
                 }
-                // Otherwise another group member rejected — we keep ringing.
             }
 
             else -> {
@@ -307,11 +369,6 @@ class CallManager(
         onRenegotiationOfferReceived?.invoke(event)
     }
 
-    /**
-     * Sends a renegotiation offer to a specific peer.  SDP is per-PeerConnection
-     * so this is always addressed to a single peer.  In group calls the inner
-     * event includes `p` tags for all members for group context.
-     */
     suspend fun sendRenegotiation(
         sdpOffer: String,
         peerPubKey: HexKey,
@@ -322,11 +379,6 @@ class CallManager(
         publishEvent(result.wrap)
     }
 
-    /**
-     * Sends a renegotiation answer to a specific peer.  SDP is per-PeerConnection
-     * so this is always addressed to a single peer.  The inner event includes
-     * `p` tags for all members for group context.
-     */
     suspend fun sendRenegotiationAnswer(
         sdpAnswer: String,
         peerPubKey: HexKey,
@@ -355,11 +407,6 @@ class CallManager(
             )
     }
 
-    /**
-     * Invites a new peer into the current call by sending them an offer.
-     * The inner event includes `p` tags for all existing group members plus
-     * the new invitee so they can see the full group composition.
-     */
     suspend fun invitePeer(
         peerPubKey: HexKey,
         sdpOffer: String,
@@ -388,7 +435,6 @@ class CallManager(
             }
         }
 
-        // All group members: existing peers + the new invitee + ourselves
         val allMembers = existingMembers + peerPubKey + signer.pubKey
         val result = factory.createCallOffer(sdpOffer, peerPubKey, allMembers, callId, callType, signer)
         publishEvent(result.wrap)
@@ -517,10 +563,8 @@ class CallManager(
             else -> null
         }
 
-    /** Returns the first peer pubkey (for P2P calls) or null. */
     fun currentPeerPubKey(): HexKey? = currentPeerPubKeys()?.firstOrNull()
 
-    /** Returns all peer pubkeys for the current call (connected + pending). */
     fun currentPeerPubKeys(): Set<HexKey>? =
         when (val s = _state.value) {
             is CallState.Offering -> s.peerPubKeys
@@ -530,7 +574,15 @@ class CallManager(
             else -> null
         }
 
-    /** True when the current call has more than one peer. */
+    fun currentCallType(): CallType? =
+        when (val s = _state.value) {
+            is CallState.Offering -> s.callType
+            is CallState.IncomingCall -> s.callType
+            is CallState.Connecting -> s.callType
+            is CallState.Connected -> s.callType
+            else -> null
+        }
+
     fun isGroupCall(): Boolean = (currentPeerPubKeys()?.size ?: 0) > 1
 
     fun reset() {
@@ -588,13 +640,4 @@ class CallManager(
     }
 }
 
-/**
- * Convenience extension: the peers in an incoming call are all group members
- * except the local signer (i.e. ourselves) – but since we don't store the
- * local pubkey here we return all members except the caller's own pubkey
- * is already the callerPubKey field.  In practice the set of "peer" keys
- * the UI should track is groupMembers minus self, which the controller
- * resolves.  Here we simply exclude the caller from the recipients set
- * and add back the caller, resulting in the full group minus self.
- */
 private fun CallState.IncomingCall.peerPubKeys(): Set<HexKey> = groupMembers
