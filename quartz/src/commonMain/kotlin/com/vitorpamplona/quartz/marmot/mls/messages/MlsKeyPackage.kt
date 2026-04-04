@@ -87,6 +87,20 @@ data class MlsKeyPackage(
         return writer.toByteArray()
     }
 
+    /**
+     * Verify the KeyPackage signature (RFC 9420 Section 10).
+     * The signature is over KeyPackageTBS using the LeafNode's signature key.
+     */
+    fun verifySignature(): Boolean {
+        val tbs = encodeTbs()
+        return MlsCryptoProvider.verifyWithLabel(
+            leafNode.signatureKey,
+            "KeyPackageTBS",
+            tbs,
+            signature,
+        )
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is MlsKeyPackage) return false

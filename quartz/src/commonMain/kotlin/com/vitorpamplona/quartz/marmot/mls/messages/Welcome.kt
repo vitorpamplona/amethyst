@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.marmot.mls.codec.TlsReader
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsSerializable
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsWriter
 import com.vitorpamplona.quartz.marmot.mls.crypto.HpkeCiphertext
+import com.vitorpamplona.quartz.marmot.mls.crypto.MlsCryptoProvider
 import com.vitorpamplona.quartz.marmot.mls.tree.Extension
 
 /**
@@ -135,6 +136,35 @@ data class GroupInfo(
         writer.putOpaqueVarInt(confirmationTag)
         writer.putUint32(signer.toLong())
         writer.putOpaqueVarInt(signature)
+    }
+
+    /**
+     * Encode the TBS (to-be-signed) portion for signature verification.
+     * GroupInfoTBS = GroupContext || extensions || confirmationTag || signer
+     */
+    fun encodeTbs(): ByteArray {
+        val writer = TlsWriter()
+        groupContext.encodeTls(writer)
+        writer.putVectorVarInt(extensions)
+        writer.putOpaqueVarInt(confirmationTag)
+        writer.putUint32(signer.toLong())
+        return writer.toByteArray()
+    }
+
+    /**
+     * Verify the GroupInfo signature (RFC 9420 Section 12.4.3.1).
+     * The signature is over GroupInfoTBS using the signer's LeafNode.signatureKey.
+     *
+     * @param signerSignatureKey the public signature key of the signer (from the ratchet tree)
+     */
+    fun verifySignature(signerSignatureKey: ByteArray): Boolean {
+        val tbs = encodeTbs()
+        return MlsCryptoProvider.verifyWithLabel(
+            signerSignatureKey,
+            "GroupInfoTBS",
+            tbs,
+            signature,
+        )
     }
 
     override fun equals(other: Any?): Boolean {
