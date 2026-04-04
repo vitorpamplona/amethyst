@@ -98,6 +98,7 @@ class MlsGroup private constructor(
     private var signingPrivateKey: ByteArray,
     private var encryptionPrivateKey: ByteArray,
     private var interimTranscriptHash: ByteArray,
+    private val pskStore: MutableMap<String, ByteArray> = mutableMapOf(),
     private val pendingProposals: MutableList<PendingProposal> = mutableListOf(),
     private val sentKeys: MutableMap<Int, com.vitorpamplona.quartz.marmot.mls.schedule.KeyNonceGeneration> = mutableMapOf(),
 ) {
@@ -113,6 +114,22 @@ class MlsGroup private constructor(
             }
             return count
         }
+
+    /** Whether a ReInit proposal has been committed, requiring a new group to be created. */
+    var reInitPending: Proposal.ReInit? = null
+        private set
+
+    /**
+     * Register a pre-shared key for use in PSK proposals.
+     */
+    fun registerPsk(
+        pskId: ByteArray,
+        psk: ByteArray,
+    ) {
+        pskStore[pskId.toHexId()] = psk
+    }
+
+    private fun ByteArray.toHexId(): String = joinToString("") { "%02x".format(it) }
 
     /**
      * Get the list of members (leaf index -> LeafNode).
@@ -193,6 +210,35 @@ class MlsGroup private constructor(
      */
     fun proposeSelfRemove(): Proposal.SelfRemove {
         val proposal = Proposal.SelfRemove()
+        pendingProposals.add(PendingProposal(proposal, myLeafIndex))
+        return proposal
+    }
+
+    /**
+     * Create a PSK proposal to include a pre-shared key in the next epoch.
+     * The PSK must be registered via registerPsk() before committing.
+     */
+    fun proposePsk(
+        pskId: ByteArray,
+        pskNonce: ByteArray = MlsCryptoProvider.randomBytes(MlsCryptoProvider.HASH_OUTPUT_LENGTH),
+    ): Proposal.Psk {
+        val proposal = Proposal.Psk(pskType = 1, pskId = pskId, pskNonce = pskNonce)
+        pendingProposals.add(PendingProposal(proposal, myLeafIndex))
+        return proposal
+    }
+
+    /**
+     * Create a ReInit proposal to reinitialize the group with new parameters.
+     * After the commit containing this proposal is processed, the group enters
+     * a reinitialization state and a new group must be created.
+     */
+    fun proposeReInit(
+        newGroupId: ByteArray = MlsCryptoProvider.randomBytes(32),
+        newVersion: Int = 1,
+        newCipherSuite: Int = 1,
+        newExtensions: List<Extension> = emptyList(),
+    ): Proposal.ReInit {
+        val proposal = Proposal.ReInit(newGroupId, newVersion, newCipherSuite, newExtensions)
         pendingProposals.add(PendingProposal(proposal, myLeafIndex))
         return proposal
     }
@@ -319,11 +365,10 @@ class MlsGroup private constructor(
             }
 
         // Update transcript hashes (RFC 9420 Section 8.2)
-        // For the committer, we use the commit content to update the transcript
-        val commitTlsBytes = commit.toTlsBytes()
+        val confirmedTranscriptHashInput = buildConfirmedTranscriptHashInput(commit, myLeafIndex)
         val confirmedInput = TlsWriter()
         confirmedInput.putBytes(interimTranscriptHash)
-        confirmedInput.putBytes(commitTlsBytes) // Simplified: use commit bytes as ConfirmedTranscriptHashInput
+        confirmedInput.putBytes(confirmedTranscriptHashInput)
         val newConfirmedTranscriptHash = MlsCryptoProvider.hash(confirmedInput.toByteArray())
 
         val newTreeHash = tree.treeHash()
@@ -336,8 +381,11 @@ class MlsGroup private constructor(
                 confirmedTranscriptHash = newConfirmedTranscriptHash,
             )
 
+        // Compute PSK secret from any PSK proposals (RFC 9420 Section 8.4)
+        val pskSecret = computePskSecret(proposals.map { it.proposal })
+
         val keySchedule = KeySchedule(groupContext.toTlsBytes())
-        epochSecrets = keySchedule.deriveEpochSecrets(commitSecret, initSecret)
+        epochSecrets = keySchedule.deriveEpochSecrets(commitSecret, initSecret, pskSecret)
         initSecret = epochSecrets.initSecret
         secretTree = SecretTree(epochSecrets.encryptionSecret, tree.leafCount)
 
@@ -478,14 +526,19 @@ class MlsGroup private constructor(
 
     /**
      * Process a received Commit message, advancing the epoch.
+     *
+     * @param commitBytes TLS-serialized Commit
+     * @param senderLeafIndex the sender's leaf index in the ratchet tree
+     * @param confirmationTag optional confirmation tag from the PublicMessage for verification
      */
     fun processCommit(
         commitBytes: ByteArray,
         senderLeafIndex: Int,
+        confirmationTag: ByteArray? = null,
     ) {
         val commit = Commit.decodeTls(TlsReader(commitBytes))
 
-        // Apply proposals
+        // Apply proposals (resolve references from pending pool)
         for (proposalOrRef in commit.proposals) {
             when (proposalOrRef) {
                 is ProposalOrRef.Inline -> {
@@ -493,8 +546,17 @@ class MlsGroup private constructor(
                 }
 
                 is ProposalOrRef.Reference -> {
-                    // Look up by reference hash in pending proposals
-                    // For now, skip reference-based proposals
+                    // Resolve proposal by reference hash from pending proposals
+                    val refHash = proposalOrRef.proposalRef
+                    val resolved =
+                        pendingProposals.find { pending ->
+                            val proposalBytes = pending.proposal.toTlsBytes()
+                            val hash = MlsCryptoProvider.refHash("MLS 1.0 Proposal Reference", proposalBytes)
+                            hash.contentEquals(refHash)
+                        }
+                    if (resolved != null) {
+                        applyProposal(resolved.proposal, resolved.senderLeafIndex)
+                    }
                 }
             }
         }
@@ -548,10 +610,12 @@ class MlsGroup private constructor(
         }
 
         // Update transcript hashes (RFC 9420 Section 8.2)
-        val commitTlsBytes = commit.toTlsBytes()
+        // ConfirmedTranscriptHashInput = wire_format || FramedContent || signature
+        // Simplified: use commit TLS bytes as the transcript input
+        val confirmedTranscriptHashInput = buildConfirmedTranscriptHashInput(commit, senderLeafIndex)
         val confirmedInput = TlsWriter()
         confirmedInput.putBytes(interimTranscriptHash)
-        confirmedInput.putBytes(commitTlsBytes) // Simplified: use commit bytes as ConfirmedTranscriptHashInput
+        confirmedInput.putBytes(confirmedTranscriptHashInput)
         val newConfirmedTranscriptHash = MlsCryptoProvider.hash(confirmedInput.toByteArray())
 
         // Advance epoch
@@ -565,21 +629,34 @@ class MlsGroup private constructor(
                 confirmedTranscriptHash = newConfirmedTranscriptHash,
             )
 
+        // Compute PSK secret from any PSK proposals in the commit
+        val commitPskProposals =
+            commit.proposals.mapNotNull {
+                when (it) {
+                    is ProposalOrRef.Inline -> it.proposal
+                    is ProposalOrRef.Reference -> null
+                }
+            }
+        val pskSecret = computePskSecret(commitPskProposals)
+
         val keySchedule = KeySchedule(groupContext.toTlsBytes())
-        epochSecrets = keySchedule.deriveEpochSecrets(commitSecret, initSecret)
+        epochSecrets = keySchedule.deriveEpochSecrets(commitSecret, initSecret, pskSecret)
         initSecret = epochSecrets.initSecret
         secretTree = SecretTree(epochSecrets.encryptionSecret, tree.leafCount)
 
-        // TODO: Verify confirmation tag (RFC 9420 Section 8.1)
-        // Full verification requires the PublicMessage's confirmation_tag,
-        // which would be passed as a parameter in a complete implementation.
-        // confirmation_tag = MAC(confirmation_key, confirmed_transcript_hash)
+        // Verify confirmation tag (RFC 9420 Section 6.1)
+        if (confirmationTag != null) {
+            val expectedTag = computeConfirmationTag(epochSecrets.confirmationKey, newConfirmedTranscriptHash)
+            require(confirmationTag.contentEquals(expectedTag)) {
+                "Confirmation tag verification failed"
+            }
+        }
 
         // Update interim_transcript_hash for next epoch
-        val confirmationTag = computeConfirmationTag(epochSecrets.confirmationKey, newConfirmedTranscriptHash)
+        val computedTag = computeConfirmationTag(epochSecrets.confirmationKey, newConfirmedTranscriptHash)
         val interimInput = TlsWriter()
         interimInput.putBytes(newConfirmedTranscriptHash)
-        interimInput.putOpaqueVarInt(confirmationTag)
+        interimInput.putOpaqueVarInt(computedTag)
         interimTranscriptHash = MlsCryptoProvider.hash(interimInput.toByteArray())
 
         pendingProposals.clear()
@@ -602,6 +679,56 @@ class MlsGroup private constructor(
     ): ByteArray = KeySchedule.mlsExporter(epochSecrets.exporterSecret, label, context, length)
 
     // --- Private Helpers ---
+
+    /**
+     * Compute the PSK secret from PSK proposals (RFC 9420 Section 8.4).
+     *
+     * psk_secret is derived by chaining Extract calls over all PSK values.
+     * If no PSK proposals, returns zeros (default PSK secret).
+     */
+    private fun computePskSecret(proposals: List<Proposal>): ByteArray {
+        val pskProposals = proposals.filterIsInstance<Proposal.Psk>()
+        if (pskProposals.isEmpty()) {
+            return ByteArray(MlsCryptoProvider.HASH_OUTPUT_LENGTH)
+        }
+
+        // Chain: psk_secret = Extract(Extract(...Extract(0, psk_1), psk_2)..., psk_n)
+        var pskSecret = ByteArray(MlsCryptoProvider.HASH_OUTPUT_LENGTH)
+        for (pskProposal in pskProposals) {
+            val pskValue =
+                pskStore[pskProposal.pskId.toHexId()]
+                    ?: ByteArray(MlsCryptoProvider.HASH_OUTPUT_LENGTH) // Unknown PSK = zeros
+            pskSecret = MlsCryptoProvider.hkdfExtract(pskSecret, pskValue)
+        }
+        return pskSecret
+    }
+
+    /**
+     * Build the ConfirmedTranscriptHashInput (RFC 9420 Section 8.2).
+     *
+     * ConfirmedTranscriptHashInput = wire_format || FramedContent || signature
+     * This is the AuthenticatedContent minus the confirmation_tag.
+     */
+    private fun buildConfirmedTranscriptHashInput(
+        commit: Commit,
+        senderLeafIndex: Int,
+    ): ByteArray {
+        val writer = TlsWriter()
+        // wire_format: PublicMessage = 1
+        writer.putUint16(WireFormat.PUBLIC_MESSAGE.value)
+        // FramedContent: group_id, epoch, sender, authenticated_data, content_type, content
+        writer.putOpaqueVarInt(groupId)
+        writer.putUint64(epoch)
+        // Sender: member type (1) + leaf_index
+        writer.putUint8(1) // SenderType.MEMBER
+        writer.putUint32(senderLeafIndex.toLong())
+        writer.putOpaqueVarInt(ByteArray(0)) // authenticated_data (empty)
+        writer.putUint8(ContentType.COMMIT.value) // content_type
+        commit.encodeTls(writer) // content = Commit
+        // signature (placeholder — in a full implementation this would be the actual signature)
+        writer.putOpaqueVarInt(ByteArray(0))
+        return writer.toByteArray()
+    }
 
     private fun computeConfirmationTag(
         confirmationKey: ByteArray,
@@ -712,11 +839,18 @@ class MlsGroup private constructor(
                 groupContext = groupContext.copy(extensions = proposal.extensions)
             }
 
-            is Proposal.Psk -> {}
+            is Proposal.Psk -> {
+                // PSK proposals are collected and included in the key schedule
+                // The actual PSK value is resolved from the PSK store
+            }
 
-            is Proposal.ReInit -> {}
+            is Proposal.ReInit -> {
+                // Mark the group as pending reinitialization.
+                // After this commit is processed, the application must create a new group
+                // with the parameters specified in the ReInit proposal.
+                reInitPending = proposal
+            }
 
-            // Handled at a higher level
             is Proposal.ExternalInit -> {} // Handled in external commit flow
         }
     }
