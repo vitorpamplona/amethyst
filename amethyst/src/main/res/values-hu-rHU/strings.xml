@@ -518,6 +518,15 @@
     <string name="use_default_servers">Alapértelmezett lista használata</string>
     <string name="add_media_server">Médiakiszolgáló hozzáadása</string>
     <string name="delete_media_server">Médiakiszolgáló törlése</string>
+    <string name="payment_targets">Fizetési célok</string>
+    <string name="payment_targets_explainer">Tegye közzé fizetési címeit, hogy mások közvetlenül küldhessenek Önnek fizetséget.</string>
+    <string name="payment_targets_section_explainer">Adjon meg fizetési címeket a különböző hálózatokhoz (például: bitcoin, lightning, ethereum).</string>
+    <string name="no_payment_targets_message">Nincsenek fizetési célok megadva. Adjon meg egyet alább ↓</string>
+    <string name="payment_target_type">Hálózat típusa (például: bitcoin)</string>
+    <string name="payment_target_authority">Cím</string>
+    <string name="delete_payment_target">Fizetési cél törlése</string>
+    <string name="no_payment_app_found">Nem található alkalmazás a fizetés kezeléséhez. Telepítsen egy kompatibilis pénztárcát.</string>
+    <string name="error_dialog_payment_error">Nem sikerült megnyitni a fizetést</string>
     <string name="uploading_state_ready">Nem kezdődött el</string>
     <string name="uploading_state_compressing">Tömörítés…</string>
     <string name="uploading_state_uploading">Feltöltés…</string>
@@ -728,6 +737,8 @@
     <string name="warn_when_posts_have_reports_from_your_follows_explainer">Figyelmeztető üzenet jelenik meg, ha a bejegyzéseket az Ön által követett felhasználók 5 vagy annál többször jelentették</string>
     <string name="show_sensitive_content_title">Érzékeny tartalom megjelenítése</string>
     <string name="show_sensitive_content_explainer">Figyelmeztető üzenet jelenik meg, ha a bejegyzés szerzője érzékenynek jelölte a hozzászólást</string>
+    <string name="max_hashtag_limit_title">Kulcsszavak száma legfeljebb bejegyzésenként</string>
+    <string name="max_hashtag_limit_explainer">Elrejti azokat a bejegyzéseket, amelyek több kulcsszót tartalmaznak ennél a korlátnál. A kikapcsoláshoz állítsa 0-ra</string>
     <string name="new_reaction_symbol">Új reakció-szimbólum</string>
     <string name="no_reaction_type_setup_long_press_to_change">A felhasználó számára nincsenek előre kiválasztott reakciótípusok. Hosszan nyomja meg a szív gombot a módosításhoz</string>
     <string name="zapraiser">Zap-gyűjtés</string>
@@ -1224,6 +1235,8 @@
     <string name="reactions_settings_zap_description">Lightning fizetés küldése a szerzőnek</string>
     <string name="reactions_settings_share">Megosztás</string>
     <string name="reactions_settings_share_description">Ennek a bejegyzésnek a megosztása külső alkalmazásban</string>
+    <string name="reactions_settings_pay">Fizetés</string>
+    <string name="reactions_settings_pay_description">Fizetés küldése a szerzőnek az elérendő fizetési céljainak segítségével</string>
     <string name="profile_image_of_user">%1$s profilképe</string>
     <string name="relay_info">%1$s átjátszó</string>
     <string name="expand_relay_list">Átjátszólista kibontása</string>
@@ -1301,6 +1314,8 @@
     <string name="search_section_explainer">A tartalom vagy felhasználók keresésekor használandó átjátszók listája. A címkézés és a keresés nem fog működni, ha nem áll rendelkezésre semmilyen beállítás. Győződjön meg arról, hogy alkalmazzák a NIP-50-et.</string>
     <string name="local_section">Helyi átjátszók</string>
     <string name="local_section_explainer">A készüléken futó átjátszók listája.</string>
+    <string name="send_kind0_to_local_relay_title">Profilok továbbítása a helyi átjátszónak</string>
+    <string name="send_kind0_to_local_relay_description">Minden fogadott profil (0 típus) esemény elküldése a helyi átjátszónak</string>
     <string name="trusted_relays_title">Megbízható átjátszók</string>
     <string name="trusted_section">Megbízható átjátszók</string>
     <string name="trusted_section_explainer">Az átjátszóknak, amelyekben megbízik, nincs szükségük Tor kapcsolatra a következőhöz:</string>
