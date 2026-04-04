@@ -56,6 +56,8 @@ object ScrollStateKeys {
     const val DISCOVER_CHATS = "DiscoverChatsFeed"
 
     const val POLLS_SCREEN = "PollsFeed"
+    const val POLLS_OPEN = "PollsOpenFeed"
+    const val POLLS_CLOSED = "PollsClosedFeed"
     const val PICTURES_SCREEN = "PicturesFeed"
     const val SHORTS_SCREEN = "ShortsFeed"
     const val LONGS_SCREEN = "LongsFeed"
@@ -68,6 +70,7 @@ object ScrollStateKeys {
 object PagerStateKeys {
     const val HOME_SCREEN = "PagerHome"
     const val DISCOVER_SCREEN = "PagerDiscover"
+    const val POLLS_SCREEN = "PagerPolls"
 }
 
 @Composable

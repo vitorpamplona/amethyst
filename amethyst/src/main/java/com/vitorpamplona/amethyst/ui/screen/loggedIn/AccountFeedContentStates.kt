@@ -46,6 +46,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NotificationS
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.OpenPollsState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.dal.NotificationFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.dal.PictureFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.dal.ClosedPollsFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.dal.OpenPollsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.dal.PollsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.shorts.dal.ShortsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.dal.VideoFeedFilter
@@ -74,6 +76,8 @@ class AccountFeedContentStates(
     val discoverPublicChats = FeedContentState(DiscoverChatFeedFilter(account), scope, LocalCache)
 
     val pollsFeed = FeedContentState(PollsFeedFilter(account), scope, LocalCache)
+    val openPollsFeed = FeedContentState(OpenPollsFeedFilter(account), scope, LocalCache)
+    val closedPollsFeed = FeedContentState(ClosedPollsFeedFilter(account), scope, LocalCache)
 
     val picturesFeed = FeedContentState(PictureFeedFilter(account), scope, LocalCache)
     val shortsFeed = FeedContentState(ShortsFeedFilter(account), scope, LocalCache)
@@ -114,6 +118,8 @@ class AccountFeedContentStates(
         discoverPublicChats.updateFeedWith(newNotes)
 
         pollsFeed.updateFeedWith(newNotes)
+        openPollsFeed.updateFeedWith(newNotes)
+        closedPollsFeed.updateFeedWith(newNotes)
 
         picturesFeed.updateFeedWith(newNotes)
         shortsFeed.updateFeedWith(newNotes)
@@ -148,6 +154,8 @@ class AccountFeedContentStates(
         discoverPublicChats.deleteFromFeed(newNotes)
 
         pollsFeed.deleteFromFeed(newNotes)
+        openPollsFeed.deleteFromFeed(newNotes)
+        closedPollsFeed.deleteFromFeed(newNotes)
 
         picturesFeed.deleteFromFeed(newNotes)
         shortsFeed.deleteFromFeed(newNotes)
