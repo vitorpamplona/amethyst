@@ -244,6 +244,32 @@ class MlsGroupTest {
     }
 
     @Test
+    fun testExternalJoin() {
+        // Alice creates a group
+        val alice = MlsGroup.create("alice".encodeToByteArray())
+        assertEquals(0L, alice.epoch)
+        assertEquals(1, alice.memberCount)
+
+        // Alice publishes GroupInfo for external joiners
+        val groupInfoBytes = alice.groupInfo().toTlsBytes()
+
+        // Zara joins via external commit (without a Welcome)
+        val (zara, commitBytes) =
+            MlsGroup.externalJoin(
+                groupInfoBytes,
+                "zara".encodeToByteArray(),
+            )
+
+        // Zara is now in the group at epoch 1
+        assertEquals(1L, zara.epoch)
+
+        // Alice processes Zara's external commit
+        alice.processCommit(commitBytes, zara.leafIndex)
+        assertEquals(1L, alice.epoch)
+        assertEquals(2, alice.memberCount)
+    }
+
+    @Test
     fun testSelfRemove() {
         val group = MlsGroup.create("alice".encodeToByteArray())
         val selfRemoveBytes = group.selfRemove()

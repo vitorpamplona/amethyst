@@ -64,6 +64,10 @@ class RatchetTree(
         leafIndex: Int,
         leafNode: LeafNode?,
     ) {
+        // Expand tree if needed
+        if (leafIndex >= _leafCount) {
+            _leafCount = leafIndex + 1
+        }
         val nodeIdx = BinaryTree.leafToNode(leafIndex)
         ensureCapacity(nodeIdx)
         nodes[nodeIdx] =

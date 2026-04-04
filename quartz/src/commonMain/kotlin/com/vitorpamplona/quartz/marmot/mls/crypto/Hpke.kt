@@ -39,7 +39,7 @@ object Hpke {
     private val KEM_SUITE_ID = "KEM".encodeToByteArray() + byteArrayOf(0x00, 0x20) // DHKEM(X25519)
     private val KDF_ID = byteArrayOf(0x00, 0x01) // HKDF-SHA256
     private val AEAD_ID = byteArrayOf(0x00, 0x01) // AES-128-GCM
-    private val HPKE_SUITE_ID = "HPKE".encodeToByteArray() + byteArrayOf(0x00, 0x20) + KDF_ID + AEAD_ID
+    internal val HPKE_SUITE_ID = "HPKE".encodeToByteArray() + byteArrayOf(0x00, 0x20) + KDF_ID + AEAD_ID
 
     private const val N_SECRET = 32 // KEM shared secret length
     private const val N_ENC = 32 // KEM encapsulated key length
@@ -190,6 +190,78 @@ object Hpke {
         return MlsCryptoProvider.hkdfExpand(prk, labeledInfo, length)
     }
 
+    // --- DeriveKeyPair and External Init (RFC 9180 Section 7.1.3, RFC 9420 Section 8.3) ---
+
+    /**
+     * DeriveKeyPair for DHKEM(X25519) (RFC 9180 Section 7.1.3).
+     * Derives an X25519 key pair from a seed.
+     */
+    fun deriveKeyPair(ikm: ByteArray): X25519KeyPair {
+        val suiteId = KEM_SUITE_ID
+        val dkpPrk = labeledExtract(suiteId, ByteArray(0), "dkp_prk", ikm)
+        val sk = labeledExpand(suiteId, dkpPrk, "sk", ByteArray(0), N_SECRET)
+        val pk = X25519.publicFromPrivate(sk)
+        return X25519KeyPair(sk, pk)
+    }
+
+    /**
+     * HPKE SetupBaseS (sender) with export-only context (RFC 9180 Section 5.1).
+     * Used for external init: joiner sends init_secret to group.
+     *
+     * @param recipientPub the group's external_pub
+     * @param info context info (empty for external init)
+     * @return (kem_output, exporter) where exporter derives secrets via context.export()
+     */
+    fun setupBaseSExport(
+        recipientPub: ByteArray,
+        info: ByteArray,
+    ): Pair<ByteArray, HpkeExportContext> {
+        val (sharedSecret, enc) = encap(recipientPub)
+        val (_, _, exporterSecret) = keyScheduleFull(sharedSecret, info)
+        return Pair(enc, HpkeExportContext(exporterSecret))
+    }
+
+    /**
+     * HPKE SetupBaseR (receiver) with export-only context (RFC 9180 Section 5.1).
+     * Used by existing members to derive init_secret from ExternalInit.
+     *
+     * @param enc the kem_output from the ExternalInit proposal
+     * @param recipientPriv the group's external_priv
+     * @param info context info (empty for external init)
+     * @return exporter context for deriving secrets
+     */
+    fun setupBaseRExport(
+        enc: ByteArray,
+        recipientPriv: ByteArray,
+        info: ByteArray,
+    ): HpkeExportContext {
+        val sharedSecret = decap(enc, recipientPriv)
+        val (_, _, exporterSecret) = keyScheduleFull(sharedSecret, info)
+        return HpkeExportContext(exporterSecret)
+    }
+
+    /**
+     * Full HPKE Key Schedule returning key, nonce, AND exporter_secret.
+     */
+    private fun keyScheduleFull(
+        sharedSecret: ByteArray,
+        info: ByteArray,
+    ): Triple<ByteArray, ByteArray, ByteArray> {
+        val mode = byteArrayOf(0x00) // Base mode
+        val suiteId = HPKE_SUITE_ID
+
+        val pskIdHash = labeledExtract(suiteId, ByteArray(0), "psk_id_hash", ByteArray(0))
+        val infoHash = labeledExtract(suiteId, ByteArray(0), "info_hash", info)
+        val ksContext = mode + pskIdHash + infoHash
+        val secret = labeledExtract(suiteId, sharedSecret, "secret", ByteArray(0))
+
+        val key = labeledExpand(suiteId, secret, "key", ksContext, N_K)
+        val baseNonce = labeledExpand(suiteId, secret, "base_nonce", ksContext, N_N)
+        val exporterSecret = labeledExpand(suiteId, secret, "exp", ksContext, N_H)
+
+        return Triple(key, baseNonce, exporterSecret)
+    }
+
     // --- AEAD (AES-128-GCM) ---
 
     private fun aeadSeal(
@@ -205,4 +277,30 @@ object Hpke {
         aad: ByteArray,
         ciphertext: ByteArray,
     ): ByteArray = AESGCM(key, nonce).decrypt(ciphertext, aad)
+}
+
+/**
+ * HPKE export-only context (RFC 9180 Section 5.3).
+ * Used for deriving secrets without encrypting data.
+ */
+class HpkeExportContext(
+    private val exporterSecret: ByteArray,
+) {
+    /**
+     * Export a secret from the HPKE context.
+     * secret = LabeledExpand(exporter_secret, "sec", Hash(exporter_context), L)
+     */
+    fun export(
+        exporterContext: ByteArray,
+        length: Int,
+    ): ByteArray {
+        val suiteId = Hpke.HPKE_SUITE_ID
+        val contextHash = MlsCryptoProvider.hash(exporterContext)
+        return MlsCryptoProvider.hkdfExpand(
+            exporterSecret,
+            byteArrayOf((length shr 8).toByte(), length.toByte()) +
+                "HPKE-v1".encodeToByteArray() + suiteId + "sec".encodeToByteArray() + contextHash,
+            length,
+        )
+    }
 }

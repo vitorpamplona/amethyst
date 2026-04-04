@@ -23,6 +23,8 @@ package com.vitorpamplona.quartz.marmot.mls.group
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsReader
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsWriter
 import com.vitorpamplona.quartz.marmot.mls.crypto.Ed25519
+import com.vitorpamplona.quartz.marmot.mls.crypto.Ed25519KeyPair
+import com.vitorpamplona.quartz.marmot.mls.crypto.Hpke
 import com.vitorpamplona.quartz.marmot.mls.crypto.MlsCryptoProvider
 import com.vitorpamplona.quartz.marmot.mls.crypto.X25519
 import com.vitorpamplona.quartz.marmot.mls.framing.ContentType
@@ -622,8 +624,18 @@ class MlsGroup private constructor(
             }
         val pskSecret = computePskSecret(commitPskProposals)
 
+        // Check for ExternalInit proposal — overrides init_secret (RFC 9420 Section 8.3)
+        val externalInitProposal =
+            commitPskProposals.filterIsInstance<Proposal.ExternalInit>().firstOrNull()
+        val effectiveInitSecret =
+            if (externalInitProposal != null) {
+                deriveExternalInitSecret(externalInitProposal.kemOutput)
+            } else {
+                initSecret
+            }
+
         val keySchedule = KeySchedule(groupContext.toTlsBytes())
-        epochSecrets = keySchedule.deriveEpochSecrets(commitSecret, initSecret, pskSecret)
+        epochSecrets = keySchedule.deriveEpochSecrets(commitSecret, effectiveInitSecret, pskSecret)
         initSecret = epochSecrets.initSecret
         secretTree = SecretTree(epochSecrets.encryptionSecret, tree.leafCount)
 
@@ -660,6 +672,68 @@ class MlsGroup private constructor(
         context: ByteArray,
         length: Int,
     ): ByteArray = KeySchedule.mlsExporter(epochSecrets.exporterSecret, label, context, length)
+
+    // --- External Join Support (RFC 9420 Section 8.3, 12.4.3.2) ---
+
+    /**
+     * Get the group's external public key for external commits.
+     * Non-members use this to join the group via external commit.
+     *
+     * external_priv, external_pub = KEM.DeriveKeyPair(external_secret)
+     */
+    fun externalPub(): ByteArray {
+        val kp = Hpke.deriveKeyPair(epochSecrets.externalSecret)
+        return kp.publicKey
+    }
+
+    /**
+     * Get the GroupInfo for publishing (needed by external joiners).
+     * Includes the ratchet tree in extensions.
+     */
+    fun groupInfo(): GroupInfo {
+        val treeWriter = TlsWriter()
+        tree.encodeTls(treeWriter)
+        val ratchetTreeExtension =
+            Extension(
+                extensionType = RATCHET_TREE_EXTENSION_TYPE,
+                extensionData = treeWriter.toByteArray(),
+            )
+        val externalPubExtension =
+            Extension(
+                extensionType = EXTERNAL_PUB_EXTENSION_TYPE,
+                extensionData = externalPub(),
+            )
+
+        return GroupInfo(
+            groupContext = groupContext,
+            extensions = listOf(ratchetTreeExtension, externalPubExtension),
+            confirmationTag =
+                computeConfirmationTag(
+                    epochSecrets.confirmationKey,
+                    groupContext.confirmedTranscriptHash,
+                ),
+            signer = myLeafIndex,
+            signature =
+                MlsCryptoProvider.signWithLabel(
+                    signingPrivateKey,
+                    "GroupInfoTBS",
+                    groupContext.toTlsBytes(),
+                ),
+        )
+    }
+
+    /**
+     * Derive the external init_secret from an ExternalInit proposal's kem_output.
+     * Used by existing members when processing an external commit.
+     */
+    internal fun deriveExternalInitSecret(kemOutput: ByteArray): ByteArray {
+        val externalKp = Hpke.deriveKeyPair(epochSecrets.externalSecret)
+        val context = Hpke.setupBaseRExport(kemOutput, externalKp.privateKey, ByteArray(0))
+        return context.export(
+            "MLS 1.0 external init secret".encodeToByteArray(),
+            MlsCryptoProvider.HASH_OUTPUT_LENGTH,
+        )
+    }
 
     // --- Private Helpers ---
 
@@ -1190,6 +1264,148 @@ class MlsGroup private constructor(
                 encryptionPrivateKey = bundle.encryptionPrivateKey,
                 interimTranscriptHash = ByteArray(0),
             )
+        }
+
+        /**
+         * Join a group via external commit (RFC 9420 Section 12.4.3.2).
+         *
+         * The joiner obtains the GroupInfo (with ratchet tree and external_pub),
+         * creates an ExternalInit proposal with HPKE encapsulation, and produces
+         * a Commit that existing members process to add the joiner.
+         *
+         * @param groupInfoBytes TLS-serialized GroupInfo
+         * @param identity the joiner's identity
+         * @param signingKey optional Ed25519 signing key (generated if null)
+         * @return the new MlsGroup and the commit bytes to send to the group
+         */
+        fun externalJoin(
+            groupInfoBytes: ByteArray,
+            identity: ByteArray,
+            signingKey: ByteArray? = null,
+        ): Pair<MlsGroup, ByteArray> {
+            val groupInfo = GroupInfo.decodeTls(TlsReader(groupInfoBytes))
+            val groupContext = groupInfo.groupContext
+
+            // Extract ratchet tree from extensions
+            val ratchetTreeExt =
+                groupInfo.extensions.find { it.extensionType == RATCHET_TREE_EXTENSION_TYPE }
+                    ?: throw IllegalArgumentException("GroupInfo missing ratchet_tree extension")
+            val tree = RatchetTree.decodeTls(TlsReader(ratchetTreeExt.extensionData))
+
+            // Extract external_pub from extensions
+            val externalPubExt =
+                groupInfo.extensions.find { it.extensionType == EXTERNAL_PUB_EXTENSION_TYPE }
+                    ?: throw IllegalArgumentException("GroupInfo missing external_pub extension")
+            val externalPub = externalPubExt.extensionData
+
+            // Generate key pairs
+            val sigKp =
+                signingKey?.let { key ->
+                    val pub = Ed25519.publicFromPrivate(key)
+                    Ed25519KeyPair(key, pub)
+                } ?: Ed25519.generateKeyPair()
+            val encKp = X25519.generateKeyPair()
+
+            // HPKE encapsulation to external_pub to derive init_secret
+            val (kemOutput, exportContext) = Hpke.setupBaseSExport(externalPub, ByteArray(0))
+            val externalInitSecret =
+                exportContext.export(
+                    "MLS 1.0 external init secret".encodeToByteArray(),
+                    MlsCryptoProvider.HASH_OUTPUT_LENGTH,
+                )
+
+            // Build ExternalInit proposal
+            val externalInitProposal = Proposal.ExternalInit(kemOutput)
+
+            // Add ourselves to the tree
+            val leafNode =
+                buildLeafNode(
+                    encryptionKey = encKp.publicKey,
+                    signatureKey = sigKp.publicKey,
+                    identity = identity,
+                    source = LeafNodeSource.COMMIT,
+                    signingKey = sigKp.privateKey,
+                    groupId = groupContext.groupId,
+                    leafIndex = tree.leafCount, // We'll be the next leaf
+                )
+            val myLeafIndex = tree.addLeaf(leafNode)
+
+            // Build UpdatePath for our leaf
+            val leafSecret = MlsCryptoProvider.randomBytes(MlsCryptoProvider.HASH_OUTPUT_LENGTH)
+            val pathSecrets = tree.derivePathSecrets(myLeafIndex, leafSecret)
+            val copath = BinaryTree.copath(myLeafIndex, tree.leafCount)
+            val pathNodes =
+                pathSecrets.zip(copath).map { (pathKey, copathNode) ->
+                    val resolution = tree.resolution(copathNode)
+                    val encryptedSecrets =
+                        resolution.mapNotNull { resNode ->
+                            val node = tree.getNode(resNode) ?: return@mapNotNull null
+                            val recipientPub =
+                                when (node) {
+                                    is com.vitorpamplona.quartz.marmot.mls.tree.TreeNode.Leaf -> {
+                                        node.leafNode.encryptionKey
+                                    }
+
+                                    is com.vitorpamplona.quartz.marmot.mls.tree.TreeNode.Parent -> {
+                                        node.parentNode.encryptionKey
+                                    }
+                                }
+                            MlsCryptoProvider.encryptWithLabel(
+                                recipientPub,
+                                "UpdatePathNode",
+                                groupContext.toTlsBytes(),
+                                pathKey.pathSecret,
+                            )
+                        }
+                    UpdatePathNode(pathKey.publicKey, encryptedSecrets)
+                }
+
+            val updatePath = UpdatePath(leafNode, pathNodes)
+            tree.applyUpdatePath(myLeafIndex, updatePath.nodes)
+
+            // Build Commit
+            val commit =
+                Commit(
+                    proposals = listOf(ProposalOrRef.Inline(externalInitProposal)),
+                    updatePath = updatePath,
+                )
+            val commitBytes = commit.toTlsBytes()
+
+            // Derive epoch secrets using external init_secret
+            val commitSecret =
+                if (pathSecrets.isNotEmpty()) {
+                    pathSecrets.last().pathSecret
+                } else {
+                    ByteArray(MlsCryptoProvider.HASH_OUTPUT_LENGTH)
+                }
+
+            val newTreeHash = tree.treeHash()
+            val newEpoch = groupContext.epoch + 1
+            val newGroupContext =
+                groupContext.copy(
+                    epoch = newEpoch,
+                    treeHash = newTreeHash,
+                )
+
+            val keySchedule = KeySchedule(newGroupContext.toTlsBytes())
+            val epochSecrets = keySchedule.deriveEpochSecrets(commitSecret, externalInitSecret)
+
+            val secretTree = SecretTree(epochSecrets.encryptionSecret, tree.leafCount)
+
+            val group =
+                MlsGroup(
+                    groupContext = newGroupContext,
+                    tree = tree,
+                    myLeafIndex = myLeafIndex,
+                    epochSecrets = epochSecrets,
+                    secretTree = secretTree,
+                    initSecret = epochSecrets.initSecret,
+                    signingPrivateKey = sigKp.privateKey,
+                    encryptionPrivateKey = encKp.privateKey,
+                    interimTranscriptHash = ByteArray(0),
+                )
+
+            return Pair(group, commitBytes)
         }
 
         /**
