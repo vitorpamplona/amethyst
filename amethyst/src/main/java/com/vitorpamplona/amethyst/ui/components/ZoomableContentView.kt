@@ -762,7 +762,7 @@ fun ShareMediaAction(
     content: BaseMediaContent? = null,
     accountViewModel: AccountViewModel,
 ) {
-    val scope = accountViewModel.viewModelScope
+    val viewModelScope = accountViewModel.viewModelScope
 
     // Track if video is downloading - hoisted here to block menu dismiss during download
     val isDownloadingVideo = remember { mutableStateOf(false) }
@@ -817,7 +817,7 @@ fun ShareMediaAction(
                             videoUri?.let {
                                 if (videoUri.isNotEmpty()) {
                                     M3ActionRow(icon = Icons.Outlined.Share, text = stringRes(R.string.share_image)) {
-                                        scope.launch { shareImageFile(context, videoUri, mimeType) }
+                                        viewModelScope.launch { shareImageFile(context, videoUri, mimeType) }
                                         onDismiss()
                                     }
                                 }
@@ -833,7 +833,7 @@ fun ShareMediaAction(
                                         enabled = !isDownloadingVideo.value,
                                     ) {
                                         isDownloadingVideo.value = true
-                                        scope.launch {
+                                        viewModelScope.launch {
                                             shareVideoFile(
                                                 context = context,
                                                 videoUrl = videoUri,
@@ -858,7 +858,7 @@ fun ShareMediaAction(
                         is MediaLocalVideo -> {
                             content.localFile?.let { localFile ->
                                 M3ActionRow(icon = Icons.Outlined.Share, text = stringRes(R.string.share_video)) {
-                                    scope.launch { shareLocalVideoFile(context, localFile, mimeType) }
+                                    viewModelScope.launch { shareLocalVideoFile(context, localFile, mimeType) }
                                     onDismiss()
                                 }
                             }
@@ -894,6 +894,7 @@ private suspend fun shareImageFile(
 
         context.startActivity(Intent.createChooser(shareIntent, null))
     } catch (e: Exception) {
+        if (e is CancellationException) throw e
         Log.w("ZoomableContentView", "Failed to share image: $videoUri", e)
         Toast.makeText(context, context.getString(R.string.unable_to_share_image), Toast.LENGTH_SHORT).show()
     }
