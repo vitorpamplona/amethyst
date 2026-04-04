@@ -762,8 +762,6 @@ fun ShareMediaAction(
     content: BaseMediaContent? = null,
     accountViewModel: AccountViewModel,
 ) {
-    val viewModelScope = accountViewModel.viewModelScope
-
     // Track if video is downloading - hoisted here to block menu dismiss during download
     val isDownloadingVideo = remember { mutableStateOf(false) }
 
@@ -817,7 +815,7 @@ fun ShareMediaAction(
                             videoUri?.let {
                                 if (videoUri.isNotEmpty()) {
                                     M3ActionRow(icon = Icons.Outlined.Share, text = stringRes(R.string.share_image)) {
-                                        viewModelScope.launch { shareImageFile(context, videoUri, mimeType) }
+                                        accountViewModel.viewModelScope.launch { shareImageFile(context, videoUri, mimeType) }
                                         onDismiss()
                                     }
                                 }
@@ -833,7 +831,7 @@ fun ShareMediaAction(
                                         enabled = !isDownloadingVideo.value,
                                     ) {
                                         isDownloadingVideo.value = true
-                                        viewModelScope.launch {
+                                        accountViewModel.viewModelScope.launch {
                                             shareVideoFile(
                                                 context = context,
                                                 videoUrl = videoUri,
@@ -858,7 +856,7 @@ fun ShareMediaAction(
                         is MediaLocalVideo -> {
                             content.localFile?.let { localFile ->
                                 M3ActionRow(icon = Icons.Outlined.Share, text = stringRes(R.string.share_video)) {
-                                    viewModelScope.launch { shareLocalVideoFile(context, localFile, mimeType) }
+                                    accountViewModel.viewModelScope.launch { shareLocalVideoFile(context, localFile, mimeType) }
                                     onDismiss()
                                 }
                             }

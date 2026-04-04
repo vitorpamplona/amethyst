@@ -159,6 +159,7 @@ class ShareHelperTest {
 
     private fun createTempFileWithBytes(bytes: ByteArray): File {
         val file = File.createTempFile("sharehelpertest", ".tmp")
+        file.deleteOnExit()
         file.writeBytes(bytes)
         return file
     }
