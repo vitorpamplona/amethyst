@@ -85,11 +85,11 @@ object ShareHelper {
             } ?: throw IOException("Unable to open snapshot for: $imageUrl")
         }
 
-    private fun getImageExtension(file: File): String = getMediaExtension(file, isVideo = false)
+    internal fun getImageExtension(file: File): String = getMediaExtension(file, isVideo = false)
 
-    private fun getVideoExtension(file: File): String = getMediaExtension(file, isVideo = true)
+    internal fun getVideoExtension(file: File): String = getMediaExtension(file, isVideo = true)
 
-    private fun getMediaExtension(
+    internal fun getMediaExtension(
         file: File,
         isVideo: Boolean,
     ): String {
