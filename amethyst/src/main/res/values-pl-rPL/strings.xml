@@ -339,7 +339,7 @@
     <string name="back">Wstecz</string>
     <string name="quick_action_select">Wybierz</string>
     <string name="quick_action_share_browser_link">Udostępnij link przeglądarki</string>
-    <string name="quick_action_share">Udostępnij</string>
+    <string name="quick_action_share">Przekaż</string>
     <string name="quick_action_copy_user_id">ID autora</string>
     <string name="quick_action_copy_note_id">ID wpisu</string>
     <string name="quick_action_copy_text">Skopiuj tekst</string>
@@ -515,6 +515,15 @@
     <string name="use_default_servers">Użyj domyślnej listy</string>
     <string name="add_media_server">Dodaj serwer multimediów</string>
     <string name="delete_media_server">Usuń serwer multimediów</string>
+    <string name="payment_targets">Dane płatności</string>
+    <string name="payment_targets_explainer">Opublikuj swoje adresy płatności, aby inni mogli wysyłać Ci środki bezpośrednio.</string>
+    <string name="payment_targets_section_explainer">Dodaj adresy płatności dla różnych sieci (np. bitcoin, lightning, ethereum).</string>
+    <string name="no_payment_targets_message">Brak danych do płatności. Dodaj je poniżej ↓</string>
+    <string name="payment_target_type">Typ sieci (np. bitcoin)</string>
+    <string name="payment_target_authority">Adres</string>
+    <string name="delete_payment_target">Usuń dane płatności</string>
+    <string name="no_payment_app_found">Nie znaleziono aplikacji do obsługi tej płatności. Zainstaluj kompatybilny portfel.</string>
+    <string name="error_dialog_payment_error">Nie można otworzyć płatności</string>
     <string name="uploading_state_ready">Nie rozpoczęte</string>
     <string name="uploading_state_compressing">Kompresja</string>
     <string name="uploading_state_uploading">Wgrywanie</string>
@@ -1222,6 +1231,8 @@
     <string name="reactions_settings_zap_description">Wyślij płatność Lightning do autora</string>
     <string name="reactions_settings_share">Prześlij dalej</string>
     <string name="reactions_settings_share_description">Prześlij ten wpis na zewnątrz</string>
+    <string name="reactions_settings_pay">Zapłać</string>
+    <string name="reactions_settings_pay_description">Prześlij płatność autorowi za pośrednictwem jego danych do płatności</string>
     <string name="profile_image_of_user">Zdjęcie profilowe %1$s</string>
     <string name="relay_info">Transmiter %1$s</string>
     <string name="expand_relay_list">Rozwiń listę transmiterów</string>
@@ -1299,6 +1310,8 @@
     <string name="search_section_explainer">Lista transmiterów używanych podczas wyszukiwania treści lub użytkowników. Tagowanie i wyszukiwanie nie będą działać, jeśli nie będą dostępne żadne opcje. Upewnij się, że zaimplementowano NIP-50.</string>
     <string name="local_section">Lokalne Transmitery</string>
     <string name="local_section_explainer">Lista transmiterów działających na tym urządzeniu.</string>
+    <string name="send_kind0_to_local_relay_title">Prześlij profile do lokalnego transmitera</string>
+    <string name="send_kind0_to_local_relay_description">Przesyłaj wszystkie otrzymane wydarzenia profilu (typ 0) do lokalnego transmitera</string>
     <string name="trusted_relays_title">Zaufane Transmitery</string>
     <string name="trusted_section">Zaufane Transmitery</string>
     <string name="trusted_section_explainer">Transmitery, którym ufasz, nie potrzebujesz połączenia Tor</string>
