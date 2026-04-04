@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.marmot.mls.codec.TlsReader
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsSerializable
 import com.vitorpamplona.quartz.marmot.mls.codec.TlsWriter
 import com.vitorpamplona.quartz.marmot.mls.crypto.HpkeCiphertext
+import com.vitorpamplona.quartz.marmot.mls.crypto.MlsCryptoProvider
 import com.vitorpamplona.quartz.marmot.mls.tree.Extension
 
 /**
@@ -49,8 +50,8 @@ data class Welcome(
 ) : TlsSerializable {
     override fun encodeTls(writer: TlsWriter) {
         writer.putUint16(cipherSuite)
-        writer.putVector4(secrets)
-        writer.putOpaque4(encryptedGroupInfo)
+        writer.putVectorVarInt(secrets)
+        writer.putOpaqueVarInt(encryptedGroupInfo)
     }
 
     override fun equals(other: Any?): Boolean {
@@ -65,8 +66,8 @@ data class Welcome(
         fun decodeTls(reader: TlsReader): Welcome =
             Welcome(
                 cipherSuite = reader.readUint16(),
-                secrets = reader.readVector4 { EncryptedGroupSecrets.decodeTls(it) },
-                encryptedGroupInfo = reader.readOpaque4(),
+                secrets = reader.readVectorVarInt { EncryptedGroupSecrets.decodeTls(it) },
+                encryptedGroupInfo = reader.readOpaqueVarInt(),
             )
     }
 }
@@ -86,7 +87,7 @@ data class EncryptedGroupSecrets(
     val encryptedGroupSecrets: HpkeCiphertext,
 ) : TlsSerializable {
     override fun encodeTls(writer: TlsWriter) {
-        writer.putOpaque1(newMember)
+        writer.putOpaqueVarInt(newMember)
         encryptedGroupSecrets.encodeTls(writer)
     }
 
@@ -101,7 +102,7 @@ data class EncryptedGroupSecrets(
     companion object {
         fun decodeTls(reader: TlsReader): EncryptedGroupSecrets =
             EncryptedGroupSecrets(
-                newMember = reader.readOpaque1(),
+                newMember = reader.readOpaqueVarInt(),
                 encryptedGroupSecrets = HpkeCiphertext.decodeTls(reader),
             )
     }
@@ -131,10 +132,39 @@ data class GroupInfo(
 ) : TlsSerializable {
     override fun encodeTls(writer: TlsWriter) {
         groupContext.encodeTls(writer)
-        writer.putVector4(extensions)
-        writer.putOpaque1(confirmationTag)
+        writer.putVectorVarInt(extensions)
+        writer.putOpaqueVarInt(confirmationTag)
         writer.putUint32(signer.toLong())
-        writer.putOpaque2(signature)
+        writer.putOpaqueVarInt(signature)
+    }
+
+    /**
+     * Encode the TBS (to-be-signed) portion for signature verification.
+     * GroupInfoTBS = GroupContext || extensions || confirmationTag || signer
+     */
+    fun encodeTbs(): ByteArray {
+        val writer = TlsWriter()
+        groupContext.encodeTls(writer)
+        writer.putVectorVarInt(extensions)
+        writer.putOpaqueVarInt(confirmationTag)
+        writer.putUint32(signer.toLong())
+        return writer.toByteArray()
+    }
+
+    /**
+     * Verify the GroupInfo signature (RFC 9420 Section 12.4.3.1).
+     * The signature is over GroupInfoTBS using the signer's LeafNode.signatureKey.
+     *
+     * @param signerSignatureKey the public signature key of the signer (from the ratchet tree)
+     */
+    fun verifySignature(signerSignatureKey: ByteArray): Boolean {
+        val tbs = encodeTbs()
+        return MlsCryptoProvider.verifyWithLabel(
+            signerSignatureKey,
+            "GroupInfoTBS",
+            tbs,
+            signature,
+        )
     }
 
     override fun equals(other: Any?): Boolean {
@@ -149,10 +179,10 @@ data class GroupInfo(
         fun decodeTls(reader: TlsReader): GroupInfo =
             GroupInfo(
                 groupContext = GroupContext.decodeTls(reader),
-                extensions = reader.readVector4 { Extension.decodeTls(it) },
-                confirmationTag = reader.readOpaque1(),
+                extensions = reader.readVectorVarInt { Extension.decodeTls(it) },
+                confirmationTag = reader.readOpaqueVarInt(),
                 signer = reader.readUint32().toInt(),
-                signature = reader.readOpaque2(),
+                signature = reader.readOpaqueVarInt(),
             )
     }
 }
@@ -186,11 +216,11 @@ data class GroupContext(
     override fun encodeTls(writer: TlsWriter) {
         writer.putUint16(version)
         writer.putUint16(cipherSuite)
-        writer.putOpaque1(groupId)
+        writer.putOpaqueVarInt(groupId)
         writer.putUint64(epoch)
-        writer.putOpaque1(treeHash)
-        writer.putOpaque1(confirmedTranscriptHash)
-        writer.putVector4(extensions)
+        writer.putOpaqueVarInt(treeHash)
+        writer.putOpaqueVarInt(confirmedTranscriptHash)
+        writer.putVectorVarInt(extensions)
     }
 
     override fun equals(other: Any?): Boolean {
@@ -210,11 +240,11 @@ data class GroupContext(
             GroupContext(
                 version = reader.readUint16(),
                 cipherSuite = reader.readUint16(),
-                groupId = reader.readOpaque1(),
+                groupId = reader.readOpaqueVarInt(),
                 epoch = reader.readUint64(),
-                treeHash = reader.readOpaque1(),
-                confirmedTranscriptHash = reader.readOpaque1(),
-                extensions = reader.readVector4 { Extension.decodeTls(it) },
+                treeHash = reader.readOpaqueVarInt(),
+                confirmedTranscriptHash = reader.readOpaqueVarInt(),
+                extensions = reader.readVectorVarInt { Extension.decodeTls(it) },
             )
     }
 }
@@ -236,18 +266,18 @@ data class GroupSecrets(
     val psks: List<ByteArray> = emptyList(),
 ) : TlsSerializable {
     override fun encodeTls(writer: TlsWriter) {
-        writer.putOpaque1(joinerSecret)
+        writer.putOpaqueVarInt(joinerSecret)
         if (pathSecret != null) {
             writer.putUint8(1)
-            writer.putOpaque1(pathSecret)
+            writer.putOpaqueVarInt(pathSecret)
         } else {
             writer.putUint8(0)
         }
         val pskWriter = TlsWriter()
         for (psk in psks) {
-            pskWriter.putOpaque2(psk)
+            pskWriter.putOpaqueVarInt(psk)
         }
-        writer.putOpaque4(pskWriter.toByteArray())
+        writer.putOpaqueVarInt(pskWriter.toByteArray())
     }
 
     override fun equals(other: Any?): Boolean {
@@ -260,13 +290,13 @@ data class GroupSecrets(
 
     companion object {
         fun decodeTls(reader: TlsReader): GroupSecrets {
-            val joinerSecret = reader.readOpaque1()
-            val pathSecret = reader.readOptional { it.readOpaque1() }
-            val pskBytes = reader.readOpaque4()
+            val joinerSecret = reader.readOpaqueVarInt()
+            val pathSecret = reader.readOptional { it.readOpaqueVarInt() }
+            val pskBytes = reader.readOpaqueVarInt()
             val pskReader = TlsReader(pskBytes)
             val psks = mutableListOf<ByteArray>()
             while (pskReader.hasRemaining) {
-                psks.add(pskReader.readOpaque2())
+                psks.add(pskReader.readOpaqueVarInt())
             }
             return GroupSecrets(joinerSecret, pathSecret, psks)
         }

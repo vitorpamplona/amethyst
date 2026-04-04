@@ -65,6 +65,26 @@ actual class AESGCM actual constructor(
             null
         }
 
+    actual fun encrypt(
+        bytesToEncrypt: ByteArray,
+        aad: ByteArray,
+    ): ByteArray =
+        with(newCipher()) {
+            init(Cipher.ENCRYPT_MODE, keySpec(), param())
+            updateAAD(aad)
+            doFinal(bytesToEncrypt)
+        }
+
+    actual fun decrypt(
+        bytesToDecrypt: ByteArray,
+        aad: ByteArray,
+    ): ByteArray =
+        with(newCipher()) {
+            init(Cipher.DECRYPT_MODE, keySpec(), param())
+            updateAAD(aad)
+            doFinal(bytesToDecrypt)
+        }
+
     companion object {
         const val NAME = "aes-gcm"
     }

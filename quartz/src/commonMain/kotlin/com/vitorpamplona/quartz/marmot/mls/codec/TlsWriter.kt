@@ -107,6 +107,23 @@ class TlsWriter(
         putBytes(data)
     }
 
+    /**
+     * Write a QUIC-style variable-length integer prefixed opaque field.
+     * Uses the MLS/TLS VarInt encoding for the length:
+     * - 0..63: 1 byte (6-bit value, 2-bit prefix 00)
+     * - 64..16383: 2 bytes (14-bit value, 2-bit prefix 01)
+     * - 16384..1073741823: 4 bytes (30-bit value, 2-bit prefix 10)
+     */
+    fun putOpaqueVarInt(data: ByteArray) {
+        val len = data.size
+        when {
+            len < 64 -> putUint8(len)
+            len < 16384 -> putUint16(len or 0x4000)
+            else -> putUint32((len.toLong() or 0x80000000L))
+        }
+        putBytes(data)
+    }
+
     /** Write a TLS-serializable struct */
     fun putStruct(value: TlsSerializable) {
         value.encodeTls(this)
@@ -122,6 +139,17 @@ class TlsWriter(
             item.encodeTls(inner)
         }
         putOpaque4(inner.toByteArray())
+    }
+
+    /**
+     * Write a variable-length vector with VarInt length prefix.
+     */
+    fun putVectorVarInt(items: List<TlsSerializable>) {
+        val inner = TlsWriter()
+        for (item in items) {
+            item.encodeTls(inner)
+        }
+        putOpaqueVarInt(inner.toByteArray())
     }
 
     /**

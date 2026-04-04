@@ -46,14 +46,14 @@ data class ParentNode(
     val unmergedLeaves: List<Int>,
 ) : TlsSerializable {
     override fun encodeTls(writer: TlsWriter) {
-        writer.putOpaque2(encryptionKey)
-        writer.putOpaque1(parentHash)
+        writer.putOpaqueVarInt(encryptionKey)
+        writer.putOpaqueVarInt(parentHash)
 
         val ulWriter = TlsWriter()
         for (leaf in unmergedLeaves) {
             ulWriter.putUint32(leaf.toLong())
         }
-        writer.putOpaque4(ulWriter.toByteArray())
+        writer.putOpaqueVarInt(ulWriter.toByteArray())
     }
 
     override fun equals(other: Any?): Boolean {
@@ -73,9 +73,9 @@ data class ParentNode(
 
     companion object {
         fun decodeTls(reader: TlsReader): ParentNode {
-            val encryptionKey = reader.readOpaque2()
-            val parentHash = reader.readOpaque1()
-            val ulBytes = reader.readOpaque4()
+            val encryptionKey = reader.readOpaqueVarInt()
+            val parentHash = reader.readOpaqueVarInt()
+            val ulBytes = reader.readOpaqueVarInt()
             val ulReader = TlsReader(ulBytes)
             val unmergedLeaves = mutableListOf<Int>()
             while (ulReader.hasRemaining) {

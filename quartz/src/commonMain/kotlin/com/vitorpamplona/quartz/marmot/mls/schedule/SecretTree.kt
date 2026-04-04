@@ -53,6 +53,9 @@ class SecretTree(
     /** Per-sender ratchet state: (handshake generation, handshake secret, app generation, app secret) */
     private val senderState = mutableMapOf<Int, SenderRatchetState>()
 
+    /** Consumed (sender, generation) pairs for replay detection (RFC 9420 Section 9.1) */
+    private val consumedGenerations = mutableMapOf<Int, MutableSet<Int>>()
+
     init {
         // Seed the root
         treeSecrets[BinaryTree.root(leafCount)] = encryptionSecret
@@ -65,12 +68,12 @@ class SecretTree(
         val state = getOrInitSender(leafIndex)
         val result = deriveKeyNonce(state.applicationSecret, state.applicationGeneration)
 
-        // Advance ratchet
+        // Advance ratchet: DeriveTreeSecret(secret_[N], "secret", N, Nh)
         val nextSecret =
             MlsCryptoProvider.expandWithLabel(
                 state.applicationSecret,
                 "secret",
-                ByteArray(0),
+                generationContext(state.applicationGeneration),
                 MlsCryptoProvider.HASH_OUTPUT_LENGTH,
             )
         senderState[leafIndex] =
@@ -93,7 +96,7 @@ class SecretTree(
             MlsCryptoProvider.expandWithLabel(
                 state.handshakeSecret,
                 "secret",
-                ByteArray(0),
+                generationContext(state.handshakeGeneration),
                 MlsCryptoProvider.HASH_OUTPUT_LENGTH,
             )
         senderState[leafIndex] =
@@ -119,18 +122,25 @@ class SecretTree(
             "Generation $generation already consumed (current: ${state.applicationGeneration})"
         }
 
+        // Replay detection: reject if this (sender, generation) was already used
+        val senderConsumed = consumedGenerations.getOrPut(leafIndex) { mutableSetOf() }
+        require(generation !in senderConsumed) {
+            "Replay detected: generation $generation from sender $leafIndex already consumed"
+        }
+        senderConsumed.add(generation)
+
         // Fast-forward the ratchet
         var secret = state.applicationSecret
         var gen = state.applicationGeneration
         while (gen < generation) {
-            secret = MlsCryptoProvider.expandWithLabel(secret, "secret", ByteArray(0), MlsCryptoProvider.HASH_OUTPUT_LENGTH)
+            secret = MlsCryptoProvider.expandWithLabel(secret, "secret", generationContext(gen), MlsCryptoProvider.HASH_OUTPUT_LENGTH)
             gen++
         }
 
         val result = deriveKeyNonce(secret, generation)
 
         // Advance past this generation
-        val nextSecret = MlsCryptoProvider.expandWithLabel(secret, "secret", ByteArray(0), MlsCryptoProvider.HASH_OUTPUT_LENGTH)
+        val nextSecret = MlsCryptoProvider.expandWithLabel(secret, "secret", generationContext(generation), MlsCryptoProvider.HASH_OUTPUT_LENGTH)
         senderState[leafIndex] =
             state.copy(
                 applicationSecret = nextSecret,
@@ -140,22 +150,38 @@ class SecretTree(
         return result
     }
 
+    /**
+     * Encode a generation counter as a 4-byte big-endian uint32 for DeriveTreeSecret context.
+     */
+    private fun generationContext(generation: Int): ByteArray =
+        byteArrayOf(
+            (generation shr 24).toByte(),
+            (generation shr 16).toByte(),
+            (generation shr 8).toByte(),
+            generation.toByte(),
+        )
+
+    /**
+     * DeriveTreeSecret(Secret, Label, Generation, Length) =
+     *     ExpandWithLabel(Secret, Label, uint32(Generation), Length)
+     */
     private fun deriveKeyNonce(
         secret: ByteArray,
         generation: Int,
     ): KeyNonceGeneration {
+        val genCtx = generationContext(generation)
         val key =
             MlsCryptoProvider.expandWithLabel(
                 secret,
                 "key",
-                ByteArray(0),
+                genCtx,
                 MlsCryptoProvider.AEAD_KEY_LENGTH,
             )
         val nonce =
             MlsCryptoProvider.expandWithLabel(
                 secret,
                 "nonce",
-                ByteArray(0),
+                genCtx,
                 MlsCryptoProvider.AEAD_NONCE_LENGTH,
             )
         return KeyNonceGeneration(key, nonce, generation)
@@ -202,8 +228,8 @@ class SecretTree(
         val leftIdx = BinaryTree.left(parentIdx)
         val rightIdx = BinaryTree.right(parentIdx)
 
-        val leftSecret = MlsCryptoProvider.expandWithLabel(parentSecret, "tree", byteArrayOf(0), MlsCryptoProvider.HASH_OUTPUT_LENGTH)
-        val rightSecret = MlsCryptoProvider.expandWithLabel(parentSecret, "tree", byteArrayOf(1), MlsCryptoProvider.HASH_OUTPUT_LENGTH)
+        val leftSecret = MlsCryptoProvider.expandWithLabel(parentSecret, "tree", "left".encodeToByteArray(), MlsCryptoProvider.HASH_OUTPUT_LENGTH)
+        val rightSecret = MlsCryptoProvider.expandWithLabel(parentSecret, "tree", "right".encodeToByteArray(), MlsCryptoProvider.HASH_OUTPUT_LENGTH)
 
         treeSecrets[leftIdx] = leftSecret
         treeSecrets[rightIdx] = rightSecret

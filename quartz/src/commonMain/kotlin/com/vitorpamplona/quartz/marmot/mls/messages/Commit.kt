@@ -44,14 +44,14 @@ data class Commit(
     val updatePath: UpdatePath?,
 ) : TlsSerializable {
     override fun encodeTls(writer: TlsWriter) {
-        writer.putVector4(proposals)
+        writer.putVectorVarInt(proposals)
         writer.putOptional(updatePath)
     }
 
     companion object {
         fun decodeTls(reader: TlsReader): Commit =
             Commit(
-                proposals = reader.readVector4 { ProposalOrRef.decodeTls(it) },
+                proposals = reader.readVectorVarInt { ProposalOrRef.decodeTls(it) },
                 updatePath = reader.readOptional { UpdatePath.decodeTls(it) },
             )
     }
@@ -77,14 +77,14 @@ data class UpdatePath(
 ) : TlsSerializable {
     override fun encodeTls(writer: TlsWriter) {
         leafNode.encodeTls(writer)
-        writer.putVector4(nodes)
+        writer.putVectorVarInt(nodes)
     }
 
     companion object {
         fun decodeTls(reader: TlsReader): UpdatePath =
             UpdatePath(
                 leafNode = LeafNode.decodeTls(reader),
-                nodes = reader.readVector4 { UpdatePathNode.decodeTls(it) },
+                nodes = reader.readVectorVarInt { UpdatePathNode.decodeTls(it) },
             )
     }
 }
