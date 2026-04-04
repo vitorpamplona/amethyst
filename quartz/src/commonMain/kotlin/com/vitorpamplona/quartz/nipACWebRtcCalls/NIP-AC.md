@@ -220,7 +220,13 @@ Caller                          Relay                           Callee
 
 ### ICE Candidate Buffering
 
-ICE candidates may arrive before the WebRTC peer connection is ready (e.g., the callee is still ringing). Clients MUST buffer incoming ICE candidates and apply them after `setRemoteDescription()` succeeds. Candidates buffered while ringing MUST NOT be cleared when accepting the call.
+Clients MUST implement **two layers** of ICE candidate buffering:
+
+1. **Global buffer** (keyed by sender pubkey): ICE candidates that arrive before any `PeerConnection` exists for that sender (e.g., the callee is still ringing and no session has been created yet). When a `PeerConnection` is later created for that peer, drain the global buffer into the per-session buffer.
+
+2. **Per-session buffer**: ICE candidates that arrive after a `PeerConnection` exists but before `setRemoteDescription()` has been called. Once `setRemoteDescription()` succeeds, flush all per-session buffered candidates via `addIceCandidate()`.
+
+Candidates buffered while ringing MUST NOT be cleared when accepting the call — they must be drained into the new session.
 
 ### Mid-Call Renegotiation
 
@@ -239,6 +245,10 @@ Party A                         Relay                           Party B
   |========= Updated WebRTC P2P Connection ========================|
 ```
 
+**Renegotiation glare handling:** If both parties send a `CallRenegotiate` simultaneously, the `PeerConnection` will be in `HAVE_LOCAL_OFFER` state when the remote offer arrives. Clients MUST resolve this using a **pubkey comparison tiebreaker**: the peer with the **higher** pubkey wins (their offer takes priority). The losing peer MUST roll back their local offer via `setLocalDescription(rollback)` and then accept the winner's offer normally.
+
+In group calls, renegotiation (e.g., toggling video) MUST be performed **per-peer** — a separate renegotiation exchange with each connected peer.
+
 ### Ending a Call
 
 Either party may send a `CallHangup` (kind 25053) at any time. The recipient SHOULD close the WebRTC peer connection and release media resources upon receiving it.
@@ -247,9 +257,69 @@ Either party may send a `CallHangup` (kind 25053) at any time. The recipient SHO
 
 The callee may send a `CallReject` (kind 25054) instead of a `CallAnswer`. The caller SHOULD stop ringing and display a "call rejected" state.
 
+### Busy Rejection
+
+If a client receives a Call Offer while already in an active call (any state other than Idle), it SHOULD automatically send a `CallReject` (kind 25054) with content `"busy"` and remain in the current call.
+
+## Call State Machine
+
+Clients MUST implement the following state machine. Each call session exists in exactly one state at a time:
+
+```
+                     ┌─────────────────────────────────────────────┐
+                     │                   Idle                      │
+                     └──────┬──────────────────────┬───────────────┘
+                  initiate  │                      │  receive offer
+                     ▼                      ▼
+               ┌──────────┐            ┌─────────────┐
+               │ Offering │            │ IncomingCall │
+               └────┬─────┘            └──────┬──────┘
+          answer    │                         │  accept
+          received  │                         │
+                     ▼                         ▼
+               ┌────────────────────────────────────┐
+               │           Connecting                │
+               └──────────────┬─────────────────────┘
+                  ICE          │
+                  connected    │
+                               ▼
+               ┌────────────────────────────────────┐
+               │           Connected                 │
+               └──────────────┬─────────────────────┘
+                  hangup /     │
+                  all peers    │
+                  left         │
+                               ▼
+               ┌────────────────────────────────────┐
+               │            Ended                    │──▶ Idle (after ~2s)
+               └────────────────────────────────────┘
+```
+
+**State descriptions:**
+
+| State | Description |
+|-------|-------------|
+| **Idle** | No active call. Ready to initiate or receive. |
+| **Offering** | Caller has sent offer(s), waiting for answer. Timeout after 60s. |
+| **IncomingCall** | Callee is ringing. Stores the SDP offer. Timeout after 60s. |
+| **Connecting** | SDP exchange complete, ICE connectivity being established. |
+| **Connected** | At least one peer's ICE connection succeeded. Call is active. |
+| **Ended** | Call finished. Displays reason briefly, then auto-resets to Idle. |
+
+**Transitions to Ended** can happen from any active state via: hangup, reject, timeout, error, or all peers leaving.
+
+**Group call tracking:** In `Connecting` and `Connected` states, clients MUST track two sets of peers: those with established connections (`peerPubKeys`) and those still pending (`pendingPeerPubKeys`). When a peer leaves (hangup/reject), remove them from both sets. End the call only when both sets are empty.
+
+### Self-Event Filtering
+
+Signaling events published by the local user will be echoed back by relays. Clients MUST filter these:
+
+- **ICE candidates and hangups from self**: Always ignore — ICE candidates are for the remote peer, and hangups are already handled locally.
+- **Answers and rejects from self**: Process ONLY when in `IncomingCall` state (for multi-device "answered/rejected elsewhere" — see Multi-Device Support). Ignore in all other states.
+
 ## Group Calls
 
-Group calls (calls with more than two participants) use the same event kinds but differ in how `p` tags and gift wraps are structured.
+Group calls (calls with more than two participants) use a **full-mesh** topology: each participant maintains a separate `PeerConnection` to every other participant. The same event kinds are used, but `p` tags and gift wraps are structured differently.
 
 ### P-Tag Convention
 
@@ -280,9 +350,9 @@ For these events, the inner event still includes `p` tags for **all** group memb
 
 This means offer, answer, and renegotiate events in group calls are signed per-peer but still carry the full group membership in their `p` tags.
 
-### Group Call Offer
+### Group Call Initiation
 
-The Call Offer (kind 25050) initiating a group call contains multiple `p` tags:
+The caller creates a **separate `PeerConnection`** and SDP offer for each callee. Each offer carries `p` tags for all callees but is gift-wrapped only to its target:
 
 ```json
 {
@@ -301,9 +371,46 @@ The Call Offer (kind 25050) initiating a group call contains multiple `p` tags:
 
 Recipients detect a group call by the presence of multiple `p` tags. The full group is the union of all `p`-tagged pubkeys plus the event's `pubkey` (the caller).
 
+### Group Answer Broadcast
+
+When a callee accepts a group call, it sends the `CallAnswer` (kind 25051) gift-wrapped to **every** group member (including self for multi-device support), not just the caller. The SDP answer is specific to the caller's `PeerConnection`, but broadcasting to all members serves as a "I joined" signal that triggers callee-to-callee mesh setup (see below).
+
+### Callee-to-Callee Mesh Setup
+
+After the initial caller-callee connections are established, callees MUST establish direct `PeerConnection`s with each other to complete the full mesh. Callees discover each other by observing `CallAnswer` events from the group broadcast:
+
+1. **During ringing** (`IncomingCall` state): When a callee receives another callee's answer for the same `call-id`, it buffers that peer's pubkey as a "discovered peer."
+
+2. **After accepting**: The callee processes all discovered peers and initiates mesh connections with them.
+
+3. **Glare prevention** (who initiates): To avoid both callees sending offers simultaneously, use a **pubkey comparison tiebreaker**: the peer with the lexicographically **lower** pubkey initiates the offer. The higher pubkey waits to receive an offer.
+
+4. **Mesh offer flow**: The initiating callee creates a new `PeerConnection`, generates an SDP offer, and sends a `CallOffer` (kind 25050) with all group member `p` tags, gift-wrapped only to the target callee. The receiving callee creates a `PeerConnection`, sets the remote description, creates an answer, and sends it back as a `CallAnswer` (kind 25051).
+
+```
+Callee A (lower pubkey)                    Callee B (higher pubkey)
+    |                                           |
+    |  [Both see each other's answers to caller]|
+    |                                           |
+    |  [A has lower pubkey → A initiates]       |
+    |                                           |
+    |-- CallOffer (callee-to-callee) ---------->|
+    |                                           |  [B creates PeerConnection]
+    |                                           |  [B sets remote desc, creates answer]
+    |<-- CallAnswer ----------------------------|
+    |                                           |
+    |=========== P2P Connection =================|
+```
+
+ICE candidates for callee-to-callee connections follow the same buffering rules as caller-callee connections.
+
 ### Inviting New Peers
 
 To invite a new peer into an active group call, send a Call Offer (kind 25050) with `p` tags listing **all** existing group members plus the new invitee. This allows the invitee to immediately see the full group composition. The SDP in the offer is specific to the new PeerConnection being established, so the wrap is addressed only to the invitee.
+
+### Partial Disconnects
+
+When a peer's ICE connection fails or they send a hangup in a group call, clients MUST close only that peer's `PeerConnection` and continue the call with remaining peers. The call ends only when all peers have disconnected.
 
 ## Spam Prevention
 
