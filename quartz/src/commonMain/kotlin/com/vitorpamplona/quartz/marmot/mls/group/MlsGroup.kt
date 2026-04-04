@@ -260,37 +260,12 @@ class MlsGroup private constructor(
         // The UpdatePath is computed after proposals are applied.
         val addedMembers = mutableListOf<Pair<Int, MlsKeyPackage>>()
         for (pending in proposals) {
-            when (val p = pending.proposal) {
-                is Proposal.Add -> {
-                    val leafIdx = tree.addLeaf(p.keyPackage.leafNode)
-                    addedMembers.add(leafIdx to p.keyPackage)
-                }
-
-                is Proposal.Remove -> {
-                    tree.removeLeaf(p.removedLeafIndex)
-                }
-
-                is Proposal.SelfRemove -> {
-                    tree.removeLeaf(pending.senderLeafIndex)
-                }
-
-                is Proposal.Update -> {
-                    tree.setLeaf(pending.senderLeafIndex, p.leafNode)
-                }
-
-                is Proposal.GroupContextExtensions -> {
-                    groupContext =
-                        groupContext.copy(extensions = p.extensions)
-                }
-
-                is Proposal.Psk -> {}
-
-                // PSK handling
-                is Proposal.ReInit -> {}
-
-                // Handled at a higher level
-                is Proposal.ExternalInit -> {} // Handled in external commit flow
+            val p = pending.proposal
+            // Track added members for Welcome generation (before apply changes leaf count)
+            if (p is Proposal.Add) {
+                addedMembers.add(tree.leafCount to p.keyPackage)
             }
+            applyProposal(p, pending.senderLeafIndex)
         }
 
         // Generate new path secrets on the updated tree
@@ -480,6 +455,14 @@ class MlsGroup private constructor(
         require(mlsMsg.wireFormat == WireFormat.PRIVATE_MESSAGE) { "Expected PrivateMessage" }
 
         val privMsg = PrivateMessage.decodeTls(TlsReader(mlsMsg.payload))
+
+        // Verify epoch and group ID match current state (RFC 9420 Section 6.1)
+        require(privMsg.epoch == epoch) {
+            "Message epoch ${privMsg.epoch} doesn't match current epoch $epoch"
+        }
+        require(privMsg.groupId.contentEquals(groupId)) {
+            "Message group ID doesn't match current group"
+        }
 
         // Decrypt sender data
         val senderDataKey =
@@ -820,10 +803,29 @@ class MlsGroup private constructor(
     ) {
         when (proposal) {
             is Proposal.Add -> {
+                // Validate KeyPackage lifetime (RFC 9420 Section 10.1)
+                val lifetime = proposal.keyPackage.leafNode.lifetime
+                if (lifetime != null) {
+                    val now = System.currentTimeMillis() / 1000
+                    require(now >= lifetime.notBefore && now <= lifetime.notAfter) {
+                        "KeyPackage lifetime expired or not yet valid"
+                    }
+                }
                 tree.addLeaf(proposal.keyPackage.leafNode)
             }
 
             is Proposal.Remove -> {
+                // Validate: sender must be a member and cannot remove themselves via Remove
+                // (use SelfRemove for that). The committer is authorized to include Remove proposals.
+                require(proposal.removedLeafIndex != senderLeafIndex) {
+                    "Use SelfRemove to remove yourself, not Remove"
+                }
+                require(proposal.removedLeafIndex < tree.leafCount) {
+                    "Remove target leaf index ${proposal.removedLeafIndex} out of range"
+                }
+                require(tree.getLeaf(proposal.removedLeafIndex) != null) {
+                    "Cannot remove blank leaf at index ${proposal.removedLeafIndex}"
+                }
                 tree.removeLeaf(proposal.removedLeafIndex)
             }
 
@@ -832,6 +834,8 @@ class MlsGroup private constructor(
             }
 
             is Proposal.Update -> {
+                // Validate: Update can only update the sender's own leaf (RFC 9420 Section 12.1.2)
+                // The sender is updating their own LeafNode with new keys
                 tree.setLeaf(senderLeafIndex, proposal.leafNode)
             }
 
