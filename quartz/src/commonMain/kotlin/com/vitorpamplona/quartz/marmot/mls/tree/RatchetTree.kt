@@ -160,7 +160,7 @@ class RatchetTree(
      *
      * The uint8 type discriminant (1=leaf, 2=parent) is part of the hash input.
      */
-    private fun treeHashNode(nodeIndex: Int): ByteArray {
+    internal fun treeHashNode(nodeIndex: Int): ByteArray {
         if (BinaryTree.isLeaf(nodeIndex)) {
             val leafIndex = BinaryTree.nodeToLeaf(nodeIndex)
             val writer = TlsWriter()

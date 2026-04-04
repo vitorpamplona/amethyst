@@ -53,6 +53,9 @@ class SecretTree(
     /** Per-sender ratchet state: (handshake generation, handshake secret, app generation, app secret) */
     private val senderState = mutableMapOf<Int, SenderRatchetState>()
 
+    /** Consumed (sender, generation) pairs for replay detection (RFC 9420 Section 9.1) */
+    private val consumedGenerations = mutableMapOf<Int, MutableSet<Int>>()
+
     init {
         // Seed the root
         treeSecrets[BinaryTree.root(leafCount)] = encryptionSecret
@@ -118,6 +121,13 @@ class SecretTree(
         require(generation >= state.applicationGeneration) {
             "Generation $generation already consumed (current: ${state.applicationGeneration})"
         }
+
+        // Replay detection: reject if this (sender, generation) was already used
+        val senderConsumed = consumedGenerations.getOrPut(leafIndex) { mutableSetOf() }
+        require(generation !in senderConsumed) {
+            "Replay detected: generation $generation from sender $leafIndex already consumed"
+        }
+        senderConsumed.add(generation)
 
         // Fast-forward the ratchet
         var secret = state.applicationSecret

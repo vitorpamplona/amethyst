@@ -725,9 +725,14 @@ class MlsGroup private constructor(
     /**
      * Verify parent hash chain in UpdatePath (RFC 9420 Section 7.9.2).
      *
-     * For each node on the sender's direct path, the parent_hash in the node
-     * must match Hash(ParentHashInput) computed from the node's parent.
-     * The leaf node's parent_hash binds it to the tree structure.
+     * For each node on the sender's direct path, verifies that the parent_hash
+     * in the child matches Hash(ParentHashInput) computed from the parent node.
+     *
+     * ParentHashInput = {
+     *   HPKEPublicKey encryption_key;    // parent's new HPKE key
+     *   opaque parent_hash<V>;           // parent's own parent_hash
+     *   opaque original_sibling_tree_hash<V>; // tree hash of the sibling subtree
+     * }
      */
     private fun verifyParentHash(
         senderLeafIndex: Int,
@@ -736,30 +741,43 @@ class MlsGroup private constructor(
         val directPath = BinaryTree.directPath(senderLeafIndex, tree.leafCount)
         if (directPath.isEmpty()) return true
 
-        // Verify leaf's parent_hash matches the first direct path node
         val leafParentHash = updatePath.leafNode.parentHash ?: return true
         if (leafParentHash.isEmpty()) return true
 
-        // Compute expected parent hash for first path node
-        val firstPathNode = tree.getNode(directPath[0])
-        if (firstPathNode is com.vitorpamplona.quartz.marmot.mls.tree.TreeNode.Parent) {
-            val parentHashInput = TlsWriter()
-            parentHashInput.putOpaqueVarInt(firstPathNode.parentNode.encryptionKey)
-            parentHashInput.putOpaqueVarInt(firstPathNode.parentNode.parentHash)
-            // original_child_resolution = hash of the original sibling subtree
-            val siblingIdx = BinaryTree.sibling(BinaryTree.leafToNode(senderLeafIndex), BinaryTree.nodeCount(tree.leafCount))
-            val siblingHash = tree.treeHashWithLeafCount(tree.leafCount) // simplified
-            parentHashInput.putOpaqueVarInt(siblingHash)
-            val expectedHash = MlsCryptoProvider.hash(parentHashInput.toByteArray())
+        val nodeCount = BinaryTree.nodeCount(tree.leafCount)
 
-            if (!leafParentHash.contentEquals(expectedHash)) {
-                // Parent hash mismatch - log but don't reject for now
-                // Full parent hash validation requires computing per-node hashes
-                // which is complex for non-trivial trees
+        // Walk up the direct path, verifying each parent_hash link
+        var expectedParentHash = leafParentHash
+        for ((i, pathNodeIdx) in directPath.withIndex()) {
+            val pathNode = tree.getNode(pathNodeIdx) ?: continue
+
+            if (pathNode is com.vitorpamplona.quartz.marmot.mls.tree.TreeNode.Parent) {
+                // Compute the parent hash for this node
+                val childIdx =
+                    if (i == 0) BinaryTree.leafToNode(senderLeafIndex) else directPath[i - 1]
+                val siblingIdx = BinaryTree.sibling(childIdx, nodeCount)
+
+                // original_sibling_tree_hash = tree hash of the sibling subtree
+                // (computed BEFORE the UpdatePath was applied)
+                val siblingHash = tree.treeHashNode(siblingIdx)
+
+                // ParentHashInput
+                val phi = TlsWriter()
+                phi.putOpaqueVarInt(pathNode.parentNode.encryptionKey)
+                phi.putOpaqueVarInt(pathNode.parentNode.parentHash)
+                phi.putOpaqueVarInt(siblingHash)
+                val computedHash = MlsCryptoProvider.hash(phi.toByteArray())
+
+                if (!expectedParentHash.contentEquals(computedHash)) {
+                    return false // Parent hash chain broken
+                }
+
+                // The next level's expected parent_hash is this node's parent_hash
+                expectedParentHash = pathNode.parentNode.parentHash
             }
         }
 
-        return true // Simplified validation passes
+        return true
     }
 
     private fun verifyLeafNodeSignature(
@@ -835,11 +853,20 @@ class MlsGroup private constructor(
 
             is Proposal.Update -> {
                 // Validate: Update can only update the sender's own leaf (RFC 9420 Section 12.1.2)
-                // The sender is updating their own LeafNode with new keys
+                // Verify the new LeafNode is signed by the sender's key
+                require(
+                    verifyLeafNodeSignature(proposal.leafNode, groupId, senderLeafIndex),
+                ) { "Invalid LeafNode signature in Update proposal" }
                 tree.setLeaf(senderLeafIndex, proposal.leafNode)
             }
 
             is Proposal.GroupContextExtensions -> {
+                // Validate extension types are supported (RFC 9420 Section 12.1.7)
+                for (ext in proposal.extensions) {
+                    require(ext.extensionType in KNOWN_EXTENSION_TYPES) {
+                        "Unsupported extension type: ${ext.extensionType}"
+                    }
+                }
                 groupContext = groupContext.copy(extensions = proposal.extensions)
             }
 
@@ -945,6 +972,19 @@ class MlsGroup private constructor(
 
     companion object {
         private const val RATCHET_TREE_EXTENSION_TYPE = 0x0001
+        private const val REQUIRED_CAPABILITIES_EXTENSION_TYPE = 0x0002
+        private const val EXTERNAL_PUB_EXTENSION_TYPE = 0x0003
+        private const val EXTERNAL_SENDERS_EXTENSION_TYPE = 0x0004
+
+        /** Known extension types that this implementation accepts. */
+        private val KNOWN_EXTENSION_TYPES =
+            setOf(
+                RATCHET_TREE_EXTENSION_TYPE,
+                REQUIRED_CAPABILITIES_EXTENSION_TYPE,
+                EXTERNAL_PUB_EXTENSION_TYPE,
+                EXTERNAL_SENDERS_EXTENSION_TYPE,
+                0xF2EE, // Marmot group data extension
+            )
 
         /**
          * Create a new MLS group with a single member (the creator).
@@ -1020,6 +1060,11 @@ class MlsGroup private constructor(
             require(mlsMsg.wireFormat == WireFormat.WELCOME) { "Expected Welcome message" }
 
             val welcome = Welcome.decodeTls(TlsReader(mlsMsg.payload))
+
+            // Verify ciphersuite match (RFC 9420 Section 12.4.3.1)
+            require(welcome.cipherSuite == bundle.keyPackage.cipherSuite) {
+                "Welcome ciphersuite ${welcome.cipherSuite} doesn't match KeyPackage ciphersuite ${bundle.keyPackage.cipherSuite}"
+            }
 
             // Find our encrypted group secrets
             val myRef = bundle.keyPackage.reference()
