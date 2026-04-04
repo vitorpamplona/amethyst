@@ -478,6 +478,91 @@ These self-notification events use the same `call-id` as the original call and f
 - If SDP offer/answer creation fails, the client SHOULD surface the error instead of hanging silently.
 - Clients SHOULD handle `ICE_CONNECTION_FAILED` state by ending the call and notifying the user of a connection failure.
 
+## Test Vectors
+
+Implementations SHOULD validate their state machine and event handling against these test scenarios.
+The reference test suite is available in this repository under `quartz/src/commonTest/` and
+`commons/src/commonTest/`.
+
+### Event Structure Tests
+
+| # | Test | Verification |
+|---|------|-------------|
+| E1 | Build Call Offer (kind 25050) | Contains `p`, `call-id`, `call-type`, `alt` tags; content = SDP offer |
+| E2 | Build Call Answer (kind 25051) | Contains `p`, `call-id`, `alt` tags; content = SDP answer; NO `call-type` tag |
+| E3 | Build ICE Candidate (kind 25052) | Contains `p`, `call-id`, `alt` tags; content = JSON with `candidate`, `sdpMid`, `sdpMLineIndex` |
+| E4 | Build Call Hangup (kind 25053) | Contains `p`, `call-id`, `alt` tags; content MAY be empty or contain reason |
+| E5 | Build Call Reject (kind 25054) | Contains `p`, `call-id`, `alt` tags; content MAY be `"busy"` for auto-reject |
+| E6 | Build Call Renegotiate (kind 25055) | Contains `p`, `call-id`, `alt` tags; content = new SDP offer |
+| E7 | Group offer with N callees | N `p` tags present, one per callee |
+| E8 | ICE candidate in group call | Still addressed to single peer (1 `p` tag) |
+| E9 | All events for same call share `call-id` | Offer, answer, ICE, hangup, reject, renegotiate — same UUID |
+
+### State Machine Tests
+
+| # | Scenario | Initial State | Event/Action | Expected State |
+|---|----------|---------------|-------------|----------------|
+| S1 | Receive offer from followed user | Idle | CallOffer | IncomingCall |
+| S2 | Receive offer from non-followed user | Idle | CallOffer | Idle (ignored) |
+| S3 | Accept incoming call | IncomingCall | acceptCall() | Connecting |
+| S4 | ICE peer connected | Connecting | onPeerConnected() | Connected |
+| S5 | Peer hangs up (P2P) | Connected | CallHangup | Ended(PEER_HANGUP) |
+| S6 | Ended auto-resets | Ended | ~2s timeout | Idle |
+| S7 | Initiate outbound call | Idle | initiateCall() | Offering |
+| S8 | Receive answer to offer | Offering | CallAnswer | Connecting |
+| S9 | Reject incoming call | IncomingCall | rejectCall() | Ended(REJECTED) |
+| S10 | Peer rejects our offer (P2P) | Offering | CallReject | Ended(PEER_REJECTED) |
+| S11 | Busy auto-reject | Connected | CallOffer (different call-id) | Connected + publish CallReject("busy") |
+| S12 | Stale event (>20s old) | Any | Any signaling event | No state change |
+| S13 | Duplicate event (same ID) | Any | Re-delivered event | No state change |
+| S14 | Self ICE candidate echo | Any active | CallIceCandidate from self | Ignored |
+| S15 | Self hangup echo | Connected | CallHangup from self | Ignored (stay Connected) |
+| S16 | Self answer in IncomingCall | IncomingCall | CallAnswer from self | Ended(ANSWERED_ELSEWHERE) |
+| S17 | Self answer in Offering | Offering | CallAnswer from self | Ignored (stay Offering) |
+| S18 | Hangup from Offering | Offering | hangup() | Ended(HANGUP) |
+| S19 | Hangup from Connecting | Connecting | hangup() | Ended(HANGUP) |
+| S20 | Hangup from Connected | Connected | hangup() | Ended(HANGUP) |
+| S21 | Hangup from Idle | Idle | hangup() | Idle (no-op) |
+
+### Renegotiation Tests
+
+| # | Scenario | Verification |
+|---|----------|-------------|
+| R1 | Renegotiate in Connected state | Forwarded to callback |
+| R2 | Renegotiate in Connecting state | Forwarded to callback |
+| R3 | Renegotiate in Idle state | Ignored |
+| R4 | Renegotiate with wrong call-id | Ignored |
+| R5 | Renegotiation response | MUST be CallAnswer (kind 25051), NOT CallRenegotiate |
+| R6 | Glare tiebreaker | Higher pubkey wins; lower pubkey rolls back |
+
+### Group Call Tests
+
+| # | Scenario | Verification |
+|---|----------|-------------|
+| G1 | Group offer detected | Multiple `p` tags → group call |
+| G2 | Peer rejects in group | Removed from group; call continues with remaining |
+| G3 | All peers reject | Call ends |
+| G4 | Partial disconnect | Close only that peer's connection; continue with remaining |
+| G5 | Last peer leaves | Call ends |
+| G6 | Discover peer while ringing | Buffer peer; trigger mesh setup after accepting |
+| G7 | Mid-call offer (callee-to-callee) | Forwarded via onMidCallOfferReceived callback |
+| G8 | Invite new peer | Offer with all existing members + new invitee in `p` tags |
+| G9 | Callee-to-callee glare | Lower pubkey initiates; higher waits |
+
+### Interface-Level Tests (Full Pipeline)
+
+| # | Scenario | Verification |
+|---|----------|-------------|
+| I1 | Initiate call | Publishes 1 EphemeralGiftWrap (kind 21059) |
+| I2 | Accept call | Publishes EphemeralGiftWrap answer(s) |
+| I3 | Reject call | Publishes EphemeralGiftWrap reject(s) |
+| I4 | Hangup | Publishes EphemeralGiftWrap hangup(s) |
+| I5 | Send renegotiation | Publishes 1 EphemeralGiftWrap renegotiate |
+| I6 | Busy auto-reject | Publishes EphemeralGiftWrap reject while staying in current call |
+| I7 | Group per-peer offers | Publishes 1 EphemeralGiftWrap per peer |
+| I8 | Invite peer | Publishes 1 EphemeralGiftWrap; invitee added to pending set |
+| I9 | Full P2P flow | Offer → Answer → Renegotiate → Hangup, all via gift wraps |
+
 ## References
 
 - [NIP-01: Basic Protocol](https://github.com/nostr-protocol/nips/blob/master/01.md) — Event structure
