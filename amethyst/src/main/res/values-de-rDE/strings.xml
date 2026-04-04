@@ -521,6 +521,15 @@ anz der Bedingungen ist erforderlich</string>
     <string name="use_default_servers">Standardliste verwenden</string>
     <string name="add_media_server">Medienserver hinzufügen</string>
     <string name="delete_media_server">Medienserver löschen</string>
+    <string name="payment_targets">Zahlungsziele</string>
+    <string name="payment_targets_explainer">Veröffentlichen Sie Ihre Zahlungsadressen, damit andere Ihnen direkt Mittel senden können.</string>
+    <string name="payment_targets_section_explainer">Fügen Sie Zahlungsadressen für verschiedene Netzwerke hinzu (z.B. Bitcoin, Lightning, Ethereum).</string>
+    <string name="no_payment_targets_message">Keine Zahlungsziele festgelegt. Fügen Sie unten eines hinzu ↓</string>
+    <string name="payment_target_type">Netzwerktyp (z.B. Bitcoin)</string>
+    <string name="payment_target_authority">Adresse</string>
+    <string name="delete_payment_target">Zahlungsziel löschen</string>
+    <string name="no_payment_app_found">Keine App gefunden, die diese Zahlung verarbeiten kann. Bitte installieren Sie eine kompatible Wallet.</string>
+    <string name="error_dialog_payment_error">Zahlung konnte nicht geöffnet werden</string>
     <string name="uploading_state_ready">Noch nicht angefangen</string>
     <string name="uploading_state_compressing">Komprimieren</string>
     <string name="uploading_state_uploading">Hochladen</string>
@@ -1223,6 +1232,8 @@ anz der Bedingungen ist erforderlich</string>
     <string name="reactions_settings_zap_description">Eine Lightning-Zahlung an den Autor senden</string>
     <string name="reactions_settings_share">Teilen</string>
     <string name="reactions_settings_share_description">Diese Notiz extern teilen</string>
+    <string name="reactions_settings_pay">Bezahlen</string>
+    <string name="reactions_settings_pay_description">Eine Zahlung an den Autor über seine Zahlungsziele senden</string>
     <string name="profile_image_of_user">Profilbild von %1$s</string>
     <string name="relay_info">%1$s weiterleiten</string>
     <string name="expand_relay_list">Rela-Liste erweitern</string>
@@ -1300,6 +1311,8 @@ anz der Bedingungen ist erforderlich</string>
     <string name="search_section_explainer">Liste der Relais, die für die Suche und das Taggen von Benutzern verwendet werden. Das Taggen und die Suche funktionieren nicht, wenn keine Optionen verfügbar sind.</string>
     <string name="local_section">Lokale Relais</string>
     <string name="local_section_explainer">Liste der Relays, die auf diesem Gerät laufen.</string>
+    <string name="send_kind0_to_local_relay_title">Profile an lokalen Relay weiterleiten</string>
+    <string name="send_kind0_to_local_relay_description">Alle empfangenen Profilereignisse (kind 0) an Ihren lokalen Relay senden</string>
     <string name="trusted_relays_title">Vertrauenswürdige Relays</string>
     <string name="trusted_section">Vertrauenswürdige Relays</string>
     <string name="trusted_section_explainer">Relays, denen du vertraust und für die keine Tor-Verbindung erforderlich ist</string>

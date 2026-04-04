@@ -23,7 +23,7 @@ package com.vitorpamplona.quartz.nipACWebRtcCalls
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallAnswerEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallHangupEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallIceCandidateEvent
@@ -36,18 +36,14 @@ class WebRtcCallFactory {
     /** Result for a single-recipient signaling message (P2P). */
     data class Result(
         val msg: Event,
-        val wrap: GiftWrapEvent,
+        val wrap: EphemeralGiftWrapEvent,
     )
 
     /** Result for a signaling message gift-wrapped to multiple recipients (group calls). */
     data class GroupResult(
         val msg: Event,
-        val wraps: List<GiftWrapEvent>,
+        val wraps: List<EphemeralGiftWrapEvent>,
     )
-
-    companion object {
-        const val WRAP_EXPIRATION_SECONDS = 20L
-    }
 
     // ---- P2P (single recipient) methods ----
 
@@ -60,7 +56,7 @@ class WebRtcCallFactory {
     ): Result {
         val template = CallOfferEvent.build(sdpOffer, calleePubKey, callId, callType)
         val signed = signer.sign(template)
-        val wrap = GiftWrapEvent.create(event = signed, recipientPubKey = calleePubKey, expirationDelta = WRAP_EXPIRATION_SECONDS)
+        val wrap = EphemeralGiftWrapEvent.create(event = signed, recipientPubKey = calleePubKey)
         return Result(signed, wrap)
     }
 
@@ -80,7 +76,7 @@ class WebRtcCallFactory {
     ): Result {
         val template = CallOfferEvent.build(sdpOffer, memberPubKeys, callId, callType)
         val signed = signer.sign(template)
-        val wrap = GiftWrapEvent.create(event = signed, recipientPubKey = calleePubKey, expirationDelta = WRAP_EXPIRATION_SECONDS)
+        val wrap = EphemeralGiftWrapEvent.create(event = signed, recipientPubKey = calleePubKey)
         return Result(signed, wrap)
     }
 
@@ -92,7 +88,7 @@ class WebRtcCallFactory {
     ): Result {
         val template = CallAnswerEvent.build(sdpAnswer, callerPubKey, callId)
         val signed = signer.sign(template)
-        val wrap = GiftWrapEvent.create(event = signed, recipientPubKey = callerPubKey, expirationDelta = WRAP_EXPIRATION_SECONDS)
+        val wrap = EphemeralGiftWrapEvent.create(event = signed, recipientPubKey = callerPubKey)
         return Result(signed, wrap)
     }
 
@@ -111,7 +107,7 @@ class WebRtcCallFactory {
     ): Result {
         val template = CallAnswerEvent.build(sdpAnswer, memberPubKeys, callId)
         val signed = signer.sign(template)
-        val wrap = GiftWrapEvent.create(event = signed, recipientPubKey = peerPubKey, expirationDelta = WRAP_EXPIRATION_SECONDS)
+        val wrap = EphemeralGiftWrapEvent.create(event = signed, recipientPubKey = peerPubKey)
         return Result(signed, wrap)
     }
 
@@ -123,7 +119,7 @@ class WebRtcCallFactory {
     ): Result {
         val template = CallIceCandidateEvent.build(candidateJson, peerPubKey, callId)
         val signed = signer.sign(template)
-        val wrap = GiftWrapEvent.create(event = signed, recipientPubKey = peerPubKey, expirationDelta = WRAP_EXPIRATION_SECONDS)
+        val wrap = EphemeralGiftWrapEvent.create(event = signed, recipientPubKey = peerPubKey)
         return Result(signed, wrap)
     }
 
@@ -135,7 +131,7 @@ class WebRtcCallFactory {
     ): Result {
         val template = CallHangupEvent.build(peerPubKey, callId, reason)
         val signed = signer.sign(template)
-        val wrap = GiftWrapEvent.create(event = signed, recipientPubKey = peerPubKey, expirationDelta = WRAP_EXPIRATION_SECONDS)
+        val wrap = EphemeralGiftWrapEvent.create(event = signed, recipientPubKey = peerPubKey)
         return Result(signed, wrap)
     }
 
@@ -147,7 +143,7 @@ class WebRtcCallFactory {
     ): Result {
         val template = CallRejectEvent.build(callerPubKey, callId, reason)
         val signed = signer.sign(template)
-        val wrap = GiftWrapEvent.create(event = signed, recipientPubKey = callerPubKey, expirationDelta = WRAP_EXPIRATION_SECONDS)
+        val wrap = EphemeralGiftWrapEvent.create(event = signed, recipientPubKey = callerPubKey)
         return Result(signed, wrap)
     }
 
@@ -159,7 +155,7 @@ class WebRtcCallFactory {
     ): Result {
         val template = CallRenegotiateEvent.build(sdpOffer, peerPubKey, callId)
         val signed = signer.sign(template)
-        val wrap = GiftWrapEvent.create(event = signed, recipientPubKey = peerPubKey, expirationDelta = WRAP_EXPIRATION_SECONDS)
+        val wrap = EphemeralGiftWrapEvent.create(event = signed, recipientPubKey = peerPubKey)
         return Result(signed, wrap)
     }
 
@@ -178,7 +174,7 @@ class WebRtcCallFactory {
     ): Result {
         val template = CallRenegotiateEvent.build(sdpOffer, memberPubKeys, callId)
         val signed = signer.sign(template)
-        val wrap = GiftWrapEvent.create(event = signed, recipientPubKey = peerPubKey, expirationDelta = WRAP_EXPIRATION_SECONDS)
+        val wrap = EphemeralGiftWrapEvent.create(event = signed, recipientPubKey = peerPubKey)
         return Result(signed, wrap)
     }
 
@@ -187,7 +183,7 @@ class WebRtcCallFactory {
     /**
      * Creates a call offer for a group call.  The signed inner event contains
      * `p` tags for **every** callee so each recipient knows the full group.
-     * A separate [GiftWrapEvent] is produced for each callee.
+     * A separate [EphemeralGiftWrapEvent] is produced for each callee.
      */
     suspend fun createGroupCallOffer(
         sdpOffer: String,
@@ -200,7 +196,7 @@ class WebRtcCallFactory {
         val signed = signer.sign(template)
         val wraps =
             calleePubKeys.map { pubKey ->
-                GiftWrapEvent.create(event = signed, recipientPubKey = pubKey, expirationDelta = WRAP_EXPIRATION_SECONDS)
+                EphemeralGiftWrapEvent.create(event = signed, recipientPubKey = pubKey)
             }
         return GroupResult(signed, wraps)
     }
@@ -208,7 +204,7 @@ class WebRtcCallFactory {
     /**
      * Creates a call answer for a group call.  The signed inner event contains
      * `p` tags for **every** member so each recipient knows the full group.
-     * A separate [GiftWrapEvent] is produced for each member.
+     * A separate [EphemeralGiftWrapEvent] is produced for each member.
      */
     suspend fun createGroupCallAnswer(
         sdpAnswer: String,
@@ -220,7 +216,7 @@ class WebRtcCallFactory {
         val signed = signer.sign(template)
         val wraps =
             memberPubKeys.map { pubKey ->
-                GiftWrapEvent.create(event = signed, recipientPubKey = pubKey, expirationDelta = WRAP_EXPIRATION_SECONDS)
+                EphemeralGiftWrapEvent.create(event = signed, recipientPubKey = pubKey)
             }
         return GroupResult(signed, wraps)
     }
@@ -228,7 +224,7 @@ class WebRtcCallFactory {
     /**
      * Sends a hangup to every peer in a group call.  The signed inner event
      * contains `p` tags for **every** member so each recipient knows the
-     * full group.  A separate [GiftWrapEvent] is produced for each member.
+     * full group.  A separate [EphemeralGiftWrapEvent] is produced for each member.
      */
     suspend fun createGroupHangup(
         peerPubKeys: Set<HexKey>,
@@ -240,7 +236,7 @@ class WebRtcCallFactory {
         val signed = signer.sign(template)
         val wraps =
             peerPubKeys.map { pubKey ->
-                GiftWrapEvent.create(event = signed, recipientPubKey = pubKey, expirationDelta = WRAP_EXPIRATION_SECONDS)
+                EphemeralGiftWrapEvent.create(event = signed, recipientPubKey = pubKey)
             }
         return GroupResult(signed, wraps)
     }
@@ -248,7 +244,7 @@ class WebRtcCallFactory {
     /**
      * Rejects a group call offer.  The signed inner event contains `p` tags
      * for **every** member so each recipient knows the full group.
-     * A separate [GiftWrapEvent] is produced for each member.
+     * A separate [EphemeralGiftWrapEvent] is produced for each member.
      */
     suspend fun createGroupReject(
         memberPubKeys: Set<HexKey>,
@@ -260,7 +256,7 @@ class WebRtcCallFactory {
         val signed = signer.sign(template)
         val wraps =
             memberPubKeys.map { pubKey ->
-                GiftWrapEvent.create(event = signed, recipientPubKey = pubKey, expirationDelta = WRAP_EXPIRATION_SECONDS)
+                EphemeralGiftWrapEvent.create(event = signed, recipientPubKey = pubKey)
             }
         return GroupResult(signed, wraps)
     }

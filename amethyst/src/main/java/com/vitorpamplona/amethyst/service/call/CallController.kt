@@ -33,7 +33,7 @@ import com.vitorpamplona.amethyst.service.notifications.NotificationUtils
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
-import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.WebRtcCallFactory
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallIceCandidateEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallRenegotiateEvent
@@ -77,7 +77,7 @@ class CallController(
     private val context: Context,
     val callManager: CallManager,
     private val scope: CoroutineScope,
-    private val publishWrap: suspend (GiftWrapEvent) -> Unit,
+    private val publishWrap: suspend (EphemeralGiftWrapEvent) -> Unit,
     private val signerProvider: suspend () -> com.vitorpamplona.quartz.nip01Core.signers.NostrSigner,
 ) {
     // ---- Per-peer session state ----
@@ -141,6 +141,11 @@ class CallController(
     // Per-peer video activity monitoring for group calls
     private val perPeerFrameSinks = ConcurrentHashMap<HexKey, VideoSink>()
     private val perPeerLastFrameTimeMs = ConcurrentHashMap<HexKey, AtomicLong>()
+    private var groupVideoMonitorJob: kotlinx.coroutines.Job? = null
+
+    // Set of peer pubkeys that are actively sending video frames
+    private val _activePeerVideos = MutableStateFlow<Set<HexKey>>(emptySet())
+    val activePeerVideos: StateFlow<Set<HexKey>> = _activePeerVideos.asStateFlow()
 
     private val _isAudioMuted = MutableStateFlow(false)
     val isAudioMuted: StateFlow<Boolean> = _isAudioMuted.asStateFlow()
@@ -534,11 +539,37 @@ class CallController(
         Log.d(TAG) { "Renegotiation offer from ${peerPubKey.take(8)}, sdpLength=${sdpOffer.length}" }
 
         scope.launch {
-            ps.session.setRemoteDescription(SessionDescription(SessionDescription.Type.OFFER, sdpOffer))
-            ps.session.createAnswer { sdp ->
-                scope.launch {
-                    callManager.sendRenegotiationAnswer(sdp.description, peerPubKey)
+            val signalingState = ps.session.getSignalingState()
+
+            if (signalingState == PeerConnection.SignalingState.HAVE_LOCAL_OFFER) {
+                // Glare: both sides sent offers simultaneously.
+                // Use pubkey comparison as tiebreaker — higher pubkey wins.
+                val myPubKey = signerProvider().pubKey
+                if (myPubKey > peerPubKey) {
+                    Log.d(TAG) { "Glare with ${peerPubKey.take(8)}: I win (my offer takes priority), ignoring remote offer" }
+                    return@launch
                 }
+                Log.d(TAG) { "Glare with ${peerPubKey.take(8)}: I lose, rolling back my offer" }
+                ps.session.rollback {
+                    scope.launch {
+                        applyRenegotiationOffer(ps, peerPubKey, sdpOffer)
+                    }
+                }
+            } else {
+                applyRenegotiationOffer(ps, peerPubKey, sdpOffer)
+            }
+        }
+    }
+
+    private fun applyRenegotiationOffer(
+        ps: PeerSessionState,
+        peerPubKey: HexKey,
+        sdpOffer: String,
+    ) {
+        ps.session.setRemoteDescription(SessionDescription(SessionDescription.Type.OFFER, sdpOffer))
+        ps.session.createAnswer { sdp ->
+            scope.launch {
+                callManager.sendRenegotiationAnswer(sdp.description, peerPubKey)
             }
         }
     }
@@ -762,13 +793,20 @@ class CallController(
     }
 
     private fun ensureGroupVideoMonitorRunning() {
-        if (remoteVideoMonitorJob != null) return
-        remoteVideoMonitorJob =
+        if (groupVideoMonitorJob != null) return
+        groupVideoMonitorJob =
             scope.launch {
                 while (true) {
                     delay(1500)
                     val now = System.currentTimeMillis()
-                    val anyActive = perPeerLastFrameTimeMs.values.any { now - it.get() < 2000 }
+                    val activePeers = mutableSetOf<HexKey>()
+                    for ((peerKey, lastFrame) in perPeerLastFrameTimeMs) {
+                        if (now - lastFrame.get() < 2000) {
+                            activePeers.add(peerKey)
+                        }
+                    }
+                    _activePeerVideos.value = activePeers
+                    val anyActive = activePeers.isNotEmpty()
                     _isRemoteVideoActive.value = anyActive || (now - lastRemoteFrameTimeMs.get() < 2000)
                 }
             }
@@ -925,6 +963,7 @@ class CallController(
         _isVideoEnabled.value = false
         _isRemoteVideoActive.value = false
         _remoteVideoAspectRatio.value = null
+        _activePeerVideos.value = emptySet()
         videoPausedByProximity = false
     }
 
@@ -947,6 +986,8 @@ class CallController(
     private fun stopRemoteVideoMonitor() {
         remoteVideoMonitorJob?.cancel()
         remoteVideoMonitorJob = null
+        groupVideoMonitorJob?.cancel()
+        groupVideoMonitorJob = null
         try {
             _remoteVideoTrack.value?.removeSink(remoteFrameSink)
         } catch (_: Exception) {

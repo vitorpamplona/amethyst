@@ -516,6 +516,15 @@
     <string name="use_default_servers">Använd standardlistan</string>
     <string name="add_media_server">Lägg till mediaserver</string>
     <string name="delete_media_server">Radera mediaserver</string>
+    <string name="payment_targets">Betalningsmottagare</string>
+    <string name="payment_targets_explainer">Publicera dina betalningsadresser så att andra kan skicka pengar direkt till dig.</string>
+    <string name="payment_targets_section_explainer">Lägg till betalningsadresser för olika nätverk (t.ex. bitcoin, lightning, ethereum).</string>
+    <string name="no_payment_targets_message">Inga betalningsmottagare inställda. Lägg till en nedan ↓</string>
+    <string name="payment_target_type">Nätverkstyp (t.ex. bitcoin)</string>
+    <string name="payment_target_authority">Adress</string>
+    <string name="delete_payment_target">Ta bort betalningsmottagare</string>
+    <string name="no_payment_app_found">Ingen app hittades för att hantera denna betalning. Installera en kompatibel plånbok.</string>
+    <string name="error_dialog_payment_error">Det gick inte att öppna betalningen</string>
     <string name="uploading_state_ready">Ej påbörjad</string>
     <string name="uploading_state_compressing">Komprimerar</string>
     <string name="uploading_state_uploading">Laddar upp</string>
@@ -1219,6 +1228,8 @@
     <string name="reactions_settings_zap_description">Skicka en lightning-betalning till författaren</string>
     <string name="reactions_settings_share">Dela</string>
     <string name="reactions_settings_share_description">Dela denna notis externt</string>
+    <string name="reactions_settings_pay">Betala</string>
+    <string name="reactions_settings_pay_description">Skicka en betalning till författaren via deras betalningsmottagare</string>
     <string name="profile_image_of_user">%1$s Profilbild</string>
     <string name="relay_info">Relä %1$s</string>
     <string name="expand_relay_list">Expandera relälistan</string>
@@ -1296,6 +1307,8 @@
     <string name="search_section_explainer">Lista över reläer som används för sökning och taggning av användare. Taggning och sökning kommer inte att fungera om inga alternativ är tillgängliga.</string>
     <string name="local_section">Lokala reläer</string>
     <string name="local_section_explainer">Lista över reläer som körs i denna enhet.</string>
+    <string name="send_kind0_to_local_relay_title">Vidarebefordra profiler till lokalt relä</string>
+    <string name="send_kind0_to_local_relay_description">Skicka alla mottagna profilhändelser (kind 0) till ditt lokala relä</string>
     <string name="trusted_relays_title">Betrodda reläer</string>
     <string name="trusted_section">Betrodda reläer</string>
     <string name="trusted_section_explainer">Reläer du litar på och inte kräver Tor för</string>

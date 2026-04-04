@@ -127,7 +127,7 @@ sealed class Proposal : TlsSerializable {
 
         override fun encodeTls(writer: TlsWriter) {
             writer.putUint16(proposalType.value)
-            writer.putVector4(extensions)
+            writer.putVectorVarInt(extensions)
         }
     }
 
@@ -144,8 +144,8 @@ sealed class Proposal : TlsSerializable {
         override fun encodeTls(writer: TlsWriter) {
             writer.putUint16(proposalType.value)
             writer.putUint8(pskType)
-            writer.putOpaque2(pskId)
-            writer.putOpaque1(pskNonce)
+            writer.putOpaqueVarInt(pskId)
+            writer.putOpaqueVarInt(pskNonce)
         }
 
         override fun equals(other: Any?): Boolean {
@@ -155,6 +155,56 @@ sealed class Proposal : TlsSerializable {
         }
 
         override fun hashCode(): Int = pskId.contentHashCode()
+    }
+
+    /**
+     * ReInit proposal: reinitialize the group with new parameters (RFC 9420 Section 12.1.5).
+     */
+    data class ReInit(
+        val groupId: ByteArray,
+        val version: Int,
+        val cipherSuite: Int,
+        val extensions: List<Extension>,
+    ) : Proposal() {
+        override val proposalType = ProposalType.REINIT
+
+        override fun encodeTls(writer: TlsWriter) {
+            writer.putUint16(proposalType.value)
+            writer.putOpaqueVarInt(groupId)
+            writer.putUint16(version)
+            writer.putUint16(cipherSuite)
+            writer.putVectorVarInt(extensions)
+        }
+
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other !is ReInit) return false
+            return groupId.contentEquals(other.groupId) && version == other.version && cipherSuite == other.cipherSuite
+        }
+
+        override fun hashCode(): Int = groupId.contentHashCode()
+    }
+
+    /**
+     * ExternalInit proposal: allows an external party to join via external commit (RFC 9420 Section 12.1.6).
+     */
+    data class ExternalInit(
+        val kemOutput: ByteArray,
+    ) : Proposal() {
+        override val proposalType = ProposalType.EXTERNAL_INIT
+
+        override fun encodeTls(writer: TlsWriter) {
+            writer.putUint16(proposalType.value)
+            writer.putOpaqueVarInt(kemOutput)
+        }
+
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other !is ExternalInit) return false
+            return kemOutput.contentEquals(other.kemOutput)
+        }
+
+        override fun hashCode(): Int = kemOutput.contentHashCode()
     }
 
     companion object {
@@ -178,11 +228,24 @@ sealed class Proposal : TlsSerializable {
                 }
 
                 ProposalType.GROUP_CONTEXT_EXTENSIONS -> {
-                    GroupContextExtensions(reader.readVector4 { Extension.decodeTls(it) })
+                    GroupContextExtensions(reader.readVectorVarInt { Extension.decodeTls(it) })
                 }
 
                 ProposalType.PSK -> {
-                    Psk(reader.readUint8(), reader.readOpaque2(), reader.readOpaque1())
+                    Psk(reader.readUint8(), reader.readOpaqueVarInt(), reader.readOpaqueVarInt())
+                }
+
+                ProposalType.REINIT -> {
+                    ReInit(
+                        groupId = reader.readOpaqueVarInt(),
+                        version = reader.readUint16(),
+                        cipherSuite = reader.readUint16(),
+                        extensions = reader.readVectorVarInt { Extension.decodeTls(it) },
+                    )
+                }
+
+                ProposalType.EXTERNAL_INIT -> {
+                    ExternalInit(reader.readOpaqueVarInt())
                 }
 
                 else -> {
@@ -211,7 +274,7 @@ sealed class ProposalOrRef : TlsSerializable {
     ) : ProposalOrRef() {
         override fun encodeTls(writer: TlsWriter) {
             writer.putUint8(2) // reference
-            writer.putOpaque1(proposalRef)
+            writer.putOpaqueVarInt(proposalRef)
         }
 
         override fun equals(other: Any?): Boolean {
@@ -228,7 +291,7 @@ sealed class ProposalOrRef : TlsSerializable {
             val type = reader.readUint8()
             return when (type) {
                 1 -> Inline(Proposal.decodeTls(reader))
-                2 -> Reference(reader.readOpaque1())
+                2 -> Reference(reader.readOpaqueVarInt())
                 else -> throw IllegalArgumentException("Unknown ProposalOrRef type: $type")
             }
         }

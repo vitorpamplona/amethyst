@@ -31,6 +31,7 @@ import coil3.request.allowHardware
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.call.CallManager
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -636,7 +637,7 @@ class EventNotificationConsumer(
     ) {
         if (!account.isFollowing(event.pubKey)) return
 
-        if (TimeUtils.now() - event.createdAt > CallOfferEvent.EXPIRATION_SECONDS) return
+        if (TimeUtils.now() - event.createdAt > CallManager.MAX_EVENT_AGE_SECONDS) return
 
         val callerUser = LocalCache.getUserIfExists(event.pubKey)
         val callerName = callerUser?.toBestDisplayName() ?: event.pubKey.take(8) + "..."

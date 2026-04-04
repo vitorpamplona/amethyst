@@ -36,4 +36,16 @@ expect class AESGCM(
     override fun decrypt(bytesToDecrypt: ByteArray): ByteArray
 
     override fun decryptOrNull(bytesToDecrypt: ByteArray): ByteArray?
+
+    /** AES-GCM encrypt with Additional Authenticated Data (AAD). */
+    fun encrypt(
+        bytesToEncrypt: ByteArray,
+        aad: ByteArray,
+    ): ByteArray
+
+    /** AES-GCM decrypt with Additional Authenticated Data (AAD). */
+    fun decrypt(
+        bytesToDecrypt: ByteArray,
+        aad: ByteArray,
+    ): ByteArray
 }

@@ -64,6 +64,10 @@ class RatchetTree(
         leafIndex: Int,
         leafNode: LeafNode?,
     ) {
+        // Expand tree if needed
+        if (leafIndex >= _leafCount) {
+            _leafCount = leafIndex + 1
+        }
         val nodeIdx = BinaryTree.leafToNode(leafIndex)
         ensureCapacity(nodeIdx)
         nodes[nodeIdx] =
@@ -144,20 +148,34 @@ class RatchetTree(
     }
 
     /**
+     * Compute tree hash using a specific logical leaf count.
+     * Used when the serialized tree has more nodes than the logical tree.
+     */
+    fun treeHashWithLeafCount(logicalLeafCount: Int): ByteArray {
+        val rootIdx = BinaryTree.root(logicalLeafCount)
+        return treeHashNode(rootIdx)
+    }
+
+    /**
      * Recursive tree hash computation per RFC 9420 Section 7.9.
      *
-     * For leaf i:   H(uint8(leaf_type) || leaf_node_or_empty)
-     * For parent i: H(uint8(parent_type) || parent_node_or_empty || left_hash || right_hash)
+     * Leaf:   H(uint8(1) || uint32(leaf_index) || optional<LeafNode>)
+     * Parent: H(uint8(2) || optional<ParentNode> || opaque left_hash<V> || opaque right_hash<V>)
+     *
+     * The uint8 type discriminant (1=leaf, 2=parent) is part of the hash input.
      */
-    private fun treeHashNode(nodeIndex: Int): ByteArray {
+    internal fun treeHashNode(nodeIndex: Int): ByteArray {
         if (BinaryTree.isLeaf(nodeIndex)) {
+            val leafIndex = BinaryTree.nodeToLeaf(nodeIndex)
             val writer = TlsWriter()
+            writer.putUint8(1) // TreeHashInput::Leaf discriminant
+            writer.putUint32(leafIndex.toLong())
             val leaf = getNode(nodeIndex)
             if (leaf != null) {
-                writer.putUint8(1) // leaf present
+                writer.putUint8(1) // present
                 (leaf as TreeNode.Leaf).leafNode.encodeTls(writer)
             } else {
-                writer.putUint8(0) // leaf blank
+                writer.putUint8(0) // blank
             }
             return MlsCryptoProvider.hash(writer.toByteArray())
         }
@@ -166,15 +184,16 @@ class RatchetTree(
         val rightHash = treeHashNode(BinaryTree.right(nodeIndex))
 
         val writer = TlsWriter()
+        writer.putUint8(2) // TreeHashInput::Parent discriminant
         val parent = getNode(nodeIndex)
         if (parent != null) {
-            writer.putUint8(1) // parent present
+            writer.putUint8(1) // present
             (parent as TreeNode.Parent).parentNode.encodeTls(writer)
         } else {
-            writer.putUint8(0) // parent blank
+            writer.putUint8(0) // blank
         }
-        writer.putBytes(leftHash)
-        writer.putBytes(rightHash)
+        writer.putOpaqueVarInt(leftHash)
+        writer.putOpaqueVarInt(rightHash)
 
         return MlsCryptoProvider.hash(writer.toByteArray())
     }
@@ -281,8 +300,16 @@ class RatchetTree(
      */
     fun encodeTls(writer: TlsWriter) {
         val totalNodes = if (_leafCount > 0) BinaryTree.nodeCount(_leafCount) else 0
+
+        // Find rightmost non-blank node to trim trailing blanks (RFC 9420 Section 7.8)
+        var lastPresent = totalNodes - 1
+        while (lastPresent >= 0 && getNode(lastPresent) == null) {
+            lastPresent--
+        }
+        val serializeCount = lastPresent + 1
+
         val inner = TlsWriter()
-        for (i in 0 until totalNodes) {
+        for (i in 0 until serializeCount) {
             val node = getNode(i)
             if (node != null) {
                 inner.putUint8(1)
@@ -291,7 +318,7 @@ class RatchetTree(
                 inner.putUint8(0)
             }
         }
-        writer.putOpaque4(inner.toByteArray())
+        writer.putOpaqueVarInt(inner.toByteArray())
     }
 
     private fun ensureCapacity(nodeIndex: Int) {
@@ -302,7 +329,7 @@ class RatchetTree(
 
     companion object {
         fun decodeTls(reader: TlsReader): RatchetTree {
-            val treeBytes = reader.readOpaque4()
+            val treeBytes = reader.readOpaqueVarInt()
             val treeReader = TlsReader(treeBytes)
             val nodesList = mutableListOf<TreeNode?>()
 
@@ -317,7 +344,8 @@ class RatchetTree(
 
             val tree = RatchetTree()
             tree.nodes.addAll(nodesList)
-            // Compute leaf count from node count: nodes = 2*leaves - 1
+            // Leaf count is derived from the total serialized node count.
+            // nodeCount = 2 * leafCount - 1
             tree._leafCount = (nodesList.size + 1) / 2
             return tree
         }
@@ -365,8 +393,8 @@ data class UpdatePathNode(
     val encryptedPathSecret: List<com.vitorpamplona.quartz.marmot.mls.crypto.HpkeCiphertext>,
 ) : TlsSerializable {
     override fun encodeTls(writer: TlsWriter) {
-        writer.putOpaque2(encryptionKey)
-        writer.putVector4(encryptedPathSecret)
+        writer.putOpaqueVarInt(encryptionKey)
+        writer.putVectorVarInt(encryptedPathSecret)
     }
 
     override fun equals(other: Any?): Boolean {
@@ -384,9 +412,9 @@ data class UpdatePathNode(
     companion object {
         fun decodeTls(reader: TlsReader): UpdatePathNode =
             UpdatePathNode(
-                encryptionKey = reader.readOpaque2(),
+                encryptionKey = reader.readOpaqueVarInt(),
                 encryptedPathSecret =
-                    reader.readVector4 {
+                    reader.readVectorVarInt {
                         com.vitorpamplona.quartz.marmot.mls.crypto.HpkeCiphertext
                             .decodeTls(it)
                     },

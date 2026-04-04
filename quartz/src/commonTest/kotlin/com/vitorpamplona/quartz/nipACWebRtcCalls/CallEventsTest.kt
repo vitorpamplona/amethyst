@@ -104,25 +104,6 @@ class CallEventsTest {
     }
 
     @Test
-    fun callOfferBuildIncludesExpirationTag() {
-        val template =
-            CallOfferEvent.build(
-                sdpOffer = "sdp",
-                calleePubKey = "abc",
-                callId = "id",
-                type = CallType.VOICE,
-                createdAt = 1000L,
-            )
-        val expirationTag = template.tags.firstOrNull { it[0] == "expiration" }
-        assertEquals((1000L + CallOfferEvent.EXPIRATION_SECONDS).toString(), expirationTag?.get(1))
-    }
-
-    @Test
-    fun callOfferExpirationIs20Seconds() {
-        assertEquals(20L, CallOfferEvent.EXPIRATION_SECONDS)
-    }
-
-    @Test
     fun callAnswerBuildContainsSdp() {
         val template =
             CallAnswerEvent.build(
@@ -233,20 +214,6 @@ class CallEventsTest {
             )
         val callTypeTag = template.tags.firstOrNull { it[0] == "call-type" }
         assertEquals("video", callTypeTag?.get(1))
-    }
-
-    @Test
-    fun groupCallOfferBuildIncludesExpirationTag() {
-        val template =
-            CallOfferEvent.build(
-                sdpOffer = "sdp",
-                calleePubKeys = setOf("alice", "bob"),
-                callId = "id",
-                type = CallType.VOICE,
-                createdAt = 2000L,
-            )
-        val expirationTag = template.tags.firstOrNull { it[0] == "expiration" }
-        assertEquals((2000L + CallOfferEvent.EXPIRATION_SECONDS).toString(), expirationTag?.get(1))
     }
 
     @Test

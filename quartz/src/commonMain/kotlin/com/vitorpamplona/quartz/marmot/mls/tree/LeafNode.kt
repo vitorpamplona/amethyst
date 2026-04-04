@@ -34,7 +34,7 @@ sealed class Credential : TlsSerializable {
     ) : Credential() {
         override fun encodeTls(writer: TlsWriter) {
             writer.putUint16(CREDENTIAL_TYPE_BASIC)
-            writer.putOpaque2(identity)
+            writer.putOpaqueVarInt(identity)
         }
 
         override fun equals(other: Any?): Boolean {
@@ -46,6 +46,36 @@ sealed class Credential : TlsSerializable {
         override fun hashCode(): Int = identity.contentHashCode()
     }
 
+    /**
+     * X.509 credential (RFC 9420 Section 5.3).
+     * Contains a chain of DER-encoded X.509 certificates.
+     */
+    data class X509(
+        val certChain: List<ByteArray>,
+    ) : Credential() {
+        override fun encodeTls(writer: TlsWriter) {
+            writer.putUint16(CREDENTIAL_TYPE_X509)
+            writer.putVectorVarInt(
+                certChain.map { cert ->
+                    object : TlsSerializable {
+                        override fun encodeTls(w: TlsWriter) {
+                            w.putOpaqueVarInt(cert)
+                        }
+                    }
+                },
+            )
+        }
+
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other !is X509) return false
+            if (certChain.size != other.certChain.size) return false
+            return certChain.zip(other.certChain).all { (a, b) -> a.contentEquals(b) }
+        }
+
+        override fun hashCode(): Int = certChain.fold(0) { acc, c -> 31 * acc + c.contentHashCode() }
+    }
+
     companion object {
         const val CREDENTIAL_TYPE_BASIC = 1
         const val CREDENTIAL_TYPE_X509 = 2
@@ -53,7 +83,8 @@ sealed class Credential : TlsSerializable {
         fun decodeTls(reader: TlsReader): Credential {
             val type = reader.readUint16()
             return when (type) {
-                CREDENTIAL_TYPE_BASIC -> Basic(reader.readOpaque2())
+                CREDENTIAL_TYPE_BASIC -> Basic(reader.readOpaqueVarInt())
+                CREDENTIAL_TYPE_X509 -> X509(reader.readVectorVarInt { it.readOpaqueVarInt() })
                 else -> throw IllegalArgumentException("Unknown credential type: $type")
             }
         }
@@ -75,27 +106,27 @@ data class Capabilities(
         // versions<V><2..255>
         val versionsWriter = TlsWriter()
         for (v in versions) versionsWriter.putUint16(v)
-        writer.putOpaque1(versionsWriter.toByteArray())
+        writer.putOpaqueVarInt(versionsWriter.toByteArray())
 
         // ciphersuites<V><2..255>
         val csWriter = TlsWriter()
         for (cs in ciphersuites) csWriter.putUint16(cs)
-        writer.putOpaque1(csWriter.toByteArray())
+        writer.putOpaqueVarInt(csWriter.toByteArray())
 
         // extensions<V><2..255>
         val extWriter = TlsWriter()
         for (e in extensions) extWriter.putUint16(e)
-        writer.putOpaque1(extWriter.toByteArray())
+        writer.putOpaqueVarInt(extWriter.toByteArray())
 
         // proposals<V><2..255>
         val propWriter = TlsWriter()
         for (p in proposals) propWriter.putUint16(p)
-        writer.putOpaque1(propWriter.toByteArray())
+        writer.putOpaqueVarInt(propWriter.toByteArray())
 
         // credentials<V><2..255>
         val credWriter = TlsWriter()
         for (c in credentials) credWriter.putUint16(c)
-        writer.putOpaque1(credWriter.toByteArray())
+        writer.putOpaqueVarInt(credWriter.toByteArray())
     }
 
     companion object {
@@ -108,11 +139,11 @@ data class Capabilities(
             }
 
             return Capabilities(
-                versions = readUint16List(reader.readOpaque1()),
-                ciphersuites = readUint16List(reader.readOpaque1()),
-                extensions = readUint16List(reader.readOpaque1()),
-                proposals = readUint16List(reader.readOpaque1()),
-                credentials = readUint16List(reader.readOpaque1()),
+                versions = readUint16List(reader.readOpaqueVarInt()),
+                ciphersuites = readUint16List(reader.readOpaqueVarInt()),
+                extensions = readUint16List(reader.readOpaqueVarInt()),
+                proposals = readUint16List(reader.readOpaqueVarInt()),
+                credentials = readUint16List(reader.readOpaqueVarInt()),
             )
         }
     }
@@ -128,7 +159,7 @@ data class Extension(
 ) : TlsSerializable {
     override fun encodeTls(writer: TlsWriter) {
         writer.putUint16(extensionType)
-        writer.putOpaque2(extensionData)
+        writer.putOpaqueVarInt(extensionData)
     }
 
     override fun equals(other: Any?): Boolean {
@@ -147,7 +178,7 @@ data class Extension(
         fun decodeTls(reader: TlsReader): Extension =
             Extension(
                 extensionType = reader.readUint16(),
-                extensionData = reader.readOpaque2(),
+                extensionData = reader.readOpaqueVarInt(),
             )
     }
 }
@@ -207,12 +238,13 @@ data class LeafNode(
     val capabilities: Capabilities,
     val leafNodeSource: LeafNodeSource,
     val lifetime: Lifetime?,
+    val parentHash: ByteArray? = null,
     val extensions: List<Extension>,
     val signature: ByteArray,
 ) : TlsSerializable {
     override fun encodeTls(writer: TlsWriter) {
-        writer.putOpaque2(encryptionKey)
-        writer.putOpaque2(signatureKey)
+        writer.putOpaqueVarInt(encryptionKey)
+        writer.putOpaqueVarInt(signatureKey)
         writer.putStruct(credential)
         writer.putStruct(capabilities)
         writer.putUint8(leafNodeSource.value)
@@ -222,11 +254,16 @@ data class LeafNode(
                 lifetime?.encodeTls(writer) ?: Lifetime(0, 0).encodeTls(writer)
             }
 
-            LeafNodeSource.UPDATE, LeafNodeSource.COMMIT -> {} // empty
+            LeafNodeSource.UPDATE -> {}
+
+            // empty
+            LeafNodeSource.COMMIT -> {
+                writer.putOpaqueVarInt(parentHash ?: ByteArray(0))
+            }
         }
 
-        writer.putVector2(extensions)
-        writer.putOpaque2(signature)
+        writer.putVectorVarInt(extensions)
+        writer.putOpaqueVarInt(signature)
     }
 
     /**
@@ -239,8 +276,8 @@ data class LeafNode(
         leafIndex: Int? = null,
     ): ByteArray {
         val writer = TlsWriter()
-        writer.putOpaque2(encryptionKey)
-        writer.putOpaque2(signatureKey)
+        writer.putOpaqueVarInt(encryptionKey)
+        writer.putOpaqueVarInt(signatureKey)
         writer.putStruct(credential)
         writer.putStruct(capabilities)
         writer.putUint8(leafNodeSource.value)
@@ -250,16 +287,20 @@ data class LeafNode(
                 lifetime?.encodeTls(writer) ?: Lifetime(0, 0).encodeTls(writer)
             }
 
-            LeafNodeSource.UPDATE, LeafNodeSource.COMMIT -> {}
+            LeafNodeSource.UPDATE -> {}
+
+            LeafNodeSource.COMMIT -> {
+                writer.putOpaqueVarInt(parentHash ?: ByteArray(0))
+            }
         }
 
-        writer.putVector2(extensions)
+        writer.putVectorVarInt(extensions)
 
         // Context for update/commit
         if (leafNodeSource != LeafNodeSource.KEY_PACKAGE) {
             requireNotNull(groupId) { "group_id required for update/commit LeafNode" }
             requireNotNull(leafIndex) { "leaf_index required for update/commit LeafNode" }
-            writer.putOpaque1(groupId)
+            writer.putOpaqueVarInt(groupId)
             writer.putUint32(leafIndex.toLong())
         }
 
@@ -288,20 +329,30 @@ data class LeafNode(
 
     companion object {
         fun decodeTls(reader: TlsReader): LeafNode {
-            val encryptionKey = reader.readOpaque2()
-            val signatureKey = reader.readOpaque2()
+            val encryptionKey = reader.readOpaqueVarInt()
+            val signatureKey = reader.readOpaqueVarInt()
             val credential = Credential.decodeTls(reader)
             val capabilities = Capabilities.decodeTls(reader)
             val source = LeafNodeSource.fromValue(reader.readUint8())
 
-            val lifetime =
-                when (source) {
-                    LeafNodeSource.KEY_PACKAGE -> Lifetime.decodeTls(reader)
-                    else -> null
+            var lifetime: Lifetime? = null
+            var parentHash: ByteArray? = null
+
+            when (source) {
+                LeafNodeSource.KEY_PACKAGE -> {
+                    lifetime = Lifetime.decodeTls(reader)
                 }
 
-            val extensions = reader.readVector2 { Extension.decodeTls(it) }
-            val signature = reader.readOpaque2()
+                LeafNodeSource.UPDATE -> {}
+
+                // empty
+                LeafNodeSource.COMMIT -> {
+                    parentHash = reader.readOpaqueVarInt()
+                }
+            }
+
+            val extensions = reader.readVectorVarInt { Extension.decodeTls(it) }
+            val signature = reader.readOpaqueVarInt()
 
             return LeafNode(
                 encryptionKey = encryptionKey,
@@ -310,6 +361,7 @@ data class LeafNode(
                 capabilities = capabilities,
                 leafNodeSource = source,
                 lifetime = lifetime,
+                parentHash = parentHash,
                 extensions = extensions,
                 signature = signature,
             )

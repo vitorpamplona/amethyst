@@ -93,35 +93,49 @@ object BinaryTree {
         nodeIndex: Int,
         nodeCount: Int,
     ): Int {
-        require(nodeIndex < nodeCount) { "Node $nodeIndex out of range for tree with $nodeCount nodes" }
-
+        // For left-balanced trees with non-power-of-2 leaves,
+        // the parent might be beyond nodeCount. In that case,
+        // the node's parent is the next valid ancestor.
         val k = level(nodeIndex)
-        // Try going up: parent is at index ^ (1 << (k+1)) + (1 << k)
-        // But we need to handle the root and boundary cases
         val b = (nodeIndex shr (k + 1)) and 1
         val p =
             if (b == 0) {
-                // Node is a left child
                 nodeIndex + (1 shl k)
             } else {
-                // Node is a right child
                 nodeIndex - (1 shl k)
             }
 
         return if (p < nodeCount) {
             p
         } else {
-            // If parent is out of range, we're at the edge of a non-full tree
-            // Go up further by recursing
-            parent(p, nodeCount)
+            // Parent is out of range. This node is at the rightmost
+            // edge of a non-full tree. Walk up through virtual parents
+            // until we find one within range.
+            parentInRange(p, nodeCount)
         }
+    }
+
+    private fun parentInRange(
+        nodeIndex: Int,
+        nodeCount: Int,
+    ): Int {
+        val k = level(nodeIndex)
+        val b = (nodeIndex shr (k + 1)) and 1
+        val p =
+            if (b == 0) {
+                nodeIndex + (1 shl k)
+            } else {
+                nodeIndex - (1 shl k)
+            }
+        return if (p < nodeCount) p else parentInRange(p, nodeCount)
     }
 
     /** Root node index for a tree with [leafCount] leaves */
     fun root(leafCount: Int): Int {
-        val n = nodeCount(leafCount)
-        // Root is the node with the highest level
-        return (1 shl log2(leafCount)) - 1
+        if (leafCount <= 1) return 0
+        // Root of a left-balanced tree: (1 << ceil(log2(n))) - 1
+        val ceilLog2 = if (leafCount and (leafCount - 1) == 0) log2(leafCount) else log2(leafCount) + 1
+        return (1 shl ceilLog2) - 1
     }
 
     /**
