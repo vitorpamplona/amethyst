@@ -37,7 +37,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.service.broadcast.BroadcastEvent
-import com.vitorpamplona.amethyst.service.broadcast.BroadcastTracker
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.collections.immutable.ImmutableList
@@ -69,8 +68,12 @@ fun DisplayBroadcastProgress(accountViewModel: AccountViewModel) {
 
         LaunchedEffect(activeBroadcasts) {
             // this effect gets restarted every time the active broadcast changes
-            delay((BroadcastTracker.TIMEOUT_SECONDS + 1) * 1000)
-            accountViewModel.broadcastTracker.clear()
+            val allComplete = activeBroadcasts.all { it.isComplete }
+            if (allComplete) {
+                // All relays responded — dismiss quickly
+                delay(3_000)
+                accountViewModel.broadcastTracker.clear()
+            }
         }
     } else {
         MultiBroadcastDetailsSheet(
