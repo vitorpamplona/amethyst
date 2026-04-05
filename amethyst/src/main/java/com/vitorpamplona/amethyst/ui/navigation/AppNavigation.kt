@@ -71,6 +71,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.list.metadat
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.membershipManagement.ArticleBookmarkListManagementScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.membershipManagement.PostBookmarkListManagementScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.old.OldBookmarkListScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.AddMemberScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.CreateGroupScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.MarmotGroupChatScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.MarmotGroupInfoScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.MarmotGroupListScreen
@@ -288,6 +290,9 @@ fun BuildNavigation(
         composableFromEnd<Route.MarmotGroupList> { MarmotGroupListScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.MarmotGroupChat> { MarmotGroupChatScreen(it.nostrGroupId, accountViewModel, nav) }
         composableFromEndArgs<Route.MarmotGroupInfo> { MarmotGroupInfoScreen(it.nostrGroupId, accountViewModel, nav) }
+
+        composableFromBottom<Route.CreateMarmotGroup> { CreateGroupScreen(accountViewModel, nav) }
+        composableFromBottomArgs<Route.MarmotGroupAddMember> { AddMemberScreen(it.nostrGroupId, accountViewModel, nav) }
 
         composableFromEndArgs<Route.PublicChatChannel> {
             PublicChatChannelScreen(it.id, it.draftId, it.replyTo, accountViewModel, nav)

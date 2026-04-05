@@ -80,7 +80,6 @@ fun MarmotGroupInfoScreen(
     val displayName by chatroom.displayName.collectAsStateWithLifecycle()
     var members by remember { mutableStateOf(emptyList<GroupMemberInfo>()) }
     var showLeaveDialog by remember { mutableStateOf(false) }
-    var showAddMemberDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val myPubkey = accountViewModel.account.signer.pubKey
 
@@ -102,7 +101,7 @@ fun MarmotGroupInfoScreen(
                 },
                 title = { Text("Group Info") },
                 actions = {
-                    IconButton(onClick = { showAddMemberDialog = true }) {
+                    IconButton(onClick = { nav.nav(Route.MarmotGroupAddMember(nostrGroupId)) }) {
                         Icon(
                             imageVector = Icons.Default.GroupAdd,
                             contentDescription = "Add Member",
@@ -216,14 +215,6 @@ fun MarmotGroupInfoScreen(
                 nav.nav(Route.MarmotGroupList)
             },
             onDismiss = { showLeaveDialog = false },
-        )
-    }
-
-    if (showAddMemberDialog) {
-        AddMemberDialog(
-            nostrGroupId = nostrGroupId,
-            accountViewModel = accountViewModel,
-            onDismiss = { showAddMemberDialog = false },
         )
     }
 }

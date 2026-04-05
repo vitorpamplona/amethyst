@@ -70,7 +70,6 @@ fun MarmotGroupListScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    var showCreateGroupDialog by remember { mutableStateOf(false) }
     var groupList by remember { mutableStateOf(listOf<Pair<HexKey, MarmotGroupChatroom>>()) }
     val scope = rememberCoroutineScope()
 
@@ -115,7 +114,7 @@ fun MarmotGroupListScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showCreateGroupDialog = true }) {
+            FloatingActionButton(onClick = { nav.nav(Route.CreateMarmotGroup) }) {
                 Icon(Icons.Default.Add, contentDescription = "Create Group")
             }
         },
@@ -154,17 +153,6 @@ fun MarmotGroupListScreen(
                 }
             }
         }
-    }
-
-    if (showCreateGroupDialog) {
-        CreateGroupDialog(
-            accountViewModel = accountViewModel,
-            onDismiss = { showCreateGroupDialog = false },
-            onGroupCreated = { groupId ->
-                showCreateGroupDialog = false
-                nav.nav(Route.MarmotGroupChat(groupId))
-            },
-        )
     }
 }
 

@@ -21,12 +21,14 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -35,66 +37,72 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.navigation.topbars.CreatingTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlin.random.Random
 
 @Composable
-fun CreateGroupDialog(
+fun CreateGroupScreen(
     accountViewModel: AccountViewModel,
-    onDismiss: () -> Unit,
-    onGroupCreated: (HexKey) -> Unit,
+    nav: INav,
 ) {
     var groupName by remember { mutableStateOf("") }
     var isCreating by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Create Marmot Group") },
-        text = {
-            Column {
-                OutlinedTextField(
-                    value = groupName,
-                    onValueChange = { groupName = it },
-                    label = { Text("Group Name") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                )
-                Text(
-                    "A new MLS group will be created. You can add members after.",
-                    modifier = Modifier.padding(top = 8.dp),
-                    style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
+    Scaffold(
+        topBar = {
+            CreatingTopBar(
+                onCancel = { nav.popBack() },
+                onPost = {
                     isCreating = true
                     scope.launch(Dispatchers.IO) {
                         val nostrGroupId = Random.nextBytes(32).joinToString("") { "%02x".format(it) }
                         accountViewModel.createMarmotGroup(nostrGroupId)
-                        // Set display name locally
                         if (groupName.isNotBlank()) {
                             accountViewModel.account.marmotGroupList
                                 .getOrCreateGroup(nostrGroupId)
                                 .displayName.value = groupName
                         }
-                        onGroupCreated(nostrGroupId)
+                        nav.nav(Route.MarmotGroupChat(nostrGroupId))
                     }
                 },
-                enabled = !isCreating,
-            ) {
-                Text(if (isCreating) "Creating..." else "Create")
-            }
+                isActive = { !isCreating },
+            )
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        },
-    )
+    ) { padding ->
+        Column(
+            modifier =
+                Modifier
+                    .padding(padding)
+                    .consumeWindowInsets(padding)
+                    .imePadding()
+                    .padding(horizontal = 16.dp),
+        ) {
+            Text(
+                text = "Create Marmot Group",
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.padding(top = 16.dp, bottom = 8.dp),
+            )
+
+            OutlinedTextField(
+                value = groupName,
+                onValueChange = { groupName = it },
+                label = { Text("Group Name") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+            )
+
+            Text(
+                "A new MLS group will be created. You can add members after.",
+                modifier = Modifier.padding(top = 12.dp),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
 }

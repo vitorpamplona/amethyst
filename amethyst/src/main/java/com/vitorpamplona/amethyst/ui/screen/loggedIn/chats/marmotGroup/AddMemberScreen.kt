@@ -21,13 +21,14 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -36,6 +37,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.topbars.ActionTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
@@ -45,55 +48,22 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Composable
-fun AddMemberDialog(
+fun AddMemberScreen(
     nostrGroupId: HexKey,
     accountViewModel: AccountViewModel,
-    onDismiss: () -> Unit,
+    nav: INav,
 ) {
     var memberInput by remember { mutableStateOf("") }
     var statusMessage by remember { mutableStateOf<String?>(null) }
     var isAdding by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Add Member") },
-        text = {
-            Column {
-                OutlinedTextField(
-                    value = memberInput,
-                    onValueChange = {
-                        memberInput = it
-                        statusMessage = null
-                    },
-                    label = { Text("npub or hex pubkey") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                )
-                Text(
-                    "Enter the member's npub or hex public key. " +
-                        "They must have published a KeyPackage (kind:30443) to be added.",
-                    modifier = Modifier.padding(top = 8.dp),
-                    style = MaterialTheme.typography.bodySmall,
-                )
-                if (statusMessage != null) {
-                    Text(
-                        text = statusMessage!!,
-                        modifier = Modifier.padding(top = 8.dp),
-                        style = MaterialTheme.typography.bodySmall,
-                        color =
-                            if (statusMessage!!.startsWith("Error")) {
-                                MaterialTheme.colorScheme.error
-                            } else {
-                                MaterialTheme.colorScheme.primary
-                            },
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
+    Scaffold(
+        topBar = {
+            ActionTopBar(
+                postRes = com.vitorpamplona.amethyst.R.string.add,
+                onCancel = { nav.popBack() },
+                onPost = {
                     isAdding = true
                     statusMessage = "Looking up KeyPackage..."
                     scope.launch(Dispatchers.IO) {
@@ -106,8 +76,8 @@ fun AddMemberDialog(
                             }
                             statusMessage = "Fetching KeyPackage for ${pubkey.take(8)}..."
                             // TODO: Fetch KeyPackage from relays and call addMarmotGroupMember
-                            // For now, show that the flow would proceed here
-                            statusMessage = "Error: KeyPackage fetch not yet implemented. " +
+                            statusMessage =
+                                "Error: KeyPackage fetch not yet implemented. " +
                                 "The member's KeyPackage (kind:30443) must be fetched from relays."
                             isAdding = false
                         } catch (e: Exception) {
@@ -116,28 +86,67 @@ fun AddMemberDialog(
                         }
                     }
                 },
-                enabled = !isAdding && memberInput.isNotBlank(),
-            ) {
-                Text(if (isAdding) "Adding..." else "Add")
-            }
+                isActive = { !isAdding && memberInput.isNotBlank() },
+            )
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
+    ) { padding ->
+        Column(
+            modifier =
+                Modifier
+                    .padding(padding)
+                    .consumeWindowInsets(padding)
+                    .imePadding()
+                    .padding(horizontal = 16.dp),
+        ) {
+            Text(
+                text = "Add Member",
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.padding(top = 16.dp, bottom = 8.dp),
+            )
+
+            OutlinedTextField(
+                value = memberInput,
+                onValueChange = {
+                    memberInput = it
+                    statusMessage = null
+                },
+                label = { Text("npub or hex pubkey") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+            )
+
+            Text(
+                "Enter the member's npub or hex public key. " +
+                    "They must have published a KeyPackage (kind:30443) to be added.",
+                modifier = Modifier.padding(top = 12.dp),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            if (statusMessage != null) {
+                Text(
+                    text = statusMessage!!,
+                    modifier = Modifier.padding(top = 12.dp),
+                    style = MaterialTheme.typography.bodySmall,
+                    color =
+                        if (statusMessage!!.startsWith("Error")) {
+                            MaterialTheme.colorScheme.error
+                        } else {
+                            MaterialTheme.colorScheme.primary
+                        },
+                )
             }
-        },
-    )
+        }
+    }
 }
 
 private fun resolvePubkey(input: String): HexKey? {
     val trimmed = input.trim()
 
-    // Try hex pubkey
     if (trimmed.length == 64 && trimmed.all { it in '0'..'9' || it in 'a'..'f' }) {
         return trimmed
     }
 
-    // Try bech32 (npub / nprofile)
     val entity =
         Nip19Parser.uriToRoute("nostr:$trimmed")?.entity
             ?: Nip19Parser.uriToRoute(trimmed)?.entity
