@@ -831,7 +831,7 @@ fun ShareMediaAction(
                                         enabled = !isDownloadingVideo.value,
                                     ) {
                                         isDownloadingVideo.value = true
-                                        accountViewModel.toastManager.toast(R.string.share_video, R.string.downloading_video_for_sharing)
+                                        Toast.makeText(context, stringRes(context, R.string.downloading_video_for_sharing), Toast.LENGTH_SHORT).show()
                                         accountViewModel.viewModelScope.launch {
                                             shareVideoFile(
                                                 context = context,
