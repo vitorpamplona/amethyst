@@ -24,6 +24,7 @@ import android.content.ContentResolver
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.marmot.AndroidMlsGroupStateStore
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -43,6 +44,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
+import java.io.File
 
 class AccountCacheState(
     val geolocationFlow: () -> StateFlow<LocationState.LocationResult>,
@@ -51,6 +53,7 @@ class AccountCacheState(
     val otsResolverBuilder: () -> OtsResolver,
     val cache: LocalCache,
     val client: INostrClient,
+    val rootFilesDir: () -> File = { File("") },
 ) {
     val accounts = MutableStateFlow<Map<HexKey, Account>>(emptyMap())
 
@@ -94,6 +97,13 @@ class AccountCacheState(
 
         val signerWithClientTag = NostrSignerWithClientTag(signer, CLIENT_TAG_NAME)
 
+        val mlsStore =
+            try {
+                AndroidMlsGroupStateStore(rootFilesDir())
+            } catch (_: Exception) {
+                null
+            }
+
         return Account(
             settings = accountSettings,
             signer = signerWithClientTag,
@@ -110,6 +120,7 @@ class AccountCacheState(
                             Log.e("AccountCacheState", "Account ${signer.pubKey} caught exception: ${throwable.message}", throwable)
                         },
                 ),
+            mlsGroupStateStore = mlsStore,
         ).also { newAccount ->
             accounts.update { existingAccounts ->
                 existingAccounts.plus(Pair(signer.pubKey, newAccount))

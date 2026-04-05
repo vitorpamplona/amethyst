@@ -71,6 +71,7 @@ class MarmotWelcomeSender(
         recipientPubKey: HexKey,
         keyPackageEventId: HexKey,
         relays: List<NormalizedRelayUrl>,
+        nostrGroupId: HexKey? = null,
     ): WelcomeDelivery? {
         val welcomeBytes = commitResult.welcomeBytes ?: return null
 
@@ -83,6 +84,7 @@ class MarmotWelcomeSender(
                 relays = relays,
                 recipientPubKey = recipientPubKey,
                 signer = signer,
+                nostrGroupId = nostrGroupId,
             )
 
         return WelcomeDelivery(
@@ -109,6 +111,7 @@ class MarmotWelcomeSender(
         recipientPubKey: HexKey,
         keyPackageEventId: HexKey,
         relays: List<NormalizedRelayUrl>,
+        nostrGroupId: HexKey? = null,
     ): WelcomeDelivery {
         val welcomeBase64 = Base64.encode(welcomeBytes)
 
@@ -119,6 +122,7 @@ class MarmotWelcomeSender(
                 relays = relays,
                 recipientPubKey = recipientPubKey,
                 signer = signer,
+                nostrGroupId = nostrGroupId,
             )
 
         return WelcomeDelivery(

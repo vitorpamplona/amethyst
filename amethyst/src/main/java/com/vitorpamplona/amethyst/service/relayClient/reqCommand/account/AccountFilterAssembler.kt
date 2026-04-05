@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.drafts.AccountDraftsEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.follows.AccountFollowsLoaderSubAssembler
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.marmot.MarmotGroupEventsEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.metadata.AccountMetadataEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip01Notifications.AccountNotificationsEoseFromInboxRelaysManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip01Notifications.AccountNotificationsEoseFromRandomRelaysManager
@@ -64,6 +65,7 @@ class AccountFilterAssembler(
             AccountDraftsEoseManager(client, ::allKeys),
             AccountNotificationsEoseFromInboxRelaysManager(client, ::allKeys),
             AccountNotificationsEoseFromRandomRelaysManager(client, ::allKeys),
+            MarmotGroupEventsEoseManager(client, ::allKeys),
         )
 
     override fun invalidateKeys() = invalidateFilters()
