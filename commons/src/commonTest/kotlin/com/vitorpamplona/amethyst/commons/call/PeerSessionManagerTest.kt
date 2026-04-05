@@ -47,7 +47,7 @@ class PeerSessionManagerTest {
     // ========================================================================
 
     @Test
-    fun iceCandidate_noSession_bufferedGlobally() {
+    fun iceCandidateNoSessionBufferedGlobally() {
         val manager = PeerSessionManager(localPubKey = bob)
         val candidate = makeCandidate("early-candidate")
 
@@ -58,7 +58,7 @@ class PeerSessionManagerTest {
     }
 
     @Test
-    fun multipleGlobalCandidates_bufferedForSamePeer() {
+    fun multipleGlobalCandidatesBufferedForSamePeer() {
         val manager = PeerSessionManager(localPubKey = bob)
 
         manager.routeIceCandidate(alice, makeCandidate("c1"))
@@ -69,7 +69,7 @@ class PeerSessionManagerTest {
     }
 
     @Test
-    fun globalBuffer_drainedOnSessionCreation() {
+    fun globalBufferDrainedOnSessionCreation() {
         val manager = PeerSessionManager(localPubKey = bob)
         val fake = FakePeerSession()
 
@@ -88,7 +88,7 @@ class PeerSessionManagerTest {
     }
 
     @Test
-    fun globalBuffer_drainedAndFlushedAfterRemoteDescription() {
+    fun globalBufferDrainedAndFlushedAfterRemoteDescription() {
         val manager = PeerSessionManager(localPubKey = bob)
         val fake = FakePeerSession()
 
@@ -115,7 +115,7 @@ class PeerSessionManagerTest {
     // ========================================================================
 
     @Test
-    fun iceCandidate_sessionExists_remoteDescNotSet_bufferedPerSession() {
+    fun iceCandidateSessionExistsRemoteDescNotSetBufferedPerSession() {
         val manager = PeerSessionManager(localPubKey = bob)
         val fake = FakePeerSession()
         manager.registerSession(alice, fake)
@@ -128,7 +128,7 @@ class PeerSessionManagerTest {
     }
 
     @Test
-    fun iceCandidate_sessionExists_remoteDescSet_addedDirectly() {
+    fun iceCandidateSessionExistsRemoteDescSetAddedDirectly() {
         val manager = PeerSessionManager(localPubKey = bob)
         val fake = FakePeerSession()
         manager.registerSession(alice, fake)
@@ -142,7 +142,7 @@ class PeerSessionManagerTest {
     }
 
     @Test
-    fun perSessionBuffer_notClearedOnSessionCreation_onlyOnFlush() {
+    fun perSessionBufferNotClearedOnSessionCreationOnlyOnFlush() {
         val manager = PeerSessionManager(localPubKey = bob)
         val fake = FakePeerSession()
 
@@ -171,7 +171,7 @@ class PeerSessionManagerTest {
     // ========================================================================
 
     @Test
-    fun candidatesBufferedWhileRinging_notLost_whenAccepting() {
+    fun candidatesBufferedWhileRingingNotLostWhenAccepting() {
         val manager = PeerSessionManager(localPubKey = bob)
         val fake = FakePeerSession()
 
@@ -198,7 +198,7 @@ class PeerSessionManagerTest {
     // ========================================================================
 
     @Test
-    fun globalBuffers_areSeparatePerPeer() {
+    fun globalBuffersAreSeparatePerPeer() {
         val manager = PeerSessionManager(localPubKey = bob)
 
         manager.routeIceCandidate(alice, makeCandidate("alice-c"))
@@ -209,7 +209,7 @@ class PeerSessionManagerTest {
     }
 
     @Test
-    fun registeringOneSession_doesNotDrainOtherPeersGlobalBuffer() {
+    fun registeringOneSessionDoesNotDrainOtherPeersGlobalBuffer() {
         val manager = PeerSessionManager(localPubKey = bob)
 
         manager.routeIceCandidate(alice, makeCandidate("alice-c"))
@@ -226,7 +226,7 @@ class PeerSessionManagerTest {
     // ========================================================================
 
     @Test
-    fun renegotiation_noGlare_acceptsRemoteOffer() {
+    fun renegotiationNoGlareAcceptsRemoteOffer() {
         val manager = PeerSessionManager(localPubKey = bob)
         val fake = FakePeerSession(signalingState = SignalingState.STABLE)
         manager.registerSession(alice, fake)
@@ -242,7 +242,7 @@ class PeerSessionManagerTest {
     }
 
     @Test
-    fun renegotiationGlare_localWins_higherPubkey() {
+    fun renegotiationGlareLocalWinsHigherPubkey() {
         // carol (higher) is local, alice (lower) is remote → carol wins
         val manager = PeerSessionManager(localPubKey = carol)
         val fake = FakePeerSession(signalingState = SignalingState.HAVE_LOCAL_OFFER)
@@ -257,7 +257,7 @@ class PeerSessionManagerTest {
     }
 
     @Test
-    fun renegotiationGlare_remoteWins_rollback() {
+    fun renegotiationGlareRemoteWinsRollback() {
         // alice (lower) is local, carol (higher) is remote → carol wins, alice rolls back
         val manager = PeerSessionManager(localPubKey = alice)
         val fake = FakePeerSession(signalingState = SignalingState.HAVE_LOCAL_OFFER)
@@ -273,7 +273,7 @@ class PeerSessionManagerTest {
     }
 
     @Test
-    fun renegotiationGlare_noSession_returnsNoSession() {
+    fun renegotiationGlareNoSessionReturnsNoSession() {
         val manager = PeerSessionManager(localPubKey = bob)
 
         val resolution =
@@ -287,7 +287,7 @@ class PeerSessionManagerTest {
     // ========================================================================
 
     @Test
-    fun meshInitiation_lowerPubkey_shouldInitiate() {
+    fun meshInitiationLowerPubkeyShouldInitiate() {
         val manager = PeerSessionManager(localPubKey = alice)
 
         assertTrue(manager.shouldInitiateOffer(bob), "Lower pubkey (alice) should initiate to higher (bob)")
@@ -295,7 +295,7 @@ class PeerSessionManagerTest {
     }
 
     @Test
-    fun meshInitiation_higherPubkey_shouldWait() {
+    fun meshInitiationHigherPubkeyShouldWait() {
         val manager = PeerSessionManager(localPubKey = carol)
 
         assertFalse(manager.shouldInitiateOffer(alice), "Higher pubkey (carol) should NOT initiate to lower (alice)")
@@ -307,7 +307,7 @@ class PeerSessionManagerTest {
     // ========================================================================
 
     @Test
-    fun routeAnswer_noSession_returnsNoSession() {
+    fun routeAnswerNoSessionReturnsNoSession() {
         val manager = PeerSessionManager(localPubKey = alice)
 
         val action = manager.routeAnswer(bob, "answer-sdp")
@@ -316,7 +316,7 @@ class PeerSessionManagerTest {
     }
 
     @Test
-    fun routeAnswer_wrongSignalingState_ignored() {
+    fun routeAnswerWrongSignalingStateIgnored() {
         val manager = PeerSessionManager(localPubKey = alice)
         val fake = FakePeerSession(signalingState = SignalingState.STABLE)
         manager.registerSession(bob, fake)
@@ -328,7 +328,7 @@ class PeerSessionManagerTest {
     }
 
     @Test
-    fun routeAnswer_havingLocalOffer_applied() {
+    fun routeAnswerHavingLocalOfferApplied() {
         val manager = PeerSessionManager(localPubKey = alice)
         val fake = FakePeerSession(signalingState = SignalingState.HAVE_LOCAL_OFFER)
         manager.registerSession(bob, fake)
@@ -351,7 +351,7 @@ class PeerSessionManagerTest {
     // ========================================================================
 
     @Test
-    fun removeSession_disposesAndCleansUp() {
+    fun removeSessionDisposesAndCleansUp() {
         val manager = PeerSessionManager(localPubKey = bob)
         val fake = FakePeerSession()
         manager.registerSession(alice, fake)
@@ -365,7 +365,7 @@ class PeerSessionManagerTest {
     }
 
     @Test
-    fun disposeAll_disposesAllSessions() {
+    fun disposeAllDisposesAllSessions() {
         val manager = PeerSessionManager(localPubKey = bob)
         val fakeAlice = FakePeerSession()
         val fakeCarol = FakePeerSession()
@@ -384,7 +384,7 @@ class PeerSessionManagerTest {
     // ========================================================================
 
     @Test
-    fun fullP2PFlow_iceBufferingThroughAllPhases() {
+    fun fullP2PFlowIceBufferingThroughAllPhases() {
         val manager = PeerSessionManager(localPubKey = bob)
         val fake = FakePeerSession()
 
@@ -417,7 +417,7 @@ class PeerSessionManagerTest {
     // ========================================================================
 
     @Test
-    fun groupCall_meshSetup_withIceBuffering() {
+    fun groupCallMeshSetupWithIceBuffering() {
         // Bob is local. Alice (caller) and Carol (other callee) are peers.
         val manager = PeerSessionManager(localPubKey = bob)
 
@@ -454,7 +454,7 @@ class PeerSessionManagerTest {
     // ========================================================================
 
     @Test
-    fun renegotiationGlare_fullFlow_lowerPubkeyRollsBack() {
+    fun renegotiationGlareFullFlowLowerPubkeyRollsBack() {
         // Alice (lower) and Bob (higher) both send renegotiation offers simultaneously
         // Alice's manager handles Bob's incoming offer
         val aliceManager = PeerSessionManager(localPubKey = alice)

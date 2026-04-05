@@ -200,7 +200,7 @@ class CallManagerTest {
     // ========================================================================
 
     @Test
-    fun incomingCallFromFollowedUser_transitionsToIncomingCall() =
+    fun incomingCallFromFollowedUserTransitionsToIncomingCall() =
         runTest {
             val (manager, _) = createManager(localPubKey = bob)
 
@@ -216,7 +216,7 @@ class CallManagerTest {
         }
 
     @Test
-    fun incomingCallFromNonFollowed_isIgnored() =
+    fun incomingCallFromNonFollowedIsIgnored() =
         runTest {
             val (manager, _) = createManager(localPubKey = bob, followedKeys = emptySet())
 
@@ -227,7 +227,7 @@ class CallManagerTest {
         }
 
     @Test
-    fun acceptingCall_transitionsToConnecting() =
+    fun acceptingCallTransitionsToConnecting() =
         runTest {
             val (manager, _) = createManager(localPubKey = bob)
 
@@ -243,7 +243,7 @@ class CallManagerTest {
         }
 
     @Test
-    fun peerConnected_transitionsConnectingToConnected() =
+    fun peerConnectedTransitionsConnectingToConnected() =
         runTest {
             val (manager, _) = createManager(localPubKey = bob)
 
@@ -259,7 +259,7 @@ class CallManagerTest {
         }
 
     @Test
-    fun peerHangup_endsConnectedCall() =
+    fun peerHangupEndsConnectedCall() =
         runTest {
             val (manager, _) = createManager(localPubKey = bob)
 
@@ -277,7 +277,7 @@ class CallManagerTest {
         }
 
     @Test
-    fun endedState_autoResetsToIdle() =
+    fun endedStateAutoResetsToIdle() =
         runTest {
             val (manager, _) = createManager(localPubKey = bob)
 
@@ -299,7 +299,7 @@ class CallManagerTest {
     // ========================================================================
 
     @Test
-    fun initiateCall_transitionsToOffering() =
+    fun initiateCallTransitionsToOffering() =
         runTest {
             val (manager, _) = createManager(localPubKey = alice)
 
@@ -313,7 +313,7 @@ class CallManagerTest {
         }
 
     @Test
-    fun receivingAnswer_transitionsOfferingToConnecting() =
+    fun receivingAnswerTransitionsOfferingToConnecting() =
         runTest {
             val (manager, _) = createManager(localPubKey = alice, followedKeys = setOf(bob))
 
@@ -336,7 +336,7 @@ class CallManagerTest {
     // ========================================================================
 
     @Test
-    fun rejectingIncomingCall_transitionsToEnded() =
+    fun rejectingIncomingCallTransitionsToEnded() =
         runTest {
             val (manager, _) = createManager(localPubKey = bob)
 
@@ -351,7 +351,7 @@ class CallManagerTest {
         }
 
     @Test
-    fun receivingReject_endsOfferingCall() =
+    fun receivingRejectEndsOfferingCall() =
         runTest {
             val (manager, _) = createManager(localPubKey = alice, followedKeys = setOf(bob))
 
@@ -371,7 +371,7 @@ class CallManagerTest {
     // ========================================================================
 
     @Test
-    fun incomingCallWhileInActiveCall_autoRejectsBusy() =
+    fun incomingCallWhileInActiveCallAutoRejectsBusy() =
         runTest {
             val (manager, published) = createManager(localPubKey = bob)
 
@@ -399,7 +399,7 @@ class CallManagerTest {
     // ========================================================================
 
     @Test
-    fun staleEvents_areDiscarded() =
+    fun staleEventsAreDiscarded() =
         runTest {
             val (manager, _) = createManager(localPubKey = bob)
 
@@ -411,7 +411,7 @@ class CallManagerTest {
         }
 
     @Test
-    fun freshEvents_areProcessed() =
+    fun freshEventsAreProcessed() =
         runTest {
             val (manager, _) = createManager(localPubKey = bob)
 
@@ -427,7 +427,7 @@ class CallManagerTest {
     // ========================================================================
 
     @Test
-    fun duplicateEvents_areIgnored() =
+    fun duplicateEventsAreIgnored() =
         runTest {
             val (manager, _) = createManager(localPubKey = bob)
 
@@ -451,7 +451,7 @@ class CallManagerTest {
     // ========================================================================
 
     @Test
-    fun selfIceCandidates_areAlwaysIgnored() =
+    fun selfIceCandidatesAreAlwaysIgnored() =
         runTest {
             val (manager, _) = createManager(localPubKey = bob)
 
@@ -469,7 +469,7 @@ class CallManagerTest {
         }
 
     @Test
-    fun selfHangup_isAlwaysIgnored() =
+    fun selfHangupIsAlwaysIgnored() =
         runTest {
             val (manager, _) = createManager(localPubKey = bob)
 
@@ -487,7 +487,7 @@ class CallManagerTest {
         }
 
     @Test
-    fun selfAnswer_inIncomingCall_meansAnsweredElsewhere() =
+    fun selfAnswerInIncomingCallMeansAnsweredElsewhere() =
         runTest {
             val (manager, _) = createManager(localPubKey = bob)
 
@@ -504,7 +504,7 @@ class CallManagerTest {
         }
 
     @Test
-    fun selfAnswer_inOfferingState_isIgnored() =
+    fun selfAnswerInOfferingStateIsIgnored() =
         runTest {
             val (manager, _) = createManager(localPubKey = alice, followedKeys = setOf(bob))
 
@@ -523,7 +523,7 @@ class CallManagerTest {
     // ========================================================================
 
     @Test
-    fun iceCandidates_areForwardedViaCallback() =
+    fun iceCandidatesAreForwardedViaCallback() =
         runTest {
             val (manager, _) = createManager(localPubKey = bob)
 
@@ -544,7 +544,7 @@ class CallManagerTest {
     // ========================================================================
 
     @Test
-    fun renegotiation_inConnectedState_isForwarded() =
+    fun renegotiationInConnectedStateIsForwarded() =
         runTest {
             val (manager, _) = createManager(localPubKey = bob)
 
@@ -563,7 +563,7 @@ class CallManagerTest {
         }
 
     @Test
-    fun renegotiation_inConnectingState_isForwarded() =
+    fun renegotiationInConnectingStateIsForwarded() =
         runTest {
             val (manager, _) = createManager(localPubKey = bob)
 
@@ -581,7 +581,7 @@ class CallManagerTest {
         }
 
     @Test
-    fun renegotiation_inIdleState_isIgnored() =
+    fun renegotiationInIdleStateIsIgnored() =
         runTest {
             val (manager, _) = createManager(localPubKey = bob)
 
@@ -596,7 +596,7 @@ class CallManagerTest {
         }
 
     @Test
-    fun renegotiation_wrongCallId_isIgnored() =
+    fun renegotiationWrongCallIdIsIgnored() =
         runTest {
             val (manager, _) = createManager(localPubKey = bob)
 
@@ -618,7 +618,7 @@ class CallManagerTest {
     // ========================================================================
 
     @Test
-    fun hangup_fromOffering_transitionsToEnded() =
+    fun hangupFromOfferingTransitionsToEnded() =
         runTest {
             val (manager, _) = createManager(localPubKey = alice, followedKeys = setOf(bob))
 
@@ -633,7 +633,7 @@ class CallManagerTest {
         }
 
     @Test
-    fun hangup_fromConnecting_transitionsToEnded() =
+    fun hangupFromConnectingTransitionsToEnded() =
         runTest {
             val (manager, _) = createManager(localPubKey = bob)
 
@@ -647,7 +647,7 @@ class CallManagerTest {
         }
 
     @Test
-    fun hangup_fromConnected_transitionsToEnded() =
+    fun hangupFromConnectedTransitionsToEnded() =
         runTest {
             val (manager, _) = createManager(localPubKey = bob)
 
@@ -663,7 +663,7 @@ class CallManagerTest {
         }
 
     @Test
-    fun hangup_fromIdle_isNoop() =
+    fun hangupFromIdleIsNoop() =
         runTest {
             val (manager, published) = createManager(localPubKey = bob)
 
@@ -678,7 +678,7 @@ class CallManagerTest {
     // ========================================================================
 
     @Test
-    fun groupCallOffer_detectsMultipleMembers() =
+    fun groupCallOfferDetectsMultipleMembers() =
         runTest {
             val (manager, _) = createManager(localPubKey = bob)
 
@@ -691,7 +691,7 @@ class CallManagerTest {
         }
 
     @Test
-    fun groupCall_peerReject_removesFromGroup() =
+    fun groupCallPeerRejectRemovesFromGroup() =
         runTest {
             val (manager, _) = createManager(localPubKey = alice, followedKeys = setOf(bob, carol))
 
@@ -709,7 +709,7 @@ class CallManagerTest {
         }
 
     @Test
-    fun groupCall_allPeersReject_endsCall() =
+    fun groupCallAllPeersRejectEndsCall() =
         runTest {
             val (manager, _) = createManager(localPubKey = alice, followedKeys = setOf(bob, carol))
 
@@ -722,7 +722,7 @@ class CallManagerTest {
         }
 
     @Test
-    fun groupCall_partialDisconnect_continuesWithRemainingPeers() =
+    fun groupCallPartialDisconnectContinuesWithRemainingPeers() =
         runTest {
             val (manager, _) = createManager(localPubKey = alice, followedKeys = setOf(bob, carol))
 
@@ -750,7 +750,7 @@ class CallManagerTest {
         }
 
     @Test
-    fun groupCall_lastPeerLeaves_endsCall() =
+    fun groupCallLastPeerLeavesEndsCall() =
         runTest {
             val (manager, _) = createManager(localPubKey = alice, followedKeys = setOf(bob, carol))
 
@@ -775,7 +775,7 @@ class CallManagerTest {
     // ========================================================================
 
     @Test
-    fun groupCall_discoversPeerWhileRinging() =
+    fun groupCallDiscoversPeerWhileRinging() =
         runTest {
             val (manager, _) = createManager(localPubKey = bob)
 
@@ -807,7 +807,7 @@ class CallManagerTest {
     // ========================================================================
 
     @Test
-    fun midCallOffer_sameCallId_isForwardedAsMidCallOffer() =
+    fun midCallOfferSameCallIdIsForwardedAsMidCallOffer() =
         runTest {
             val (manager, _) = createManager(localPubKey = bob, followedKeys = setOf(alice, carol))
 
@@ -836,7 +836,7 @@ class CallManagerTest {
     // ========================================================================
 
     @Test
-    fun answer_wrongCallId_isIgnored() =
+    fun answerWrongCallIdIsIgnored() =
         runTest {
             val (manager, _) = createManager(localPubKey = alice, followedKeys = setOf(bob))
 
@@ -850,7 +850,7 @@ class CallManagerTest {
         }
 
     @Test
-    fun hangup_wrongCallId_isIgnored() =
+    fun hangupWrongCallIdIsIgnored() =
         runTest {
             val (manager, _) = createManager(localPubKey = bob)
 
@@ -870,7 +870,7 @@ class CallManagerTest {
     // ========================================================================
 
     @Test
-    fun peerLeft_callback_firesOnHangup() =
+    fun peerLeftCallbackFiresOnHangup() =
         runTest {
             val (manager, _) = createManager(localPubKey = alice, followedKeys = setOf(bob, carol))
 
@@ -892,7 +892,7 @@ class CallManagerTest {
     // ========================================================================
 
     @Test
-    fun reset_returnsToIdle() =
+    fun resetReturnsToIdle() =
         runTest {
             val (manager, _) = createManager(localPubKey = bob)
 
@@ -909,7 +909,7 @@ class CallManagerTest {
     // ========================================================================
 
     @Test
-    fun videoCallType_preservedThroughStates() =
+    fun videoCallTypePreservedThroughStates() =
         runTest {
             val (manager, _) = createManager(localPubKey = bob)
 
@@ -936,7 +936,7 @@ class CallManagerTest {
     // ========================================================================
 
     @Test
-    fun callerHangup_whileRinging_endsIncomingCall() =
+    fun callerHangupWhileRingingEndsIncomingCall() =
         runTest {
             val (manager, _) = createManager(localPubKey = bob)
 
@@ -957,7 +957,7 @@ class CallManagerTest {
     // the full pipeline: CallManager → WebRtcCallFactory → sign → gift wrap → publish
 
     @Test
-    fun interface_initiateCall_publishesGiftWrappedOffer() =
+    fun interfaceInitiateCallPublishesGiftWrappedOffer() =
         runTest {
             val (manager, published) = createManager(localPubKey = alice, followedKeys = setOf(bob))
 
@@ -969,7 +969,7 @@ class CallManagerTest {
         }
 
     @Test
-    fun interface_acceptCall_publishesGiftWrappedAnswer() =
+    fun interfaceAcceptCallPublishesGiftWrappedAnswer() =
         runTest {
             val (manager, published) = createManager(localPubKey = bob, followedKeys = setOf(alice))
 
@@ -990,7 +990,7 @@ class CallManagerTest {
         }
 
     @Test
-    fun interface_rejectCall_publishesGiftWrappedReject() =
+    fun interfaceRejectCallPublishesGiftWrappedReject() =
         runTest {
             val (manager, published) = createManager(localPubKey = bob, followedKeys = setOf(alice))
 
@@ -1006,7 +1006,7 @@ class CallManagerTest {
         }
 
     @Test
-    fun interface_hangup_publishesGiftWrappedHangup() =
+    fun interfaceHangupPublishesGiftWrappedHangup() =
         runTest {
             val (manager, published) = createManager(localPubKey = bob, followedKeys = setOf(alice))
 
@@ -1024,7 +1024,7 @@ class CallManagerTest {
         }
 
     @Test
-    fun interface_sendRenegotiation_publishesGiftWrappedRenegotiate() =
+    fun interfaceSendRenegotiationPublishesGiftWrappedRenegotiate() =
         runTest {
             val (manager, published) = createManager(localPubKey = bob, followedKeys = setOf(alice))
 
@@ -1043,7 +1043,7 @@ class CallManagerTest {
         }
 
     @Test
-    fun interface_sendRenegotiationAnswer_publishesGiftWrappedAnswer() =
+    fun interfaceSendRenegotiationAnswerPublishesGiftWrappedAnswer() =
         runTest {
             val (manager, published) = createManager(localPubKey = bob, followedKeys = setOf(alice))
 
@@ -1060,7 +1060,7 @@ class CallManagerTest {
         }
 
     @Test
-    fun interface_busyAutoReject_publishesRejectEvent() =
+    fun interfaceBusyAutoRejectPublishesRejectEvent() =
         runTest {
             val (manager, published) = createManager(localPubKey = bob, followedKeys = setOf(alice, carol))
 
@@ -1083,7 +1083,7 @@ class CallManagerTest {
         }
 
     @Test
-    fun interface_groupCall_publishesPerPeerOffers() =
+    fun interfaceGroupCallPublishesPerPeerOffers() =
         runTest {
             val (manager, published) = createManager(localPubKey = alice, followedKeys = setOf(bob, carol))
 
@@ -1097,7 +1097,7 @@ class CallManagerTest {
         }
 
     @Test
-    fun interface_invitePeer_publishesOfferToNewPeer() =
+    fun interfaceInvitePeerPublishesOfferToNewPeer() =
         runTest {
             val (manager, published) = createManager(localPubKey = alice, followedKeys = setOf(bob))
 
@@ -1118,7 +1118,7 @@ class CallManagerTest {
         }
 
     @Test
-    fun interface_fullP2PCallFlow_withRealSigners() =
+    fun interfaceFullP2PCallFlowWithRealSigners() =
         runTest {
             // Full end-to-end P2P call: Alice calls Bob
             val (aliceManager, alicePublished) = createManager(localPubKey = alice, followedKeys = setOf(bob))

@@ -74,7 +74,7 @@ class NipACGiftWrapRoundTripTest {
     // ========================================================================
 
     @Test
-    fun callOffer_roundTrips_throughGiftWrap() =
+    fun callOfferRoundTripsThroughGiftWrap() =
         runTest {
             val result = factory.createCallOffer(sdpOffer, bob, callId, CallType.VIDEO, aliceSigner)
 
@@ -98,7 +98,7 @@ class NipACGiftWrapRoundTripTest {
         }
 
     @Test
-    fun callOffer_cannotBeDecrypted_byThirdParty() =
+    fun callOfferCannotBeDecryptedByThirdParty() =
         runTest {
             val result = factory.createCallOffer(sdpOffer, bob, callId, CallType.VOICE, aliceSigner)
 
@@ -112,7 +112,7 @@ class NipACGiftWrapRoundTripTest {
     // ========================================================================
 
     @Test
-    fun callAnswer_roundTrips_throughGiftWrap() =
+    fun callAnswerRoundTripsThroughGiftWrap() =
         runTest {
             val result = factory.createCallAnswer(sdpAnswer, alice, callId, bobSigner)
 
@@ -134,7 +134,7 @@ class NipACGiftWrapRoundTripTest {
     // ========================================================================
 
     @Test
-    fun iceCandidate_roundTrips_throughGiftWrap() =
+    fun iceCandidateRoundTripsThroughGiftWrap() =
         runTest {
             val candidateJson =
                 CallIceCandidateEvent.serializeCandidate(
@@ -163,7 +163,7 @@ class NipACGiftWrapRoundTripTest {
     // ========================================================================
 
     @Test
-    fun hangup_roundTrips_throughGiftWrap() =
+    fun hangupRoundTripsThroughGiftWrap() =
         runTest {
             val result = factory.createHangup(bob, callId, "user ended", aliceSigner)
 
@@ -176,7 +176,7 @@ class NipACGiftWrapRoundTripTest {
         }
 
     @Test
-    fun hangup_emptyReason_roundTrips() =
+    fun hangupEmptyReasonRoundTrips() =
         runTest {
             val result = factory.createHangup(bob, callId, "", aliceSigner)
 
@@ -190,7 +190,7 @@ class NipACGiftWrapRoundTripTest {
     // ========================================================================
 
     @Test
-    fun reject_roundTrips_throughGiftWrap() =
+    fun rejectRoundTripsThroughGiftWrap() =
         runTest {
             val result = factory.createReject(alice, callId, "", bobSigner)
 
@@ -202,7 +202,7 @@ class NipACGiftWrapRoundTripTest {
         }
 
     @Test
-    fun busyReject_roundTrips_throughGiftWrap() =
+    fun busyRejectRoundTripsThroughGiftWrap() =
         runTest {
             val result = factory.createReject(alice, callId, "busy", bobSigner)
 
@@ -216,7 +216,7 @@ class NipACGiftWrapRoundTripTest {
     // ========================================================================
 
     @Test
-    fun renegotiate_roundTrips_throughGiftWrap() =
+    fun renegotiateRoundTripsThroughGiftWrap() =
         runTest {
             val newSdp = "v=0\r\no=- 4611731400430051338 3 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0"
             val result = factory.createRenegotiate(newSdp, bob, callId, aliceSigner)
@@ -234,7 +234,7 @@ class NipACGiftWrapRoundTripTest {
     // ========================================================================
 
     @Test
-    fun groupCallOffer_perPeerWraps_eachDecryptableOnlyByTarget() =
+    fun groupCallOfferPerPeerWrapsEachDecryptableOnlyByTarget() =
         runTest {
             val result =
                 factory.createGroupCallOffer(
@@ -281,7 +281,7 @@ class NipACGiftWrapRoundTripTest {
         }
 
     @Test
-    fun groupCallAnswer_broadcastWraps_eachDecryptableByTarget() =
+    fun groupCallAnswerBroadcastWrapsEachDecryptableByTarget() =
         runTest {
             val allMembers = setOf(alice, bob, carol)
             val result = factory.createGroupCallAnswer(sdpAnswer, allMembers, callId, bobSigner)
@@ -311,7 +311,7 @@ class NipACGiftWrapRoundTripTest {
         }
 
     @Test
-    fun groupHangup_allMembers_receiveIdenticalInnerEvent() =
+    fun groupHangupAllMembersReceiveIdenticalInnerEvent() =
         runTest {
             val members = setOf(bob, carol)
             val result = factory.createGroupHangup(members, callId, "leaving", aliceSigner)
@@ -336,7 +336,7 @@ class NipACGiftWrapRoundTripTest {
         }
 
     @Test
-    fun groupReject_allMembers_receiveIdenticalInnerEvent() =
+    fun groupRejectAllMembersReceiveIdenticalInnerEvent() =
         runTest {
             val members = setOf(alice, carol)
             val result = factory.createGroupReject(members, callId, "busy", bobSigner)
@@ -360,7 +360,7 @@ class NipACGiftWrapRoundTripTest {
     // ========================================================================
 
     @Test
-    fun fullP2PFlow_allSignalingEvents_roundTrip() =
+    fun fullP2PFlowAllSignalingEventsRoundTrip() =
         runTest {
             // Step 1: Alice sends offer to Bob
             val offerResult = factory.createCallOffer(sdpOffer, bob, callId, CallType.VIDEO, aliceSigner)
@@ -413,7 +413,7 @@ class NipACGiftWrapRoundTripTest {
     // ========================================================================
 
     @Test
-    fun wrapMetadata_isCorrect() =
+    fun wrapMetadataIsCorrect() =
         runTest {
             val result = factory.createCallOffer(sdpOffer, bob, callId, CallType.VOICE, aliceSigner)
             val wrap = result.wrap
@@ -426,7 +426,7 @@ class NipACGiftWrapRoundTripTest {
         }
 
     @Test
-    fun eachWrap_usesUniqueEphemeralKey() =
+    fun eachWrapUsesUniqueEphemeralKey() =
         runTest {
             val result1 = factory.createCallOffer(sdpOffer, bob, callId, CallType.VOICE, aliceSigner)
             val result2 = factory.createCallOffer(sdpOffer, bob, callId, CallType.VOICE, aliceSigner)
@@ -443,7 +443,7 @@ class NipACGiftWrapRoundTripTest {
     // ========================================================================
 
     @Test
-    fun innerEventSignature_isVerifiable_afterUnwrap() =
+    fun innerEventSignatureIsVerifiableAfterUnwrap() =
         runTest {
             val result = factory.createCallOffer(sdpOffer, bob, callId, CallType.VIDEO, aliceSigner)
             val inner = result.wrap.unwrapThrowing(bobSigner)
@@ -458,7 +458,7 @@ class NipACGiftWrapRoundTripTest {
     // ========================================================================
 
     @Test
-    fun sdpWithSpecialChars_survivesGiftWrapRoundTrip() =
+    fun sdpWithSpecialCharsSurvivesGiftWrapRoundTrip() =
         runTest {
             val complexSdp =
                 "v=0\r\n" +
@@ -481,7 +481,7 @@ class NipACGiftWrapRoundTripTest {
         }
 
     @Test
-    fun iceCandidateWithSpecialChars_survivesGiftWrapRoundTrip() =
+    fun iceCandidateWithSpecialCharsSurvivesGiftWrapRoundTrip() =
         runTest {
             val candidateSdp = """candidate:842163049 1 udp 1677729535 203.0.113.1 44323 typ srflx raddr 0.0.0.0 rport 0 generation 0 ufrag abc+def network-id 1"""
             val json = CallIceCandidateEvent.serializeCandidate(candidateSdp, "audio", 0)
@@ -498,7 +498,7 @@ class NipACGiftWrapRoundTripTest {
     // ========================================================================
 
     @Test
-    fun groupOfferWithContext_perPeerSdp_allPTagsVisible() =
+    fun groupOfferWithContextPerPeerSdpAllPTagsVisible() =
         runTest {
             // Caller creates per-peer offer using the group-context overload
             val bobResult =
