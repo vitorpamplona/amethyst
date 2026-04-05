@@ -180,6 +180,71 @@ internal object ECPoint {
         }
     }
 
+    // ==================== Comb Method for G Multiplication ====================
+    //
+    // The comb method (Hamburg 2012) is much faster than windowed scalar multiplication
+    // for a fixed base point because it avoids most doublings. Instead of processing the
+    // scalar bit-by-bit with doublings between each, it arranges the scalar bits into a
+    // 2D matrix (SPACING rows × BLOCKS*TEETH columns) and processes each row with table
+    // lookups. Only SPACING-1 doublings are needed between rows.
+    //
+    // With BLOCKS=11, TEETH=6, SPACING=4:
+    //   - Doublings: 3 (vs ~130 for GLV+wNAF)
+    //   - Additions: ~43 mixed (11 blocks × ~98% non-zero × 4 rows)
+    //   - Total: ~43 mixed additions + 3 doublings ≈ 464 M-equiv
+    //   - vs GLV+wNAF: ~130 doublings + ~32 additions ≈ 1,035 M-equiv (2.2× faster)
+    //
+    // The table has 11 blocks × 64 entries = 704 affine points (~45KB), lazily computed.
+
+    private const val COMB_BLOCKS = 11
+    private const val COMB_TEETH = 6
+    private const val COMB_SPACING = 4
+    private const val COMB_POINTS = 1 shl COMB_TEETH // 64
+
+    private val combTable: Array<AffinePoint> by lazy { buildCombTable() }
+
+    private fun buildCombTable(): Array<AffinePoint> {
+        // Tooth base points: toothG[i] = 2^(i * SPACING) * G
+        val numTeeth = COMB_BLOCKS * COMB_TEETH
+        val toothG = Array(numTeeth) { MutablePoint() }
+        toothG[0].setAffine(GX, GY)
+        for (i in 1 until numTeeth) {
+            toothG[i].copyFrom(toothG[i - 1])
+            repeat(COMB_SPACING) { doublePoint(toothG[i], toothG[i]) }
+        }
+
+        // For each block, build all 2^TEETH combinations of its teeth
+        val tableSize = COMB_BLOCKS * COMB_POINTS
+        val jac = Array(tableSize) { MutablePoint() }
+        val tmp = MutablePoint()
+
+        for (b in 0 until COMB_BLOCKS) {
+            val base = b * COMB_POINTS
+            jac[base].setInfinity()
+            for (m in 1 until COMB_POINTS) {
+                val changedBit = Integer.numberOfTrailingZeros(m)
+                if (m and (m - 1) == 0) {
+                    jac[base + m].copyFrom(toothG[b * COMB_TEETH + changedBit])
+                } else {
+                    val prev = m xor (1 shl changedBit)
+                    addPoints(tmp, jac[base + prev], toothG[b * COMB_TEETH + changedBit])
+                    jac[base + m].copyFrom(tmp)
+                }
+            }
+        }
+
+        return Array(tableSize) { i ->
+            if (jac[i].isInfinity()) {
+                AffinePoint(IntArray(8), IntArray(8))
+            } else {
+                val x = IntArray(8)
+                val y = IntArray(8)
+                toAffine(jac[i], x, y)
+                AffinePoint(x, y)
+            }
+        }
+    }
+
     // ==================== Thread-local scratch buffers ====================
 
     /**
@@ -436,12 +501,14 @@ internal object ECPoint {
     }
 
     /**
-     * Generator multiplication: out = scalar · G.
+     * Generator multiplication using the comb method: out = scalar · G.
      *
-     * Uses GLV endomorphism + wNAF-5 with precomputed affine G and λ(G) tables:
-     *   scalar = k₁ + k₂·λ, then scalar·G = k₁·G + k₂·λ(G)
-     * Both tables are cached (lazy static), so no per-call table building.
-     * Mixed Jacobian+Affine addition (8M+3S) for all lookups.
+     * Arranges the 256 scalar bits into a 2D matrix (4 rows × 66 columns) and
+     * processes each row with 11 table lookups (one per block of 6 bits).
+     * Only 3 doublings are needed between rows, vs ~130 for GLV+wNAF.
+     *
+     * Total: ~43 mixed additions + 3 doublings ≈ 464 M-equiv
+     * (vs ~1,035 for the previous GLV+wNAF approach — 2.2× faster)
      */
     fun mulG(
         out: MutablePoint,
@@ -452,28 +519,28 @@ internal object ECPoint {
             return
         }
 
-        val split = Glv.splitScalar(scalar)
-        val wnaf1 = Glv.wnaf(split.k1, WINDOW_G, 129)
-        val wnaf2 = Glv.wnaf(split.k2, WINDOW_G, 129)
-
-        val gOdd = gOddTable
-        val gLam = gLamTable
-
-        var bits = maxOf(wnaf1.size, wnaf2.size)
-        while (bits > 0) {
-            val b = bits - 1
-            if ((b < wnaf1.size && wnaf1[b] != 0) || (b < wnaf2.size && wnaf2[b] != 0)) break
-            bits--
-        }
-
+        val table = combTable
         out.setInfinity()
         val tmp = MutablePoint()
-        val negY = IntArray(8)
 
-        for (i in bits - 1 downTo 0) {
-            doublePoint(out, out)
-            addWnafMixed(out, tmp, negY, wnaf1, i, gOdd, split.negK1)
-            addWnafMixed(out, tmp, negY, wnaf2, i, gLam, split.negK2)
+        for (combOff in COMB_SPACING - 1 downTo 0) {
+            if (combOff < COMB_SPACING - 1) {
+                doublePoint(out, out)
+            }
+            for (block in 0 until COMB_BLOCKS) {
+                var mask = 0
+                for (tooth in 0 until COMB_TEETH) {
+                    val bitPos = (block * COMB_TEETH + tooth) * COMB_SPACING + combOff
+                    if (bitPos < 256 && U256.testBit(scalar, bitPos)) {
+                        mask = mask or (1 shl tooth)
+                    }
+                }
+                if (mask != 0) {
+                    val entry = table[block * COMB_POINTS + mask]
+                    addMixed(tmp, out, entry.x, entry.y)
+                    out.copyFrom(tmp)
+                }
+            }
         }
     }
 
