@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.marmot
 
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.quartz.marmot.GroupEventResult
 import com.vitorpamplona.quartz.marmot.MarmotInboundProcessor
 import com.vitorpamplona.quartz.marmot.MarmotOutboundProcessor
@@ -31,10 +32,12 @@ import com.vitorpamplona.quartz.marmot.WelcomeResult
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRotationManager
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageUtils
+import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupManager
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupStateStore
+import com.vitorpamplona.quartz.marmot.mls.tree.Credential
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
@@ -254,4 +257,75 @@ class MarmotManager(
      * Get all active group IDs.
      */
     fun activeGroupIds(): Set<HexKey> = groupManager.activeGroupIds()
+
+    // --- Group Info ---
+
+    /**
+     * Get the member count for a group.
+     */
+    fun memberCount(nostrGroupId: HexKey): Int = groupManager.getGroup(nostrGroupId)?.memberCount ?: 0
+
+    /**
+     * Get the member list for a group.
+     * Returns leaf index and Nostr pubkey (extracted from BasicCredential) for each member.
+     */
+    fun memberPubkeys(nostrGroupId: HexKey): List<GroupMemberInfo> {
+        val group = groupManager.getGroup(nostrGroupId) ?: return emptyList()
+        return group.members().mapNotNull { (leafIndex, leafNode) ->
+            val pubkey =
+                when (val cred = leafNode.credential) {
+                    is Credential.Basic -> cred.identity.toHexKey()
+                    else -> null
+                }
+            if (pubkey != null) {
+                GroupMemberInfo(leafIndex = leafIndex, pubkey = pubkey)
+            } else {
+                null
+            }
+        }
+    }
+
+    /**
+     * Get the current epoch for a group.
+     */
+    fun groupEpoch(nostrGroupId: HexKey): Long? = groupManager.getGroup(nostrGroupId)?.epoch
+
+    /**
+     * Get the MIP-01 group metadata from the MLS GroupContext extensions.
+     * Returns null if the group doesn't exist or has no MarmotGroupData extension.
+     */
+    fun groupMetadata(nostrGroupId: HexKey): MarmotGroupData? {
+        val group = groupManager.getGroup(nostrGroupId) ?: return null
+        return MarmotGroupData.fromExtensions(group.extensions)
+    }
+
+    /**
+     * Sync MIP-01 metadata and member info from the MLS group into a [MarmotGroupChatroom].
+     * Call after joining a group, processing a commit, or restoring from storage.
+     */
+    fun syncMetadataTo(
+        nostrGroupId: HexKey,
+        chatroom: MarmotGroupChatroom,
+    ) {
+        val metadata = groupMetadata(nostrGroupId)
+        if (metadata != null) {
+            if (metadata.name.isNotEmpty()) {
+                chatroom.displayName.value = metadata.name
+            }
+            if (metadata.description.isNotEmpty()) {
+                chatroom.description.value = metadata.description
+            }
+            chatroom.adminPubkeys.value = metadata.adminPubkeys
+            chatroom.relays.value = metadata.relays
+        }
+        chatroom.memberCount.value = memberCount(nostrGroupId)
+    }
 }
+
+/**
+ * Information about a member in a Marmot MLS group.
+ */
+data class GroupMemberInfo(
+    val leafIndex: Int,
+    val pubkey: HexKey,
+)

@@ -1440,6 +1440,42 @@ class AccountViewModel(
         }
     }
 
+    // --- Marmot Group Messaging ---
+
+    suspend fun sendMarmotGroupMessage(
+        nostrGroupId: String,
+        text: String,
+    ) {
+        val template =
+            com.vitorpamplona.quartz.nip01Core.signers.eventTemplate<com.vitorpamplona.quartz.nip01Core.core.Event>(
+                kind = 9,
+                description = text,
+            )
+        val innerEvent = account.signer.sign<com.vitorpamplona.quartz.nip01Core.core.Event>(template)
+        val relays = account.outboxRelays.flow.value
+        account.sendMarmotGroupMessage(nostrGroupId, innerEvent, relays)
+    }
+
+    suspend fun createMarmotGroup(nostrGroupId: String) {
+        account.createMarmotGroup(nostrGroupId)
+    }
+
+    suspend fun publishMarmotKeyPackage() {
+        account.publishMarmotKeyPackage()
+    }
+
+    suspend fun leaveMarmotGroup(nostrGroupId: String) {
+        val relays = account.outboxRelays.flow.value
+        account.leaveMarmotGroup(nostrGroupId, relays)
+    }
+
+    fun marmotGroupMembers(nostrGroupId: String): List<com.vitorpamplona.amethyst.commons.marmot.GroupMemberInfo> = account.marmotManager?.memberPubkeys(nostrGroupId) ?: emptyList()
+
+    suspend fun addMarmotGroupMember(
+        nostrGroupId: String,
+        memberPubKey: String,
+    ): String = account.fetchKeyPackageAndAddMember(nostrGroupId, memberPubKey)
+
     override fun onCleared() {
         Log.d("AccountViewModel", "onCleared")
         callController?.cleanup()

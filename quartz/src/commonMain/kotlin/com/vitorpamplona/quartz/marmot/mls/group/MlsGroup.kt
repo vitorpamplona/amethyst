@@ -107,6 +107,7 @@ class MlsGroup private constructor(
     val groupId: ByteArray get() = groupContext.groupId
     val epoch: Long get() = groupContext.epoch
     val leafIndex: Int get() = myLeafIndex
+    val extensions: List<com.vitorpamplona.quartz.marmot.mls.tree.Extension> get() = groupContext.extensions
 
     // --- State Persistence ---
 

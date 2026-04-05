@@ -103,6 +103,25 @@ fun ChannelFabColumn(nav: INav) {
                 }
 
                 Spacer(modifier = Modifier.height(20.dp))
+
+                FloatingActionButton(
+                    onClick = {
+                        nav.nav(Route.MarmotGroupList)
+                        isOpen = false
+                    },
+                    modifier = Size55Modifier,
+                    shape = CircleShape,
+                    containerColor = MaterialTheme.colorScheme.primary,
+                ) {
+                    Text(
+                        text = "MLS\nGroups",
+                        color = Color.White,
+                        textAlign = TextAlign.Center,
+                        fontSize = Font12SP,
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
             }
         }
 
