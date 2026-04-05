@@ -386,6 +386,8 @@
     <string name="migrate_bookmarks_success">书签迁移成功</string>
     <string name="drafts">草稿</string>
     <string name="polls">投票</string>
+    <string name="open_polls">开启</string>
+    <string name="closed_polls">已关闭</string>
     <string name="pictures">图片</string>
     <string name="shorts">短视频</string>
     <string name="longs">视频</string>
