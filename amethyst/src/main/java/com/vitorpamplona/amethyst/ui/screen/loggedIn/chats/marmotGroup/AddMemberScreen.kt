@@ -21,8 +21,11 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
@@ -30,20 +33,25 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.ActionTopBar
+import com.vitorpamplona.amethyst.ui.note.UserPicture
+import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
+import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightPage
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
-import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
-import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -53,10 +61,20 @@ fun AddMemberScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    var memberInput by remember { mutableStateOf("") }
+    var searchInput by remember { mutableStateOf("") }
+    var selectedUser by remember { mutableStateOf<User?>(null) }
     var statusMessage by remember { mutableStateOf<String?>(null) }
     var isAdding by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+
+    val userSuggestions =
+        remember {
+            UserSuggestionState(accountViewModel.account, accountViewModel.nip05ClientBuilder())
+        }
+
+    DisposableEffect(Unit) {
+        onDispose { userSuggestions.reset() }
+    }
 
     Scaffold(
         topBar = {
@@ -64,14 +82,13 @@ fun AddMemberScreen(
                 postRes = com.vitorpamplona.amethyst.R.string.add,
                 onCancel = { nav.popBack() },
                 onPost = {
-                    isAdding = true
-                    val pubkey = resolvePubkey(memberInput)
+                    val pubkey = selectedUser?.pubkeyHex
                     if (pubkey == null) {
-                        statusMessage = "Error: Invalid public key format"
+                        statusMessage = "Error: No user selected"
                         return@ActionTopBar
                     }
                     isAdding = true
-                    statusMessage = "Fetching KeyPackage for ${pubkey.take(8)}..."
+                    statusMessage = "Fetching KeyPackage..."
                     scope.launch(Dispatchers.IO) {
                         try {
                             val result =
@@ -88,7 +105,7 @@ fun AddMemberScreen(
                         }
                     }
                 },
-                isActive = { !isAdding && memberInput.isNotBlank() },
+                isActive = { !isAdding && selectedUser != null },
             )
         },
     ) { padding ->
@@ -97,38 +114,47 @@ fun AddMemberScreen(
                 Modifier
                     .padding(padding)
                     .consumeWindowInsets(padding)
-                    .imePadding()
-                    .padding(horizontal = 16.dp),
+                    .imePadding(),
         ) {
-            Text(
-                text = "Add Member",
-                style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.padding(top = 16.dp, bottom = 8.dp),
-            )
+            // Selected user display
+            if (selectedUser != null) {
+                SelectedUserRow(
+                    user = selectedUser!!,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                    onClear = {
+                        selectedUser = null
+                        statusMessage = null
+                    },
+                )
+            }
 
+            // Search field
             OutlinedTextField(
-                value = memberInput,
-                onValueChange = {
-                    memberInput = it
+                value = searchInput,
+                onValueChange = { newValue ->
+                    searchInput = newValue
                     statusMessage = null
+                    if (newValue.length > 2) {
+                        userSuggestions.processCurrentWord(newValue)
+                    } else {
+                        userSuggestions.reset()
+                    }
                 },
-                label = { Text("npub or hex pubkey") },
-                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Search users") },
+                placeholder = { Text("Name, npub, or NIP-05") },
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
                 singleLine = true,
-            )
-
-            Text(
-                "Enter the member's npub or hex public key. " +
-                    "They must have published a KeyPackage (kind:30443) to be added.",
-                modifier = Modifier.padding(top = 12.dp),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                enabled = selectedUser == null && !isAdding,
             )
 
             if (statusMessage != null) {
                 Text(
                     text = statusMessage!!,
-                    modifier = Modifier.padding(top = 12.dp),
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                     style = MaterialTheme.typography.bodySmall,
                     color =
                         if (statusMessage!!.startsWith("Error")) {
@@ -138,23 +164,70 @@ fun AddMemberScreen(
                         },
                 )
             }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // User suggestion list
+            if (selectedUser == null && searchInput.length > 2) {
+                ShowUserSuggestionList(
+                    userSuggestions = userSuggestions,
+                    onSelect = { user ->
+                        selectedUser = user
+                        searchInput = ""
+                        userSuggestions.reset()
+                    },
+                    accountViewModel = accountViewModel,
+                    modifier = SuggestionListDefaultHeightPage,
+                    onEmpty = {
+                        Text(
+                            "They must have published a KeyPackage (kind:30443) to be added.",
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    },
+                )
+            }
         }
     }
 }
 
-private fun resolvePubkey(input: String): HexKey? {
-    val trimmed = input.trim()
-
-    if (trimmed.length == 64 && trimmed.all { it in '0'..'9' || it in 'a'..'f' }) {
-        return trimmed
-    }
-
-    val entity =
-        Nip19Parser.uriToRoute("nostr:$trimmed")?.entity
-            ?: Nip19Parser.uriToRoute(trimmed)?.entity
-    return when (entity) {
-        is NPub -> entity.hex
-        is NProfile -> entity.hex
-        else -> null
+@Composable
+private fun SelectedUserRow(
+    user: User,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    onClear: () -> Unit,
+) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        UserPicture(
+            userHex = user.pubkeyHex,
+            size = 40.dp,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
+        Column(
+            modifier = Modifier.weight(1f).padding(start = 12.dp),
+        ) {
+            Text(
+                text = user.toBestDisplayName(),
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                text = "${user.pubkeyHex.take(16)}...",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        androidx.compose.material3.TextButton(onClick = onClear) {
+            Text("Clear")
+        }
     }
 }
