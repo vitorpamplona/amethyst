@@ -99,11 +99,7 @@ class ProfilePictureFetcher(
             if (bitmap != null) {
                 // Fire-and-forget: save thumbnail to disk for next load
                 backgroundScope.launch {
-                    try {
-                        thumbnailCache.save(originalUrl, bitmap)
-                    } catch (_: Exception) {
-                        // Best-effort
-                    }
+                    thumbnailCache.save(originalUrl, bitmap)
                 }
 
                 return ImageFetchResult(

@@ -25,6 +25,7 @@ import android.graphics.BitmapFactory
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.sha256.sha256
 import java.io.File
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Disk cache for pre-resized profile picture thumbnails.
@@ -33,8 +34,10 @@ import java.io.File
  * This avoids re-decoding large original images from Coil's disk cache on
  * every recomposition when images are evicted from the memory cache.
  *
- * With 60 profile pictures on screen, reading ~300-600KB of tiny thumbnails
- * is dramatically faster than re-decoding 60 full-size originals.
+ * Thread safety:
+ * - Writes use atomic temp-file-then-rename to prevent partial reads.
+ * - [inFlight] tracks URLs currently being saved to prevent duplicate work
+ *   when multiple composables request the same profile picture simultaneously.
  */
 class ThumbnailDiskCache(
     private val cacheDir: File,
@@ -44,6 +47,9 @@ class ThumbnailDiskCache(
         const val THUMBNAIL_SIZE_PX = 256
         const val JPEG_QUALITY = 80
     }
+
+    // Tracks URLs currently being written to prevent duplicate saves
+    private val inFlight = ConcurrentHashMap.newKeySet<String>()
 
     init {
         cacheDir.mkdirs()
@@ -56,16 +62,40 @@ class ThumbnailDiskCache(
         return if (file.exists()) file else null
     }
 
+    /**
+     * Saves a bitmap as a JPEG thumbnail. Uses atomic write (temp file + rename)
+     * to prevent readers from seeing a partially written file.
+     *
+     * Returns true if saved, false if already in flight or on error.
+     */
     fun save(
         url: String,
         bitmap: Bitmap,
-    ): File {
-        val file = File(cacheDir, keyFor(url))
-        file.outputStream().use { out ->
-            bitmap.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, out)
+    ): Boolean {
+        // Skip if another coroutine is already saving this URL
+        if (!inFlight.add(url)) return false
+
+        try {
+            val key = keyFor(url)
+            val finalFile = File(cacheDir, key)
+
+            // Already saved by another coroutine that finished before us
+            if (finalFile.exists()) return true
+
+            // Write to temp file, then atomically rename
+            val tempFile = File(cacheDir, "$key.tmp")
+            tempFile.outputStream().use { out ->
+                bitmap.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, out)
+            }
+            tempFile.renameTo(finalFile)
+
+            evictIfNeeded()
+            return true
+        } catch (e: Exception) {
+            return false
+        } finally {
+            inFlight.remove(url)
         }
-        evictIfNeeded()
-        return file
     }
 
     fun decodeThumbnail(file: File): Bitmap? =
