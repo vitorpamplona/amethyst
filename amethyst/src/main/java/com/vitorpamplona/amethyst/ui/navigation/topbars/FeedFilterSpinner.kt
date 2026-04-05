@@ -327,6 +327,7 @@ private enum class FeedGroup(
     FEEDS(R.string.feed_group_feeds),
     HASHTAGS(R.string.feed_group_hashtags),
     COMMUNITIES(R.string.feed_group_communities),
+    LOCATIONS(R.string.feed_group_locations),
     LISTS(R.string.feed_group_lists),
     RELAYS(R.string.feed_group_relays),
 }
@@ -335,11 +336,33 @@ private fun groupFeedDefinitions(options: ImmutableList<FeedDefinition>): Map<Fe
     val indexed = options.mapIndexed { index, item -> IndexedFeedDefinition(index, item) }
     return indexed.groupBy { entry ->
         when (entry.item.name) {
-            is HashtagName -> FeedGroup.HASHTAGS
-            is CommunityName -> FeedGroup.COMMUNITIES
-            is PeopleListName -> FeedGroup.LISTS
-            is RelayName -> FeedGroup.RELAYS
-            else -> FeedGroup.FEEDS
+            is HashtagName -> {
+                FeedGroup.HASHTAGS
+            }
+
+            is CommunityName -> {
+                FeedGroup.COMMUNITIES
+            }
+
+            is PeopleListName -> {
+                FeedGroup.LISTS
+            }
+
+            is RelayName -> {
+                FeedGroup.RELAYS
+            }
+
+            is GeoHashName -> {
+                FeedGroup.LOCATIONS
+            }
+
+            is ResourceName -> {
+                when (entry.item.code) {
+                    is TopFilter.AroundMe -> FeedGroup.LOCATIONS
+                    is TopFilter.Global -> FeedGroup.RELAYS
+                    else -> FeedGroup.FEEDS
+                }
+            }
         }
     }
 }

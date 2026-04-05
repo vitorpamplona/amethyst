@@ -243,7 +243,7 @@ class TopNavFilterState(
 }
 
 @Stable
-abstract class Name {
+sealed class Name {
     abstract fun name(): String
 
     open fun name(context: Context) = name()
