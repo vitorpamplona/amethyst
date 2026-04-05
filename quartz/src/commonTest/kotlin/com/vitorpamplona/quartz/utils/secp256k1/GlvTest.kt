@@ -48,7 +48,7 @@ class GlvTest {
                     .map { it.toInt(16).toByte() }
                     .toByteArray(),
             )
-        val split = ECPoint.scalarSplitLambda(k)
+        val split = Glv.splitScalar(k)
         val k1 = if (split.negK1) ScalarN.neg(split.k1) else split.k1
         val k2 = if (split.negK2) ScalarN.neg(split.k2) else split.k2
         val reconstructed = ScalarN.add(k1, ScalarN.mul(k2, LAMBDA))
@@ -88,9 +88,9 @@ class GlvTest {
                     .map { it.toInt(16).toByte() }
                     .toByteArray(),
             )
-        val split = ECPoint.scalarSplitLambda(k)
+        val split = Glv.splitScalar(k)
         val gOdd = Array(8) { ECPoint.gTable[it * 2] }
-        val digits = ECPoint.wnaf(split.k1, 5, 129)
+        val digits = Glv.wnaf(split.k1, 5, 129)
 
         var bits = digits.size
         while (bits > 0 && digits[bits - 1] == 0) bits--

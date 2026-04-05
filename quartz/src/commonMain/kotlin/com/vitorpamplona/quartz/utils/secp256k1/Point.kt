@@ -52,31 +52,15 @@ package com.vitorpamplona.quartz.utils.secp256k1
 //
 // SCALAR MULTIPLICATION
 // =====================
-// We use a 4-bit windowed method: process the scalar 4 bits at a time, performing 4
-// doublings per window position and one addition for non-zero nibbles. This reduces the
-// number of point additions from ~128 (binary method) to ~60 (windowed).
+// For general scalar multiplication (mul, mulG), we use a 4-bit windowed method.
+// For signature verification (mulDoubleG), we use Shamir's trick combined with:
 //
-// For signature verification, we use Shamir's trick to compute s·G + e·P in a single
-// pass instead of two separate scalar multiplications. The G-side uses mixed addition
-// (from the precomputed affine table) while the P-side uses full Jacobian addition
-// (since building an affine table for P would require expensive inversions).
-//
-// FUTURE OPTIMIZATIONS
-// ====================
-// Two techniques from Bitcoin Core's C library would provide significant further speedup:
-//
-// - GLV Endomorphism: secp256k1 has an efficiently computable endomorphism λ where
-//   λ·P = (β·x, y) for a field constant β. Any 256-bit scalar k can be decomposed into
-//   k = k₁ + k₂·λ where k₁, k₂ are ~128 bits. This halves the number of doublings.
-//   Infrastructure for this (constants, scalar splitting, endomorphism application) is
-//   implemented and tested, but the combined Strauss+GLV path has a sign-handling bug
-//   that needs debugging before it can replace the current 4-bit window approach.
-//
-// - wNAF (windowed Non-Adjacent Form): An encoding of scalars where non-zero digits are
-//   always odd and separated by at least w-1 zero digits. Width-5 wNAF uses digits
-//   ±{1,3,5,...,15} with a table of 8 points (vs 16 for simple windowing), and the
-//   guaranteed zero runs mean fewer additions. Combined with GLV, wNAF processes
-//   ~128-bit half-scalars with ~26 additions each instead of ~60.
+// - GLV Endomorphism (Glv.kt): Splits each 256-bit scalar into two ~128-bit halves,
+//   halving the number of doublings from 256 to ~130.
+// - wNAF-5 Encoding (Glv.kt): Encodes each half-scalar so non-zero digits are sparse
+//   (separated by ≥4 zeros), reducing point additions.
+// - Mixed Addition: G-side additions use the precomputed affine table (8M+3S per add),
+//   while P-side uses full Jacobian (11M+5S, avoiding expensive table inversions).
 // =====================================================================================
 
 /**
@@ -165,7 +149,7 @@ internal object ECPoint {
 
     /** Precomputed λ(G) odd-multiples for GLV: gLamTable[i] = λ((2i+1)·G) as affine. */
     private val gLamTable: Array<AffinePoint> by lazy {
-        Array(8) { AffinePoint(FieldP.mul(gTable[it * 2].x, BETA), gTable[it * 2].y.copyOf()) }
+        Array(8) { AffinePoint(FieldP.mul(gTable[it * 2].x, Glv.BETA), gTable[it * 2].y.copyOf()) }
     }
 
     private fun buildGTable(): Array<AffinePoint> {
@@ -369,221 +353,6 @@ internal object ECPoint {
         FieldP.sub(out.z, out.z, t[1])
         FieldP.mul(out.z, out.z, t[6])
     }
-
-    // ==================== wNAF Encoding ====================
-
-    /**
-     * Convert scalar to width-w wNAF (windowed Non-Adjacent Form).
-     *
-     * wNAF is an encoding where each non-zero digit is odd and separated by at least
-     * w-1 zero digits. For width 5, digits are in {±1, ±3, ±5, ..., ±15} with a
-     * precomputed table of 8 odd multiples. The guaranteed zero runs mean fewer
-     * point additions than simple windowing.
-     *
-     * Returns IntArray where result[i] is the signed digit at bit position i.
-     */
-    internal fun wnaf(
-        scalar: IntArray,
-        w: Int,
-        maxBits: Int,
-    ): IntArray {
-        // wNAF can carry up to bit (maxBits + w - 1), so extend both arrays
-        val totalBits = maxBits + w
-        val sLimbs = maxOf((totalBits + 31) / 32, scalar.size)
-        val result = IntArray(totalBits)
-        val s = IntArray(sLimbs)
-        scalar.copyInto(s)
-        var bit = 0
-        while (bit < totalBits) {
-            if (s[bit / 32] ushr (bit % 32) and 1 == 0) {
-                bit++
-                continue
-            }
-            var word = getBitsVar(s, bit, w.coerceAtMost(totalBits - bit))
-            if (word >= (1 shl (w - 1))) {
-                word -= (1 shl w)
-                addBitTo(s, bit + w) // Propagate the borrow
-            }
-            result[bit] = word
-            bit += w
-        }
-        return result
-    }
-
-    private fun getBitsVar(
-        s: IntArray,
-        bitPos: Int,
-        count: Int,
-    ): Int {
-        if (count == 0) return 0
-        val limb = bitPos / 32
-        val shift = bitPos % 32
-        var r = (s[limb] ushr shift)
-        if (shift + count > 32 && limb + 1 < s.size) {
-            r = r or (s[limb + 1] shl (32 - shift))
-        }
-        return r and ((1 shl count) - 1)
-    }
-
-    private fun addBitTo(
-        s: IntArray,
-        bitPos: Int,
-    ) {
-        val limb = bitPos / 32
-        if (limb >= s.size) return
-        val bit = bitPos % 32
-        var carry = (1L shl bit)
-        for (i in limb until s.size) {
-            carry += (s[i].toLong() and 0xFFFFFFFFL)
-            s[i] = carry.toInt()
-            carry = carry ushr 32
-            if (carry == 0L) break
-        }
-    }
-
-    // ==================== GLV Endomorphism ====================
-    //
-    // secp256k1 has an efficiently computable endomorphism φ(x,y) = (β·x, y) where
-    // β is a cube root of unity in the field (β³ ≡ 1 mod p). The corresponding scalar
-    // λ satisfies λ·P = φ(P) for any point P on the curve.
-    //
-    // This allows decomposing any 256-bit scalar k into k = k₁ + k₂·λ (mod n) where
-    // k₁ and k₂ are only ~128 bits. Since λ·P = (β·x, y) costs just one field multiply,
-    // we can compute k·P = k₁·P + k₂·φ(P) using two 128-bit scalar muls instead of
-    // one 256-bit mul — halving the number of point doublings from 256 to 128.
-
-    /** β: cube root of unity mod p. φ(x,y) = (β·x, y). */
-    private val BETA =
-        intArrayOf(
-            0x719501EE.toInt(),
-            0xC1396C28.toInt(),
-            0x12F58995.toInt(),
-            0x9CF04975.toInt(),
-            0xAC3434E9.toInt(),
-            0x6E64479E.toInt(),
-            0x657C0710.toInt(),
-            0x7AE96A2B.toInt(),
-        )
-
-    // Babai rounding constants for the GLV decomposition (from libsecp256k1)
-    private val MINUS_LAMBDA =
-        intArrayOf(
-            0xB51283CF.toInt(),
-            0xE0CFC810.toInt(),
-            0x8EC739C2.toInt(),
-            0xA880B9FC.toInt(),
-            0x77ED9BA4.toInt(),
-            0x5AD9E3FD.toInt(),
-            0x3FA3CF1F.toInt(),
-            0xAC9C52B3.toInt(),
-        )
-    private val G1 =
-        intArrayOf(
-            0x45DBB031.toInt(),
-            0xE893209A.toInt(),
-            0x71E8CA7F.toInt(),
-            0x3DAA8A14.toInt(),
-            0x9284EB15.toInt(),
-            0xE86C90E4.toInt(),
-            0xA7D46BCD.toInt(),
-            0x3086D221.toInt(),
-        )
-    private val G2 =
-        intArrayOf(
-            0x8AC47F71.toInt(),
-            0x1571B4AE.toInt(),
-            0x9DF506C6.toInt(),
-            0x221208AC.toInt(),
-            0x0ABFE4C4.toInt(),
-            0x6F547FA9.toInt(),
-            0x010E8828.toInt(),
-            0xE4437ED6.toInt(),
-        )
-    private val MINUS_B1 =
-        intArrayOf(
-            0x0ABFE4C3.toInt(),
-            0x6F547FA9.toInt(),
-            0x010E8828.toInt(),
-            0xE4437ED6.toInt(),
-            0,
-            0,
-            0,
-            0,
-        )
-    private val MINUS_B2 =
-        intArrayOf(
-            0x3DB1562C.toInt(),
-            0xD765CDA8.toInt(),
-            0x0774346D.toInt(),
-            0x8A280AC5.toInt(),
-            0xFFFFFFFE.toInt(),
-            0xFFFFFFFF.toInt(),
-            0xFFFFFFFF.toInt(),
-            0xFFFFFFFF.toInt(),
-        )
-    private val N_HALF =
-        intArrayOf(
-            0x681B20A0.toInt(),
-            0xDFE92F46.toInt(),
-            0x57A4501D.toInt(),
-            0x5D576E73.toInt(),
-            0xFFFFFFFF.toInt(),
-            0xFFFFFFFF.toInt(),
-            0xFFFFFFFF.toInt(),
-            0x7FFFFFFF.toInt(),
-        )
-
-    /**
-     * Split scalar k into (k₁, k₂) such that k ≡ k₁ + k₂·λ (mod n) with |k₁|, |k₂| ≈ 128 bits.
-     *
-     * Uses Babai's nearest-plane algorithm with precomputed lattice basis vectors.
-     * Returns the two half-scalars and flags indicating whether each was negated
-     * (to ensure both are positive for wNAF encoding).
-     */
-    internal data class GlvSplit(
-        val k1: IntArray,
-        val k2: IntArray,
-        val negK1: Boolean,
-        val negK2: Boolean,
-    )
-
-    internal fun scalarSplitLambda(k: IntArray): GlvSplit {
-        val c1 = mulShift384(k, G1)
-        val c2 = mulShift384(k, G2)
-        val r2 = ScalarN.add(ScalarN.mul(c1, MINUS_B1), ScalarN.mul(c2, MINUS_B2))
-        val r1 = ScalarN.add(ScalarN.mul(r2, MINUS_LAMBDA), k)
-        val neg1 = U256.cmp(r1, N_HALF) > 0
-        val neg2 = U256.cmp(r2, N_HALF) > 0
-        return GlvSplit(
-            if (neg1) ScalarN.neg(r1) else r1,
-            if (neg2) ScalarN.neg(r2) else r2,
-            neg1,
-            neg2,
-        )
-    }
-
-    /** Multiply two 256-bit numbers and return the result shifted right by 384 bits (with rounding). */
-    internal fun mulShift384(
-        k: IntArray,
-        g: IntArray,
-    ): IntArray {
-        val wide = IntArray(16)
-        U256.mulWide(wide, k, g)
-        val result = IntArray(8)
-        // 384 / 32 = 12 limbs to skip
-        for (i in 0 until 4) result[i] = wide[i + 12]
-        // Round based on bit 383
-        if (wide[11] < 0) { // bit 31 of wide[11] = bit 383
-            var c = 1L
-            for (i in 0 until 8) {
-                c += (result[i].toLong() and 0xFFFFFFFFL)
-                result[i] = c.toInt()
-                c = c ushr 32
-            }
-        }
-        return result
-    }
-
     // ==================== Scalar Multiplication ====================
 
     /**
@@ -678,14 +447,14 @@ internal object ECPoint {
         val tableSize = 1 shl (w - 2) // 8 entries per table
 
         // Split scalars via GLV decomposition
-        val sSplit = scalarSplitLambda(s)
-        val eSplit = scalarSplitLambda(e)
+        val sSplit = Glv.splitScalar(s)
+        val eSplit = Glv.splitScalar(e)
 
         // Build wNAF for each ~128-bit half-scalar
-        val wnafS1 = wnaf(sSplit.k1, w, 129)
-        val wnafS2 = wnaf(sSplit.k2, w, 129)
-        val wnafE1 = wnaf(eSplit.k1, w, 129)
-        val wnafE2 = wnaf(eSplit.k2, w, 129)
+        val wnafS1 = Glv.wnaf(sSplit.k1, w, 129)
+        val wnafS2 = Glv.wnaf(sSplit.k2, w, 129)
+        val wnafE1 = Glv.wnaf(eSplit.k1, w, 129)
+        val wnafE2 = Glv.wnaf(eSplit.k2, w, 129)
 
         // G tables: precomputed and cached (no per-verify allocation)
         val gOdd = Array(tableSize) { gTable[it * 2] }
@@ -701,7 +470,7 @@ internal object ECPoint {
         val pLamOdd =
             Array(tableSize) { i ->
                 val lp = MutablePoint()
-                FieldP.mul(lp.x, pOdd[i].x, BETA)
+                FieldP.mul(lp.x, pOdd[i].x, Glv.BETA)
                 pOdd[i].y.copyInto(lp.y)
                 pOdd[i].z.copyInto(lp.z)
                 lp
