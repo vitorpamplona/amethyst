@@ -495,6 +495,15 @@ Implementations SHOULD validate their state machine and event handling against t
 | E7 | Group offer with N callees | N `p` tags present, one per callee |
 | E8 | ICE candidate in group call | Still addressed to single peer (1 `p` tag) |
 | E9 | All events for same call share `call-id` | Offer, answer, ICE, hangup, reject, renegotiate — same UUID |
+| E10 | Single callee offer is not a group call | Exactly 1 `p` tag |
+| E11 | P2P call flow event sequence | Offer → Answer → ICE → Hangup produce correct kinds in order |
+| E12 | Group answer includes all member `p` tags | All members visible in answer `p` tags |
+| E13 | Group hangup includes all member `p` tags | All members visible in hangup `p` tags |
+| E14 | Group reject includes all member `p` tags | All members visible in reject `p` tags |
+| E15 | Group renegotiate includes all member `p` tags | All members visible in renegotiate `p` tags |
+| E16 | Group members = `p` tags + event author | `groupMembers()` union includes the caller's pubkey |
+| E17 | ICE candidate JSON serialization round-trips | `serializeCandidate()` → parse → original values |
+| E18 | ICE candidate JSON escapes special characters | Quotes and backslashes in SDP survive serialization |
 
 ### State Machine Tests
 
@@ -521,6 +530,14 @@ Implementations SHOULD validate their state machine and event handling against t
 | S19 | Hangup from Connecting | Connecting | hangup() | Ended(HANGUP) |
 | S20 | Hangup from Connected | Connected | hangup() | Ended(HANGUP) |
 | S21 | Hangup from Idle | Idle | hangup() | Idle (no-op) |
+| S22 | Fresh event (<20s old) | Idle | CallOffer | IncomingCall (processed normally) |
+| S23 | Answer with wrong call-id | Offering | CallAnswer (wrong id) | Offering (ignored) |
+| S24 | Hangup with wrong call-id | Connected | CallHangup (wrong id) | Connected (ignored) |
+| S25 | ICE candidates forwarded via callback | Connecting | CallIceCandidate | Forwarded to onIceCandidateReceived |
+| S26 | Peer left callback fires on hangup | Connected (group) | CallHangup from one peer | onPeerLeft callback invoked |
+| S27 | Reset returns to Idle | Any | reset() | Idle |
+| S28 | Video call type preserved through states | IncomingCall(VIDEO) | accept → connect | All states carry VIDEO type |
+| S29 | Caller cancels while ringing | IncomingCall | CallHangup from caller | Ended(PEER_HANGUP) |
 
 ### Renegotiation Tests
 
@@ -532,6 +549,7 @@ Implementations SHOULD validate their state machine and event handling against t
 | R4 | Renegotiate with wrong call-id | Ignored |
 | R5 | Renegotiation response | MUST be CallAnswer (kind 25051), NOT CallRenegotiate |
 | R6 | Glare tiebreaker | Higher pubkey wins; lower pubkey rolls back |
+| R7 | Renegotiation preserves call-id | Same `call-id` tag in renegotiate event |
 
 ### Group Call Tests
 
@@ -543,23 +561,64 @@ Implementations SHOULD validate their state machine and event handling against t
 | G4 | Partial disconnect | Close only that peer's connection; continue with remaining |
 | G5 | Last peer leaves | Call ends |
 | G6 | Discover peer while ringing | Buffer peer; trigger mesh setup after accepting |
-| G7 | Mid-call offer (callee-to-callee) | Forwarded via onMidCallOfferReceived callback |
+| G7 | Mid-call offer (callee-to-callee) | Forwarded via callback with peer pubkey and SDP |
 | G8 | Invite new peer | Offer with all existing members + new invitee in `p` tags |
 | G9 | Callee-to-callee glare | Lower pubkey initiates; higher waits |
+
+### ICE Candidate Buffering Tests
+
+| # | Scenario | Verification |
+|---|----------|-------------|
+| B1 | Candidate arrives before session exists | Buffered in global buffer (keyed by sender) |
+| B2 | Multiple candidates buffered globally | All preserved per peer |
+| B3 | Global buffer drains on session creation | Moved to per-session buffer, global cleared |
+| B4 | Global buffer drains and flushes after remote desc | Candidates reach PeerConnection via `addIceCandidate()` |
+| B5 | Candidate arrives after session, before remote desc | Buffered per-session |
+| B6 | Candidate arrives after session and remote desc | Added directly via `addIceCandidate()` |
+| B7 | Per-session buffer not cleared on creation | Only cleared on flush after `setRemoteDescription()` |
+| B8 | Candidates buffered while ringing are preserved | Not lost when accepting — drained into new session |
+| B9 | Global buffers are separate per peer | Alice's buffer independent of Carol's |
+| B10 | Registering one session doesn't drain other peer | Only the target peer's global buffer is drained |
+| B11 | Full P2P flow: ICE through all phases | Ringing → accept → pre-desc → flush → post-desc |
+| B12 | Group call mesh with ICE buffering | Global buffer per peer, drain on mesh session creation |
+
+### Gift Wrap Round-Trip Tests
+
+| # | Scenario | Verification |
+|---|----------|-------------|
+| W1 | Call Offer round-trips through gift wrap | Sign → wrap → unwrap → correct typed event, valid signature |
+| W2 | Third party cannot decrypt | Gift wrap addressed to Bob, Carol cannot unwrap |
+| W3 | Call Answer round-trips | SDP answer content preserved |
+| W4 | ICE Candidate round-trips | JSON with candidate/sdpMid/sdpMLineIndex preserved |
+| W5 | Hangup round-trips | Reason string preserved (including empty) |
+| W6 | Reject round-trips | Including `"busy"` reason |
+| W7 | Renegotiate round-trips | New SDP offer preserved |
+| W8 | Group offer: per-peer wraps | Each callee can decrypt only their own wrap |
+| W9 | Group answer: broadcast wraps | All members can decrypt; inner event identical |
+| W10 | Group hangup: sign once, wrap per recipient | All wraps contain same inner event ID |
+| W11 | Group reject: sign once, wrap per recipient | All wraps contain same inner event ID |
+| W12 | Full P2P flow through gift wraps | All 7 signaling steps round-trip successfully |
+| W13 | Wrap uses ephemeral key (not sender's) | Gift wrap pubkey differs from inner event pubkey |
+| W14 | Each wrap uses unique ephemeral key | Two wraps for same content have different pubkeys |
+| W15 | Inner event signature verifiable after unwrap | Recipient can verify sender's signature |
+| W16 | SDP with special characters survives | CRLF, slashes, equals signs in SDP preserved |
+| W17 | ICE candidate with special characters survives | JSON escaping + NIP-44 encryption preserves content |
+| W18 | Group offer with context: per-peer SDP | Per-peer SDP content but all `p` tags visible |
 
 ### Interface-Level Tests (Full Pipeline)
 
 | # | Scenario | Verification |
 |---|----------|-------------|
-| I1 | Initiate call | Publishes 1 ephemeral gift wrap (kind 21059) |
-| I2 | Accept call | Publishes ephemeral gift wrap answer(s) |
-| I3 | Reject call | Publishes ephemeral gift wrap reject(s) |
-| I4 | Hangup | Publishes ephemeral gift wrap hangup(s) |
-| I5 | Send renegotiation | Publishes 1 ephemeral gift wrap renegotiate |
-| I6 | Busy auto-reject | Publishes ephemeral gift wrap reject while staying in current call |
-| I7 | Group per-peer offers | Publishes 1 ephemeral gift wrap per peer |
-| I8 | Invite peer | Publishes 1 ephemeral gift wrap; invitee added to pending set |
-| I9 | Full P2P flow | Offer → Answer → Renegotiate → Hangup, all via gift wraps |
+| I1 | Initiate call | Publishes 1 gift wrap (kind 21059) |
+| I2 | Accept call | Publishes gift wrap answer(s) |
+| I3 | Reject call | Publishes gift wrap reject(s) |
+| I4 | Hangup | Publishes gift wrap hangup(s) |
+| I5 | Send renegotiation | Publishes 1 gift wrap renegotiate |
+| I6 | Send renegotiation answer | Publishes 1 gift wrap answer |
+| I7 | Busy auto-reject | Publishes gift wrap reject while staying in current call |
+| I8 | Group per-peer offers | Publishes 1 gift wrap per peer |
+| I9 | Invite peer | Publishes 1 gift wrap; invitee added to pending set |
+| I10 | Full P2P flow | Offer → Answer → Renegotiate → Hangup, all via gift wraps |
 
 ## References
 
