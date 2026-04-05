@@ -20,35 +20,39 @@
  */
 package com.vitorpamplona.quartz.utils
 
-expect object Secp256k1Instance {
-    fun compressedPubKeyFor(privKey: ByteArray): ByteArray
+import com.vitorpamplona.quartz.utils.secp256k1.Secp256k1
 
-    fun isPrivateKeyValid(il: ByteArray): Boolean
+object Secp256k1Instance {
+    private val h02 = Hex.decode("02")
+
+    fun compressedPubKeyFor(privKey: ByteArray) = Secp256k1.pubKeyCompress(Secp256k1.pubkeyCreate(privKey))
+
+    fun isPrivateKeyValid(il: ByteArray): Boolean = Secp256k1.secKeyVerify(il)
 
     fun signSchnorr(
         data: ByteArray,
         privKey: ByteArray,
         nonce: ByteArray? = RandomInstance.bytes(32),
-    ): ByteArray
+    ): ByteArray = Secp256k1.signSchnorr(data, privKey, nonce)
 
     fun signSchnorr(
         data: ByteArray,
         privKey: ByteArray,
-    ): ByteArray
+    ): ByteArray = Secp256k1.signSchnorr(data, privKey, null)
 
     fun verifySchnorr(
         signature: ByteArray,
         hash: ByteArray,
         pubKey: ByteArray,
-    ): Boolean
+    ): Boolean = Secp256k1.verifySchnorr(signature, hash, pubKey)
 
     fun privateKeyAdd(
         first: ByteArray,
         second: ByteArray,
-    ): ByteArray
+    ): ByteArray = Secp256k1.privKeyTweakAdd(first, second)
 
     fun pubKeyTweakMulCompact(
         pubKey: ByteArray,
         privateKey: ByteArray,
-    ): ByteArray
+    ): ByteArray = Secp256k1.pubKeyTweakMul(h02 + pubKey, privateKey).copyOfRange(1, 33)
 }
