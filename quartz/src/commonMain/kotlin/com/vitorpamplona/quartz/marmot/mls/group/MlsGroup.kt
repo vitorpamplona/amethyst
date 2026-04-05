@@ -108,6 +108,47 @@ class MlsGroup private constructor(
     val epoch: Long get() = groupContext.epoch
     val leafIndex: Int get() = myLeafIndex
 
+    // --- State Persistence ---
+
+    /**
+     * Capture the current group state as a serializable snapshot.
+     *
+     * The returned [MlsGroupState] contains all secret key material and
+     * MUST be stored in encrypted local storage. Call this after every
+     * epoch transition (commit, processCommit, processWelcome) to ensure
+     * the group can be restored after an app restart.
+     */
+    fun saveState(): MlsGroupState {
+        val treeWriter = TlsWriter()
+        tree.encodeTls(treeWriter)
+
+        return MlsGroupState(
+            groupContext = groupContext,
+            treeBytes = treeWriter.toByteArray(),
+            myLeafIndex = myLeafIndex,
+            epochSecrets = epochSecrets,
+            initSecret = initSecret,
+            signingPrivateKey = signingPrivateKey,
+            encryptionPrivateKey = encryptionPrivateKey,
+            interimTranscriptHash = interimTranscriptHash,
+            encryptionSecret = epochSecrets.encryptionSecret,
+        )
+    }
+
+    /**
+     * Extract retained epoch secrets for late-message decryption.
+     *
+     * Call this BEFORE an epoch transition to capture the outgoing epoch's
+     * decryption secrets. These are kept in a bounded window by [MlsGroupManager].
+     */
+    fun retainedSecrets(): RetainedEpochSecrets =
+        RetainedEpochSecrets(
+            epoch = epoch,
+            senderDataSecret = epochSecrets.senderDataSecret,
+            encryptionSecret = epochSecrets.encryptionSecret,
+            leafCount = tree.leafCount,
+        )
+
     val memberCount: Int
         get() {
             var count = 0
@@ -213,6 +254,48 @@ class MlsGroup private constructor(
     fun proposeSelfRemove(): Proposal.SelfRemove {
         val proposal = Proposal.SelfRemove()
         pendingProposals.add(PendingProposal(proposal, myLeafIndex))
+        return proposal
+    }
+
+    /**
+     * Create an Update proposal to rotate the signing key within the group.
+     *
+     * Per MIP-00, members SHOULD perform a self-update within 24 hours
+     * of joining a group. This replaces the leaf node with fresh key material,
+     * improving forward secrecy.
+     *
+     * The new signing key pair is generated internally and takes effect
+     * after the next Commit.
+     *
+     * @return the Update proposal (already queued for the next commit)
+     */
+    fun proposeSigningKeyRotation(): Proposal.Update {
+        val newSigKp = Ed25519.generateKeyPair()
+        val newEncKp = X25519.generateKeyPair()
+
+        val currentLeaf = tree.getLeaf(myLeafIndex)
+        val identity =
+            (currentLeaf?.credential as? Credential.Basic)?.identity
+                ?: ByteArray(0)
+
+        val newLeafNode =
+            buildLeafNode(
+                encryptionKey = newEncKp.publicKey,
+                signatureKey = newSigKp.publicKey,
+                identity = identity,
+                source = LeafNodeSource.UPDATE,
+                signingKey = newSigKp.privateKey,
+                groupId = groupId,
+                leafIndex = myLeafIndex,
+            )
+
+        val proposal = Proposal.Update(newLeafNode)
+        pendingProposals.add(PendingProposal(proposal, myLeafIndex))
+
+        // Stage the new keys — they take effect when commit() is called
+        signingPrivateKey = newSigKp.privateKey
+        encryptionPrivateKey = newEncKp.privateKey
+
         return proposal
     }
 
@@ -1406,6 +1489,32 @@ class MlsGroup private constructor(
                 )
 
             return Pair(group, commitBytes)
+        }
+
+        /**
+         * Restore a group from a previously saved [MlsGroupState].
+         *
+         * The SecretTree is reconstructed from the stored encryption_secret.
+         * Note: SecretTree ratchet state (per-sender generation counters) is
+         * NOT preserved — messages sent/received before the save point cannot
+         * be re-decrypted, which is acceptable because they would already
+         * have been processed.
+         */
+        fun restore(state: MlsGroupState): MlsGroup {
+            val tree = RatchetTree.decodeTls(TlsReader(state.treeBytes))
+            val secretTree = SecretTree(state.encryptionSecret, tree.leafCount)
+
+            return MlsGroup(
+                groupContext = state.groupContext,
+                tree = tree,
+                myLeafIndex = state.myLeafIndex,
+                epochSecrets = state.epochSecrets,
+                secretTree = secretTree,
+                initSecret = state.initSecret,
+                signingPrivateKey = state.signingPrivateKey,
+                encryptionPrivateKey = state.encryptionPrivateKey,
+                interimTranscriptHash = state.interimTranscriptHash,
+            )
         }
 
         /**
