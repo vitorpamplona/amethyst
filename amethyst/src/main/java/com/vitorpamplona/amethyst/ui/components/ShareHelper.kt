@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.components
 
 import android.content.Context
 import android.net.Uri
+import androidx.annotation.VisibleForTesting
 import androidx.core.content.FileProvider
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.quartz.utils.Log
@@ -85,10 +86,13 @@ object ShareHelper {
             } ?: throw IOException("Unable to open snapshot for: $imageUrl")
         }
 
+    @VisibleForTesting
     internal fun getImageExtension(file: File): String = getMediaExtension(file, isVideo = false)
 
+    @VisibleForTesting
     internal fun getVideoExtension(file: File): String = getMediaExtension(file, isVideo = true)
 
+    @VisibleForTesting
     internal fun getMediaExtension(
         file: File,
         isVideo: Boolean,
