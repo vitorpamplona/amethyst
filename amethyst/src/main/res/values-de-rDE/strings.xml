@@ -1933,4 +1933,9 @@ anz der Bedingungen ist erforderlich</string>
     <string name="relay_members_removed">%1$d Mitglieder aus Relay entfernt</string>
     <string name="relay_join_request">Relay-Beitrittsanfrage</string>
     <string name="relay_leave_request">Relay-Austrittsanfrage</string>
+    <string name="call_bluetooth">Bluetooth</string>
+    <string name="closed_polls">Geschlossen</string>
+    <string name="feed_group_locations">Standorte</string>
+    <string name="open_polls">Offen</string>
+    <string name="poll_view_results">Ergebnisse anzeigen</string>
 </resources>

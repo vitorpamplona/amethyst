@@ -1929,4 +1929,9 @@
     <string name="relay_members_removed">%1$d membros removidos do relay</string>
     <string name="relay_join_request">Solicitação de entrada no relay</string>
     <string name="relay_leave_request">Solicitação de saída do relay</string>
+    <string name="call_bluetooth">Bluetooth</string>
+    <string name="closed_polls">Encerradas</string>
+    <string name="feed_group_locations">Localizações</string>
+    <string name="open_polls">Abertas</string>
+    <string name="poll_view_results">Ver resultados</string>
 </resources>
