@@ -141,22 +141,38 @@ internal object ECPoint {
     private val B = intArrayOf(7, 0, 0, 0, 0, 0, 0, 0)
 
     /**
-     * Precomputed table: gTable[i] = (i+1)·G as affine points, for i in 0..15.
-     * Used by mulG and mulDoubleG for fast generator multiplication.
-     * Lazily initialized on first use (costs ~16 point additions + 16 inversions).
+     * wNAF window width for the G-side of scalar multiplication.
+     * Width w uses a table of 2^(w-2) odd multiples. Larger windows mean fewer
+     * additions but more precomputed storage:
+     *   w=5:  8 entries,  ~26 adds per 128-bit scalar (~1KB table)
+     *   w=8:  64 entries, ~16 adds per 128-bit scalar (~8KB table)
+     *   w=10: 256 entries,~13 adds per 128-bit scalar (~32KB table)
      */
-    internal val gTable: Array<AffinePoint> by lazy { buildGTable() }
+    private const val WINDOW_G = 8
+    private val G_TABLE_SIZE = 1 shl (WINDOW_G - 2) // 64 for w=8
+
+    /**
+     * Precomputed G odd-multiples for wNAF: gOddTable[i] = (2i+1)·G as affine, for i in 0..G_TABLE_SIZE-1.
+     * Used by mulG and mulDoubleG. Lazily initialized on first use.
+     */
+    private val gOddTable: Array<AffinePoint> by lazy { buildGOddTable() }
 
     /** Precomputed λ(G) odd-multiples for GLV: gLamTable[i] = λ((2i+1)·G) as affine. */
     private val gLamTable: Array<AffinePoint> by lazy {
-        Array(8) { AffinePoint(FieldP.mul(gTable[it * 2].x, Glv.BETA), gTable[it * 2].y.copyOf()) }
+        Array(G_TABLE_SIZE) { AffinePoint(FieldP.mul(gOddTable[it].x, Glv.BETA), gOddTable[it].y.copyOf()) }
     }
 
-    private fun buildGTable(): Array<AffinePoint> {
-        val jac = Array(16) { MutablePoint() }
-        jac[0].setAffine(GX, GY)
-        for (i in 1 until 16) addPoints(jac[i], jac[i - 1], jac[0])
-        return Array(16) { i ->
+    private fun buildGOddTable(): Array<AffinePoint> {
+        val g = MutablePoint()
+        g.setAffine(GX, GY)
+        val g2 = MutablePoint()
+        doublePoint(g2, g)
+
+        val jac = Array(G_TABLE_SIZE) { MutablePoint() }
+        jac[0].copyFrom(g)
+        for (i in 1 until G_TABLE_SIZE) addPoints(jac[i], jac[i - 1], g2)
+
+        return Array(G_TABLE_SIZE) { i ->
             val x = IntArray(8)
             val y = IntArray(8)
             toAffine(jac[i], x, y)
@@ -436,12 +452,11 @@ internal object ECPoint {
             return
         }
 
-        val w = 5
         val split = Glv.splitScalar(scalar)
-        val wnaf1 = Glv.wnaf(split.k1, w, 129)
-        val wnaf2 = Glv.wnaf(split.k2, w, 129)
+        val wnaf1 = Glv.wnaf(split.k1, WINDOW_G, 129)
+        val wnaf2 = Glv.wnaf(split.k2, WINDOW_G, 129)
 
-        val gOdd = Array(8) { gTable[it * 2] }
+        val gOdd = gOddTable
         val gLam = gLamTable
 
         var bits = maxOf(wnaf1.size, wnaf2.size)
@@ -480,32 +495,32 @@ internal object ECPoint {
         p: MutablePoint,
         e: IntArray,
     ) {
-        val w = 5
-        val tableSize = 1 shl (w - 2) // 8 entries per table
+        val wP = 5 // Window for P-side (table built per-call, keep small)
+        val pTableSize = 1 shl (wP - 2) // 8 entries for P
 
         // Split scalars via GLV decomposition
         val sSplit = Glv.splitScalar(s)
         val eSplit = Glv.splitScalar(e)
 
-        // Build wNAF for each ~128-bit half-scalar
-        val wnafS1 = Glv.wnaf(sSplit.k1, w, 129)
-        val wnafS2 = Glv.wnaf(sSplit.k2, w, 129)
-        val wnafE1 = Glv.wnaf(eSplit.k1, w, 129)
-        val wnafE2 = Glv.wnaf(eSplit.k2, w, 129)
+        // Build wNAF: G-side uses wider window (cached table), P-side uses w=5
+        val wnafS1 = Glv.wnaf(sSplit.k1, WINDOW_G, 129)
+        val wnafS2 = Glv.wnaf(sSplit.k2, WINDOW_G, 129)
+        val wnafE1 = Glv.wnaf(eSplit.k1, wP, 129)
+        val wnafE2 = Glv.wnaf(eSplit.k2, wP, 129)
 
         // G tables: precomputed and cached (no per-verify allocation)
-        val gOdd = Array(tableSize) { gTable[it * 2] }
+        val gOdd = gOddTable
         val gLam = gLamTable
 
         // P odd-multiples [1P, 3P, 5P, ..., 15P] via 2P stepping (1 double + 7 adds)
         val p2 = MutablePoint()
         doublePoint(p2, p)
-        val pOdd = Array(tableSize) { MutablePoint() }
+        val pOdd = Array(pTableSize) { MutablePoint() }
         pOdd[0].copyFrom(p)
-        for (i in 1 until tableSize) addPoints(pOdd[i], pOdd[i - 1], p2)
+        for (i in 1 until pTableSize) addPoints(pOdd[i], pOdd[i - 1], p2)
         // λ(P) table: (β·X, Y, Z) in Jacobian — endomorphism preserves projective coords
         val pLamOdd =
-            Array(tableSize) { i ->
+            Array(pTableSize) { i ->
                 val lp = MutablePoint()
                 FieldP.mul(lp.x, pOdd[i].x, Glv.BETA)
                 pOdd[i].y.copyInto(lp.y)
