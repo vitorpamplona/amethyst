@@ -161,7 +161,7 @@ internal object ECPoint {
      * Used by mulG and mulDoubleG for fast generator multiplication.
      * Lazily initialized on first use (costs ~16 point additions + 16 inversions).
      */
-    private val gTable: Array<AffinePoint> by lazy { buildGTable() }
+    internal val gTable: Array<AffinePoint> by lazy { buildGTable() }
 
     private fun buildGTable(): Array<AffinePoint> {
         val jac = Array(16) { MutablePoint() }
@@ -365,6 +365,77 @@ internal object ECPoint {
         FieldP.mul(out.z, out.z, t[6])
     }
 
+    // ==================== wNAF Encoding ====================
+
+    /**
+     * Convert scalar to width-w wNAF (windowed Non-Adjacent Form).
+     *
+     * wNAF is an encoding where each non-zero digit is odd and separated by at least
+     * w-1 zero digits. For width 5, digits are in {±1, ±3, ±5, ..., ±15} with a
+     * precomputed table of 8 odd multiples. The guaranteed zero runs mean fewer
+     * point additions than simple windowing.
+     *
+     * Returns IntArray where result[i] is the signed digit at bit position i.
+     */
+    internal fun wnaf(
+        scalar: IntArray,
+        w: Int,
+        maxBits: Int,
+    ): IntArray {
+        // wNAF can carry up to bit (maxBits + w - 1), so extend both arrays
+        val totalBits = maxBits + w
+        val sLimbs = (totalBits + 31) / 32
+        val result = IntArray(totalBits)
+        val s = IntArray(sLimbs)
+        scalar.copyInto(s)
+        var bit = 0
+        while (bit < totalBits) {
+            if (s[bit / 32] ushr (bit % 32) and 1 == 0) {
+                bit++
+                continue
+            }
+            var word = getBitsVar(s, bit, w.coerceAtMost(totalBits - bit))
+            if (word >= (1 shl (w - 1))) {
+                word -= (1 shl w)
+                addBitTo(s, bit + w) // Propagate the borrow
+            }
+            result[bit] = word
+            bit += w
+        }
+        return result
+    }
+
+    private fun getBitsVar(
+        s: IntArray,
+        bitPos: Int,
+        count: Int,
+    ): Int {
+        if (count == 0) return 0
+        val limb = bitPos / 32
+        val shift = bitPos % 32
+        var r = (s[limb] ushr shift)
+        if (shift + count > 32 && limb + 1 < s.size) {
+            r = r or (s[limb + 1] shl (32 - shift))
+        }
+        return r and ((1 shl count) - 1)
+    }
+
+    private fun addBitTo(
+        s: IntArray,
+        bitPos: Int,
+    ) {
+        val limb = bitPos / 32
+        if (limb >= s.size) return
+        val bit = bitPos % 32
+        var carry = (1L shl bit)
+        for (i in limb until s.size) {
+            carry += (s[i].toLong() and 0xFFFFFFFFL)
+            s[i] = carry.toInt()
+            carry = carry ushr 32
+            if (carry == 0L) break
+        }
+    }
+
     // ==================== Scalar Multiplication ====================
 
     /**
@@ -438,15 +509,14 @@ internal object ECPoint {
     }
 
     /**
-     * Shamir's trick: out = s·G + e·P in a single scalar multiplication pass.
+     * Shamir's trick with wNAF-5: out = s·G + e·P in a single pass.
      *
-     * Instead of computing s·G and e·P separately (two full scalar muls) and adding
-     * the results, we interleave them: process both scalars simultaneously from MSB
-     * to LSB, sharing the doublings. This roughly halves the total work for signature
-     * verification, where we need to compute R = s·G - e·P.
+     * Uses width-5 wNAF encoding for both scalars, processing 1 bit at a time with
+     * shared doublings. wNAF guarantees at least 4 zeros between non-zero digits,
+     * reducing additions from ~120 (4-bit window) to ~86 for two 256-bit scalars.
      *
-     * The G-side uses mixed addition (from precomputed affine table), while the P-side
-     * uses full Jacobian addition (building the P table on-the-fly avoids 16 inversions).
+     * The G-side uses mixed addition (from precomputed affine odd-multiples table).
+     * The P-side uses full Jacobian addition (building the table avoids 8 inversions).
      */
     fun mulDoubleG(
         out: MutablePoint,
@@ -454,27 +524,63 @@ internal object ECPoint {
         p: MutablePoint,
         e: IntArray,
     ) {
-        val gTab = gTable
-        val pTab = Array(16) { MutablePoint() }
-        pTab[0].copyFrom(p)
-        for (i in 1 until 16) addPoints(pTab[i], pTab[i - 1], pTab[0])
+        // G odd-multiples [1G, 3G, 5G, ..., 15G] as affine
+        val gOdd = Array(8) { gTable[it * 2] }
+
+        // P odd-multiples [1P, 3P, ..., 15P] as Jacobian (avoids 8 inversions)
+        val pAll = Array(16) { MutablePoint() }
+        pAll[0].copyFrom(p)
+        for (i in 1 until 16) addPoints(pAll[i], pAll[i - 1], pAll[0])
+        val pOdd = Array(8) { pAll[it * 2] }
+
+        // Build wNAF representations
+        val wnafS = wnaf(s, 5, 256)
+        val wnafE = wnaf(e, 5, 256)
+
+        // Find highest non-zero digit across both
+        var bits = maxOf(wnafS.size, wnafE.size)
+        while (bits > 0 && (bits > wnafS.size || wnafS[bits - 1] == 0) &&
+            (bits > wnafE.size || wnafE[bits - 1] == 0)
+        ) {
+            bits--
+        }
 
         out.setInfinity()
         val tmp = MutablePoint()
-        for (nibbleIdx in 63 downTo 0) {
+        val negY = IntArray(8)
+
+        for (i in bits - 1 downTo 0) {
             doublePoint(out, out)
-            doublePoint(out, out)
-            doublePoint(out, out)
-            doublePoint(out, out)
-            val sNib = U256.getNibble(s, nibbleIdx)
-            if (sNib != 0) {
-                addMixed(tmp, out, gTab[sNib - 1].x, gTab[sNib - 1].y)
-                out.copyFrom(tmp)
+
+            if (i < wnafS.size) {
+                val ds = wnafS[i]
+                if (ds != 0) {
+                    val idx = (if (ds > 0) ds else -ds) / 2
+                    if (ds > 0) {
+                        addMixed(tmp, out, gOdd[idx].x, gOdd[idx].y)
+                    } else {
+                        FieldP.neg(negY, gOdd[idx].y)
+                        addMixed(tmp, out, gOdd[idx].x, negY)
+                    }
+                    out.copyFrom(tmp)
+                }
             }
-            val eNib = U256.getNibble(e, nibbleIdx)
-            if (eNib != 0) {
-                addPoints(tmp, out, pTab[eNib - 1])
-                out.copyFrom(tmp)
+
+            if (i < wnafE.size) {
+                val de = wnafE[i]
+                if (de != 0) {
+                    val idx = (if (de > 0) de else -de) / 2
+                    if (de < 0) {
+                        val neg = MutablePoint()
+                        pOdd[idx].x.copyInto(neg.x)
+                        FieldP.neg(neg.y, pOdd[idx].y)
+                        pOdd[idx].z.copyInto(neg.z)
+                        addPoints(tmp, out, neg)
+                    } else {
+                        addPoints(tmp, out, pOdd[idx])
+                    }
+                    out.copyFrom(tmp)
+                }
             }
         }
     }
