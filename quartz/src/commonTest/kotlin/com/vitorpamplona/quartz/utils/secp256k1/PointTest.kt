@@ -330,4 +330,50 @@ class PointTest {
         assertFalse(ECPoint.parsePublicKey(ByteArray(10), x, y))
         assertFalse(ECPoint.parsePublicKey(ByteArray(33), x, y)) // wrong prefix (0x00)
     }
+
+    @Test
+    fun addMixedEqualPoints() {
+        // addMixed with equal points should double
+        val p = MutablePoint()
+        p.setAffine(ECPoint.GX, ECPoint.GY)
+        val result = MutablePoint()
+        ECPoint.addMixed(result, p, ECPoint.GX, ECPoint.GY)
+        val rx = IntArray(8)
+        val ry = IntArray(8)
+        ECPoint.toAffine(result, rx, ry)
+        val doubled = MutablePoint()
+        ECPoint.doublePoint(doubled, p)
+        val dx = IntArray(8)
+        val dy = IntArray(8)
+        ECPoint.toAffine(doubled, dx, dy)
+        assertEquals(toHex(dx), toHex(rx))
+    }
+
+    @Test
+    fun addMixedInversePoints() {
+        val p = MutablePoint()
+        p.setAffine(ECPoint.GX, ECPoint.GY)
+        val negGy = FieldP.neg(ECPoint.GY)
+        val result = MutablePoint()
+        ECPoint.addMixed(result, p, ECPoint.GX, negGy)
+        assertTrue(result.isInfinity())
+    }
+
+    @Test
+    fun parseCompressedOddY() {
+        val privKeyBytes =
+            "65f039136f8da8d3e87b4818746b53318d5481e24b2673f162815144223a0b5a"
+                .chunked(2)
+                .map { it.toInt(16).toByte() }
+                .toByteArray()
+        val pubkey = Secp256k1.pubkeyCreate(privKeyBytes)
+        val compressed = Secp256k1.pubKeyCompress(pubkey)
+        assertEquals(0x03.toByte(), compressed[0]) // Odd y → 03 prefix
+        val x = IntArray(8)
+        val y = IntArray(8)
+        assertTrue(ECPoint.parsePublicKey(compressed, x, y))
+        // Round-trip: compress again should give same result
+        val recompressed = ECPoint.serializeCompressed(x, y)
+        assertEquals(compressed.toList(), recompressed.toList())
+    }
 }

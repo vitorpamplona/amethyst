@@ -238,4 +238,46 @@ class Secp256k1Test {
         val secretBA = Secp256k1.pubKeyTweakMul(pubA, privB)
         assertEquals(secretAB.toHexKey(), secretBA.toHexKey())
     }
+
+    @Test
+    fun verifySchnorrWrongMessage() {
+        val sig =
+            Secp256k1.signSchnorr(
+                ByteArray(32) { 0x42 },
+                "f410f88bcec6cbfda04d6a273c7b1dd8bba144cd45b71e87109cfa11dd7ed561".hexToByteArray(),
+                null,
+            )
+        val pubkey =
+            Secp256k1.pubKeyCompress(
+                Secp256k1.pubkeyCreate("f410f88bcec6cbfda04d6a273c7b1dd8bba144cd45b71e87109cfa11dd7ed561".hexToByteArray()),
+            )
+        val xonly = pubkey.copyOfRange(1, 33)
+        // Correct message verifies
+        assertTrue(Secp256k1.verifySchnorr(sig, ByteArray(32) { 0x42 }, xonly))
+        // Wrong message fails
+        assertFalse(Secp256k1.verifySchnorr(sig, ByteArray(32) { 0x43 }, xonly))
+    }
+
+    @Test
+    fun verifySchnorrCorruptedSignature() {
+        val privKey = "f410f88bcec6cbfda04d6a273c7b1dd8bba144cd45b71e87109cfa11dd7ed561".hexToByteArray()
+        val msg = ByteArray(32) { 0x42 }
+        val sig = Secp256k1.signSchnorr(msg, privKey, null)
+        val pubkey = Secp256k1.pubKeyCompress(Secp256k1.pubkeyCreate(privKey))
+        val xonly = pubkey.copyOfRange(1, 33)
+        // Flip a bit in the signature
+        val corrupt = sig.copyOf()
+        corrupt[0] = (corrupt[0].toInt() xor 1).toByte()
+        assertFalse(Secp256k1.verifySchnorr(corrupt, msg, xonly))
+    }
+
+    @Test
+    fun signSchnorrDeterministic() {
+        // With null auxrand, signing should be deterministic
+        val privKey = "f410f88bcec6cbfda04d6a273c7b1dd8bba144cd45b71e87109cfa11dd7ed561".hexToByteArray()
+        val msg = ByteArray(32) { 0x42 }
+        val sig1 = Secp256k1.signSchnorr(msg, privKey, null)
+        val sig2 = Secp256k1.signSchnorr(msg, privKey, null)
+        assertEquals(sig1.toList(), sig2.toList())
+    }
 }

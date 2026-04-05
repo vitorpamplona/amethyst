@@ -262,4 +262,49 @@ class FieldPTest {
         FieldP.sqr(out, a)
         assertEquals(25, out[0]) // 5² = 25
     }
+
+    @Test
+    fun halfOfPMinus1() {
+        // half(p-1) should equal (p-1)/2
+        val pMinus1 = hex("fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2e")
+        val out = IntArray(8)
+        FieldP.half(out, pMinus1)
+        // Verify: 2 * half(p-1) = p-1
+        val doubled = FieldP.add(out, out)
+        assertEquals(toHex(pMinus1), toHex(doubled))
+    }
+
+    @Test
+    fun invOfTwo() {
+        val two = intArrayOf(2, 0, 0, 0, 0, 0, 0, 0)
+        val inv2 = FieldP.inv(two)
+        val product = FieldP.mul(two, inv2)
+        val one = intArrayOf(1, 0, 0, 0, 0, 0, 0, 0)
+        assertEquals(toHex(one), toHex(product))
+    }
+
+    @Test
+    fun sqrtOfZero() {
+        val zero = IntArray(8)
+        val root = FieldP.sqrt(zero)
+        assertTrue(root != null && U256.isZero(root))
+    }
+
+    @Test
+    fun sqrtOfOne() {
+        val one = intArrayOf(1, 0, 0, 0, 0, 0, 0, 0)
+        val root = FieldP.sqrt(one)!!
+        assertEquals(toHex(one), toHex(root))
+    }
+
+    @Test
+    fun mulAliasingOutputEqualsInput() {
+        // mul(out, a, b) where out == a should work
+        val a = hex("67e56582298859ddae725f972992a07c6c4fb9f62a8fff58ce3ca926a1063530")
+        val b = hex("3982f19bef1615bccfbb05e321c10e1d4cba3df0e841c2e41eeb6016347653c3")
+        val expected = FieldP.mul(a, b)
+        val aCopy = a.copyOf()
+        FieldP.mul(aCopy, aCopy, b) // out == a
+        assertEquals(toHex(expected), toHex(aCopy))
+    }
 }
