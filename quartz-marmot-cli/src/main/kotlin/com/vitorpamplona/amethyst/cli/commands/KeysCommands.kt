@@ -92,7 +92,7 @@ class KeysPublishCommand : CliktCommand(name = "publish") {
                 signer = store.signerFor(account),
                 dataDir = File(findWnCommand().dataDir),
             )
-        engine.init()
+        engine.init(connectRelays = true)
 
         try {
             val kpInfo = engine.generateKeyPackage()

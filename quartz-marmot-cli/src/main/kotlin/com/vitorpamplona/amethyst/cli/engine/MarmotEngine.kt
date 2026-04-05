@@ -47,8 +47,14 @@ class MarmotEngine(
     val subscriptionManager = MarmotSubscriptionManager(account.pubKeyHex)
     val relayPool = CliRelayPool()
 
-    fun init() {
+    fun init(connectRelays: Boolean = false) {
         runBlocking { groupManager.restoreAll() }
+        if (connectRelays) {
+            relayPool.connect(account.relays)
+        }
+    }
+
+    fun connectRelays() {
         relayPool.connect(account.relays)
     }
 

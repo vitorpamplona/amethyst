@@ -211,7 +211,7 @@ class GroupsAddMembersCommand : CliktCommand(name = "add-members") {
                 signer = store.signerFor(account),
                 dataDir = File(findWnCommand().dataDir),
             )
-        engine.init()
+        engine.init(connectRelays = true)
 
         try {
             for (kp in keyPackages) {
@@ -249,7 +249,7 @@ class GroupsRemoveMembersCommand : CliktCommand(name = "remove-members") {
                 signer = store.signerFor(account),
                 dataDir = File(findWnCommand().dataDir),
             )
-        engine.init()
+        engine.init(connectRelays = true)
 
         try {
             val commitB64 = engine.removeMember(groupId, leafIndex)
@@ -393,7 +393,7 @@ class GroupsLeaveCommand : CliktCommand(name = "leave") {
                 signer = store.signerFor(account),
                 dataDir = File(findWnCommand().dataDir),
             )
-        engine.init()
+        engine.init(connectRelays = true)
 
         try {
             val proposalB64 = engine.leaveGroup(groupId)

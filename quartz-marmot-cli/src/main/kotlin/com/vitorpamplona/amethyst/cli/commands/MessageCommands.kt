@@ -75,7 +75,7 @@ class MessagesSendCommand : CliktCommand(name = "send") {
                 signer = store.signerFor(account),
                 dataDir = File(findWnCommand().dataDir),
             )
-        engine.init()
+        engine.init(connectRelays = true)
 
         try {
             val eventId = engine.sendMessage(groupId, content)
@@ -120,7 +120,7 @@ class MessagesSubscribeCommand : CliktCommand(name = "subscribe") {
                 signer = store.signerFor(account),
                 dataDir = File(findWnCommand().dataDir),
             )
-        engine.init()
+        engine.init(connectRelays = true)
 
         try {
             println("Subscribing to group $groupId... (Ctrl+C to stop)")
