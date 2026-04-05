@@ -28,10 +28,10 @@ import coil3.Uri
 import coil3.annotation.ExperimentalCoilApi
 import coil3.asImage
 import coil3.decode.DataSource
+import coil3.disk.DiskCache
 import coil3.fetch.FetchResult
 import coil3.fetch.Fetcher
 import coil3.fetch.ImageFetchResult
-import coil3.fetch.SourceFetchResult
 import coil3.key.Keyer
 import coil3.network.CacheStrategy
 import coil3.network.ConcurrentRequestStrategy
@@ -49,11 +49,12 @@ import kotlin.coroutines.cancellation.CancellationException
  * Coil Fetcher that serves pre-resized profile picture thumbnails from a dedicated disk cache.
  *
  * URLs are wrapped as `profilepic://https://example.com/pic.jpg` by the avatar composables.
- * This fetcher:
- * 1. Checks the thumbnail disk cache for a pre-resized JPEG (~5-10KB)
- * 2. On hit: returns the tiny thumbnail directly (fast disk read)
- * 3. On miss: returns the network result immediately for display, and generates
- *    the thumbnail in the background for next time
+ *
+ * Flow:
+ * - Thumbnail cache hit: returns the tiny ~5KB JPEG directly. No network, no large decode.
+ * - Thumbnail cache miss (first load): passes the result straight through to Coil's normal
+ *   pipeline (zero overhead). In the background, reads the file from Coil's disk cache
+ *   after download and generates a thumbnail for next time.
  *
  * The zoomable full-screen dialog uses the raw URL (without profilepic:// prefix),
  * which goes through the normal Coil pipeline for full-resolution display.
@@ -64,6 +65,7 @@ class ProfilePictureFetcher(
     private val options: Options,
     private val thumbnailCache: ThumbnailDiskCache,
     private val networkFetcher: Fetcher,
+    private val diskCacheLazy: Lazy<DiskCache?>,
     private val backgroundScope: CoroutineScope,
 ) : Fetcher {
     override suspend fun fetch(): FetchResult? {
@@ -80,7 +82,11 @@ class ProfilePictureFetcher(
             }
         }
 
-        // Cache miss: download via normal network fetcher
+        // Cache miss: download via normal network fetcher.
+        // NetworkFetcher writes the original to Coil's disk cache and returns
+        // a source pointing to it. We pass this through unchanged — Coil's
+        // decoder pipeline handles streaming decode with inSampleSize, no
+        // large byte array allocation.
         val result =
             try {
                 networkFetcher.fetch() ?: return null
@@ -89,62 +95,57 @@ class ProfilePictureFetcher(
                 return null
             }
 
-        // For source results, read bytes, decode for immediate display,
-        // and generate thumbnail in background for next time
-        if (result is SourceFetchResult) {
-            val bytes = result.source.source().use { it.readByteArray() }
-
-            // Decode at thumbnail size for immediate display
-            val bitmap = decodeThumbnailFromBytes(bytes)
-            if (bitmap != null) {
-                // Fire-and-forget: save thumbnail to disk for next load
-                backgroundScope.launch {
-                    thumbnailCache.save(originalUrl, bitmap)
-                }
-
-                return ImageFetchResult(
-                    image = bitmap.asImage(true),
-                    isSampled = true,
-                    dataSource = DataSource.NETWORK,
-                )
-            }
+        // Fire-and-forget: generate thumbnail from Coil's disk cache in background.
+        // The file is already there because NetworkFetcher just wrote it.
+        backgroundScope.launch {
+            generateThumbnailFromDiskCache()
         }
 
         return result
     }
 
-    private fun decodeThumbnailFromBytes(bytes: ByteArray): Bitmap? =
-        try {
+    /**
+     * Reads the original image from Coil's disk cache and generates a small
+     * thumbnail for our dedicated thumbnail cache. Uses file-based BitmapFactory
+     * decode which is seekable (supports two-pass bounds+decode) and never loads
+     * the entire file into a byte array.
+     */
+    private fun generateThumbnailFromDiskCache() {
+        val diskCache = diskCacheLazy.value ?: return
+
+        diskCache.openSnapshot(originalUrl)?.use { snapshot ->
+            val file = snapshot.data.toFile()
             val targetSize = ThumbnailDiskCache.THUMBNAIL_SIZE_PX
 
-            // First pass: decode bounds only
+            // First pass: decode bounds only (no memory allocation for pixels)
             val boundsOptions =
                 BitmapFactory.Options().apply {
                     inJustDecodeBounds = true
                 }
-            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, boundsOptions)
+            BitmapFactory.decodeFile(file.absolutePath, boundsOptions)
+
+            if (boundsOptions.outWidth <= 0 || boundsOptions.outHeight <= 0) return
 
             // Calculate inSampleSize for efficient memory use during decode
             val sampleSize = calculateInSampleSize(boundsOptions, targetSize, targetSize)
 
-            // Second pass: decode at reduced size
+            // Second pass: decode at reduced size (streams from file, not byte array)
             val decodeOptions =
                 BitmapFactory.Options().apply {
                     inSampleSize = sampleSize
                 }
-            val decoded =
-                BitmapFactory.decodeByteArray(bytes, 0, bytes.size, decodeOptions)
-                    ?: return null
+            val decoded = BitmapFactory.decodeFile(file.absolutePath, decodeOptions) ?: return
 
             // Scale to exact target size
             val scaled = Bitmap.createScaledBitmap(decoded, targetSize, targetSize, true)
             if (scaled !== decoded) {
                 decoded.recycle()
             }
-            scaled
-        } catch (e: Exception) {
-            null
+
+            thumbnailCache.save(originalUrl, scaled)
+            scaled.recycle()
         }
+    }
 
     private fun calculateInSampleSize(
         options: BitmapFactory.Options,
@@ -189,19 +190,27 @@ class ProfilePictureFetcher(
             if (data.scheme != SCHEME) return null
 
             val originalUrl = extractOriginalUrl(data)
+            val diskCacheLazy = lazy { imageLoader.diskCache }
 
             val netFetcher =
                 NetworkFetcher(
                     url = originalUrl,
                     options = options,
                     networkClient = lazy { networkClient(originalUrl).asNetworkClient() },
-                    diskCache = lazy { imageLoader.diskCache },
+                    diskCache = diskCacheLazy,
                     cacheStrategy = lazy { CacheStrategy.DEFAULT },
                     connectivityChecker = lazy { connectivityCheckerLazy.get(options.context) },
                     concurrentRequestStrategy = lazy { ConcurrentRequestStrategy.UNCOORDINATED },
                 )
 
-            return ProfilePictureFetcher(originalUrl, options, thumbnailCache, netFetcher, backgroundScope)
+            return ProfilePictureFetcher(
+                originalUrl,
+                options,
+                thumbnailCache,
+                netFetcher,
+                diskCacheLazy,
+                backgroundScope,
+            )
         }
     }
 
