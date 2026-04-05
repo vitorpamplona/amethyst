@@ -384,7 +384,7 @@ internal object ECPoint {
     ): IntArray {
         // wNAF can carry up to bit (maxBits + w - 1), so extend both arrays
         val totalBits = maxBits + w
-        val sLimbs = (totalBits + 31) / 32
+        val sLimbs = maxOf((totalBits + 31) / 32, scalar.size)
         val result = IntArray(totalBits)
         val s = IntArray(sLimbs)
         scalar.copyInto(s)
@@ -434,6 +434,149 @@ internal object ECPoint {
             carry = carry ushr 32
             if (carry == 0L) break
         }
+    }
+
+    // ==================== GLV Endomorphism ====================
+    //
+    // secp256k1 has an efficiently computable endomorphism φ(x,y) = (β·x, y) where
+    // β is a cube root of unity in the field (β³ ≡ 1 mod p). The corresponding scalar
+    // λ satisfies λ·P = φ(P) for any point P on the curve.
+    //
+    // This allows decomposing any 256-bit scalar k into k = k₁ + k₂·λ (mod n) where
+    // k₁ and k₂ are only ~128 bits. Since λ·P = (β·x, y) costs just one field multiply,
+    // we can compute k·P = k₁·P + k₂·φ(P) using two 128-bit scalar muls instead of
+    // one 256-bit mul — halving the number of point doublings from 256 to 128.
+
+    /** β: cube root of unity mod p. φ(x,y) = (β·x, y). */
+    private val BETA =
+        intArrayOf(
+            0x719501EE.toInt(),
+            0xC1396C28.toInt(),
+            0x12F58995.toInt(),
+            0x9CF04975.toInt(),
+            0xAC3434E9.toInt(),
+            0x6E64479E.toInt(),
+            0x657C0710.toInt(),
+            0x7AE96A2B.toInt(),
+        )
+
+    // Babai rounding constants for the GLV decomposition (from libsecp256k1)
+    private val MINUS_LAMBDA =
+        intArrayOf(
+            0xB51283CF.toInt(),
+            0xE0CFC810.toInt(),
+            0x8EC739C2.toInt(),
+            0xA880B9FC.toInt(),
+            0x77ED9BA4.toInt(),
+            0x5AD9E3FD.toInt(),
+            0x3FA3CF1F.toInt(),
+            0xAC9C52B3.toInt(),
+        )
+    private val G1 =
+        intArrayOf(
+            0x45DBB031.toInt(),
+            0xE893209A.toInt(),
+            0x71E8CA7F.toInt(),
+            0x3DAA8A14.toInt(),
+            0x9284EB15.toInt(),
+            0xE86C90E4.toInt(),
+            0xA7D46BCD.toInt(),
+            0x3086D221.toInt(),
+        )
+    private val G2 =
+        intArrayOf(
+            0x8AC47F71.toInt(),
+            0x1571B4AE.toInt(),
+            0x9DF506C6.toInt(),
+            0x221208AC.toInt(),
+            0x0ABFE4C4.toInt(),
+            0x6F547FA9.toInt(),
+            0x010E8828.toInt(),
+            0xE4437ED6.toInt(),
+        )
+    private val MINUS_B1 =
+        intArrayOf(
+            0x0ABFE4C3.toInt(),
+            0x6F547FA9.toInt(),
+            0x010E8828.toInt(),
+            0xE4437ED6.toInt(),
+            0,
+            0,
+            0,
+            0,
+        )
+    private val MINUS_B2 =
+        intArrayOf(
+            0x3DB1562C.toInt(),
+            0xD765CDA8.toInt(),
+            0x0774346D.toInt(),
+            0x8A280AC5.toInt(),
+            0xFFFFFFFE.toInt(),
+            0xFFFFFFFF.toInt(),
+            0xFFFFFFFF.toInt(),
+            0xFFFFFFFF.toInt(),
+        )
+    private val N_HALF =
+        intArrayOf(
+            0x681B20A0.toInt(),
+            0xDFE92F46.toInt(),
+            0x57A4501D.toInt(),
+            0x5D576E73.toInt(),
+            0xFFFFFFFF.toInt(),
+            0xFFFFFFFF.toInt(),
+            0xFFFFFFFF.toInt(),
+            0x7FFFFFFF.toInt(),
+        )
+
+    /**
+     * Split scalar k into (k₁, k₂) such that k ≡ k₁ + k₂·λ (mod n) with |k₁|, |k₂| ≈ 128 bits.
+     *
+     * Uses Babai's nearest-plane algorithm with precomputed lattice basis vectors.
+     * Returns the two half-scalars and flags indicating whether each was negated
+     * (to ensure both are positive for wNAF encoding).
+     */
+    internal data class GlvSplit(
+        val k1: IntArray,
+        val k2: IntArray,
+        val negK1: Boolean,
+        val negK2: Boolean,
+    )
+
+    internal fun scalarSplitLambda(k: IntArray): GlvSplit {
+        val c1 = mulShift384(k, G1)
+        val c2 = mulShift384(k, G2)
+        val r2 = ScalarN.add(ScalarN.mul(c1, MINUS_B1), ScalarN.mul(c2, MINUS_B2))
+        val r1 = ScalarN.add(ScalarN.mul(r2, MINUS_LAMBDA), k)
+        val neg1 = U256.cmp(r1, N_HALF) > 0
+        val neg2 = U256.cmp(r2, N_HALF) > 0
+        return GlvSplit(
+            if (neg1) ScalarN.neg(r1) else r1,
+            if (neg2) ScalarN.neg(r2) else r2,
+            neg1,
+            neg2,
+        )
+    }
+
+    /** Multiply two 256-bit numbers and return the result shifted right by 384 bits (with rounding). */
+    internal fun mulShift384(
+        k: IntArray,
+        g: IntArray,
+    ): IntArray {
+        val wide = IntArray(16)
+        U256.mulWide(wide, k, g)
+        val result = IntArray(8)
+        // 384 / 32 = 12 limbs to skip
+        for (i in 0 until 4) result[i] = wide[i + 12]
+        // Round based on bit 383
+        if (wide[11] < 0) { // bit 31 of wide[11] = bit 383
+            var c = 1L
+            for (i in 0 until 8) {
+                c += (result[i].toLong() and 0xFFFFFFFFL)
+                result[i] = c.toInt()
+                c = c ushr 32
+            }
+        }
+        return result
     }
 
     // ==================== Scalar Multiplication ====================
@@ -509,14 +652,16 @@ internal object ECPoint {
     }
 
     /**
-     * Shamir's trick with wNAF-5: out = s·G + e·P in a single pass.
+     * Shamir's trick with GLV endomorphism and wNAF-5:
+     * out = s·G + e·P using 4 interleaved 128-bit scalar multiplications.
      *
-     * Uses width-5 wNAF encoding for both scalars, processing 1 bit at a time with
-     * shared doublings. wNAF guarantees at least 4 zeros between non-zero digits,
-     * reducing additions from ~120 (4-bit window) to ~86 for two 256-bit scalars.
+     * GLV splits each 256-bit scalar into two ~128-bit halves:
+     *   s = s₁ + s₂·λ,  e = e₁ + e₂·λ
+     * Then: s·G + e·P = s₁·G + s₂·λ(G) + e₁·P + e₂·λ(P)
+     * where λ(Q) = (β·Q.x, Q.y) is essentially free (one field multiply).
      *
-     * The G-side uses mixed addition (from precomputed affine odd-multiples table).
-     * The P-side uses full Jacobian addition (building the table avoids 8 inversions).
+     * The 4 half-scalars are wNAF-5 encoded and processed in a single pass of ~130
+     * shared doublings (vs 256 without GLV). This roughly halves the verification cost.
      */
     fun mulDoubleG(
         out: MutablePoint,
@@ -524,24 +669,52 @@ internal object ECPoint {
         p: MutablePoint,
         e: IntArray,
     ) {
-        // G odd-multiples [1G, 3G, 5G, ..., 15G] as affine
-        val gOdd = Array(8) { gTable[it * 2] }
+        val w = 5
+        val tableSize = 1 shl (w - 2) // 8 entries per table
 
-        // P odd-multiples [1P, 3P, ..., 15P] as Jacobian (avoids 8 inversions)
+        // Split scalars via GLV decomposition
+        val sSplit = scalarSplitLambda(s)
+        val eSplit = scalarSplitLambda(e)
+
+        // Build wNAF for each ~128-bit half-scalar
+        val wnafS1 = wnaf(sSplit.k1, w, 129)
+        val wnafS2 = wnaf(sSplit.k2, w, 129)
+        val wnafE1 = wnaf(eSplit.k1, w, 129)
+        val wnafE2 = wnaf(eSplit.k2, w, 129)
+
+        // G odd-multiples [1G, 3G, 5G, ..., 15G] (affine, from precomputed table)
+        val gOddBase = Array(tableSize) { gTable[it * 2] }
+        // λ(G) odd-multiples: apply endomorphism (β·x, y) to each G table entry
+        val gLamBase = Array(tableSize) { AffinePoint(FieldP.mul(gOddBase[it].x, BETA), gOddBase[it].y.copyOf()) }
+
+        // Apply GLV sign: if the split negated k₁/k₂, negate the corresponding table y-coords
+        // GLV sign is NOT baked into tables. Instead, we XOR the negation flag
+        // with each wNAF digit's sign in the main loop. This avoids the
+        // double-negation bug where a negative wNAF digit + negated table cancel out.
+        val gOdd = gOddBase
+        val gLam = gLamBase
+
+        // P odd-multiples [1P, 3P, ..., 15P] as Jacobian (avoids expensive inversions)
         val pAll = Array(16) { MutablePoint() }
         pAll[0].copyFrom(p)
         for (i in 1 until 16) addPoints(pAll[i], pAll[i - 1], pAll[0])
-        val pOdd = Array(8) { pAll[it * 2] }
+        val pOdd = Array(tableSize) { pAll[it * 2] }
+        // λ(P) table: (β·X, Y, Z) in Jacobian — endomorphism works in projective coords
+        val pLamOdd =
+            Array(tableSize) { i ->
+                val lp = MutablePoint()
+                FieldP.mul(lp.x, pOdd[i].x, BETA)
+                pOdd[i].y.copyInto(lp.y)
+                pOdd[i].z.copyInto(lp.z)
+                lp
+            }
 
-        // Build wNAF representations
-        val wnafS = wnaf(s, 5, 256)
-        val wnafE = wnaf(e, 5, 256)
-
-        // Find highest non-zero digit across both
-        var bits = maxOf(wnafS.size, wnafE.size)
-        while (bits > 0 && (bits > wnafS.size || wnafS[bits - 1] == 0) &&
-            (bits > wnafE.size || wnafE[bits - 1] == 0)
-        ) {
+        // Find highest non-zero digit across all 4 streams
+        val allWnaf = arrayOf(wnafS1, wnafS2, wnafE1, wnafE2)
+        var bits = allWnaf.maxOf { it.size }
+        while (bits > 0) {
+            val b = bits - 1
+            if (allWnaf.any { b < it.size && it[b] != 0 }) break
             bits--
         }
 
@@ -551,38 +724,79 @@ internal object ECPoint {
 
         for (i in bits - 1 downTo 0) {
             doublePoint(out, out)
-
-            if (i < wnafS.size) {
-                val ds = wnafS[i]
-                if (ds != 0) {
-                    val idx = (if (ds > 0) ds else -ds) / 2
-                    if (ds > 0) {
-                        addMixed(tmp, out, gOdd[idx].x, gOdd[idx].y)
-                    } else {
-                        FieldP.neg(negY, gOdd[idx].y)
-                        addMixed(tmp, out, gOdd[idx].x, negY)
-                    }
-                    out.copyFrom(tmp)
-                }
-            }
-
-            if (i < wnafE.size) {
-                val de = wnafE[i]
-                if (de != 0) {
-                    val idx = (if (de > 0) de else -de) / 2
-                    if (de < 0) {
-                        val neg = MutablePoint()
-                        pOdd[idx].x.copyInto(neg.x)
-                        FieldP.neg(neg.y, pOdd[idx].y)
-                        pOdd[idx].z.copyInto(neg.z)
-                        addPoints(tmp, out, neg)
-                    } else {
-                        addPoints(tmp, out, pOdd[idx])
-                    }
-                    out.copyFrom(tmp)
-                }
-            }
+            // Streams 1-2: G-side (affine tables, mixed addition)
+            addWnafMixed(out, tmp, negY, wnafS1, i, gOdd, sSplit.negK1)
+            addWnafMixed(out, tmp, negY, wnafS2, i, gLam, sSplit.negK2)
+            // Streams 3-4: P-side (Jacobian tables, full addition)
+            addWnafJacobian(out, tmp, wnafE1, i, pOdd, eSplit.negK1)
+            addWnafJacobian(out, tmp, wnafE2, i, pLamOdd, eSplit.negK2)
         }
+    }
+
+    /** Conditionally negate all y-coordinates in an affine table. */
+    private fun maybeNegateTable(
+        table: Array<AffinePoint>,
+        negate: Boolean,
+    ): Array<AffinePoint> {
+        if (!negate) return table
+        return Array(table.size) { i ->
+            AffinePoint(table[i].x.copyOf(), FieldP.neg(table[i].y))
+        }
+    }
+
+    /**
+     * Process one wNAF digit with mixed addition.
+     * The effective sign is: (wNAF digit sign) XOR (GLV negation flag).
+     * Positive = add as-is, negative = negate the table entry's y.
+     */
+    private fun addWnafMixed(
+        out: MutablePoint,
+        tmp: MutablePoint,
+        negY: IntArray,
+        wnafDigits: IntArray,
+        bitIndex: Int,
+        table: Array<AffinePoint>,
+        glvNeg: Boolean,
+    ) {
+        if (bitIndex >= wnafDigits.size) return
+        val d = wnafDigits[bitIndex]
+        if (d == 0) return
+        val idx = (if (d > 0) d else -d) / 2
+        val effectiveNeg = (d < 0) xor glvNeg
+        if (!effectiveNeg) {
+            addMixed(tmp, out, table[idx].x, table[idx].y)
+        } else {
+            FieldP.neg(negY, table[idx].y)
+            addMixed(tmp, out, table[idx].x, negY)
+        }
+        out.copyFrom(tmp)
+    }
+
+    /** Process one wNAF digit with full Jacobian addition (for P-side tables). */
+    private fun addWnafJacobian(
+        out: MutablePoint,
+        tmp: MutablePoint,
+        wnafDigits: IntArray,
+        bitIndex: Int,
+        table: Array<MutablePoint>,
+        glvNeg: Boolean,
+    ) {
+        if (bitIndex >= wnafDigits.size) return
+        val d = wnafDigits[bitIndex]
+        if (d == 0) return
+        val idx = (if (d > 0) d else -d) / 2
+        val effectiveNeg = (d < 0) xor glvNeg
+        if (!effectiveNeg) {
+            addPoints(tmp, out, table[idx])
+        } else {
+            // Negate the Jacobian point: (X, -Y, Z)
+            val neg = MutablePoint()
+            table[idx].x.copyInto(neg.x)
+            FieldP.neg(neg.y, table[idx].y)
+            table[idx].z.copyInto(neg.z)
+            addPoints(tmp, out, neg)
+        }
+        out.copyFrom(tmp)
     }
 
     // ==================== Coordinate Conversion ====================
