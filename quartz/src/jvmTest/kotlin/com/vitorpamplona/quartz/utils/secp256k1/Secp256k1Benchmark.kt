@@ -146,7 +146,7 @@ class Secp256k1Benchmark {
                 },
             )
 
-        // --- signSchnorr ---
+        // --- signSchnorr (derives pubkey from seckey each time) ---
         results +=
             bench(
                 name = "signSchnorr",
@@ -157,6 +157,23 @@ class Secp256k1Benchmark {
                     com.vitorpamplona.quartz.utils.secp256k1.Secp256k1.signSchnorr(
                         msg32,
                         privKey,
+                        auxRand,
+                    )
+                },
+            )
+
+        // --- signSchnorrWithPubKey (pre-computed pubkey, no self-verify — matches C) ---
+        results +=
+            bench(
+                name = "signSchnorr (cached pk)",
+                warmup = 10,
+                iterations = 50,
+                nativeOp = { native.signSchnorr(msg32, privKey, auxRand) },
+                kotlinOp = {
+                    com.vitorpamplona.quartz.utils.secp256k1.Secp256k1.signSchnorrWithPubKey(
+                        msg32,
+                        privKey,
+                        nativePubKey,
                         auxRand,
                     )
                 },

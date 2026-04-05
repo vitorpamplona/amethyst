@@ -164,18 +164,9 @@ object Secp256k1 {
     /**
      * Create a BIP-340 Schnorr signature.
      *
-     * Implements the full BIP-340 signing algorithm:
-     * 1. Derive keypair, negate secret key if public key has odd y
-     * 2. Compute deterministic nonce via tagged hashes (with optional aux randomness)
-     * 3. Compute R = k·G, ensure even y
-     * 4. Compute challenge e = H(R || P || msg)
-     * 5. Compute s = k + e·d (mod n)
-     * 6. Verify the signature as a safety check
-     *
-     * @param data Message bytes (any length — hashed internally via tagged hash)
-     * @param seckey 32-byte secret key
-     * @param auxrand Optional 32-byte auxiliary randomness (null for deterministic)
-     * @return 64-byte signature (R.x || s)
+     * This convenience overload derives the public key from the secret key.
+     * For repeated signing with the same key, prefer [signSchnorrWithPubKey]
+     * to avoid redundant G multiplication.
      */
     fun signSchnorr(
         data: ByteArray,
@@ -186,15 +177,60 @@ object Secp256k1 {
         val d0 = U256.fromBytes(seckey)
         require(ScalarN.isValid(d0))
 
+        // Derive public key (one G multiplication + one inversion)
         val pubPoint = MutablePoint()
         ECPoint.mulG(pubPoint, d0)
         val px = IntArray(8)
         val py = IntArray(8)
         check(ECPoint.toAffine(pubPoint, px, py))
 
-        val d = if (ECPoint.hasEvenY(py)) d0 else ScalarN.neg(d0)
+        val xOnlyPub = U256.toBytes(px)
+        return signSchnorrInternal(data, d0, xOnlyPub, ECPoint.hasEvenY(py), auxrand)
+    }
+
+    /**
+     * Create a BIP-340 Schnorr signature with a pre-computed compressed public key.
+     *
+     * This is the fast path — skips the expensive G multiplication for public key
+     * derivation. The 33-byte compressed key provides both the x-coordinate (for the
+     * BIP-340 tagged hash) and the y-parity (02=even, 03=odd, needed to determine
+     * whether to negate the secret key).
+     *
+     * The C library's signing function similarly takes a pre-computed keypair.
+     *
+     * @param data Message bytes (any length)
+     * @param seckey 32-byte secret key
+     * @param compressedPub 33-byte compressed public key (02/03 || x)
+     * @param auxrand Optional 32-byte auxiliary randomness (null for deterministic)
+     */
+    fun signSchnorrWithPubKey(
+        data: ByteArray,
+        seckey: ByteArray,
+        compressedPub: ByteArray,
+        auxrand: ByteArray?,
+    ): ByteArray {
+        require(seckey.size == 32 && compressedPub.size == 33)
+        val d0 = U256.fromBytes(seckey)
+        require(ScalarN.isValid(d0))
+        val hasEvenY = compressedPub[0] == 0x02.toByte()
+        val xOnlyPub = compressedPub.copyOfRange(1, 33)
+        return signSchnorrInternal(data, d0, xOnlyPub, hasEvenY, auxrand)
+    }
+
+    /**
+     * Internal signing implementation shared by both public overloads.
+     * Performs: nonce derivation → R = k·G → challenge → s = k + e·d.
+     * Does NOT re-derive the public key or self-verify (matching the C library).
+     */
+    private fun signSchnorrInternal(
+        data: ByteArray,
+        d0: IntArray,
+        pBytes: ByteArray,
+        pubKeyHasEvenY: Boolean,
+        auxrand: ByteArray?,
+    ): ByteArray {
+        val d = if (pubKeyHasEvenY) d0 else ScalarN.neg(d0)
         val dBytes = U256.toBytes(d)
-        val pBytes = U256.toBytes(px)
 
         val t =
             if (auxrand != null) {
@@ -216,6 +252,7 @@ object Secp256k1 {
         val k0 = ScalarN.reduce(U256.fromBytes(rand))
         require(!U256.isZero(k0))
 
+        // R = k0·G
         val rPoint = MutablePoint()
         ECPoint.mulG(rPoint, k0)
         val rx = IntArray(8)
@@ -223,6 +260,8 @@ object Secp256k1 {
         check(ECPoint.toAffine(rPoint, rx, ry))
 
         val k = if (ECPoint.hasEvenY(ry)) k0 else ScalarN.neg(k0)
+
+        // Challenge: e = H(R || P || msg)
         val chalInput = ByteArray(64 + 32 + 32 + data.size)
         CHALLENGE_PREFIX.copyInto(chalInput, 0)
         U256.toBytesInto(rx, chalInput, 64)
@@ -231,12 +270,11 @@ object Secp256k1 {
         val eHash = sha256(chalInput)
         val e = ScalarN.reduce(U256.fromBytes(eHash))
 
+        // s = k + e·d mod n
         val sScalar = ScalarN.add(k, ScalarN.mul(e, d))
         val sig = ByteArray(64)
         U256.toBytesInto(rx, sig, 0)
         U256.toBytesInto(sScalar, sig, 32)
-
-        require(verifySchnorr(sig, data, pBytes)) { "Signature self-verification failed" }
         return sig
     }
 
