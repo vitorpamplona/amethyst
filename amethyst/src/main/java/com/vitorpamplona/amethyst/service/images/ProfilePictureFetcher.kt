@@ -20,9 +20,6 @@
  */
 package com.vitorpamplona.amethyst.service.images
 
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import androidx.compose.runtime.Stable
 import coil3.ImageLoader
 import coil3.annotation.ExperimentalCoilApi
 import coil3.asImage
@@ -45,48 +42,35 @@ import okhttp3.Call
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
- * Coil Fetcher that serves pre-resized profile picture thumbnails from a dedicated disk cache.
+ * Coil Fetcher for profile picture thumbnails.
  *
- * Composables pass [ProfilePictureUrl] as the model to AsyncImage. Coil routes to this
- * fetcher by type — no string concatenation or scheme parsing needed.
+ * Composables pass [ProfilePictureUrl] as the AsyncImage model. Coil routes here by type.
  *
- * Flow:
- * - Thumbnail cache hit: returns the tiny ~5KB JPEG directly. No network, no large decode.
- * - Thumbnail cache miss (first load): passes the result straight through to Coil's normal
- *   pipeline (zero overhead). In the background, reads the file from Coil's disk cache
- *   after download and generates a thumbnail for next time.
+ * - Cache hit: returns a tiny ~5KB JPEG from the thumbnail disk cache.
+ * - Cache miss: passes the network result straight through to Coil (zero overhead),
+ *   then generates the thumbnail in the background from Coil's disk cache for next time.
  *
- * The zoomable full-screen dialog uses the raw URL string (not wrapped in ProfilePictureUrl),
- * which goes through the normal Coil pipeline for full-resolution display.
+ * Full-size display (zoomable dialog) uses the raw URL string, bypassing this fetcher.
  */
-@Stable
 class ProfilePictureFetcher(
-    private val originalUrl: String,
-    private val options: Options,
+    private val url: String,
     private val thumbnailCache: ThumbnailDiskCache,
     private val networkFetcher: Fetcher,
     private val diskCacheLazy: Lazy<DiskCache?>,
     private val backgroundScope: CoroutineScope,
 ) : Fetcher {
     override suspend fun fetch(): FetchResult? {
-        // Fast path: return pre-resized thumbnail from disk (~5KB read)
-        val cached = thumbnailCache.get(originalUrl)
-        if (cached != null) {
-            val bitmap = thumbnailCache.decodeThumbnail(cached)
-            if (bitmap != null) {
-                return ImageFetchResult(
-                    image = bitmap.asImage(true),
-                    isSampled = true,
-                    dataSource = DataSource.DISK,
-                )
-            }
+        // Fast path: return pre-resized thumbnail (~5KB read + decode)
+        val bitmap = thumbnailCache.load(url)
+        if (bitmap != null) {
+            return ImageFetchResult(
+                image = bitmap.asImage(true),
+                isSampled = true,
+                dataSource = DataSource.DISK,
+            )
         }
 
-        // Cache miss: download via normal network fetcher.
-        // NetworkFetcher writes the original to Coil's disk cache and returns
-        // a source pointing to it. We pass this through unchanged — Coil's
-        // decoder pipeline handles streaming decode with inSampleSize, no
-        // large byte array allocation.
+        // Cache miss: let Coil's normal pipeline handle download + decode
         val result =
             try {
                 networkFetcher.fetch() ?: return null
@@ -95,73 +79,15 @@ class ProfilePictureFetcher(
                 return null
             }
 
-        // Fire-and-forget: generate thumbnail from Coil's disk cache in background.
-        // The file is already there because NetworkFetcher just wrote it.
+        // Generate thumbnail in background from Coil's disk cache for next time
         backgroundScope.launch {
-            generateThumbnailFromDiskCache()
+            val diskCache = diskCacheLazy.value ?: return@launch
+            diskCache.openSnapshot(url)?.use { snapshot ->
+                thumbnailCache.generateFromFile(url, snapshot.data.toFile())
+            }
         }
 
         return result
-    }
-
-    /**
-     * Reads the original image from Coil's disk cache and generates a small
-     * thumbnail for our dedicated thumbnail cache. Uses file-based BitmapFactory
-     * decode which is seekable (supports two-pass bounds+decode) and never loads
-     * the entire file into a byte array.
-     */
-    private fun generateThumbnailFromDiskCache() {
-        val diskCache = diskCacheLazy.value ?: return
-
-        diskCache.openSnapshot(originalUrl)?.use { snapshot ->
-            val file = snapshot.data.toFile()
-            val targetSize = ThumbnailDiskCache.THUMBNAIL_SIZE_PX
-
-            // First pass: decode bounds only (no memory allocation for pixels)
-            val boundsOptions =
-                BitmapFactory.Options().apply {
-                    inJustDecodeBounds = true
-                }
-            BitmapFactory.decodeFile(file.absolutePath, boundsOptions)
-
-            if (boundsOptions.outWidth <= 0 || boundsOptions.outHeight <= 0) return
-
-            // Calculate inSampleSize for efficient memory use during decode
-            val sampleSize = calculateInSampleSize(boundsOptions, targetSize, targetSize)
-
-            // Second pass: decode at reduced size (streams from file, not byte array)
-            val decodeOptions =
-                BitmapFactory.Options().apply {
-                    inSampleSize = sampleSize
-                }
-            val decoded = BitmapFactory.decodeFile(file.absolutePath, decodeOptions) ?: return
-
-            // Scale to exact target size
-            val scaled = Bitmap.createScaledBitmap(decoded, targetSize, targetSize, true)
-            if (scaled !== decoded) {
-                decoded.recycle()
-            }
-
-            thumbnailCache.save(originalUrl, scaled)
-            scaled.recycle()
-        }
-    }
-
-    private fun calculateInSampleSize(
-        options: BitmapFactory.Options,
-        reqWidth: Int,
-        reqHeight: Int,
-    ): Int {
-        val (height, width) = options.outHeight to options.outWidth
-        var inSampleSize = 1
-        if (height > reqHeight || width > reqWidth) {
-            val halfHeight = height / 2
-            val halfWidth = width / 2
-            while (halfHeight / inSampleSize >= reqHeight && halfWidth / inSampleSize >= reqWidth) {
-                inSampleSize *= 2
-            }
-        }
-        return inSampleSize
     }
 
     @OptIn(ExperimentalCoilApi::class)
@@ -192,7 +118,6 @@ class ProfilePictureFetcher(
 
             return ProfilePictureFetcher(
                 data.url,
-                options,
                 thumbnailCache,
                 netFetcher,
                 diskCacheLazy,

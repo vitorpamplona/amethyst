@@ -45,10 +45,9 @@ class ThumbnailDiskCache(
 ) {
     companion object {
         const val THUMBNAIL_SIZE_PX = 256
-        const val JPEG_QUALITY = 80
+        private const val JPEG_QUALITY = 80
     }
 
-    // Tracks URLs currently being written to prevent duplicate saves
     private val inFlight = ConcurrentHashMap.newKeySet<String>()
 
     init {
@@ -57,36 +56,66 @@ class ThumbnailDiskCache(
 
     private fun keyFor(url: String): String = sha256(url.toByteArray()).toHexKey()
 
-    fun get(url: String): File? {
+    /**
+     * Loads a cached thumbnail bitmap for the given URL, or null if not cached.
+     */
+    fun load(url: String): Bitmap? {
         val file = File(cacheDir, keyFor(url))
-        return if (file.exists()) file else null
+        if (!file.exists()) return null
+        return try {
+            BitmapFactory.decodeFile(file.absolutePath)
+        } catch (e: Exception) {
+            file.delete()
+            null
+        }
     }
 
     /**
-     * Saves a bitmap as a JPEG thumbnail. Uses atomic write (temp file + rename)
-     * to prevent readers from seeing a partially written file.
+     * Generates a thumbnail from a source file and saves it to the cache.
+     * Uses two-pass BitmapFactory decode (bounds then pixels) so the full
+     * file is never loaded into a byte array.
      *
-     * Returns true if saved, false if already in flight or on error.
+     * Returns true if saved, false if already in flight, already cached, or on error.
      */
-    fun save(
+    fun generateFromFile(
         url: String,
-        bitmap: Bitmap,
+        sourceFile: File,
     ): Boolean {
-        // Skip if another coroutine is already saving this URL
         if (!inFlight.add(url)) return false
 
         try {
             val key = keyFor(url)
             val finalFile = File(cacheDir, key)
-
-            // Already saved by another coroutine that finished before us
             if (finalFile.exists()) return true
 
-            // Write to temp file, then atomically rename
+            val path = sourceFile.absolutePath
+            val targetSize = THUMBNAIL_SIZE_PX
+
+            // First pass: decode bounds only
+            val boundsOptions =
+                BitmapFactory.Options().apply {
+                    inJustDecodeBounds = true
+                }
+            BitmapFactory.decodeFile(path, boundsOptions)
+            if (boundsOptions.outWidth <= 0 || boundsOptions.outHeight <= 0) return false
+
+            // Second pass: decode at reduced size
+            val sampleSize = calculateInSampleSize(boundsOptions, targetSize)
+            val decodeOptions =
+                BitmapFactory.Options().apply {
+                    inSampleSize = sampleSize
+                }
+            val decoded = BitmapFactory.decodeFile(path, decodeOptions) ?: return false
+
+            // Scale to exact target size and write atomically
+            val scaled = Bitmap.createScaledBitmap(decoded, targetSize, targetSize, true)
+            if (scaled !== decoded) decoded.recycle()
+
             val tempFile = File(cacheDir, "$key.tmp")
             tempFile.outputStream().use { out ->
-                bitmap.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, out)
+                scaled.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, out)
             }
+            scaled.recycle()
             tempFile.renameTo(finalFile)
 
             evictIfNeeded()
@@ -98,13 +127,21 @@ class ThumbnailDiskCache(
         }
     }
 
-    fun decodeThumbnail(file: File): Bitmap? =
-        try {
-            BitmapFactory.decodeFile(file.absolutePath)
-        } catch (e: Exception) {
-            file.delete()
-            null
+    private fun calculateInSampleSize(
+        options: BitmapFactory.Options,
+        targetSize: Int,
+    ): Int {
+        val (height, width) = options.outHeight to options.outWidth
+        var inSampleSize = 1
+        if (height > targetSize || width > targetSize) {
+            val halfHeight = height / 2
+            val halfWidth = width / 2
+            while (halfHeight / inSampleSize >= targetSize && halfWidth / inSampleSize >= targetSize) {
+                inSampleSize *= 2
+            }
         }
+        return inSampleSize
+    }
 
     private fun evictIfNeeded() {
         val files = cacheDir.listFiles() ?: return

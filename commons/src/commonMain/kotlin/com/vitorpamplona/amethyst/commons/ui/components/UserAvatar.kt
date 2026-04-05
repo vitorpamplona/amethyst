@@ -61,7 +61,7 @@ data class ProfilePictureUrl(
  * @param contentDescription Accessibility description
  * @param loadProfilePicture Whether to load the profile picture (false = show robohash only)
  * @param loadRobohash Whether to generate robohash (false = show generic icon)
- * @param useThumbnailCache Whether to wrap the URL with profilepic:// scheme for thumbnail caching
+ * @param useThumbnailCache Whether to use the thumbnail disk cache for faster repeated loads
  */
 @Composable
 fun UserAvatar(
