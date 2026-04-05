@@ -546,33 +546,58 @@ private fun CheckNewAndRenderNote(
             accountViewModel,
         )
 
-    ClickableNote(
+    InnerNoteWithReactions(
         baseNote = baseNote,
         backgroundColor = backgroundColor,
-        modifier = modifier,
+        clickModifier = clickableNoteModifier(baseNote, modifier, accountViewModel, showPopup, nav),
+        isBoostedNote = isBoostedNote,
+        isQuotedNote = isQuotedNote,
+        unPackReply = unPackReply,
+        makeItShort = makeItShort,
+        canPreview = canPreview,
+        isPinned = isPinned,
+        quotesLeft = quotesLeft,
         accountViewModel = accountViewModel,
-        showPopup = showPopup,
         nav = nav,
-    ) {
-        InnerNoteWithReactions(
-            baseNote = baseNote,
-            backgroundColor = backgroundColor,
-            isBoostedNote = isBoostedNote,
-            isQuotedNote = isQuotedNote,
-            unPackReply = unPackReply,
-            makeItShort = makeItShort,
-            canPreview = canPreview,
-            isPinned = isPinned,
-            quotesLeft = quotesLeft,
-            accountViewModel = accountViewModel,
-            nav = nav,
-            moreOptions = moreOptions,
-        )
-    }
+        moreOptions = moreOptions,
+    )
 }
 
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
+fun clickableNoteModifier(
+    baseNote: Note,
+    modifier: Modifier,
+    accountViewModel: AccountViewModel,
+    showPopup: () -> Unit,
+    nav: INav,
+): Modifier =
+    remember(baseNote, modifier) {
+        modifier
+            .combinedClickable(
+                onClick = {
+                    val redirectToNote =
+                        if (baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent) {
+                            baseNote.replyTo?.lastOrNull() ?: baseNote
+                        } else {
+                            baseNote
+                        }
+
+                    nav.nav {
+                        if (redirectToNote.event is DraftWrapEvent) {
+                            withContext(Dispatchers.IO) {
+                                routeEditDraftTo(redirectToNote, accountViewModel.account)
+                            }
+                        } else {
+                            routeFor(redirectToNote, accountViewModel.account)
+                        }
+                    }
+                },
+                onLongClick = showPopup,
+            )
+    }
+
+@Composable
 fun ClickableNote(
     baseNote: Note,
     modifier: Modifier,
@@ -582,39 +607,20 @@ fun ClickableNote(
     nav: INav,
     content: @Composable () -> Unit,
 ) {
-    val updatedModifier =
-        remember(baseNote, modifier) {
-            modifier
-                .combinedClickable(
-                    onClick = {
-                        val redirectToNote =
-                            if (baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent) {
-                                baseNote.replyTo?.lastOrNull() ?: baseNote
-                            } else {
-                                baseNote
-                            }
-
-                        nav.nav {
-                            if (redirectToNote.event is DraftWrapEvent) {
-                                withContext(Dispatchers.IO) {
-                                    routeEditDraftTo(redirectToNote, accountViewModel.account)
-                                }
-                            } else {
-                                routeFor(redirectToNote, accountViewModel.account)
-                            }
-                        }
-                    },
-                    onLongClick = showPopup,
-                )
-        }
-
-    Column(modifier = updatedModifier.background(backgroundColor.value)) { content() }
+    Column(
+        modifier =
+            clickableNoteModifier(baseNote, modifier, accountViewModel, showPopup, nav)
+                .background(backgroundColor.value),
+    ) {
+        content()
+    }
 }
 
 @Composable
 fun InnerNoteWithReactions(
     baseNote: Note,
     backgroundColor: MutableState<Color>,
+    clickModifier: Modifier = Modifier,
     isBoostedNote: Boolean,
     isQuotedNote: Boolean,
     unPackReply: ReplyRenderType,
@@ -632,7 +638,7 @@ fun InnerNoteWithReactions(
     val showSecondRow = isNotRepost && notBoostedNorQuote && accountViewModel.settings.isCompleteUIMode()
 
     NoteComposeLayout(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = clickModifier.background(backgroundColor.value).fillMaxWidth(),
         addPadding = !isBoostedNote,
         showAuthorColumn = notBoostedNorQuote,
         showSecondRow = showSecondRow,
