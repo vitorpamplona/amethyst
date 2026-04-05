@@ -25,13 +25,16 @@ package com.vitorpamplona.quartz.utils.secp256k1
  *
  * Numbers are represented as IntArray(8) in little-endian order where each element
  * holds 32 bits (treated as unsigned). Element [0] is the least significant limb.
+ *
+ * Performance: All hot-path operations write into caller-provided output arrays
+ * to avoid allocation. Only conversion methods (fromBytes/toBytes) allocate.
  */
 internal object U256 {
     val ZERO = IntArray(8)
 
     fun isZero(a: IntArray): Boolean {
-        for (i in 0 until 8) if (a[i] != 0) return false
-        return true
+        // Merge all limbs to avoid branches
+        return (a[0] or a[1] or a[2] or a[3] or a[4] or a[5] or a[6] or a[7]) == 0
     }
 
     /** Compare: returns negative if a < b, 0 if equal, positive if a > b */
@@ -42,87 +45,70 @@ internal object U256 {
         for (i in 7 downTo 0) {
             val ai = a[i].toLong() and 0xFFFFFFFFL
             val bi = b[i].toLong() and 0xFFFFFFFFL
-            if (ai < bi) return -1
-            if (ai > bi) return 1
+            if (ai != bi) return if (ai < bi) -1 else 1
         }
         return 0
     }
 
-    /** a + b, returns (result, carry) where carry is 0 or 1 */
-    fun addCarry(
+    /** a + b -> out, returns carry (0 or 1) */
+    fun addTo(
+        out: IntArray,
         a: IntArray,
         b: IntArray,
-    ): Pair<IntArray, Int> {
-        val r = IntArray(8)
+    ): Int {
         var carry = 0L
         for (i in 0 until 8) {
             carry += (a[i].toLong() and 0xFFFFFFFFL) + (b[i].toLong() and 0xFFFFFFFFL)
-            r[i] = carry.toInt()
+            out[i] = carry.toInt()
             carry = carry ushr 32
         }
-        return Pair(r, carry.toInt())
+        return carry.toInt()
     }
 
-    /** a - b, returns (result, borrow) where borrow is 0 or 1 */
-    fun subBorrow(
+    /** a - b -> out, returns borrow (0 or 1) */
+    fun subTo(
+        out: IntArray,
         a: IntArray,
         b: IntArray,
-    ): Pair<IntArray, Int> {
-        val r = IntArray(8)
+    ): Int {
         var borrow = 0L
         for (i in 0 until 8) {
             val diff = (a[i].toLong() and 0xFFFFFFFFL) - (b[i].toLong() and 0xFFFFFFFFL) - borrow
-            r[i] = diff.toInt()
+            out[i] = diff.toInt()
             borrow = if (diff < 0) 1L else 0L
         }
-        return Pair(r, borrow.toInt())
+        return borrow.toInt()
     }
 
-    /** Full 256x256 -> 512 bit multiplication. Result is IntArray(16). */
+    /** Full 256x256 -> 512 bit multiplication. Result written to out (size 16). */
     fun mulWide(
+        out: IntArray,
         a: IntArray,
         b: IntArray,
-    ): IntArray {
-        val r = IntArray(16)
+    ) {
+        for (i in 0 until 16) out[i] = 0
         for (i in 0 until 8) {
             var carry = 0L
             val ai = a[i].toLong() and 0xFFFFFFFFL
             for (j in 0 until 8) {
-                val prod = ai * (b[j].toLong() and 0xFFFFFFFFL) + (r[i + j].toLong() and 0xFFFFFFFFL) + carry
-                r[i + j] = prod.toInt()
+                val prod = ai * (b[j].toLong() and 0xFFFFFFFFL) + (out[i + j].toLong() and 0xFFFFFFFFL) + carry
+                out[i + j] = prod.toInt()
                 carry = prod ushr 32
             }
-            r[i + 8] = carry.toInt()
+            out[i + 8] = carry.toInt()
         }
-        return r
-    }
-
-    /** Multiply 256-bit number by a small (fits in Long) constant. Result is IntArray(9). */
-    fun mulSmall(
-        a: IntArray,
-        b: Long,
-    ): IntArray {
-        val r = IntArray(9)
-        var carry = 0L
-        for (i in 0 until 8) {
-            carry += (a[i].toLong() and 0xFFFFFFFFL) * b
-            r[i] = carry.toInt()
-            carry = carry ushr 32
-        }
-        r[8] = carry.toInt()
-        return r
     }
 
     /** Convert big-endian 32-byte array to IntArray(8) little-endian limbs */
     fun fromBytes(bytes: ByteArray): IntArray {
-        require(bytes.size == 32) { "Expected 32 bytes, got ${bytes.size}" }
+        require(bytes.size == 32)
         val r = IntArray(8)
         for (i in 0 until 8) {
-            val offset = 28 - i * 4
-            r[i] = ((bytes[offset].toInt() and 0xFF) shl 24) or
-                ((bytes[offset + 1].toInt() and 0xFF) shl 16) or
-                ((bytes[offset + 2].toInt() and 0xFF) shl 8) or
-                (bytes[offset + 3].toInt() and 0xFF)
+            val o = 28 - i * 4
+            r[i] = ((bytes[o].toInt() and 0xFF) shl 24) or
+                ((bytes[o + 1].toInt() and 0xFF) shl 16) or
+                ((bytes[o + 2].toInt() and 0xFF) shl 8) or
+                (bytes[o + 3].toInt() and 0xFF)
         }
         return r
     }
@@ -131,44 +117,69 @@ internal object U256 {
     fun toBytes(a: IntArray): ByteArray {
         val r = ByteArray(32)
         for (i in 0 until 8) {
-            val offset = 28 - i * 4
-            r[offset] = (a[i] ushr 24).toByte()
-            r[offset + 1] = (a[i] ushr 16).toByte()
-            r[offset + 2] = (a[i] ushr 8).toByte()
-            r[offset + 3] = a[i].toByte()
+            val o = 28 - i * 4
+            r[o] = (a[i] ushr 24).toByte()
+            r[o + 1] = (a[i] ushr 16).toByte()
+            r[o + 2] = (a[i] ushr 8).toByte()
+            r[o + 3] = a[i].toByte()
         }
         return r
     }
 
-    /** Check if bit at position pos is set (pos 0 = LSB) */
+    /** Write big-endian bytes into existing array at offset */
+    fun toBytesInto(
+        a: IntArray,
+        dest: ByteArray,
+        offset: Int,
+    ) {
+        for (i in 0 until 8) {
+            val o = offset + 28 - i * 4
+            dest[o] = (a[i] ushr 24).toByte()
+            dest[o + 1] = (a[i] ushr 16).toByte()
+            dest[o + 2] = (a[i] ushr 8).toByte()
+            dest[o + 3] = a[i].toByte()
+        }
+    }
+
+    /** Get 4-bit nibble from scalar at position pos (pos 0 = lowest nibble) */
+    fun getNibble(
+        a: IntArray,
+        pos: Int,
+    ): Int {
+        val limb = pos / 8
+        val shift = (pos % 8) * 4
+        return (a[limb] ushr shift) and 0xF
+    }
+
+    /** Check if bit at position pos is set */
     fun testBit(
         a: IntArray,
         pos: Int,
-    ): Boolean {
-        val limb = pos / 32
-        val bit = pos % 32
-        return (a[limb] ushr bit) and 1 == 1
-    }
+    ): Boolean = (a[pos / 32] ushr (pos % 32)) and 1 == 1
 
-    /** XOR two 256-bit values */
-    fun xor(
+    /** XOR: out = a xor b */
+    fun xorTo(
+        out: IntArray,
         a: IntArray,
         b: IntArray,
-    ): IntArray {
-        val r = IntArray(8)
-        for (i in 0 until 8) r[i] = a[i] xor b[i]
-        return r
+    ) {
+        for (i in 0 until 8) out[i] = a[i] xor b[i]
     }
 
-    fun clone(a: IntArray): IntArray = a.copyOf()
+    /** Copy a into out */
+    fun copyInto(
+        out: IntArray,
+        a: IntArray,
+    ) {
+        a.copyInto(out)
+    }
 }
 
 /**
- * Field arithmetic modulo p = 2^256 - 2^32 - 977 (= 2^256 - 4294968273).
- * This is the base field of the secp256k1 curve.
+ * Field arithmetic modulo p = 2^256 - 2^32 - 977.
+ * All hot-path operations write results into caller-provided output arrays.
  */
 internal object FieldP {
-    // p = FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F
     val P =
         intArrayOf(
             0xFFFFFC2F.toInt(),
@@ -181,133 +192,145 @@ internal object FieldP {
             0xFFFFFFFF.toInt(),
         )
 
-    // 2^256 mod p = 2^32 + 977 = 0x1000003D1 (fits in 33 bits)
-    // As limbs: [977, 1, 0, 0, 0, 0, 0, 0]
-    private val P_COMPLEMENT_LIMBS = intArrayOf(977, 1, 0, 0, 0, 0, 0, 0)
+    // Thread-local scratch space to avoid allocation in hot path
+    // Since Kotlin/JVM coroutines are cooperative (not preemptive on same thread),
+    // thread-locals are safe as long as we don't call suspend functions mid-computation.
+    private val wide = ThreadLocal.withInitial { IntArray(16) }
 
-    /** Reduce a value that might be >= p (but < 2p) */
-    fun reduce(a: IntArray): IntArray =
+    /** Reduce in-place: if a >= p, subtract p */
+    fun reduceSelf(a: IntArray) {
         if (U256.cmp(a, P) >= 0) {
-            U256.subBorrow(a, P).first
-        } else {
-            a
+            U256.subTo(a, a, P)
         }
+    }
 
-    /** Reduce a wide 512-bit product mod p */
-    fun reduceWide(w: IntArray): IntArray {
-        // w = hi * 2^256 + lo
-        // ≡ lo + hi * (2^32 + 977) (mod p)
-        //
+    /** Reduce a wide 512-bit value in w[0..15] -> out[0..7] mod p */
+    fun reduceWide(
+        out: IntArray,
+        w: IntArray,
+    ) {
+        // w ≡ lo + hi * (2^32 + 977) (mod p)
         // Split: hi * (2^32 + 977) = (hi << 32) + hi * 977
-        // hi * 977: each limb product fits in 42 bits, no overflow
-        // hi << 32: shift limbs by one position
 
-        val lo = IntArray(8)
-        val hi = IntArray(8)
-        for (i in 0 until 8) {
-            lo[i] = w[i]
-            hi[i] = w[i + 8]
-        }
-
-        // Compute hi * 977 (result fits in 266 bits = 9 limbs)
-        val hiTimes977 = U256.mulSmall(hi, 977L)
-
-        // Compute lo + hi * 977 + (hi << 32)
-        // hi << 32 means: [0, hi[0], hi[1], ..., hi[7]] (9 limbs)
-        val result = IntArray(8)
+        // Compute: out = lo + hi*977 + (hi << 32)
         var carry = 0L
         for (i in 0 until 8) {
-            carry += (lo[i].toLong() and 0xFFFFFFFFL) +
-                (hiTimes977[i].toLong() and 0xFFFFFFFFL) +
-                if (i > 0) (hi[i - 1].toLong() and 0xFFFFFFFFL) else 0L
-            result[i] = carry.toInt()
+            // lo[i]
+            carry += (w[i].toLong() and 0xFFFFFFFFL)
+            // hi[i] * 977
+            carry += (w[i + 8].toLong() and 0xFFFFFFFFL) * 977L
+            // hi[i-1] (the <<32 shift)
+            if (i > 0) carry += (w[i + 7].toLong() and 0xFFFFFFFFL)
+            out[i] = carry.toInt()
             carry = carry ushr 32
         }
-        // Remaining overflow: carry + hiTimes977[8] + hi[7]
-        var overflow =
-            carry +
-                (hiTimes977[8].toLong() and 0xFFFFFFFFL) +
-                (hi[7].toLong() and 0xFFFFFFFFL)
+        // Remaining: carry + hi[7]
+        var overflow = carry + (w[15].toLong() and 0xFFFFFFFFL)
 
         // Second round: overflow * (2^32 + 977)
-        // overflow is at most ~35 bits, so overflow * 977 fits in Long easily
         if (overflow > 0) {
             val ov977 = overflow * 977L
             var c2 = 0L
-            // Add ov977 to result[0..1], and overflow to result[1..2] (the <<32 part)
             for (i in 0 until 8) {
-                c2 += (result[i].toLong() and 0xFFFFFFFFL)
+                c2 += (out[i].toLong() and 0xFFFFFFFFL)
                 if (i == 0) c2 += (ov977 and 0xFFFFFFFFL)
                 if (i == 1) c2 += (ov977 ushr 32) + (overflow and 0xFFFFFFFFL)
                 if (i == 2) c2 += (overflow ushr 32)
-                result[i] = c2.toInt()
+                out[i] = c2.toInt()
                 c2 = c2 ushr 32
             }
-            // c2 should be 0 or very small; if > 0, do a third tiny round
             if (c2 > 0) {
                 val tiny = c2 * 977L
                 var c3 = 0L
                 for (i in 0 until 3) {
-                    c3 += (result[i].toLong() and 0xFFFFFFFFL)
+                    c3 += (out[i].toLong() and 0xFFFFFFFFL)
                     if (i == 0) c3 += (tiny and 0xFFFFFFFFL)
                     if (i == 1) c3 += (tiny ushr 32) + (c2 and 0xFFFFFFFFL)
                     if (i == 2) c3 += (c2 ushr 32)
-                    result[i] = c3.toInt()
+                    out[i] = c3.toInt()
                     c3 = c3 ushr 32
                 }
             }
         }
-
-        // Final reduction: result might still be >= p
-        return reduce(result)
+        reduceSelf(out)
     }
 
+    /** out = a + b mod p */
     fun add(
+        out: IntArray,
         a: IntArray,
         b: IntArray,
-    ): IntArray {
-        val (sum, carry) = U256.addCarry(a, b)
-        return if (carry != 0) {
-            // sum + 2^256 ≡ sum + (2^32 + 977) (mod p)
-            // carry is always 1 here, so just add the constant
-            val (r2, c2) = U256.addCarry(sum, P_COMPLEMENT_LIMBS)
-            if (c2 != 0) reduce(U256.addCarry(r2, P_COMPLEMENT_LIMBS).first) else reduce(r2)
-        } else {
-            reduce(sum)
+    ) {
+        val carry = U256.addTo(out, a, b)
+        if (carry != 0) {
+            // out + 2^256 ≡ out + (2^32 + 977) mod p
+            var c = 977L + (out[0].toLong() and 0xFFFFFFFFL)
+            out[0] = c.toInt()
+            c = c ushr 32
+            c += 1L + (out[1].toLong() and 0xFFFFFFFFL)
+            out[1] = c.toInt()
+            c = c ushr 32
+            for (i in 2 until 8) {
+                c += (out[i].toLong() and 0xFFFFFFFFL)
+                out[i] = c.toInt()
+                c = c ushr 32
+            }
         }
+        reduceSelf(out)
     }
 
+    /** out = a - b mod p */
     fun sub(
+        out: IntArray,
         a: IntArray,
         b: IntArray,
-    ): IntArray {
-        val (diff, borrow) = U256.subBorrow(a, b)
-        return if (borrow != 0) {
-            // Add p back
-            U256.addCarry(diff, P).first
-        } else {
-            diff
+    ) {
+        val borrow = U256.subTo(out, a, b)
+        if (borrow != 0) {
+            U256.addTo(out, out, P)
         }
     }
 
+    /** out = a * b mod p. Uses thread-local scratch space. */
     fun mul(
+        out: IntArray,
         a: IntArray,
         b: IntArray,
-    ): IntArray = reduceWide(U256.mulWide(a, b))
-
-    fun sqr(a: IntArray): IntArray = mul(a, a)
-
-    fun neg(a: IntArray): IntArray = if (U256.isZero(a)) IntArray(8) else U256.subBorrow(P, a).first
-
-    /** Modular inverse using Fermat's little theorem: a^(p-2) mod p */
-    fun inv(a: IntArray): IntArray {
-        require(!U256.isZero(a)) { "Cannot invert zero" }
-        // p - 2 = FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2D
-        // Use square-and-multiply with an optimized addition chain for secp256k1
-        return powModP(a, P_MINUS_2)
+    ) {
+        val w = wide.get()
+        U256.mulWide(w, a, b)
+        reduceWide(out, w)
     }
 
-    // p - 2
+    /** out = a² mod p. Uses thread-local scratch space. */
+    fun sqr(
+        out: IntArray,
+        a: IntArray,
+    ) {
+        mul(out, a, a)
+    }
+
+    /** out = -a mod p */
+    fun neg(
+        out: IntArray,
+        a: IntArray,
+    ) {
+        if (U256.isZero(a)) {
+            for (i in 0 until 8) out[i] = 0
+        } else {
+            U256.subTo(out, P, a)
+        }
+    }
+
+    /** out = a^(-1) mod p via Fermat's little theorem */
+    fun inv(
+        out: IntArray,
+        a: IntArray,
+    ) {
+        require(!U256.isZero(a))
+        powModP(out, a, P_MINUS_2)
+    }
+
     private val P_MINUS_2 =
         intArrayOf(
             0xFFFFFC2D.toInt(),
@@ -320,8 +343,6 @@ internal object FieldP {
             0xFFFFFFFF.toInt(),
         )
 
-    // (p + 1) / 4 = 3FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFBFFFFF0C
-    // Used for computing square roots since p ≡ 3 (mod 4)
     private val P_PLUS_1_DIV_4 =
         intArrayOf(
             0xBFFFFF0C.toInt(),
@@ -334,39 +355,111 @@ internal object FieldP {
             0x3FFFFFFF,
         )
 
-    /** Square root mod p. Returns null if a is not a quadratic residue. */
-    fun sqrt(a: IntArray): IntArray? {
-        // Since p ≡ 3 (mod 4), sqrt(a) = a^((p+1)/4) mod p
-        val r = powModP(a, P_PLUS_1_DIV_4)
-        // Verify: r^2 == a (mod p)
-        return if (U256.cmp(mul(r, r), reduce(a)) == 0) r else null
+    /** out = sqrt(a) mod p, returns false if not a QR */
+    fun sqrt(
+        out: IntArray,
+        a: IntArray,
+    ): Boolean {
+        powModP(out, a, P_PLUS_1_DIV_4)
+        // Verify: out² == a
+        val check = IntArray(8)
+        mul(check, out, out)
+        // Need a reduced copy of a for comparison
+        val ar = IntArray(8)
+        U256.copyInto(ar, a)
+        reduceSelf(ar)
+        return U256.cmp(check, ar) == 0
     }
 
-    /** Generic modular exponentiation mod p using square-and-multiply */
+    /** out = base^exp mod p */
     private fun powModP(
+        out: IntArray,
         base: IntArray,
         exp: IntArray,
-    ): IntArray {
-        var result = intArrayOf(1, 0, 0, 0, 0, 0, 0, 0) // 1
-        var b = base.copyOf()
-        // Find highest set bit
+    ) {
+        // Left-to-right square-and-multiply
+        val b = IntArray(8)
+        U256.copyInto(b, base)
+
         var highBit = 255
         while (highBit >= 0 && !U256.testBit(exp, highBit)) highBit--
-        for (i in 0..highBit) {
+        if (highBit < 0) {
+            out[0] = 1
+            for (i in 1 until 8) out[i] = 0
+            return
+        }
+
+        // Start with the base (first bit is always 1)
+        U256.copyInto(out, b)
+        for (i in highBit - 1 downTo 0) {
+            sqr(out, out) // out = out²
             if (U256.testBit(exp, i)) {
-                result = mul(result, b)
-            }
-            if (i < highBit) {
-                b = sqr(b)
+                mul(out, out, b) // out = out * base
             }
         }
-        return result
+    }
+
+    // === Allocating convenience wrappers (for non-hot paths) ===
+
+    fun add(
+        a: IntArray,
+        b: IntArray,
+    ): IntArray {
+        val r = IntArray(8)
+        add(r, a, b)
+        return r
+    }
+
+    fun sub(
+        a: IntArray,
+        b: IntArray,
+    ): IntArray {
+        val r = IntArray(8)
+        sub(r, a, b)
+        return r
+    }
+
+    fun mul(
+        a: IntArray,
+        b: IntArray,
+    ): IntArray {
+        val r = IntArray(8)
+        mul(r, a, b)
+        return r
+    }
+
+    fun sqr(a: IntArray): IntArray {
+        val r = IntArray(8)
+        sqr(r, a)
+        return r
+    }
+
+    fun neg(a: IntArray): IntArray {
+        val r = IntArray(8)
+        neg(r, a)
+        return r
+    }
+
+    fun inv(a: IntArray): IntArray {
+        val r = IntArray(8)
+        inv(r, a)
+        return r
+    }
+
+    fun sqrt(a: IntArray): IntArray? {
+        val r = IntArray(8)
+        return if (sqrt(r, a)) r else null
+    }
+
+    fun reduce(a: IntArray): IntArray {
+        val r = a.copyOf()
+        reduceSelf(r)
+        return r
     }
 }
 
 /**
  * Scalar arithmetic modulo n (the order of the secp256k1 group).
- * n = FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
  */
 internal object ScalarN {
     val N =
@@ -381,99 +474,6 @@ internal object ScalarN {
             0xFFFFFFFF.toInt(),
         )
 
-    /** Check if 0 < a < n */
-    fun isValid(a: IntArray): Boolean {
-        if (U256.isZero(a)) return false
-        return U256.cmp(a, N) < 0
-    }
-
-    /** Reduce mod n: for values up to 2n */
-    fun reduce(a: IntArray): IntArray =
-        if (U256.cmp(a, N) >= 0) {
-            U256.subBorrow(a, N).first
-        } else {
-            a
-        }
-
-    /** Reduce a wide 512-bit value mod n */
-    fun reduceWide(w: IntArray): IntArray {
-        // Barrett-like reduction using schoolbook division
-        // For simplicity, we do repeated subtraction with shifts
-        // Since n is close to 2^256, the quotient is at most ~2^256.
-        // We use a simpler approach: reduce by subtracting n * (hi_estimate)
-        //
-        // Actually, we'll use the same approach as field reduction but
-        // for n which doesn't have a nice sparse form.
-        // n = 2^256 - nComplement where nComplement = 2^256 - n
-        //   = 0x14551231950B75FC4402DA1732FC9BEBF
-
-        val lo = IntArray(8)
-        val hi = IntArray(8)
-        for (i in 0 until 8) {
-            lo[i] = w[i]
-            hi[i] = w[i + 8]
-        }
-
-        if (U256.isZero(hi)) return reduce(lo)
-
-        // 2^256 mod n = N_COMPLEMENT
-        // hi * 2^256 ≡ hi * N_COMPLEMENT (mod n)
-        val hiTimesNC = U256.mulWide(hi, N_COMPLEMENT)
-        // This is at most 384 bits. Add lo.
-        val sum = IntArray(16)
-        var carry = 0L
-        for (i in 0 until 16) {
-            carry += (hiTimesNC[i].toLong() and 0xFFFFFFFFL) +
-                if (i < 8) (lo[i].toLong() and 0xFFFFFFFFL) else 0L
-            sum[i] = carry.toInt()
-            carry = carry ushr 32
-        }
-
-        // Now sum might be up to ~384 bits. Repeat reduction.
-        val lo2 = IntArray(8)
-        val hi2 = IntArray(8)
-        for (i in 0 until 8) {
-            lo2[i] = sum[i]
-            hi2[i] = sum[i + 8]
-        }
-
-        if (U256.isZero(hi2)) return reduce(lo2)
-
-        // Another round
-        val hi2TimesNC = U256.mulWide(hi2, N_COMPLEMENT)
-        var carry2 = 0L
-        val result = IntArray(8)
-        for (i in 0 until 8) {
-            carry2 += (lo2[i].toLong() and 0xFFFFFFFFL) + (hi2TimesNC[i].toLong() and 0xFFFFFFFFL)
-            result[i] = carry2.toInt()
-            carry2 = carry2 ushr 32
-        }
-        // Handle any remaining overflow
-        var overflow = carry2
-        for (i in 8 until 16) {
-            overflow += (hi2TimesNC[i].toLong() and 0xFFFFFFFFL)
-        }
-        // overflow * 2^256 ≡ overflow * N_COMPLEMENT (mod n)
-        if (overflow > 0) {
-            val corr = U256.mulSmall(N_COMPLEMENT, overflow)
-            var c3 = 0L
-            for (i in 0 until 8) {
-                c3 += (result[i].toLong() and 0xFFFFFFFFL) + (corr[i].toLong() and 0xFFFFFFFFL)
-                result[i] = c3.toInt()
-                c3 = c3 ushr 32
-            }
-        }
-
-        // Final reductions
-        var r = result
-        while (U256.cmp(r, N) >= 0) {
-            r = U256.subBorrow(r, N).first
-        }
-        return r
-    }
-
-    // 2^256 - n = 14551231950B75FC4402DA1732FC9BEBF
-    // In little-endian limbs:
     private val N_COMPLEMENT =
         intArrayOf(
             0x2FC9BEBF.toInt(),
@@ -486,46 +486,6 @@ internal object ScalarN {
             0,
         )
 
-    fun add(
-        a: IntArray,
-        b: IntArray,
-    ): IntArray {
-        val (sum, carry) = U256.addCarry(a, b)
-        return if (carry != 0) {
-            // sum + 2^256 ≡ sum + N_COMPLEMENT (mod n)
-            val (r2, _) = U256.addCarry(sum, N_COMPLEMENT)
-            reduce(r2)
-        } else {
-            reduce(sum)
-        }
-    }
-
-    fun sub(
-        a: IntArray,
-        b: IntArray,
-    ): IntArray {
-        val (diff, borrow) = U256.subBorrow(a, b)
-        return if (borrow != 0) {
-            U256.addCarry(diff, N).first
-        } else {
-            diff
-        }
-    }
-
-    fun mul(
-        a: IntArray,
-        b: IntArray,
-    ): IntArray = reduceWide(U256.mulWide(a, b))
-
-    fun neg(a: IntArray): IntArray = if (U256.isZero(a)) IntArray(8) else U256.subBorrow(N, a).first
-
-    /** Modular inverse using Fermat's little theorem: a^(n-2) mod n */
-    fun inv(a: IntArray): IntArray {
-        require(!U256.isZero(a)) { "Cannot invert zero" }
-        return powModN(a, N_MINUS_2)
-    }
-
-    // n - 2
     private val N_MINUS_2 =
         intArrayOf(
             0xD036413F.toInt(),
@@ -538,20 +498,155 @@ internal object ScalarN {
             0xFFFFFFFF.toInt(),
         )
 
+    fun isValid(a: IntArray): Boolean = !U256.isZero(a) && U256.cmp(a, N) < 0
+
+    fun reduce(a: IntArray): IntArray =
+        if (U256.cmp(a, N) >= 0) {
+            val r = IntArray(8)
+            U256.subTo(r, a, N)
+            r
+        } else {
+            a
+        }
+
+    fun add(
+        a: IntArray,
+        b: IntArray,
+    ): IntArray {
+        val r = IntArray(8)
+        val carry = U256.addTo(r, a, b)
+        if (carry != 0) {
+            U256.addTo(r, r, N_COMPLEMENT)
+            reduceSelf(r)
+        } else {
+            reduceSelf(r)
+        }
+        return r
+    }
+
+    fun sub(
+        a: IntArray,
+        b: IntArray,
+    ): IntArray {
+        val r = IntArray(8)
+        val borrow = U256.subTo(r, a, b)
+        if (borrow != 0) U256.addTo(r, r, N)
+        return r
+    }
+
+    fun mul(
+        a: IntArray,
+        b: IntArray,
+    ): IntArray = reduceWide(mulWideAlloc(a, b))
+
+    fun neg(a: IntArray): IntArray {
+        if (U256.isZero(a)) return IntArray(8)
+        val r = IntArray(8)
+        U256.subTo(r, N, a)
+        return r
+    }
+
+    fun inv(a: IntArray): IntArray {
+        require(!U256.isZero(a))
+        return powModN(a, N_MINUS_2)
+    }
+
+    private fun reduceSelf(a: IntArray) {
+        if (U256.cmp(a, N) >= 0) U256.subTo(a, a, N)
+    }
+
+    private fun mulWideAlloc(
+        a: IntArray,
+        b: IntArray,
+    ): IntArray {
+        val w = IntArray(16)
+        U256.mulWide(w, a, b)
+        return w
+    }
+
+    private fun reduceWide(w: IntArray): IntArray {
+        val lo = IntArray(8)
+        val hi = IntArray(8)
+        for (i in 0 until 8) {
+            lo[i] = w[i]
+            hi[i] = w[i + 8]
+        }
+        if (U256.isZero(hi)) {
+            reduceSelf(lo)
+            return lo
+        }
+
+        val hiTimesNC = IntArray(16)
+        U256.mulWide(hiTimesNC, hi, N_COMPLEMENT)
+        val sum = IntArray(16)
+        var carry = 0L
+        for (i in 0 until 16) {
+            carry += (hiTimesNC[i].toLong() and 0xFFFFFFFFL) +
+                if (i < 8) (lo[i].toLong() and 0xFFFFFFFFL) else 0L
+            sum[i] = carry.toInt()
+            carry = carry ushr 32
+        }
+
+        val lo2 = IntArray(8)
+        val hi2 = IntArray(8)
+        for (i in 0 until 8) {
+            lo2[i] = sum[i]
+            hi2[i] = sum[i + 8]
+        }
+        if (U256.isZero(hi2)) {
+            reduceSelf(lo2)
+            return lo2
+        }
+
+        val hi2NC = IntArray(16)
+        U256.mulWide(hi2NC, hi2, N_COMPLEMENT)
+        var c2 = 0L
+        val result = IntArray(8)
+        for (i in 0 until 8) {
+            c2 += (lo2[i].toLong() and 0xFFFFFFFFL) + (hi2NC[i].toLong() and 0xFFFFFFFFL)
+            result[i] = c2.toInt()
+            c2 = c2 ushr 32
+        }
+        var overflow = c2
+        for (i in 8 until 16) overflow += (hi2NC[i].toLong() and 0xFFFFFFFFL)
+        if (overflow > 0) {
+            val corr = IntArray(9)
+            var cc = 0L
+            for (i in 0 until 8) {
+                cc += (N_COMPLEMENT[i].toLong() and 0xFFFFFFFFL) * overflow
+                corr[i] = cc.toInt()
+                cc = cc ushr 32
+            }
+            var c3 = 0L
+            for (i in 0 until 8) {
+                c3 += (result[i].toLong() and 0xFFFFFFFFL) + (corr[i].toLong() and 0xFFFFFFFFL)
+                result[i] = c3.toInt()
+                c3 = c3 ushr 32
+            }
+        }
+        while (U256.cmp(result, N) >= 0) U256.subTo(result, result, N)
+        return result
+    }
+
     private fun powModN(
         base: IntArray,
         exp: IntArray,
     ): IntArray {
-        var result = intArrayOf(1, 0, 0, 0, 0, 0, 0, 0)
-        var b = base.copyOf()
+        val result = IntArray(8)
+        val b = base.copyOf()
         var highBit = 255
         while (highBit >= 0 && !U256.testBit(exp, highBit)) highBit--
-        for (i in 0..highBit) {
+        if (highBit < 0) {
+            result[0] = 1
+            return result
+        }
+        U256.copyInto(result, b)
+        for (i in highBit - 1 downTo 0) {
+            val sq = mul(result, result)
+            U256.copyInto(result, sq)
             if (U256.testBit(exp, i)) {
-                result = mul(result, b)
-            }
-            if (i < highBit) {
-                b = mul(b, b)
+                val prod = mul(result, b)
+                U256.copyInto(result, prod)
             }
         }
         return result
