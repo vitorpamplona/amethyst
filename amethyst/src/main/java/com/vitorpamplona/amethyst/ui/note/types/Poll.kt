@@ -271,7 +271,7 @@ fun RenderPollCard(
                 accountViewModel.account.pollRespond(event, responses)
             }
         },
-        onViewResults = { accountViewModel.markPollResultsViewed(event.id) },
+        onViewResults = { accountViewModel.markPollResultsViewed(event.id, event.endsAt()) },
         hasViewedResults = { accountViewModel.hasViewedPollResults(event.id) },
         resultContent = galleryUser,
         labelContent = labelContent,

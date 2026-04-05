@@ -392,7 +392,10 @@ object LocalPreferences {
                     )
                     putStringSet(PrefKeys.HAS_DONATED_IN_VERSION, settings.hasDonatedInVersion.value)
                     putStringSet(PrefKeys.DISMISSED_POLL_NOTE_IDS, settings.dismissedPollNoteIds.value)
-                    putStringSet(PrefKeys.VIEWED_POLL_RESULT_NOTE_IDS, settings.viewedPollResultNoteIds.value)
+                    putString(
+                        PrefKeys.VIEWED_POLL_RESULT_NOTE_IDS,
+                        JsonMapper.toJson(settings.viewedPollResultNoteIds.value),
+                    )
 
                     putString(
                         PrefKeys.PENDING_ATTESTATIONS,
@@ -478,7 +481,7 @@ object LocalPreferences {
                     val hideNIP17WarningDialog = getBoolean(PrefKeys.HIDE_NIP_17_WARNING_DIALOG, false)
                     val hasDonatedInVersion = getStringSet(PrefKeys.HAS_DONATED_IN_VERSION, null) ?: setOf()
                     val dismissedPollNoteIds = getStringSet(PrefKeys.DISMISSED_POLL_NOTE_IDS, null) ?: setOf()
-                    val viewedPollResultNoteIds = getStringSet(PrefKeys.VIEWED_POLL_RESULT_NOTE_IDS, null) ?: setOf()
+                    val viewedPollResultNoteIdsStr = getString(PrefKeys.VIEWED_POLL_RESULT_NOTE_IDS, null)
                     val localRelayServers = getStringSet(PrefKeys.LOCAL_RELAY_SERVERS, null) ?: setOf()
 
                     val defaultHomeFollowListStr = getString(PrefKeys.DEFAULT_HOME_FOLLOW_LIST, null)
@@ -531,6 +534,7 @@ object LocalPreferences {
                     val zapPaymentRequestServer = async { parseOrNull<Nip47WalletConnect.Nip47URI>(zapPaymentRequestServerStr) }
                     val defaultFileServer = async { parseOrNull<ServerName>(defaultFileServerStr) ?: DEFAULT_MEDIA_SERVERS[0] }
 
+                    val viewedPollResultNoteIds = async { parseOrNull<Map<String, Long>>(viewedPollResultNoteIdsStr) ?: mapOf() }
                     val pendingAttestations = async { parseOrNull<Map<HexKey, String>>(pendingAttestationsStr) ?: mapOf() }
                     val latestUserMetadata = async { parseEventOrNull<MetadataEvent>(latestUserMetadataStr) }
                     val latestContactList = async { parseEventOrNull<ContactListEvent>(latestContactListStr) }
@@ -601,7 +605,7 @@ object LocalPreferences {
                         lastReadPerRoute = MutableStateFlow(lastReadPerRoute.await()),
                         hasDonatedInVersion = MutableStateFlow(hasDonatedInVersion),
                         dismissedPollNoteIds = MutableStateFlow(dismissedPollNoteIds),
-                        viewedPollResultNoteIds = MutableStateFlow(viewedPollResultNoteIds),
+                        viewedPollResultNoteIds = MutableStateFlow(viewedPollResultNoteIds.await()),
                         pendingAttestations = MutableStateFlow(pendingAttestations.await()),
                         backupNipA3PaymentTargets = latestPaymentTargets.await(),
                     )

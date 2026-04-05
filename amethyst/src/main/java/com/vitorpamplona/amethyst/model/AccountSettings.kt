@@ -57,6 +57,7 @@ import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayType
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -194,7 +195,7 @@ class AccountSettings(
     val lastReadPerRoute: MutableStateFlow<Map<String, MutableStateFlow<Long>>> = MutableStateFlow(mapOf()),
     val hasDonatedInVersion: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
     val dismissedPollNoteIds: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
-    val viewedPollResultNoteIds: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
+    val viewedPollResultNoteIds: MutableStateFlow<Map<String, Long>> = MutableStateFlow(mapOf()),
     val pendingAttestations: MutableStateFlow<Map<HexKey, String>> = MutableStateFlow(mapOf()),
     var backupNipA3PaymentTargets: PaymentTargetsEvent? = null,
 ) : EphemeralChatRepository,
@@ -700,15 +701,32 @@ class AccountSettings(
     // viewed poll results
     // ---
 
-    fun hasViewedPollResults(noteId: String) = viewedPollResultNoteIds.value.contains(noteId)
+    fun hasViewedPollResults(noteId: String): Boolean {
+        val expiresAt = viewedPollResultNoteIds.value[noteId] ?: return false
+        return expiresAt > TimeUtils.now()
+    }
 
-    fun markPollResultsViewed(noteId: String) {
-        if (!viewedPollResultNoteIds.value.contains(noteId)) {
+    fun markPollResultsViewed(
+        noteId: String,
+        pollEndsAt: Long?,
+    ) {
+        if (noteId !in viewedPollResultNoteIds.value) {
+            val expiresAt =
+                if (pollEndsAt != null && pollEndsAt > TimeUtils.now()) {
+                    pollEndsAt
+                } else {
+                    TimeUtils.now() + TimeUtils.ONE_DAY
+                }
             viewedPollResultNoteIds.update {
-                it + noteId
+                pruneExpiredViews(it) + (noteId to expiresAt)
             }
             saveAccountSettings()
         }
+    }
+
+    private fun pruneExpiredViews(views: Map<String, Long>): Map<String, Long> {
+        val now = TimeUtils.now()
+        return views.filterValues { it > now }
     }
 
     // ----
