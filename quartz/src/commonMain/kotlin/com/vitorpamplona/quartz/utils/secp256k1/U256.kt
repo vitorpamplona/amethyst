@@ -21,15 +21,18 @@
 package com.vitorpamplona.quartz.utils.secp256k1
 
 // =====================================================================================
-// 256-BIT ARITHMETIC AND MODULAR FIELD OPERATIONS FOR secp256k1
+// 256-BIT UNSIGNED INTEGER ARITHMETIC FOR secp256k1
 // =====================================================================================
 //
-// This file implements the foundational math needed for elliptic curve cryptography on
-// the secp256k1 curve (used by Bitcoin and Nostr). It provides:
+// This file implements the raw 256-bit unsigned integer arithmetic that underlies all
+// secp256k1 operations. It is the foundation of the secp256k1 package, which consists of:
 //
-//   - U256:    Raw 256-bit unsigned integer arithmetic (add, subtract, multiply, compare)
-//   - FieldP:  Arithmetic modulo p (the field prime), used for point coordinates
-//   - ScalarN: Arithmetic modulo n (the group order), used for private keys and signatures
+//   - U256.kt (this file): Raw 256-bit arithmetic (add, subtract, multiply, compare)
+//   - FieldP.kt:  Modular arithmetic mod p (field prime), for point coordinates
+//   - ScalarN.kt: Modular arithmetic mod n (group order), for keys and signatures
+//   - Glv.kt:     GLV endomorphism and wNAF scalar encoding
+//   - Point.kt:   EC point operations, scalar multiplication (comb, Strauss, GLV)
+//   - Secp256k1.kt: Public API (sign, verify, key operations)
 //
 // REPRESENTATION
 // ==============

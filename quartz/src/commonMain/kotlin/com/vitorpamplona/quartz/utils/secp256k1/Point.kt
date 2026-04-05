@@ -36,31 +36,32 @@ package com.vitorpamplona.quartz.utils.secp256k1
 //
 // The "point at infinity" (identity element) is represented by Z = 0.
 //
-// PRECOMPUTED GENERATOR TABLE
-// ===========================
-// The generator point G is used for public key creation and signature operations.
-// We precompute a table of [1G, 2G, 3G, ..., 16G] in affine form (stored as AffinePoint)
-// at first use. This table is lazily initialized and cached for the lifetime of the process.
-// Affine storage enables "mixed addition" (Jacobian + Affine), which is cheaper than
-// adding two Jacobian points because the second point's Z=1 eliminates several multiplications.
-//
-// POINT DOUBLING FORMULA
-// ======================
+// POINT DOUBLING
+// ==============
 // We use the 3M+4S formula from libsecp256k1 that computes L = (3/2)·X² using a cheap
 // field halving operation instead of a full multiplication. On the secp256k1 curve (a=0),
 // this is the most efficient known doubling formula.
 //
-// SCALAR MULTIPLICATION
-// =====================
-// For general scalar multiplication (mul, mulG), we use a 4-bit windowed method.
-// For signature verification (mulDoubleG), we use Shamir's trick combined with:
+// SCALAR MULTIPLICATION STRATEGIES
+// ================================
+// Three methods are used depending on the context:
 //
-// - GLV Endomorphism (Glv.kt): Splits each 256-bit scalar into two ~128-bit halves,
-//   halving the number of doublings from 256 to ~130.
-// - wNAF-5 Encoding (Glv.kt): Encodes each half-scalar so non-zero digits are sparse
-//   (separated by ≥4 zeros), reducing point additions.
-// - Mixed Addition: G-side additions use the precomputed affine table (8M+3S per add),
-//   while P-side uses full Jacobian (11M+5S, avoiding expensive table inversions).
+// 1. mulG (Generator multiplication): Comb method (Hamburg 2012).
+//    Arranges scalar bits into a 4×66 matrix, processes 4 rows with 11 table lookups
+//    each. Only 3 doublings total. Uses a precomputed 704-entry affine table (~45KB).
+//    Cost: ~43 mixed additions + 3 doublings (vs ~130 dbl for GLV+wNAF).
+//    Used by: pubkeyCreate, signSchnorr.
+//
+// 2. mul (Arbitrary point multiplication): GLV endomorphism + wNAF-5 (Glv.kt).
+//    Splits the 256-bit scalar into two ~128-bit halves via the secp256k1 endomorphism,
+//    then processes both with wNAF encoding in a single pass of ~130 shared doublings.
+//    Used by: pubKeyTweakMul (ECDH).
+//
+// 3. mulDoubleG (Verification: s·G + e·P): Strauss/Shamir trick with GLV + wNAF.
+//    Splits both scalars via GLV into 4 half-scalar streams. G-side uses a precomputed
+//    64-entry affine wNAF-8 table; P-side builds a Jacobian wNAF-5 table per call.
+//    All 4 streams share ~130 doublings in a single pass.
+//    Used by: verifySchnorr.
 // =====================================================================================
 
 /**

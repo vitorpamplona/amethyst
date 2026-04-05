@@ -36,10 +36,13 @@ import com.vitorpamplona.quartz.utils.sha256.sha256
  * - [privKeyTweakAdd]: BIP-32 key derivation (NIP-06)
  * - [pubKeyTweakMul]: ECDH shared secrets (NIP-04, NIP-44)
  *
- * Performance: ~2,100 verify/s on JVM (~13× slower than the native C library).
+ * Performance on JVM (vs native C/JNI secp256k1):
+ *   verify ~3,700 ops/s (~8×), sign ~14K ops/s (~2.3×), pubkeyCreate ~18K ops/s (~3.6×),
+ *   compress ~7M ops/s (2× FASTER), secKeyVerify ~6M ops/s (FASTER).
  * The gap is primarily due to JVM's lack of 128-bit integer types (forcing 8×32-bit
- * limbs instead of C's 5×52-bit) and the absence of the GLV endomorphism optimization
- * that halves the number of EC point doublings. See Point.kt for optimization notes.
+ * limbs with 64 inner products per field multiply, vs C's 5×52-bit with 25).
+ * All algorithmic optimizations from libsecp256k1 are implemented: GLV endomorphism,
+ * wNAF encoding, Shamir's trick, comb method, and optimized addition chains.
  */
 object Secp256k1 {
     // ==================== Cached BIP-340 tag hash prefixes ====================
