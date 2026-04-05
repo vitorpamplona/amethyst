@@ -384,6 +384,8 @@
     <string name="migrate_bookmarks_success">Záložky úspěšně přesunuty</string>
     <string name="drafts">Koncepty</string>
     <string name="polls">Ankety</string>
+    <string name="open_polls">Otevřené</string>
+    <string name="closed_polls">Uzavřené</string>
     <string name="pictures">Obrázky</string>
     <string name="shorts">Krátká videa</string>
     <string name="longs">Videa</string>
@@ -699,6 +701,7 @@
     <string name="call_camera_off">Kamera vypnuta</string>
     <string name="call_speaker">Reproduktor</string>
     <string name="call_earpiece">Sluchátko</string>
+    <string name="call_bluetooth">Bluetooth</string>
     <string name="call_voice">Hlasový hovor</string>
     <string name="call_video">Videohovor</string>
     <string name="call_waiting_for_others">Čekání na připojení ostatních\u2026</string>
@@ -1430,6 +1433,7 @@
     <string name="select_list_to_filter">Vyberte seznam pro filtrování kanálu</string>
     <string name="feed_group_feeds">Kanály</string>
     <string name="feed_group_hashtags">Hashtagy</string>
+    <string name="feed_group_locations">Lokace</string>
     <string name="feed_group_communities">Komunity</string>
     <string name="feed_group_lists">Seznamy</string>
     <string name="feed_group_relays">Relé</string>
@@ -1530,6 +1534,7 @@
     <string name="connected">Připojeno</string>
     <string name="social_proof">Sociální důkaz</string>
     <string name="poll_submit">Odeslat</string>
+    <string name="poll_view_results">Zobrazit výsledky</string>
     <string name="restart">Restartovat</string>
     <string name="chess_accept">Přijmout</string>
     <string name="chess_decline">Odmítnout</string>
@@ -1930,9 +1935,4 @@
     <string name="relay_members_removed">%1$d členů odebráno z relé</string>
     <string name="relay_join_request">Žádost o připojení k relé</string>
     <string name="relay_leave_request">Žádost o opuštění relé</string>
-    <string name="call_bluetooth">Bluetooth</string>
-    <string name="closed_polls">Uzavřené</string>
-    <string name="feed_group_locations">Lokace</string>
-    <string name="open_polls">Otevřené</string>
-    <string name="poll_view_results">Zobrazit výsledky</string>
 </resources>

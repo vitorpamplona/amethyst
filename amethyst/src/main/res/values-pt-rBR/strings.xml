@@ -384,6 +384,8 @@
     <string name="migrate_bookmarks_success">Favoritos migrados com sucesso</string>
     <string name="drafts">Rascunhos</string>
     <string name="polls">Enquetes</string>
+    <string name="open_polls">Abertas</string>
+    <string name="closed_polls">Encerradas</string>
     <string name="pictures">Imagens</string>
     <string name="shorts">Curtas</string>
     <string name="longs">Vídeos</string>
@@ -699,6 +701,7 @@
     <string name="call_camera_off">Câmera desligada</string>
     <string name="call_speaker">Alto-falante</string>
     <string name="call_earpiece">Auricular</string>
+    <string name="call_bluetooth">Bluetooth</string>
     <string name="call_voice">Chamada de voz</string>
     <string name="call_video">Chamada de vídeo</string>
     <string name="call_waiting_for_others">Aguardando outros participantes\u2026</string>
@@ -1204,6 +1207,7 @@
     <string name="article_description_placeholder">Uma breve descrição do seu artigo\u2026</string>
     <string name="url_slug">Slug da URL</string>
     <string name="url_slug_placeholder">slug-url-do-artigo</string>
+    <string name="tags_label"># Tags</string>
     <string name="add_a_tag">Adicionar uma tag\u2026</string>
     <string name="start_writing_article">Comece a escrever seu artigo\u2026</string>
     <string name="open_all_reactions_to_this_post">Abrir todas as reações a esta postagem</string>
@@ -1429,6 +1433,7 @@
     <string name="select_list_to_filter">Selecione uma lista para filtrar o feed</string>
     <string name="feed_group_feeds">Feeds</string>
     <string name="feed_group_hashtags">Hashtags</string>
+    <string name="feed_group_locations">Localizações</string>
     <string name="feed_group_communities">Comunidades</string>
     <string name="feed_group_lists">Listas</string>
     <string name="feed_group_relays">Relés</string>
@@ -1529,6 +1534,7 @@
     <string name="connected">Conectado</string>
     <string name="social_proof">Prova social</string>
     <string name="poll_submit">Enviar</string>
+    <string name="poll_view_results">Ver resultados</string>
     <string name="restart">Reiniciar</string>
     <string name="chess_accept">Aceitar</string>
     <string name="chess_decline">Recusar</string>
@@ -1929,9 +1935,4 @@
     <string name="relay_members_removed">%1$d membros removidos do relay</string>
     <string name="relay_join_request">Solicitação de entrada no relay</string>
     <string name="relay_leave_request">Solicitação de saída do relay</string>
-    <string name="call_bluetooth">Bluetooth</string>
-    <string name="closed_polls">Encerradas</string>
-    <string name="feed_group_locations">Localizações</string>
-    <string name="open_polls">Abertas</string>
-    <string name="poll_view_results">Ver resultados</string>
 </resources>
