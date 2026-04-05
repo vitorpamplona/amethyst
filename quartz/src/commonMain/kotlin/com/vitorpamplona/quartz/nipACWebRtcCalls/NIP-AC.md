@@ -15,17 +15,17 @@ NAT traversal — no custom server infrastructure is required.
 The protocol works as follows:
 
 1. **Caller** creates a signed call offer event containing an SDP offer
-2. The event is wrapped in an **Ephemeral Gift Wrap** (kind `21059`) and published to relays
+2. The event is wrapped in an **ephemeral gift wrap** (kind `21059`) and published to relays
 3. **Callee** unwraps the event, verifies the signature, and decides whether to accept
 4. If accepted, callee sends back a gift-wrapped call answer event containing an SDP answer
 5. Both parties exchange **ICE candidates** as gift-wrapped events for NAT traversal
 6. A **direct WebRTC peer connection** is established for audio/video
 
-All signaling events MUST be delivered using **Ephemeral Gift Wraps** (kind `21059`), an ephemeral
-variant of [NIP-59](https://github.com/nostr-protocol/nips/blob/master/59.md) Gift Wraps. Events are
-signed by the sender's key and wrapped directly (without the seal layer) — the ephemeral gift wrap's
-random ephemeral key already hides the sender from relay operators. Relays SHOULD treat kind `21059`
-events as ephemeral and not persist them to long-term storage.
+All signaling events MUST be delivered using **ephemeral gift wraps** (kind `21059`), an ephemeral
+variant of [NIP-59](https://github.com/nostr-protocol/nips/blob/master/59.md) gift wraps. Events are
+signed by the sender's key and wrapped directly (without the seal layer) — the gift wrap's random
+ephemeral key already hides the sender from relay operators. Relays SHOULD treat kind `21059` events
+as ephemeral and not persist them to long-term storage.
 
 ## Event Kinds
 
@@ -179,13 +179,13 @@ Used for mid-call changes such as toggling video on/off. The `content` field con
 
 ## Encryption and Delivery
 
-All signaling events MUST be delivered using **Ephemeral Gift Wraps** (kind `21059`):
+All signaling events MUST be delivered using **ephemeral gift wraps** (kind `21059`):
 
 1. **Sign** the signaling event with the sender's key
-2. **Wrap** the signed event directly using `EphemeralGiftWrapEvent` (kind `21059`) with NIP-44 encryption
-3. **Publish** the ephemeral gift wrap to the recipient's relay list
+2. **Wrap** the signed event in a kind `21059` event with NIP-44 encryption and a random ephemeral key
+3. **Publish** the gift wrap to the recipient's relay list
 
-The seal layer (`SealedRumorEvent`) is NOT used. The ephemeral gift wrap already provides:
+The seal layer (kind `13`) is NOT used. The ephemeral gift wrap already provides:
 
 - **NIP-44 encryption** — content is unreadable to relay operators
 - **Random ephemeral pubkey** — the relay cannot identify the sender
@@ -194,7 +194,7 @@ The seal layer (`SealedRumorEvent`) is NOT used. The ephemeral gift wrap already
 
 No `expiration` tag is needed on the inner signaling events or the outer wrap. The ephemeral kind itself communicates the transient nature of the data. Clients MUST still perform staleness checks (see Spam Prevention) to discard old events.
 
-Recipients unwrap the ephemeral gift, verify the inner event's signature against the sender's pubkey, and then process the signaling message.
+Recipients decrypt the gift wrap using NIP-44 with their private key and the wrap's ephemeral pubkey, verify the inner event's signature against the sender's pubkey, and then process the signaling message.
 
 ## Protocol Flow
 
@@ -203,16 +203,16 @@ Recipients unwrap the ephemeral gift, verify the inner event's signature against
 ```
 Caller                          Relay                           Callee
   |                               |                               |
-  |-- EphemeralGiftWrap(CallOffer) ------->|                               |
-  |                               |-- EphemeralGiftWrap(CallOffer) ------->|
+  |-- GiftWrap(CallOffer) ------->|                               |
+  |                               |-- GiftWrap(CallOffer) ------->|
   |                               |                               |
-  |                               |         [Callee unwraps, verifies signature]
+  |                               |         [Callee decrypts wrap, verifies signature]
   |                               |         [Checks: is caller followed?]
   |                               |         [YES → ring / NO → ignore]
   |                               |                               |
-  |<-- EphemeralGiftWrap(CallAnswer) ------|<-- EphemeralGiftWrap(CallAnswer) ------|
+  |<-- GiftWrap(CallAnswer) ------|<-- GiftWrap(CallAnswer) ------|
   |                               |                               |
-  |<-> EphemeralGiftWrap(IceCandidate) <-->|<-> EphemeralGiftWrap(IceCandidate) <-->|
+  |<-> GiftWrap(IceCandidate) <-->|<-> GiftWrap(IceCandidate) <-->|
   |                               |                               |
   |============= WebRTC P2P Connection Established ===============|
   |                 (relay no longer involved)                     |
@@ -235,12 +235,12 @@ Either party may send a `CallRenegotiate` (kind 25055) during an active call to 
 ```
 Party A                         Relay                           Party B
   |                               |                               |
-  |-- EphemeralGiftWrap(Renegotiate) ----->|                               |
-  |                               |-- EphemeralGiftWrap(Renegotiate) ----->|
+  |-- GiftWrap(Renegotiate) ----->|                               |
+  |                               |-- GiftWrap(Renegotiate) ----->|
   |                               |                               |
   |                               |  [Party B creates SDP answer] |
   |                               |                               |
-  |<-- EphemeralGiftWrap(CallAnswer) ------|<-- EphemeralGiftWrap(CallAnswer) ------|
+  |<-- GiftWrap(CallAnswer) ------|<-- GiftWrap(CallAnswer) ------|
   |                               |                               |
   |========= Updated WebRTC P2P Connection ========================|
 ```
@@ -436,7 +436,7 @@ This NIP does not mandate specific STUN or TURN servers. Clients SHOULD:
 ### Event Lifecycle
 
 - The `call-id` tag MUST be a UUID that is unique per call session. All signaling events for the same call share the same `call-id`.
-- Signaling data is ephemeral and has no long-term value. Using kind `21059` (Ephemeral Gift Wrap) signals to relays that these events are transient and SHOULD NOT be persisted.
+- Signaling data is ephemeral and has no long-term value. Using kind `21059` (ephemeral gift wrap) signals to relays that these events are transient and SHOULD NOT be persisted.
 - Clients SHOULD implement a ringing timeout (e.g., 60 seconds). If no answer is received, the call transitions to a "timed out" state.
 - After a call ends, the call state SHOULD auto-reset to idle after a brief display period (e.g., 2 seconds) to ensure the client is ready for subsequent calls.
 
@@ -477,6 +477,148 @@ These self-notification events use the same `call-id` as the original call and f
 - If WebRTC session creation fails, the client SHOULD display an error to the user and transition to an ended state.
 - If SDP offer/answer creation fails, the client SHOULD surface the error instead of hanging silently.
 - Clients SHOULD handle `ICE_CONNECTION_FAILED` state by ending the call and notifying the user of a connection failure.
+
+## Test Vectors
+
+Implementations SHOULD validate their state machine and event handling against these test scenarios.
+
+### Event Structure Tests
+
+| # | Test | Verification |
+|---|------|-------------|
+| E1 | Build Call Offer (kind 25050) | Contains `p`, `call-id`, `call-type`, `alt` tags; content = SDP offer |
+| E2 | Build Call Answer (kind 25051) | Contains `p`, `call-id`, `alt` tags; content = SDP answer; NO `call-type` tag |
+| E3 | Build ICE Candidate (kind 25052) | Contains `p`, `call-id`, `alt` tags; content = JSON with `candidate`, `sdpMid`, `sdpMLineIndex` |
+| E4 | Build Call Hangup (kind 25053) | Contains `p`, `call-id`, `alt` tags; content MAY be empty or contain reason |
+| E5 | Build Call Reject (kind 25054) | Contains `p`, `call-id`, `alt` tags; content MAY be `"busy"` for auto-reject |
+| E6 | Build Call Renegotiate (kind 25055) | Contains `p`, `call-id`, `alt` tags; content = new SDP offer |
+| E7 | Group offer with N callees | N `p` tags present, one per callee |
+| E8 | ICE candidate in group call | Still addressed to single peer (1 `p` tag) |
+| E9 | All events for same call share `call-id` | Offer, answer, ICE, hangup, reject, renegotiate — same UUID |
+| E10 | Single callee offer is not a group call | Exactly 1 `p` tag |
+| E11 | P2P call flow event sequence | Offer → Answer → ICE → Hangup produce correct kinds in order |
+| E12 | Group answer includes all member `p` tags | All members visible in answer `p` tags |
+| E13 | Group hangup includes all member `p` tags | All members visible in hangup `p` tags |
+| E14 | Group reject includes all member `p` tags | All members visible in reject `p` tags |
+| E15 | Group renegotiate includes all member `p` tags | All members visible in renegotiate `p` tags |
+| E16 | Group members = `p` tags + event author | `groupMembers()` union includes the caller's pubkey |
+| E17 | ICE candidate JSON serialization round-trips | `serializeCandidate()` → parse → original values |
+| E18 | ICE candidate JSON escapes special characters | Quotes and backslashes in SDP survive serialization |
+
+### State Machine Tests
+
+| # | Scenario | Initial State | Event/Action | Expected State |
+|---|----------|---------------|-------------|----------------|
+| S1 | Receive offer from followed user | Idle | CallOffer | IncomingCall |
+| S2 | Receive offer from non-followed user | Idle | CallOffer | Idle (ignored) |
+| S3 | Accept incoming call | IncomingCall | acceptCall() | Connecting |
+| S4 | ICE peer connected | Connecting | onPeerConnected() | Connected |
+| S5 | Peer hangs up (P2P) | Connected | CallHangup | Ended(PEER_HANGUP) |
+| S6 | Ended auto-resets | Ended | ~2s timeout | Idle |
+| S7 | Initiate outbound call | Idle | initiateCall() | Offering |
+| S8 | Receive answer to offer | Offering | CallAnswer | Connecting |
+| S9 | Reject incoming call | IncomingCall | rejectCall() | Ended(REJECTED) |
+| S10 | Peer rejects our offer (P2P) | Offering | CallReject | Ended(PEER_REJECTED) |
+| S11 | Busy auto-reject | Connected | CallOffer (different call-id) | Connected + publish CallReject("busy") |
+| S12 | Stale event (>20s old) | Any | Any signaling event | No state change |
+| S13 | Duplicate event (same ID) | Any | Re-delivered event | No state change |
+| S14 | Self ICE candidate echo | Any active | CallIceCandidate from self | Ignored |
+| S15 | Self hangup echo | Connected | CallHangup from self | Ignored (stay Connected) |
+| S16 | Self answer in IncomingCall | IncomingCall | CallAnswer from self | Ended(ANSWERED_ELSEWHERE) |
+| S17 | Self answer in Offering | Offering | CallAnswer from self | Ignored (stay Offering) |
+| S18 | Hangup from Offering | Offering | hangup() | Ended(HANGUP) |
+| S19 | Hangup from Connecting | Connecting | hangup() | Ended(HANGUP) |
+| S20 | Hangup from Connected | Connected | hangup() | Ended(HANGUP) |
+| S21 | Hangup from Idle | Idle | hangup() | Idle (no-op) |
+| S22 | Fresh event (<20s old) | Idle | CallOffer | IncomingCall (processed normally) |
+| S23 | Answer with wrong call-id | Offering | CallAnswer (wrong id) | Offering (ignored) |
+| S24 | Hangup with wrong call-id | Connected | CallHangup (wrong id) | Connected (ignored) |
+| S25 | ICE candidates forwarded via callback | Connecting | CallIceCandidate | Forwarded to onIceCandidateReceived |
+| S26 | Peer left callback fires on hangup | Connected (group) | CallHangup from one peer | onPeerLeft callback invoked |
+| S27 | Reset returns to Idle | Any | reset() | Idle |
+| S28 | Video call type preserved through states | IncomingCall(VIDEO) | accept → connect | All states carry VIDEO type |
+| S29 | Caller cancels while ringing | IncomingCall | CallHangup from caller | Ended(PEER_HANGUP) |
+
+### Renegotiation Tests
+
+| # | Scenario | Verification |
+|---|----------|-------------|
+| R1 | Renegotiate in Connected state | Forwarded to callback |
+| R2 | Renegotiate in Connecting state | Forwarded to callback |
+| R3 | Renegotiate in Idle state | Ignored |
+| R4 | Renegotiate with wrong call-id | Ignored |
+| R5 | Renegotiation response | MUST be CallAnswer (kind 25051), NOT CallRenegotiate |
+| R6 | Glare tiebreaker | Higher pubkey wins; lower pubkey rolls back |
+| R7 | Renegotiation preserves call-id | Same `call-id` tag in renegotiate event |
+
+### Group Call Tests
+
+| # | Scenario | Verification |
+|---|----------|-------------|
+| G1 | Group offer detected | Multiple `p` tags → group call |
+| G2 | Peer rejects in group | Removed from group; call continues with remaining |
+| G3 | All peers reject | Call ends |
+| G4 | Partial disconnect | Close only that peer's connection; continue with remaining |
+| G5 | Last peer leaves | Call ends |
+| G6 | Discover peer while ringing | Buffer peer; trigger mesh setup after accepting |
+| G7 | Mid-call offer (callee-to-callee) | Forwarded via callback with peer pubkey and SDP |
+| G8 | Invite new peer | Offer with all existing members + new invitee in `p` tags |
+| G9 | Callee-to-callee glare | Lower pubkey initiates; higher waits |
+
+### ICE Candidate Buffering Tests
+
+| # | Scenario | Verification |
+|---|----------|-------------|
+| B1 | Candidate arrives before session exists | Buffered in global buffer (keyed by sender) |
+| B2 | Multiple candidates buffered globally | All preserved per peer |
+| B3 | Global buffer drains on session creation | Moved to per-session buffer, global cleared |
+| B4 | Global buffer drains and flushes after remote desc | Candidates reach PeerConnection via `addIceCandidate()` |
+| B5 | Candidate arrives after session, before remote desc | Buffered per-session |
+| B6 | Candidate arrives after session and remote desc | Added directly via `addIceCandidate()` |
+| B7 | Per-session buffer not cleared on creation | Only cleared on flush after `setRemoteDescription()` |
+| B8 | Candidates buffered while ringing are preserved | Not lost when accepting — drained into new session |
+| B9 | Global buffers are separate per peer | Alice's buffer independent of Carol's |
+| B10 | Registering one session doesn't drain other peer | Only the target peer's global buffer is drained |
+| B11 | Full P2P flow: ICE through all phases | Ringing → accept → pre-desc → flush → post-desc |
+| B12 | Group call mesh with ICE buffering | Global buffer per peer, drain on mesh session creation |
+
+### Gift Wrap Round-Trip Tests
+
+| # | Scenario | Verification |
+|---|----------|-------------|
+| W1 | Call Offer round-trips through gift wrap | Sign → wrap → unwrap → correct typed event, valid signature |
+| W2 | Third party cannot decrypt | Gift wrap addressed to Bob, Carol cannot unwrap |
+| W3 | Call Answer round-trips | SDP answer content preserved |
+| W4 | ICE Candidate round-trips | JSON with candidate/sdpMid/sdpMLineIndex preserved |
+| W5 | Hangup round-trips | Reason string preserved (including empty) |
+| W6 | Reject round-trips | Including `"busy"` reason |
+| W7 | Renegotiate round-trips | New SDP offer preserved |
+| W8 | Group offer: per-peer wraps | Each callee can decrypt only their own wrap |
+| W9 | Group answer: broadcast wraps | All members can decrypt; inner event identical |
+| W10 | Group hangup: sign once, wrap per recipient | All wraps contain same inner event ID |
+| W11 | Group reject: sign once, wrap per recipient | All wraps contain same inner event ID |
+| W12 | Full P2P flow through gift wraps | All 7 signaling steps round-trip successfully |
+| W13 | Wrap uses ephemeral key (not sender's) | Gift wrap pubkey differs from inner event pubkey |
+| W14 | Each wrap uses unique ephemeral key | Two wraps for same content have different pubkeys |
+| W15 | Inner event signature verifiable after unwrap | Recipient can verify sender's signature |
+| W16 | SDP with special characters survives | CRLF, slashes, equals signs in SDP preserved |
+| W17 | ICE candidate with special characters survives | JSON escaping + NIP-44 encryption preserves content |
+| W18 | Group offer with context: per-peer SDP | Per-peer SDP content but all `p` tags visible |
+
+### Interface-Level Tests (Full Pipeline)
+
+| # | Scenario | Verification |
+|---|----------|-------------|
+| I1 | Initiate call | Publishes 1 gift wrap (kind 21059) |
+| I2 | Accept call | Publishes gift wrap answer(s) |
+| I3 | Reject call | Publishes gift wrap reject(s) |
+| I4 | Hangup | Publishes gift wrap hangup(s) |
+| I5 | Send renegotiation | Publishes 1 gift wrap renegotiate |
+| I6 | Send renegotiation answer | Publishes 1 gift wrap answer |
+| I7 | Busy auto-reject | Publishes gift wrap reject while staying in current call |
+| I8 | Group per-peer offers | Publishes 1 gift wrap per peer |
+| I9 | Invite peer | Publishes 1 gift wrap; invitee added to pending set |
+| I10 | Full P2P flow | Offer → Answer → Renegotiate → Hangup, all via gift wraps |
 
 ## References
 
