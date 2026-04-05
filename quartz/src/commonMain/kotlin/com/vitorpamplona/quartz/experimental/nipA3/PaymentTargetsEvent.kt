@@ -54,7 +54,7 @@ class PaymentTargetsEvent(
                 earlierVersion.tags
                     .filter(PaymentTargetTag::notMatch)
                     .plus(targets.map { PaymentTargetTag.assemble(it) })
-                    .plus(AltTag.assemble(ALT))
+                    .plusElement(AltTag.assemble(ALT))
                     .toTypedArray()
 
             return signer.sign(createdAt, KIND, tags, earlierVersion.content)
