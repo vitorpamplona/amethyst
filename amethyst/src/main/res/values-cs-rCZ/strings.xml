@@ -1930,4 +1930,9 @@
     <string name="relay_members_removed">%1$d členů odebráno z relé</string>
     <string name="relay_join_request">Žádost o připojení k relé</string>
     <string name="relay_leave_request">Žádost o opuštění relé</string>
+    <string name="call_bluetooth">Bluetooth</string>
+    <string name="closed_polls">Uzavřené</string>
+    <string name="feed_group_locations">Lokace</string>
+    <string name="open_polls">Otevřené</string>
+    <string name="poll_view_results">Zobrazit výsledky</string>
 </resources>

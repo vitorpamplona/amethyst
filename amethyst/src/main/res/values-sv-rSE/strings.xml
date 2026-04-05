@@ -1929,4 +1929,9 @@
     <string name="relay_members_removed">%1$d medlemmar borttagna från relä</string>
     <string name="relay_join_request">Begäran om att gå med i relä</string>
     <string name="relay_leave_request">Begäran om att lämna relä</string>
+    <string name="call_bluetooth">Bluetooth</string>
+    <string name="closed_polls">Stängda</string>
+    <string name="feed_group_locations">Platser</string>
+    <string name="open_polls">Öppna</string>
+    <string name="poll_view_results">Visa resultat</string>
 </resources>
