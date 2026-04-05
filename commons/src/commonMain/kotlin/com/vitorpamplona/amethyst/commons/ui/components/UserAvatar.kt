@@ -41,6 +41,8 @@ import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.robohash.CachedRobohash
 import com.vitorpamplona.amethyst.commons.ui.theme.isLight
 
+const val PROFILE_PIC_SCHEME = "profilepic"
+
 /**
  * Shared avatar component that displays a user's profile picture with Robohash fallback.
  *
@@ -51,6 +53,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.isLight
  * @param contentDescription Accessibility description
  * @param loadProfilePicture Whether to load the profile picture (false = show robohash only)
  * @param loadRobohash Whether to generate robohash (false = show generic icon)
+ * @param useThumbnailCache Whether to wrap the URL with profilepic:// scheme for thumbnail caching
  */
 @Composable
 fun UserAvatar(
@@ -61,6 +64,7 @@ fun UserAvatar(
     contentDescription: String? = null,
     loadProfilePicture: Boolean = true,
     loadRobohash: Boolean = true,
+    useThumbnailCache: Boolean = false,
 ) {
     val avatarModifier =
         remember(size, modifier) {
@@ -69,7 +73,14 @@ fun UserAvatar(
                 .clip(shape = CircleShape)
         }
 
-    if (pictureUrl != null && loadProfilePicture) {
+    val imageModel =
+        if (pictureUrl != null && useThumbnailCache) {
+            "$PROFILE_PIC_SCHEME://$pictureUrl"
+        } else {
+            pictureUrl
+        }
+
+    if (imageModel != null && loadProfilePicture) {
         // Show profile picture with robohash/icon as fallback
         val fallbackPainter =
             if (loadRobohash) {
@@ -83,7 +94,7 @@ fun UserAvatar(
             }
 
         AsyncImage(
-            model = pictureUrl,
+            model = imageModel,
             contentDescription = contentDescription,
             modifier = avatarModifier,
             placeholder = fallbackPainter,

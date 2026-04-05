@@ -66,6 +66,7 @@ class ImageLoaderSetup {
             memoryCache: () -> MemoryCache,
             blossomServerResolver: () -> BlossomServerResolver,
             callFactory: (url: String) -> Call.Factory,
+            thumbnailCache: ThumbnailDiskCache,
         ) {
             SingletonImageLoader.setUnsafe(
                 ImageLoader
@@ -81,8 +82,10 @@ class ImageLoaderSetup {
                         add(Base64Fetcher.Factory)
                         add(BlurHashFetcher.Factory)
                         add(BlossomFetcher.Factory(blossomServerResolver, callFactory))
+                        add(ProfilePictureFetcher.Factory(thumbnailCache, callFactory))
                         add(Base64Fetcher.BKeyer)
                         add(BlurHashFetcher.BKeyer)
+                        add(ProfilePictureFetcher.BKeyer)
                         add(OkHttpFactory(callFactory))
                     }.build(),
             )
