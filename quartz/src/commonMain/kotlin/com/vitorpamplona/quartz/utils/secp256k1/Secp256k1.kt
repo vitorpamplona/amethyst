@@ -373,6 +373,46 @@ object Secp256k1 {
         }
     }
 
+    /**
+     * ECDH x-only multiplication: computes the x-coordinate of scalar · P.
+     *
+     * Optimized for the Nostr ECDH use case (NIP-04, NIP-44) where the caller only
+     * needs the x-coordinate of the shared secret. This avoids the expensive square
+     * root (~267 field ops) needed to decompress the y-coordinate from a compressed
+     * public key, because k·(x,y) and k·(x,-y) produce the same x-coordinate
+     * (negating a point only flips y: k·(-P) = -(k·P), and negation preserves x).
+     *
+     * @param xOnlyPub 32-byte x-only public key
+     * @param scalar 32-byte scalar (private key)
+     * @return 32-byte x-coordinate of the shared point
+     */
+    fun ecdhXOnly(
+        xOnlyPub: ByteArray,
+        scalar: ByteArray,
+    ): ByteArray {
+        require(xOnlyPub.size == 32 && scalar.size == 32)
+        val x = U256.fromBytes(xOnlyPub)
+        require(U256.cmp(x, FieldP.P) < 0)
+        val k = U256.fromBytes(scalar)
+        require(ScalarN.isValid(k))
+
+        // Compute y = sqrt(x³ + 7). We need SOME valid y for EC point operations,
+        // but the result's x-coordinate is the same regardless of y sign.
+        // Use liftX which returns the even-y variant.
+        val px = IntArray(8)
+        val py = IntArray(8)
+        check(ECPoint.liftX(px, py, x)) { "Not a valid x-coordinate on secp256k1" }
+
+        val p = MutablePoint()
+        p.setAffine(px, py)
+        val result = MutablePoint()
+        ECPoint.mul(result, p, k)
+        val rx = IntArray(8)
+        val ry = IntArray(8)
+        check(ECPoint.toAffine(result, rx, ry))
+        return U256.toBytes(rx)
+    }
+
     /** BIP-340 tagged hash (for tags not cached above). */
     internal fun taggedHash(
         tag: String,

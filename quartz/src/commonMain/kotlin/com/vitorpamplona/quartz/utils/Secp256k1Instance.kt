@@ -62,5 +62,5 @@ object Secp256k1Instance {
     fun pubKeyTweakMulCompact(
         pubKey: ByteArray,
         privateKey: ByteArray,
-    ): ByteArray = Secp256k1.pubKeyTweakMul(h02 + pubKey, privateKey).copyOfRange(1, 33)
+    ): ByteArray = Secp256k1.ecdhXOnly(pubKey, privateKey)
 }
