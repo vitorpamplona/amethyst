@@ -24,7 +24,6 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import androidx.compose.runtime.Stable
 import coil3.ImageLoader
-import coil3.Uri
 import coil3.annotation.ExperimentalCoilApi
 import coil3.asImage
 import coil3.decode.DataSource
@@ -39,7 +38,7 @@ import coil3.network.ConnectivityChecker
 import coil3.network.NetworkFetcher
 import coil3.network.okhttp.asNetworkClient
 import coil3.request.Options
-import com.vitorpamplona.amethyst.commons.ui.components.PROFILE_PIC_SCHEME
+import com.vitorpamplona.amethyst.commons.ui.components.ProfilePictureUrl
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import okhttp3.Call
@@ -48,7 +47,8 @@ import kotlin.coroutines.cancellation.CancellationException
 /**
  * Coil Fetcher that serves pre-resized profile picture thumbnails from a dedicated disk cache.
  *
- * URLs are wrapped as `profilepic://https://example.com/pic.jpg` by the avatar composables.
+ * Composables pass [ProfilePictureUrl] as the model to AsyncImage. Coil routes to this
+ * fetcher by type — no string concatenation or scheme parsing needed.
  *
  * Flow:
  * - Thumbnail cache hit: returns the tiny ~5KB JPEG directly. No network, no large decode.
@@ -56,7 +56,7 @@ import kotlin.coroutines.cancellation.CancellationException
  *   pipeline (zero overhead). In the background, reads the file from Coil's disk cache
  *   after download and generates a thumbnail for next time.
  *
- * The zoomable full-screen dialog uses the raw URL (without profilepic:// prefix),
+ * The zoomable full-screen dialog uses the raw URL string (not wrapped in ProfilePictureUrl),
  * which goes through the normal Coil pipeline for full-resolution display.
  */
 @Stable
@@ -164,39 +164,26 @@ class ProfilePictureFetcher(
         return inSampleSize
     }
 
-    companion object {
-        const val SCHEME = PROFILE_PIC_SCHEME
-
-        fun extractOriginalUrl(data: Uri): String {
-            // profilepic://https://example.com/pic.jpg → https://example.com/pic.jpg
-            val full = data.toString()
-            return full.removePrefix("$SCHEME://")
-        }
-    }
-
     @OptIn(ExperimentalCoilApi::class)
     class Factory(
         private val thumbnailCache: ThumbnailDiskCache,
         private val networkClient: (url: String) -> Call.Factory,
         private val backgroundScope: CoroutineScope,
-    ) : Fetcher.Factory<Uri> {
+    ) : Fetcher.Factory<ProfilePictureUrl> {
         private val connectivityCheckerLazy = singleParameterLazy(::ConnectivityChecker)
 
         override fun create(
-            data: Uri,
+            data: ProfilePictureUrl,
             options: Options,
             imageLoader: ImageLoader,
-        ): Fetcher? {
-            if (data.scheme != SCHEME) return null
-
-            val originalUrl = extractOriginalUrl(data)
+        ): Fetcher {
             val diskCacheLazy = lazy { imageLoader.diskCache }
 
             val netFetcher =
                 NetworkFetcher(
-                    url = originalUrl,
+                    url = data.url,
                     options = options,
-                    networkClient = lazy { networkClient(originalUrl).asNetworkClient() },
+                    networkClient = lazy { networkClient(data.url).asNetworkClient() },
                     diskCache = diskCacheLazy,
                     cacheStrategy = lazy { CacheStrategy.DEFAULT },
                     connectivityChecker = lazy { connectivityCheckerLazy.get(options.context) },
@@ -204,7 +191,7 @@ class ProfilePictureFetcher(
                 )
 
             return ProfilePictureFetcher(
-                originalUrl,
+                data.url,
                 options,
                 thumbnailCache,
                 netFetcher,
@@ -214,15 +201,10 @@ class ProfilePictureFetcher(
         }
     }
 
-    object BKeyer : Keyer<Uri> {
+    object BKeyer : Keyer<ProfilePictureUrl> {
         override fun key(
-            data: Uri,
+            data: ProfilePictureUrl,
             options: Options,
-        ): String? =
-            if (data.scheme == SCHEME) {
-                "profilepic_thumb_${extractOriginalUrl(data)}"
-            } else {
-                null
-            }
+        ): String = "profilepic_thumb_${data.url}"
     }
 }

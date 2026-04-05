@@ -41,7 +41,15 @@ import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.robohash.CachedRobohash
 import com.vitorpamplona.amethyst.commons.ui.theme.isLight
 
-const val PROFILE_PIC_SCHEME = "profilepic"
+/**
+ * Wrapper class for profile picture URLs that signals Coil to use the thumbnail
+ * disk cache fetcher instead of the normal network pipeline. Passing this as the
+ * model to AsyncImage avoids string concatenation/parsing and lets Coil route
+ * by type via Fetcher.Factory<ProfilePictureUrl>.
+ */
+data class ProfilePictureUrl(
+    val url: String,
+)
 
 /**
  * Shared avatar component that displays a user's profile picture with Robohash fallback.
@@ -73,9 +81,9 @@ fun UserAvatar(
                 .clip(shape = CircleShape)
         }
 
-    val imageModel =
+    val imageModel: Any? =
         if (pictureUrl != null && useThumbnailCache) {
-            "$PROFILE_PIC_SCHEME://$pictureUrl"
+            ProfilePictureUrl(pictureUrl)
         } else {
             pictureUrl
         }
