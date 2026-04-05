@@ -163,6 +163,11 @@ internal object ECPoint {
      */
     internal val gTable: Array<AffinePoint> by lazy { buildGTable() }
 
+    /** Precomputed λ(G) odd-multiples for GLV: gLamTable[i] = λ((2i+1)·G) as affine. */
+    private val gLamTable: Array<AffinePoint> by lazy {
+        Array(8) { AffinePoint(FieldP.mul(gTable[it * 2].x, BETA), gTable[it * 2].y.copyOf()) }
+    }
+
     private fun buildGTable(): Array<AffinePoint> {
         val jac = Array(16) { MutablePoint() }
         jac[0].setAffine(GX, GY)
@@ -682,24 +687,17 @@ internal object ECPoint {
         val wnafE1 = wnaf(eSplit.k1, w, 129)
         val wnafE2 = wnaf(eSplit.k2, w, 129)
 
-        // G odd-multiples [1G, 3G, 5G, ..., 15G] (affine, from precomputed table)
-        val gOddBase = Array(tableSize) { gTable[it * 2] }
-        // λ(G) odd-multiples: apply endomorphism (β·x, y) to each G table entry
-        val gLamBase = Array(tableSize) { AffinePoint(FieldP.mul(gOddBase[it].x, BETA), gOddBase[it].y.copyOf()) }
+        // G tables: precomputed and cached (no per-verify allocation)
+        val gOdd = Array(tableSize) { gTable[it * 2] }
+        val gLam = gLamTable
 
-        // Apply GLV sign: if the split negated k₁/k₂, negate the corresponding table y-coords
-        // GLV sign is NOT baked into tables. Instead, we XOR the negation flag
-        // with each wNAF digit's sign in the main loop. This avoids the
-        // double-negation bug where a negative wNAF digit + negated table cancel out.
-        val gOdd = gOddBase
-        val gLam = gLamBase
-
-        // P odd-multiples [1P, 3P, ..., 15P] as Jacobian (avoids expensive inversions)
-        val pAll = Array(16) { MutablePoint() }
-        pAll[0].copyFrom(p)
-        for (i in 1 until 16) addPoints(pAll[i], pAll[i - 1], pAll[0])
-        val pOdd = Array(tableSize) { pAll[it * 2] }
-        // λ(P) table: (β·X, Y, Z) in Jacobian — endomorphism works in projective coords
+        // P odd-multiples [1P, 3P, 5P, ..., 15P] via 2P stepping (1 double + 7 adds)
+        val p2 = MutablePoint()
+        doublePoint(p2, p)
+        val pOdd = Array(tableSize) { MutablePoint() }
+        pOdd[0].copyFrom(p)
+        for (i in 1 until tableSize) addPoints(pOdd[i], pOdd[i - 1], p2)
+        // λ(P) table: (β·X, Y, Z) in Jacobian — endomorphism preserves projective coords
         val pLamOdd =
             Array(tableSize) { i ->
                 val lp = MutablePoint()
@@ -721,6 +719,7 @@ internal object ECPoint {
         out.setInfinity()
         val tmp = MutablePoint()
         val negY = IntArray(8)
+        val negJac = MutablePoint() // Reused scratch for Jacobian negation
 
         for (i in bits - 1 downTo 0) {
             doublePoint(out, out)
@@ -728,19 +727,8 @@ internal object ECPoint {
             addWnafMixed(out, tmp, negY, wnafS1, i, gOdd, sSplit.negK1)
             addWnafMixed(out, tmp, negY, wnafS2, i, gLam, sSplit.negK2)
             // Streams 3-4: P-side (Jacobian tables, full addition)
-            addWnafJacobian(out, tmp, wnafE1, i, pOdd, eSplit.negK1)
-            addWnafJacobian(out, tmp, wnafE2, i, pLamOdd, eSplit.negK2)
-        }
-    }
-
-    /** Conditionally negate all y-coordinates in an affine table. */
-    private fun maybeNegateTable(
-        table: Array<AffinePoint>,
-        negate: Boolean,
-    ): Array<AffinePoint> {
-        if (!negate) return table
-        return Array(table.size) { i ->
-            AffinePoint(table[i].x.copyOf(), FieldP.neg(table[i].y))
+            addWnafJacobian(out, tmp, negJac, wnafE1, i, pOdd, eSplit.negK1)
+            addWnafJacobian(out, tmp, negJac, wnafE2, i, pLamOdd, eSplit.negK2)
         }
     }
 
@@ -776,6 +764,7 @@ internal object ECPoint {
     private fun addWnafJacobian(
         out: MutablePoint,
         tmp: MutablePoint,
+        negScratch: MutablePoint,
         wnafDigits: IntArray,
         bitIndex: Int,
         table: Array<MutablePoint>,
@@ -789,12 +778,11 @@ internal object ECPoint {
         if (!effectiveNeg) {
             addPoints(tmp, out, table[idx])
         } else {
-            // Negate the Jacobian point: (X, -Y, Z)
-            val neg = MutablePoint()
-            table[idx].x.copyInto(neg.x)
-            FieldP.neg(neg.y, table[idx].y)
-            table[idx].z.copyInto(neg.z)
-            addPoints(tmp, out, neg)
+            // Negate the Jacobian point: (X, -Y, Z) using pre-allocated scratch
+            table[idx].x.copyInto(negScratch.x)
+            FieldP.neg(negScratch.y, table[idx].y)
+            table[idx].z.copyInto(negScratch.z)
+            addPoints(tmp, out, negScratch)
         }
         out.copyFrom(tmp)
     }
