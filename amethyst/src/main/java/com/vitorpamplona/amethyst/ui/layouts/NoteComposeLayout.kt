@@ -20,16 +20,29 @@
  */
 package com.vitorpamplona.amethyst.ui.layouts
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 
 private val ZeroConstraints = Constraints.fixed(0, 0)
 
@@ -43,6 +56,82 @@ private data class NoteLayoutPx(
     val padEnd: Int,
     val padTop: Int,
 )
+
+@Composable
+@Preview
+private fun NoteComposeLayoutPreview() {
+    ThemeComparisonColumn {
+        NoteComposeLayoutPreviewCard()
+    }
+}
+
+@Composable
+private fun NoteComposeLayoutPreviewCard() {
+    NoteComposeLayout(
+        modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface),
+        showSecondRow = true,
+        authorPicture = {
+            Box(
+                Modifier
+                    .size(55.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFF9575CD)),
+            )
+        },
+        relayBadges = {
+            Text("R1  R2  R3", fontSize = 10.sp, color = Color.Gray)
+        },
+        firstRow = {
+            Text(
+                "Alice  @alice  2h  ...",
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        },
+        secondRow = {
+            Text(
+                "alice@nostr.com",
+                fontSize = 12.sp,
+                color = Color.Gray,
+                maxLines = 1,
+            )
+        },
+        noteContent = {
+            Text(
+                "This is a sample note content that demonstrates the custom " +
+                    "NoteComposeLayout with all slots populated. The layout handles " +
+                    "author picture, relay badges, header rows, content, and reactions.",
+            )
+        },
+        reactionsRow = {
+            Text("  Reply 3     Boost 5     Like 12     Zap 1.2k", fontSize = 12.sp, color = Color.Gray)
+        },
+    )
+}
+
+@Composable
+@Preview
+private fun NoteComposeLayoutBoostedPreview() {
+    ThemeComparisonColumn {
+        NoteComposeLayout(
+            modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface),
+            addPadding = false,
+            showAuthorColumn = false,
+            authorPicture = {},
+            relayBadges = {},
+            firstRow = {
+                Text("Bob boosted  2h  ...")
+            },
+            secondRow = {},
+            noteContent = {
+                Text("Boosted note content without author column or padding.")
+            },
+            reactionsRow = {
+                Text("  Reply     Boost     Like     Zap", fontSize = 12.sp, color = Color.Gray)
+            },
+        )
+    }
+}
 
 /**
  * Custom zero-overhead layout for note items. Uses the multi-content [Layout]
