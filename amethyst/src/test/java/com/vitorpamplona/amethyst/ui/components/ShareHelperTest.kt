@@ -49,4 +49,118 @@ class ShareHelperTest {
         targetFile.delete()
         tempDir.delete()
     }
+
+    @Test
+    fun getImageExtension_jpeg() {
+        val file = createTempFileWithBytes(byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 0x00, 0x00))
+        assertEquals("jpg", ShareHelper.getImageExtension(file))
+        file.delete()
+    }
+
+    @Test
+    fun getImageExtension_png() {
+        val file = createTempFileWithBytes(byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A))
+        assertEquals("png", ShareHelper.getImageExtension(file))
+        file.delete()
+    }
+
+    @Test
+    fun getImageExtension_gif() {
+        val file = createTempFileWithBytes("GIF89a".toByteArray())
+        assertEquals("gif", ShareHelper.getImageExtension(file))
+        file.delete()
+    }
+
+    @Test
+    fun getImageExtension_webp() {
+        // RIFF....WEBP
+        val header = ByteArray(12)
+        "RIFF".toByteArray().copyInto(header, 0)
+        "WEBP".toByteArray().copyInto(header, 8)
+        val file = createTempFileWithBytes(header)
+        assertEquals("webp", ShareHelper.getImageExtension(file))
+        file.delete()
+    }
+
+    @Test
+    fun getImageExtension_unknownDefaultsToJpg() {
+        val file = createTempFileWithBytes(byteArrayOf(0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07))
+        assertEquals("jpg", ShareHelper.getImageExtension(file))
+        file.delete()
+    }
+
+    @Test
+    fun getImageExtension_tooShortDefaultsToJpg() {
+        val file = createTempFileWithBytes(byteArrayOf(0x00, 0x01))
+        assertEquals("jpg", ShareHelper.getImageExtension(file))
+        file.delete()
+    }
+
+    @Test
+    fun getVideoExtension_webm() {
+        val file = createTempFileWithBytes(byteArrayOf(0x1A, 0x45, 0xDF.toByte(), 0xA3.toByte(), 0x00, 0x00))
+        assertEquals("webm", ShareHelper.getVideoExtension(file))
+        file.delete()
+    }
+
+    @Test
+    fun getVideoExtension_avi() {
+        // RIFF....AVI
+        val header = ByteArray(12)
+        "RIFF".toByteArray().copyInto(header, 0)
+        "AVI ".toByteArray().copyInto(header, 8)
+        val file = createTempFileWithBytes(header)
+        assertEquals("avi", ShareHelper.getVideoExtension(file))
+        file.delete()
+    }
+
+    @Test
+    fun getVideoExtension_mp4Isom() {
+        // ....ftypisom
+        val header = ByteArray(12)
+        "ftyp".toByteArray().copyInto(header, 4)
+        "isom".toByteArray().copyInto(header, 8)
+        val file = createTempFileWithBytes(header)
+        assertEquals("mp4", ShareHelper.getVideoExtension(file))
+        file.delete()
+    }
+
+    @Test
+    fun getVideoExtension_mov() {
+        // ....ftypqt__
+        val header = ByteArray(12)
+        "ftyp".toByteArray().copyInto(header, 4)
+        "qt  ".toByteArray().copyInto(header, 8)
+        val file = createTempFileWithBytes(header)
+        assertEquals("mov", ShareHelper.getVideoExtension(file))
+        file.delete()
+    }
+
+    @Test
+    fun getVideoExtension_unknownDefaultsToMp4() {
+        val file = createTempFileWithBytes(byteArrayOf(0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07))
+        assertEquals("mp4", ShareHelper.getVideoExtension(file))
+        file.delete()
+    }
+
+    @Test
+    fun getMediaExtension_emptyFileDefaultsToImage() {
+        val file = createTempFileWithBytes(byteArrayOf())
+        assertEquals("jpg", ShareHelper.getMediaExtension(file, isVideo = false))
+        file.delete()
+    }
+
+    @Test
+    fun getMediaExtension_emptyFileDefaultsToVideo() {
+        val file = createTempFileWithBytes(byteArrayOf())
+        assertEquals("mp4", ShareHelper.getMediaExtension(file, isVideo = true))
+        file.delete()
+    }
+
+    private fun createTempFileWithBytes(bytes: ByteArray): File {
+        val file = File.createTempFile("sharehelpertest", ".tmp")
+        file.deleteOnExit()
+        file.writeBytes(bytes)
+        return file
+    }
 }
