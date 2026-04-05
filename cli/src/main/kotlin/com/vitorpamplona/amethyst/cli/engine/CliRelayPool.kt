@@ -166,5 +166,4 @@ class CliRelayPool(
 
         fun send(msg: String): Boolean = socket?.send(msg) ?: false
     }
-
 }
