@@ -26,8 +26,14 @@ import coil3.ImageLoader
 import coil3.asDrawable
 import coil3.request.ImageRequest
 import coil3.request.allowHardware
+import com.vitorpamplona.amethyst.commons.call.AnswerRouteAction
 import com.vitorpamplona.amethyst.commons.call.CallManager
 import com.vitorpamplona.amethyst.commons.call.CallState
+import com.vitorpamplona.amethyst.commons.call.IceCandidateData
+import com.vitorpamplona.amethyst.commons.call.PeerSession
+import com.vitorpamplona.amethyst.commons.call.PeerSessionManager
+import com.vitorpamplona.amethyst.commons.call.SdpType
+import com.vitorpamplona.amethyst.commons.call.SignalingState
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -56,9 +62,7 @@ import org.webrtc.DefaultVideoEncoderFactory
 import org.webrtc.EglBase
 import org.webrtc.IceCandidate
 import org.webrtc.MediaConstraints
-import org.webrtc.PeerConnection
 import org.webrtc.PeerConnectionFactory
-import org.webrtc.SessionDescription
 import org.webrtc.SurfaceTextureHelper
 import org.webrtc.VideoFrame
 import org.webrtc.VideoSink
@@ -66,8 +70,6 @@ import org.webrtc.VideoSource
 import org.webrtc.VideoTrack
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.CopyOnWriteArrayList
-import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 
 private const val TAG = "CallController"
@@ -80,18 +82,20 @@ class CallController(
     private val publishWrap: suspend (EphemeralGiftWrapEvent) -> Unit,
     private val signerProvider: suspend () -> com.vitorpamplona.quartz.nip01Core.signers.NostrSigner,
 ) {
-    // ---- Per-peer session state ----
+    // ---- Per-peer session state (delegated to PeerSessionManager) ----
 
-    private class PeerSessionState(
-        val session: WebRtcCallSession,
-        val remoteDescriptionSet: AtomicBoolean = AtomicBoolean(false),
-        val pendingIceCandidates: CopyOnWriteArrayList<IceCandidate> = CopyOnWriteArrayList(),
-    )
+    // Lazily initialized — needs signerProvider() for localPubKey
+    private var peerSessionMgr: PeerSessionManager? = null
 
-    private val peerSessions = ConcurrentHashMap<HexKey, PeerSessionState>()
+    private suspend fun sessionManager(): PeerSessionManager {
+        if (peerSessionMgr == null) {
+            peerSessionMgr = PeerSessionManager(signerProvider().pubKey)
+        }
+        return peerSessionMgr!!
+    }
 
-    // Candidates received before a PeerSession exists for the sender
-    private val globalPendingIce = ConcurrentHashMap<HexKey, CopyOnWriteArrayList<IceCandidate>>()
+    /** Map from peer pubkey to the WebRtcCallSession for direct access to WebRTC-specific APIs. */
+    private val webRtcSessions = ConcurrentHashMap<HexKey, WebRtcCallSession>()
 
     // ---- Shared WebRTC resources ----
 
@@ -272,12 +276,16 @@ class CallController(
             // Set state to Offering before creating peer sessions
             callManager.beginOffering(callId, peerPubKeys, callType)
 
+            val mgr = sessionManager()
+
             // Create a PeerConnection + offer for each callee
             for (peerPubKey in peerPubKeys) {
                 try {
-                    val ps = withContext(Dispatchers.IO) { createPeerSession(peerPubKey) }
+                    val webRtcSession = withContext(Dispatchers.IO) { createWebRtcSession(peerPubKey) }
+                    val adapter = WebRtcPeerSessionAdapter(webRtcSession)
+                    mgr.registerSession(peerPubKey, adapter)
                     Log.d(TAG) { "initiateCall: PeerConnection created for ${peerPubKey.take(8)}" }
-                    ps.session.createOffer { sdp ->
+                    webRtcSession.createOffer { sdp ->
                         Log.d(TAG) { "initiateCall: offer created for ${peerPubKey.take(8)}, sdpLength=${sdp.description.length}" }
                         scope.launch {
                             callManager.publishOfferToPeer(peerPubKey, peerPubKeys, callType, callId, sdp.description)
@@ -315,28 +323,27 @@ class CallController(
                 return@launch
             }
 
-            // Retrieve any ICE candidates buffered while ringing (before session existed)
-            val globalPending = getGlobalPendingCandidates(callerPubKey)
+            val mgr = sessionManager()
 
-            val ps =
+            val webRtcSession =
                 try {
-                    withContext(Dispatchers.IO) { createPeerSession(callerPubKey) }
+                    withContext(Dispatchers.IO) { createWebRtcSession(callerPubKey) }
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to create PeerConnection", e)
                     _errorMessage.value = "Failed to accept call: ${e.message}"
                     return@launch
                 }
 
-            // Inject any globally-buffered ICE candidates for the caller
-            globalPending.forEach { ps.pendingIceCandidates.add(it) }
+            val adapter = WebRtcPeerSessionAdapter(webRtcSession)
+            val entry = mgr.registerSession(callerPubKey, adapter)
 
             Log.d(TAG) { "acceptIncomingCall: setting remote description (OFFER)..." }
-            ps.session.setRemoteDescription(SessionDescription(SessionDescription.Type.OFFER, sdpOffer))
-            Log.d(TAG) { "acceptIncomingCall: flushing ${ps.pendingIceCandidates.size} pending ICE candidates..." }
-            flushPendingIceCandidates(callerPubKey, ps)
+            adapter.setRemoteDescription(SdpType.OFFER, sdpOffer)
+            Log.d(TAG) { "acceptIncomingCall: flushing ${entry.pendingIceCandidates.size} pending ICE candidates..." }
+            mgr.flushPendingIceCandidates(callerPubKey)
 
             Log.d(TAG) { "acceptIncomingCall: creating answer..." }
-            ps.session.createAnswer { sdp ->
+            webRtcSession.createAnswer { sdp ->
                 Log.d(TAG) { "acceptIncomingCall: answer created, sdpLength=${sdp.description.length}, publishing..." }
                 scope.launch {
                     callManager.acceptCall(sdp.description)
@@ -358,29 +365,29 @@ class CallController(
         peerPubKey: HexKey,
         sdpAnswer: String,
     ) {
-        Log.d(TAG) { "onCallAnswerReceived: from=${peerPubKey.take(8)}, knownSessions=${peerSessions.keys.map { it.take(8) }}" }
-        val ps = peerSessions[peerPubKey]
-        if (ps != null) {
-            // We have a PeerConnection for this peer — set remote description
-            val signalingState = ps.session.getSignalingState()
-            Log.d(TAG) {
-                "Answer received from ${peerPubKey.take(8)}, sdpLength=${sdpAnswer.length}, " +
-                    "signalingState=$signalingState, remoteDescSet=${ps.remoteDescriptionSet.get()}"
+        val mgr = peerSessionMgr
+        if (mgr == null) {
+            Log.d(TAG) { "onCallAnswerReceived: sessionManager not initialized — ignoring" }
+            return
+        }
+
+        Log.d(TAG) { "onCallAnswerReceived: from=${peerPubKey.take(8)}, knownSessions=${mgr.allSessionKeys().map { it.take(8) }}" }
+
+        val action = mgr.routeAnswer(peerPubKey, sdpAnswer)
+        Log.d(TAG) { "onCallAnswerReceived: action=$action" }
+        when (action) {
+            AnswerRouteAction.APPLIED -> {
+                Log.d(TAG) { "Answer applied for ${peerPubKey.take(8)}" }
             }
 
-            if (signalingState != PeerConnection.SignalingState.HAVE_LOCAL_OFFER) {
-                Log.d(TAG) { "Ignoring answer from ${peerPubKey.take(8)} in $signalingState (no pending local offer)" }
-                return
+            AnswerRouteAction.NO_SESSION -> {
+                Log.d(TAG) { "Answer from unknown peer ${peerPubKey.take(8)} — triggering callee-to-callee connection" }
+                onNewPeerInGroupCall(peerPubKey)
             }
 
-            Log.d(TAG) { "Setting remote description (ANSWER) for ${peerPubKey.take(8)}..." }
-            ps.session.setRemoteDescription(SessionDescription(SessionDescription.Type.ANSWER, sdpAnswer))
-            flushPendingIceCandidates(peerPubKey, ps)
-        } else {
-            // No session for this peer — they are another callee who joined.
-            // Initiate a callee-to-callee connection (with tie-breaking).
-            Log.d(TAG) { "Answer from unknown peer ${peerPubKey.take(8)} — triggering callee-to-callee connection" }
-            onNewPeerInGroupCall(peerPubKey)
+            AnswerRouteAction.IGNORED_WRONG_STATE -> {
+                Log.d(TAG) { "Ignoring answer from ${peerPubKey.take(8)} (no pending local offer)" }
+            }
         }
     }
 
@@ -393,35 +400,17 @@ class CallController(
     fun onIceCandidateReceived(event: CallIceCandidateEvent) {
         try {
             val senderPubKey = event.pubKey
-            val candidate = IceCandidate(event.sdpMid(), event.sdpMLineIndex(), event.candidateSdp())
-            val ps = peerSessions[senderPubKey]
-            if (ps != null && ps.remoteDescriptionSet.get()) {
-                Log.d(TAG) { "Adding ICE candidate from ${senderPubKey.take(8)} directly" }
-                ps.session.addIceCandidate(candidate)
-            } else if (ps != null) {
-                Log.d(TAG) { "Buffering ICE candidate from ${senderPubKey.take(8)} (remoteDesc not set)" }
-                ps.pendingIceCandidates.add(candidate)
-            } else {
-                // No session yet — buffer globally (keyed by sender)
-                Log.d(TAG) { "Buffering ICE candidate from ${senderPubKey.take(8)} (no session yet)" }
-                globalPendingIce.getOrPut(senderPubKey) { CopyOnWriteArrayList() }.add(candidate)
+            val candidate = IceCandidateData(event.candidateSdp(), event.sdpMid(), event.sdpMLineIndex())
+            val mgr = peerSessionMgr
+            if (mgr == null) {
+                Log.d(TAG) { "Buffering ICE candidate from ${senderPubKey.take(8)} (manager not initialized)" }
+                return
             }
+            val action = mgr.routeIceCandidate(senderPubKey, candidate)
+            Log.d(TAG) { "ICE candidate from ${senderPubKey.take(8)}: $action" }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to parse ICE candidate", e)
         }
-    }
-
-    private fun getGlobalPendingCandidates(peerPubKey: HexKey): List<IceCandidate> = globalPendingIce.remove(peerPubKey)?.toList() ?: emptyList()
-
-    private fun flushPendingIceCandidates(
-        peerPubKey: HexKey,
-        ps: PeerSessionState,
-    ) {
-        ps.remoteDescriptionSet.set(true)
-        val candidates = ps.pendingIceCandidates.toList()
-        Log.d(TAG) { "Flushing ${candidates.size} buffered ICE candidates for ${peerPubKey.take(8)}" }
-        ps.pendingIceCandidates.clear()
-        candidates.forEach { ps.session.addIceCandidate(it) }
     }
 
     private fun onLocalIceCandidate(
@@ -447,15 +436,16 @@ class CallController(
      * peer with the lexicographically lower pubkey initiates.
      */
     fun onNewPeerInGroupCall(peerPubKey: HexKey) {
-        if (peerSessions.containsKey(peerPubKey)) {
+        val mgr = peerSessionMgr
+        if (mgr != null && mgr.hasSession(peerPubKey)) {
             Log.d(TAG) { "onNewPeerInGroupCall: session already exists for ${peerPubKey.take(8)} — skipping" }
             return
         }
 
         scope.launch {
-            val myPubKey = signerProvider().pubKey
-            Log.d(TAG) { "onNewPeerInGroupCall: peer=${peerPubKey.take(8)}, myPubKey=${myPubKey.take(8)}, iAmLower=${myPubKey < peerPubKey}" }
-            if (myPubKey < peerPubKey) {
+            val sm = sessionManager()
+            Log.d(TAG) { "onNewPeerInGroupCall: peer=${peerPubKey.take(8)}, shouldInitiate=${sm.shouldInitiateOffer(peerPubKey)}" }
+            if (sm.shouldInitiateOffer(peerPubKey)) {
                 Log.d(TAG) { "Initiating callee-to-callee connection to ${peerPubKey.take(8)} (I have lower pubkey)" }
                 createAndOfferToPeer(peerPubKey)
             } else {
@@ -466,19 +456,20 @@ class CallController(
 
     private suspend fun createAndOfferToPeer(peerPubKey: HexKey) {
         if (peerConnectionFactory == null) return
-        val globalPending = getGlobalPendingCandidates(peerPubKey)
+        val mgr = sessionManager()
 
-        val ps =
+        val webRtcSession =
             try {
-                withContext(Dispatchers.IO) { createPeerSession(peerPubKey) }
+                withContext(Dispatchers.IO) { createWebRtcSession(peerPubKey) }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to create PeerConnection for ${peerPubKey.take(8)}", e)
                 return
             }
 
-        globalPending.forEach { ps.pendingIceCandidates.add(it) }
+        val adapter = WebRtcPeerSessionAdapter(webRtcSession)
+        mgr.registerSession(peerPubKey, adapter)
 
-        ps.session.createOffer { sdp ->
+        webRtcSession.createOffer { sdp ->
             Log.d(TAG) { "Callee-to-callee offer created for ${peerPubKey.take(8)}, sdpLength=${sdp.description.length}" }
             scope.launch {
                 callManager.publishOfferToPeer(peerPubKey, sdp.description)
@@ -494,7 +485,8 @@ class CallController(
         peerPubKey: HexKey,
         sdpOffer: String,
     ) {
-        if (peerSessions.containsKey(peerPubKey)) {
+        val mgr = peerSessionMgr
+        if (mgr != null && mgr.hasSession(peerPubKey)) {
             Log.d(TAG) { "Mid-call offer from ${peerPubKey.take(8)} but session already exists — ignoring" }
             return
         }
@@ -506,22 +498,22 @@ class CallController(
                 return@launch
             }
 
-            val globalPending = getGlobalPendingCandidates(peerPubKey)
+            val sm = sessionManager()
 
-            val ps =
+            val webRtcSession =
                 try {
-                    withContext(Dispatchers.IO) { createPeerSession(peerPubKey) }
+                    withContext(Dispatchers.IO) { createWebRtcSession(peerPubKey) }
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to create PeerConnection for mid-call offer from ${peerPubKey.take(8)}", e)
                     return@launch
                 }
 
-            globalPending.forEach { ps.pendingIceCandidates.add(it) }
+            val adapter = WebRtcPeerSessionAdapter(webRtcSession)
+            sm.registerSession(peerPubKey, adapter)
+            adapter.setRemoteDescription(SdpType.OFFER, sdpOffer)
+            sm.flushPendingIceCandidates(peerPubKey)
 
-            ps.session.setRemoteDescription(SessionDescription(SessionDescription.Type.OFFER, sdpOffer))
-            flushPendingIceCandidates(peerPubKey, ps)
-
-            ps.session.createAnswer { sdp ->
+            webRtcSession.createAnswer { sdp ->
                 Log.d(TAG) { "Callee-to-callee answer for ${peerPubKey.take(8)}, sdpLength=${sdp.description.length}" }
                 scope.launch {
                     callManager.publishAnswerToPeer(peerPubKey, sdp.description)
@@ -534,53 +526,39 @@ class CallController(
 
     private fun onRenegotiationOfferReceived(event: CallRenegotiateEvent) {
         val peerPubKey = event.pubKey
-        val ps = peerSessions[peerPubKey] ?: return
+        val mgr = peerSessionMgr ?: return
         val sdpOffer = event.sdpOffer()
         Log.d(TAG) { "Renegotiation offer from ${peerPubKey.take(8)}, sdpLength=${sdpOffer.length}" }
 
         scope.launch {
-            val signalingState = ps.session.getSignalingState()
-
-            if (signalingState == PeerConnection.SignalingState.HAVE_LOCAL_OFFER) {
-                // Glare: both sides sent offers simultaneously.
-                // Use pubkey comparison as tiebreaker — higher pubkey wins.
-                val myPubKey = signerProvider().pubKey
-                if (myPubKey > peerPubKey) {
-                    Log.d(TAG) { "Glare with ${peerPubKey.take(8)}: I win (my offer takes priority), ignoring remote offer" }
-                    return@launch
+            val resolution =
+                mgr.resolveRenegotiationGlare(peerPubKey, sdpOffer) { entry ->
+                    applyRenegotiationOffer(entry.session, peerPubKey, sdpOffer)
                 }
-                Log.d(TAG) { "Glare with ${peerPubKey.take(8)}: I lose, rolling back my offer" }
-                ps.session.rollback {
-                    scope.launch {
-                        applyRenegotiationOffer(ps, peerPubKey, sdpOffer)
-                    }
-                }
-            } else {
-                applyRenegotiationOffer(ps, peerPubKey, sdpOffer)
-            }
+            Log.d(TAG) { "Renegotiation glare resolution with ${peerPubKey.take(8)}: $resolution" }
         }
     }
 
     private fun applyRenegotiationOffer(
-        ps: PeerSessionState,
+        session: PeerSession,
         peerPubKey: HexKey,
         sdpOffer: String,
     ) {
-        ps.session.setRemoteDescription(SessionDescription(SessionDescription.Type.OFFER, sdpOffer))
-        ps.session.createAnswer { sdp ->
+        session.setRemoteDescription(SdpType.OFFER, sdpOffer)
+        session.createAnswer { sdpAnswer ->
             scope.launch {
-                callManager.sendRenegotiationAnswer(sdp.description, peerPubKey)
+                callManager.sendRenegotiationAnswer(sdpAnswer, peerPubKey)
             }
         }
     }
 
     private fun performRenegotiation(peerPubKey: HexKey) {
-        val ps = peerSessions[peerPubKey] ?: return
+        val webRtcSession = webRtcSessions[peerPubKey] ?: return
         val state = callManager.state.value
         if (state !is CallState.Connected && state !is CallState.Connecting) return
 
         Log.d(TAG) { "Starting renegotiation with ${peerPubKey.take(8)}" }
-        ps.session.createOffer { sdp ->
+        webRtcSession.createOffer { sdp ->
             scope.launch {
                 callManager.sendRenegotiation(sdp.description, peerPubKey)
             }
@@ -602,8 +580,8 @@ class CallController(
             if (localVideoTrackInternal == null) {
                 // Voice → video upgrade: create video source/track and add to all sessions
                 createVideoResources()
-                peerSessions.values.forEach { ps ->
-                    localVideoTrackInternal?.let { ps.session.addTrack(it, VIDEO_MAX_BITRATE_BPS) }
+                webRtcSessions.values.forEach { session ->
+                    localVideoTrackInternal?.let { session.addTrack(it, VIDEO_MAX_BITRATE_BPS) }
                 }
             } else {
                 localVideoTrackInternal?.setEnabled(true)
@@ -710,8 +688,8 @@ class CallController(
 
     // ---- Per-peer PeerConnection creation ----
 
-    private fun createPeerSession(peerPubKey: HexKey): PeerSessionState {
-        Log.d(TAG) { "createPeerSession: ${peerPubKey.take(8)}, existing sessions=${peerSessions.keys.map { it.take(8) }}" }
+    private fun createWebRtcSession(peerPubKey: HexKey): WebRtcCallSession {
+        Log.d(TAG) { "createWebRtcSession: ${peerPubKey.take(8)}, existing sessions=${webRtcSessions.keys.map { it.take(8) }}" }
         val factory = peerConnectionFactory ?: throw IllegalStateException("PeerConnectionFactory not initialized")
 
         val session =
@@ -744,9 +722,8 @@ class CallController(
         localAudioTrackInternal?.let { session.addTrack(it) }
         localVideoTrackInternal?.let { session.addTrack(it, VIDEO_MAX_BITRATE_BPS) }
 
-        val ps = PeerSessionState(session)
-        peerSessions[peerPubKey] = ps
-        return ps
+        webRtcSessions[peerPubKey] = session
+        return session
     }
 
     private fun onRemoteVideoTrack(
@@ -814,17 +791,17 @@ class CallController(
 
     private fun onPeerDisconnected(peerPubKey: HexKey) {
         Log.d(TAG) { "Peer ${peerPubKey.take(8)} disconnected (ICE FAILED)" }
-        // If all peers disconnected, hang up.
-        // A session counts as "not active" if it is the one that just failed,
-        // if it was already closed, or if it never received a remote description
-        // (e.g. the peer rejected before answering).
-        val sessionStates = peerSessions.map { (key, ps) -> "${key.take(8)}=${ps.session.getSignalingState()},remoteSet=${ps.remoteDescriptionSet.get()}" }
-        Log.d(TAG) { "onPeerDisconnected: checking remaining sessions: $sessionStates" }
+        val mgr = peerSessionMgr
+        if (mgr == null) {
+            scope.launch { callManager.hangup() }
+            return
+        }
+
         val allDisconnected =
-            peerSessions.keys.all { key ->
+            mgr.allSessionKeys().all { key ->
                 key == peerPubKey ||
-                    peerSessions[key]?.session?.getSignalingState() == PeerConnection.SignalingState.CLOSED ||
-                    peerSessions[key]?.remoteDescriptionSet?.get() != true
+                    mgr.getSession(key)?.session?.getSignalingState() == SignalingState.CLOSED ||
+                    mgr.getSession(key)?.remoteDescriptionSet != true
             }
         if (allDisconnected) {
             Log.d(TAG) { "onPeerDisconnected: all peers disconnected, hanging up" }
@@ -841,11 +818,12 @@ class CallController(
      * but the call continues with remaining peers.
      */
     fun disposePeerSession(peerPubKey: HexKey) {
-        val ps = peerSessions.remove(peerPubKey)
-        if (ps != null) {
-            Log.d(TAG) { "disposePeerSession: closing session for ${peerPubKey.take(8)}, remaining sessions=${peerSessions.keys.map { it.take(8) }}" }
+        val entry = peerSessionMgr?.removeSession(peerPubKey)
+        val webRtcSession = webRtcSessions.remove(peerPubKey)
+        if (entry != null || webRtcSession != null) {
+            Log.d(TAG) { "disposePeerSession: closing session for ${peerPubKey.take(8)}" }
             try {
-                ps.session.dispose()
+                entry?.session?.dispose()
             } catch (e: Exception) {
                 Log.e(TAG, "disposePeerSession: dispose() failed for ${peerPubKey.take(8)}", e)
             }
@@ -868,14 +846,12 @@ class CallController(
         } else {
             Log.d(TAG) { "disposePeerSession: no session for ${peerPubKey.take(8)} (already disposed or never created)" }
         }
-        // Clean up any buffered ICE candidates for this peer
-        globalPendingIce.remove(peerPubKey)
     }
 
     // ---- Cleanup ----
 
     fun cleanup() {
-        Log.d(TAG) { "cleanup: disposing ${peerSessions.size} peer sessions, state=${callManager.state.value::class.simpleName}" }
+        Log.d(TAG) { "cleanup: disposing ${webRtcSessions.size} peer sessions, state=${callManager.state.value::class.simpleName}" }
         // Each block is wrapped individually so that a failure in one
         // (e.g. a WebRTC native crash) does not prevent the rest from
         // running.  Without this, a single exception could leave the
@@ -900,14 +876,13 @@ class CallController(
         }
 
         // Dispose all peer sessions
-        for (ps in peerSessions.values) {
-            try {
-                ps.session.dispose()
-            } catch (e: Exception) {
-                Log.e(TAG, "cleanup: PeerSession.dispose() failed", e)
-            }
+        try {
+            peerSessionMgr?.disposeAll()
+        } catch (e: Exception) {
+            Log.e(TAG, "cleanup: sessionManager.disposeAll() failed", e)
         }
-        peerSessions.clear()
+        peerSessionMgr = null
+        webRtcSessions.clear()
 
         // Dispose shared resources — each in its own try-catch so one
         // failure does not prevent the others from being released.
@@ -953,8 +928,6 @@ class CallController(
         localVideoSource = null
         peerConnectionFactory = null
         sharedEglBase = null
-
-        globalPendingIce.clear()
 
         _remoteVideoTrack.value = null
         _remoteVideoTracks.value = emptyMap()
