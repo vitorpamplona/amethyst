@@ -150,10 +150,16 @@ class MarmotEngine(
 
     fun generateKeyPackage(): KeyPackageInfo {
         val identity = signer.keyPair.pubKey
-        val signingKey = signer.keyPair.privKey!!
 
-        val group = MlsGroup.create(identity, signingKey)
-        val bundle = group.createKeyPackage(identity, signingKey)
+        // Let MlsGroup generate its own Ed25519 keypairs for MLS operations
+        // (the Nostr secp256k1 key is used as the credential identity, not for MLS signing)
+        val group = MlsGroup.create(identity)
+        // createKeyPackage generates fresh Ed25519 keys internally;
+        // the signingKey param is for the group's current signing key (unused for the KP itself)
+        val tempSigningKey =
+            com.vitorpamplona.quartz.marmot.mls.crypto.Ed25519
+                .generateKeyPair()
+        val bundle = group.createKeyPackage(identity, tempSigningKey.privateKey)
         val bundleBytes = bundle.keyPackage.toTlsBytes()
         val bundleBase64 = Base64.getEncoder().encodeToString(bundleBytes)
         val ref = bundle.keyPackage.reference().toHexKey()
