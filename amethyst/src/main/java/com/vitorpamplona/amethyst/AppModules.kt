@@ -46,6 +46,7 @@ import com.vitorpamplona.amethyst.service.crashreports.UnexpectedCrashSaver
 import com.vitorpamplona.amethyst.service.eventCache.MemoryTrimmingService
 import com.vitorpamplona.amethyst.service.images.ImageCacheFactory
 import com.vitorpamplona.amethyst.service.images.ImageLoaderSetup
+import com.vitorpamplona.amethyst.service.images.ThumbnailDiskCache
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.notifications.PokeyReceiver
 import com.vitorpamplona.amethyst.service.okhttp.DualHttpClientManager
@@ -64,6 +65,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.RelaySubscripti
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderQueryState
 import com.vitorpamplona.amethyst.service.relayClient.speedLogger.RelaySpeedLogger
+import com.vitorpamplona.amethyst.service.safeCacheDir
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.BlossomServerResolver
 import com.vitorpamplona.amethyst.service.uploads.nip95.Nip95CacheFactory
 import com.vitorpamplona.amethyst.ui.resourceCacheInit
@@ -422,6 +424,12 @@ class AppModules(
         ImageCacheFactory.newMemory(appContext)
     }
 
+    // thumbnail disk cache for profile pictures
+    val thumbnailDiskCache: ThumbnailDiskCache by lazy {
+        Log.d("AppModules", "ThumbnailDiskCache Init")
+        ThumbnailDiskCache(appContext.safeCacheDir().resolve("profile_thumbnails"))
+    }
+
     // crash report storage
     val crashReportCache = CrashReportCache(appContext)
 
@@ -439,6 +447,8 @@ class AppModules(
             memoryCache = { memoryCache },
             blossomServerResolver = { blossomResolver },
             callFactory = { okHttpClients.getHttpClient(roleBasedHttpClientBuilder.shouldUseTorForImageDownload(it)) },
+            thumbnailCache = thumbnailDiskCache,
+            backgroundScope = applicationIOScope,
         )
     }
 

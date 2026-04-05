@@ -45,6 +45,7 @@ import coil3.video.VideoFrameDecoder
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.BlossomServerResolver
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.CoroutineScope
 import okhttp3.Call
 
 class ImageLoaderSetup {
@@ -66,6 +67,8 @@ class ImageLoaderSetup {
             memoryCache: () -> MemoryCache,
             blossomServerResolver: () -> BlossomServerResolver,
             callFactory: (url: String) -> Call.Factory,
+            thumbnailCache: ThumbnailDiskCache,
+            backgroundScope: CoroutineScope,
         ) {
             SingletonImageLoader.setUnsafe(
                 ImageLoader
@@ -81,8 +84,10 @@ class ImageLoaderSetup {
                         add(Base64Fetcher.Factory)
                         add(BlurHashFetcher.Factory)
                         add(BlossomFetcher.Factory(blossomServerResolver, callFactory))
+                        add(ProfilePictureFetcher.Factory(thumbnailCache, callFactory, backgroundScope))
                         add(Base64Fetcher.BKeyer)
                         add(BlurHashFetcher.BKeyer)
+                        add(ProfilePictureFetcher.BKeyer)
                         add(OkHttpFactory(callFactory))
                     }.build(),
             )
