@@ -15,17 +15,17 @@ NAT traversal — no custom server infrastructure is required.
 The protocol works as follows:
 
 1. **Caller** creates a signed call offer event containing an SDP offer
-2. The event is wrapped in an **Ephemeral Gift Wrap** (kind `21059`) and published to relays
+2. The event is wrapped in an **ephemeral gift wrap** (kind `21059`) and published to relays
 3. **Callee** unwraps the event, verifies the signature, and decides whether to accept
 4. If accepted, callee sends back a gift-wrapped call answer event containing an SDP answer
 5. Both parties exchange **ICE candidates** as gift-wrapped events for NAT traversal
 6. A **direct WebRTC peer connection** is established for audio/video
 
-All signaling events MUST be delivered using **Ephemeral Gift Wraps** (kind `21059`), an ephemeral
-variant of [NIP-59](https://github.com/nostr-protocol/nips/blob/master/59.md) Gift Wraps. Events are
-signed by the sender's key and wrapped directly (without the seal layer) — the ephemeral gift wrap's
-random ephemeral key already hides the sender from relay operators. Relays SHOULD treat kind `21059`
-events as ephemeral and not persist them to long-term storage.
+All signaling events MUST be delivered using **ephemeral gift wraps** (kind `21059`), an ephemeral
+variant of [NIP-59](https://github.com/nostr-protocol/nips/blob/master/59.md) gift wraps. Events are
+signed by the sender's key and wrapped directly (without the seal layer) — the gift wrap's random
+ephemeral key already hides the sender from relay operators. Relays SHOULD treat kind `21059` events
+as ephemeral and not persist them to long-term storage.
 
 ## Event Kinds
 
@@ -179,13 +179,13 @@ Used for mid-call changes such as toggling video on/off. The `content` field con
 
 ## Encryption and Delivery
 
-All signaling events MUST be delivered using **Ephemeral Gift Wraps** (kind `21059`):
+All signaling events MUST be delivered using **ephemeral gift wraps** (kind `21059`):
 
 1. **Sign** the signaling event with the sender's key
-2. **Wrap** the signed event directly using `EphemeralGiftWrapEvent` (kind `21059`) with NIP-44 encryption
-3. **Publish** the ephemeral gift wrap to the recipient's relay list
+2. **Wrap** the signed event in a kind `21059` event with NIP-44 encryption and a random ephemeral key
+3. **Publish** the gift wrap to the recipient's relay list
 
-The seal layer (`SealedRumorEvent`) is NOT used. The ephemeral gift wrap already provides:
+The seal layer (kind `13`) is NOT used. The ephemeral gift wrap already provides:
 
 - **NIP-44 encryption** — content is unreadable to relay operators
 - **Random ephemeral pubkey** — the relay cannot identify the sender
@@ -194,7 +194,7 @@ The seal layer (`SealedRumorEvent`) is NOT used. The ephemeral gift wrap already
 
 No `expiration` tag is needed on the inner signaling events or the outer wrap. The ephemeral kind itself communicates the transient nature of the data. Clients MUST still perform staleness checks (see Spam Prevention) to discard old events.
 
-Recipients unwrap the ephemeral gift, verify the inner event's signature against the sender's pubkey, and then process the signaling message.
+Recipients decrypt the gift wrap using NIP-44 with their private key and the wrap's ephemeral pubkey, verify the inner event's signature against the sender's pubkey, and then process the signaling message.
 
 ## Protocol Flow
 
@@ -203,16 +203,16 @@ Recipients unwrap the ephemeral gift, verify the inner event's signature against
 ```
 Caller                          Relay                           Callee
   |                               |                               |
-  |-- EphemeralGiftWrap(CallOffer) ------->|                               |
-  |                               |-- EphemeralGiftWrap(CallOffer) ------->|
+  |-- GiftWrap(CallOffer) ------->|                               |
+  |                               |-- GiftWrap(CallOffer) ------->|
   |                               |                               |
-  |                               |         [Callee unwraps, verifies signature]
+  |                               |         [Callee decrypts wrap, verifies signature]
   |                               |         [Checks: is caller followed?]
   |                               |         [YES → ring / NO → ignore]
   |                               |                               |
-  |<-- EphemeralGiftWrap(CallAnswer) ------|<-- EphemeralGiftWrap(CallAnswer) ------|
+  |<-- GiftWrap(CallAnswer) ------|<-- GiftWrap(CallAnswer) ------|
   |                               |                               |
-  |<-> EphemeralGiftWrap(IceCandidate) <-->|<-> EphemeralGiftWrap(IceCandidate) <-->|
+  |<-> GiftWrap(IceCandidate) <-->|<-> GiftWrap(IceCandidate) <-->|
   |                               |                               |
   |============= WebRTC P2P Connection Established ===============|
   |                 (relay no longer involved)                     |
@@ -235,12 +235,12 @@ Either party may send a `CallRenegotiate` (kind 25055) during an active call to 
 ```
 Party A                         Relay                           Party B
   |                               |                               |
-  |-- EphemeralGiftWrap(Renegotiate) ----->|                               |
-  |                               |-- EphemeralGiftWrap(Renegotiate) ----->|
+  |-- GiftWrap(Renegotiate) ----->|                               |
+  |                               |-- GiftWrap(Renegotiate) ----->|
   |                               |                               |
   |                               |  [Party B creates SDP answer] |
   |                               |                               |
-  |<-- EphemeralGiftWrap(CallAnswer) ------|<-- EphemeralGiftWrap(CallAnswer) ------|
+  |<-- GiftWrap(CallAnswer) ------|<-- GiftWrap(CallAnswer) ------|
   |                               |                               |
   |========= Updated WebRTC P2P Connection ========================|
 ```
@@ -436,7 +436,7 @@ This NIP does not mandate specific STUN or TURN servers. Clients SHOULD:
 ### Event Lifecycle
 
 - The `call-id` tag MUST be a UUID that is unique per call session. All signaling events for the same call share the same `call-id`.
-- Signaling data is ephemeral and has no long-term value. Using kind `21059` (Ephemeral Gift Wrap) signals to relays that these events are transient and SHOULD NOT be persisted.
+- Signaling data is ephemeral and has no long-term value. Using kind `21059` (ephemeral gift wrap) signals to relays that these events are transient and SHOULD NOT be persisted.
 - Clients SHOULD implement a ringing timeout (e.g., 60 seconds). If no answer is received, the call transitions to a "timed out" state.
 - After a call ends, the call state SHOULD auto-reset to idle after a brief display period (e.g., 2 seconds) to ensure the client is ready for subsequent calls.
 
@@ -481,8 +481,6 @@ These self-notification events use the same `call-id` as the original call and f
 ## Test Vectors
 
 Implementations SHOULD validate their state machine and event handling against these test scenarios.
-The reference test suite is available in this repository under `quartz/src/commonTest/` and
-`commons/src/commonTest/`.
 
 ### Event Structure Tests
 
@@ -553,14 +551,14 @@ The reference test suite is available in this repository under `quartz/src/commo
 
 | # | Scenario | Verification |
 |---|----------|-------------|
-| I1 | Initiate call | Publishes 1 EphemeralGiftWrap (kind 21059) |
-| I2 | Accept call | Publishes EphemeralGiftWrap answer(s) |
-| I3 | Reject call | Publishes EphemeralGiftWrap reject(s) |
-| I4 | Hangup | Publishes EphemeralGiftWrap hangup(s) |
-| I5 | Send renegotiation | Publishes 1 EphemeralGiftWrap renegotiate |
-| I6 | Busy auto-reject | Publishes EphemeralGiftWrap reject while staying in current call |
-| I7 | Group per-peer offers | Publishes 1 EphemeralGiftWrap per peer |
-| I8 | Invite peer | Publishes 1 EphemeralGiftWrap; invitee added to pending set |
+| I1 | Initiate call | Publishes 1 ephemeral gift wrap (kind 21059) |
+| I2 | Accept call | Publishes ephemeral gift wrap answer(s) |
+| I3 | Reject call | Publishes ephemeral gift wrap reject(s) |
+| I4 | Hangup | Publishes ephemeral gift wrap hangup(s) |
+| I5 | Send renegotiation | Publishes 1 ephemeral gift wrap renegotiate |
+| I6 | Busy auto-reject | Publishes ephemeral gift wrap reject while staying in current call |
+| I7 | Group per-peer offers | Publishes 1 ephemeral gift wrap per peer |
+| I8 | Invite peer | Publishes 1 ephemeral gift wrap; invitee added to pending set |
 | I9 | Full P2P flow | Offer → Answer → Renegotiate → Hangup, all via gift wraps |
 
 ## References
