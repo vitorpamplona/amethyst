@@ -390,8 +390,11 @@ anz der Bedingungen ist erforderlich</string>
     <string name="migrate_bookmarks_success">Lesezeichen erfolgreich migriert</string>
     <string name="drafts">Entwürfe</string>
     <string name="polls">Umfragen</string>
+    <string name="open_polls">Offen</string>
+    <string name="closed_polls">Geschlossen</string>
     <string name="pictures">Bilder</string>
     <string name="shorts">Kurzvideos</string>
+    <string name="longs">Videos</string>
     <string name="private_bookmarks">Private Lesezeichen</string>
     <string name="public_bookmarks">Öffentliche Lesezeichen</string>
     <string name="add_to_private_bookmarks">Zu den privaten Lesezeichen hinzufügen</string>
@@ -703,6 +706,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="call_camera_off">Kamera aus</string>
     <string name="call_speaker">Lautsprecher</string>
     <string name="call_earpiece">Ohrhörer</string>
+    <string name="call_bluetooth">Bluetooth</string>
     <string name="call_voice">Sprachanruf</string>
     <string name="call_video">Videoanruf</string>
     <string name="call_waiting_for_others">Warte auf andere Teilnehmer\u2026</string>
@@ -1208,6 +1212,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="article_description_placeholder">Eine kurze Beschreibung deines Artikels\u2026</string>
     <string name="url_slug">URL-Slug</string>
     <string name="url_slug_placeholder">artikel-url-slug</string>
+    <string name="tags_label"># Tags</string>
     <string name="add_a_tag">Tag hinzufügen\u2026</string>
     <string name="start_writing_article">Beginne deinen Artikel zu schreiben\u2026</string>
     <string name="open_all_reactions_to_this_post">Alle Reaktionen auf diesen Beitrag öffnen</string>
@@ -1433,6 +1438,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="select_list_to_filter">Liste zum Filtern des Feeds auswählen</string>
     <string name="feed_group_feeds">Feeds</string>
     <string name="feed_group_hashtags">Hash-Tags</string>
+    <string name="feed_group_locations">Standorte</string>
     <string name="feed_group_communities">Gemeinschaften</string>
     <string name="feed_group_lists">Listen</string>
     <string name="feed_group_relays">Relais</string>
@@ -1533,6 +1539,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="connected">Verbunden</string>
     <string name="social_proof">Sozialer Nachweis</string>
     <string name="poll_submit">Absenden</string>
+    <string name="poll_view_results">Ergebnisse anzeigen</string>
     <string name="restart">Neu starten</string>
     <string name="chess_accept">Annehmen</string>
     <string name="chess_decline">Ablehnen</string>
@@ -1933,9 +1940,4 @@ anz der Bedingungen ist erforderlich</string>
     <string name="relay_members_removed">%1$d Mitglieder aus Relay entfernt</string>
     <string name="relay_join_request">Relay-Beitrittsanfrage</string>
     <string name="relay_leave_request">Relay-Austrittsanfrage</string>
-    <string name="call_bluetooth">Bluetooth</string>
-    <string name="closed_polls">Geschlossen</string>
-    <string name="feed_group_locations">Standorte</string>
-    <string name="open_polls">Offen</string>
-    <string name="poll_view_results">Ergebnisse anzeigen</string>
 </resources>

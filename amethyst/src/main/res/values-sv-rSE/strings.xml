@@ -384,6 +384,8 @@
     <string name="migrate_bookmarks_success">Bokmärken migrerade</string>
     <string name="drafts">Utkast</string>
     <string name="polls">Omröstningar</string>
+    <string name="open_polls">Öppna</string>
+    <string name="closed_polls">Stängda</string>
     <string name="pictures">Bilder</string>
     <string name="shorts">Kortfilmer</string>
     <string name="longs">Videor</string>
@@ -698,6 +700,7 @@
     <string name="call_camera_off">Kamera av</string>
     <string name="call_speaker">Högtalare</string>
     <string name="call_earpiece">Hörlur</string>
+    <string name="call_bluetooth">Bluetooth</string>
     <string name="call_voice">Röstsamtal</string>
     <string name="call_video">Videosamtal</string>
     <string name="call_waiting_for_others">Väntar på att andra ska ansluta\u2026</string>
@@ -1429,6 +1432,7 @@
     <string name="select_list_to_filter">Välj en lista för att filtrera flödet</string>
     <string name="feed_group_feeds">Flöden</string>
     <string name="feed_group_hashtags">Hashtaggar</string>
+    <string name="feed_group_locations">Platser</string>
     <string name="feed_group_communities">Gemenskaper</string>
     <string name="feed_group_lists">Listor</string>
     <string name="feed_group_relays">Reläer</string>
@@ -1529,6 +1533,7 @@
     <string name="connected">Ansluten</string>
     <string name="social_proof">Socialt bevis</string>
     <string name="poll_submit">Skicka</string>
+    <string name="poll_view_results">Visa resultat</string>
     <string name="restart">Starta om</string>
     <string name="chess_accept">Acceptera</string>
     <string name="chess_decline">Avböj</string>
@@ -1929,9 +1934,4 @@
     <string name="relay_members_removed">%1$d medlemmar borttagna från relä</string>
     <string name="relay_join_request">Begäran om att gå med i relä</string>
     <string name="relay_leave_request">Begäran om att lämna relä</string>
-    <string name="call_bluetooth">Bluetooth</string>
-    <string name="closed_polls">Stängda</string>
-    <string name="feed_group_locations">Platser</string>
-    <string name="open_polls">Öppna</string>
-    <string name="poll_view_results">Visa resultat</string>
 </resources>
