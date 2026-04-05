@@ -99,6 +99,92 @@ internal object U256 {
         }
     }
 
+    /**
+     * Dedicated squaring: out = a², written to out (size 16).
+     * Exploits symmetry: a[i]*a[j] == a[j]*a[i], computing 28 cross-products
+     * once and doubling, plus 8 diagonal products. Total: 36 multiplications
+     * vs 64 for generic mul.
+     */
+    fun sqrWide(
+        out: IntArray,
+        a: IntArray,
+    ) {
+        for (i in 0 until 16) out[i] = 0
+
+        // Pass 1: accumulate cross-products a[i]*a[j] for i < j (single, not doubled yet)
+        for (i in 0 until 8) {
+            var carry = 0L
+            val ai = a[i].toLong() and 0xFFFFFFFFL
+            for (j in i + 1 until 8) {
+                val prod = ai * (a[j].toLong() and 0xFFFFFFFFL) + (out[i + j].toLong() and 0xFFFFFFFFL) + carry
+                out[i + j] = prod.toInt()
+                carry = prod ushr 32
+            }
+            out[i + 8] = carry.toInt()
+        }
+
+        // Pass 2: double all cross-products (left shift by 1 bit)
+        var carry = 0
+        for (i in 1 until 16) {
+            val v = out[i]
+            out[i] = (v shl 1) or carry
+            carry = v ushr 31
+        }
+
+        // Pass 3: add diagonal products a[i]*a[i] at positions 2*i and 2*i+1
+        var dCarry = 0L
+        for (i in 0 until 8) {
+            val ai = a[i].toLong() and 0xFFFFFFFFL
+            val diag = ai * ai
+            val pos = 2 * i
+            dCarry += (out[pos].toLong() and 0xFFFFFFFFL) + (diag and 0xFFFFFFFFL)
+            out[pos] = dCarry.toInt()
+            dCarry = dCarry ushr 32
+            dCarry += (out[pos + 1].toLong() and 0xFFFFFFFFL) + (diag ushr 32)
+            out[pos + 1] = dCarry.toInt()
+            dCarry = dCarry ushr 32
+        }
+    }
+
+    /** 256x128 -> 384 bit multiply, return top portion shifted right by `shift` bits. */
+    fun mulShift(
+        k: IntArray,
+        g: IntArray,
+        shift: Int,
+    ): IntArray {
+        val wide = IntArray(16)
+        mulWide(wide, k, g)
+        val wordShift = shift / 32
+        val bitShift = shift % 32
+        val result = IntArray(8)
+        for (i in 0 until 8) {
+            val srcIdx = i + wordShift
+            if (srcIdx < 16) {
+                result[i] = wide[srcIdx]
+                if (bitShift > 0 && srcIdx + 1 < 16) {
+                    result[i] = (result[i] ushr bitShift) or (wide[srcIdx + 1] shl (32 - bitShift))
+                } else if (bitShift > 0) {
+                    result[i] = result[i] ushr bitShift
+                }
+            }
+        }
+        // Rounding: check the bit just below the shift
+        if (shift > 0) {
+            val roundBitIdx = shift - 1
+            val roundWord = roundBitIdx / 32
+            val roundBit = (wide[roundWord] ushr (roundBitIdx % 32)) and 1
+            if (roundBit == 1) {
+                var c = 1L
+                for (i in 0 until 8) {
+                    c += (result[i].toLong() and 0xFFFFFFFFL)
+                    result[i] = c.toInt()
+                    c = c ushr 32
+                }
+            }
+        }
+        return result
+    }
+
     /** Convert big-endian 32-byte array to IntArray(8) little-endian limbs */
     fun fromBytes(bytes: ByteArray): IntArray {
         require(bytes.size == 32)
@@ -302,12 +388,37 @@ internal object FieldP {
         reduceWide(out, w)
     }
 
-    /** out = a² mod p. Uses thread-local scratch space. */
+    /** out = a² mod p. Uses dedicated squaring for ~40% fewer inner products. */
     fun sqr(
         out: IntArray,
         a: IntArray,
     ) {
-        mul(out, a, a)
+        val w = wide.get()
+        U256.sqrWide(w, a)
+        reduceWide(out, w)
+    }
+
+    /** out = a / 2 mod p. If a is odd, add p first (since p is odd, a+p is even). */
+    fun half(
+        out: IntArray,
+        a: IntArray,
+    ) {
+        val isOdd = a[0] and 1
+        // If odd, compute (a + p) / 2. If even, compute a / 2.
+        // Add p conditionally (branchless via mask)
+        val mask = (-isOdd).toLong() // all 1s if odd, all 0s if even
+        var carry = 0L
+        for (i in 0 until 8) {
+            carry += (a[i].toLong() and 0xFFFFFFFFL) + ((P[i].toLong() and 0xFFFFFFFFL) and mask)
+            out[i] = carry.toInt()
+            carry = carry ushr 32
+        }
+        // carry is 0 or 1 from the addition
+        // Now right-shift by 1 (the carry bit becomes the top bit)
+        for (i in 0 until 7) {
+            out[i] = (out[i] ushr 1) or (out[i + 1] shl 31)
+        }
+        out[7] = (out[7] ushr 1) or (carry.toInt() shl 31)
     }
 
     /** out = -a mod p */
