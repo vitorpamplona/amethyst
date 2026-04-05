@@ -70,6 +70,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNo
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.layouts.GenericRepostLayout
+import com.vitorpamplona.amethyst.ui.layouts.NoteComposeLayout
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeEditDraftTo
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
@@ -178,8 +179,6 @@ import com.vitorpamplona.amethyst.ui.theme.HalfDoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.HalfPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
 import com.vitorpamplona.amethyst.ui.theme.Height4dpModifier
-import com.vitorpamplona.amethyst.ui.theme.RowColSpacing10dp
-import com.vitorpamplona.amethyst.ui.theme.RowColSpacing5dp
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.Size30dp
@@ -189,12 +188,9 @@ import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.UserNameMaxRowHeight
 import com.vitorpamplona.amethyst.ui.theme.UserNameRowHeight
-import com.vitorpamplona.amethyst.ui.theme.WidthAuthorPictureModifier
-import com.vitorpamplona.amethyst.ui.theme.boostedNoteModifier
 import com.vitorpamplona.amethyst.ui.theme.channelNotePictureModifier
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
-import com.vitorpamplona.amethyst.ui.theme.normalWithTopMarginNoteModifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
@@ -632,74 +628,91 @@ fun InnerNoteWithReactions(
 ) {
     val notBoostedNorQuote = !isBoostedNote && !isQuotedNote
     val editState = observeEdits(baseNote = baseNote, accountViewModel = accountViewModel)
+    val isNotRepost = baseNote.event !is RepostEvent && baseNote.event !is GenericRepostEvent
+    val showSecondRow = isNotRepost && notBoostedNorQuote && accountViewModel.settings.isCompleteUIMode()
 
-    Row(
-        modifier =
-            if (!isBoostedNote) {
-                normalWithTopMarginNoteModifier
-            } else {
-                boostedNoteModifier
-            },
-        horizontalArrangement = RowColSpacing10dp,
-    ) {
-        if (notBoostedNorQuote) {
-            Column(WidthAuthorPictureModifier, verticalArrangement = RowColSpacing5dp) {
-                // Draws the boosted picture outside the boosted card.
+    NoteComposeLayout(
+        modifier = Modifier.fillMaxWidth(),
+        addPadding = !isBoostedNote,
+        showAuthorColumn = notBoostedNorQuote,
+        showSecondRow = showSecondRow,
+        showContentSpacer = isNotRepost,
+        authorPicture = {
+            if (notBoostedNorQuote) {
                 Box(modifier = Size55Modifier, contentAlignment = Alignment.BottomEnd) {
                     RenderAuthorImages(baseNote, nav, accountViewModel)
                 }
-
+            }
+        },
+        relayBadges = {
+            if (notBoostedNorQuote) {
                 BadgeBox(baseNote, accountViewModel, nav)
             }
-        }
-
-        Column(Modifier.fillMaxWidth()) {
-            val showSecondRow =
-                baseNote.event !is RepostEvent &&
-                    baseNote.event !is GenericRepostEvent &&
-                    !isBoostedNote &&
-                    !isQuotedNote &&
-                    accountViewModel.settings.isCompleteUIMode()
-            NoteBody(
+        },
+        firstRow = {
+            FirstUserInfoRow(
                 baseNote = baseNote,
                 showAuthorPicture = isQuotedNote,
-                unPackReply = unPackReply,
-                makeItShort = makeItShort,
-                canPreview = canPreview,
-                showSecondRow = showSecondRow,
                 isPinned = isPinned,
-                quotesLeft = quotesLeft,
-                backgroundColor = backgroundColor,
                 editState = editState,
                 accountViewModel = accountViewModel,
                 nav = nav,
                 moreOptions = moreOptions,
             )
-
-            RenderApprovalIfNeeded(baseNote, accountViewModel, nav)
-        }
-    }
-
-    val isNotRepost = baseNote.event !is RepostEvent && baseNote.event !is GenericRepostEvent && baseNote.event !is DraftWrapEvent
-
-    if (isNotRepost) {
-        if (makeItShort) {
-            Spacer(modifier = DoubleVertSpacer)
-        } else {
-            ReactionsRow(
+        },
+        secondRow = {
+            if (showSecondRow) {
+                SecondUserInfoRow(
+                    baseNote,
+                    editState,
+                    accountViewModel,
+                    nav,
+                )
+            }
+        },
+        noteContent = {
+            RenderNoteRow(
                 baseNote = baseNote,
-                showReactionDetail = notBoostedNorQuote,
-                addPadding = !isBoostedNote,
+                backgroundColor = backgroundColor,
+                makeItShort = makeItShort,
+                canPreview = canPreview,
                 editState = editState,
+                quotesLeft = quotesLeft,
+                unPackReply = unPackReply,
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
-        }
-    } else {
-        if (baseNote.event is DraftWrapEvent) {
-            Spacer(modifier = DoubleVertSpacer)
-        }
-    }
+
+            if (!makeItShort) {
+                val noteEvent = baseNote.event
+                val zapSplits = remember(noteEvent) { noteEvent?.hasZapSplitSetup() ?: false }
+                if (zapSplits && noteEvent != null) {
+                    Spacer(modifier = HalfDoubleVertSpacer)
+                    DisplayZapSplits(noteEvent, false, accountViewModel, nav)
+                }
+            }
+
+            RenderApprovalIfNeeded(baseNote, accountViewModel, nav)
+        },
+        reactionsRow = {
+            if (isNotRepost && baseNote.event !is DraftWrapEvent) {
+                if (makeItShort) {
+                    Spacer(modifier = DoubleVertSpacer)
+                } else {
+                    ReactionsRow(
+                        baseNote = baseNote,
+                        showReactionDetail = notBoostedNorQuote,
+                        addPadding = !isBoostedNote,
+                        editState = editState,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                }
+            } else if (baseNote.event is DraftWrapEvent) {
+                Spacer(modifier = DoubleVertSpacer)
+            }
+        },
+    )
 }
 
 @Composable
