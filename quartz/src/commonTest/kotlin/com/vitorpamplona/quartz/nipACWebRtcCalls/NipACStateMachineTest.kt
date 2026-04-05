@@ -394,27 +394,11 @@ class NipACStateMachineTest {
         }
     }
 
-    // ========================================================================
-    // 9. Renegotiation Glare: Pubkey Comparison Tiebreaker
-    // ========================================================================
-
-    @Test
-    fun renegotiationGlareTiebreaker_higherPubkeyWins() {
-        // Per spec: "the peer with the higher pubkey wins"
-        // alice < bob (lexicographically: 'a' < 'b')
-        assertTrue(alice < bob, "Precondition: alice pubkey < bob pubkey")
-        // So bob's offer takes priority, alice must rollback
-    }
-
-    @Test
-    fun calleeToCalleeMeshGlare_lowerPubkeyInitiates() {
-        // Per spec: "the peer with the lexicographically lower pubkey initiates the offer"
-        assertTrue(alice < bob)
-        // Alice (lower) should initiate, Bob (higher) waits
-    }
+    // Renegotiation glare and callee-to-callee mesh tiebreakers are tested in
+    // PeerSessionManagerTest (commons/commonTest/) where the actual logic lives.
 
     // ========================================================================
-    // 10. Event Kind Constants
+    // 9. Event Kind Constants
     // ========================================================================
 
     @Test

@@ -23,57 +23,6 @@ package com.vitorpamplona.amethyst.commons.call
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 /**
- * Represents a single ICE candidate received from a peer.
- * Platform-neutral — does not depend on org.webrtc.
- */
-data class IceCandidateData(
-    val sdp: String,
-    val sdpMid: String,
-    val sdpMLineIndex: Int,
-)
-
-/**
- * Represents the signaling state of a peer connection.
- * Maps 1:1 with WebRTC's PeerConnection.SignalingState.
- */
-enum class SignalingState {
-    STABLE,
-    HAVE_LOCAL_OFFER,
-    HAVE_REMOTE_OFFER,
-    HAVE_LOCAL_PRANSWER,
-    HAVE_REMOTE_PRANSWER,
-    CLOSED,
-}
-
-/**
- * Abstraction over a single peer connection's signaling operations.
- * Implemented by the platform-specific WebRTC wrapper.
- */
-interface PeerSession {
-    fun getSignalingState(): SignalingState?
-
-    fun setRemoteDescription(
-        type: SdpType,
-        sdp: String,
-    )
-
-    fun addIceCandidate(candidate: IceCandidateData)
-
-    fun createOffer(onSdpCreated: (String) -> Unit)
-
-    fun createAnswer(onSdpCreated: (String) -> Unit)
-
-    fun rollback(onDone: () -> Unit)
-
-    fun dispose()
-}
-
-enum class SdpType {
-    OFFER,
-    ANSWER,
-}
-
-/**
  * Manages per-peer session state and ICE candidate buffering.
  *
  * This class encapsulates the NIP-AC spec requirements for:
@@ -85,7 +34,7 @@ enum class SdpType {
  * It is platform-independent and testable without real WebRTC.
  */
 class PeerSessionManager(
-    private val localPubKey: HexKey,
+    val localPubKey: HexKey,
 ) {
     data class SessionEntry(
         val session: PeerSession,
@@ -126,9 +75,9 @@ class PeerSessionManager(
 
     /**
      * Routes an incoming ICE candidate to the correct destination:
-     * 1. If session exists AND remote description is set → add directly
-     * 2. If session exists but remote description NOT set → buffer per-session
-     * 3. If no session exists → buffer globally (keyed by sender)
+     * 1. If session exists AND remote description is set -> add directly
+     * 2. If session exists but remote description NOT set -> buffer per-session
+     * 3. If no session exists -> buffer globally (keyed by sender)
      *
      * Returns the action taken for testability.
      */
@@ -137,15 +86,21 @@ class PeerSessionManager(
         candidate: IceCandidateData,
     ): IceRouteAction {
         val entry = sessions[senderPubKey]
-        if (entry != null && entry.remoteDescriptionSet) {
-            entry.session.addIceCandidate(candidate)
-            return IceRouteAction.ADDED_DIRECTLY
-        } else if (entry != null) {
-            entry.pendingIceCandidates.add(candidate)
-            return IceRouteAction.BUFFERED_PER_SESSION
-        } else {
-            globalPendingIce.getOrPut(senderPubKey) { mutableListOf() }.add(candidate)
-            return IceRouteAction.BUFFERED_GLOBALLY
+        return when {
+            entry != null && entry.remoteDescriptionSet -> {
+                entry.session.addIceCandidate(candidate)
+                IceRouteAction.ADDED_DIRECTLY
+            }
+
+            entry != null -> {
+                entry.pendingIceCandidates.add(candidate)
+                IceRouteAction.BUFFERED_PER_SESSION
+            }
+
+            else -> {
+                globalPendingIce.getOrPut(senderPubKey) { mutableListOf() }.add(candidate)
+                IceRouteAction.BUFFERED_GLOBALLY
+            }
         }
     }
 
@@ -184,17 +139,14 @@ class PeerSessionManager(
 
         val signalingState = entry.session.getSignalingState()
         if (signalingState != SignalingState.HAVE_LOCAL_OFFER) {
-            // No glare — accept the remote offer directly
             onAcceptRemote(entry)
             return GlareResolution.NO_GLARE
         }
 
         // Glare detected: both sides sent offers simultaneously
         return if (localPubKey > peerPubKey) {
-            // We win — our offer takes priority, ignore remote
             GlareResolution.LOCAL_WINS
         } else {
-            // We lose — rollback our local offer, accept remote
             entry.session.rollback {
                 onAcceptRemote(entry)
             }
