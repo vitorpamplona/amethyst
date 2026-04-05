@@ -37,7 +37,7 @@ private val threadLocalDigest =
 
 actual fun sha256(data: ByteArray): ByteArray = threadLocalDigest.get().digest(data)
 
-/** Pool is still available for streaming use cases that need incremental hashing. */
+/** Pool for incremental hashing (used by EventHasherSerializer, HashingByteArrayBuilder). */
 val pool = Sha256Pool(25)
 
 /**
@@ -54,6 +54,12 @@ fun sha256StreamWithCount(
     bufferSize: Int = 8192,
 ): Pair<ByteArray, Long> {
     val countingStream = CountingInputStream(inputStream)
-    val hash = pool.hashStream(countingStream, bufferSize)
+    val digest = threadLocalDigest.get()
+    val buffer = ByteArray(bufferSize)
+    var bytesRead: Int
+    while (countingStream.read(buffer).also { bytesRead = it } != -1) {
+        digest.update(buffer, 0, bytesRead)
+    }
+    val hash = digest.digest()
     return Pair(hash, countingStream.bytesRead)
 }
