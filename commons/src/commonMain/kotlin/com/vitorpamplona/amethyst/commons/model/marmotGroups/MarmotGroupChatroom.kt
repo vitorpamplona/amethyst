@@ -42,6 +42,9 @@ class MarmotGroupChatroom(
 ) : NotesGatherer {
     var messages: Set<Note> = setOf()
     var displayName = MutableStateFlow<String?>(null)
+    var description = MutableStateFlow<String?>(null)
+    var adminPubkeys = MutableStateFlow<List<HexKey>>(emptyList())
+    var relays = MutableStateFlow<List<String>>(emptyList())
     var memberCount = MutableStateFlow(0)
     var newestMessage: Note? = null
 

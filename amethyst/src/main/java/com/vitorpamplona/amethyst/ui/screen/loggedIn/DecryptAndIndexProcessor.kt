@@ -326,6 +326,10 @@ class GiftWrapEventHandler(
             is WelcomeResult.Joined -> {
                 Log.d("GiftWrapEventHandler", "Joined Marmot group ${result.nostrGroupId}")
 
+                // Sync MIP-01 metadata from group extensions to chatroom
+                val chatroom = account.marmotGroupList.getOrCreateGroup(result.nostrGroupId)
+                manager.syncMetadataTo(result.nostrGroupId, chatroom)
+
                 // Rotate KeyPackages if needed
                 if (result.needsKeyPackageRotation) {
                     account.publishMarmotKeyPackages()
@@ -483,6 +487,9 @@ class GroupEventHandler(
 
                 is GroupEventResult.CommitProcessed -> {
                     Log.d("GroupEventHandler", "Commit processed for group ${result.groupId}, epoch=${result.newEpoch}")
+                    // Sync MIP-01 metadata after epoch advance (extensions may have changed)
+                    val chatroom = account.marmotGroupList.getOrCreateGroup(result.groupId)
+                    manager.syncMetadataTo(result.groupId, chatroom)
                 }
 
                 is GroupEventResult.CommitPending -> {

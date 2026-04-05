@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.marmot
 
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.quartz.marmot.GroupEventResult
 import com.vitorpamplona.quartz.marmot.MarmotInboundProcessor
 import com.vitorpamplona.quartz.marmot.MarmotOutboundProcessor
@@ -31,6 +32,7 @@ import com.vitorpamplona.quartz.marmot.WelcomeResult
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRotationManager
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageUtils
+import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupManager
@@ -287,6 +289,37 @@ class MarmotManager(
      * Get the current epoch for a group.
      */
     fun groupEpoch(nostrGroupId: HexKey): Long? = groupManager.getGroup(nostrGroupId)?.epoch
+
+    /**
+     * Get the MIP-01 group metadata from the MLS GroupContext extensions.
+     * Returns null if the group doesn't exist or has no MarmotGroupData extension.
+     */
+    fun groupMetadata(nostrGroupId: HexKey): MarmotGroupData? {
+        val group = groupManager.getGroup(nostrGroupId) ?: return null
+        return MarmotGroupData.fromExtensions(group.extensions)
+    }
+
+    /**
+     * Sync MIP-01 metadata and member info from the MLS group into a [MarmotGroupChatroom].
+     * Call after joining a group, processing a commit, or restoring from storage.
+     */
+    fun syncMetadataTo(
+        nostrGroupId: HexKey,
+        chatroom: MarmotGroupChatroom,
+    ) {
+        val metadata = groupMetadata(nostrGroupId)
+        if (metadata != null) {
+            if (metadata.name.isNotEmpty()) {
+                chatroom.displayName.value = metadata.name
+            }
+            if (metadata.description.isNotEmpty()) {
+                chatroom.description.value = metadata.description
+            }
+            chatroom.adminPubkeys.value = metadata.adminPubkeys
+            chatroom.relays.value = metadata.relays
+        }
+        chatroom.memberCount.value = memberCount(nostrGroupId)
+    }
 }
 
 /**

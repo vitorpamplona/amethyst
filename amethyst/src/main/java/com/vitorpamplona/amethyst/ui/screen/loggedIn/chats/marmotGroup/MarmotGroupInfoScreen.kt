@@ -78,6 +78,9 @@ fun MarmotGroupInfoScreen(
             accountViewModel.account.marmotGroupList.getOrCreateGroup(nostrGroupId)
         }
     val displayName by chatroom.displayName.collectAsStateWithLifecycle()
+    val groupDescription by chatroom.description.collectAsStateWithLifecycle()
+    val adminPubkeys by chatroom.adminPubkeys.collectAsStateWithLifecycle()
+    val groupRelays by chatroom.relays.collectAsStateWithLifecycle()
     var members by remember { mutableStateOf(emptyList<GroupMemberInfo>()) }
     var showLeaveDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -130,18 +133,28 @@ fun MarmotGroupInfoScreen(
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
                     )
+                    if (!groupDescription.isNullOrEmpty()) {
+                        Text(
+                            text = groupDescription!!,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 4.dp),
+                        )
+                    }
                     Text(
                         text = "${members.size} members",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 4.dp),
                     )
-                    Text(
-                        text = "Group ID: ${nostrGroupId.take(16)}...",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 2.dp),
-                    )
+                    if (groupRelays.isNotEmpty()) {
+                        Text(
+                            text = "Relays: ${groupRelays.joinToString(", ")}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 2.dp),
+                        )
+                    }
                     val epoch = accountViewModel.account.marmotManager?.groupEpoch(nostrGroupId)
                     if (epoch != null) {
                         Text(
@@ -170,6 +183,7 @@ fun MarmotGroupInfoScreen(
                 MemberRow(
                     member = member,
                     isMe = member.pubkey == myPubkey,
+                    isAdmin = member.pubkey in adminPubkeys,
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
@@ -222,6 +236,7 @@ fun MarmotGroupInfoScreen(
 fun MemberRow(
     member: GroupMemberInfo,
     isMe: Boolean,
+    isAdmin: Boolean,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -243,24 +258,19 @@ fun MemberRow(
         Column(modifier = Modifier.weight(1f)) {
             LoadUser(baseUserHex = member.pubkey, accountViewModel = accountViewModel) { user ->
                 val displayName = user?.toBestDisplayName() ?: "${member.pubkey.take(16)}..."
+                val suffix =
+                    buildString {
+                        if (isMe) append(" (you)")
+                        if (isAdmin) append(" - admin")
+                    }
                 Text(
-                    text =
-                        if (isMe) {
-                            "$displayName (you)"
-                        } else {
-                            displayName
-                        },
+                    text = "$displayName$suffix",
                     style = MaterialTheme.typography.bodyMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    fontWeight = if (isMe) FontWeight.Bold else FontWeight.Normal,
+                    fontWeight = if (isMe || isAdmin) FontWeight.Bold else FontWeight.Normal,
                 )
             }
-            Text(
-                text = "Leaf #${member.leafIndex}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
     }
 }

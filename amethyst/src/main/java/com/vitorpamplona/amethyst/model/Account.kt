@@ -2335,6 +2335,11 @@ class Account(
         if (marmotManager != null) {
             scope.launch(Dispatchers.IO) {
                 marmotManager.restoreAll()
+                // Sync MIP-01 metadata from restored groups to chatrooms
+                marmotManager.activeGroupIds().forEach { groupId ->
+                    val chatroom = marmotGroupList.getOrCreateGroup(groupId)
+                    marmotManager.syncMetadataTo(groupId, chatroom)
+                }
             }
         }
 
