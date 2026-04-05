@@ -416,6 +416,8 @@
     <string name="migrate_bookmarks_success">Bookmarks migrated successfully</string>
     <string name="drafts">Drafts</string>
     <string name="polls">Polls</string>
+    <string name="open_polls">Open</string>
+    <string name="closed_polls">Closed</string>
     <string name="pictures">Pictures</string>
     <string name="shorts">Shorts</string>
     <string name="longs">Videos</string>

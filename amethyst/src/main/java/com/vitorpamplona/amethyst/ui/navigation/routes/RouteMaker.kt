@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
+import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -51,6 +52,7 @@ import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip73ExternalIds.location.isGeohashedScoped
 import com.vitorpamplona.quartz.nip73ExternalIds.topics.isHashtagScoped
+import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
@@ -349,6 +351,14 @@ suspend fun routeEditDraftTo(
                 parentId = noteEvent.id,
                 draftId = note.idHex,
             )
+        }
+
+        is PollEvent -> {
+            Route.NewPoll(draft = note.idHex)
+        }
+
+        is ZapPollEvent -> {
+            Route.NewPoll(draft = note.idHex)
         }
 
         is CommentEvent -> {
