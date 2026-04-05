@@ -63,6 +63,8 @@ import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.nns.NNSEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
+import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -2613,6 +2615,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is GeohashListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is GoalEvent -> consumeRegularEvent(event, relay, wasVerified)
                 is GiftWrapEvent -> consumeRegularEvent(event, relay, wasVerified)
+                is GroupEvent -> consumeRegularEvent(event, relay, wasVerified)
                 is GitIssueEvent -> consumeRegularEvent(event, relay, wasVerified)
                 is GitReplyEvent -> consumeRegularEvent(event, relay, wasVerified)
                 is GitPatchEvent -> consumeRegularEvent(event, relay, wasVerified)
@@ -2622,6 +2625,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is ChessGameEvent -> consumeRegularEvent(event, relay, wasVerified)
                 is RelayFeedsListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is JesterEvent -> consumeRegularEvent(event, relay, wasVerified)
+                is KeyPackageEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is LiveChessGameChallengeEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is LiveChessGameAcceptEvent -> consumeBaseReplaceable(event, relay, wasVerified)
                 is LiveChessMoveEvent -> consumeBaseReplaceable(event, relay, wasVerified)

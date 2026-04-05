@@ -67,6 +67,12 @@ class WelcomeEvent(
     /** Content encoding (must be "base64") */
     fun encoding() = tags.welcomeEncoding()
 
+    /** Nostr group ID from the "h" tag (for recipient to identify the group) */
+    fun nostrGroupId(): HexKey? =
+        tags.firstNotNullOfOrNull { tag ->
+            if (tag.size >= 2 && tag[0] == "h") tag[1] else null
+        }
+
     override fun isContentEncoded() = true
 
     companion object {
@@ -77,12 +83,14 @@ class WelcomeEvent(
             welcomeBase64: String,
             keyPackageEventId: HexKey,
             relays: List<NormalizedRelayUrl>,
+            nostrGroupId: HexKey? = null,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<WelcomeEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, welcomeBase64, createdAt) {
             keyPackageEventId(keyPackageEventId)
             welcomeRelays(relays)
             encoding()
+            nostrGroupId?.let { addUnique(arrayOf("h", it)) }
             initializer()
         }
     }

@@ -26,6 +26,11 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
+import com.vitorpamplona.quartz.marmot.GroupEventResult
+import com.vitorpamplona.quartz.marmot.MarmotInboundProcessor
+import com.vitorpamplona.quartz.marmot.WelcomeResult
+import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
+import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.IEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
@@ -59,6 +64,8 @@ class EventProcessor(
     private val zapRequest = LnZapRequestEventHandler(account.privateZapsDecryptionCache)
     private val zapEvent = LnZapEventHandler(account.privateZapsDecryptionCache)
 
+    private val groupEventHandler = GroupEventHandler(account, cache)
+
     var callManager: CallManager? = null
 
     suspend fun consume(note: Note) {
@@ -88,6 +95,8 @@ class EventProcessor(
             is ChatroomKeyable -> chatHandler.add(event, eventNote, publicNote)
 
             is DraftWrapEvent -> draftHandler.add(event, eventNote, publicNote)
+
+            is GroupEvent -> groupEventHandler.add(event, eventNote, publicNote)
 
             is GiftWrapEvent -> giftWrapHandler.add(event, eventNote, publicNote)
 
@@ -287,10 +296,45 @@ class GiftWrapEventHandler(
         val innerGift = event.unwrapOrNull(account.signer) ?: return
 
         eventNote.event = event.copyNoContent()
+
+        // Check if the unwrapped event is a Marmot WelcomeEvent (kind:444)
+        if (MarmotInboundProcessor.isWelcomeEvent(innerGift)) {
+            processMarmotWelcome(innerGift, eventNote, publicNote)
+            return
+        }
+
         if (cache.justConsume(innerGift, null, false)) {
             cache.copyRelaysFromTo(publicNote, innerGift)
             val innerGiftNote = cache.getOrCreateNote(innerGift.id)
             eventProcessor.consumeEvent(innerGift, innerGiftNote, publicNote)
+        }
+    }
+
+    private suspend fun processMarmotWelcome(
+        innerEvent: Event,
+        eventNote: Note,
+        publicNote: Note,
+    ) {
+        val manager = account.marmotManager ?: return
+        if (innerEvent !is WelcomeEvent) return
+
+        val nostrGroupId = innerEvent.nostrGroupId() ?: return
+
+        val result = manager.processWelcome(innerEvent, nostrGroupId)
+
+        when (result) {
+            is WelcomeResult.Joined -> {
+                Log.d("GiftWrapEventHandler", "Joined Marmot group ${result.nostrGroupId}")
+
+                // Rotate KeyPackages if needed
+                if (result.needsKeyPackageRotation) {
+                    account.publishMarmotKeyPackages()
+                }
+            }
+
+            is WelcomeResult.Error -> {
+                Log.w("GiftWrapEventHandler") { "Failed to process Marmot Welcome: ${result.message}" }
+            }
         }
     }
 
@@ -397,6 +441,58 @@ class LnZapEventHandler(
             if (req.isPrivateZap()) {
                 decryptionCache.delete(req)
             }
+        }
+    }
+}
+
+/**
+ * Handles inbound GroupEvent (kind:445) for Marmot MLS group messaging.
+ *
+ * Decrypts the outer ChaCha20-Poly1305 layer and the inner MLS layer,
+ * then indexes the resulting inner event in LocalCache.
+ */
+class GroupEventHandler(
+    private val account: Account,
+    private val cache: LocalCache,
+) : EventHandler<GroupEvent> {
+    override suspend fun add(
+        event: GroupEvent,
+        eventNote: Note,
+        publicNote: Note,
+    ) {
+        val manager = account.marmotManager ?: return
+
+        val groupId = event.groupId() ?: return
+        if (!manager.isMember(groupId)) return
+
+        try {
+            val result = manager.processGroupEvent(event)
+
+            when (result) {
+                is GroupEventResult.ApplicationMessage -> {
+                    // Parse the inner event JSON and index it
+                    val innerEvent = Event.fromJson(result.innerEventJson)
+                    if (cache.justConsume(innerEvent, null, false)) {
+                        val innerNote = cache.getOrCreateNote(innerEvent.id)
+                        innerNote.event = innerEvent
+                    }
+                }
+
+                is GroupEventResult.CommitProcessed -> {
+                    Log.d("GroupEventHandler", "Commit processed for group ${result.groupId}, epoch=${result.newEpoch}")
+                }
+
+                is GroupEventResult.CommitPending -> {
+                    Log.d("GroupEventHandler", "Commit pending for group ${result.groupId}, epoch=${result.epoch}")
+                }
+
+                is GroupEventResult.Error -> {
+                    Log.w("GroupEventHandler") { "Error processing GroupEvent: ${result.message}" }
+                }
+            }
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.e("GroupEventHandler", "Failed to process GroupEvent", e)
         }
     }
 }

@@ -339,6 +339,7 @@ class AppModules(
             otsResolverBuilder = { otsResolverBuilder.build() },
             cache = cache,
             client = client,
+            rootFilesDir = { appContext.filesDir },
         )
 
     val sessionManager =
