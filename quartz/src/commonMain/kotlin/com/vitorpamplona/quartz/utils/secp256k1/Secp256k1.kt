@@ -138,7 +138,12 @@ object Secp256k1 {
                 dBytes
             }
 
-        val rand = sha256(NONCE_PREFIX + t + pBytes + data)
+        val nonceInput = ByteArray(64 + 32 + 32 + data.size)
+        NONCE_PREFIX.copyInto(nonceInput, 0)
+        t.copyInto(nonceInput, 64)
+        pBytes.copyInto(nonceInput, 96)
+        data.copyInto(nonceInput, 128)
+        val rand = sha256(nonceInput)
         val k0 = ScalarN.reduce(U256.fromBytes(rand))
         require(!U256.isZero(k0))
 
@@ -149,12 +154,18 @@ object Secp256k1 {
         check(ECPoint.toAffine(rPoint, rx, ry))
 
         val k = if (ECPoint.hasEvenY(ry)) k0 else ScalarN.neg(k0)
-        val rBytes = U256.toBytes(rx)
-        val eHash = sha256(CHALLENGE_PREFIX + rBytes + pBytes + data)
+        val chalInput = ByteArray(64 + 32 + 32 + data.size)
+        CHALLENGE_PREFIX.copyInto(chalInput, 0)
+        U256.toBytesInto(rx, chalInput, 64)
+        pBytes.copyInto(chalInput, 96)
+        data.copyInto(chalInput, 128)
+        val eHash = sha256(chalInput)
         val e = ScalarN.reduce(U256.fromBytes(eHash))
 
-        val s = ScalarN.add(k, ScalarN.mul(e, d))
-        val sig = rBytes + U256.toBytes(s)
+        val sScalar = ScalarN.add(k, ScalarN.mul(e, d))
+        val sig = ByteArray(64)
+        U256.toBytesInto(rx, sig, 0)
+        U256.toBytesInto(sScalar, sig, 32)
 
         require(verifySchnorr(sig, data, pBytes)) { "Signature self-verification failed" }
         return sig
@@ -186,12 +197,18 @@ object Secp256k1 {
         val py = IntArray(8)
         if (!ECPoint.liftX(px, py, U256.fromBytes(pub))) return false
 
-        val r = U256.fromBytes(signature.copyOfRange(0, 32))
+        val r = U256.fromBytes(signature, 0)
         if (U256.cmp(r, FieldP.P) >= 0) return false
-        val s = U256.fromBytes(signature.copyOfRange(32, 64))
+        val s = U256.fromBytes(signature, 32)
         if (U256.cmp(s, ScalarN.N) >= 0) return false
 
-        val eHash = sha256(CHALLENGE_PREFIX + signature.copyOfRange(0, 32) + pub + data)
+        // Build challenge hash input in a single array: prefix(64) + r(32) + pub(32) + data(N)
+        val hashInput = ByteArray(64 + 32 + 32 + data.size)
+        CHALLENGE_PREFIX.copyInto(hashInput, 0)
+        signature.copyInto(hashInput, 64, 0, 32) // r bytes from signature
+        pub.copyInto(hashInput, 96)
+        data.copyInto(hashInput, 128)
+        val eHash = sha256(hashInput)
         val e = ScalarN.reduce(U256.fromBytes(eHash))
 
         // R = s·G + (-e)·P via Shamir's trick

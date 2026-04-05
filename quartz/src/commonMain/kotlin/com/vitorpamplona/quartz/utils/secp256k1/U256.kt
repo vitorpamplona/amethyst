@@ -216,11 +216,16 @@ internal object U256 {
     // ==================== Serialization ====================
 
     /** Decode a big-endian 32-byte array into little-endian IntArray(8). */
-    fun fromBytes(bytes: ByteArray): IntArray {
-        require(bytes.size == 32)
+    fun fromBytes(bytes: ByteArray): IntArray = fromBytes(bytes, 0)
+
+    /** Decode 32 big-endian bytes starting at [offset] into little-endian IntArray(8). */
+    fun fromBytes(
+        bytes: ByteArray,
+        offset: Int,
+    ): IntArray {
         val r = IntArray(8)
         for (i in 0 until 8) {
-            val o = 28 - i * 4
+            val o = offset + 28 - i * 4
             r[i] = ((bytes[o].toInt() and 0xFF) shl 24) or
                 ((bytes[o + 1].toInt() and 0xFF) shl 16) or
                 ((bytes[o + 2].toInt() and 0xFF) shl 8) or
