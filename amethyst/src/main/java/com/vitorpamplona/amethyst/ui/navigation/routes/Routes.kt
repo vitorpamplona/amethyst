@@ -263,6 +263,12 @@ sealed class Route {
         val id: String? = null,
     ) : Route()
 
+    @Serializable object MarmotGroupList : Route()
+
+    @Serializable data class MarmotGroupChat(
+        val nostrGroupId: String,
+    ) : Route()
+
     @Serializable data class NewGroupDM(
         val message: String? = null,
         val attachment: String? = null,

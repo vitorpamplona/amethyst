@@ -475,6 +475,9 @@ class GroupEventHandler(
                     if (cache.justConsume(innerEvent, null, false)) {
                         val innerNote = cache.getOrCreateNote(innerEvent.id)
                         innerNote.event = innerEvent
+
+                        // Track the message in the Marmot group chatroom
+                        account.marmotGroupList.addMessage(result.groupId, innerNote)
                     }
                 }
 

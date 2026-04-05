@@ -376,6 +376,9 @@ class Account(
     val draftsDecryptionCache = DraftEventCache(signer)
 
     override val chatroomList = cache.getOrCreateChatroomList(signer.pubKey)
+    override val marmotGroupList =
+        com.vitorpamplona.amethyst.commons.model.marmotGroups
+            .MarmotGroupList()
 
     val newNotesPreProcessor = EventProcessor(this, cache)
 
