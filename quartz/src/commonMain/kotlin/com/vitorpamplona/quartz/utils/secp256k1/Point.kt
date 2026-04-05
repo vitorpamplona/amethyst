@@ -358,13 +358,12 @@ internal object ECPoint {
     /**
      * General scalar multiplication: out = scalar · p.
      *
-     * Uses a 4-bit windowed method: precomputes [1P, 2P, ..., 16P], then processes
-     * the scalar 4 bits (one nibble) at a time from MSB to LSB:
-     *   for each nibble: double 4 times, then add table[nibble] if non-zero.
+     * Uses GLV endomorphism + wNAF-5 to halve doublings from 256 to ~130:
+     *   scalar = k₁ + k₂·λ (mod n), where k₁, k₂ are ~128 bits
+     *   scalar·P = k₁·P + k₂·λ(P), with λ(P) = (β·X, Y, Z)
      *
-     * This requires 64 iterations with 4 doublings each (256 total) and ~60 additions
-     * (on average 15/16 of nibbles are non-zero). All operations use full Jacobian
-     * arithmetic since the P table is built on-the-fly without inversions.
+     * The two ~128-bit half-scalars are wNAF-5 encoded and processed in a single
+     * pass of ~130 shared doublings. P-side uses Jacobian tables (no inversions).
      */
     fun mul(
         out: MutablePoint,
@@ -376,30 +375,57 @@ internal object ECPoint {
             return
         }
 
-        val table = Array(16) { MutablePoint() }
-        table[0].copyFrom(p)
-        for (i in 1 until 16) addPoints(table[i], table[i - 1], p)
+        val w = 5
+        val tableSize = 1 shl (w - 2) // 8 entries
+
+        // Split scalar via GLV: scalar = k₁ + k₂·λ
+        val split = Glv.splitScalar(scalar)
+        val wnaf1 = Glv.wnaf(split.k1, w, 129)
+        val wnaf2 = Glv.wnaf(split.k2, w, 129)
+
+        // P odd-multiples [1P, 3P, 5P, ..., 15P] via 2P stepping
+        val p2 = MutablePoint()
+        doublePoint(p2, p)
+        val pOdd = Array(tableSize) { MutablePoint() }
+        pOdd[0].copyFrom(p)
+        for (i in 1 until tableSize) addPoints(pOdd[i], pOdd[i - 1], p2)
+
+        // λ(P) odd-multiples: (β·X, Y, Z) in Jacobian
+        val pLamOdd =
+            Array(tableSize) { i ->
+                val lp = MutablePoint()
+                FieldP.mul(lp.x, pOdd[i].x, Glv.BETA)
+                pOdd[i].y.copyInto(lp.y)
+                pOdd[i].z.copyInto(lp.z)
+                lp
+            }
+
+        // Find highest non-zero digit
+        var bits = maxOf(wnaf1.size, wnaf2.size)
+        while (bits > 0) {
+            val b = bits - 1
+            if ((b < wnaf1.size && wnaf1[b] != 0) || (b < wnaf2.size && wnaf2[b] != 0)) break
+            bits--
+        }
 
         out.setInfinity()
         val tmp = MutablePoint()
-        for (nibbleIdx in 63 downTo 0) {
+        val negJac = MutablePoint()
+
+        for (i in bits - 1 downTo 0) {
             doublePoint(out, out)
-            doublePoint(out, out)
-            doublePoint(out, out)
-            doublePoint(out, out)
-            val nib = U256.getNibble(scalar, nibbleIdx)
-            if (nib != 0) {
-                addPoints(tmp, out, table[nib - 1])
-                out.copyFrom(tmp)
-            }
+            addWnafJacobian(out, tmp, negJac, wnaf1, i, pOdd, split.negK1)
+            addWnafJacobian(out, tmp, negJac, wnaf2, i, pLamOdd, split.negK2)
         }
     }
 
     /**
      * Generator multiplication: out = scalar · G.
      *
-     * Same 4-bit windowed algorithm as [mul], but uses the precomputed affine G table
-     * for faster mixed addition (8M+3S instead of 11M+5S per addition).
+     * Uses GLV endomorphism + wNAF-5 with precomputed affine G and λ(G) tables:
+     *   scalar = k₁ + k₂·λ, then scalar·G = k₁·G + k₂·λ(G)
+     * Both tables are cached (lazy static), so no per-call table building.
+     * Mixed Jacobian+Affine addition (8M+3S) for all lookups.
      */
     fun mulG(
         out: MutablePoint,
@@ -409,19 +435,30 @@ internal object ECPoint {
             out.setInfinity()
             return
         }
-        val table = gTable
+
+        val w = 5
+        val split = Glv.splitScalar(scalar)
+        val wnaf1 = Glv.wnaf(split.k1, w, 129)
+        val wnaf2 = Glv.wnaf(split.k2, w, 129)
+
+        val gOdd = Array(8) { gTable[it * 2] }
+        val gLam = gLamTable
+
+        var bits = maxOf(wnaf1.size, wnaf2.size)
+        while (bits > 0) {
+            val b = bits - 1
+            if ((b < wnaf1.size && wnaf1[b] != 0) || (b < wnaf2.size && wnaf2[b] != 0)) break
+            bits--
+        }
+
         out.setInfinity()
         val tmp = MutablePoint()
-        for (nibbleIdx in 63 downTo 0) {
+        val negY = IntArray(8)
+
+        for (i in bits - 1 downTo 0) {
             doublePoint(out, out)
-            doublePoint(out, out)
-            doublePoint(out, out)
-            doublePoint(out, out)
-            val nib = U256.getNibble(scalar, nibbleIdx)
-            if (nib != 0) {
-                addMixed(tmp, out, table[nib - 1].x, table[nib - 1].y)
-                out.copyFrom(tmp)
-            }
+            addWnafMixed(out, tmp, negY, wnaf1, i, gOdd, split.negK1)
+            addWnafMixed(out, tmp, negY, wnaf2, i, gLam, split.negK2)
         }
     }
 
