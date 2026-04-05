@@ -27,14 +27,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.GroupAdd
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -61,7 +59,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.marmot.GroupMemberInfo
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -170,9 +170,8 @@ fun MarmotGroupInfoScreen(
                 MemberRow(
                     member = member,
                     isMe = member.pubkey == myPubkey,
-                    onClick = {
-                        nav.nav(Route.Profile(member.pubkey))
-                    },
+                    accountViewModel = accountViewModel,
+                    nav = nav,
                 )
                 HorizontalDivider()
             }
@@ -223,36 +222,40 @@ fun MarmotGroupInfoScreen(
 fun MemberRow(
     member: GroupMemberInfo,
     isMe: Boolean,
-    onClick: () -> Unit,
+    accountViewModel: AccountViewModel,
+    nav: INav,
 ) {
     Row(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .clickable(onClick = onClick)
+                .clickable { nav.nav(Route.Profile(member.pubkey)) }
                 .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Icon(
-            imageVector = Icons.Default.Person,
-            contentDescription = null,
-            modifier = Modifier.size(36.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        UserPicture(
+            userHex = member.pubkey,
+            size = 36.dp,
+            accountViewModel = accountViewModel,
+            nav = nav,
         )
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text =
-                    if (isMe) {
-                        "${member.pubkey.take(16)}... (you)"
-                    } else {
-                        "${member.pubkey.take(16)}..."
-                    },
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                fontWeight = if (isMe) FontWeight.Bold else FontWeight.Normal,
-            )
+            LoadUser(baseUserHex = member.pubkey, accountViewModel = accountViewModel) { user ->
+                val displayName = user?.toBestDisplayName() ?: "${member.pubkey.take(16)}..."
+                Text(
+                    text =
+                        if (isMe) {
+                            "$displayName (you)"
+                        } else {
+                            displayName
+                        },
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    fontWeight = if (isMe) FontWeight.Bold else FontWeight.Normal,
+                )
+            }
             Text(
                 text = "Leaf #${member.leafIndex}",
                 style = MaterialTheme.typography.bodySmall,

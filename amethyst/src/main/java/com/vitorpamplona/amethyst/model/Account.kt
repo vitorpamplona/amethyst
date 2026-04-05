@@ -1732,6 +1732,60 @@ class Account(
     }
 
     /**
+     * Fetch a user's KeyPackage from relays and add them to a Marmot group.
+     * Returns a status message describing the outcome.
+     */
+    @OptIn(kotlin.io.encoding.ExperimentalEncodingApi::class)
+    suspend fun fetchKeyPackageAndAddMember(
+        nostrGroupId: HexKey,
+        memberPubKey: HexKey,
+    ): String {
+        val manager = marmotManager ?: return "Error: Marmot not initialized"
+        if (!isWriteable()) return "Error: Account is read-only"
+
+        // Build filter for the member's KeyPackages
+        val filter = manager.subscriptionManager.keyPackageFilter(memberPubKey)
+        val relays = outboxRelays.flow.value
+
+        // Query across outbox relays
+        val filterMap = relays.associateWith { listOf(filter) }
+
+        val event =
+            client.fetchFirst(
+                filters = filterMap,
+            )
+
+        if (event == null) {
+            return "Error: No KeyPackage found for this user. They may not have published one yet."
+        }
+
+        if (event !is com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent) {
+            return "Error: Unexpected event type received"
+        }
+
+        val keyPackageBase64 = event.keyPackageBase64()
+        if (keyPackageBase64.isBlank()) {
+            return "Error: KeyPackage event has empty content"
+        }
+
+        val keyPackageBytes =
+            kotlin.io.encoding.Base64
+                .decode(keyPackageBase64)
+        val keyPackageEventId = event.id
+        val groupRelays = relays.toList()
+
+        addMarmotGroupMember(
+            nostrGroupId = nostrGroupId,
+            memberPubKey = memberPubKey,
+            keyPackageBytes = keyPackageBytes,
+            keyPackageEventId = keyPackageEventId,
+            groupRelays = groupRelays,
+        )
+
+        return "Success: Member added to group"
+    }
+
+    /**
      * Add a member to a Marmot MLS group.
      * Publishes the commit GroupEvent, then sends the Welcome gift wrap.
      */

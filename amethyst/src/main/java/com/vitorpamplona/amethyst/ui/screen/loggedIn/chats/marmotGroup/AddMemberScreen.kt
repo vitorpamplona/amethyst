@@ -65,21 +65,23 @@ fun AddMemberScreen(
                 onCancel = { nav.popBack() },
                 onPost = {
                     isAdding = true
-                    statusMessage = "Looking up KeyPackage..."
+                    val pubkey = resolvePubkey(memberInput)
+                    if (pubkey == null) {
+                        statusMessage = "Error: Invalid public key format"
+                        return@ActionTopBar
+                    }
+                    isAdding = true
+                    statusMessage = "Fetching KeyPackage for ${pubkey.take(8)}..."
                     scope.launch(Dispatchers.IO) {
                         try {
-                            val pubkey = resolvePubkey(memberInput)
-                            if (pubkey == null) {
-                                statusMessage = "Error: Invalid public key format"
+                            val result =
+                                accountViewModel.addMarmotGroupMember(nostrGroupId, pubkey)
+                            statusMessage = result
+                            if (result.startsWith("Success")) {
+                                nav.popBack()
+                            } else {
                                 isAdding = false
-                                return@launch
                             }
-                            statusMessage = "Fetching KeyPackage for ${pubkey.take(8)}..."
-                            // TODO: Fetch KeyPackage from relays and call addMarmotGroupMember
-                            statusMessage =
-                                "Error: KeyPackage fetch not yet implemented. " +
-                                "The member's KeyPackage (kind:30443) must be fetched from relays."
-                            isAdding = false
                         } catch (e: Exception) {
                             statusMessage = "Error: ${e.message}"
                             isAdding = false

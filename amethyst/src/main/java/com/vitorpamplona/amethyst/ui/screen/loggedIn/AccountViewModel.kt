@@ -1471,6 +1471,11 @@ class AccountViewModel(
 
     fun marmotGroupMembers(nostrGroupId: String): List<com.vitorpamplona.amethyst.commons.marmot.GroupMemberInfo> = account.marmotManager?.memberPubkeys(nostrGroupId) ?: emptyList()
 
+    suspend fun addMarmotGroupMember(
+        nostrGroupId: String,
+        memberPubKey: String,
+    ): String = account.fetchKeyPackageAndAddMember(nostrGroupId, memberPubKey)
+
     override fun onCleared() {
         Log.d("AccountViewModel", "onCleared")
         callController?.cleanup()
