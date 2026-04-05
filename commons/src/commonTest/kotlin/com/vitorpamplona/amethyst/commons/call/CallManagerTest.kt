@@ -98,6 +98,10 @@ class CallManagerTest {
     }
 
     // ---- Event construction helpers ----
+    // These use the real event builders from quartz so that tag structures
+    // stay in sync with the production code.  The builder returns an
+    // EventTemplate (no pubKey/id/sig); we wrap the template fields into
+    // a concrete event instance with a test pubKey and dummy id/sig.
 
     private var eventCounter = 0
 
@@ -109,14 +113,8 @@ class CallManagerTest {
         sdp: String = sdpOffer,
         createdAt: Long = TimeUtils.now(),
     ): CallOfferEvent {
-        val tags =
-            arrayOf(
-                arrayOf("p", to),
-                arrayOf("call-id", callId),
-                arrayOf("call-type", callType.value),
-                arrayOf("alt", "WebRTC call offer"),
-            )
-        return CallOfferEvent("offer${eventCounter++}", from, createdAt, tags, sdp, "sig")
+        val t = CallOfferEvent.build(sdp, to, callId, callType)
+        return CallOfferEvent("offer${eventCounter++}", from, createdAt, t.tags, t.content, "sig")
     }
 
     private fun makeGroupOffer(
@@ -127,15 +125,8 @@ class CallManagerTest {
         sdp: String = sdpOffer,
         createdAt: Long = TimeUtils.now(),
     ): CallOfferEvent {
-        val pTags = members.map { arrayOf("p", it) }.toTypedArray()
-        val tags =
-            pTags +
-                arrayOf(
-                    arrayOf("call-id", callId),
-                    arrayOf("call-type", callType.value),
-                    arrayOf("alt", "WebRTC call offer"),
-                )
-        return CallOfferEvent("offer${eventCounter++}", from, createdAt, tags, sdp, "sig")
+        val t = CallOfferEvent.build(sdp, members, callId, callType)
+        return CallOfferEvent("offer${eventCounter++}", from, createdAt, t.tags, t.content, "sig")
     }
 
     private fun makeAnswer(
@@ -145,13 +136,8 @@ class CallManagerTest {
         sdp: String = sdpAnswer,
         createdAt: Long = TimeUtils.now(),
     ): CallAnswerEvent {
-        val tags =
-            arrayOf(
-                arrayOf("p", to),
-                arrayOf("call-id", callId),
-                arrayOf("alt", "WebRTC call answer"),
-            )
-        return CallAnswerEvent("answer${eventCounter++}", from, createdAt, tags, sdp, "sig")
+        val t = CallAnswerEvent.build(sdp, to, callId)
+        return CallAnswerEvent("answer${eventCounter++}", from, createdAt, t.tags, t.content, "sig")
     }
 
     private fun makeGroupAnswer(
@@ -161,14 +147,8 @@ class CallManagerTest {
         sdp: String = sdpAnswer,
         createdAt: Long = TimeUtils.now(),
     ): CallAnswerEvent {
-        val pTags = members.map { arrayOf("p", it) }.toTypedArray()
-        val tags =
-            pTags +
-                arrayOf(
-                    arrayOf("call-id", callId),
-                    arrayOf("alt", "WebRTC call answer"),
-                )
-        return CallAnswerEvent("answer${eventCounter++}", from, createdAt, tags, sdp, "sig")
+        val t = CallAnswerEvent.build(sdp, members, callId)
+        return CallAnswerEvent("answer${eventCounter++}", from, createdAt, t.tags, t.content, "sig")
     }
 
     private fun makeHangup(
@@ -178,13 +158,8 @@ class CallManagerTest {
         reason: String = "",
         createdAt: Long = TimeUtils.now(),
     ): CallHangupEvent {
-        val tags =
-            arrayOf(
-                arrayOf("p", to),
-                arrayOf("call-id", callId),
-                arrayOf("alt", "WebRTC call hangup"),
-            )
-        return CallHangupEvent("hangup${eventCounter++}", from, createdAt, tags, reason, "sig")
+        val t = CallHangupEvent.build(to, callId, reason)
+        return CallHangupEvent("hangup${eventCounter++}", from, createdAt, t.tags, t.content, "sig")
     }
 
     private fun makeReject(
@@ -194,13 +169,8 @@ class CallManagerTest {
         reason: String = "",
         createdAt: Long = TimeUtils.now(),
     ): CallRejectEvent {
-        val tags =
-            arrayOf(
-                arrayOf("p", to),
-                arrayOf("call-id", callId),
-                arrayOf("alt", "WebRTC call rejection"),
-            )
-        return CallRejectEvent("reject${eventCounter++}", from, createdAt, tags, reason, "sig")
+        val t = CallRejectEvent.build(to, callId, reason)
+        return CallRejectEvent("reject${eventCounter++}", from, createdAt, t.tags, t.content, "sig")
     }
 
     private fun makeIceCandidate(
@@ -209,14 +179,9 @@ class CallManagerTest {
         callId: String = this.callId,
         createdAt: Long = TimeUtils.now(),
     ): CallIceCandidateEvent {
-        val json = """{"candidate":"candidate:1","sdpMid":"0","sdpMLineIndex":0}"""
-        val tags =
-            arrayOf(
-                arrayOf("p", to),
-                arrayOf("call-id", callId),
-                arrayOf("alt", "WebRTC ICE candidate"),
-            )
-        return CallIceCandidateEvent("ice${eventCounter++}", from, createdAt, tags, json, "sig")
+        val json = CallIceCandidateEvent.serializeCandidate("candidate:1", "0", 0)
+        val t = CallIceCandidateEvent.build(json, to, callId)
+        return CallIceCandidateEvent("ice${eventCounter++}", from, createdAt, t.tags, t.content, "sig")
     }
 
     private fun makeRenegotiate(
@@ -226,13 +191,8 @@ class CallManagerTest {
         sdp: String = sdpOffer,
         createdAt: Long = TimeUtils.now(),
     ): CallRenegotiateEvent {
-        val tags =
-            arrayOf(
-                arrayOf("p", to),
-                arrayOf("call-id", callId),
-                arrayOf("alt", "WebRTC call renegotiation"),
-            )
-        return CallRenegotiateEvent("renego${eventCounter++}", from, createdAt, tags, sdp, "sig")
+        val t = CallRenegotiateEvent.build(sdp, to, callId)
+        return CallRenegotiateEvent("renego${eventCounter++}", from, createdAt, t.tags, t.content, "sig")
     }
 
     // ========================================================================
