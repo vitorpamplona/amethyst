@@ -34,13 +34,14 @@ package com.vitorpamplona.quartz.utils.secp256k1
 // algorithm with precomputed lattice basis vectors.
 //
 // wNAF (windowed Non-Adjacent Form) is a scalar encoding where non-zero digits are odd
-// and separated by at least w-1 zero digits. Width-5 wNAF uses digits ±{1,3,...,15}
-// with a table of 8 odd multiples. For a 128-bit scalar, this produces ~26 non-zero
-// digits instead of ~60 for simple 4-bit windowing.
+// and separated by at least w-1 zero digits. Width-w wNAF uses digits ±{1,3,...,2^(w-1)-1}
+// with a table of 2^(w-2) odd multiples. For a 128-bit scalar with width 5, this produces
+// ~26 non-zero digits; with width 8, ~16 digits.
 //
-// Together, GLV + wNAF-5 enables signature verification (s·G + e·P) as 4 interleaved
-// 128-bit streams with ~130 shared doublings and ~44 additions, roughly halving the
-// cost compared to two separate 256-bit scalar multiplications.
+// These techniques are used throughout the secp256k1 package:
+// - mul (arbitrary point): GLV + wNAF-5, ~130 shared doublings
+// - mulG (generator): Comb method (Point.kt), only 3 doublings + ~43 table lookups
+// - mulDoubleG (verify): Strauss + GLV + wNAF, 4 interleaved 128-bit streams
 // =====================================================================================
 
 /**

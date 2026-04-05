@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.utils.secp256k1
 
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.utils.Secp256k1Instance
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -279,5 +280,60 @@ class Secp256k1Test {
         val sig1 = Secp256k1.signSchnorr(msg, privKey, null)
         val sig2 = Secp256k1.signSchnorr(msg, privKey, null)
         assertEquals(sig1.toList(), sig2.toList())
+    }
+
+    @Test
+    fun ecdhXOnlyMatchesTweakMul() {
+        // ecdhXOnly should produce the same x as pubKeyTweakMulCompact
+        val privKey =
+            "67E56582298859DDAE725F972992A07C6C4FB9F62A8FFF58CE3CA926A1063530"
+                .hexToByteArray()
+        val pubKeyXOnly =
+            Secp256k1Instance
+                .compressedPubKeyFor(
+                    "3982F19BEF1615BCCFBB05E321C10E1D4CBA3DF0E841C2E41EEB6016347653C3".hexToByteArray(),
+                ).copyOfRange(1, 33)
+        val viaEcdh =
+            com.vitorpamplona.quartz.utils.secp256k1.Secp256k1
+                .ecdhXOnly(pubKeyXOnly, privKey)
+        val viaTweak = Secp256k1Instance.pubKeyTweakMulCompact(pubKeyXOnly, privKey)
+        assertEquals(viaEcdh.toHexKey(), viaTweak.toHexKey())
+    }
+
+    @Test
+    fun ecdhXOnlySymmetric() {
+        // A→B and B→A should produce the same shared secret
+        val privA =
+            "67E56582298859DDAE725F972992A07C6C4FB9F62A8FFF58CE3CA926A1063530"
+                .hexToByteArray()
+        val privB =
+            "3982F19BEF1615BCCFBB05E321C10E1D4CBA3DF0E841C2E41EEB6016347653C3"
+                .hexToByteArray()
+        val pubA = Secp256k1Instance.compressedPubKeyFor(privA).copyOfRange(1, 33)
+        val pubB = Secp256k1Instance.compressedPubKeyFor(privB).copyOfRange(1, 33)
+        val secretAB =
+            com.vitorpamplona.quartz.utils.secp256k1.Secp256k1
+                .ecdhXOnly(pubB, privA)
+        val secretBA =
+            com.vitorpamplona.quartz.utils.secp256k1.Secp256k1
+                .ecdhXOnly(pubA, privB)
+        assertEquals(secretAB.toHexKey(), secretBA.toHexKey())
+    }
+
+    @Test
+    fun taggedHashConsistency() {
+        // tagged_hash("BIP0340/challenge", msg) should equal SHA256(SHA256(tag) || SHA256(tag) || msg)
+        val tag = "BIP0340/challenge"
+        val msg = ByteArray(32) { 0x42 }
+        val result =
+            com.vitorpamplona.quartz.utils.secp256k1.Secp256k1
+                .taggedHash(tag, msg)
+        val tagHash =
+            com.vitorpamplona.quartz.utils.sha256
+                .sha256(tag.encodeToByteArray())
+        val expected =
+            com.vitorpamplona.quartz.utils.sha256
+                .sha256(tagHash + tagHash + msg)
+        assertEquals(expected.toHexKey(), result.toHexKey())
     }
 }

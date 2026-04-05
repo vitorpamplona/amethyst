@@ -205,4 +205,34 @@ class U256Test {
         U256.xorTo(out, hex("ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00"), hex("0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f"))
         assertEquals("f00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00f", toHex(out))
     }
+
+    @Test
+    fun toBytesIntoAtOffset() {
+        val a = hex("0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20")
+        val dest = ByteArray(64)
+        U256.toBytesInto(a, dest, 16) // write at offset 16
+        // First 16 bytes should be zero
+        for (i in 0 until 16) assertEquals(0, dest[i].toInt())
+        // Bytes 16-47 should contain the value
+        assertEquals(0x01, dest[16].toInt() and 0xFF)
+        assertEquals(0x20, dest[47].toInt() and 0xFF)
+    }
+
+    @Test
+    fun copyIntoTest() {
+        val src = hex("67e56582298859ddae725f972992a07c6c4fb9f62a8fff58ce3ca926a1063530")
+        val dst = IntArray(8)
+        U256.copyInto(dst, src)
+        for (i in 0 until 8) assertEquals(src[i], dst[i])
+    }
+
+    @Test
+    fun fromBytesWithOffset() {
+        val fullArray = ByteArray(64)
+        // Put a known value at offset 32
+        val expected = hex("67e56582298859ddae725f972992a07c6c4fb9f62a8fff58ce3ca926a1063530")
+        U256.toBytesInto(expected, fullArray, 32)
+        val decoded = U256.fromBytes(fullArray, 32)
+        for (i in 0 until 8) assertEquals(expected[i], decoded[i])
+    }
 }
