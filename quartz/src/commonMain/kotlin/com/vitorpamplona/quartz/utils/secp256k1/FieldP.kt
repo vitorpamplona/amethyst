@@ -150,42 +150,157 @@ internal object FieldP {
     }
 
     // ==================== Inversion and square root ====================
+    //
+    // Both use hand-crafted addition chains that are much faster than generic
+    // square-and-multiply. The key insight is that p-2 and (p+1)/4 have long
+    // runs of 1-bits in binary (since p = 2^256 - 2^32 - 977 ≈ 2^256).
+    //
+    // Generic powModP would need ~255 squarings + ~248 multiplications for inv,
+    // or ~253 squarings + ~246 multiplications for sqrt.
+    //
+    // The optimized chains need only ~255 squarings + ~14 multiplications each,
+    // saving ~230 multiplications per call. Since verify does one inv + one sqrt,
+    // this saves ~460 field multiplications (29,440 inner products) per verify.
+    //
+    // The chains build up power-of-2 exponents by repeated squaring, then
+    // combine them with a few multiplications. For example, to compute x^(2^22-1),
+    // first compute x^(2^11-1), then square it 11 times and multiply by itself.
 
     /**
-     * out = a^(-1) mod p using Fermat's little theorem: a^(p-2) mod p.
+     * out = a^(-1) mod p via Fermat: a^(p-2) mod p.
      *
-     * This computes the modular inverse via exponentiation by repeated squaring.
-     * It requires ~255 squarings and ~255 multiplications (one per bit of p-2).
+     * p-2 = 0xFFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFE FFFFFC2D
+     * In binary: 224 ones, then 0, then 22 ones, then 01000101101 (the tail).
      *
-     * Called once per signature verify (in Jacobian-to-affine conversion) and once
-     * per public key decompression (in square root).
+     * Addition chain: 255 squarings + 15 multiplications (vs 503 generic).
      */
     fun inv(
         out: IntArray,
         a: IntArray,
     ) {
         require(!U256.isZero(a))
-        powModP(out, a, P_MINUS_2)
+        // Build up common subexpressions via the addition chain
+        val x2 = IntArray(8)
+        val x3 = IntArray(8)
+        val x6 = IntArray(8)
+        val x9 = IntArray(8)
+        val x11 = IntArray(8)
+        val x22 = IntArray(8)
+        val x44 = IntArray(8)
+        val x88 = IntArray(8)
+        val x176 = IntArray(8)
+        val x220 = IntArray(8)
+        val x223 = IntArray(8)
+
+        // Build chain: xN = a^(2^N - 1) by repeated squaring and multiplication
+        sqr(x2, a)
+        mul(x2, x2, a) // a^(2²-1) = a³
+        sqr(x3, x2)
+        mul(x3, x3, a) // a^(2³-1) = a⁷
+        sqrN(x6, x3, 3)
+        mul(x6, x6, x3) // a^(2⁶-1)
+        sqrN(x9, x6, 3)
+        mul(x9, x9, x3) // a^(2⁹-1)
+        sqrN(x11, x9, 2)
+        mul(x11, x11, x2) // a^(2¹¹-1)
+        sqrN(x22, x11, 11)
+        mul(x22, x22, x11) // a^(2²²-1)
+        sqrN(x44, x22, 22)
+        mul(x44, x44, x22) // a^(2⁴⁴-1)
+        sqrN(x88, x44, 44)
+        mul(x88, x88, x44) // a^(2⁸⁸-1)
+        sqrN(x176, x88, 88)
+        mul(x176, x176, x88) // a^(2¹⁷⁶-1)
+        sqrN(x220, x176, 44)
+        mul(x220, x220, x44) // a^(2²²⁰-1)
+        sqrN(x223, x220, 3)
+        mul(x223, x223, x3) // a^(2²²³-1)
+
+        // Tail of p-2: ((2²²³-1)*2²³ + (2²²-1)) * 2⁵ + 1) * 2³ + 3) * 2² + 1
+        sqrN(out, x223, 23)
+        mul(out, out, x22)
+        sqrN(out, out, 5)
+        mul(out, out, a)
+        sqrN(out, out, 3)
+        mul(out, out, x2)
+        sqrN(out, out, 2)
+        mul(out, out, a)
     }
 
     /**
      * out = √a mod p, returns false if a is not a quadratic residue.
      *
-     * Since p ≡ 3 (mod 4), the square root is simply a^((p+1)/4) mod p.
-     * We verify the result by checking that out² = a (mod p).
-     * Used to decompress public keys: given x, compute y from y² = x³ + 7.
+     * Computes a^((p+1)/4) mod p using an optimized addition chain.
+     * (p+1)/4 = 0x3FFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF BFFFFF0C
+     *
+     * Addition chain: 253 squarings + 13 multiplications (vs 499 generic).
      */
     fun sqrt(
         out: IntArray,
         a: IntArray,
     ): Boolean {
-        powModP(out, a, P_PLUS_1_DIV_4)
+        val x2 = IntArray(8)
+        val x3 = IntArray(8)
+        val x6 = IntArray(8)
+        val x9 = IntArray(8)
+        val x11 = IntArray(8)
+        val x22 = IntArray(8)
+        val x44 = IntArray(8)
+        val x88 = IntArray(8)
+        val x176 = IntArray(8)
+        val x220 = IntArray(8)
+        val x223 = IntArray(8)
+
+        // Same chain as inv up to x223
+        sqr(x2, a)
+        mul(x2, x2, a)
+        sqr(x3, x2)
+        mul(x3, x3, a)
+        sqrN(x6, x3, 3)
+        mul(x6, x6, x3)
+        sqrN(x9, x6, 3)
+        mul(x9, x9, x3)
+        sqrN(x11, x9, 2)
+        mul(x11, x11, x2)
+        sqrN(x22, x11, 11)
+        mul(x22, x22, x11)
+        sqrN(x44, x22, 22)
+        mul(x44, x44, x22)
+        sqrN(x88, x44, 44)
+        mul(x88, x88, x44)
+        sqrN(x176, x88, 88)
+        mul(x176, x176, x88)
+        sqrN(x220, x176, 44)
+        mul(x220, x220, x44)
+        sqrN(x223, x220, 3)
+        mul(x223, x223, x3)
+
+        // Tail of (p+1)/4: after the 223 ones, the remaining bits are 0_BFFFFF0C.
+        // (p+1)/4 = (2^223-1) * 2^31 + 0x3FFFFF0C
+        //         = ((2^223-1)*2^23 + (2^22-1)) * 2^6 + 3) * 2^2
+        sqrN(out, x223, 23)
+        mul(out, out, x22) // (2^223-1)*2^23 + (2^22-1)
+        sqrN(out, out, 6)
+        mul(out, out, x2) // * 2^6 + 3
+        sqrN(out, out, 2) // * 2^2
+
+        // Verify: out² = a mod p
         val check = IntArray(8)
         mul(check, out, out)
         val ar = IntArray(8)
         U256.copyInto(ar, a)
         reduceSelf(ar)
         return U256.cmp(check, ar) == 0
+    }
+
+    /** Helper: square n times in a row. out = a^(2^n). */
+    private fun sqrN(
+        out: IntArray,
+        a: IntArray,
+        n: Int,
+    ) {
+        U256.copyInto(out, a)
+        repeat(n) { sqr(out, out) }
     }
 
     // ==================== Reduction ====================
@@ -249,56 +364,6 @@ internal object FieldP {
     }
 
     // ==================== Internal exponentiation ====================
-
-    /** Compute base^exp mod p using left-to-right binary exponentiation (square-and-multiply). */
-    private fun powModP(
-        out: IntArray,
-        base: IntArray,
-        exp: IntArray,
-    ) {
-        val b = IntArray(8)
-        U256.copyInto(b, base)
-        var highBit = 255
-        while (highBit >= 0 && !U256.testBit(exp, highBit)) highBit--
-        if (highBit < 0) {
-            out[0] = 1
-            for (i in 1 until 8) out[i] = 0
-            return
-        }
-        U256.copyInto(out, b) // Start with base (MSB is always 1)
-        for (i in highBit - 1 downTo 0) {
-            sqr(out, out)
-            if (U256.testBit(exp, i)) mul(out, out, b)
-        }
-    }
-
-    // ==================== Constants ====================
-
-    /** p - 2: exponent for Fermat inversion */
-    private val P_MINUS_2 =
-        intArrayOf(
-            0xFFFFFC2D.toInt(),
-            0xFFFFFFFE.toInt(),
-            0xFFFFFFFF.toInt(),
-            0xFFFFFFFF.toInt(),
-            0xFFFFFFFF.toInt(),
-            0xFFFFFFFF.toInt(),
-            0xFFFFFFFF.toInt(),
-            0xFFFFFFFF.toInt(),
-        )
-
-    /** (p + 1) / 4: exponent for square root when p ≡ 3 (mod 4) */
-    private val P_PLUS_1_DIV_4 =
-        intArrayOf(
-            0xBFFFFF0C.toInt(),
-            0xFFFFFFFF.toInt(),
-            0xFFFFFFFF.toInt(),
-            0xFFFFFFFF.toInt(),
-            0xFFFFFFFF.toInt(),
-            0xFFFFFFFF.toInt(),
-            0xFFFFFFFF.toInt(),
-            0x3FFFFFFF,
-        )
 
     // ==================== Convenience wrappers (allocating — for non-hot paths) ====================
 
