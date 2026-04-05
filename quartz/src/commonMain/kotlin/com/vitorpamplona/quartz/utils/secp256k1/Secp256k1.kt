@@ -76,13 +76,30 @@ object Secp256k1 {
         return ECPoint.serializeUncompressed(x, y)
     }
 
-    /** Compress a public key to 33 bytes (02/03 || x). Accepts 33 or 65 byte input. */
-    fun pubKeyCompress(pubkey: ByteArray): ByteArray {
-        val x = IntArray(8)
-        val y = IntArray(8)
-        check(ECPoint.parsePublicKey(pubkey, x, y))
-        return ECPoint.serializeCompressed(x, y)
-    }
+    /**
+     * Compress a public key to 33 bytes (02/03 || x). Accepts 33 or 65 byte input.
+     *
+     * For uncompressed keys (04 prefix): reads the y-coordinate's parity from the last
+     * byte and copies the x-coordinate directly — no field arithmetic needed.
+     * For already-compressed keys: returns the input unchanged.
+     */
+    fun pubKeyCompress(pubkey: ByteArray): ByteArray =
+        when {
+            pubkey.size == 65 && pubkey[0] == 0x04.toByte() -> {
+                val result = ByteArray(33)
+                result[0] = if (pubkey[64].toInt() and 1 == 0) 0x02 else 0x03
+                pubkey.copyInto(result, 1, 1, 33)
+                result
+            }
+
+            pubkey.size == 33 && (pubkey[0] == 0x02.toByte() || pubkey[0] == 0x03.toByte()) -> {
+                pubkey
+            }
+
+            else -> {
+                error("Invalid public key: size=${pubkey.size}")
+            }
+        }
 
     /** Verify that a byte array is a valid secret key (32 bytes, 0 < value < n). */
     fun secKeyVerify(seckey: ByteArray): Boolean {
