@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
@@ -41,6 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
@@ -72,7 +74,12 @@ fun MarmotGroupChatScreen(
                     }
                 },
                 title = {
-                    Column {
+                    Column(
+                        modifier =
+                            Modifier.clickable {
+                                nav.nav(Route.MarmotGroupInfo(nostrGroupId))
+                            },
+                    ) {
                         Text(displayName ?: "Marmot Group")
                         if (memberCount > 0) {
                             Text(

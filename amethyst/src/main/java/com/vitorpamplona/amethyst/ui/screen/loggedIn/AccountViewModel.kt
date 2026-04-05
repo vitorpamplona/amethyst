@@ -1464,6 +1464,13 @@ class AccountViewModel(
         account.publishMarmotKeyPackage()
     }
 
+    suspend fun leaveMarmotGroup(nostrGroupId: String) {
+        val relays = account.outboxRelays.flow.value
+        account.leaveMarmotGroup(nostrGroupId, relays)
+    }
+
+    fun marmotGroupMembers(nostrGroupId: String): List<com.vitorpamplona.amethyst.commons.marmot.GroupMemberInfo> = account.marmotManager?.memberPubkeys(nostrGroupId) ?: emptyList()
+
     override fun onCleared() {
         Log.d("AccountViewModel", "onCleared")
         callController?.cleanup()

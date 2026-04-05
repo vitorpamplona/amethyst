@@ -1804,6 +1804,21 @@ class Account(
         manager.createGroup(nostrGroupId)
     }
 
+    /**
+     * Leave a Marmot MLS group.
+     * Publishes the SelfRemove proposal and removes local state.
+     */
+    suspend fun leaveMarmotGroup(
+        nostrGroupId: HexKey,
+        groupRelays: Set<NormalizedRelayUrl>,
+    ) {
+        val manager = marmotManager ?: return
+        if (!isWriteable()) return
+
+        val outbound = manager.leaveGroup(nostrGroupId)
+        client.publish(outbound.signedEvent, groupRelays)
+    }
+
     suspend fun createStatus(newStatus: String) = sendMyPublicAndPrivateOutbox(UserStatusAction.create(newStatus, signer))
 
     suspend fun publishCallSignaling(wrap: EphemeralGiftWrapEvent) {

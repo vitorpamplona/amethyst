@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupManager
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupStateStore
+import com.vitorpamplona.quartz.marmot.mls.tree.Credential
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
@@ -254,4 +255,44 @@ class MarmotManager(
      * Get all active group IDs.
      */
     fun activeGroupIds(): Set<HexKey> = groupManager.activeGroupIds()
+
+    // --- Group Info ---
+
+    /**
+     * Get the member count for a group.
+     */
+    fun memberCount(nostrGroupId: HexKey): Int = groupManager.getGroup(nostrGroupId)?.memberCount ?: 0
+
+    /**
+     * Get the member list for a group.
+     * Returns leaf index and Nostr pubkey (extracted from BasicCredential) for each member.
+     */
+    fun memberPubkeys(nostrGroupId: HexKey): List<GroupMemberInfo> {
+        val group = groupManager.getGroup(nostrGroupId) ?: return emptyList()
+        return group.members().mapNotNull { (leafIndex, leafNode) ->
+            val pubkey =
+                when (val cred = leafNode.credential) {
+                    is Credential.Basic -> cred.identity.toHexKey()
+                    else -> null
+                }
+            if (pubkey != null) {
+                GroupMemberInfo(leafIndex = leafIndex, pubkey = pubkey)
+            } else {
+                null
+            }
+        }
+    }
+
+    /**
+     * Get the current epoch for a group.
+     */
+    fun groupEpoch(nostrGroupId: HexKey): Long? = groupManager.getGroup(nostrGroupId)?.epoch
 }
+
+/**
+ * Information about a member in a Marmot MLS group.
+ */
+data class GroupMemberInfo(
+    val leafIndex: Int,
+    val pubkey: HexKey,
+)
