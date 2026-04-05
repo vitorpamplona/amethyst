@@ -101,11 +101,63 @@ object Secp256k1 {
             }
         }
 
-    /** Verify that a byte array is a valid secret key (32 bytes, 0 < value < n). */
+    /**
+     * Verify that a byte array is a valid secret key (32 bytes, 0 < value < n).
+     * Operates directly on bytes without converting to limbs — avoids IntArray allocation.
+     */
     fun secKeyVerify(seckey: ByteArray): Boolean {
         if (seckey.size != 32) return false
-        return ScalarN.isValid(U256.fromBytes(seckey))
+        // Check not zero (any non-zero byte means non-zero)
+        var nonZero = 0
+        for (b in seckey) nonZero = nonZero or b.toInt()
+        if (nonZero == 0) return false
+        // Check < n by comparing big-endian bytes against n
+        // n = FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
+        for (i in 0 until 32) {
+            val si = seckey[i].toInt() and 0xFF
+            val ni = N_BYTES[i].toInt() and 0xFF
+            if (si < ni) return true // definitely less
+            if (si > ni) return false // definitely greater
+        }
+        return false // equal to n → invalid
     }
+
+    // n as big-endian bytes for direct comparison
+    private val N_BYTES =
+        byteArrayOf(
+            0xFF.toByte(),
+            0xFF.toByte(),
+            0xFF.toByte(),
+            0xFF.toByte(),
+            0xFF.toByte(),
+            0xFF.toByte(),
+            0xFF.toByte(),
+            0xFF.toByte(),
+            0xFF.toByte(),
+            0xFF.toByte(),
+            0xFF.toByte(),
+            0xFF.toByte(),
+            0xFF.toByte(),
+            0xFF.toByte(),
+            0xFF.toByte(),
+            0xFE.toByte(),
+            0xBA.toByte(),
+            0xAE.toByte(),
+            0xDC.toByte(),
+            0xE6.toByte(),
+            0xAF.toByte(),
+            0x48.toByte(),
+            0xA0.toByte(),
+            0x3B.toByte(),
+            0xBF.toByte(),
+            0xD2.toByte(),
+            0x5E.toByte(),
+            0x8C.toByte(),
+            0xD0.toByte(),
+            0x36.toByte(),
+            0x41.toByte(),
+            0x41.toByte(),
+        )
 
     // ==================== BIP-340 Schnorr Signatures ====================
 
