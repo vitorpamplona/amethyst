@@ -1789,6 +1789,7 @@
     <string name="connected">Connected</string>
     <string name="social_proof">Social proof</string>
     <string name="poll_submit">Submit</string>
+    <string name="poll_view_results">View results</string>
     <string name="restart">Restart</string>
     <string name="chess_accept">Accept</string>
     <string name="chess_decline">Decline</string>

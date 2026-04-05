@@ -2152,6 +2152,10 @@ class Account(
 
     fun dismissPollNotification(noteId: String) = settings.dismissPollNotification(noteId)
 
+    fun hasViewedPollResults(noteId: String) = settings.hasViewedPollResults(noteId)
+
+    fun markPollResultsViewed(noteId: String) = settings.markPollResultsViewed(noteId)
+
     init {
         Log.d("AccountRegisterObservers", "Init")
 

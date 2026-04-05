@@ -1128,6 +1128,10 @@ class AccountViewModel(
 
     fun dismissPollNotification(noteId: String) = account.dismissPollNotification(noteId)
 
+    fun hasViewedPollResults(noteId: String) = account.hasViewedPollResults(noteId)
+
+    fun markPollResultsViewed(noteId: String) = account.markPollResultsViewed(noteId)
+
     fun dontTranslateFrom() = account.settings.syncedSettings.languages.dontTranslateFrom.value
 
     fun translateTo() = account.settings.syncedSettings.languages.translateTo.value
