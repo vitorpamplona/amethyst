@@ -386,6 +386,8 @@
     <string name="migrate_bookmarks_success">स्मर्त्तव्यचिह्न सफलतापूर्वक स्थानान्तरित किए गए</string>
     <string name="drafts">पाण्डुलिपियाँ</string>
     <string name="polls">मतदान</string>
+    <string name="open_polls">खुला</string>
+    <string name="closed_polls">अवरुद्ध</string>
     <string name="pictures">चित्र</string>
     <string name="shorts">छोटे</string>
     <string name="longs">चलचित्र</string>
