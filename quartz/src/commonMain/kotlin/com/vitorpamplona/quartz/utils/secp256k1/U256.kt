@@ -139,6 +139,10 @@ internal object U256 {
      * Uses the standard O(n²) algorithm with 8×8 = 64 inner Long multiplications.
      * Each partial product is at most 32×32 = 64 bits, which fits in a signed Long
      * with room for carry accumulation.
+     *
+     * Note: Karatsuba (splitting into 4-limb halves for 48 products) was attempted
+     * but the overhead of extra additions, carry propagation, and 5 temporary array
+     * allocations per call negates the product-count savings at only 8 limbs.
      */
     fun mulWide(
         out: IntArray,
