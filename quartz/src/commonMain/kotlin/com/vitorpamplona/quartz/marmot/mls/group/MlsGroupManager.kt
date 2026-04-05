@@ -31,19 +31,57 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 /**
  * High-level coordinator for MLS group lifecycle and state management.
  *
- * Manages:
- * - In-memory group instances (keyed by Nostr group ID)
- * - Epoch secret retention window (N-1 epochs for late messages)
- * - Secure deletion of consumed init_keys after Welcome processing
- * - Persistence of group state through [MlsGroupStateStore]
- * - KeyPackage rotation scheduling after group joins
+ * This is the primary entry point for the Marmot MLS integration. It bridges
+ * the low-level MLS engine ([MlsGroup]) with the Nostr application layer,
+ * managing multiple concurrent groups and ensuring state survives app restarts.
  *
- * This class is the bridge between the low-level MLS engine ([MlsGroup])
- * and the application layer. It ensures that MLS state survives app restarts
- * and that cryptographic hygiene (key deletion, rotation) is maintained.
+ * ## Responsibilities
+ *
+ * - **Group lifecycle**: Create, join (via Welcome or external commit), and leave groups
+ * - **State persistence**: Save/restore group state through [MlsGroupStateStore]
+ * - **Epoch retention**: Keep N-1 epoch secrets for decrypting late-arriving messages
+ * - **Key hygiene**: Secure deletion of consumed init_keys after Welcome processing
+ * - **KeyPackage rotation**: Schedule self-updates within 24h of joining (MIP-00)
+ *
+ * ## Typical Usage
+ *
+ * ```kotlin
+ * val store: MlsGroupStateStore = ... // platform-specific encrypted storage
+ * val manager = MlsGroupManager(store)
+ *
+ * // On app startup
+ * manager.restoreAll()
+ *
+ * // Create a new group
+ * val group = manager.createGroup(nostrGroupId, myIdentity)
+ *
+ * // Add a member (from their published KeyPackage)
+ * val result = manager.addMember(nostrGroupId, keyPackageBytes)
+ * // Send result.commitBytes as kind 445 GroupEvent
+ * // Send result.welcomeBytes as kind 444 WelcomeEvent (NIP-59 wrapped)
+ *
+ * // Join via Welcome
+ * manager.processWelcome(nostrGroupId, welcomeBytes, myKeyPackageBundle)
+ *
+ * // Encrypt/decrypt messages
+ * val ciphertext = manager.encrypt(nostrGroupId, plaintext)
+ * val decrypted = manager.decrypt(nostrGroupId, ciphertext)
+ *
+ * // Derive outer encryption key for GroupEvents (MIP-03)
+ * val key = manager.exporterSecret(nostrGroupId)
+ * ```
+ *
+ * ## Cross-Implementation Notes
+ *
+ * This manager uses ciphersuite 0x0001 (MLS_128_DHKEMX25519_AES128GCM_SHA256_Ed25519).
+ * The epoch secret retention window is [EPOCH_RETENTION_WINDOW] = 2, meaning secrets
+ * for the current and previous epoch are kept for late-message decryption.
  *
  * Thread safety: All public methods are suspending and should be called
  * from a single coroutine context (e.g., the Account's scope).
+ *
+ * @see MlsGroup The low-level MLS state machine
+ * @see MlsGroupStateStore Storage abstraction for group state persistence
  */
 class MlsGroupManager(
     private val store: MlsGroupStateStore,
