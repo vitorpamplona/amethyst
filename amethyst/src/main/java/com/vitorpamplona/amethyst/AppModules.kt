@@ -448,6 +448,7 @@ class AppModules(
             blossomServerResolver = { blossomResolver },
             callFactory = { okHttpClients.getHttpClient(roleBasedHttpClientBuilder.shouldUseTorForImageDownload(it)) },
             thumbnailCache = thumbnailDiskCache,
+            backgroundScope = applicationIOScope,
         )
     }
 

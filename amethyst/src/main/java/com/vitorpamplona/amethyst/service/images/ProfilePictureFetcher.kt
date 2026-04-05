@@ -40,6 +40,8 @@ import coil3.network.NetworkFetcher
 import coil3.network.okhttp.asNetworkClient
 import coil3.request.Options
 import com.vitorpamplona.amethyst.commons.ui.components.PROFILE_PIC_SCHEME
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import okhttp3.Call
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -49,9 +51,9 @@ import kotlin.coroutines.cancellation.CancellationException
  * URLs are wrapped as `profilepic://https://example.com/pic.jpg` by the avatar composables.
  * This fetcher:
  * 1. Checks the thumbnail disk cache for a pre-resized JPEG (~5-10KB)
- * 2. On hit: returns the tiny file directly (fast disk read)
- * 3. On miss: downloads the original via NetworkFetcher, decodes + resizes to 256px,
- *    saves the thumbnail to the cache, and returns the small bitmap
+ * 2. On hit: returns the tiny thumbnail directly (fast disk read)
+ * 3. On miss: returns the network result immediately for display, and generates
+ *    the thumbnail in the background for next time
  *
  * The zoomable full-screen dialog uses the raw URL (without profilepic:// prefix),
  * which goes through the normal Coil pipeline for full-resolution display.
@@ -62,9 +64,10 @@ class ProfilePictureFetcher(
     private val options: Options,
     private val thumbnailCache: ThumbnailDiskCache,
     private val networkFetcher: Fetcher,
+    private val backgroundScope: CoroutineScope,
 ) : Fetcher {
     override suspend fun fetch(): FetchResult? {
-        // Check thumbnail cache first
+        // Fast path: return pre-resized thumbnail from disk (~5KB read)
         val cached = thumbnailCache.get(originalUrl)
         if (cached != null) {
             val bitmap = thumbnailCache.decodeThumbnail(cached)
@@ -86,61 +89,64 @@ class ProfilePictureFetcher(
                 return null
             }
 
-        // Decode the downloaded image to a small thumbnail
-        val thumbnail = decodeAndResize(result) ?: return result
+        // For source results, read bytes, decode for immediate display,
+        // and generate thumbnail in background for next time
+        if (result is SourceFetchResult) {
+            val bytes = result.source.source().use { it.readByteArray() }
 
-        // Save thumbnail to our cache
-        thumbnailCache.save(originalUrl, thumbnail)
+            // Decode at thumbnail size for immediate display
+            val bitmap = decodeThumbnailFromBytes(bytes)
+            if (bitmap != null) {
+                // Fire-and-forget: save thumbnail to disk for next load
+                backgroundScope.launch {
+                    try {
+                        thumbnailCache.save(originalUrl, bitmap)
+                    } catch (_: Exception) {
+                        // Best-effort
+                    }
+                }
 
-        return ImageFetchResult(
-            image = thumbnail.asImage(true),
-            isSampled = true,
-            dataSource = DataSource.NETWORK,
-        )
+                return ImageFetchResult(
+                    image = bitmap.asImage(true),
+                    isSampled = true,
+                    dataSource = DataSource.NETWORK,
+                )
+            }
+        }
+
+        return result
     }
 
-    private fun decodeAndResize(result: FetchResult): Bitmap? =
+    private fun decodeThumbnailFromBytes(bytes: ByteArray): Bitmap? =
         try {
-            when (result) {
-                is SourceFetchResult -> {
-                    val targetSize = ThumbnailDiskCache.THUMBNAIL_SIZE_PX
+            val targetSize = ThumbnailDiskCache.THUMBNAIL_SIZE_PX
 
-                    // First pass: decode bounds only
-                    val boundsOptions =
-                        BitmapFactory.Options().apply {
-                            inJustDecodeBounds = true
-                        }
-                    val source = result.source
-                    val bytes = source.source().use { it.readByteArray() }
-                    BitmapFactory.decodeByteArray(bytes, 0, bytes.size, boundsOptions)
-
-                    // Calculate inSampleSize for efficient decode
-                    val sampleSize = calculateInSampleSize(boundsOptions, targetSize, targetSize)
-
-                    // Second pass: decode at reduced size
-                    val decodeOptions =
-                        BitmapFactory.Options().apply {
-                            inSampleSize = sampleSize
-                        }
-                    val decoded =
-                        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, decodeOptions)
-                            ?: return null
-
-                    // Scale to exact target size
-                    val scaled = Bitmap.createScaledBitmap(decoded, targetSize, targetSize, true)
-                    if (scaled !== decoded) {
-                        decoded.recycle()
-                    }
-                    scaled
+            // First pass: decode bounds only
+            val boundsOptions =
+                BitmapFactory.Options().apply {
+                    inJustDecodeBounds = true
                 }
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, boundsOptions)
 
-                is ImageFetchResult -> {
-                    // Already decoded (e.g. from Base64Fetcher) — not expected for profile pics
-                    null
+            // Calculate inSampleSize for efficient memory use during decode
+            val sampleSize = calculateInSampleSize(boundsOptions, targetSize, targetSize)
+
+            // Second pass: decode at reduced size
+            val decodeOptions =
+                BitmapFactory.Options().apply {
+                    inSampleSize = sampleSize
                 }
+            val decoded =
+                BitmapFactory.decodeByteArray(bytes, 0, bytes.size, decodeOptions)
+                    ?: return null
+
+            // Scale to exact target size
+            val scaled = Bitmap.createScaledBitmap(decoded, targetSize, targetSize, true)
+            if (scaled !== decoded) {
+                decoded.recycle()
             }
+            scaled
         } catch (e: Exception) {
-            if (e is CancellationException) throw e
             null
         }
 
@@ -175,6 +181,7 @@ class ProfilePictureFetcher(
     class Factory(
         private val thumbnailCache: ThumbnailDiskCache,
         private val networkClient: (url: String) -> Call.Factory,
+        private val backgroundScope: CoroutineScope,
     ) : Fetcher.Factory<Uri> {
         private val connectivityCheckerLazy = singleParameterLazy(::ConnectivityChecker)
 
@@ -198,7 +205,7 @@ class ProfilePictureFetcher(
                     concurrentRequestStrategy = lazy { ConcurrentRequestStrategy.UNCOORDINATED },
                 )
 
-            return ProfilePictureFetcher(originalUrl, options, thumbnailCache, netFetcher)
+            return ProfilePictureFetcher(originalUrl, options, thumbnailCache, netFetcher, backgroundScope)
         }
     }
 
