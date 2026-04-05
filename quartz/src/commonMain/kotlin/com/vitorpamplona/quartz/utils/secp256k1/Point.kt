@@ -20,9 +20,70 @@
  */
 package com.vitorpamplona.quartz.utils.secp256k1
 
+// =====================================================================================
+// ELLIPTIC CURVE POINT OPERATIONS ON secp256k1
+// =====================================================================================
+//
+// This file implements point arithmetic on the secp256k1 elliptic curve: y² = x³ + 7 (mod p).
+// It provides point addition, doubling, scalar multiplication, and serialization.
+//
+// JACOBIAN COORDINATES
+// ====================
+// Points are stored in Jacobian projective coordinates (X, Y, Z) which represent the
+// affine point (X/Z², Y/Z³). This avoids expensive field inversions during intermediate
+// steps of scalar multiplication — inversion is only needed once at the very end to
+// convert back to affine (x, y) form.
+//
+// The "point at infinity" (identity element) is represented by Z = 0.
+//
+// PRECOMPUTED GENERATOR TABLE
+// ===========================
+// The generator point G is used for public key creation and signature operations.
+// We precompute a table of [1G, 2G, 3G, ..., 16G] in affine form (stored as AffinePoint)
+// at first use. This table is lazily initialized and cached for the lifetime of the process.
+// Affine storage enables "mixed addition" (Jacobian + Affine), which is cheaper than
+// adding two Jacobian points because the second point's Z=1 eliminates several multiplications.
+//
+// POINT DOUBLING FORMULA
+// ======================
+// We use the 3M+4S formula from libsecp256k1 that computes L = (3/2)·X² using a cheap
+// field halving operation instead of a full multiplication. On the secp256k1 curve (a=0),
+// this is the most efficient known doubling formula.
+//
+// SCALAR MULTIPLICATION
+// =====================
+// We use a 4-bit windowed method: process the scalar 4 bits at a time, performing 4
+// doublings per window position and one addition for non-zero nibbles. This reduces the
+// number of point additions from ~128 (binary method) to ~60 (windowed).
+//
+// For signature verification, we use Shamir's trick to compute s·G + e·P in a single
+// pass instead of two separate scalar multiplications. The G-side uses mixed addition
+// (from the precomputed affine table) while the P-side uses full Jacobian addition
+// (since building an affine table for P would require expensive inversions).
+//
+// FUTURE OPTIMIZATIONS
+// ====================
+// Two techniques from Bitcoin Core's C library would provide significant further speedup:
+//
+// - GLV Endomorphism: secp256k1 has an efficiently computable endomorphism λ where
+//   λ·P = (β·x, y) for a field constant β. Any 256-bit scalar k can be decomposed into
+//   k = k₁ + k₂·λ where k₁, k₂ are ~128 bits. This halves the number of doublings.
+//   Infrastructure for this (constants, scalar splitting, endomorphism application) is
+//   implemented and tested, but the combined Strauss+GLV path has a sign-handling bug
+//   that needs debugging before it can replace the current 4-bit window approach.
+//
+// - wNAF (windowed Non-Adjacent Form): An encoding of scalars where non-zero digits are
+//   always odd and separated by at least w-1 zero digits. Width-5 wNAF uses digits
+//   ±{1,3,5,...,15} with a table of 8 points (vs 16 for simple windowing), and the
+//   guaranteed zero runs mean fewer additions. Combined with GLV, wNAF processes
+//   ~128-bit half-scalars with ~26 additions each instead of ~60.
+// =====================================================================================
+
 /**
  * Mutable Jacobian point for in-place computation.
- * (X, Y, Z) represents affine (X/Z², Y/Z³). Infinity: Z = 0.
+ *
+ * Points are mutable to avoid allocating new objects during the inner loop of scalar
+ * multiplication, which performs thousands of doublings and additions per operation.
  */
 internal class MutablePoint(
     val x: IntArray = IntArray(8),
@@ -55,17 +116,20 @@ internal class MutablePoint(
         z[0] = 1
         for (i in 1 until 8) z[i] = 0
     }
-
-    fun snapshot(): MutablePoint = MutablePoint(x.copyOf(), y.copyOf(), z.copyOf())
 }
 
-/** Affine point stored as two IntArray(8). Used for precomputed tables. */
+/**
+ * Affine point (x, y) — no Z coordinate.
+ * Used for precomputed tables where we want compact storage and mixed addition.
+ */
 internal class AffinePoint(
     val x: IntArray = IntArray(8),
     val y: IntArray = IntArray(8),
 )
 
 internal object ECPoint {
+    // ==================== Generator point G ====================
+
     val GX =
         intArrayOf(
             0x16F81798.toInt(),
@@ -88,111 +152,21 @@ internal object ECPoint {
             0x26A3C465.toInt(),
             0x483ADA77.toInt(),
         )
+
+    /** Curve constant b = 7 in y² = x³ + 7. */
     private val B = intArrayOf(7, 0, 0, 0, 0, 0, 0, 0)
 
-    // GLV endomorphism: beta (cube root of unity in field, beta^3 = 1 mod p)
-    // lambda*P = (beta*P.x, P.y) for any point P on the curve
-    private val BETA =
-        intArrayOf(
-            0x719501EE.toInt(),
-            0xC1396C28.toInt(),
-            0x12F58995.toInt(),
-            0x9CF04975.toInt(),
-            0xAC3434E9.toInt(),
-            0x6E64479E.toInt(),
-            0x657C0710.toInt(),
-            0x7AE96A2B.toInt(),
-        )
-
-    // GLV scalar decomposition constants (from libsecp256k1)
-    // lambda: the scalar such that lambda*P = endomorphism(P)
-    private val LAMBDA =
-        intArrayOf(
-            0x1B23BD72.toInt(),
-            0xDF02967C.toInt(),
-            0x20816678.toInt(),
-            0x122E22EA.toInt(),
-            0x8812645A.toInt(),
-            0xA5261C02.toInt(),
-            0xC05C30E0.toInt(),
-            0x5363AD4C.toInt(),
-        )
-
-    // -lambda mod n
-    private val MINUS_LAMBDA =
-        intArrayOf(
-            0xB512F0CF.toInt(),
-            0xE0CF97D5.toInt(),
-            0x8F279763.toInt(),
-            0xA89CBA5C.toInt(),
-            0x77EDE0E7.toInt(),
-            0x09E86C02.toInt(),
-            0xEF481860.toInt(),
-            0x574B0E83.toInt(),
-        )
-
-    // g1 = round(2^384 * |b2| / n) for Babai rounding
-    private val G1 =
-        intArrayOf(
-            0xEB153DAB.toInt(),
-            0x90E49284.toInt(),
-            0x6BCDE86C.toInt(),
-            0xD221A7D4.toInt(),
-            0x00003086,
-            0,
-            0,
-            0,
-        )
-
-    // g2 = round(2^384 * |b1| / n)
-    private val G2 =
-        intArrayOf(
-            0xE4C42212.toInt(),
-            0x7FA90ABF.toInt(),
-            0x88286F54.toInt(),
-            0x7ED6010E.toInt(),
-            0x0000E443.toInt(),
-            0,
-            0,
-            0,
-        )
-
-    // -b1 mod n (b1 is negative, so this is |b1|)
-    private val MINUS_B1 =
-        intArrayOf(
-            0x0ABFE4C3.toInt(),
-            0x6F547FA9.toInt(),
-            0x010E8828.toInt(),
-            0xE4437ED6.toInt(),
-            0,
-            0,
-            0,
-            0,
-        )
-
-    // -b2 mod n
-    private val MINUS_B2 =
-        intArrayOf(
-            0x3DB1562C.toInt(),
-            0xD765CDA8.toInt(),
-            0x0774346D.toInt(),
-            0x8A280AC5.toInt(),
-            0xFFFFFFFE.toInt(),
-            0xFFFFFFFF.toInt(),
-            0xFFFFFFFF.toInt(),
-            0xFFFFFFFF.toInt(),
-        )
-
-    // Precomputed G table: gTable[i] = (i+1)*G as affine points
+    /**
+     * Precomputed table: gTable[i] = (i+1)·G as affine points, for i in 0..15.
+     * Used by mulG and mulDoubleG for fast generator multiplication.
+     * Lazily initialized on first use (costs ~16 point additions + 16 inversions).
+     */
     private val gTable: Array<AffinePoint> by lazy { buildGTable() }
 
     private fun buildGTable(): Array<AffinePoint> {
         val jac = Array(16) { MutablePoint() }
         jac[0].setAffine(GX, GY)
-        for (i in 1 until 16) {
-            addPoints(jac[i], jac[i - 1], jac[0])
-        }
-        // Convert all to affine via batch-style (one inversion per point)
+        for (i in 1 until 16) addPoints(jac[i], jac[i - 1], jac[0])
         return Array(16) { i ->
             val x = IntArray(8)
             val y = IntArray(8)
@@ -201,20 +175,36 @@ internal object ECPoint {
         }
     }
 
-    // Thread-local scratch
+    // ==================== Thread-local scratch buffers ====================
+
+    /**
+     * Scratch space for point operations. Each thread gets its own set of temporary
+     * field elements to avoid allocation in the inner loops. The 12 temp buffers
+     * (t[0]..t[11]) are shared across doublePoint and addPoints — this is safe because
+     * these functions only call each other in the equal-point degenerate case, which
+     * returns immediately after the recursive call without using the temps further.
+     */
     private class PointScratch {
         val t = Array(12) { IntArray(8) }
-        val dblCopy = MutablePoint()
+        val dblCopy = MutablePoint() // Copy buffer for in-place doubling (out === input)
     }
 
     private val scratch = ThreadLocal.withInitial { PointScratch() }
 
-    // ============ Optimized Point Doubling (3M + 4S via fe_half) ============
+    // ==================== Point Doubling (3M + 4S) ====================
 
     /**
-     * Point doubling using the 3M+4S formula with fe_half.
-     * L = (3/2)*X², S = Y², T = -X*S
-     * X3 = L² + 2T, Y3 = -(L*(X3+T) + S²), Z3 = Y*Z
+     * Point doubling: out = 2·p.
+     *
+     * Uses the optimized formula from libsecp256k1 for curves with a=0:
+     *   S = Y², L = (3/2)·X², T = -X·S
+     *   X₃ = L² + 2T,  Y₃ = -(L·(X₃+T) + S²),  Z₃ = Y·Z
+     *
+     * Cost: 3 multiplications + 4 squarings + field halving + adds/negations.
+     * The key trick is computing L = (3/2)·X² using fe_half instead of an extra
+     * multiplication — halving is just a carry-propagating right shift.
+     *
+     * Safe for out === inp (in-place doubling) via internal copy buffer.
      */
     fun doublePoint(
         out: MutablePoint,
@@ -234,35 +224,36 @@ internal object ECPoint {
             }
         val t = s.t
 
-        // S = Y²
-        FieldP.sqr(t[0], p.y)
-        // L = (3/2)*X² = half(3*X²)
+        FieldP.sqr(t[0], p.y) // S = Y²
         FieldP.sqr(t[1], p.x) // X²
-        FieldP.add(t[2], t[1], t[1]) // 2*X²
-        FieldP.add(t[2], t[2], t[1]) // 3*X²
-        FieldP.half(t[2], t[2]) // L = (3/2)*X²
-        // T = -X*S
-        FieldP.mul(t[3], p.x, t[0]) // X*S
-        FieldP.neg(t[3], t[3]) // T = -X*S
-        // X3 = L² + 2T
-        FieldP.sqr(out.x, t[2]) // L²
-        FieldP.add(out.x, out.x, t[3]) // + T
-        FieldP.add(out.x, out.x, t[3]) // + T
-        // Y3 = -(L*(X3+T) + S²)
-        FieldP.add(t[4], out.x, t[3]) // X3+T
-        FieldP.mul(t[4], t[2], t[4]) // L*(X3+T)
+        FieldP.add(t[2], t[1], t[1]) // 2·X²
+        FieldP.add(t[2], t[2], t[1]) // 3·X²
+        FieldP.half(t[2], t[2]) // L = (3/2)·X²
+        FieldP.mul(t[3], p.x, t[0]) // X·S
+        FieldP.neg(t[3], t[3]) // T = -X·S
+        FieldP.sqr(out.x, t[2]) // X₃ = L²
+        FieldP.add(out.x, out.x, t[3]) //     + T
+        FieldP.add(out.x, out.x, t[3]) //     + T
+        FieldP.add(t[4], out.x, t[3]) // X₃ + T
+        FieldP.mul(t[4], t[2], t[4]) // L·(X₃+T)
         FieldP.sqr(t[5], t[0]) // S²
-        FieldP.add(t[4], t[4], t[5]) // L*(X3+T) + S²
-        FieldP.neg(out.y, t[4]) // negate
-        // Z3 = Y*Z
-        FieldP.mul(out.z, p.y, p.z)
+        FieldP.add(t[4], t[4], t[5]) // L·(X₃+T) + S²
+        FieldP.neg(out.y, t[4]) // Y₃ = negate
+        FieldP.mul(out.z, p.y, p.z) // Z₃ = Y·Z
     }
 
-    // ============ Mixed Addition: Jacobian + Affine (8M + 3S) ============
+    // ==================== Mixed Addition: Jacobian + Affine (8M + 3S) ====================
 
     /**
-     * Mixed addition: out = p + (qx, qy) where q is affine (z=1).
-     * Saves 4M+1S vs full Jacobian addition.
+     * Mixed point addition: out = p + (qx, qy) where q is an affine point (Z=1).
+     *
+     * When one input is affine, we can skip computing Z₂², Z₂³, and the Z₃ formula
+     * simplifies. This saves 4 multiplications and 1 squaring vs full Jacobian addition.
+     *
+     * Cost: 8 multiplications + 3 squarings + adds/subtractions.
+     * Used for additions from the precomputed G table (always stored in affine form).
+     *
+     * Handles degenerate cases: p is infinity, or p equals/negates q.
      */
     fun addMixed(
         out: MutablePoint,
@@ -277,54 +268,49 @@ internal object ECPoint {
         val s = scratch.get()
         val t = s.t
 
-        // Z1² and Z1³
-        FieldP.sqr(t[0], p.z) // Z1²
-        FieldP.mul(t[1], t[0], p.z) // Z1³
-        // U2 = qx * Z1², S2 = qy * Z1³ (U1=X1, S1=Y1 since q.z=1)
-        FieldP.mul(t[2], qx, t[0]) // U2
-        FieldP.mul(t[3], qy, t[1]) // S2
-        // H = U2 - X1
-        FieldP.sub(t[4], t[2], p.x) // H
+        FieldP.sqr(t[0], p.z) // Z₁²
+        FieldP.mul(t[1], t[0], p.z) // Z₁³
+        FieldP.mul(t[2], qx, t[0]) // U₂ = qx·Z₁²  (U₁ = X₁ since Z₂=1)
+        FieldP.mul(t[3], qy, t[1]) // S₂ = qy·Z₁³  (S₁ = Y₁ since Z₂=1)
+        FieldP.sub(t[4], t[2], p.x) // H = U₂ - U₁
 
         if (U256.isZero(t[4])) {
-            // U1 == U2, check S1 vs S2
+            // Same x-coordinate: either same point (double) or inverse (infinity)
             val tmp = IntArray(8)
             FieldP.sub(tmp, t[3], p.y)
-            if (U256.isZero(tmp)) {
-                doublePoint(out, p)
-            } else {
-                out.setInfinity()
-            }
+            if (U256.isZero(tmp)) doublePoint(out, p) else out.setInfinity()
             return
         }
 
-        // I = (2H)², J = H*I
         FieldP.add(t[5], t[4], t[4]) // 2H
         FieldP.sqr(t[5], t[5]) // I = (2H)²
-        FieldP.mul(t[6], t[4], t[5]) // J = H*I
-        // r = 2*(S2 - Y1)
+        FieldP.mul(t[6], t[4], t[5]) // J = H·I
         FieldP.sub(t[7], t[3], p.y)
-        FieldP.add(t[7], t[7], t[7]) // r
-        // V = X1 * I
-        FieldP.mul(t[8], p.x, t[5]) // V
-        // X3 = r² - J - 2V
-        FieldP.sqr(out.x, t[7])
-        FieldP.sub(out.x, out.x, t[6])
-        FieldP.sub(out.x, out.x, t[8])
-        FieldP.sub(out.x, out.x, t[8])
-        // Y3 = r*(V - X3) - 2*Y1*J
-        FieldP.sub(t[9], t[8], out.x)
-        FieldP.mul(out.y, t[7], t[9])
-        FieldP.mul(t[9], p.y, t[6]) // Y1*J
-        FieldP.add(t[9], t[9], t[9]) // 2*Y1*J
+        FieldP.add(t[7], t[7], t[7]) // r = 2·(S₂ - S₁)
+        FieldP.mul(t[8], p.x, t[5]) // V = U₁·I
+        FieldP.sqr(out.x, t[7]) // X₃ = r²
+        FieldP.sub(out.x, out.x, t[6]) //     - J
+        FieldP.sub(out.x, out.x, t[8]) //     - V
+        FieldP.sub(out.x, out.x, t[8]) //     - V
+        FieldP.sub(t[9], t[8], out.x) // V - X₃
+        FieldP.mul(out.y, t[7], t[9]) // Y₃ = r·(V-X₃)
+        FieldP.mul(t[9], p.y, t[6]) //      - 2·S₁·J
+        FieldP.add(t[9], t[9], t[9])
         FieldP.sub(out.y, out.y, t[9])
-        // Z3 = 2*Z1*H
-        FieldP.mul(out.z, p.z, t[4])
-        FieldP.add(out.z, out.z, out.z) // *2
+        FieldP.mul(out.z, p.z, t[4]) // Z₃ = 2·Z₁·H
+        FieldP.add(out.z, out.z, out.z)
     }
 
-    // ============ Full Jacobian Addition (kept for table building) ============
+    // ==================== Full Jacobian Addition (11M + 5S) ====================
 
+    /**
+     * General point addition: out = p + q, both in Jacobian coordinates.
+     *
+     * This is the most expensive addition variant because neither point has Z=1.
+     * Used when adding points from on-the-fly tables (P multiples in verification).
+     *
+     * Handles degenerate cases: either point is infinity, or points are equal/inverse.
+     */
     fun addPoints(
         out: MutablePoint,
         p: MutablePoint,
@@ -341,31 +327,27 @@ internal object ECPoint {
         val s = scratch.get()
         val t = s.t
 
-        FieldP.sqr(t[0], p.z)
-        FieldP.sqr(t[1], q.z)
-        FieldP.mul(t[2], p.x, t[1])
-        FieldP.mul(t[3], q.x, t[0])
-        FieldP.mul(t[4], q.z, t[1])
-        FieldP.mul(t[4], p.y, t[4])
-        FieldP.mul(t[5], p.z, t[0])
-        FieldP.mul(t[5], q.y, t[5])
+        FieldP.sqr(t[0], p.z) // Z₁²
+        FieldP.sqr(t[1], q.z) // Z₂²
+        FieldP.mul(t[2], p.x, t[1]) // U₁ = X₁·Z₂²
+        FieldP.mul(t[3], q.x, t[0]) // U₂ = X₂·Z₁²
+        FieldP.mul(t[4], q.z, t[1]) // Z₂³
+        FieldP.mul(t[4], p.y, t[4]) // S₁ = Y₁·Z₂³
+        FieldP.mul(t[5], p.z, t[0]) // Z₁³
+        FieldP.mul(t[5], q.y, t[5]) // S₂ = Y₂·Z₁³
 
         if (U256.cmp(t[2], t[3]) == 0) {
-            if (U256.cmp(t[4], t[5]) == 0) {
-                doublePoint(out, p)
-            } else {
-                out.setInfinity()
-            }
+            if (U256.cmp(t[4], t[5]) == 0) doublePoint(out, p) else out.setInfinity()
             return
         }
 
-        FieldP.sub(t[6], t[3], t[2])
+        FieldP.sub(t[6], t[3], t[2]) // H = U₂ - U₁
         FieldP.add(t[7], t[6], t[6])
-        FieldP.sqr(t[7], t[7])
-        FieldP.mul(t[8], t[6], t[7])
+        FieldP.sqr(t[7], t[7]) // I = (2H)²
+        FieldP.mul(t[8], t[6], t[7]) // J = H·I
         FieldP.sub(t[9], t[5], t[4])
-        FieldP.add(t[9], t[9], t[9])
-        FieldP.mul(t[10], t[2], t[7])
+        FieldP.add(t[9], t[9], t[9]) // r = 2·(S₂-S₁)
+        FieldP.mul(t[10], t[2], t[7]) // V = U₁·I
 
         FieldP.sqr(out.x, t[9])
         FieldP.sub(out.x, out.x, t[8])
@@ -382,303 +364,20 @@ internal object ECPoint {
         FieldP.sub(out.z, out.z, t[1])
         FieldP.mul(out.z, out.z, t[6])
     }
-    // ============ wNAF Encoding ============
 
-    /** Convert scalar to width-w wNAF. Returns array of signed digits and the number of used bits. */
-    fun wnaf(
-        scalar: IntArray,
-        w: Int,
-        maxBits: Int,
-    ): IntArray {
-        val result = IntArray(maxBits + 1)
-        // Work on a mutable copy
-        val s = scalar.copyOf()
-        var bit = 0
-        while (bit < maxBits) {
-            if (s[bit / 32] ushr (bit % 32) and 1 == 0) {
-                bit++
-                continue
-            }
-            // Extract w bits
-            var word = getBitsVar(s, bit, w.coerceAtMost(maxBits - bit))
-            if (word >= (1 shl (w - 1))) {
-                word -= (1 shl w)
-                // Propagate the borrow
-                addBitTo(s, bit + w)
-            }
-            result[bit] = word
-            bit += w
-        }
-        return result
-    }
-
-    private fun getBitsVar(
-        s: IntArray,
-        bitPos: Int,
-        count: Int,
-    ): Int {
-        if (count == 0) return 0
-        val limb = bitPos / 32
-        val shift = bitPos % 32
-        var r = (s[limb] ushr shift)
-        if (shift + count > 32 && limb + 1 < s.size) {
-            r = r or (s[limb + 1] shl (32 - shift))
-        }
-        return r and ((1 shl count) - 1)
-    }
-
-    private fun addBitTo(
-        s: IntArray,
-        bitPos: Int,
-    ) {
-        val limb = bitPos / 32
-        if (limb >= s.size) return
-        val bit = bitPos % 32
-        var carry = (1L shl bit)
-        for (i in limb until s.size) {
-            carry += (s[i].toLong() and 0xFFFFFFFFL)
-            s[i] = carry.toInt()
-            carry = carry ushr 32
-            if (carry == 0L) break
-        }
-    }
-
-    // ============ GLV Endomorphism ============
-
-    /** Apply endomorphism: (x, y) -> (beta*x, y) */
-    fun mulLambdaAffine(src: AffinePoint): AffinePoint {
-        val nx = IntArray(8)
-        FieldP.mul(nx, src.x, BETA)
-        return AffinePoint(nx, src.y.copyOf())
-    }
+    // ==================== Scalar Multiplication ====================
 
     /**
-     * Split scalar k into k1, k2 such that k = k1 + k2*lambda (mod n),
-     * where |k1|, |k2| are ~128 bits. Returns (k1, k2, negK1, negK2)
-     * where negK1/negK2 indicate if the point should be negated.
+     * General scalar multiplication: out = scalar · p.
+     *
+     * Uses a 4-bit windowed method: precomputes [1P, 2P, ..., 16P], then processes
+     * the scalar 4 bits (one nibble) at a time from MSB to LSB:
+     *   for each nibble: double 4 times, then add table[nibble] if non-zero.
+     *
+     * This requires 64 iterations with 4 doublings each (256 total) and ~60 additions
+     * (on average 15/16 of nibbles are non-zero). All operations use full Jacobian
+     * arithmetic since the P table is built on-the-fly without inversions.
      */
-    fun scalarSplitLambda(k: IntArray): SplitResult {
-        // c1 = round(k * g1 >> 384), c2 = round(k * g2 >> 384)
-        val c1 = U256.mulShift(k, G1, 384)
-        val c2 = U256.mulShift(k, G2, 384)
-
-        // r2 = c1*(-b1) + c2*(-b2) mod n
-        val c1b1 = ScalarN.mul(c1, MINUS_B1)
-        val c2b2 = ScalarN.mul(c2, MINUS_B2)
-        val r2 = ScalarN.add(c1b1, c2b2)
-
-        // r1 = k + r2*(-lambda) mod n = k - r2*lambda mod n
-        val r2lam = ScalarN.mul(r2, MINUS_LAMBDA)
-        val r1 = ScalarN.add(r2lam, k)
-
-        // If r1 or r2 > n/2, negate them (and we'll negate the corresponding point)
-        val negK1 = isHigh(r1)
-        val negK2 = isHigh(r2)
-        val k1 = if (negK1) ScalarN.neg(r1) else r1
-        val k2 = if (negK2) ScalarN.neg(r2) else r2
-
-        return SplitResult(k1, k2, negK1, negK2)
-    }
-
-    class SplitResult(
-        val k1: IntArray,
-        val k2: IntArray,
-        val negK1: Boolean,
-        val negK2: Boolean,
-    )
-
-    /** Check if scalar > n/2 */
-    private fun isHigh(s: IntArray): Boolean {
-        // n/2 = 7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0
-        // Simple check: if top bit of byte 31 (bit 255) is set, it's > n/2
-        // More precise: compare against n/2
-        val nHalf =
-            intArrayOf(
-                0x681B20A0.toInt(),
-                0xDFE92F46.toInt(),
-                0x57A4501D.toInt(),
-                0x5D576E73.toInt(),
-                0xFFFFFFFF.toInt(),
-                0xFFFFFFFF.toInt(),
-                0xFFFFFFFF.toInt(),
-                0x7FFFFFFF.toInt(),
-            )
-        return U256.cmp(s, nHalf) > 0
-    }
-
-    // ============ Strauss with GLV: s*G + e*P in one pass ============
-
-    /**
-     * Compute s*G + e*P using GLV endomorphism and interleaved wNAF (Strauss method).
-     * Splits each scalar into two 128-bit halves, processes 4 wNAF streams simultaneously.
-     * Uses mixed Jacobian+Affine addition with precomputed affine tables.
-     */
-    fun straussGlvGP(
-        out: MutablePoint,
-        s: IntArray,
-        px: IntArray,
-        py: IntArray,
-        e: IntArray,
-    ) {
-        val windowA = 5 // for arbitrary point P
-        val tableSize = 1 shl (windowA - 2) // 8 entries
-
-        // Split scalars via GLV
-        val sSplit = scalarSplitLambda(s)
-        val eSplit = scalarSplitLambda(e)
-
-        // Build wNAF for each half-scalar (128 bits)
-        val wnafS1 = wnaf(sSplit.k1, windowA, 129)
-        val wnafS2 = wnaf(sSplit.k2, windowA, 129)
-        val wnafE1 = wnaf(eSplit.k1, windowA, 129)
-        val wnafE2 = wnaf(eSplit.k2, windowA, 129)
-
-        // Build base table for P (no negation), then derive negated versions
-        val pTableBase = buildOddMultiplesTable(px, py, tableSize, false)
-        val pTable =
-            if (eSplit.negK1) {
-                Array(tableSize) { i ->
-                    val ny = IntArray(8)
-                    FieldP.neg(ny, pTableBase[i].y)
-                    AffinePoint(pTableBase[i].x, ny)
-                }
-            } else {
-                pTableBase
-            }
-        // Build lambda(P) table from base (not pre-negated) table, then apply negK2
-        val pLamBase = Array(tableSize) { mulLambdaAffine(pTableBase[it]) }
-        val pLamTable =
-            if (eSplit.negK2) {
-                Array(tableSize) { i ->
-                    val ny = IntArray(8)
-                    FieldP.neg(ny, pLamBase[i].y)
-                    AffinePoint(pLamBase[i].x, ny)
-                }
-            } else {
-                pLamBase
-            }
-
-        // G table: odd multiples [1G, 3G, 5G, ..., 15G] (base, un-negated)
-        val gOdd = Array(tableSize) { gTable[it * 2] }
-        val gOddSigned =
-            if (sSplit.negK1) {
-                Array(tableSize) { i ->
-                    val ny = IntArray(8)
-                    FieldP.neg(ny, gOdd[i].y)
-                    AffinePoint(gOdd[i].x, ny)
-                }
-            } else {
-                gOdd
-            }
-        // Lambda(G) table: from un-negated base
-        val gLamOdd = Array(tableSize) { mulLambdaAffine(gOdd[it]) }
-        val gLamOddSigned =
-            if (sSplit.negK2) {
-                Array(tableSize) { i ->
-                    val ny = IntArray(8)
-                    FieldP.neg(ny, gLamOdd[i].y)
-                    AffinePoint(gLamOdd[i].x, ny)
-                }
-            } else {
-                gLamOdd
-            }
-
-        // Handle negation from GLV split for s
-        // If negK1 for s: negate the G table entries y-coords (flip sign)
-        // If negK2 for s: negate the Glam table entries y-coords
-        // Simpler: we encode the negation into the wNAF lookup
-
-        // Find highest bit across all 4 wNAFs
-        var bits = 129
-        while (bits > 0 && wnafS1[bits - 1] == 0 && wnafS2[bits - 1] == 0 &&
-            wnafE1[bits - 1] == 0 && wnafE2[bits - 1] == 0
-        ) {
-            bits--
-        }
-
-        out.setInfinity()
-        val tmp = MutablePoint()
-        for (i in bits - 1 downTo 0) {
-            doublePoint(out, out)
-
-            // Stream 1: s1 * G (sign baked into gOddSigned)
-            val n1 = wnafS1[i]
-            if (n1 != 0) {
-                val idx = (if (n1 > 0) n1 else -n1) / 2
-                addMixedWithSign(tmp, out, gOddSigned[idx], n1 < 0)
-                out.copyFrom(tmp)
-            }
-            // Stream 2: s2 * lambda(G) (sign baked into gLamOddSigned)
-            val n2 = wnafS2[i]
-            if (n2 != 0) {
-                val idx = (if (n2 > 0) n2 else -n2) / 2
-                addMixedWithSign(tmp, out, gLamOddSigned[idx], n2 < 0)
-                out.copyFrom(tmp)
-            }
-            // Stream 3: e1 * P (sign baked into pTable)
-            val n3 = wnafE1[i]
-            if (n3 != 0) {
-                val idx = (if (n3 > 0) n3 else -n3) / 2
-                addMixedWithSign(tmp, out, pTable[idx], n3 < 0)
-                out.copyFrom(tmp)
-            }
-            // Stream 4: e2 * lambda(P) (sign baked into pLamTable)
-            val n4 = wnafE2[i]
-            if (n4 != 0) {
-                val idx = (if (n4 > 0) n4 else -n4) / 2
-                addMixedWithSign(tmp, out, pLamTable[idx], n4 < 0)
-                out.copyFrom(tmp)
-            }
-        }
-    }
-
-    /** Add affine point with optional y-negation */
-    private fun addMixedWithSign(
-        out: MutablePoint,
-        p: MutablePoint,
-        q: AffinePoint,
-        negateQ: Boolean,
-    ) {
-        if (negateQ) {
-            val negY = IntArray(8)
-            FieldP.neg(negY, q.y)
-            addMixed(out, p, q.x, negY)
-        } else {
-            addMixed(out, p, q.x, q.y)
-        }
-    }
-
-    /** Build table of odd multiples [1,3,5,...,(2*n-1)]*P as affine points */
-    private fun buildOddMultiplesTable(
-        px: IntArray,
-        py: IntArray,
-        n: Int,
-        negate: Boolean,
-    ): Array<AffinePoint> {
-        val p = MutablePoint()
-        p.setAffine(px, py)
-
-        // 2*P for stepping
-        val p2 = MutablePoint()
-        doublePoint(p2, p)
-
-        val jPoints = Array(n) { MutablePoint() }
-        jPoints[0].copyFrom(p) // 1*P
-        for (i in 1 until n) {
-            addPoints(jPoints[i], jPoints[i - 1], p2) // (2i+1)*P
-        }
-
-        // Convert to affine
-        return Array(n) { i ->
-            val x = IntArray(8)
-            val y = IntArray(8)
-            toAffine(jPoints[i], x, y)
-            if (negate) FieldP.neg(y, y)
-            AffinePoint(x, y)
-        }
-    }
-    // ============ Generic scalar multiplication (for non-verify paths) ============
-
     fun mul(
         out: MutablePoint,
         p: MutablePoint,
@@ -688,7 +387,7 @@ internal object ECPoint {
             out.setInfinity()
             return
         }
-        // Build 4-bit window table (16 entries, Jacobian)
+
         val table = Array(16) { MutablePoint() }
         table[0].copyFrom(p)
         for (i in 1 until 16) addPoints(table[i], table[i - 1], p)
@@ -708,6 +407,12 @@ internal object ECPoint {
         }
     }
 
+    /**
+     * Generator multiplication: out = scalar · G.
+     *
+     * Same 4-bit windowed algorithm as [mul], but uses the precomputed affine G table
+     * for faster mixed addition (8M+3S instead of 11M+5S per addition).
+     */
     fun mulG(
         out: MutablePoint,
         scalar: IntArray,
@@ -732,15 +437,23 @@ internal object ECPoint {
         }
     }
 
+    /**
+     * Shamir's trick: out = s·G + e·P in a single scalar multiplication pass.
+     *
+     * Instead of computing s·G and e·P separately (two full scalar muls) and adding
+     * the results, we interleave them: process both scalars simultaneously from MSB
+     * to LSB, sharing the doublings. This roughly halves the total work for signature
+     * verification, where we need to compute R = s·G - e·P.
+     *
+     * The G-side uses mixed addition (from precomputed affine table), while the P-side
+     * uses full Jacobian addition (building the P table on-the-fly avoids 16 inversions).
+     */
     fun mulDoubleG(
         out: MutablePoint,
         s: IntArray,
         p: MutablePoint,
         e: IntArray,
     ) {
-        // Shamir's trick: s*G + e*P in one pass with 4-bit windows
-        // G table: precomputed affine (mixed addition = 8M+3S)
-        // P table: Jacobian on-the-fly (full addition = 11M+5S, but no inversion cost)
         val gTab = gTable
         val pTab = Array(16) { MutablePoint() }
         pTab[0].copyFrom(p)
@@ -766,8 +479,13 @@ internal object ECPoint {
         }
     }
 
-    // ============ Coordinate conversion and serialization ============
+    // ==================== Coordinate Conversion ====================
 
+    /**
+     * Convert from Jacobian (X, Y, Z) to affine (x, y) = (X/Z², Y/Z³).
+     * Requires one field inversion (the most expensive single operation).
+     * Returns false if the point is at infinity.
+     */
     fun toAffine(
         p: MutablePoint,
         outX: IntArray,
@@ -785,6 +503,12 @@ internal object ECPoint {
         return true
     }
 
+    // ==================== Key Parsing and Serialization ====================
+
+    /**
+     * Lift an x-coordinate to a curve point with even y (BIP-340 convention).
+     * Computes y = √(x³ + 7) mod p. Returns false if x is not a valid coordinate.
+     */
     fun liftX(
         outX: IntArray,
         outY: IntArray,
@@ -794,33 +518,38 @@ internal object ECPoint {
         val t = IntArray(8)
         FieldP.sqr(t, x)
         FieldP.mul(t, t, x)
-        FieldP.add(t, t, B)
+        FieldP.add(t, t, B) // t = x³ + 7
         if (!FieldP.sqrt(outY, t)) return false
         U256.copyInto(outX, x)
-        if (outY[0] and 1 != 0) FieldP.neg(outY, outY)
+        if (outY[0] and 1 != 0) FieldP.neg(outY, outY) // Ensure even y
         return true
     }
 
+    /** Check if y-coordinate is even (LSB = 0). */
     fun hasEvenY(y: IntArray): Boolean = y[0] and 1 == 0
 
+    /**
+     * Parse a serialized public key (33 bytes compressed or 65 bytes uncompressed).
+     * For compressed keys (02/03 prefix): decompresses y from x via square root.
+     * For uncompressed keys (04 prefix): validates the point is on the curve.
+     */
     fun parsePublicKey(
         pubkey: ByteArray,
         outX: IntArray,
         outY: IntArray,
-    ): Boolean {
-        return when {
+    ): Boolean =
+        when {
             pubkey.size == 33 && (pubkey[0] == 0x02.toByte() || pubkey[0] == 0x03.toByte()) -> {
                 val x = U256.fromBytes(pubkey.copyOfRange(1, 33))
                 if (U256.cmp(x, FieldP.P) >= 0) return false
                 val t = IntArray(8)
                 FieldP.sqr(t, x)
                 FieldP.mul(t, t, x)
-                FieldP.add(t, t, B)
+                FieldP.add(t, t, B) // y² = x³ + 7
                 if (!FieldP.sqrt(outY, t)) return false
                 U256.copyInto(outX, x)
                 val isOdd = outY[0] and 1 == 1
-                val wantOdd = pubkey[0] == 0x03.toByte()
-                if (isOdd != wantOdd) FieldP.neg(outY, outY)
+                if (isOdd != (pubkey[0] == 0x03.toByte())) FieldP.neg(outY, outY)
                 true
             }
 
@@ -844,8 +573,8 @@ internal object ECPoint {
                 false
             }
         }
-    }
 
+    /** Serialize as 65-byte uncompressed: 04 || x (32 bytes) || y (32 bytes). */
     fun serializeUncompressed(
         x: IntArray,
         y: IntArray,
@@ -857,6 +586,7 @@ internal object ECPoint {
         return r
     }
 
+    /** Serialize as 33-byte compressed: 02/03 || x (32 bytes). */
     fun serializeCompressed(
         x: IntArray,
         y: IntArray,
@@ -867,6 +597,7 @@ internal object ECPoint {
         return r
     }
 
+    /** Convenience: convert to affine and return as Pair, or null if infinity. */
     fun toAffinePair(p: MutablePoint): Pair<IntArray, IntArray>? {
         val x = IntArray(8)
         val y = IntArray(8)

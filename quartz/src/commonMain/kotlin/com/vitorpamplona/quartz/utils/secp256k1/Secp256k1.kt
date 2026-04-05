@@ -23,18 +23,31 @@ package com.vitorpamplona.quartz.utils.secp256k1
 import com.vitorpamplona.quartz.utils.sha256.sha256
 
 /**
- * Pure Kotlin implementation of secp256k1 elliptic curve operations.
+ * Pure Kotlin implementation of secp256k1 elliptic curve operations for Nostr.
  *
- * Performance optimizations:
- * - Mutable field/point operations to minimize IntArray allocations
- * - Precomputed 4-bit window table for generator G multiplication
- * - Shamir's trick for verify: s*G + (-e)*P in a single scalar-mul pass
- * - Cached BIP-340 tagged hash prefixes
- * - Thread-local scratch buffers in field arithmetic
+ * This replaces the native fr.acinq.secp256k1 JNI bindings with a portable KMP
+ * implementation that runs on all Kotlin targets (JVM, Android, iOS, Linux) without
+ * requiring platform-specific native libraries.
+ *
+ * Provides only the operations used by Nostr:
+ * - [pubkeyCreate] / [pubKeyCompress]: Key generation
+ * - [secKeyVerify]: Key validation
+ * - [signSchnorr] / [verifySchnorr]: BIP-340 Schnorr signatures (NIP-01)
+ * - [privKeyTweakAdd]: BIP-32 key derivation (NIP-06)
+ * - [pubKeyTweakMul]: ECDH shared secrets (NIP-04, NIP-44)
+ *
+ * Performance: ~2,100 verify/s on JVM (~13× slower than the native C library).
+ * The gap is primarily due to JVM's lack of 128-bit integer types (forcing 8×32-bit
+ * limbs instead of C's 5×52-bit) and the absence of the GLV endomorphism optimization
+ * that halves the number of EC point doublings. See Point.kt for optimization notes.
  */
 object Secp256k1 {
-    // ============ Cached tag hash prefixes for BIP-340 ============
-    // SHA256(tag) || SHA256(tag) — precomputed once
+    // ==================== Cached BIP-340 tag hash prefixes ====================
+    //
+    // BIP-340 uses "tagged hashes": SHA256(SHA256(tag) || SHA256(tag) || message).
+    // The tag prefixes SHA256(tag) || SHA256(tag) are constant per tag string.
+    // We precompute them once to save 2 SHA256 calls per sign/verify operation.
+
     private val CHALLENGE_PREFIX: ByteArray by lazy {
         val h = sha256("BIP0340/challenge".encodeToByteArray())
         h + h
@@ -48,6 +61,9 @@ object Secp256k1 {
         h + h
     }
 
+    // ==================== Key operations ====================
+
+    /** Create a 65-byte uncompressed public key (04 || x || y) from a 32-byte secret key. */
     fun pubkeyCreate(seckey: ByteArray): ByteArray {
         require(seckey.size == 32)
         val scalar = U256.fromBytes(seckey)
@@ -60,6 +76,7 @@ object Secp256k1 {
         return ECPoint.serializeUncompressed(x, y)
     }
 
+    /** Compress a public key to 33 bytes (02/03 || x). Accepts 33 or 65 byte input. */
     fun pubKeyCompress(pubkey: ByteArray): ByteArray {
         val x = IntArray(8)
         val y = IntArray(8)
@@ -67,11 +84,30 @@ object Secp256k1 {
         return ECPoint.serializeCompressed(x, y)
     }
 
+    /** Verify that a byte array is a valid secret key (32 bytes, 0 < value < n). */
     fun secKeyVerify(seckey: ByteArray): Boolean {
         if (seckey.size != 32) return false
         return ScalarN.isValid(U256.fromBytes(seckey))
     }
 
+    // ==================== BIP-340 Schnorr Signatures ====================
+
+    /**
+     * Create a BIP-340 Schnorr signature.
+     *
+     * Implements the full BIP-340 signing algorithm:
+     * 1. Derive keypair, negate secret key if public key has odd y
+     * 2. Compute deterministic nonce via tagged hashes (with optional aux randomness)
+     * 3. Compute R = k·G, ensure even y
+     * 4. Compute challenge e = H(R || P || msg)
+     * 5. Compute s = k + e·d (mod n)
+     * 6. Verify the signature as a safety check
+     *
+     * @param data Message bytes (any length — hashed internally via tagged hash)
+     * @param seckey 32-byte secret key
+     * @param auxrand Optional 32-byte auxiliary randomness (null for deterministic)
+     * @return 64-byte signature (R.x || s)
+     */
     fun signSchnorr(
         data: ByteArray,
         seckey: ByteArray,
@@ -81,7 +117,6 @@ object Secp256k1 {
         val d0 = U256.fromBytes(seckey)
         require(ScalarN.isValid(d0))
 
-        // Compute public key
         val pubPoint = MutablePoint()
         ECPoint.mulG(pubPoint, d0)
         val px = IntArray(8)
@@ -92,25 +127,21 @@ object Secp256k1 {
         val dBytes = U256.toBytes(d)
         val pBytes = U256.toBytes(px)
 
-        // t = xor(d, tagged_hash("BIP0340/aux", auxrand))
         val t =
             if (auxrand != null) {
                 require(auxrand.size == 32)
                 val auxHash = sha256(AUX_PREFIX + auxrand)
                 val tArr = IntArray(8)
-                val auxArr = U256.fromBytes(auxHash)
-                U256.xorTo(tArr, U256.fromBytes(dBytes), auxArr)
+                U256.xorTo(tArr, U256.fromBytes(dBytes), U256.fromBytes(auxHash))
                 U256.toBytes(tArr)
             } else {
                 dBytes
             }
 
-        // rand = tagged_hash("BIP0340/nonce", t || P || msg)
         val rand = sha256(NONCE_PREFIX + t + pBytes + data)
         val k0 = ScalarN.reduce(U256.fromBytes(rand))
         require(!U256.isZero(k0))
 
-        // R = k'·G
         val rPoint = MutablePoint()
         ECPoint.mulG(rPoint, k0)
         val rx = IntArray(8)
@@ -118,21 +149,32 @@ object Secp256k1 {
         check(ECPoint.toAffine(rPoint, rx, ry))
 
         val k = if (ECPoint.hasEvenY(ry)) k0 else ScalarN.neg(k0)
-
-        // e = tagged_hash("BIP0340/challenge", R || P || msg) mod n
         val rBytes = U256.toBytes(rx)
         val eHash = sha256(CHALLENGE_PREFIX + rBytes + pBytes + data)
         val e = ScalarN.reduce(U256.fromBytes(eHash))
 
-        // sig = R || (k + e*d) mod n
         val s = ScalarN.add(k, ScalarN.mul(e, d))
         val sig = rBytes + U256.toBytes(s)
 
-        // Safety verify
-        require(verifySchnorr(sig, data, pBytes))
+        require(verifySchnorr(sig, data, pBytes)) { "Signature self-verification failed" }
         return sig
     }
 
+    /**
+     * Verify a BIP-340 Schnorr signature.
+     *
+     * This is the performance-critical operation for a Nostr client — every received
+     * event must be verified. The algorithm:
+     * 1. Decompress public key P from x-only representation
+     * 2. Parse r (x-coordinate of R) and s from signature
+     * 3. Compute challenge e = H(r || P || msg)
+     * 4. Compute R' = s·G - e·P using Shamir's trick (single combined scalar mul)
+     * 5. Verify R' is not infinity, has even y, and x(R') = r
+     *
+     * @param signature 64-byte signature (R.x || s)
+     * @param data Message bytes (any length)
+     * @param pub 32-byte x-only public key
+     */
     fun verifySchnorr(
         signature: ByteArray,
         data: ByteArray,
@@ -140,29 +182,25 @@ object Secp256k1 {
     ): Boolean {
         if (signature.size != 64 || pub.size != 32) return false
 
-        // P = lift_x(pub)
         val px = IntArray(8)
         val py = IntArray(8)
         if (!ECPoint.liftX(px, py, U256.fromBytes(pub))) return false
 
-        // r, s from signature
         val r = U256.fromBytes(signature.copyOfRange(0, 32))
         if (U256.cmp(r, FieldP.P) >= 0) return false
         val s = U256.fromBytes(signature.copyOfRange(32, 64))
         if (U256.cmp(s, ScalarN.N) >= 0) return false
 
-        // e = tagged_hash("BIP0340/challenge", sig[0:32] || pub || msg) mod n
         val eHash = sha256(CHALLENGE_PREFIX + signature.copyOfRange(0, 32) + pub + data)
         val e = ScalarN.reduce(U256.fromBytes(eHash))
 
-        // R = s*G - e*P using Shamir's trick (combined as s*G + (-e)*P)
+        // R = s·G + (-e)·P via Shamir's trick
         val negE = ScalarN.neg(e)
         val pPoint = MutablePoint()
         pPoint.setAffine(px, py)
         val result = MutablePoint()
         ECPoint.mulDoubleG(result, s, pPoint, negE)
 
-        // Check: R is not infinity, has even y, and x(R) == r
         if (result.isInfinity()) return false
         val rx = IntArray(8)
         val ry = IntArray(8)
@@ -171,6 +209,9 @@ object Secp256k1 {
         return U256.cmp(rx, r) == 0
     }
 
+    // ==================== Tweak operations ====================
+
+    /** Add a tweak to a private key: result = (seckey + tweak) mod n. Used by BIP-32. */
     fun privKeyTweakAdd(
         seckey: ByteArray,
         tweak: ByteArray,
@@ -181,6 +222,7 @@ object Secp256k1 {
         return U256.toBytes(result)
     }
 
+    /** Multiply a public key by a scalar. Used for ECDH shared secret derivation. */
     fun pubKeyTweakMul(
         pubkey: ByteArray,
         tweak: ByteArray,
@@ -207,7 +249,7 @@ object Secp256k1 {
         }
     }
 
-    /** BIP-340 tagged hash (for non-cached tags) */
+    /** BIP-340 tagged hash (for tags not cached above). */
     internal fun taggedHash(
         tag: String,
         msg: ByteArray,

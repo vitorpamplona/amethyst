@@ -20,24 +20,77 @@
  */
 package com.vitorpamplona.quartz.utils.secp256k1
 
+// =====================================================================================
+// 256-BIT ARITHMETIC AND MODULAR FIELD OPERATIONS FOR secp256k1
+// =====================================================================================
+//
+// This file implements the foundational math needed for elliptic curve cryptography on
+// the secp256k1 curve (used by Bitcoin and Nostr). It provides:
+//
+//   - U256:    Raw 256-bit unsigned integer arithmetic (add, subtract, multiply, compare)
+//   - FieldP:  Arithmetic modulo p (the field prime), used for point coordinates
+//   - ScalarN: Arithmetic modulo n (the group order), used for private keys and signatures
+//
+// REPRESENTATION
+// ==============
+// A 256-bit number is stored as IntArray(8) in little-endian order. Each Int holds 32 bits,
+// treated as unsigned. Element [0] is the least significant. For example, the number 1 is
+// stored as [1, 0, 0, 0, 0, 0, 0, 0].
+//
+// We chose 8×32-bit limbs over alternatives like 5×52-bit because Kotlin's Long (64-bit)
+// can hold the product of two 32-bit values without overflow (32+32=64 ≤ 63 signed bits
+// for most cases). The C reference implementation uses 5×52-bit with compiler-specific
+// __int128 which is unavailable on JVM. A future optimization could use 5×52-bit with
+// split-product techniques to reduce the inner product count from 64 to ~40.
+//
+// FIELD REDUCTION
+// ===============
+// secp256k1's field prime p = 2^256 - 2^32 - 977 has a special sparse form that makes
+// modular reduction efficient. After a 512-bit multiplication result, we split into
+// lo (256-bit) + hi (256-bit) and use the identity:
+//
+//   hi × 2^256 ≡ hi × (2^32 + 977)  (mod p)
+//
+// This replaces a generic 512-bit mod with a 256×33-bit multiply and add. A second
+// round handles any remaining overflow. This is much cheaper than generic Barrett or
+// Montgomery reduction because secp256k1's prime was specifically chosen for this property.
+//
+// MODULAR INVERSION
+// =================
+// We use Fermat's little theorem: a^(-1) = a^(p-2) mod p, computed via repeated
+// squaring (~255 squarings + ~255 multiplications). This is simple but expensive.
+//
+// The C reference library uses a faster algorithm called "safegcd" (Bernstein-Yang 2019)
+// that computes the modular inverse using ~590 cheap division steps (shifts and additions)
+// instead of ~510 field multiplications. Implementing safegcd would make inversion ~10×
+// faster, but since inversion only happens once per signature verification (in the final
+// Jacobian-to-affine conversion), the total impact on verify throughput is modest (~10%).
+//
+// PERFORMANCE APPROACH
+// ====================
+// Hot-path functions (mul, sqr, add, sub) take an output IntArray parameter to avoid
+// allocating a new array on every call. During a single signature verification, the field
+// multiplication is called thousands of times — allocating a new IntArray(8) each time
+// would create significant GC pressure on Android. Convenience wrappers that allocate
+// are provided for non-hot-path code.
+//
+// A thread-local IntArray(16) scratch buffer is reused across field multiplications to
+// avoid allocating a 512-bit intermediate on every mul/sqr call.
+// =====================================================================================
+
 /**
- * 256-bit unsigned integer arithmetic for secp256k1 field and scalar operations.
+ * Raw 256-bit unsigned integer arithmetic.
  *
- * Numbers are represented as IntArray(8) in little-endian order where each element
- * holds 32 bits (treated as unsigned). Element [0] is the least significant limb.
- *
- * Performance: All hot-path operations write into caller-provided output arrays
- * to avoid allocation. Only conversion methods (fromBytes/toBytes) allocate.
+ * All operations treat IntArray(8) as a 256-bit unsigned integer in little-endian
+ * limb order. No modular reduction is performed — callers (FieldP, ScalarN) handle that.
  */
 internal object U256 {
     val ZERO = IntArray(8)
 
-    fun isZero(a: IntArray): Boolean {
-        // Merge all limbs to avoid branches
-        return (a[0] or a[1] or a[2] or a[3] or a[4] or a[5] or a[6] or a[7]) == 0
-    }
+    /** Branchless zero check — OR all limbs, avoiding per-limb branching. */
+    fun isZero(a: IntArray): Boolean = (a[0] or a[1] or a[2] or a[3] or a[4] or a[5] or a[6] or a[7]) == 0
 
-    /** Compare: returns negative if a < b, 0 if equal, positive if a > b */
+    /** Unsigned comparison. Returns -1 if a < b, 0 if equal, 1 if a > b. */
     fun cmp(
         a: IntArray,
         b: IntArray,
@@ -50,7 +103,7 @@ internal object U256 {
         return 0
     }
 
-    /** a + b -> out, returns carry (0 or 1) */
+    /** out = a + b. Returns the carry bit (0 or 1). Safe for out aliasing a or b. */
     fun addTo(
         out: IntArray,
         a: IntArray,
@@ -65,7 +118,7 @@ internal object U256 {
         return carry.toInt()
     }
 
-    /** a - b -> out, returns borrow (0 or 1) */
+    /** out = a - b. Returns the borrow bit (0 or 1). Safe for out aliasing a or b. */
     fun subTo(
         out: IntArray,
         a: IntArray,
@@ -80,7 +133,13 @@ internal object U256 {
         return borrow.toInt()
     }
 
-    /** Full 256x256 -> 512 bit multiplication. Result written to out (size 16). */
+    /**
+     * Schoolbook multiplication: out = a × b (512-bit result in IntArray(16)).
+     *
+     * Uses the standard O(n²) algorithm with 8×8 = 64 inner Long multiplications.
+     * Each partial product is at most 32×32 = 64 bits, which fits in a signed Long
+     * with room for carry accumulation.
+     */
     fun mulWide(
         out: IntArray,
         a: IntArray,
@@ -100,10 +159,14 @@ internal object U256 {
     }
 
     /**
-     * Dedicated squaring: out = a², written to out (size 16).
-     * Exploits symmetry: a[i]*a[j] == a[j]*a[i], computing 28 cross-products
-     * once and doubling, plus 8 diagonal products. Total: 36 multiplications
-     * vs 64 for generic mul.
+     * Dedicated squaring: out = a² (512-bit result in IntArray(16)).
+     *
+     * Exploits the identity a²[i,j] = a²[j,i] to compute each cross-product once
+     * and double it, reducing from 64 to 36 multiplications:
+     *   - 28 cross-products (i < j), doubled
+     *   - 8 diagonal products (i == i)
+     *
+     * This gives ~40% fewer multiplications than generic mulWide for squaring.
      */
     fun sqrWide(
         out: IntArray,
@@ -123,15 +186,15 @@ internal object U256 {
             out[i + 8] = carry.toInt()
         }
 
-        // Pass 2: double all cross-products (left shift by 1 bit)
-        var carry = 0
+        // Pass 2: double all cross-products (shift entire 512-bit result left by 1 bit)
+        var shiftCarry = 0
         for (i in 1 until 16) {
             val v = out[i]
-            out[i] = (v shl 1) or carry
-            carry = v ushr 31
+            out[i] = (v shl 1) or shiftCarry
+            shiftCarry = v ushr 31
         }
 
-        // Pass 3: add diagonal products a[i]*a[i] at positions 2*i and 2*i+1
+        // Pass 3: add diagonal products a[i]² at positions 2i and 2i+1
         var dCarry = 0L
         for (i in 0 until 8) {
             val ai = a[i].toLong() and 0xFFFFFFFFL
@@ -146,46 +209,9 @@ internal object U256 {
         }
     }
 
-    /** 256x128 -> 384 bit multiply, return top portion shifted right by `shift` bits. */
-    fun mulShift(
-        k: IntArray,
-        g: IntArray,
-        shift: Int,
-    ): IntArray {
-        val wide = IntArray(16)
-        mulWide(wide, k, g)
-        val wordShift = shift / 32
-        val bitShift = shift % 32
-        val result = IntArray(8)
-        for (i in 0 until 8) {
-            val srcIdx = i + wordShift
-            if (srcIdx < 16) {
-                result[i] = wide[srcIdx]
-                if (bitShift > 0 && srcIdx + 1 < 16) {
-                    result[i] = (result[i] ushr bitShift) or (wide[srcIdx + 1] shl (32 - bitShift))
-                } else if (bitShift > 0) {
-                    result[i] = result[i] ushr bitShift
-                }
-            }
-        }
-        // Rounding: check the bit just below the shift
-        if (shift > 0) {
-            val roundBitIdx = shift - 1
-            val roundWord = roundBitIdx / 32
-            val roundBit = (wide[roundWord] ushr (roundBitIdx % 32)) and 1
-            if (roundBit == 1) {
-                var c = 1L
-                for (i in 0 until 8) {
-                    c += (result[i].toLong() and 0xFFFFFFFFL)
-                    result[i] = c.toInt()
-                    c = c ushr 32
-                }
-            }
-        }
-        return result
-    }
+    // ==================== Serialization ====================
 
-    /** Convert big-endian 32-byte array to IntArray(8) little-endian limbs */
+    /** Decode a big-endian 32-byte array into little-endian IntArray(8). */
     fun fromBytes(bytes: ByteArray): IntArray {
         require(bytes.size == 32)
         val r = IntArray(8)
@@ -199,20 +225,14 @@ internal object U256 {
         return r
     }
 
-    /** Convert IntArray(8) little-endian limbs to big-endian 32-byte array */
+    /** Encode little-endian IntArray(8) to a big-endian 32-byte array. */
     fun toBytes(a: IntArray): ByteArray {
         val r = ByteArray(32)
-        for (i in 0 until 8) {
-            val o = 28 - i * 4
-            r[o] = (a[i] ushr 24).toByte()
-            r[o + 1] = (a[i] ushr 16).toByte()
-            r[o + 2] = (a[i] ushr 8).toByte()
-            r[o + 3] = a[i].toByte()
-        }
+        toBytesInto(a, r, 0)
         return r
     }
 
-    /** Write big-endian bytes into existing array at offset */
+    /** Encode into an existing byte array at the given offset. Avoids allocation. */
     fun toBytesInto(
         a: IntArray,
         dest: ByteArray,
@@ -227,7 +247,9 @@ internal object U256 {
         }
     }
 
-    /** Get 4-bit nibble from scalar at position pos (pos 0 = lowest nibble) */
+    // ==================== Bit manipulation ====================
+
+    /** Extract 4-bit nibble at position pos (0 = lowest nibble). Used by windowed scalar mul. */
     fun getNibble(
         a: IntArray,
         pos: Int,
@@ -237,13 +259,13 @@ internal object U256 {
         return (a[limb] ushr shift) and 0xF
     }
 
-    /** Check if bit at position pos is set */
+    /** Test if bit at position pos is set (0 = LSB). */
     fun testBit(
         a: IntArray,
         pos: Int,
     ): Boolean = (a[pos / 32] ushr (pos % 32)) and 1 == 1
 
-    /** XOR: out = a xor b */
+    /** out = a XOR b. Used by BIP-340 signing for nonce derivation. */
     fun xorTo(
         out: IntArray,
         a: IntArray,
@@ -252,7 +274,7 @@ internal object U256 {
         for (i in 0 until 8) out[i] = a[i] xor b[i]
     }
 
-    /** Copy a into out */
+    /** Copy the contents of a into out. */
     fun copyInto(
         out: IntArray,
         a: IntArray,
@@ -262,10 +284,17 @@ internal object U256 {
 }
 
 /**
- * Field arithmetic modulo p = 2^256 - 2^32 - 977.
- * All hot-path operations write results into caller-provided output arrays.
+ * Arithmetic modulo the secp256k1 field prime: p = 2^256 - 2^32 - 977.
+ *
+ * This is the "base field" — the coordinates (x, y) of every point on the secp256k1
+ * curve are elements of this field. All coordinate math during point addition and
+ * doubling uses these operations.
+ *
+ * Hot-path functions accept an output IntArray parameter to avoid per-call allocation.
+ * Convenience wrappers that return a new IntArray are provided for non-performance-critical code.
  */
 internal object FieldP {
+    /** The field prime: p = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F */
     val P =
         intArrayOf(
             0xFFFFFC2F.toInt(),
@@ -278,68 +307,18 @@ internal object FieldP {
             0xFFFFFFFF.toInt(),
         )
 
-    // Thread-local scratch space to avoid allocation in hot path
-    // Since Kotlin/JVM coroutines are cooperative (not preemptive on same thread),
-    // thread-locals are safe as long as we don't call suspend functions mid-computation.
+    /**
+     * Thread-local 512-bit scratch buffer, reused across mul/sqr calls.
+     *
+     * Each field multiplication produces a 512-bit intermediate result before reduction.
+     * Rather than allocating a new IntArray(16) on every mul (thousands of times per
+     * verify), we reuse this thread-local buffer. This is safe because:
+     * - EC point operations are synchronous (no suspension points mid-computation)
+     * - Each thread gets its own buffer via ThreadLocal
+     */
     private val wide = ThreadLocal.withInitial { IntArray(16) }
 
-    /** Reduce in-place: if a >= p, subtract p */
-    fun reduceSelf(a: IntArray) {
-        if (U256.cmp(a, P) >= 0) {
-            U256.subTo(a, a, P)
-        }
-    }
-
-    /** Reduce a wide 512-bit value in w[0..15] -> out[0..7] mod p */
-    fun reduceWide(
-        out: IntArray,
-        w: IntArray,
-    ) {
-        // w ≡ lo + hi * (2^32 + 977) (mod p)
-        // Split: hi * (2^32 + 977) = (hi << 32) + hi * 977
-
-        // Compute: out = lo + hi*977 + (hi << 32)
-        var carry = 0L
-        for (i in 0 until 8) {
-            // lo[i]
-            carry += (w[i].toLong() and 0xFFFFFFFFL)
-            // hi[i] * 977
-            carry += (w[i + 8].toLong() and 0xFFFFFFFFL) * 977L
-            // hi[i-1] (the <<32 shift)
-            if (i > 0) carry += (w[i + 7].toLong() and 0xFFFFFFFFL)
-            out[i] = carry.toInt()
-            carry = carry ushr 32
-        }
-        // Remaining: carry + hi[7]
-        var overflow = carry + (w[15].toLong() and 0xFFFFFFFFL)
-
-        // Second round: overflow * (2^32 + 977)
-        if (overflow > 0) {
-            val ov977 = overflow * 977L
-            var c2 = 0L
-            for (i in 0 until 8) {
-                c2 += (out[i].toLong() and 0xFFFFFFFFL)
-                if (i == 0) c2 += (ov977 and 0xFFFFFFFFL)
-                if (i == 1) c2 += (ov977 ushr 32) + (overflow and 0xFFFFFFFFL)
-                if (i == 2) c2 += (overflow ushr 32)
-                out[i] = c2.toInt()
-                c2 = c2 ushr 32
-            }
-            if (c2 > 0) {
-                val tiny = c2 * 977L
-                var c3 = 0L
-                for (i in 0 until 3) {
-                    c3 += (out[i].toLong() and 0xFFFFFFFFL)
-                    if (i == 0) c3 += (tiny and 0xFFFFFFFFL)
-                    if (i == 1) c3 += (tiny ushr 32) + (c2 and 0xFFFFFFFFL)
-                    if (i == 2) c3 += (c2 ushr 32)
-                    out[i] = c3.toInt()
-                    c3 = c3 ushr 32
-                }
-            }
-        }
-        reduceSelf(out)
-    }
+    // ==================== Core arithmetic ====================
 
     /** out = a + b mod p */
     fun add(
@@ -349,7 +328,7 @@ internal object FieldP {
     ) {
         val carry = U256.addTo(out, a, b)
         if (carry != 0) {
-            // out + 2^256 ≡ out + (2^32 + 977) mod p
+            // Overflow past 2^256: add 2^256 mod p = 2^32 + 977
             var c = 977L + (out[0].toLong() and 0xFFFFFFFFL)
             out[0] = c.toInt()
             c = c ushr 32
@@ -372,12 +351,10 @@ internal object FieldP {
         b: IntArray,
     ) {
         val borrow = U256.subTo(out, a, b)
-        if (borrow != 0) {
-            U256.addTo(out, out, P)
-        }
+        if (borrow != 0) U256.addTo(out, out, P) // Underflow: add p
     }
 
-    /** out = a * b mod p. Uses thread-local scratch space. */
+    /** out = a × b mod p */
     fun mul(
         out: IntArray,
         a: IntArray,
@@ -398,29 +375,6 @@ internal object FieldP {
         reduceWide(out, w)
     }
 
-    /** out = a / 2 mod p. If a is odd, add p first (since p is odd, a+p is even). */
-    fun half(
-        out: IntArray,
-        a: IntArray,
-    ) {
-        val isOdd = a[0] and 1
-        // If odd, compute (a + p) / 2. If even, compute a / 2.
-        // Add p conditionally (branchless via mask)
-        val mask = (-isOdd).toLong() // all 1s if odd, all 0s if even
-        var carry = 0L
-        for (i in 0 until 8) {
-            carry += (a[i].toLong() and 0xFFFFFFFFL) + ((P[i].toLong() and 0xFFFFFFFFL) and mask)
-            out[i] = carry.toInt()
-            carry = carry ushr 32
-        }
-        // carry is 0 or 1 from the addition
-        // Now right-shift by 1 (the carry bit becomes the top bit)
-        for (i in 0 until 7) {
-            out[i] = (out[i] ushr 1) or (out[i + 1] shl 31)
-        }
-        out[7] = (out[7] ushr 1) or (carry.toInt() shl 31)
-    }
-
     /** out = -a mod p */
     fun neg(
         out: IntArray,
@@ -433,7 +387,42 @@ internal object FieldP {
         }
     }
 
-    /** out = a^(-1) mod p via Fermat's little theorem */
+    /**
+     * out = a / 2 mod p (field halving).
+     *
+     * If a is odd, computes (a + p) / 2 (since p is odd, a+p is even).
+     * Implemented branchlessly using a conditional mask to avoid timing leaks.
+     * Used by the optimized point doubling formula to compute (3/2)x² cheaply.
+     */
+    fun half(
+        out: IntArray,
+        a: IntArray,
+    ) {
+        val mask = (-(a[0] and 1)).toLong() // all 1s if odd, all 0s if even
+        var carry = 0L
+        for (i in 0 until 8) {
+            carry += (a[i].toLong() and 0xFFFFFFFFL) + ((P[i].toLong() and 0xFFFFFFFFL) and mask)
+            out[i] = carry.toInt()
+            carry = carry ushr 32
+        }
+        // Right-shift by 1 (carry becomes the top bit)
+        for (i in 0 until 7) {
+            out[i] = (out[i] ushr 1) or (out[i + 1] shl 31)
+        }
+        out[7] = (out[7] ushr 1) or (carry.toInt() shl 31)
+    }
+
+    // ==================== Inversion and square root ====================
+
+    /**
+     * out = a^(-1) mod p using Fermat's little theorem: a^(p-2) mod p.
+     *
+     * This computes the modular inverse via exponentiation by repeated squaring.
+     * It requires ~255 squarings and ~255 multiplications (one per bit of p-2).
+     *
+     * Called once per signature verify (in Jacobian-to-affine conversion) and once
+     * per public key decompression (in square root).
+     */
     fun inv(
         out: IntArray,
         a: IntArray,
@@ -442,6 +431,113 @@ internal object FieldP {
         powModP(out, a, P_MINUS_2)
     }
 
+    /**
+     * out = √a mod p, returns false if a is not a quadratic residue.
+     *
+     * Since p ≡ 3 (mod 4), the square root is simply a^((p+1)/4) mod p.
+     * We verify the result by checking that out² = a (mod p).
+     * Used to decompress public keys: given x, compute y from y² = x³ + 7.
+     */
+    fun sqrt(
+        out: IntArray,
+        a: IntArray,
+    ): Boolean {
+        powModP(out, a, P_PLUS_1_DIV_4)
+        val check = IntArray(8)
+        mul(check, out, out)
+        val ar = IntArray(8)
+        U256.copyInto(ar, a)
+        reduceSelf(ar)
+        return U256.cmp(check, ar) == 0
+    }
+
+    // ==================== Reduction ====================
+
+    /** Conditional subtraction: if a >= p, set a = a - p. */
+    fun reduceSelf(a: IntArray) {
+        if (U256.cmp(a, P) >= 0) U256.subTo(a, a, P)
+    }
+
+    /**
+     * Reduce a 512-bit value (from multiplication) to 256 bits mod p.
+     *
+     * Uses the special form of p: since p = 2^256 - (2^32 + 977), any value
+     * above 2^256 can be "folded back" by multiplying the high part by (2^32 + 977)
+     * and adding to the low part. We split this into two cheaper operations:
+     *   hi × (2^32 + 977) = (hi << 32) + hi × 977
+     * to avoid overflow, since hi × (2^32 + 977) could exceed 64 bits per limb.
+     */
+    fun reduceWide(
+        out: IntArray,
+        w: IntArray,
+    ) {
+        // First round: out = lo + hi*977 + (hi << 32)
+        var carry = 0L
+        for (i in 0 until 8) {
+            carry += (w[i].toLong() and 0xFFFFFFFFL) // lo[i]
+            carry += (w[i + 8].toLong() and 0xFFFFFFFFL) * 977L // hi[i] * 977
+            if (i > 0) carry += (w[i + 7].toLong() and 0xFFFFFFFFL) // hi[i-1] (the <<32)
+            out[i] = carry.toInt()
+            carry = carry ushr 32
+        }
+        var overflow = carry + (w[15].toLong() and 0xFFFFFFFFL) // hi[7] from the <<32
+
+        // Second round: fold overflow × (2^32 + 977) back in
+        if (overflow > 0) {
+            val ov977 = overflow * 977L
+            var c2 = 0L
+            for (i in 0 until 8) {
+                c2 += (out[i].toLong() and 0xFFFFFFFFL)
+                if (i == 0) c2 += (ov977 and 0xFFFFFFFFL)
+                if (i == 1) c2 += (ov977 ushr 32) + (overflow and 0xFFFFFFFFL)
+                if (i == 2) c2 += (overflow ushr 32)
+                out[i] = c2.toInt()
+                c2 = c2 ushr 32
+            }
+            // Extremely rare third round (overflow from second round)
+            if (c2 > 0) {
+                val tiny = c2 * 977L
+                var c3 = 0L
+                for (i in 0 until 3) {
+                    c3 += (out[i].toLong() and 0xFFFFFFFFL)
+                    if (i == 0) c3 += (tiny and 0xFFFFFFFFL)
+                    if (i == 1) c3 += (tiny ushr 32) + (c2 and 0xFFFFFFFFL)
+                    if (i == 2) c3 += (c2 ushr 32)
+                    out[i] = c3.toInt()
+                    c3 = c3 ushr 32
+                }
+            }
+        }
+        reduceSelf(out) // Final conditional subtraction
+    }
+
+    // ==================== Internal exponentiation ====================
+
+    /** Compute base^exp mod p using left-to-right binary exponentiation (square-and-multiply). */
+    private fun powModP(
+        out: IntArray,
+        base: IntArray,
+        exp: IntArray,
+    ) {
+        val b = IntArray(8)
+        U256.copyInto(b, base)
+        var highBit = 255
+        while (highBit >= 0 && !U256.testBit(exp, highBit)) highBit--
+        if (highBit < 0) {
+            out[0] = 1
+            for (i in 1 until 8) out[i] = 0
+            return
+        }
+        U256.copyInto(out, b) // Start with base (MSB is always 1)
+        for (i in highBit - 1 downTo 0) {
+            sqr(out, out)
+            if (U256.testBit(exp, i)) mul(out, out, b)
+        }
+    }
+
+    // ==================== Constants ====================
+
+    /** p - 2: exponent for Fermat inversion */
     private val P_MINUS_2 =
         intArrayOf(
             0xFFFFFC2D.toInt(),
@@ -454,6 +550,7 @@ internal object FieldP {
             0xFFFFFFFF.toInt(),
         )
 
+    /** (p + 1) / 4: exponent for square root when p ≡ 3 (mod 4) */
     private val P_PLUS_1_DIV_4 =
         intArrayOf(
             0xBFFFFF0C.toInt(),
@@ -466,51 +563,7 @@ internal object FieldP {
             0x3FFFFFFF,
         )
 
-    /** out = sqrt(a) mod p, returns false if not a QR */
-    fun sqrt(
-        out: IntArray,
-        a: IntArray,
-    ): Boolean {
-        powModP(out, a, P_PLUS_1_DIV_4)
-        // Verify: out² == a
-        val check = IntArray(8)
-        mul(check, out, out)
-        // Need a reduced copy of a for comparison
-        val ar = IntArray(8)
-        U256.copyInto(ar, a)
-        reduceSelf(ar)
-        return U256.cmp(check, ar) == 0
-    }
-
-    /** out = base^exp mod p */
-    private fun powModP(
-        out: IntArray,
-        base: IntArray,
-        exp: IntArray,
-    ) {
-        // Left-to-right square-and-multiply
-        val b = IntArray(8)
-        U256.copyInto(b, base)
-
-        var highBit = 255
-        while (highBit >= 0 && !U256.testBit(exp, highBit)) highBit--
-        if (highBit < 0) {
-            out[0] = 1
-            for (i in 1 until 8) out[i] = 0
-            return
-        }
-
-        // Start with the base (first bit is always 1)
-        U256.copyInto(out, b)
-        for (i in highBit - 1 downTo 0) {
-            sqr(out, out) // out = out²
-            if (U256.testBit(exp, i)) {
-                mul(out, out, b) // out = out * base
-            }
-        }
-    }
-
-    // === Allocating convenience wrappers (for non-hot paths) ===
+    // ==================== Convenience wrappers (allocating — for non-hot paths) ====================
 
     fun add(
         a: IntArray,
@@ -570,7 +623,16 @@ internal object FieldP {
 }
 
 /**
- * Scalar arithmetic modulo n (the order of the secp256k1 group).
+ * Arithmetic modulo the secp256k1 group order: n = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141.
+ *
+ * This is the "scalar field" — private keys, nonces, and challenge hashes are elements
+ * of this field. Schnorr signing computes s = k + e·d (mod n), and scalar multiplication
+ * computes k·G (mod n) where G is the generator point.
+ *
+ * Unlike FieldP, the group order n doesn't have a nice sparse form, so reduction from
+ * 512 bits uses a different strategy: we exploit n ≈ 2^256, so 2^256 mod n is a small
+ * ~129-bit constant. We multiply the high part by this constant and fold it back,
+ * repeating until the result fits in 256 bits.
  */
 internal object ScalarN {
     val N =
@@ -585,6 +647,7 @@ internal object ScalarN {
             0xFFFFFFFF.toInt(),
         )
 
+    /** 2^256 - n: the small constant used for reduction (≈129 bits) */
     private val N_COMPLEMENT =
         intArrayOf(
             0x2FC9BEBF.toInt(),
@@ -597,6 +660,7 @@ internal object ScalarN {
             0,
         )
 
+    /** n - 2: exponent for Fermat inversion */
     private val N_MINUS_2 =
         intArrayOf(
             0xD036413F.toInt(),
@@ -609,8 +673,10 @@ internal object ScalarN {
             0xFFFFFFFF.toInt(),
         )
 
+    /** Check if 0 < a < n (valid non-zero scalar). */
     fun isValid(a: IntArray): Boolean = !U256.isZero(a) && U256.cmp(a, N) < 0
 
+    /** If a >= n, return a - n. Otherwise return a unchanged. */
     fun reduce(a: IntArray): IntArray =
         if (U256.cmp(a, N) >= 0) {
             val r = IntArray(8)
@@ -626,12 +692,8 @@ internal object ScalarN {
     ): IntArray {
         val r = IntArray(8)
         val carry = U256.addTo(r, a, b)
-        if (carry != 0) {
-            U256.addTo(r, r, N_COMPLEMENT)
-            reduceSelf(r)
-        } else {
-            reduceSelf(r)
-        }
+        if (carry != 0) U256.addTo(r, r, N_COMPLEMENT)
+        reduceSelf(r)
         return r
     }
 
@@ -648,7 +710,11 @@ internal object ScalarN {
     fun mul(
         a: IntArray,
         b: IntArray,
-    ): IntArray = reduceWide(mulWideAlloc(a, b))
+    ): IntArray {
+        val w = IntArray(16)
+        U256.mulWide(w, a, b)
+        return reduceWide(w)
+    }
 
     fun neg(a: IntArray): IntArray {
         if (U256.isZero(a)) return IntArray(8)
@@ -657,6 +723,7 @@ internal object ScalarN {
         return r
     }
 
+    /** a^(-1) mod n via Fermat's little theorem. */
     fun inv(a: IntArray): IntArray {
         require(!U256.isZero(a))
         return powModN(a, N_MINUS_2)
@@ -666,15 +733,13 @@ internal object ScalarN {
         if (U256.cmp(a, N) >= 0) U256.subTo(a, a, N)
     }
 
-    private fun mulWideAlloc(
-        a: IntArray,
-        b: IntArray,
-    ): IntArray {
-        val w = IntArray(16)
-        U256.mulWide(w, a, b)
-        return w
-    }
-
+    /**
+     * Reduce a 512-bit product mod n.
+     *
+     * Strategy: split w = lo + hi × 2^256, then use hi × 2^256 ≡ hi × N_COMPLEMENT (mod n).
+     * Since N_COMPLEMENT is ~129 bits, hi × N_COMPLEMENT is ~385 bits. We repeat the
+     * reduction until the result fits in 256 bits, then do a final conditional subtraction.
+     */
     private fun reduceWide(w: IntArray): IntArray {
         val lo = IntArray(8)
         val hi = IntArray(8)
@@ -687,6 +752,7 @@ internal object ScalarN {
             return lo
         }
 
+        // Round 1: lo + hi × N_COMPLEMENT
         val hiTimesNC = IntArray(16)
         U256.mulWide(hiTimesNC, hi, N_COMPLEMENT)
         val sum = IntArray(16)
@@ -698,6 +764,7 @@ internal object ScalarN {
             carry = carry ushr 32
         }
 
+        // Round 2 if still > 256 bits
         val lo2 = IntArray(8)
         val hi2 = IntArray(8)
         for (i in 0 until 8) {
