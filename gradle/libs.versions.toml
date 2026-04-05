@@ -67,9 +67,11 @@ androidxExifinterface = "1.4.2"
 kotlinTest = "2.3.0"
 core = "1.7.0"
 mavenPublish = "0.36.0"
+clikt = "5.0.3"
 sqlite = "2.6.2"
 
 [libraries]
+clikt = { group = "com.github.ajalt.clikt", name = "clikt", version.ref = "clikt" }
 abedElazizShe-video-compressor-fork = { group = "com.github.davotoula", name = "LightCompressor-enhanced", version.ref = "lightcompressor-enhanced" }
 accompanist-adaptive = { group = "com.google.accompanist", name = "accompanist-adaptive", version.ref = "accompanistAdaptive" }
 accompanist-permissions = { group = "com.google.accompanist", name = "accompanist-permissions", version.ref = "accompanistAdaptive" }
