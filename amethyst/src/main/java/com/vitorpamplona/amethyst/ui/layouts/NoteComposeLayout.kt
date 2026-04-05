@@ -44,16 +44,25 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 
-private val ZeroConstraints = Constraints.fixed(0, 0)
-
+/**
+ * Pre-computed pixel dimensions for [NoteComposeLayout], cached via [remember]
+ * so dp-to-px conversion only runs once per density change.
+ */
 @Immutable
 private data class NoteLayoutPx(
+    /** Author picture column width: 55dp */
     val authorWidth: Int,
+    /** Horizontal gap between author column and content column: 10dp */
     val authorContentGap: Int,
+    /** Vertical gap between author picture and relay badges: 5dp */
     val authorBadgeGap: Int,
+    /** Vertical spacer between header rows and note content: 4dp */
     val contentSpacer: Int,
+    /** Left padding for the content area: 12dp */
     val padStart: Int,
+    /** Right padding for the content area: 12dp */
     val padEnd: Int,
+    /** Top padding for the content area: 10dp */
     val padTop: Int,
 )
 
@@ -134,12 +143,13 @@ private fun NoteComposeLayoutBoostedPreview() {
 }
 
 /**
- * Custom zero-overhead layout for note items. Uses the multi-content [Layout]
- * overload to eliminate ALL intermediate wrapper nodes (Box/Column). Each slot's
- * composables become direct measurables measured with pre-computed constraints
- * in a single pass.
+ * Custom single-pass layout for note feed items that replaces the nested
+ * Row/Column structure with direct constraint calculation using known fixed
+ * dimensions.
  *
- * Layout structure (when [showAuthorColumn] is true):
+ * ## Layout structure
+ *
+ * When [showAuthorColumn] is true (normal notes):
  * ```
  * ┌──────────────────────────────────────────────┐
  * │ padding (start=12, end=12, top=10)           │
@@ -156,17 +166,81 @@ private fun NoteComposeLayoutBoostedPreview() {
  * └───────────────────────────────────────────────┘
  * ```
  *
- * Performance characteristics:
- * - Zero intermediate layout nodes (no Box/Column wrappers)
- * - Pre-computed pixel dimensions cached across recompositions
- * - Single measure pass with known constraints for all 6 slots
- * - Multi-child slots (noteContent, reactionsRow) stacked inline
- * - Hidden slots skip measurement entirely (empty measurable lists)
+ * When [showAuthorColumn] is false (boosted/quoted notes):
+ * ```
+ * ┌───────────────────────────────────────────────┐
+ * │ firstRow (full width)                         │
+ * │ noteContent                                   │
+ * ├───────────────────────────────────────────────┤
+ * │ reactionsRow (full width)                     │
+ * └───────────────────────────────────────────────┘
+ * ```
  *
+ * ## Design choices
+ *
+ * **Multi-content Layout instead of layoutId**: Uses [Layout] with `contents: List`
+ * so each slot's composables become direct measurables without Box/Column wrappers.
+ * This eliminates 6 intermediate layout nodes per note compared to the layoutId
+ * approach. Empty slot lambdas produce empty measurable lists, which are skipped
+ * entirely (no [Constraints.fixed] zero-size measurement needed).
+ *
+ * **Padding in measure policy instead of Modifier.padding()**: The reactions row
+ * spans the full parent width without side padding, while the author + content area
+ * has 12dp horizontal padding. A single Modifier.padding() can't express different
+ * padding for different children, so padding offsets are applied during placement.
+ *
+ * **placeRelative instead of place**: Ensures correct positioning in RTL layouts
+ * by automatically mirroring x coordinates.
+ *
+ * **arrayOfNulls instead of map**: For multi-child slots (noteContent, reactionsRow),
+ * uses pre-sized arrays with indexed iteration to avoid List allocation overhead in
+ * the measure pass hot path.
+ *
+ * ## Slot ordering contract
+ *
+ * The `contents` list and `allMeasurables` indices are:
+ * - 0: [authorPicture] - 0 or 1 measurables
+ * - 1: [relayBadges] - 0 or 1 measurables
+ * - 2: [firstRow] - exactly 1 measurable
+ * - 3: [secondRow] - 0 or 1 measurables
+ * - 4: [noteContent] - 1+ measurables (stacked vertically)
+ * - 5: [reactionsRow] - 0+ measurables (stacked vertically)
+ *
+ * ## Performance
+ *
+ * Compared to the previous nested Row > Column > Column structure:
+ * - Eliminates 3 layout node levels (Row, author Column, content Column)
+ * - Eliminates Row's two-pass measurement (measure author first, then content)
+ * - Pre-computes all pixel dimensions once via [remember], cached across recompositions
+ * - Remaining per-frame allocations: ~48 bytes for `listOf(6 lambdas)` +
+ *   ~24 bytes per `arrayOfNulls` for multi-child slots
+ *
+ * The caller should use `drawBehind { drawRect(color) }` instead of
+ * `background(color)` on the [modifier] to avoid recomposition when the
+ * background color state changes (e.g. "new item" highlight fade).
+ *
+ * @param modifier Applied to the Layout root. Typically includes combinedClickable
+ *   for note navigation, drawBehind for background color, and fillMaxWidth.
  * @param addPadding Whether to add standard note padding (12dp sides, 10dp top)
- * @param showAuthorColumn Whether to reserve space for the author picture column
- * @param showSecondRow Whether to measure and place the second info row
- * @param showContentSpacer Whether to add a 4dp spacer between header rows and content
+ *   to the author + content area. False for boosted notes.
+ * @param showAuthorColumn Whether to reserve 55dp for the author picture column
+ *   with a 10dp gap. False for boosted/quoted notes.
+ * @param showSecondRow Whether to measure and place the second header row
+ *   (NIP-05 status, location, PoW). Requires complete UI mode.
+ * @param showContentSpacer Whether to add a 4dp spacer between header rows and
+ *   note content. False for repost events.
+ * @param authorPicture Slot for the author's profile picture (55x55dp area).
+ *   Should emit nothing when [showAuthorColumn] is false to skip composition.
+ * @param relayBadges Slot for relay indicator icons below the author picture.
+ *   Should emit nothing when [showAuthorColumn] is false.
+ * @param firstRow Slot for the primary header: author name, time, more options.
+ *   Always present.
+ * @param secondRow Slot for the secondary header: NIP-05, location, PoW, OTS.
+ *   Should emit nothing when [showSecondRow] is false.
+ * @param noteContent Slot for the event-specific content. May emit multiple
+ *   children (content + zap splits + approval button) which are stacked vertically.
+ * @param reactionsRow Slot for the reaction buttons row. May emit a ReactionsRow,
+ *   a Spacer, or nothing depending on event type.
  */
 @Composable
 fun NoteComposeLayout(
@@ -198,46 +272,49 @@ fun NoteComposeLayout(
             }
         }
 
+    // Slot order must match the indices used in the measure policy below.
     Layout(
         contents =
             listOf(
-                authorPicture,
-                relayBadges,
-                firstRow,
-                secondRow,
-                noteContent,
-                reactionsRow,
+                authorPicture, // 0
+                relayBadges, // 1
+                firstRow, // 2
+                secondRow, // 3
+                noteContent, // 4
+                reactionsRow, // 5
             ),
         modifier = modifier,
     ) { allMeasurables, constraints ->
         val maxWidth = constraints.maxWidth
 
-        // Compute padding offsets
+        // Padding is applied in the measure policy (not via Modifier.padding) because
+        // the reactions row needs full width while the content area is inset.
         val padStart = if (addPadding) px.padStart else 0
         val padEnd = if (addPadding) px.padEnd else 0
         val padTop = if (addPadding) px.padTop else 0
 
-        // Compute column widths from known dimensions
+        // Column widths are computed from known fixed dimensions, eliminating
+        // the Row's two-pass measurement (measure author → compute remaining → measure content).
         val innerWidth = maxWidth - padStart - padEnd
         val authorW = if (showAuthorColumn) px.authorWidth else 0
         val gap = if (showAuthorColumn) px.authorContentGap else 0
         val contentWidth = (innerWidth - authorW - gap).coerceAtLeast(0)
 
-        // Pre-compute constraint objects once
+        // Constraints is a value class (inline Long) so these don't allocate.
         val authorConstraints = Constraints(maxWidth = px.authorWidth)
         val contentConstraints = Constraints(maxWidth = contentWidth)
         val fullWidthConstraints = Constraints(maxWidth = maxWidth)
 
-        // Measure author column (single child per slot, skip if empty)
+        // Single-child slots: firstOrNull() returns null for empty slots (hidden),
+        // skipping measurement entirely.
         val authorPlaceable = allMeasurables[0].firstOrNull()?.measure(authorConstraints)
         val relayPlaceable = allMeasurables[1].firstOrNull()?.measure(authorConstraints)
 
-        // Measure header rows
         val firstRowPlaceable = allMeasurables[2].firstOrNull()?.measure(contentConstraints)
         val secondRowPlaceable =
             if (showSecondRow) allMeasurables[3].firstOrNull()?.measure(contentConstraints) else null
 
-        // Measure note content children directly (no Column wrapper)
+        // Multi-child slots: measured into pre-sized arrays to avoid List allocation.
         val contentMeasurables = allMeasurables[4]
         val contentPlaceables = arrayOfNulls<Placeable>(contentMeasurables.size)
         var contentStackHeight = 0
@@ -247,7 +324,6 @@ fun NoteComposeLayout(
             contentStackHeight += placeable.height
         }
 
-        // Measure reactions row children directly (no Column wrapper)
         val reactionsMeasurables = allMeasurables[5]
         val reactionsPlaceables = arrayOfNulls<Placeable>(reactionsMeasurables.size)
         var reactionsHeight = 0
@@ -257,7 +333,7 @@ fun NoteComposeLayout(
             reactionsHeight += placeable.height
         }
 
-        // Calculate section heights
+        // Height calculation
         val spacer = if (showContentSpacer) px.contentSpacer else 0
 
         val contentColumnHeight =
@@ -276,8 +352,9 @@ fun NoteComposeLayout(
         val mainAreaHeight = maxOf(authorColumnHeight, contentColumnHeight)
         val totalHeight = padTop + mainAreaHeight + reactionsHeight
 
+        // placeRelative handles RTL by mirroring x coordinates automatically.
         layout(maxWidth, totalHeight.coerceAtLeast(constraints.minHeight)) {
-            // Place author column
+            // Author column (inside padding area)
             if (showAuthorColumn) {
                 authorPlaceable?.placeRelative(padStart, padTop)
                 relayPlaceable?.placeRelative(
@@ -286,7 +363,7 @@ fun NoteComposeLayout(
                 )
             }
 
-            // Place content column
+            // Content column (to the right of author, inside padding area)
             val contentX = padStart + authorW + gap
             var y = padTop
 
@@ -305,7 +382,7 @@ fun NoteComposeLayout(
                 y += placeable?.height ?: 0
             }
 
-            // Place reactions row at full width, below main area
+            // Reactions row (full width, no side padding, below main area)
             var reactionsY = padTop + mainAreaHeight
             for (placeable in reactionsPlaceables) {
                 placeable?.placeRelative(0, reactionsY)

@@ -564,6 +564,14 @@ private fun CheckNewAndRenderNote(
     )
 }
 
+/**
+ * Creates a [Modifier] with [combinedClickable] for note navigation (click to open,
+ * long-press for quick action popup). Remembered by [baseNote] and [modifier] to avoid
+ * recreating the click handler on every recomposition.
+ *
+ * Used directly on [NoteComposeLayout]'s modifier in [InnerNoteWithReactions] to avoid
+ * a wrapping Column node. For callers that need a wrapping container, use [ClickableNote].
+ */
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
 fun clickableNoteModifier(
@@ -598,6 +606,14 @@ fun clickableNoteModifier(
             )
     }
 
+/**
+ * Wraps [content] in a Column with click handling and animated background.
+ *
+ * Kept for callers outside NoteCompose (e.g. ChannelCardCompose) that need a
+ * container for non-NoteComposeLayout content. For NoteCompose itself,
+ * [InnerNoteWithReactions] applies [clickableNoteModifier] directly on the
+ * [NoteComposeLayout] modifier to eliminate this Column wrapper node.
+ */
 @Composable
 fun ClickableNote(
     baseNote: Note,
