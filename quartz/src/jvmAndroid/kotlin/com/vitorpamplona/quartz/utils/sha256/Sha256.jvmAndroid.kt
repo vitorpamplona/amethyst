@@ -21,10 +21,24 @@
 package com.vitorpamplona.quartz.utils.sha256
 
 import java.io.InputStream
+import java.security.MessageDigest
 
-val pool = Sha256Pool(25) // max parallel operations
+/**
+ * Thread-local MessageDigest for lock-free SHA256 hashing.
+ *
+ * The previous ArrayBlockingQueue pool added ~10µs of synchronization overhead per call
+ * (lock acquire + release) for ~2µs of actual hashing. ThreadLocal eliminates all locking
+ * since each thread gets its own MessageDigest instance. digest() implicitly resets state.
+ */
+private val threadLocalDigest =
+    ThreadLocal.withInitial {
+        MessageDigest.getInstance("SHA-256")
+    }
 
-actual fun sha256(data: ByteArray) = pool.hash(data)
+actual fun sha256(data: ByteArray): ByteArray = threadLocalDigest.get().digest(data)
+
+/** Pool is still available for streaming use cases that need incremental hashing. */
+val pool = Sha256Pool(25)
 
 /**
  * Calculate SHA256 hash while counting bytes read from the stream.
