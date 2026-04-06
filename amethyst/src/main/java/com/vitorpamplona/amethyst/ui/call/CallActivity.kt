@@ -33,6 +33,7 @@ import android.os.Bundle
 import android.util.Rational
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.lifecycleScope
@@ -54,6 +55,16 @@ class CallActivity : AppCompatActivity() {
     // Tracks whether we entered PiP at least once, so we can distinguish
     // "user swiped PiP away" from "user pressed Home from full-screen call".
     private var wasInPipMode = false
+
+    // Launcher for requesting call permissions when accepting from notification
+    private val permissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { results ->
+            if (hasCallPermissions(this, isVideo = pendingAcceptIsVideo)) {
+                acceptCall()
+            }
+        }
+
+    private var pendingAcceptIsVideo = false
 
     private val pipActionReceiver =
         object : BroadcastReceiver() {
@@ -142,6 +153,21 @@ class CallActivity : AppCompatActivity() {
         com.vitorpamplona.amethyst.service.notifications.NotificationUtils
             .cancelCallNotification(this)
 
+        val callManager = ActiveCallHolder.callManager ?: return
+        val state = callManager.state.value
+        if (state !is CallState.IncomingCall) return
+
+        val isVideo = state.callType == com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType.VIDEO
+        pendingAcceptIsVideo = isVideo
+
+        if (hasCallPermissions(this, isVideo)) {
+            acceptCall()
+        } else {
+            permissionLauncher.launch(buildCallPermissions(isVideo))
+        }
+    }
+
+    private fun acceptCall() {
         val callController = ActiveCallHolder.callController ?: return
         val callManager = ActiveCallHolder.callManager ?: return
         val state = callManager.state.value
