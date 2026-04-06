@@ -997,6 +997,7 @@
     <string name="settings">Settings</string>
     <string name="account_settings">Account Settings</string>
     <string name="app_settings">App Settings</string>
+    <string name="danger_zone">Danger Zone</string>
     <string name="connectivity_type_always">Always</string>
     <string name="connectivity_type_wifi_only">Wifi-only</string>
     <string name="connectivity_type_unmetered_wifi_only">Unmetered WiFi</string>
