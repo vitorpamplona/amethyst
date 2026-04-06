@@ -50,6 +50,10 @@ internal object FieldP {
 
     private val wide = ThreadLocal.withInitial { LongArray(8) }
 
+    // Pre-allocated scratch for inv/sqrt addition chains (11 field elements).
+    // Avoids 11 LongArray(4) allocations per inv/sqrt call.
+    private val chainScratch = ThreadLocal.withInitial { Array(11) { LongArray(4) } }
+
     /** Get a thread-local wide buffer. Call once at the top-level entry point, then pass through. */
     fun getWide(): LongArray = wide.get()
 
@@ -172,17 +176,18 @@ internal object FieldP {
     ) {
         require(!U256.isZero(a))
         val w = wide.get()
-        val x2 = LongArray(4)
-        val x3 = LongArray(4)
-        val x6 = LongArray(4)
-        val x9 = LongArray(4)
-        val x11 = LongArray(4)
-        val x22 = LongArray(4)
-        val x44 = LongArray(4)
-        val x88 = LongArray(4)
-        val x176 = LongArray(4)
-        val x220 = LongArray(4)
-        val x223 = LongArray(4)
+        val cs = chainScratch.get()
+        val x2 = cs[0]
+        val x3 = cs[1]
+        val x6 = cs[2]
+        val x9 = cs[3]
+        val x11 = cs[4]
+        val x22 = cs[5]
+        val x44 = cs[6]
+        val x88 = cs[7]
+        val x176 = cs[8]
+        val x220 = cs[9]
+        val x223 = cs[10]
 
         sqr(x2, a, w)
         mul(x2, x2, a, w)
@@ -222,17 +227,18 @@ internal object FieldP {
         a: LongArray,
     ): Boolean {
         val w = wide.get()
-        val x2 = LongArray(4)
-        val x3 = LongArray(4)
-        val x6 = LongArray(4)
-        val x9 = LongArray(4)
-        val x11 = LongArray(4)
-        val x22 = LongArray(4)
-        val x44 = LongArray(4)
-        val x88 = LongArray(4)
-        val x176 = LongArray(4)
-        val x220 = LongArray(4)
-        val x223 = LongArray(4)
+        val cs = chainScratch.get()
+        val x2 = cs[0]
+        val x3 = cs[1]
+        val x6 = cs[2]
+        val x9 = cs[3]
+        val x11 = cs[4]
+        val x22 = cs[5]
+        val x44 = cs[6]
+        val x88 = cs[7]
+        val x176 = cs[8]
+        val x220 = cs[9]
+        val x223 = cs[10]
 
         sqr(x2, a, w)
         mul(x2, x2, a, w)
@@ -263,12 +269,12 @@ internal object FieldP {
         mul(out, out, x2, w)
         sqrN(out, out, 2, w)
 
-        val check = LongArray(4)
-        mul(check, out, out, w)
-        val ar = LongArray(4)
-        U256.copyInto(ar, a)
-        reduceSelf(ar)
-        return U256.cmp(check, ar) == 0
+        // Verify: check that out² == a (mod p)
+        // Reuse cs[0], cs[1] as scratch since we're done with the chain
+        mul(cs[0], out, out, w) // cs[0] = out²
+        U256.copyInto(cs[1], a)
+        reduceSelf(cs[1]) // cs[1] = a reduced
+        return U256.cmp(cs[0], cs[1]) == 0
     }
 
     private fun sqrN(
