@@ -332,6 +332,20 @@ internal object ECPoint {
         // Pre-allocated scratch for wNAF mixed addition
         val mixTmp = MutablePoint()
         val mixNegY = LongArray(4)
+
+        // Pre-allocated P-side tables for mul/mulDoubleG (avoids ~80 LongArray allocs per call)
+        val pOddJac = Array(8) { MutablePoint() }
+        val pLamOddJac = Array(8) { MutablePoint() }
+        val pOddAff = Array(8) { AffinePoint() }
+        val pLamOddAff = Array(8) { AffinePoint() }
+        val p2 = MutablePoint() // doublePoint temp for table building
+
+        // Pre-allocated batch inversion temps (avoids 12 LongArray allocs per call)
+        val cumZ = Array(8) { LongArray(4) }
+        val batchInv = LongArray(4)
+        val batchZInv = LongArray(4)
+        val batchZInv2 = LongArray(4)
+        val batchZInv3 = LongArray(4)
     }
 
     private val scratch = ThreadLocal.withInitial { PointScratch() }
@@ -429,9 +443,8 @@ internal object ECPoint {
         FieldP.sub(t[4], t[2], p.x) // H = U₂ - U₁
 
         if (U256.isZero(t[4])) {
-            val tmp = LongArray(4)
-            FieldP.sub(tmp, t[3], p.y)
-            if (U256.isZero(tmp)) doublePoint(out, p, s) else out.setInfinity()
+            FieldP.sub(t[5], t[3], p.y)
+            if (U256.isZero(t[5])) doublePoint(out, p, s) else out.setInfinity()
             return
         }
 
@@ -558,27 +571,23 @@ internal object ECPoint {
         val wnaf2 = s.wnaf2
 
         // P odd-multiples [1P, 3P, 5P, ..., 15P] via 2P stepping (Jacobian)
-        val p2 = MutablePoint()
-        doublePoint(p2, p, s)
-        val pOddJac = Array(tableSize) { MutablePoint() }
+        // Uses pre-allocated tables from PointScratch to avoid ~80 LongArray allocs
+        doublePoint(s.p2, p, s)
+        val pOddJac = s.pOddJac
         pOddJac[0].copyFrom(p)
-        for (i in 1 until tableSize) addPoints(pOddJac[i], pOddJac[i - 1], p2, s)
+        for (i in 1 until tableSize) addPoints(pOddJac[i], pOddJac[i - 1], s.p2, s)
 
-        // λ(P) odd-multiples: (β·X, Y, Z) — Z is identical to pOddJac (endomorphism preserves Z)
-        val pLamOddJac =
-            Array(tableSize) { i ->
-                val lp = MutablePoint()
-                FieldP.mul(lp.x, pOddJac[i].x, Glv.BETA, s.w)
-                pOddJac[i].y.copyInto(lp.y)
-                pOddJac[i].z.copyInto(lp.z)
-                lp
-            }
+        // λ(P) odd-multiples: (β·X, Y, Z) — Z is identical to pOddJac
+        val pLamOddJac = s.pLamOddJac
+        for (i in 0 until tableSize) {
+            FieldP.mul(pLamOddJac[i].x, pOddJac[i].x, Glv.BETA, s.w)
+            pOddJac[i].y.copyInto(pLamOddJac[i].y)
+            pOddJac[i].z.copyInto(pLamOddJac[i].z)
+        }
 
-        // Effective-affine: batch-convert to affine for cheaper mixed additions.
-        // Since pLamOddJac has the same Z coordinates as pOddJac, we batch-invert
-        // once and reuse the Z⁻¹ values for both tables (saves one full inversion).
-        val pOdd = Array(tableSize) { AffinePoint() }
-        val pLamOdd = Array(tableSize) { AffinePoint() }
+        // Effective-affine: batch-convert with shared Z inversion
+        val pOdd = s.pOddAff
+        val pLamOdd = s.pLamOddAff
         batchToAffinePair(pOddJac, pLamOddJac, pOdd, pLamOdd, s)
 
         // Find highest non-zero digit
@@ -683,25 +692,21 @@ internal object ECPoint {
         val gOdd = gOddTable
         val gLam = gLamTable
 
-        // P odd-multiples [1P, 3P, 5P, ..., 15P] via 2P stepping (1 double + 7 adds)
-        val p2 = MutablePoint()
-        doublePoint(p2, p, sc)
-        val pOddJac = Array(pTableSize) { MutablePoint() }
+        // P odd-multiples [1P, 3P, 5P, ..., 15P] — uses pre-allocated scratch tables
+        doublePoint(sc.p2, p, sc)
+        val pOddJac = sc.pOddJac
         pOddJac[0].copyFrom(p)
-        for (i in 1 until pTableSize) addPoints(pOddJac[i], pOddJac[i - 1], p2, sc)
-        // λ(P) table: (β·X, Y, Z) in Jacobian — endomorphism preserves projective coords
-        val pLamOddJac =
-            Array(pTableSize) { i ->
-                val lp = MutablePoint()
-                FieldP.mul(lp.x, pOddJac[i].x, Glv.BETA, sc.w)
-                pOddJac[i].y.copyInto(lp.y)
-                pOddJac[i].z.copyInto(lp.z)
-                lp
-            }
+        for (i in 1 until pTableSize) addPoints(pOddJac[i], pOddJac[i - 1], sc.p2, sc)
+        val pLamOddJac = sc.pLamOddJac
+        for (i in 0 until pTableSize) {
+            FieldP.mul(pLamOddJac[i].x, pOddJac[i].x, Glv.BETA, sc.w)
+            pOddJac[i].y.copyInto(pLamOddJac[i].y)
+            pOddJac[i].z.copyInto(pLamOddJac[i].z)
+        }
 
         // Effective-affine: batch-convert P-side tables (shared Z inversion)
-        val pOdd = Array(pTableSize) { AffinePoint() }
-        val pLamOdd = Array(pTableSize) { AffinePoint() }
+        val pOdd = sc.pOddAff
+        val pLamOdd = sc.pLamOddAff
         batchToAffinePair(pOddJac, pLamOddJac, pOdd, pLamOdd, sc)
 
         // Find highest non-zero digit across all 4 streams
@@ -862,20 +867,20 @@ internal object ECPoint {
         val w = s.w
 
         // Build prefix products of Z (shared between a and b)
-        val cumZ = Array(n) { LongArray(4) }
+        val cumZ = s.cumZ
         a[0].z.copyInto(cumZ[0])
         for (i in 1 until n) {
             FieldP.mul(cumZ[i], cumZ[i - 1], a[i].z, w)
         }
 
         // Single inversion of the total product
-        val inv = LongArray(4)
+        val inv = s.batchInv
         FieldP.inv(inv, cumZ[n - 1])
 
         // Recover individual Z⁻¹ and convert both tables
-        val zInv = LongArray(4)
-        val zInv2 = LongArray(4)
-        val zInv3 = LongArray(4)
+        val zInv = s.batchZInv
+        val zInv2 = s.batchZInv2
+        val zInv3 = s.batchZInv3
 
         for (i in n - 1 downTo 1) {
             FieldP.mul(zInv, inv, cumZ[i - 1], w)
