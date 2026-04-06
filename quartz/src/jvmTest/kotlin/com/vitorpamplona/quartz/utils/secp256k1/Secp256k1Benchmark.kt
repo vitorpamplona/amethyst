@@ -267,11 +267,11 @@ class Secp256k1Benchmark {
                 },
             )
 
-        // --- pubKeyTweakMulCompact (the actual Secp256k1Instance pattern) ---
+        // --- pubKeyTweakMulCompact (old pattern via pubKeyTweakMul) ---
         val pub2xOnly = hexToBytes("c2f9d9948dc8c7c38321e4b85c8558872eafa0641cd269db76848a6073e69133")
         results +=
             bench(
-                name = "pubKeyTweakMulCompact",
+                name = "tweakMulCompact (old)",
                 warmup = 10,
                 iterations = 50,
                 nativeOp = { native.pubKeyTweakMul(h02 + pub2xOnly, privKey).copyOfRange(1, 33) },
@@ -281,6 +281,19 @@ class Secp256k1Benchmark {
                             h02 + pub2xOnly,
                             privKey,
                         ).copyOfRange(1, 33)
+                },
+            )
+
+        // --- ecdhXOnly (actual Nostr ECDH path) ---
+        results +=
+            bench(
+                name = "ecdhXOnly (Nostr)",
+                warmup = 10,
+                iterations = 50,
+                nativeOp = { native.pubKeyTweakMul(h02 + pub2xOnly, privKey).copyOfRange(1, 33) },
+                kotlinOp = {
+                    com.vitorpamplona.quartz.utils.secp256k1.Secp256k1
+                        .ecdhXOnly(pub2xOnly, privKey)
                 },
             )
 

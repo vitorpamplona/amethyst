@@ -412,8 +412,7 @@ object Secp256k1 {
         val result = MutablePoint()
         ECPoint.mul(result, p, k)
         val rx = LongArray(4)
-        val ry = LongArray(4)
-        check(ECPoint.toAffine(result, rx, ry))
+        check(ECPoint.toAffineX(result, rx))
         return U256.toBytes(rx)
     }
 

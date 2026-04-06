@@ -265,20 +265,16 @@ internal object ECPoint {
 
     // ==================== Point Doubling (3M + 4S) ====================
 
-    /**
-     * Point doubling: out = 2·p.
-     *
-     * Uses the optimized formula from libsecp256k1 for curves with a=0:
-     *   S = Y², L = (3/2)·X², T = -X·S
-     *   X₃ = L² + 2T,  Y₃ = -(L·(X₃+T) + S²),  Z₃ = Y·Z
-     *
-     * Cost: 3 multiplications + 4 squarings + field halving + adds/negations.
-     * The key trick is computing L = (3/2)·X² using fe_half instead of an extra
-     * multiplication — halving is just a carry-propagating right shift.
-     *
-     * Safe for out === inp (in-place doubling) via internal copy buffer.
-     */
-    /** doublePoint with ThreadLocal scratch (convenience for non-hot paths). */
+    // Point doubling: out = 2·p.
+    //
+    // Uses the optimized formula from libsecp256k1 for curves with a=0:
+    //   S = Y², L = (3/2)·X², T = -X·S
+    //   X₃ = L² + 2T,  Y₃ = -(L·(X₃+T) + S²),  Z₃ = Y·Z
+    //
+    // Cost: 3 multiplications + 4 squarings + field halving + adds/negations.
+    // Safe for out === inp (in-place doubling) via internal copy buffer.
+
+    // doublePoint with ThreadLocal scratch (convenience for non-hot paths).
     fun doublePoint(
         out: MutablePoint,
         inp: MutablePoint,
@@ -324,18 +320,10 @@ internal object ECPoint {
 
     // ==================== Mixed Addition: Jacobian + Affine (8M + 3S) ====================
 
-    /**
-     * Mixed point addition: out = p + (qx, qy) where q is an affine point (Z=1).
-     *
-     * When one input is affine, we can skip computing Z₂², Z₂³, and the Z₃ formula
-     * simplifies. This saves 4 multiplications and 1 squaring vs full Jacobian addition.
-     *
-     * Cost: 8 multiplications + 3 squarings + adds/subtractions.
-     * Used for additions from the precomputed G table (always stored in affine form).
-     *
-     * Handles degenerate cases: p is infinity, or p equals/negates q.
-     */
-    /** addMixed with ThreadLocal scratch (convenience for non-hot paths). */
+    // Mixed point addition: out = p + (qx, qy) where q is an affine point (Z=1).
+    // Cost: 8M + 3S. Saves 4M+1S vs full Jacobian by exploiting Z₂=1.
+
+    // addMixed with ThreadLocal scratch (convenience for non-hot paths).
     fun addMixed(
         out: MutablePoint,
         p: MutablePoint,
@@ -726,6 +714,24 @@ internal object ECPoint {
         FieldP.mul(zInv3, zInv2, zInv)
         FieldP.mul(outX, p.x, zInv2)
         FieldP.mul(outY, p.y, zInv3)
+        return true
+    }
+
+    /**
+     * Convert from Jacobian to affine, returning only the x-coordinate: x = X/Z².
+     * Saves 2 multiplications vs full toAffine (no zInv3, no outY computation).
+     * Used by ecdhXOnly where only the x-coordinate of the shared point is needed.
+     */
+    fun toAffineX(
+        p: MutablePoint,
+        outX: LongArray,
+    ): Boolean {
+        if (p.isInfinity()) return false
+        val zInv = LongArray(4)
+        val zInv2 = LongArray(4)
+        FieldP.inv(zInv, p.z)
+        FieldP.sqr(zInv2, zInv)
+        FieldP.mul(outX, p.x, zInv2)
         return true
     }
 
