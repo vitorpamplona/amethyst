@@ -41,6 +41,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -72,6 +74,8 @@ fun MarmotGroupListScreen(
 ) {
     var groupList by remember { mutableStateOf(listOf<Pair<HexKey, MarmotGroupChatroom>>()) }
     val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
+    var isPublishing by remember { mutableStateOf(false) }
 
     // Load group list
     LaunchedEffect(Unit) {
@@ -99,9 +103,18 @@ fun MarmotGroupListScreen(
                 title = { Text("Marmot Groups") },
                 actions = {
                     IconButton(
+                        enabled = !isPublishing,
                         onClick = {
+                            isPublishing = true
                             scope.launch(Dispatchers.IO) {
-                                accountViewModel.publishMarmotKeyPackage()
+                                try {
+                                    accountViewModel.publishMarmotKeyPackage()
+                                    snackbarHostState.showSnackbar("KeyPackage published successfully")
+                                } catch (e: Exception) {
+                                    snackbarHostState.showSnackbar("Failed to publish KeyPackage: ${e.message}")
+                                } finally {
+                                    isPublishing = false
+                                }
                             }
                         },
                     ) {
@@ -113,6 +126,7 @@ fun MarmotGroupListScreen(
                 },
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
             FloatingActionButton(onClick = { nav.nav(Route.CreateMarmotGroup) }) {
                 Icon(Icons.Default.Add, contentDescription = "Create Group")
@@ -130,7 +144,7 @@ fun MarmotGroupListScreen(
                         style = MaterialTheme.typography.titleMedium,
                     )
                     Text(
-                        "Publish your KeyPackage to receive invitations.",
+                        "Tap the key icon above to publish your KeyPackage and receive invitations.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 4.dp),
