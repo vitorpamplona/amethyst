@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.marmot.mls.tree.Credential
 import com.vitorpamplona.quartz.marmot.mls.tree.LeafNode
 import com.vitorpamplona.quartz.marmot.mls.tree.LeafNodeSource
 import com.vitorpamplona.quartz.marmot.mls.tree.Lifetime
+import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
  * Manages KeyPackage creation and rotation lifecycle (MIP-00).
@@ -190,7 +191,7 @@ class KeyPackageRotationManager {
         identity: ByteArray,
         signingKey: ByteArray,
     ): LeafNode {
-        val now = System.currentTimeMillis() / 1000
+        val now = TimeUtils.now()
         val unsigned =
             LeafNode(
                 encryptionKey = encryptionKey,

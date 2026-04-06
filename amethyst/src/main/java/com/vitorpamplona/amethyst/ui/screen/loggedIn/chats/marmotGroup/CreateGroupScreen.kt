@@ -41,6 +41,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.CreatingTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlin.random.Random
@@ -61,7 +62,7 @@ fun CreateGroupScreen(
                 onPost = {
                     isCreating = true
                     scope.launch(Dispatchers.IO) {
-                        val nostrGroupId = Random.nextBytes(32).joinToString("") { "%02x".format(it) }
+                        val nostrGroupId = Random.nextBytes(32).toHexKey()
                         accountViewModel.createMarmotGroup(nostrGroupId)
                         if (groupName.isNotBlank()) {
                             accountViewModel.account.marmotGroupList

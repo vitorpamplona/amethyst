@@ -55,6 +55,8 @@ import com.vitorpamplona.quartz.marmot.mls.tree.LeafNodeSource
 import com.vitorpamplona.quartz.marmot.mls.tree.Lifetime
 import com.vitorpamplona.quartz.marmot.mls.tree.RatchetTree
 import com.vitorpamplona.quartz.marmot.mls.tree.UpdatePathNode
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.mac.MacInstance
 
 /**
@@ -170,10 +172,8 @@ class MlsGroup private constructor(
         pskId: ByteArray,
         psk: ByteArray,
     ) {
-        pskStore[pskId.toHexId()] = psk
+        pskStore[pskId.toHexKey()] = psk
     }
-
-    private fun ByteArray.toHexId(): String = joinToString("") { "%02x".format(it) }
 
     /**
      * Get the list of members (leaf index -> LeafNode).
@@ -845,7 +845,7 @@ class MlsGroup private constructor(
         var pskSecret = ByteArray(MlsCryptoProvider.HASH_OUTPUT_LENGTH)
         for (pskProposal in pskProposals) {
             val pskValue =
-                pskStore[pskProposal.pskId.toHexId()]
+                pskStore[pskProposal.pskId.toHexKey()]
                     ?: ByteArray(MlsCryptoProvider.HASH_OUTPUT_LENGTH) // Unknown PSK = zeros
             pskSecret = MlsCryptoProvider.hkdfExtract(pskSecret, pskValue)
         }
@@ -990,7 +990,7 @@ class MlsGroup private constructor(
                 // Validate KeyPackage lifetime (RFC 9420 Section 10.1)
                 val lifetime = proposal.keyPackage.leafNode.lifetime
                 if (lifetime != null) {
-                    val now = System.currentTimeMillis() / 1000
+                    val now = TimeUtils.now()
                     require(now >= lifetime.notBefore && now <= lifetime.notAfter) {
                         "KeyPackage lifetime expired or not yet valid"
                     }
