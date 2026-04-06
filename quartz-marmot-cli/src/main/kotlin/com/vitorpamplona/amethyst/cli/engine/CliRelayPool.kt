@@ -21,25 +21,16 @@
 package com.vitorpamplona.amethyst.cli.engine
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocket
-import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocketListener
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
-class CliRelayPool(
-    private val scope: CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
-) {
+class CliRelayPool : AutoCloseable {
     private val httpClient =
         OkHttpClient
             .Builder()
@@ -48,122 +39,48 @@ class CliRelayPool(
             .writeTimeout(15, TimeUnit.SECONDS)
             .build()
 
-    private val connections = ConcurrentHashMap<String, RelayConnection>()
-    val incomingEvents = Channel<Pair<String, String>>(Channel.UNLIMITED)
-    private val subscriptionCounter = AtomicInteger(0)
+    private val websocketBuilder = BasicOkHttpWebSocket.Builder { httpClient }
 
-    fun connect(relayUrls: List<String>) {
-        for (url in relayUrls) {
-            if (connections.containsKey(url)) continue
-            val conn = RelayConnection(url)
-            connections[url] = conn
-            conn.connect()
-        }
+    val client = NostrClient(websocketBuilder)
+
+    private val subscriptionCounter = AtomicInteger(0)
+    private var relayUrls = setOf<NormalizedRelayUrl>()
+
+    fun connect(relayUrlStrings: List<String>) {
+        relayUrls = relayUrlStrings.map { NormalizedRelayUrl(it) }.toSet()
+        client.connect()
     }
 
     fun disconnect() {
-        connections.values.forEach { it.disconnect() }
-        connections.clear()
+        client.disconnect()
     }
 
-    fun send(event: Event) {
-        val json = """["EVENT",${event.toJson()}]"""
-        connections.values.forEach { conn ->
-            conn.send(json)
-        }
+    override fun close() {
+        client.close()
     }
 
-    fun sendToRelay(
-        relayUrl: String,
+    fun send(
         event: Event,
+        relays: Set<NormalizedRelayUrl> = relayUrls,
     ) {
-        val json = """["EVENT",${event.toJson()}]"""
-        connections[relayUrl]?.send(json)
+        client.publish(event, relays)
     }
 
     fun subscribe(
         filters: List<Filter>,
-        onEvent: (String, String) -> Unit,
+        listener: SubscriptionListener,
     ): String {
         val subId = "sub_${subscriptionCounter.incrementAndGet()}"
-        val filtersJson = filters.joinToString(",") { it.toJson() }
-        val reqJson = """["REQ","$subId",$filtersJson]"""
-
-        scope.launch {
-            for ((_, msg) in incomingEvents) {
-                onEvent(subId, msg)
-            }
-        }
-
-        connections.values.forEach { conn ->
-            conn.send(reqJson)
-        }
-
+        val filterMap = relayUrls.associateWith { filters }
+        client.subscribe(subId = subId, filters = filterMap, listener = listener)
         return subId
     }
 
     fun unsubscribe(subId: String) {
-        val closeJson = """["CLOSE","$subId"]"""
-        connections.values.forEach { it.send(closeJson) }
+        client.unsubscribe(subId)
     }
 
-    fun connectedRelays(): List<String> = connections.keys.toList()
+    fun connectedRelays(): Set<NormalizedRelayUrl> = client.connectedRelaysFlow().value
 
-    fun isConnected(relayUrl: String): Boolean = connections[relayUrl]?.isConnected == true
-
-    inner class RelayConnection(
-        val url: String,
-    ) {
-        private var socket: WebSocket? = null
-        var isConnected = false
-            private set
-
-        private val listener =
-            object : WebSocketListener {
-                override fun onOpen(
-                    pingMillis: Int,
-                    compression: Boolean,
-                ) {
-                    isConnected = true
-                }
-
-                override fun onMessage(text: String) {
-                    incomingEvents.trySend(url to text)
-                }
-
-                override fun onClosed(
-                    code: Int,
-                    reason: String,
-                ) {
-                    isConnected = false
-                }
-
-                override fun onFailure(
-                    t: Throwable,
-                    code: Int?,
-                    response: String?,
-                ) {
-                    isConnected = false
-                    scope.launch {
-                        delay(5000)
-                        connect()
-                    }
-                }
-            }
-
-        fun connect() {
-            socket =
-                BasicOkHttpWebSocket(NormalizedRelayUrl(url), { httpClient }, listener).also {
-                    it.connect()
-                }
-        }
-
-        fun disconnect() {
-            socket?.disconnect()
-            socket = null
-            isConnected = false
-        }
-
-        fun send(msg: String): Boolean = socket?.send(msg) ?: false
-    }
+    fun availableRelays(): Set<NormalizedRelayUrl> = relayUrls
 }

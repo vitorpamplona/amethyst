@@ -32,6 +32,10 @@ import com.vitorpamplona.amethyst.cli.engine.MarmotEngine
 import com.vitorpamplona.amethyst.cli.findWnCommand
 import com.vitorpamplona.amethyst.cli.output.Output
 import com.vitorpamplona.amethyst.cli.resolveAccount
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import java.io.File
@@ -124,7 +128,45 @@ class MessagesSubscribeCommand : CliktCommand(name = "subscribe") {
 
         try {
             println("Subscribing to group $groupId... (Ctrl+C to stop)")
-            engine.subscribeToGroup(groupId)
+            engine.subscribeToGroup(
+                groupId,
+                object : SubscriptionListener {
+                    override fun onEvent(
+                        event: Event,
+                        isLive: Boolean,
+                        relay: NormalizedRelayUrl,
+                        forFilters: List<Filter>?,
+                    ) {
+                        println("[${relay.url}] ${event.toJson()}")
+                    }
+
+                    override fun onEose(
+                        relay: NormalizedRelayUrl,
+                        forFilters: List<Filter>?,
+                    ) {}
+
+                    override fun onClosed(
+                        message: String,
+                        relay: NormalizedRelayUrl,
+                        forFilters: List<Filter>?,
+                    ) {}
+
+                    override fun onCannotConnect(
+                        relay: NormalizedRelayUrl,
+                        message: String,
+                        forFilters: List<Filter>?,
+                    ) {
+                        System.err.println("Cannot connect to ${relay.url}: $message")
+                    }
+
+                    override fun onSubscriptionStarted(
+                        relay: String,
+                        forFilters: List<Filter>,
+                    ) {}
+
+                    override fun onSubscriptionClosed(relay: String) {}
+                },
+            )
 
             runBlocking {
                 while (true) {

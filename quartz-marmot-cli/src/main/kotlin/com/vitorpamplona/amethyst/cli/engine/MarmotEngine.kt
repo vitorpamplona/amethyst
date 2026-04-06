@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.Nip01Crypto
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import kotlinx.coroutines.runBlocking
@@ -59,7 +60,7 @@ class MarmotEngine(
     }
 
     fun shutdown() {
-        relayPool.disconnect()
+        relayPool.close()
     }
 
     fun createGroup(
@@ -229,12 +230,13 @@ class MarmotEngine(
         relayPool.send(event)
     }
 
-    fun subscribeToGroup(nostrGroupId: HexKey) {
+    fun subscribeToGroup(
+        nostrGroupId: HexKey,
+        listener: SubscriptionListener,
+    ) {
         subscriptionManager.subscribeGroup(nostrGroupId)
         val filters = subscriptionManager.buildFilters()
-        relayPool.subscribe(filters) { _, msg ->
-            println(msg)
-        }
+        relayPool.subscribe(filters, listener)
     }
 }
 
