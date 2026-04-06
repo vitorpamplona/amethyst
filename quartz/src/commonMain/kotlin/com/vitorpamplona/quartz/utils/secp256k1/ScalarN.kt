@@ -118,21 +118,30 @@ internal object ScalarN {
             result[i] = s2
             c2 = c1 + cc
         }
-        // Handle remaining overflow
-        var overflow = c2
-        for (i in 4 until 8) {
-            overflow += hi2NC[i].toULong().toLong() // approximate
-        }
-        if (overflow != 0L) {
-            // overflow × N_COMPLEMENT is small, fold it in
-            val corr0 = overflow * N_COMPLEMENT[0]
-            val s = result[0] + corr0
-            val c = if (s.toULong() < result[0].toULong()) 1L else 0L
-            result[0] = s
-            if (c != 0L || overflow * N_COMPLEMENT[1] != 0L) {
-                val s1 = result[1] + overflow * N_COMPLEMENT[1] + c
-                result[1] = s1
-            }
+        // Handle remaining overflow from hi2NC[4..7] + carry
+        // hi2NC[4..7] should be small (hi2 is ~129 bits, NC is ~129 bits → product ≤ 258 bits)
+        // So hi2NC[4] might be non-zero but hi2NC[5..7] should be zero.
+        // Fold: overflow * N_COMPLEMENT into result
+        var ov = c2 + hi2NC[4]
+        for (i in 5 until 8) ov += hi2NC[i]
+        if (ov != 0L) {
+            // ov × NC[0]
+            val c0lo = ov * N_COMPLEMENT[0]
+            val c0hi = unsignedMultiplyHigh(ov, N_COMPLEMENT[0])
+            // ov × NC[1]
+            val c1lo = ov * N_COMPLEMENT[1]
+            val c1hi = unsignedMultiplyHigh(ov, N_COMPLEMENT[1])
+            // ov × NC[2] = ov × 1 = ov
+            val s0 = result[0] + c0lo
+            val carry0 = if (s0.toULong() < result[0].toULong()) 1L else 0L
+            result[0] = s0
+            val s1 = result[1] + c0hi + c1lo + carry0
+            val carry1 = if (s1.toULong() < result[1].toULong()) 1L else 0L
+            result[1] = s1
+            val s2 = result[2] + c1hi + ov + carry1
+            val carry2 = if (s2.toULong() < result[2].toULong()) 1L else 0L
+            result[2] = s2
+            result[3] += carry2
         }
 
         while (U256.cmp(result, N) >= 0) U256.subTo(result, result, N)

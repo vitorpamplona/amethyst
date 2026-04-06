@@ -70,7 +70,7 @@ class GlvTest {
         val k = hex("67e56582298859ddae725f972992a07c6c4fb9f62a8fff58ce3ca926a1063530")
         val split = Glv.splitScalar(k)
         // Upper 4 limbs should be zero for a proper 128-bit half-scalar
-        for (i in 4 until 8) {
+        for (i in 2 until 4) {
             assertEquals(0, split.k1[i], "k1 limb $i should be 0")
             assertEquals(0, split.k2[i], "k2 limb $i should be 0")
         }
@@ -137,7 +137,7 @@ class GlvTest {
         val k = hex("e907831f80848d1069a5371b402410364bdf1c5f8307b0084c55f1ce2dca8215")
         val digits = Glv.wnaf(k, 5, 256)
         val reconstructed = reconstructWnaf(digits)
-        for (i in 0 until 8) assertEquals(k[i], reconstructed[i], "Limb $i mismatch")
+        for (i in 0 until 4) assertEquals(k[i], reconstructed[i], "Limb $i mismatch")
     }
 
     @Test
@@ -147,7 +147,7 @@ class GlvTest {
         val k = hex("944946c56e0d133f326db0b0645544a04bfcc5a0f447ad6d0227958414d8ba73")
         val digits = Glv.wnaf(k, 5, 256)
         val reconstructed = reconstructWnaf(digits)
-        for (i in 0 until 8) assertEquals(k[i], reconstructed[i], "Limb $i mismatch for carry test")
+        for (i in 0 until 4) assertEquals(k[i], reconstructed[i], "Limb $i mismatch for carry test")
     }
 
     @Test
@@ -227,12 +227,22 @@ class GlvTest {
                 val s = acc[0] + d.toLong()
                 val c = if (s.toULong() < acc[0].toULong()) 1L else 0L
                 acc[0] = s
-                if (c != 0L) for (j in 1 until 4) { acc[j]++; if (acc[j] != 0L) break }
+                if (c != 0L) {
+                    for (j in 1 until 4) {
+                        acc[j]++
+                        if (acc[j] != 0L) break
+                    }
+                }
             } else if (d < 0) {
                 val s = acc[0] - (-d).toLong()
                 val b = if (acc[0].toULong() < (-d).toULong()) 1L else 0L
                 acc[0] = s
-                if (b != 0L) for (j in 1 until 4) { acc[j]--; if (acc[j] != -1L) break }
+                if (b != 0L) {
+                    for (j in 1 until 4) {
+                        acc[j]--
+                        if (acc[j] != -1L) break
+                    }
+                }
             }
         }
         return acc

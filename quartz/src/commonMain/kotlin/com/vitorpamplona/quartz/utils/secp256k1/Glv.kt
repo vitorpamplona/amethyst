@@ -39,10 +39,13 @@ package com.vitorpamplona.quartz.utils.secp256k1
 
 internal object Glv {
     /** β: cube root of unity mod p. φ(x,y) = (β·x, y). */
-    val BETA = longArrayOf(
-        -4523465429756870162L, -7138124642204153451L,
-        7954561588662645993L, 8856726876819556112L,
-    )
+    val BETA =
+        longArrayOf(
+            -4523465429756870162L,
+            -7138124642204153451L,
+            7954561588662645993L,
+            8856726876819556112L,
+        )
 
     // ==================== GLV Scalar Decomposition ====================
 
@@ -63,7 +66,8 @@ internal object Glv {
         return Split(
             if (neg1) ScalarN.neg(r1) else r1,
             if (neg2) ScalarN.neg(r2) else r2,
-            neg1, neg2,
+            neg1,
+            neg2,
         )
     }
 
@@ -75,7 +79,11 @@ internal object Glv {
      *
      * The working copy is extended to handle carries past maxBits.
      */
-    fun wnaf(scalar: LongArray, w: Int, maxBits: Int): IntArray {
+    fun wnaf(
+        scalar: LongArray,
+        w: Int,
+        maxBits: Int,
+    ): IntArray {
         val totalBits = maxBits + w
         val sLimbs = maxOf((totalBits + 63) / 64, scalar.size)
         val result = IntArray(totalBits)
@@ -101,7 +109,10 @@ internal object Glv {
     // ==================== Internal Helpers ====================
 
     /** Multiply two 256-bit numbers, return result >> 384 (rounded). */
-    private fun mulShift384(k: LongArray, g: LongArray): LongArray {
+    private fun mulShift384(
+        k: LongArray,
+        g: LongArray,
+    ): LongArray {
         val wide = LongArray(8)
         U256.mulWide(wide, k, g)
         val result = LongArray(4)
@@ -115,7 +126,11 @@ internal object Glv {
         return result
     }
 
-    private fun getBitsVar(s: LongArray, bitPos: Int, count: Int): Int {
+    private fun getBitsVar(
+        s: LongArray,
+        bitPos: Int,
+        count: Int,
+    ): Int {
         if (count == 0) return 0
         val limb = bitPos / 64
         val shift = bitPos % 64
@@ -126,7 +141,10 @@ internal object Glv {
         return (r and ((1L shl count) - 1L)).toInt()
     }
 
-    private fun addBitTo(s: LongArray, bitPos: Int) {
+    private fun addBitTo(
+        s: LongArray,
+        bitPos: Int,
+    ) {
         val limb = bitPos / 64
         if (limb >= s.size) return
         val addVal = 1L shl (bitPos % 64)
@@ -140,26 +158,46 @@ internal object Glv {
 
     // ==================== Constants (from libsecp256k1) ====================
 
-    private val MINUS_LAMBDA = longArrayOf(
-        -2247357714951666737L, -6304834983940376126L,
-        6546514211138018212L, -6008836872998760673L,
-    )
-    private val G1 = longArrayOf(
-        -1687969588364726223L, 4443515802769476223L,
-        -1698823648040391915L, 3496713202691238861L,
-    )
-    private val G2 = longArrayOf(
-        1545214808910233457L, 2455034284347819718L,
-        8022177200260244676L, -1998614352016537560L,
-    )
-    private val MINUS_B1 = longArrayOf(
-        8022177200260244675L, -1998614352016537560L, 0L, 0L,
-    )
-    private val MINUS_B2 = longArrayOf(
-        -2925706260434037204L, -8491525256057179027L, -2L, -1L,
-    )
-    private val N_HALF = longArrayOf(
-        -2312264954237214560L, 6725966010171805725L,
-        -1L, 9223372036854775807L,
-    )
+    private val MINUS_LAMBDA =
+        longArrayOf(
+            -2247357714951666737L,
+            -6304834983940376126L,
+            6546514211138018212L,
+            -6008836872998760673L,
+        )
+    private val G1 =
+        longArrayOf(
+            -1687969588364726223L,
+            4443515802769476223L,
+            -1698823648040391915L,
+            3496713202691238861L,
+        )
+    private val G2 =
+        longArrayOf(
+            1545214808910233457L,
+            2455034284347819718L,
+            8022177200260244676L,
+            -1998614352016537560L,
+        )
+    private val MINUS_B1 =
+        longArrayOf(
+            8022177200260244675L,
+            -1998614352016537560L,
+            0L,
+            0L,
+        )
+    private val MINUS_B2 =
+        longArrayOf(
+            -2925706260434037204L,
+            -8491525256057179027L,
+            -2L,
+            -1L,
+        )
+    private val N_HALF =
+        longArrayOf(
+            -2312264954237214560L,
+            6725966010171805725L,
+            -1L,
+            9223372036854775807L,
+        )
 }
