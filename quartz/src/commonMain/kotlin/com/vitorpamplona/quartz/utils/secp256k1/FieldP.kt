@@ -48,11 +48,11 @@ internal object FieldP {
             -1L, // 0xFFFFFFFFFFFFFFFF
         )
 
-    private val wide = ThreadLocal.withInitial { LongArray(8) }
+    private val wide = ScratchLocal { LongArray(8) }
 
     // Pre-allocated scratch for inv/sqrt addition chains (11 field elements).
     // Avoids 11 LongArray(4) allocations per inv/sqrt call.
-    private val chainScratch = ThreadLocal.withInitial { Array(11) { LongArray(4) } }
+    private val chainScratch = ScratchLocal { Array(11) { LongArray(4) } }
 
     /** Get a thread-local wide buffer. Call once at the top-level entry point, then pass through. */
     fun getWide(): LongArray = wide.get()

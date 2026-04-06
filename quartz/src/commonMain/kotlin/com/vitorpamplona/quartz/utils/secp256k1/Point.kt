@@ -348,7 +348,7 @@ internal object ECPoint {
         val batchZInv3 = LongArray(4)
     }
 
-    private val scratch = ThreadLocal.withInitial { PointScratch() }
+    private val scratch = ScratchLocal { PointScratch() }
 
     /** Get thread-local scratch. Call once at the top-level entry point. */
     internal fun getScratch(): PointScratch = scratch.get()
