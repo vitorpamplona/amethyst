@@ -34,6 +34,8 @@ import com.vitorpamplona.quartz.nip01Core.crypto.Nip01Crypto
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
+import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import kotlinx.coroutines.runBlocking
 import java.io.File
 import java.util.Base64
@@ -199,7 +201,11 @@ class MarmotEngine(
         val group = groupManager.getGroup(nostrGroupId) ?: return null
         val exporterKey = group.exporterSecret(GroupEvent.EXPORTER_LABEL, GroupEvent.EXPORTER_CONTEXT.toByteArray(), GroupEvent.EXPORTER_KEY_LENGTH)
 
-        val innerJson = """{"kind":9,"content":"$content","pubkey":"${account.pubKeyHex}","created_at":${System.currentTimeMillis() / 1000},"tags":[]}"""
+        // Build an unsigned ChatEvent rumor (kind:9) per MIP-03:
+        // inner events use the real pubkey but no signature and no h tag
+        val chatTemplate = ChatEvent.build(message = content)
+        val innerRumor = RumorAssembler.assembleRumor<ChatEvent>(account.pubKeyHex, chatTemplate)
+        val innerJson = innerRumor.toJson()
         val mlsMessage = group.encrypt(innerJson.toByteArray())
         val encryptedContent = GroupEventEncryption.encrypt(mlsMessage, exporterKey)
 
