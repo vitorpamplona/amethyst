@@ -34,9 +34,20 @@ internal expect fun multiplyHigh(
 
 /**
  * Returns the upper 64 bits of the UNSIGNED 128-bit product of two Long values.
- * Built on top of the signed multiplyHigh with a correction for sign bits.
+ *
+ * On JVM 18+, delegates to Math.unsignedMultiplyHigh (single UMULH instruction).
+ * On older JVMs and other platforms, uses signed multiplyHigh with sign-bit correction.
+ * The correction adds 4 instructions per call; eliminating it saves ~64 insns per field mul.
  */
-internal fun unsignedMultiplyHigh(
+internal expect fun unsignedMultiplyHigh(
+    a: Long,
+    b: Long,
+): Long
+
+/**
+ * Fallback: unsigned multiply high from signed multiply high + correction.
+ */
+internal fun unsignedMultiplyHighFallback(
     a: Long,
     b: Long,
 ): Long = multiplyHigh(a, b) + (a and (b shr 63)) + (b and (a shr 63))

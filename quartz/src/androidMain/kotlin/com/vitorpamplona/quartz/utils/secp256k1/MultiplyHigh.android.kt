@@ -33,3 +33,8 @@ internal actual fun multiplyHigh(
     } else {
         multiplyHighFallback(a, b)
     }
+
+internal actual fun unsignedMultiplyHigh(
+    a: Long,
+    b: Long,
+): Long = unsignedMultiplyHighFallback(a, b)

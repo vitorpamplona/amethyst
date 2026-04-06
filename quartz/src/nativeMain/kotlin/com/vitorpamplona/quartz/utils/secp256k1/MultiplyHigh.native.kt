@@ -25,3 +25,8 @@ internal actual fun multiplyHigh(
     a: Long,
     b: Long,
 ): Long = multiplyHighFallback(a, b)
+
+internal actual fun unsignedMultiplyHigh(
+    a: Long,
+    b: Long,
+): Long = unsignedMultiplyHighFallback(a, b)
