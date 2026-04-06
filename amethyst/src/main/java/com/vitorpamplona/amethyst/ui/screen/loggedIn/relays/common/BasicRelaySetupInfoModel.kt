@@ -132,8 +132,6 @@ abstract class BasicRelaySetupInfoModel : ViewModel() {
                             .useTor(it),
                 )
             }.distinctBy { it.relay }
-            .sortedBy { it.relayStat.receivedBytes }
-            .reversed()
     }
 
     fun clear() {

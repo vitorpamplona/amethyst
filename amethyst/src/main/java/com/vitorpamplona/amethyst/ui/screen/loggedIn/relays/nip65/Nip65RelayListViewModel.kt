@@ -176,8 +176,6 @@ class Nip65RelayListViewModel : ViewModel() {
             relayList
                 .map { relaySetupInfoBuilder(it) }
                 .distinctBy { it.relay }
-                .sortedBy { it.relayStat.receivedBytes }
-                .reversed()
         }
 
         _notificationRelays.update {
@@ -186,8 +184,6 @@ class Nip65RelayListViewModel : ViewModel() {
             relayList
                 .map { relaySetupInfoBuilder(it) }
                 .distinctBy { it.relay }
-                .sortedBy { it.relayStat.receivedBytes }
-                .reversed()
         }
     }
 
