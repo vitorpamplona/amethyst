@@ -141,6 +141,13 @@ class MarmotSubscriptionManager(
         }
 
     /**
+     * Build a filter for the current user's own KeyPackages (kind:30443).
+     * Used to discover previously published KeyPackages on relay connect/reconnect,
+     * so the app can track whether a KeyPackage has already been published.
+     */
+    fun ownKeyPackageFilter(): Filter = MarmotFilters.keyPackagesByAuthor(userPubKey)
+
+    /**
      * Build a KeyPackage filter for a specific user.
      * Used on-demand when inviting a user to a group.
      */
@@ -166,6 +173,7 @@ class MarmotSubscriptionManager(
         val filters = mutableListOf<Filter>()
         filters.addAll(activeGroupFilters())
         filters.add(giftWrapFilter())
+        filters.add(ownKeyPackageFilter())
         return filters
     }
 

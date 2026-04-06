@@ -155,6 +155,12 @@ class KeyPackageRotationManager {
     fun needsRotation(): Boolean = pendingRotations.isNotEmpty()
 
     /**
+     * Check if there are any active (non-consumed) KeyPackage bundles.
+     * Returns true if at least one slot has been generated and not yet consumed.
+     */
+    fun hasActiveKeyPackages(): Boolean = activeBundles.isNotEmpty()
+
+    /**
      * Rotate a consumed slot: generate a new KeyPackage for the same d-tag.
      *
      * @param identity the user's identity bytes

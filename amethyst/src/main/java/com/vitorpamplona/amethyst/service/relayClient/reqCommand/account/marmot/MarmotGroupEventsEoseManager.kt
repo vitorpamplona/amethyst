@@ -51,16 +51,17 @@ class MarmotGroupEventsEoseManager(
         val manager = key.account.marmotManager ?: return emptyList()
         if (!key.account.isWriteable()) return emptyList()
 
-        // Build Marmot filters (kind:445 per group)
+        // Build Marmot filters (kind:445 per group + kind:30443 own key packages)
         val marmotFilters = manager.subscriptionManager.activeGroupFilters()
-        if (marmotFilters.isEmpty()) return emptyList()
+        val ownKeyPackageFilter = manager.subscriptionManager.ownKeyPackageFilter()
+        val allFilters = marmotFilters + ownKeyPackageFilter
 
         // Send to the home relays (where group events are relayed)
         val relays = key.account.homeRelays.flow.value
         if (relays.isEmpty()) return emptyList()
 
         return relays.flatMap { relay ->
-            marmotFilters.map { filter ->
+            allFilters.map { filter ->
                 RelayBasedFilter(
                     relay = relay,
                     filter = filter,

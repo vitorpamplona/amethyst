@@ -130,6 +130,8 @@ import com.vitorpamplona.quartz.experimental.profileGallery.dimension
 import com.vitorpamplona.quartz.experimental.profileGallery.fromEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.hash
 import com.vitorpamplona.quartz.experimental.profileGallery.mimeType
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageUtils
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupStateStore
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -1847,6 +1849,26 @@ class Account(
         val event = manager.generateKeyPackageEvent(relays)
         cache.justConsumeMyOwnEvent(event)
         client.publish(event, outboxRelays.flow.value)
+    }
+
+    /**
+     * Check if a KeyPackage has been published, either locally generated
+     * in this session or found in the local cache from a previous session.
+     */
+    fun hasPublishedKeyPackage(): Boolean {
+        // Check in-memory bundles first (current session)
+        val manager = marmotManager
+        if (manager != null && manager.hasActiveKeyPackages()) return true
+
+        // Check local cache for our own kind:30443 events (from previous sessions / relay downloads)
+        val address =
+            com.vitorpamplona.quartz.nip01Core.core.Address(
+                KeyPackageEvent.KIND,
+                signer.pubKey,
+                KeyPackageUtils.PRIMARY_SLOT,
+            )
+        val note = cache.getAddressableNoteIfExists(address)
+        return note?.event != null
     }
 
     /**

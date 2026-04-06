@@ -1464,6 +1464,8 @@ class AccountViewModel(
         account.publishMarmotKeyPackage()
     }
 
+    fun hasPublishedKeyPackage(): Boolean = account.hasPublishedKeyPackage()
+
     suspend fun leaveMarmotGroup(nostrGroupId: String) {
         val relays = account.outboxRelays.flow.value
         account.leaveMarmotGroup(nostrGroupId, relays)
