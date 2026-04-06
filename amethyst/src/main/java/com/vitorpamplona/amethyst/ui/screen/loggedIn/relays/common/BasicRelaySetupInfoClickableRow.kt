@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DragIndicator
@@ -112,7 +113,7 @@ fun BasicRelaySetupInfoClickableRow(
             modifier = modifier,
         ) {
             if (dragState != null && index >= 0) {
-                val handleModifier = Modifier.size(24.dp).relayDragHandle(index, dragState)
+                val handleModifier = Modifier.height(24.dp).relayDragHandle(index, dragState)
                 Icon(
                     Icons.Default.DragIndicator,
                     contentDescription = stringRes(R.string.relay_reorder),
