@@ -75,7 +75,7 @@
     <string name="propose_an_edit">सम्पादन सुझाव दें</string>
     <string name="new_amount_in_sats">साट्स में नयी मात्रा</string>
     <string name="add">जोडें</string>
-    <string name="replying_to">"उत्तर दें इनको "</string>
+    <string name="replying_to">"उत्तर इनको "</string>
     <string name="and">" तथा "</string>
     <string name="in_channel">"प्रणाली अभ्यन्तर "</string>
     <string name="profile_banner">परिचय पृष्ठ चौडाचित्र</string>
@@ -1438,6 +1438,7 @@
     <string name="select_list_to_filter">सूचनावली छानने के लिए सूची चुनें</string>
     <string name="feed_group_feeds">सूचनावली</string>
     <string name="feed_group_hashtags">विषयसूचक</string>
+    <string name="feed_group_locations">स्थान</string>
     <string name="feed_group_communities">समुदाय</string>
     <string name="feed_group_lists">सूचियाँ</string>
     <string name="feed_group_relays">पुनःप्रसारक</string>
@@ -1538,6 +1539,7 @@
     <string name="connected">संयोजित</string>
     <string name="social_proof">सामूहिक प्रमाण</string>
     <string name="poll_submit">उपस्थापन</string>
+    <string name="poll_view_results">परिणाम देखें</string>
     <string name="restart">पुनःआरम्भ</string>
     <string name="chess_accept">स्वीकार</string>
     <string name="chess_decline">अस्वीकार</string>
