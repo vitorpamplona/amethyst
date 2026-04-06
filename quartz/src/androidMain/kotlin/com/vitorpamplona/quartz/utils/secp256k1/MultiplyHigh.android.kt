@@ -21,14 +21,28 @@
 package com.vitorpamplona.quartz.utils.secp256k1
 
 /**
- * Android implementation. Uses Math.multiplyHigh on API 31+ (Android 12),
- * falls back to pure Kotlin on older devices.
+ * Android implementation with API-level-gated intrinsics.
+ *
+ * Resolved once at class init to avoid per-call branch overhead:
+ * - API 31+ (Android 12): Math.multiplyHigh (ART intrinsic → SMULH on ARM64)
+ * - API 35+ (Android 15): Math.unsignedMultiplyHigh (ART intrinsic → UMULH on ARM64)
+ * - Below: pure-Kotlin fallback via four 32-bit sub-products
+ *
+ * These functions are called 16× per field multiply (~12,000× per signature verify),
+ * so eliminating the per-call version check is critical.
+ *
+ * Implementation strategy is resolved once at class load time via static finals.
+ * The JIT then devirtualizes and inlines the hot path.
  */
+
+private val HAS_MULTIPLY_HIGH = android.os.Build.VERSION.SDK_INT >= 31
+private val HAS_UNSIGNED_MULTIPLY_HIGH = android.os.Build.VERSION.SDK_INT >= 35
+
 internal actual fun multiplyHigh(
     a: Long,
     b: Long,
 ): Long =
-    if (android.os.Build.VERSION.SDK_INT >= 31) {
+    if (HAS_MULTIPLY_HIGH) {
         Math.multiplyHigh(a, b)
     } else {
         multiplyHighFallback(a, b)
@@ -37,4 +51,14 @@ internal actual fun multiplyHigh(
 internal actual fun unsignedMultiplyHigh(
     a: Long,
     b: Long,
-): Long = unsignedMultiplyHighFallback(a, b)
+): Long =
+    if (HAS_UNSIGNED_MULTIPLY_HIGH) {
+        @Suppress("NewApi")
+        Math.unsignedMultiplyHigh(a, b)
+    } else if (HAS_MULTIPLY_HIGH) {
+        // API 31-34: signed multiplyHigh + unsigned correction (3 extra insns)
+        Math.multiplyHigh(a, b) + (a and (b shr 63)) + (b and (a shr 63))
+    } else {
+        // API <31: pure-Kotlin fallback
+        unsignedMultiplyHighFallback(a, b)
+    }
