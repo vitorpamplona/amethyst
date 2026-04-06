@@ -60,6 +60,7 @@ fun LocalRelayList(
     Row(verticalAlignment = Alignment.CenterVertically) {
         LazyColumn(
             contentPadding = FeedPadding,
+            userScrollEnabled = !dragState.isDragging,
         ) {
             renderLocalItems(feedState, postViewModel, accountViewModel, newNav, dragState = dragState)
         }

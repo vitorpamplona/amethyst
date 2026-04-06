@@ -70,6 +70,7 @@ fun Nip65RelayList(
     Row(verticalAlignment = Alignment.CenterVertically) {
         LazyColumn(
             contentPadding = FeedPadding,
+            userScrollEnabled = !homeDragState.isDragging && !notifDragState.isDragging,
         ) {
             renderNip65HomeItems(homeFeedState, postViewModel, accountViewModel, newNav, dragState = homeDragState)
             renderNip65NotifItems(notifFeedState, postViewModel, accountViewModel, newNav, dragState = notifDragState)
@@ -95,6 +96,7 @@ fun Nip65InboxRelayList(
     Row(verticalAlignment = Alignment.CenterVertically) {
         LazyColumn(
             contentPadding = FeedPadding,
+            userScrollEnabled = !dragState.isDragging,
         ) {
             renderNip65NotifItems(notifFeedState, postViewModel, accountViewModel, newNav, dragState = dragState)
         }
@@ -119,6 +121,7 @@ fun Nip65OutboxRelayList(
     Row(verticalAlignment = Alignment.CenterVertically) {
         LazyColumn(
             contentPadding = FeedPadding,
+            userScrollEnabled = !dragState.isDragging,
         ) {
             renderNip65HomeItems(homeFeedState, postViewModel, accountViewModel, newNav, dragState = dragState)
         }

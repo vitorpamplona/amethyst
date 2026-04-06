@@ -60,6 +60,7 @@ fun BroadcastRelayList(
     Row(verticalAlignment = Alignment.CenterVertically) {
         LazyColumn(
             contentPadding = FeedPadding,
+            userScrollEnabled = !dragState.isDragging,
         ) {
             renderBroadcastItems(feedState, postViewModel, accountViewModel, newNav, dragState = dragState)
         }

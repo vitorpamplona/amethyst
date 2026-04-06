@@ -60,6 +60,7 @@ fun TrustedRelayList(
     Row(verticalAlignment = Alignment.CenterVertically) {
         LazyColumn(
             contentPadding = FeedPadding,
+            userScrollEnabled = !dragState.isDragging,
         ) {
             renderTrustedItems(feedState, postViewModel, accountViewModel, newNav, dragState = dragState)
         }

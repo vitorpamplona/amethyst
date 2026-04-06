@@ -62,6 +62,7 @@ fun PrivateOutboxRelayList(
     Row(verticalAlignment = Alignment.CenterVertically) {
         LazyColumn(
             contentPadding = FeedPadding,
+            userScrollEnabled = !dragState.isDragging,
         ) {
             renderPrivateOutboxItems(feedState, postViewModel, accountViewModel, newNav, dragState = dragState)
         }

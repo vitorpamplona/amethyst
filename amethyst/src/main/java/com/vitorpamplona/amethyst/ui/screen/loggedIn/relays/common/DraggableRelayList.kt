@@ -44,6 +44,7 @@ class RelayDragState(
     var draggedItemIndex by mutableIntStateOf(-1)
     var dragOffset by mutableFloatStateOf(0f)
     val itemHeights = mutableStateMapOf<Int, Float>()
+    val isDragging: Boolean get() = draggedItemIndex >= 0
 
     fun onDragStart(index: Int) {
         draggedItemIndex = index

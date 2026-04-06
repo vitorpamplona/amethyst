@@ -62,6 +62,7 @@ fun DMRelayList(
     Row(verticalAlignment = Alignment.CenterVertically) {
         LazyColumn(
             contentPadding = FeedPadding,
+            userScrollEnabled = !dragState.isDragging,
         ) {
             renderDMItems(feedState, postViewModel, accountViewModel, newNav, dragState = dragState)
         }

@@ -62,6 +62,7 @@ fun SearchRelayList(
     Row(verticalAlignment = Alignment.CenterVertically) {
         LazyColumn(
             contentPadding = FeedPadding,
+            userScrollEnabled = !dragState.isDragging,
         ) {
             renderSearchItems(feedState, postViewModel, accountViewModel, newNav, dragState = dragState)
         }

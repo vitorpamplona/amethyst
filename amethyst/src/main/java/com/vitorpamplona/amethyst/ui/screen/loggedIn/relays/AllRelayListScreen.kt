@@ -316,8 +316,17 @@ fun MappedAllRelayListView(
             )
         },
     ) { pad ->
+        val anyDragging =
+            homeDragState.isDragging || notifDragState.isDragging ||
+                dmDragState.isDragging || privateOutboxDragState.isDragging ||
+                proxyDragState.isDragging || broadcastDragState.isDragging ||
+                indexerDragState.isDragging || searchDragState.isDragging ||
+                localDragState.isDragging || trustedDragState.isDragging ||
+                feedsDragState.isDragging || blockedDragState.isDragging
+
         LazyColumn(
             contentPadding = FeedPadding,
+            userScrollEnabled = !anyDragging,
             modifier =
                 Modifier
                     .fillMaxSize()

@@ -60,6 +60,7 @@ fun RelayFeedsList(
     Row(verticalAlignment = Alignment.CenterVertically) {
         LazyColumn(
             contentPadding = FeedPadding,
+            userScrollEnabled = !dragState.isDragging,
         ) {
             renderRelayFeedsItems(feedState, postViewModel, accountViewModel, newNav, dragState = dragState)
         }
