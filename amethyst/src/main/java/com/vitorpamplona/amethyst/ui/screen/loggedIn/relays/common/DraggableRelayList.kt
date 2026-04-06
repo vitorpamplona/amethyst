@@ -22,10 +22,8 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -38,106 +36,112 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.zIndex
 
-@Composable
-fun DraggableRelayList(
-    items: List<BasicRelaySetupInfo>,
-    onMove: (from: Int, to: Int) -> Unit,
-    modifier: Modifier = Modifier,
-    content: @Composable (
-        index: Int,
-        item: BasicRelaySetupInfo,
-        dragModifier: Modifier,
-    ) -> Unit,
+@Stable
+class RelayDragState(
+    val onMove: (from: Int, to: Int) -> Unit,
+    val itemCount: () -> Int,
 ) {
-    var draggedItemIndex by remember { mutableIntStateOf(-1) }
-    var dragOffset by remember { mutableFloatStateOf(0f) }
-    val itemHeights = remember { mutableStateMapOf<Int, Float>() }
+    var draggedItemIndex by mutableIntStateOf(-1)
+    var dragOffset by mutableFloatStateOf(0f)
+    val itemHeights = mutableStateMapOf<Int, Float>()
 
-    Column(modifier = modifier.fillMaxWidth()) {
-        items.forEachIndexed { index, item ->
-            val isDragging = draggedItemIndex == index
-            val targetElevation = if (isDragging) 8f else 0f
-            val animatedElevation by animateFloatAsState(
-                targetValue = targetElevation,
-                label = "dragElevation",
-            )
+    fun onDragStart(index: Int) {
+        draggedItemIndex = index
+        dragOffset = 0f
+    }
 
-            Box(
-                modifier =
-                    Modifier
-                        .zIndex(if (isDragging) 1f else 0f)
-                        .onGloballyPositioned { coordinates ->
-                            itemHeights[index] = coordinates.size.height.toFloat()
-                        }.graphicsLayer {
-                            translationY = if (isDragging) dragOffset else 0f
-                            shadowElevation = animatedElevation
-                            if (isDragging) {
-                                scaleX = 1.02f
-                                scaleY = 1.02f
-                            }
-                        },
-            ) {
-                val dragModifier =
-                    Modifier.pointerInput(Unit) {
-                        detectDragGestures(
-                            onDragStart = {
-                                draggedItemIndex = index
-                                dragOffset = 0f
-                            },
-                            onDrag = { change, dragAmount ->
-                                change.consume()
-                                dragOffset += dragAmount.y
+    fun onDrag(dragAmount: Float) {
+        dragOffset += dragAmount
 
-                                val currentIndex = draggedItemIndex
-                                if (currentIndex < 0) return@detectDragGestures
+        val currentIndex = draggedItemIndex
+        if (currentIndex < 0) return
 
-                                // Check if we should swap with the item above
-                                if (dragOffset < 0 && currentIndex > 0) {
-                                    val aboveHeight = itemHeights[currentIndex - 1] ?: 0f
-                                    if (-dragOffset > aboveHeight / 2f) {
-                                        onMove(currentIndex, currentIndex - 1)
+        // Check if we should swap with the item above
+        if (dragOffset < 0 && currentIndex > 0) {
+            val aboveHeight = itemHeights[currentIndex - 1] ?: 0f
+            if (-dragOffset > aboveHeight / 2f) {
+                onMove(currentIndex, currentIndex - 1)
 
-                                        // Transfer heights
-                                        val h1 = itemHeights[currentIndex]
-                                        val h2 = itemHeights[currentIndex - 1]
-                                        if (h1 != null) itemHeights[currentIndex - 1] = h1
-                                        if (h2 != null) itemHeights[currentIndex] = h2
+                val h1 = itemHeights[currentIndex]
+                val h2 = itemHeights[currentIndex - 1]
+                if (h1 != null) itemHeights[currentIndex - 1] = h1
+                if (h2 != null) itemHeights[currentIndex] = h2
 
-                                        dragOffset += aboveHeight
-                                        draggedItemIndex = currentIndex - 1
-                                    }
-                                }
+                dragOffset += aboveHeight
+                draggedItemIndex = currentIndex - 1
+            }
+        }
 
-                                // Check if we should swap with the item below
-                                if (dragOffset > 0 && currentIndex < items.lastIndex) {
-                                    val belowHeight = itemHeights[currentIndex + 1] ?: 0f
-                                    if (dragOffset > belowHeight / 2f) {
-                                        onMove(currentIndex, currentIndex + 1)
+        // Check if we should swap with the item below
+        if (dragOffset > 0 && currentIndex < itemCount() - 1) {
+            val belowHeight = itemHeights[currentIndex + 1] ?: 0f
+            if (dragOffset > belowHeight / 2f) {
+                onMove(currentIndex, currentIndex + 1)
 
-                                        // Transfer heights
-                                        val h1 = itemHeights[currentIndex]
-                                        val h2 = itemHeights[currentIndex + 1]
-                                        if (h1 != null) itemHeights[currentIndex + 1] = h1
-                                        if (h2 != null) itemHeights[currentIndex] = h2
+                val h1 = itemHeights[currentIndex]
+                val h2 = itemHeights[currentIndex + 1]
+                if (h1 != null) itemHeights[currentIndex + 1] = h1
+                if (h2 != null) itemHeights[currentIndex] = h2
 
-                                        dragOffset -= belowHeight
-                                        draggedItemIndex = currentIndex + 1
-                                    }
-                                }
-                            },
-                            onDragEnd = {
-                                draggedItemIndex = -1
-                                dragOffset = 0f
-                            },
-                            onDragCancel = {
-                                draggedItemIndex = -1
-                                dragOffset = 0f
-                            },
-                        )
-                    }
-
-                content(index, item, dragModifier)
+                dragOffset -= belowHeight
+                draggedItemIndex = currentIndex + 1
             }
         }
     }
+
+    fun onDragEnd() {
+        draggedItemIndex = -1
+        dragOffset = 0f
+    }
 }
+
+@Composable
+fun rememberRelayDragState(
+    onMove: (from: Int, to: Int) -> Unit,
+    itemCount: () -> Int,
+): RelayDragState =
+    remember(onMove, itemCount) {
+        RelayDragState(onMove, itemCount)
+    }
+
+@Composable
+fun Modifier.draggableRelayItem(
+    index: Int,
+    dragState: RelayDragState,
+): Modifier {
+    val isDragging = dragState.draggedItemIndex == index
+    val targetElevation = if (isDragging) 8f else 0f
+    val animatedElevation by animateFloatAsState(
+        targetValue = targetElevation,
+        label = "dragElevation",
+    )
+
+    return this
+        .zIndex(if (isDragging) 1f else 0f)
+        .onGloballyPositioned { coordinates ->
+            dragState.itemHeights[index] = coordinates.size.height.toFloat()
+        }.graphicsLayer {
+            translationY = if (isDragging) dragState.dragOffset else 0f
+            shadowElevation = animatedElevation
+            if (isDragging) {
+                scaleX = 1.02f
+                scaleY = 1.02f
+            }
+        }
+}
+
+fun Modifier.relayDragHandle(
+    index: Int,
+    dragState: RelayDragState,
+): Modifier =
+    this.pointerInput(index) {
+        detectDragGestures(
+            onDragStart = { dragState.onDragStart(index) },
+            onDrag = { change, dragAmount ->
+                change.consume()
+                dragState.onDrag(dragAmount.y)
+            },
+            onDragEnd = { dragState.onDragEnd() },
+            onDragCancel = { dragState.onDragEnd() },
+        )
+    }

@@ -68,6 +68,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayExporter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayListCollection
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayZipExporter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.rememberRelayDragState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.connected.ConnectedRelayListViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.connected.renderConnectedItems
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.dm.DMRelayListViewModel
@@ -201,6 +202,67 @@ fun MappedAllRelayListView(
     val indexerCounts by indexerViewModel.countResults.collectAsStateWithLifecycle()
     val searchCounts by searchViewModel.countResults.collectAsStateWithLifecycle()
 
+    val homeDragState =
+        rememberRelayDragState(
+            onMove = { from, to -> nip65ViewModel.moveHomeRelay(from, to) },
+            itemCount = { homeFeedState.size },
+        )
+    val notifDragState =
+        rememberRelayDragState(
+            onMove = { from, to -> nip65ViewModel.moveNotifRelay(from, to) },
+            itemCount = { notifFeedState.size },
+        )
+    val dmDragState =
+        rememberRelayDragState(
+            onMove = { from, to -> dmViewModel.moveRelay(from, to) },
+            itemCount = { dmFeedState.size },
+        )
+    val privateOutboxDragState =
+        rememberRelayDragState(
+            onMove = { from, to -> privateOutboxViewModel.moveRelay(from, to) },
+            itemCount = { privateOutboxFeedState.size },
+        )
+    val proxyDragState =
+        rememberRelayDragState(
+            onMove = { from, to -> proxyViewModel.moveRelay(from, to) },
+            itemCount = { proxyRelays.size },
+        )
+    val broadcastDragState =
+        rememberRelayDragState(
+            onMove = { from, to -> broadcastViewModel.moveRelay(from, to) },
+            itemCount = { broadcastRelays.size },
+        )
+    val indexerDragState =
+        rememberRelayDragState(
+            onMove = { from, to -> indexerViewModel.moveRelay(from, to) },
+            itemCount = { indexerRelays.size },
+        )
+    val searchDragState =
+        rememberRelayDragState(
+            onMove = { from, to -> searchViewModel.moveRelay(from, to) },
+            itemCount = { searchFeedState.size },
+        )
+    val localDragState =
+        rememberRelayDragState(
+            onMove = { from, to -> localViewModel.moveRelay(from, to) },
+            itemCount = { localFeedState.size },
+        )
+    val trustedDragState =
+        rememberRelayDragState(
+            onMove = { from, to -> trustedViewModel.moveRelay(from, to) },
+            itemCount = { trustedFeedState.size },
+        )
+    val feedsDragState =
+        rememberRelayDragState(
+            onMove = { from, to -> relayFeedsViewModel.moveRelay(from, to) },
+            itemCount = { relayFeedsFeedState.size },
+        )
+    val blockedDragState =
+        rememberRelayDragState(
+            onMove = { from, to -> blockedViewModel.moveRelay(from, to) },
+            itemCount = { blockedFeedState.size },
+        )
+
     Scaffold(
         topBar = {
             SavingTopBar(
@@ -274,7 +336,7 @@ fun MappedAllRelayListView(
                     SettingsCategoryFirstModifier,
                 )
             }
-            renderNip65HomeItems(homeFeedState, nip65ViewModel, accountViewModel, nav, outboxCounts)
+            renderNip65HomeItems(homeFeedState, nip65ViewModel, accountViewModel, nav, outboxCounts, homeDragState)
 
             item {
                 SettingsCategory(
@@ -283,7 +345,7 @@ fun MappedAllRelayListView(
                     SettingsCategorySpacingModifier,
                 )
             }
-            renderNip65NotifItems(notifFeedState, nip65ViewModel, accountViewModel, nav, inboxCounts)
+            renderNip65NotifItems(notifFeedState, nip65ViewModel, accountViewModel, nav, inboxCounts, notifDragState)
 
             item {
                 SettingsCategoryWithButton(
@@ -295,7 +357,7 @@ fun MappedAllRelayListView(
                     },
                 )
             }
-            renderDMItems(dmFeedState, dmViewModel, accountViewModel, nav, dmCounts)
+            renderDMItems(dmFeedState, dmViewModel, accountViewModel, nav, dmCounts, dmDragState)
 
             item {
                 SettingsCategory(
@@ -304,7 +366,7 @@ fun MappedAllRelayListView(
                     SettingsCategorySpacingModifier,
                 )
             }
-            renderPrivateOutboxItems(privateOutboxFeedState, privateOutboxViewModel, accountViewModel, nav, privateHomeCounts)
+            renderPrivateOutboxItems(privateOutboxFeedState, privateOutboxViewModel, accountViewModel, nav, privateHomeCounts, privateOutboxDragState)
 
             item {
                 SettingsCategory(
@@ -313,7 +375,7 @@ fun MappedAllRelayListView(
                     SettingsCategorySpacingModifier,
                 )
             }
-            renderProxyItems(proxyRelays, proxyViewModel, accountViewModel, nav, proxyCounts)
+            renderProxyItems(proxyRelays, proxyViewModel, accountViewModel, nav, proxyCounts, proxyDragState)
 
             item {
                 SettingsCategory(
@@ -322,7 +384,7 @@ fun MappedAllRelayListView(
                     SettingsCategorySpacingModifier,
                 )
             }
-            renderBroadcastItems(broadcastRelays, broadcastViewModel, accountViewModel, nav)
+            renderBroadcastItems(broadcastRelays, broadcastViewModel, accountViewModel, nav, broadcastDragState)
 
             item {
                 SettingsCategoryWithButton(
@@ -333,7 +395,7 @@ fun MappedAllRelayListView(
                     ResetIndexerRelays(indexerViewModel)
                 }
             }
-            renderIndexerItems(indexerRelays, indexerViewModel, accountViewModel, nav, indexerCounts)
+            renderIndexerItems(indexerRelays, indexerViewModel, accountViewModel, nav, indexerCounts, indexerDragState)
 
             item {
                 SettingsCategoryWithButton(
@@ -344,7 +406,7 @@ fun MappedAllRelayListView(
                     ResetSearchRelays(searchViewModel)
                 }
             }
-            renderSearchItems(searchFeedState, searchViewModel, accountViewModel, nav, searchCounts)
+            renderSearchItems(searchFeedState, searchViewModel, accountViewModel, nav, searchCounts, searchDragState)
 
             item {
                 SettingsCategory(
@@ -371,7 +433,7 @@ fun MappedAllRelayListView(
                     )
                 }
             }
-            renderLocalItems(localFeedState, localViewModel, accountViewModel, nav)
+            renderLocalItems(localFeedState, localViewModel, accountViewModel, nav, localDragState)
 
             item {
                 SettingsCategory(
@@ -380,7 +442,7 @@ fun MappedAllRelayListView(
                     SettingsCategorySpacingModifier,
                 )
             }
-            renderTrustedItems(trustedFeedState, trustedViewModel, accountViewModel, nav)
+            renderTrustedItems(trustedFeedState, trustedViewModel, accountViewModel, nav, trustedDragState)
 
             item {
                 SettingsCategory(
@@ -389,7 +451,7 @@ fun MappedAllRelayListView(
                     SettingsCategorySpacingModifier,
                 )
             }
-            renderRelayFeedsItems(relayFeedsFeedState, relayFeedsViewModel, accountViewModel, nav)
+            renderRelayFeedsItems(relayFeedsFeedState, relayFeedsViewModel, accountViewModel, nav, feedsDragState)
 
             item {
                 SettingsCategory(
@@ -398,7 +460,7 @@ fun MappedAllRelayListView(
                     SettingsCategorySpacingModifier,
                 )
             }
-            renderBlockedItems(blockedFeedState, blockedViewModel, accountViewModel, nav)
+            renderBlockedItems(blockedFeedState, blockedViewModel, accountViewModel, nav, blockedDragState)
 
             item {
                 SettingsCategory(

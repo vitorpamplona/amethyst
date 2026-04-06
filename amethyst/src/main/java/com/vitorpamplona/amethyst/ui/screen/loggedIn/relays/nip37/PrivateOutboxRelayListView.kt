@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -34,10 +35,11 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.rememberExtendedNav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoDialog
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.DraggableRelayList
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayCountResult
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayDragState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayUrlEditField
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.rememberRelayDragState
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -51,12 +53,17 @@ fun PrivateOutboxRelayList(
 ) {
     val newNav = rememberExtendedNav(nav, onClose)
     val feedState by postViewModel.relays.collectAsStateWithLifecycle()
+    val dragState =
+        rememberRelayDragState(
+            onMove = { from, to -> postViewModel.moveRelay(from, to) },
+            itemCount = { feedState.size },
+        )
 
     Row(verticalAlignment = Alignment.CenterVertically) {
         LazyColumn(
             contentPadding = FeedPadding,
         ) {
-            renderPrivateOutboxItems(feedState, postViewModel, accountViewModel, newNav)
+            renderPrivateOutboxItems(feedState, postViewModel, accountViewModel, newNav, dragState = dragState)
         }
     }
 }
@@ -67,22 +74,19 @@ fun LazyListScope.renderPrivateOutboxItems(
     accountViewModel: AccountViewModel,
     nav: INav,
     countResults: Map<NormalizedRelayUrl, RelayCountResult> = emptyMap(),
+    dragState: RelayDragState? = null,
 ) {
-    item(key = "Outbox_draggable_list") {
-        DraggableRelayList(
-            items = feedState,
-            onMove = { from, to -> postViewModel.moveRelay(from, to) },
-        ) { _, item, dragModifier ->
-            BasicRelaySetupInfoDialog(
-                item,
-                onDelete = { postViewModel.deleteRelay(item) },
-                nip11CachedRetriever = Amethyst.instance.nip11Cache,
-                countResult = countResults[item.relay],
-                dragModifier = dragModifier,
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
-        }
+    itemsIndexed(feedState, key = { _, item -> "Outbox" + item.relay.url }) { index, item ->
+        BasicRelaySetupInfoDialog(
+            item,
+            onDelete = { postViewModel.deleteRelay(item) },
+            nip11CachedRetriever = Amethyst.instance.nip11Cache,
+            countResult = countResults[item.relay],
+            index = index,
+            dragState = dragState,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
     }
 
     item {

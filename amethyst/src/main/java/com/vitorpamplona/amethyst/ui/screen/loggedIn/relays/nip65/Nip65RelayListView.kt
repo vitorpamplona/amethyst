@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -34,10 +35,11 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.rememberExtendedNav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoDialog
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.DraggableRelayList
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayCountResult
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayDragState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayUrlEditField
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.rememberRelayDragState
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -54,12 +56,23 @@ fun Nip65RelayList(
     val homeFeedState by postViewModel.homeRelays.collectAsStateWithLifecycle()
     val notifFeedState by postViewModel.notificationRelays.collectAsStateWithLifecycle()
 
+    val homeDragState =
+        rememberRelayDragState(
+            onMove = { from, to -> postViewModel.moveHomeRelay(from, to) },
+            itemCount = { homeFeedState.size },
+        )
+    val notifDragState =
+        rememberRelayDragState(
+            onMove = { from, to -> postViewModel.moveNotifRelay(from, to) },
+            itemCount = { notifFeedState.size },
+        )
+
     Row(verticalAlignment = Alignment.CenterVertically) {
         LazyColumn(
             contentPadding = FeedPadding,
         ) {
-            renderNip65HomeItems(homeFeedState, postViewModel, accountViewModel, newNav)
-            renderNip65NotifItems(notifFeedState, postViewModel, accountViewModel, newNav)
+            renderNip65HomeItems(homeFeedState, postViewModel, accountViewModel, newNav, dragState = homeDragState)
+            renderNip65NotifItems(notifFeedState, postViewModel, accountViewModel, newNav, dragState = notifDragState)
         }
     }
 }
@@ -72,14 +85,18 @@ fun Nip65InboxRelayList(
     nav: INav,
 ) {
     val newNav = rememberExtendedNav(nav, onClose)
-
     val notifFeedState by postViewModel.notificationRelays.collectAsStateWithLifecycle()
+    val dragState =
+        rememberRelayDragState(
+            onMove = { from, to -> postViewModel.moveNotifRelay(from, to) },
+            itemCount = { notifFeedState.size },
+        )
 
     Row(verticalAlignment = Alignment.CenterVertically) {
         LazyColumn(
             contentPadding = FeedPadding,
         ) {
-            renderNip65NotifItems(notifFeedState, postViewModel, accountViewModel, newNav)
+            renderNip65NotifItems(notifFeedState, postViewModel, accountViewModel, newNav, dragState = dragState)
         }
     }
 }
@@ -92,14 +109,18 @@ fun Nip65OutboxRelayList(
     nav: INav,
 ) {
     val newNav = rememberExtendedNav(nav, onClose)
-
     val homeFeedState by postViewModel.homeRelays.collectAsStateWithLifecycle()
+    val dragState =
+        rememberRelayDragState(
+            onMove = { from, to -> postViewModel.moveHomeRelay(from, to) },
+            itemCount = { homeFeedState.size },
+        )
 
     Row(verticalAlignment = Alignment.CenterVertically) {
         LazyColumn(
             contentPadding = FeedPadding,
         ) {
-            renderNip65HomeItems(homeFeedState, postViewModel, accountViewModel, newNav)
+            renderNip65HomeItems(homeFeedState, postViewModel, accountViewModel, newNav, dragState = dragState)
         }
     }
 }
@@ -110,22 +131,19 @@ fun LazyListScope.renderNip65HomeItems(
     accountViewModel: AccountViewModel,
     nav: INav,
     countResults: Map<NormalizedRelayUrl, RelayCountResult> = emptyMap(),
+    dragState: RelayDragState? = null,
 ) {
-    item(key = "Nip65Home_draggable_list") {
-        DraggableRelayList(
-            items = feedState,
-            onMove = { from, to -> postViewModel.moveHomeRelay(from, to) },
-        ) { _, item, dragModifier ->
-            BasicRelaySetupInfoDialog(
-                item,
-                onDelete = { postViewModel.deleteHomeRelay(item) },
-                nip11CachedRetriever = Amethyst.instance.nip11Cache,
-                countResult = countResults[item.relay],
-                dragModifier = dragModifier,
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
-        }
+    itemsIndexed(feedState, key = { _, item -> "Nip65Home" + item.relay.url }) { index, item ->
+        BasicRelaySetupInfoDialog(
+            item,
+            onDelete = { postViewModel.deleteHomeRelay(item) },
+            nip11CachedRetriever = Amethyst.instance.nip11Cache,
+            countResult = countResults[item.relay],
+            index = index,
+            dragState = dragState,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
     }
 
     item {
@@ -144,22 +162,19 @@ fun LazyListScope.renderNip65NotifItems(
     accountViewModel: AccountViewModel,
     nav: INav,
     countResults: Map<NormalizedRelayUrl, RelayCountResult> = emptyMap(),
+    dragState: RelayDragState? = null,
 ) {
-    item(key = "Nip65Notif_draggable_list") {
-        DraggableRelayList(
-            items = feedState,
-            onMove = { from, to -> postViewModel.moveNotifRelay(from, to) },
-        ) { _, item, dragModifier ->
-            BasicRelaySetupInfoDialog(
-                item,
-                onDelete = { postViewModel.deleteNotifRelay(item) },
-                nip11CachedRetriever = Amethyst.instance.nip11Cache,
-                countResult = countResults[item.relay],
-                dragModifier = dragModifier,
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
-        }
+    itemsIndexed(feedState, key = { _, item -> "Nip65Notif" + item.relay.url }) { index, item ->
+        BasicRelaySetupInfoDialog(
+            item,
+            onDelete = { postViewModel.deleteNotifRelay(item) },
+            nip11CachedRetriever = Amethyst.instance.nip11Cache,
+            countResult = countResults[item.relay],
+            index = index,
+            dragState = dragState,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
     }
 
     item {

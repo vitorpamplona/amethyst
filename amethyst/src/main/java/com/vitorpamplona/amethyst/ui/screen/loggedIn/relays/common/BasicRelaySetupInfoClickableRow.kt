@@ -71,36 +71,54 @@ fun BasicRelaySetupInfoClickableRow(
     onClick: () -> Unit,
     nip11CachedRetriever: Nip11CachedRetriever,
     modifier: Modifier = Modifier,
-    dragModifier: Modifier = Modifier,
+    index: Int = -1,
+    dragState: RelayDragState? = null,
     countResult: RelayCountResult? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val clipboardManager = LocalClipboard.current
     val scope = rememberCoroutineScope()
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .combinedClickable(
-                onClick = onClick,
-                onLongClick = {
-                    scope.launch {
-                        clipboardManager.setText(item.relay.url)
-                    }
-                },
-            ),
-    ) {
+
+    val itemModifier =
+        if (dragState != null && index >= 0) {
+            Modifier
+                .fillMaxWidth()
+                .draggableRelayItem(index, dragState)
+                .combinedClickable(
+                    onClick = onClick,
+                    onLongClick = {
+                        scope.launch {
+                            clipboardManager.setText(item.relay.url)
+                        }
+                    },
+                )
+        } else {
+            Modifier
+                .fillMaxWidth()
+                .combinedClickable(
+                    onClick = onClick,
+                    onLongClick = {
+                        scope.launch {
+                            clipboardManager.setText(item.relay.url)
+                        }
+                    },
+                )
+        }
+
+    Column(itemModifier) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = modifier,
         ) {
-            if (dragModifier != Modifier) {
+            if (dragState != null && index >= 0) {
                 Icon(
                     Icons.Default.DragIndicator,
                     contentDescription = stringRes(R.string.relay_reorder),
                     modifier =
-                        dragModifier
-                            .size(24.dp),
+                        Modifier
+                            .size(24.dp)
+                            .relayDragHandle(index, dragState),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
