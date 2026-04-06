@@ -36,7 +36,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
-import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.hours
 
 @Stable
 class OpenPollsState(
@@ -54,7 +54,7 @@ class OpenPollsState(
         flow {
             while (true) {
                 emit(Unit)
-                delay(1.minutes)
+                delay(1.hours)
             }
         }
 
