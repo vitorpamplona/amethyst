@@ -20,33 +20,37 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.clearText
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.RefreshingChatroomFeedView
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ThinSendButton
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.EditFieldBorder
+import com.vitorpamplona.amethyst.ui.theme.EditFieldModifier
+import com.vitorpamplona.amethyst.ui.theme.EditFieldTrailingIconModifier
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -107,39 +111,39 @@ fun MarmotGroupMessageComposer(
 ) {
     val scope = rememberCoroutineScope()
     val messageState = remember { TextFieldState() }
+    val canPost by remember { derivedStateOf { messageState.text.isNotBlank() } }
 
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        OutlinedTextField(
+    Column(modifier = EditFieldModifier) {
+        ThinPaddingTextField(
             state = messageState,
-            modifier = Modifier.weight(1f),
-            placeholder = { Text("Message") },
-            lineLimits =
-                androidx.compose.foundation.text.input.TextFieldLineLimits
-                    .MultiLine(maxHeightInLines = 4),
-        )
-        IconButton(
-            onClick = {
-                val text = messageState.text.toString().trim()
-                if (text.isNotEmpty()) {
-                    scope.launch(Dispatchers.IO) {
-                        accountViewModel.sendMarmotGroupMessage(nostrGroupId, text)
-                        messageState.clearText()
-                        onMessageSent()
+            modifier = Modifier.fillMaxWidth(),
+            shape = EditFieldBorder,
+            placeholder = {
+                Text(
+                    text = stringRes(R.string.reply_here),
+                    color = MaterialTheme.colorScheme.placeholderText,
+                )
+            },
+            trailingIcon = {
+                ThinSendButton(
+                    isActive = canPost,
+                    modifier = EditFieldTrailingIconModifier,
+                ) {
+                    val text = messageState.text.toString().trim()
+                    if (text.isNotEmpty()) {
+                        scope.launch(Dispatchers.IO) {
+                            accountViewModel.sendMarmotGroupMessage(nostrGroupId, text)
+                            messageState.clearText()
+                            onMessageSent()
+                        }
                     }
                 }
             },
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.Send,
-                contentDescription = "Send",
-            )
-        }
+            colors =
+                TextFieldDefaults.colors(
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
+                ),
+        )
     }
 }
