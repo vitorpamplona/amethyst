@@ -242,17 +242,26 @@ internal object ECPoint {
 
     /**
      * Scratch space for point operations. Each thread gets its own set of temporary
-     * field elements to avoid allocation in the inner loops. The 12 temp buffers
-     * (t[0]..t[11]) are shared across doublePoint and addPoints — this is safe because
-     * these functions only call each other in the equal-point degenerate case, which
-     * returns immediately after the recursive call without using the temps further.
+     * field elements and a wide buffer to avoid allocation and ThreadLocal lookups
+     * in the inner loops. The 12 temp buffers (t[0]..t[11]) are shared across
+     * doublePoint and addPoints — this is safe because these functions only call
+     * each other in the equal-point degenerate case, which returns immediately
+     * after the recursive call without using the temps further.
+     *
+     * The wide buffer (LongArray(8)) is pre-fetched once per top-level operation
+     * and passed through to FieldP.mul/sqr, avoiding ~500+ ThreadLocal.get() calls
+     * per scalar multiplication (~20-30ns each on JVM).
      */
-    private class PointScratch {
+    internal class PointScratch {
         val t = Array(12) { LongArray(4) }
         val dblCopy = MutablePoint() // Copy buffer for in-place doubling (out === input)
+        val w = LongArray(8) // Wide buffer for FieldP.mul/sqr — shared, avoids ThreadLocal
     }
 
     private val scratch = ThreadLocal.withInitial { PointScratch() }
+
+    /** Get thread-local scratch. Call once at the top-level entry point. */
+    internal fun getScratch(): PointScratch = scratch.get()
 
     // ==================== Point Doubling (3M + 4S) ====================
 
@@ -269,15 +278,22 @@ internal object ECPoint {
      *
      * Safe for out === inp (in-place doubling) via internal copy buffer.
      */
+    /** doublePoint with ThreadLocal scratch (convenience for non-hot paths). */
     fun doublePoint(
         out: MutablePoint,
         inp: MutablePoint,
+    ) = doublePoint(out, inp, scratch.get())
+
+    /** doublePoint with caller-provided scratch (hot path — no ThreadLocal lookup). */
+    fun doublePoint(
+        out: MutablePoint,
+        inp: MutablePoint,
+        s: PointScratch,
     ) {
         if (inp.isInfinity()) {
             out.setInfinity()
             return
         }
-        val s = scratch.get()
         val p =
             if (out === inp) {
                 s.dblCopy.copyFrom(inp)
@@ -286,23 +302,24 @@ internal object ECPoint {
                 inp
             }
         val t = s.t
+        val w = s.w
 
-        FieldP.sqr(t[0], p.y) // S = Y²
-        FieldP.sqr(t[1], p.x) // X²
+        FieldP.sqr(t[0], p.y, w) // S = Y²
+        FieldP.sqr(t[1], p.x, w) // X²
         FieldP.add(t[2], t[1], t[1]) // 2·X²
         FieldP.add(t[2], t[2], t[1]) // 3·X²
         FieldP.half(t[2], t[2]) // L = (3/2)·X²
-        FieldP.mul(t[3], p.x, t[0]) // X·S
+        FieldP.mul(t[3], p.x, t[0], w) // X·S
         FieldP.neg(t[3], t[3]) // T = -X·S
-        FieldP.sqr(out.x, t[2]) // X₃ = L²
+        FieldP.sqr(out.x, t[2], w) // X₃ = L²
         FieldP.add(out.x, out.x, t[3]) //     + T
         FieldP.add(out.x, out.x, t[3]) //     + T
         FieldP.add(t[4], out.x, t[3]) // X₃ + T
-        FieldP.mul(t[4], t[2], t[4]) // L·(X₃+T)
-        FieldP.sqr(t[5], t[0]) // S²
+        FieldP.mul(t[4], t[2], t[4], w) // L·(X₃+T)
+        FieldP.sqr(t[5], t[0], w) // S²
         FieldP.add(t[4], t[4], t[5]) // L·(X₃+T) + S²
         FieldP.neg(out.y, t[4]) // Y₃ = negate
-        FieldP.mul(out.z, p.y, p.z) // Z₃ = Y·Z
+        FieldP.mul(out.z, p.y, p.z, w) // Z₃ = Y·Z
     }
 
     // ==================== Mixed Addition: Jacobian + Affine (8M + 3S) ====================
@@ -318,49 +335,58 @@ internal object ECPoint {
      *
      * Handles degenerate cases: p is infinity, or p equals/negates q.
      */
+    /** addMixed with ThreadLocal scratch (convenience for non-hot paths). */
     fun addMixed(
         out: MutablePoint,
         p: MutablePoint,
         qx: LongArray,
         qy: LongArray,
+    ) = addMixed(out, p, qx, qy, scratch.get())
+
+    /** addMixed with caller-provided scratch (hot path — no ThreadLocal lookup). */
+    fun addMixed(
+        out: MutablePoint,
+        p: MutablePoint,
+        qx: LongArray,
+        qy: LongArray,
+        s: PointScratch,
     ) {
         if (p.isInfinity()) {
             out.setAffine(qx, qy)
             return
         }
-        val s = scratch.get()
         val t = s.t
+        val w = s.w
 
-        FieldP.sqr(t[0], p.z) // Z₁²
-        FieldP.mul(t[1], t[0], p.z) // Z₁³
-        FieldP.mul(t[2], qx, t[0]) // U₂ = qx·Z₁²  (U₁ = X₁ since Z₂=1)
-        FieldP.mul(t[3], qy, t[1]) // S₂ = qy·Z₁³  (S₁ = Y₁ since Z₂=1)
+        FieldP.sqr(t[0], p.z, w) // Z₁²
+        FieldP.mul(t[1], t[0], p.z, w) // Z₁³
+        FieldP.mul(t[2], qx, t[0], w) // U₂ = qx·Z₁²  (U₁ = X₁ since Z₂=1)
+        FieldP.mul(t[3], qy, t[1], w) // S₂ = qy·Z₁³  (S₁ = Y₁ since Z₂=1)
         FieldP.sub(t[4], t[2], p.x) // H = U₂ - U₁
 
         if (U256.isZero(t[4])) {
-            // Same x-coordinate: either same point (double) or inverse (infinity)
             val tmp = LongArray(4)
             FieldP.sub(tmp, t[3], p.y)
-            if (U256.isZero(tmp)) doublePoint(out, p) else out.setInfinity()
+            if (U256.isZero(tmp)) doublePoint(out, p, s) else out.setInfinity()
             return
         }
 
         FieldP.add(t[5], t[4], t[4]) // 2H
-        FieldP.sqr(t[5], t[5]) // I = (2H)²
-        FieldP.mul(t[6], t[4], t[5]) // J = H·I
+        FieldP.sqr(t[5], t[5], w) // I = (2H)²
+        FieldP.mul(t[6], t[4], t[5], w) // J = H·I
         FieldP.sub(t[7], t[3], p.y)
         FieldP.add(t[7], t[7], t[7]) // r = 2·(S₂ - S₁)
-        FieldP.mul(t[8], p.x, t[5]) // V = U₁·I
-        FieldP.sqr(out.x, t[7]) // X₃ = r²
+        FieldP.mul(t[8], p.x, t[5], w) // V = U₁·I
+        FieldP.sqr(out.x, t[7], w) // X₃ = r²
         FieldP.sub(out.x, out.x, t[6]) //     - J
         FieldP.sub(out.x, out.x, t[8]) //     - V
         FieldP.sub(out.x, out.x, t[8]) //     - V
         FieldP.sub(t[9], t[8], out.x) // V - X₃
-        FieldP.mul(out.y, t[7], t[9]) // Y₃ = r·(V-X₃)
-        FieldP.mul(t[9], p.y, t[6]) //      - 2·S₁·J
+        FieldP.mul(out.y, t[7], t[9], w) // Y₃ = r·(V-X₃)
+        FieldP.mul(t[9], p.y, t[6], w) //      - 2·S₁·J
         FieldP.add(t[9], t[9], t[9])
         FieldP.sub(out.y, out.y, t[9])
-        FieldP.mul(out.z, p.z, t[4]) // Z₃ = 2·Z₁·H
+        FieldP.mul(out.z, p.z, t[4], w) // Z₃ = 2·Z₁·H
         FieldP.add(out.z, out.z, out.z)
     }
 
@@ -378,6 +404,13 @@ internal object ECPoint {
         out: MutablePoint,
         p: MutablePoint,
         q: MutablePoint,
+    ) = addPoints(out, p, q, scratch.get())
+
+    fun addPoints(
+        out: MutablePoint,
+        p: MutablePoint,
+        q: MutablePoint,
+        s: PointScratch,
     ) {
         if (p.isInfinity()) {
             out.copyFrom(q)
@@ -387,45 +420,45 @@ internal object ECPoint {
             out.copyFrom(p)
             return
         }
-        val s = scratch.get()
         val t = s.t
+        val w = s.w
 
-        FieldP.sqr(t[0], p.z) // Z₁²
-        FieldP.sqr(t[1], q.z) // Z₂²
-        FieldP.mul(t[2], p.x, t[1]) // U₁ = X₁·Z₂²
-        FieldP.mul(t[3], q.x, t[0]) // U₂ = X₂·Z₁²
-        FieldP.mul(t[4], q.z, t[1]) // Z₂³
-        FieldP.mul(t[4], p.y, t[4]) // S₁ = Y₁·Z₂³
-        FieldP.mul(t[5], p.z, t[0]) // Z₁³
-        FieldP.mul(t[5], q.y, t[5]) // S₂ = Y₂·Z₁³
+        FieldP.sqr(t[0], p.z, w) // Z₁²
+        FieldP.sqr(t[1], q.z, w) // Z₂²
+        FieldP.mul(t[2], p.x, t[1], w) // U₁ = X₁·Z₂²
+        FieldP.mul(t[3], q.x, t[0], w) // U₂ = X₂·Z₁²
+        FieldP.mul(t[4], q.z, t[1], w) // Z₂³
+        FieldP.mul(t[4], p.y, t[4], w) // S₁ = Y₁·Z₂³
+        FieldP.mul(t[5], p.z, t[0], w) // Z₁³
+        FieldP.mul(t[5], q.y, t[5], w) // S₂ = Y₂·Z₁³
 
         if (U256.cmp(t[2], t[3]) == 0) {
-            if (U256.cmp(t[4], t[5]) == 0) doublePoint(out, p) else out.setInfinity()
+            if (U256.cmp(t[4], t[5]) == 0) doublePoint(out, p, s) else out.setInfinity()
             return
         }
 
         FieldP.sub(t[6], t[3], t[2]) // H = U₂ - U₁
         FieldP.add(t[7], t[6], t[6])
-        FieldP.sqr(t[7], t[7]) // I = (2H)²
-        FieldP.mul(t[8], t[6], t[7]) // J = H·I
+        FieldP.sqr(t[7], t[7], w) // I = (2H)²
+        FieldP.mul(t[8], t[6], t[7], w) // J = H·I
         FieldP.sub(t[9], t[5], t[4])
         FieldP.add(t[9], t[9], t[9]) // r = 2·(S₂-S₁)
-        FieldP.mul(t[10], t[2], t[7]) // V = U₁·I
+        FieldP.mul(t[10], t[2], t[7], w) // V = U₁·I
 
-        FieldP.sqr(out.x, t[9])
+        FieldP.sqr(out.x, t[9], w)
         FieldP.sub(out.x, out.x, t[8])
         FieldP.sub(out.x, out.x, t[10])
         FieldP.sub(out.x, out.x, t[10])
         FieldP.sub(t[11], t[10], out.x)
-        FieldP.mul(out.y, t[9], t[11])
-        FieldP.mul(t[11], t[4], t[8])
+        FieldP.mul(out.y, t[9], t[11], w)
+        FieldP.mul(t[11], t[4], t[8], w)
         FieldP.add(t[11], t[11], t[11])
         FieldP.sub(out.y, out.y, t[11])
         FieldP.add(out.z, p.z, q.z)
-        FieldP.sqr(out.z, out.z)
+        FieldP.sqr(out.z, out.z, w)
         FieldP.sub(out.z, out.z, t[0])
         FieldP.sub(out.z, out.z, t[1])
-        FieldP.mul(out.z, out.z, t[6])
+        FieldP.mul(out.z, out.z, t[6], w)
     }
     // ==================== Scalar Multiplication ====================
 
@@ -449,26 +482,27 @@ internal object ECPoint {
             return
         }
 
-        val w = 5
-        val tableSize = 1 shl (w - 2) // 8 entries
+        val s = scratch.get()
+        val wnd = 5
+        val tableSize = 1 shl (wnd - 2) // 8 entries
 
         // Split scalar via GLV: scalar = k₁ + k₂·λ
         val split = Glv.splitScalar(scalar)
-        val wnaf1 = Glv.wnaf(split.k1, w, 129)
-        val wnaf2 = Glv.wnaf(split.k2, w, 129)
+        val wnaf1 = Glv.wnaf(split.k1, wnd, 129)
+        val wnaf2 = Glv.wnaf(split.k2, wnd, 129)
 
         // P odd-multiples [1P, 3P, 5P, ..., 15P] via 2P stepping
         val p2 = MutablePoint()
-        doublePoint(p2, p)
+        doublePoint(p2, p, s)
         val pOdd = Array(tableSize) { MutablePoint() }
         pOdd[0].copyFrom(p)
-        for (i in 1 until tableSize) addPoints(pOdd[i], pOdd[i - 1], p2)
+        for (i in 1 until tableSize) addPoints(pOdd[i], pOdd[i - 1], p2, s)
 
         // λ(P) odd-multiples: (β·X, Y, Z) in Jacobian
         val pLamOdd =
             Array(tableSize) { i ->
                 val lp = MutablePoint()
-                FieldP.mul(lp.x, pOdd[i].x, Glv.BETA)
+                FieldP.mul(lp.x, pOdd[i].x, Glv.BETA, s.w)
                 pOdd[i].y.copyInto(lp.y)
                 pOdd[i].z.copyInto(lp.z)
                 lp
@@ -487,9 +521,9 @@ internal object ECPoint {
         val negJac = MutablePoint()
 
         for (i in bits - 1 downTo 0) {
-            doublePoint(out, out)
-            addWnafJacobian(out, tmp, negJac, wnaf1, i, pOdd, split.negK1)
-            addWnafJacobian(out, tmp, negJac, wnaf2, i, pLamOdd, split.negK2)
+            doublePoint(out, out, s)
+            addWnafJacobian(out, tmp, negJac, wnaf1, i, pOdd, split.negK1, s)
+            addWnafJacobian(out, tmp, negJac, wnaf2, i, pLamOdd, split.negK2, s)
         }
     }
 
@@ -512,13 +546,14 @@ internal object ECPoint {
             return
         }
 
+        val s = scratch.get()
         val table = combTable
         out.setInfinity()
         val tmp = MutablePoint()
 
         for (combOff in COMB_SPACING - 1 downTo 0) {
             if (combOff < COMB_SPACING - 1) {
-                doublePoint(out, out)
+                doublePoint(out, out, s)
             }
             for (block in 0 until COMB_BLOCKS) {
                 var mask = 0
@@ -530,7 +565,7 @@ internal object ECPoint {
                 }
                 if (mask != 0) {
                     val entry = table[block * COMB_POINTS + mask]
-                    addMixed(tmp, out, entry.x, entry.y)
+                    addMixed(tmp, out, entry.x, entry.y, s)
                     out.copyFrom(tmp)
                 }
             }
@@ -555,6 +590,7 @@ internal object ECPoint {
         p: MutablePoint,
         e: LongArray,
     ) {
+        val sc = scratch.get()
         val wP = 5 // Window for P-side (table built per-call, keep small)
         val pTableSize = 1 shl (wP - 2) // 8 entries for P
 
@@ -574,15 +610,15 @@ internal object ECPoint {
 
         // P odd-multiples [1P, 3P, 5P, ..., 15P] via 2P stepping (1 double + 7 adds)
         val p2 = MutablePoint()
-        doublePoint(p2, p)
+        doublePoint(p2, p, sc)
         val pOdd = Array(pTableSize) { MutablePoint() }
         pOdd[0].copyFrom(p)
-        for (i in 1 until pTableSize) addPoints(pOdd[i], pOdd[i - 1], p2)
+        for (i in 1 until pTableSize) addPoints(pOdd[i], pOdd[i - 1], p2, sc)
         // λ(P) table: (β·X, Y, Z) in Jacobian — endomorphism preserves projective coords
         val pLamOdd =
             Array(pTableSize) { i ->
                 val lp = MutablePoint()
-                FieldP.mul(lp.x, pOdd[i].x, Glv.BETA)
+                FieldP.mul(lp.x, pOdd[i].x, Glv.BETA, sc.w)
                 pOdd[i].y.copyInto(lp.y)
                 pOdd[i].z.copyInto(lp.z)
                 lp
@@ -600,16 +636,16 @@ internal object ECPoint {
         out.setInfinity()
         val tmp = MutablePoint()
         val negY = LongArray(4)
-        val negJac = MutablePoint() // Reused scratch for Jacobian negation
+        val negJac = MutablePoint()
 
         for (i in bits - 1 downTo 0) {
-            doublePoint(out, out)
+            doublePoint(out, out, sc)
             // Streams 1-2: G-side (affine tables, mixed addition)
-            addWnafMixed(out, tmp, negY, wnafS1, i, gOdd, sSplit.negK1)
-            addWnafMixed(out, tmp, negY, wnafS2, i, gLam, sSplit.negK2)
+            addWnafMixed(out, tmp, negY, wnafS1, i, gOdd, sSplit.negK1, sc)
+            addWnafMixed(out, tmp, negY, wnafS2, i, gLam, sSplit.negK2, sc)
             // Streams 3-4: P-side (Jacobian tables, full addition)
-            addWnafJacobian(out, tmp, negJac, wnafE1, i, pOdd, eSplit.negK1)
-            addWnafJacobian(out, tmp, negJac, wnafE2, i, pLamOdd, eSplit.negK2)
+            addWnafJacobian(out, tmp, negJac, wnafE1, i, pOdd, eSplit.negK1, sc)
+            addWnafJacobian(out, tmp, negJac, wnafE2, i, pLamOdd, eSplit.negK2, sc)
         }
     }
 
@@ -626,6 +662,7 @@ internal object ECPoint {
         bitIndex: Int,
         table: Array<AffinePoint>,
         glvNeg: Boolean,
+        s: PointScratch,
     ) {
         if (bitIndex >= wnafDigits.size) return
         val d = wnafDigits[bitIndex]
@@ -633,10 +670,10 @@ internal object ECPoint {
         val idx = (if (d > 0) d else -d) / 2
         val effectiveNeg = (d < 0) xor glvNeg
         if (!effectiveNeg) {
-            addMixed(tmp, out, table[idx].x, table[idx].y)
+            addMixed(tmp, out, table[idx].x, table[idx].y, s)
         } else {
             FieldP.neg(negY, table[idx].y)
-            addMixed(tmp, out, table[idx].x, negY)
+            addMixed(tmp, out, table[idx].x, negY, s)
         }
         out.copyFrom(tmp)
     }
@@ -650,6 +687,7 @@ internal object ECPoint {
         bitIndex: Int,
         table: Array<MutablePoint>,
         glvNeg: Boolean,
+        s: PointScratch,
     ) {
         if (bitIndex >= wnafDigits.size) return
         val d = wnafDigits[bitIndex]
@@ -657,13 +695,12 @@ internal object ECPoint {
         val idx = (if (d > 0) d else -d) / 2
         val effectiveNeg = (d < 0) xor glvNeg
         if (!effectiveNeg) {
-            addPoints(tmp, out, table[idx])
+            addPoints(tmp, out, table[idx], s)
         } else {
-            // Negate the Jacobian point: (X, -Y, Z) using pre-allocated scratch
             table[idx].x.copyInto(negScratch.x)
             FieldP.neg(negScratch.y, table[idx].y)
             table[idx].z.copyInto(negScratch.z)
-            addPoints(tmp, out, negScratch)
+            addPoints(tmp, out, negScratch, s)
         }
         out.copyFrom(tmp)
     }

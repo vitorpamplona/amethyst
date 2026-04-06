@@ -22,7 +22,10 @@ package com.vitorpamplona.quartz.utils.secp256k1
 
 /**
  * Arithmetic modulo the secp256k1 field prime: p = 2^256 - 2^32 - 977.
- * Uses LongArray(4) limbs (4×64-bit). Thread-local LongArray(8) scratch for mul/sqr.
+ * Uses LongArray(4) limbs (4×64-bit).
+ *
+ * Hot-path mul/sqr accept a pre-fetched LongArray(8) wide buffer to avoid
+ * ThreadLocal.get() overhead (~20-30ns per call, 500+ calls per scalar mul).
  */
 internal object FieldP {
     // p = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F
@@ -35,6 +38,9 @@ internal object FieldP {
         )
 
     private val wide = ThreadLocal.withInitial { LongArray(8) }
+
+    /** Get a thread-local wide buffer. Call once at the top-level entry point, then pass through. */
+    fun getWide(): LongArray = wide.get()
 
     // ==================== Core arithmetic ====================
 
@@ -69,6 +75,7 @@ internal object FieldP {
         if (borrow != 0) U256.addTo(out, out, P)
     }
 
+    /** Multiply with ThreadLocal wide buffer (convenience for non-hot paths). */
     fun mul(
         out: LongArray,
         a: LongArray,
@@ -79,11 +86,33 @@ internal object FieldP {
         reduceWide(out, w)
     }
 
+    /** Multiply with caller-provided wide buffer (hot path — no ThreadLocal lookup). */
+    fun mul(
+        out: LongArray,
+        a: LongArray,
+        b: LongArray,
+        w: LongArray,
+    ) {
+        U256.mulWide(w, a, b)
+        reduceWide(out, w)
+    }
+
+    /** Square with ThreadLocal wide buffer (convenience for non-hot paths). */
     fun sqr(
         out: LongArray,
         a: LongArray,
     ) {
         val w = wide.get()
+        U256.sqrWide(w, a)
+        reduceWide(out, w)
+    }
+
+    /** Square with caller-provided wide buffer (hot path — no ThreadLocal lookup). */
+    fun sqr(
+        out: LongArray,
+        a: LongArray,
+        w: LongArray,
+    ) {
         U256.sqrWide(w, a)
         reduceWide(out, w)
     }
@@ -131,6 +160,7 @@ internal object FieldP {
         a: LongArray,
     ) {
         require(!U256.isZero(a))
+        val w = wide.get()
         val x2 = LongArray(4)
         val x3 = LongArray(4)
         val x6 = LongArray(4)
@@ -143,43 +173,44 @@ internal object FieldP {
         val x220 = LongArray(4)
         val x223 = LongArray(4)
 
-        sqr(x2, a)
-        mul(x2, x2, a)
-        sqr(x3, x2)
-        mul(x3, x3, a)
-        sqrN(x6, x3, 3)
-        mul(x6, x6, x3)
-        sqrN(x9, x6, 3)
-        mul(x9, x9, x3)
-        sqrN(x11, x9, 2)
-        mul(x11, x11, x2)
-        sqrN(x22, x11, 11)
-        mul(x22, x22, x11)
-        sqrN(x44, x22, 22)
-        mul(x44, x44, x22)
-        sqrN(x88, x44, 44)
-        mul(x88, x88, x44)
-        sqrN(x176, x88, 88)
-        mul(x176, x176, x88)
-        sqrN(x220, x176, 44)
-        mul(x220, x220, x44)
-        sqrN(x223, x220, 3)
-        mul(x223, x223, x3)
+        sqr(x2, a, w)
+        mul(x2, x2, a, w)
+        sqr(x3, x2, w)
+        mul(x3, x3, a, w)
+        sqrN(x6, x3, 3, w)
+        mul(x6, x6, x3, w)
+        sqrN(x9, x6, 3, w)
+        mul(x9, x9, x3, w)
+        sqrN(x11, x9, 2, w)
+        mul(x11, x11, x2, w)
+        sqrN(x22, x11, 11, w)
+        mul(x22, x22, x11, w)
+        sqrN(x44, x22, 22, w)
+        mul(x44, x44, x22, w)
+        sqrN(x88, x44, 44, w)
+        mul(x88, x88, x44, w)
+        sqrN(x176, x88, 88, w)
+        mul(x176, x176, x88, w)
+        sqrN(x220, x176, 44, w)
+        mul(x220, x220, x44, w)
+        sqrN(x223, x220, 3, w)
+        mul(x223, x223, x3, w)
 
-        sqrN(out, x223, 23)
-        mul(out, out, x22)
-        sqrN(out, out, 5)
-        mul(out, out, a)
-        sqrN(out, out, 3)
-        mul(out, out, x2)
-        sqrN(out, out, 2)
-        mul(out, out, a)
+        sqrN(out, x223, 23, w)
+        mul(out, out, x22, w)
+        sqrN(out, out, 5, w)
+        mul(out, out, a, w)
+        sqrN(out, out, 3, w)
+        mul(out, out, x2, w)
+        sqrN(out, out, 2, w)
+        mul(out, out, a, w)
     }
 
     fun sqrt(
         out: LongArray,
         a: LongArray,
     ): Boolean {
+        val w = wide.get()
         val x2 = LongArray(4)
         val x3 = LongArray(4)
         val x6 = LongArray(4)
@@ -192,41 +223,51 @@ internal object FieldP {
         val x220 = LongArray(4)
         val x223 = LongArray(4)
 
-        sqr(x2, a)
-        mul(x2, x2, a)
-        sqr(x3, x2)
-        mul(x3, x3, a)
-        sqrN(x6, x3, 3)
-        mul(x6, x6, x3)
-        sqrN(x9, x6, 3)
-        mul(x9, x9, x3)
-        sqrN(x11, x9, 2)
-        mul(x11, x11, x2)
-        sqrN(x22, x11, 11)
-        mul(x22, x22, x11)
-        sqrN(x44, x22, 22)
-        mul(x44, x44, x22)
-        sqrN(x88, x44, 44)
-        mul(x88, x88, x44)
-        sqrN(x176, x88, 88)
-        mul(x176, x176, x88)
-        sqrN(x220, x176, 44)
-        mul(x220, x220, x44)
-        sqrN(x223, x220, 3)
-        mul(x223, x223, x3)
+        sqr(x2, a, w)
+        mul(x2, x2, a, w)
+        sqr(x3, x2, w)
+        mul(x3, x3, a, w)
+        sqrN(x6, x3, 3, w)
+        mul(x6, x6, x3, w)
+        sqrN(x9, x6, 3, w)
+        mul(x9, x9, x3, w)
+        sqrN(x11, x9, 2, w)
+        mul(x11, x11, x2, w)
+        sqrN(x22, x11, 11, w)
+        mul(x22, x22, x11, w)
+        sqrN(x44, x22, 22, w)
+        mul(x44, x44, x22, w)
+        sqrN(x88, x44, 44, w)
+        mul(x88, x88, x44, w)
+        sqrN(x176, x88, 88, w)
+        mul(x176, x176, x88, w)
+        sqrN(x220, x176, 44, w)
+        mul(x220, x220, x44, w)
+        sqrN(x223, x220, 3, w)
+        mul(x223, x223, x3, w)
 
-        sqrN(out, x223, 23)
-        mul(out, out, x22)
-        sqrN(out, out, 6)
-        mul(out, out, x2)
-        sqrN(out, out, 2)
+        sqrN(out, x223, 23, w)
+        mul(out, out, x22, w)
+        sqrN(out, out, 6, w)
+        mul(out, out, x2, w)
+        sqrN(out, out, 2, w)
 
         val check = LongArray(4)
-        mul(check, out, out)
+        mul(check, out, out, w)
         val ar = LongArray(4)
         U256.copyInto(ar, a)
         reduceSelf(ar)
         return U256.cmp(check, ar) == 0
+    }
+
+    private fun sqrN(
+        out: LongArray,
+        a: LongArray,
+        n: Int,
+        w: LongArray,
+    ) {
+        U256.copyInto(out, a)
+        repeat(n) { sqr(out, out, w) }
     }
 
     private fun sqrN(
