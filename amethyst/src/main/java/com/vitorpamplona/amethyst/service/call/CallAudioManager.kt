@@ -118,8 +118,11 @@ class CallAudioManager(
     }
 
     fun stopRingbackTone() {
-        ringbackTone?.stopTone()
-        ringbackTone?.release()
+        try {
+            ringbackTone?.stopTone()
+            ringbackTone?.release()
+        } catch (_: Exception) {
+        }
         ringbackTone = null
     }
 
@@ -345,7 +348,9 @@ class CallAudioManager(
                             .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
                             .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                             .build()
-                    isLooping = true
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                        isLooping = true
+                    }
                     play()
                 }
         } catch (_: Exception) {
@@ -353,7 +358,10 @@ class CallAudioManager(
     }
 
     private fun stopRingtone() {
-        ringtone?.stop()
+        try {
+            ringtone?.stop()
+        } catch (_: Exception) {
+        }
         ringtone = null
     }
 
@@ -374,7 +382,10 @@ class CallAudioManager(
     }
 
     private fun stopVibration() {
-        vibrator?.cancel()
+        try {
+            vibrator?.cancel()
+        } catch (_: Exception) {
+        }
         vibrator = null
     }
 }

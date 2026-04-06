@@ -21,7 +21,10 @@
 package com.vitorpamplona.quartz.marmot.mip01Groups
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.marmot.mls.codec.TlsReader
+import com.vitorpamplona.quartz.marmot.mls.tree.Extension
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 
 /**
  * Marmot Group Data Extension (MIP-01) — extension ID 0xF2EE.
@@ -91,5 +94,86 @@ data class MarmotGroupData(
 
         /** MLS extension type identifier for marmot_group_data */
         const val EXTENSION_ID: UShort = 0xF2EEu
+        const val EXTENSION_ID_INT: Int = 0xF2EE
+
+        /**
+         * Find and decode the MarmotGroupData extension from a list of MLS extensions.
+         * Returns null if no extension with type 0xF2EE is present.
+         */
+        fun fromExtensions(extensions: List<Extension>): MarmotGroupData? {
+            val ext = extensions.find { it.extensionType == EXTENSION_ID_INT } ?: return null
+            return decodeTls(ext.extensionData)
+        }
+
+        /**
+         * Decode MarmotGroupData from TLS wire format bytes.
+         *
+         * Wire format:
+         * ```
+         * uint16 version
+         * opaque nostr_group_id[32]
+         * opaque name<0..2^16-1>
+         * opaque description<0..2^16-1>
+         * opaque admin_pubkeys<0..2^16-1>   // concatenated 32-byte keys
+         * RelayUrl relays<0..2^16-1>        // length-prefixed UTF-8 strings
+         * opaque image_hash<0..32>
+         * opaque image_key<0..32>
+         * opaque image_nonce<0..12>
+         * opaque image_upload_key<0..32>
+         * ```
+         */
+        fun decodeTls(data: ByteArray): MarmotGroupData? =
+            try {
+                val reader = TlsReader(data)
+                val version = reader.readUint16()
+
+                val nostrGroupIdBytes = reader.readBytes(32)
+                val nostrGroupId = nostrGroupIdBytes.toHexKey()
+
+                val nameBytes = reader.readOpaque2()
+                val name = nameBytes.decodeToString()
+
+                val descriptionBytes = reader.readOpaque2()
+                val description = descriptionBytes.decodeToString()
+
+                // Admin pubkeys: concatenated 32-byte keys within a length-prefixed block
+                val adminBlock = reader.readOpaque2()
+                val adminPubkeys = mutableListOf<HexKey>()
+                var i = 0
+                while (i + 32 <= adminBlock.size) {
+                    adminPubkeys.add(adminBlock.copyOfRange(i, i + 32).toHexKey())
+                    i += 32
+                }
+
+                // Relays: length-prefixed block of length-prefixed UTF-8 strings
+                val relaysBlock = reader.readOpaque2()
+                val relays = mutableListOf<String>()
+                val relayReader = TlsReader(relaysBlock)
+                while (relayReader.hasRemaining) {
+                    val relayBytes = relayReader.readOpaque2()
+                    relays.add(relayBytes.decodeToString())
+                }
+
+                // Optional fields — read if remaining
+                val imageHash = if (reader.hasRemaining) reader.readOpaque2().takeIf { it.isNotEmpty() }?.toHexKey() else null
+                val imageKey = if (reader.hasRemaining) reader.readOpaque2().takeIf { it.isNotEmpty() } else null
+                val imageNonce = if (reader.hasRemaining) reader.readOpaque2().takeIf { it.isNotEmpty() } else null
+                val imageUploadKey = if (reader.hasRemaining) reader.readOpaque2().takeIf { it.isNotEmpty() } else null
+
+                MarmotGroupData(
+                    version = version,
+                    nostrGroupId = nostrGroupId,
+                    name = name,
+                    description = description,
+                    adminPubkeys = adminPubkeys,
+                    relays = relays,
+                    imageHash = imageHash,
+                    imageKey = imageKey,
+                    imageNonce = imageNonce,
+                    imageUploadKey = imageUploadKey,
+                )
+            } catch (e: Exception) {
+                null
+            }
     }
 }

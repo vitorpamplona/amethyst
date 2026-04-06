@@ -55,6 +55,8 @@ import com.vitorpamplona.quartz.marmot.mls.tree.LeafNodeSource
 import com.vitorpamplona.quartz.marmot.mls.tree.Lifetime
 import com.vitorpamplona.quartz.marmot.mls.tree.RatchetTree
 import com.vitorpamplona.quartz.marmot.mls.tree.UpdatePathNode
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.mac.MacInstance
 
 /**
@@ -107,6 +109,7 @@ class MlsGroup private constructor(
     val groupId: ByteArray get() = groupContext.groupId
     val epoch: Long get() = groupContext.epoch
     val leafIndex: Int get() = myLeafIndex
+    val extensions: List<com.vitorpamplona.quartz.marmot.mls.tree.Extension> get() = groupContext.extensions
 
     // --- State Persistence ---
 
@@ -169,10 +172,8 @@ class MlsGroup private constructor(
         pskId: ByteArray,
         psk: ByteArray,
     ) {
-        pskStore[pskId.toHexId()] = psk
+        pskStore[pskId.toHexKey()] = psk
     }
-
-    private fun ByteArray.toHexId(): String = joinToString("") { "%02x".format(it) }
 
     /**
      * Get the list of members (leaf index -> LeafNode).
@@ -787,20 +788,28 @@ class MlsGroup private constructor(
                 extensionData = externalPub(),
             )
 
-        return GroupInfo(
-            groupContext = groupContext,
-            extensions = listOf(ratchetTreeExtension, externalPubExtension),
-            confirmationTag =
-                computeConfirmationTag(
-                    epochSecrets.confirmationKey,
-                    groupContext.confirmedTranscriptHash,
-                ),
-            signer = myLeafIndex,
+        // Build unsigned GroupInfo first, then sign its TBS encoding
+        // (RFC 9420 Section 12.4.3.1: signature covers GroupInfoTBS =
+        //  GroupContext || extensions || confirmationTag || signer)
+        val unsigned =
+            GroupInfo(
+                groupContext = groupContext,
+                extensions = listOf(ratchetTreeExtension, externalPubExtension),
+                confirmationTag =
+                    computeConfirmationTag(
+                        epochSecrets.confirmationKey,
+                        groupContext.confirmedTranscriptHash,
+                    ),
+                signer = myLeafIndex,
+                signature = ByteArray(0),
+            )
+
+        return unsigned.copy(
             signature =
                 MlsCryptoProvider.signWithLabel(
                     signingPrivateKey,
                     "GroupInfoTBS",
-                    groupContext.toTlsBytes(),
+                    unsigned.encodeTbs(),
                 ),
         )
     }
@@ -836,7 +845,7 @@ class MlsGroup private constructor(
         var pskSecret = ByteArray(MlsCryptoProvider.HASH_OUTPUT_LENGTH)
         for (pskProposal in pskProposals) {
             val pskValue =
-                pskStore[pskProposal.pskId.toHexId()]
+                pskStore[pskProposal.pskId.toHexKey()]
                     ?: ByteArray(MlsCryptoProvider.HASH_OUTPUT_LENGTH) // Unknown PSK = zeros
             pskSecret = MlsCryptoProvider.hkdfExtract(pskSecret, pskValue)
         }
@@ -981,7 +990,7 @@ class MlsGroup private constructor(
                 // Validate KeyPackage lifetime (RFC 9420 Section 10.1)
                 val lifetime = proposal.keyPackage.leafNode.lifetime
                 if (lifetime != null) {
-                    val now = System.currentTimeMillis() / 1000
+                    val now = TimeUtils.now()
                     require(now >= lifetime.notBefore && now <= lifetime.notAfter) {
                         "KeyPackage lifetime expired or not yet valid"
                     }
@@ -1053,8 +1062,10 @@ class MlsGroup private constructor(
                 extensionData = treeWriter.toByteArray(),
             )
 
-        // Build GroupInfo
-        val groupInfo =
+        // Build unsigned GroupInfo first, then sign its TBS encoding
+        // (RFC 9420 Section 12.4.3.1: signature covers GroupInfoTBS =
+        //  GroupContext || extensions || confirmationTag || signer)
+        val unsignedGroupInfo =
             GroupInfo(
                 groupContext = groupContext,
                 extensions = listOf(ratchetTreeExtension),
@@ -1066,11 +1077,15 @@ class MlsGroup private constructor(
                         MlsCryptoProvider.HASH_OUTPUT_LENGTH,
                     ),
                 signer = myLeafIndex,
+                signature = ByteArray(0),
+            )
+        val groupInfo =
+            unsignedGroupInfo.copy(
                 signature =
                     MlsCryptoProvider.signWithLabel(
                         signingPrivateKey,
                         "GroupInfoTBS",
-                        groupContext.toTlsBytes(),
+                        unsignedGroupInfo.encodeTbs(),
                     ),
             )
 

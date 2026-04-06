@@ -122,6 +122,9 @@ kotlin {
         getByName("androidHostTest") {
             dependencies {
                 implementation(libs.junit)
+
+                // Bitcoin secp256k1 bindings
+                implementation(libs.secp256k1.kmp.jni.jvm)
             }
         }
 

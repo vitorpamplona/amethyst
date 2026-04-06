@@ -229,14 +229,6 @@ class CallController(
     }
 
     // ---- Call initiation (caller side) ----
-
-    fun initiateCall(
-        peerPubKey: String,
-        callType: CallType,
-    ) {
-        initiateCallInternal(setOf(peerPubKey), callType)
-    }
-
     fun initiateGroupCall(
         peerPubKeys: Set<String>,
         callType: CallType,

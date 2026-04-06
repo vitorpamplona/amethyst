@@ -1438,6 +1438,7 @@
     <string name="select_list_to_filter">选择一个用于过滤订阅源的列表</string>
     <string name="feed_group_feeds">源</string>
     <string name="feed_group_hashtags">话题标签</string>
+    <string name="feed_group_locations">位置</string>
     <string name="feed_group_communities">社区</string>
     <string name="feed_group_lists">列表</string>
     <string name="feed_group_relays">中继</string>
@@ -1538,6 +1539,7 @@
     <string name="connected">已连接</string>
     <string name="social_proof">社交证明</string>
     <string name="poll_submit">提交</string>
+    <string name="poll_view_results">查看结果</string>
     <string name="restart">重启</string>
     <string name="chess_accept">接受</string>
     <string name="chess_decline">拒绝</string>

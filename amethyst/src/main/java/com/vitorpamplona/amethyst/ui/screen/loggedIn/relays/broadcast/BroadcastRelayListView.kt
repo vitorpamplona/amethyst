@@ -35,8 +35,10 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.rememberExtendedNav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoDialog
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayDragState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayUrlEditField
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.rememberRelayDragState
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 
@@ -48,14 +50,19 @@ fun BroadcastRelayList(
     nav: INav,
 ) {
     val feedState by postViewModel.relays.collectAsStateWithLifecycle()
-
     val newNav = rememberExtendedNav(nav, onClose)
+    val dragState =
+        rememberRelayDragState(
+            onMove = { from, to -> postViewModel.moveRelay(from, to) },
+            itemCount = { feedState.size },
+        )
 
     Row(verticalAlignment = Alignment.CenterVertically) {
         LazyColumn(
             contentPadding = FeedPadding,
+            userScrollEnabled = !dragState.isDragging,
         ) {
-            renderBroadcastItems(feedState, postViewModel, accountViewModel, newNav)
+            renderBroadcastItems(feedState, postViewModel, accountViewModel, newNav, dragState = dragState)
         }
     }
 }
@@ -65,13 +72,16 @@ fun LazyListScope.renderBroadcastItems(
     postViewModel: BroadcastRelayListViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
+    dragState: RelayDragState? = null,
 ) {
     itemsIndexed(feedState, key = { _, item -> "Broadcast" + item.relay.url }) { index, item ->
         BasicRelaySetupInfoDialog(
             item,
             onDelete = { postViewModel.deleteRelay(item) },
-            accountViewModel = accountViewModel,
             nip11CachedRetriever = Amethyst.instance.nip11Cache,
+            index = index,
+            dragState = dragState,
+            accountViewModel = accountViewModel,
             nav = nav,
         )
     }

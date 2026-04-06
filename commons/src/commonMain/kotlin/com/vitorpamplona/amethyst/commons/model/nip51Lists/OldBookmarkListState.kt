@@ -48,6 +48,7 @@ class OldBookmarkListState(
     val cache: ICacheProvider,
     val scope: CoroutineScope,
 ) {
+    @Stable
     class BookmarkList(
         val public: List<Note> = emptyList(),
         val private: List<Note> = emptyList(),

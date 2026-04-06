@@ -118,6 +118,9 @@ class DesktopIAccount(
     override val spammersHashCodes: Set<Int> = emptySet()
 
     override val chatroomList: ChatroomList = ChatroomList(accountState.pubKeyHex)
+    override val marmotGroupList =
+        com.vitorpamplona.amethyst.commons.model.marmotGroups
+            .MarmotGroupList()
 
     override val nip47SignerState: INwcSignerState =
         object : INwcSignerState {

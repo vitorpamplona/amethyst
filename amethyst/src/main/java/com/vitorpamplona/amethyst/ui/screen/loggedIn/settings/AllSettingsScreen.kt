@@ -140,29 +140,6 @@ fun AllSettingsScreen(
                 tint = tint,
                 onClick = { nav.nav(Route.UserSettings) },
             )
-            accountViewModel.account.settings.keyPair.privKey?.let {
-                HorizontalDivider()
-                SettingsNavigationRow(
-                    title = R.string.backup_keys,
-                    icon = Icons.Outlined.Key,
-                    tint = tint,
-                    onClick = { nav.nav(Route.AccountBackup) },
-                )
-                HorizontalDivider()
-                SettingsNavigationRow(
-                    title = R.string.request_to_vanish,
-                    icon = Icons.Outlined.DeleteForever,
-                    tint = tint,
-                    onClick = { nav.nav(Route.RequestToVanish) },
-                )
-            }
-            HorizontalDivider()
-            SettingsNavigationRow(
-                title = R.string.vanish_history,
-                icon = Icons.Outlined.History,
-                tint = tint,
-                onClick = { nav.nav(Route.VanishEvents) },
-            )
             HorizontalDivider(thickness = 4.dp)
             SettingsSectionHeader(R.string.app_settings)
             SettingsNavigationRow(
@@ -199,6 +176,30 @@ fun AllSettingsScreen(
                 icon = Icons.Outlined.ThumbUp,
                 tint = tint,
                 onClick = { nav.nav(Route.ReactionsSettings) },
+            )
+            HorizontalDivider(thickness = 4.dp)
+            SettingsSectionHeader(R.string.danger_zone)
+            accountViewModel.account.settings.keyPair.privKey?.let {
+                SettingsNavigationRow(
+                    title = R.string.backup_keys,
+                    icon = Icons.Outlined.Key,
+                    tint = tint,
+                    onClick = { nav.nav(Route.AccountBackup) },
+                )
+                HorizontalDivider()
+                SettingsNavigationRow(
+                    title = R.string.request_to_vanish,
+                    icon = Icons.Outlined.DeleteForever,
+                    tint = tint,
+                    onClick = { nav.nav(Route.RequestToVanish) },
+                )
+                HorizontalDivider()
+            }
+            SettingsNavigationRow(
+                title = R.string.vanish_history,
+                icon = Icons.Outlined.History,
+                tint = tint,
+                onClick = { nav.nav(Route.VanishEvents) },
             )
         }
     }
