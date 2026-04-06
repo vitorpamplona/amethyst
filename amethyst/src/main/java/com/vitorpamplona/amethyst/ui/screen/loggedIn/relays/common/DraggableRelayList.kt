@@ -29,6 +29,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
@@ -131,13 +132,17 @@ fun Modifier.draggableRelayItem(
         }
 }
 
+@Composable
 fun Modifier.relayDragHandle(
     index: Int,
     dragState: RelayDragState,
-): Modifier =
-    this.pointerInput(index) {
+): Modifier {
+    // rememberUpdatedState keeps the index current without restarting
+    // the pointerInput scope (which would cancel the in-progress gesture)
+    val currentIndex by rememberUpdatedState(index)
+    return this.pointerInput(dragState) {
         detectDragGestures(
-            onDragStart = { dragState.onDragStart(index) },
+            onDragStart = { dragState.onDragStart(currentIndex) },
             onDrag = { change, dragAmount ->
                 change.consume()
                 dragState.onDrag(dragAmount.y)
@@ -146,3 +151,4 @@ fun Modifier.relayDragHandle(
             onDragCancel = { dragState.onDragEnd() },
         )
     }
+}

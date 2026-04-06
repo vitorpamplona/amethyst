@@ -112,13 +112,11 @@ fun BasicRelaySetupInfoClickableRow(
             modifier = modifier,
         ) {
             if (dragState != null && index >= 0) {
+                val handleModifier = Modifier.size(24.dp).relayDragHandle(index, dragState)
                 Icon(
                     Icons.Default.DragIndicator,
                     contentDescription = stringRes(R.string.relay_reorder),
-                    modifier =
-                        Modifier
-                            .size(24.dp)
-                            .relayDragHandle(index, dragState),
+                    modifier = handleModifier,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
