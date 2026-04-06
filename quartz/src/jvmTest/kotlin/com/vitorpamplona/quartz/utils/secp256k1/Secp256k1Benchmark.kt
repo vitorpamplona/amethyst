@@ -134,8 +134,8 @@ class Secp256k1Benchmark {
         results +=
             bench(
                 name = "verifySchnorr",
-                warmup = 50,
-                iterations = 200,
+                warmup = 200,
+                iterations = 500,
                 nativeOp = { native.verifySchnorr(nativeSig, msg32, nativeXOnlyPub) },
                 kotlinOp = {
                     com.vitorpamplona.quartz.utils.secp256k1.Secp256k1.verifySchnorr(
