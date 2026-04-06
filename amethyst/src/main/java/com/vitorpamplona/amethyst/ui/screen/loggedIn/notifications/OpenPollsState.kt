@@ -29,12 +29,14 @@ import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlin.time.Duration.Companion.minutes
 
 @Stable
 class OpenPollsState(
@@ -47,14 +49,23 @@ class OpenPollsState(
             authors = listOf(account.pubKey),
         )
 
+    // Periodic ticker to re-evaluate polls after their close date passes
+    private val ticker =
+        flow {
+            while (true) {
+                emit(Unit)
+                delay(1.minutes)
+            }
+        }
+
     val flow: StateFlow<List<Note>> =
         combine(
             account.cache
-                .observeNotes(filter)
-                .map { notes -> filterOpenPolls(notes) },
+                .observeNotes(filter),
             account.settings.dismissedPollNoteIds,
-        ) { polls, dismissed ->
-            polls.filter { it.idHex !in dismissed }
+            ticker,
+        ) { notes, dismissed, _ ->
+            filterOpenPolls(notes).filter { it.idHex !in dismissed }
         }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
