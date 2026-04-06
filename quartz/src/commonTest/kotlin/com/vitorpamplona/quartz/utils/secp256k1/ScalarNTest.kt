@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.quartz.utils.secp256k1
 
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -27,12 +29,9 @@ import kotlin.test.assertTrue
 
 /** Tests for scalar arithmetic modulo n. */
 class ScalarNTest {
-    private fun hex(s: String) =
-        U256.fromBytes(
-            s.chunked(2).map { it.toInt(16).toByte() }.toByteArray(),
-        )
+    private fun hex(s: String) = U256.fromBytes(s.hexToByteArray())
 
-    private fun toHex(a: LongArray) = U256.toBytes(a).joinToString("") { "%02x".format(it) }
+    private fun toHex(a: LongArray) = U256.toBytes(a).toHexKey()
 
     // ==================== isValid ====================
 

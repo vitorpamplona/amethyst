@@ -20,18 +20,17 @@
  */
 package com.vitorpamplona.quartz.utils.secp256k1
 
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /** Comprehensive tests for GLV endomorphism and wNAF encoding. */
 class GlvTest {
-    private fun toHex(a: LongArray) = U256.toBytes(a).joinToString("") { "%02x".format(it) }
+    private fun toHex(a: LongArray) = U256.toBytes(a).toHexKey()
 
-    private fun hex(s: String) =
-        U256.fromBytes(
-            s.chunked(2).map { it.toInt(16).toByte() }.toByteArray(),
-        )
+    private fun hex(s: String) = U256.fromBytes(s.hexToByteArray())
 
     @Suppress("ktlint:standard:property-naming")
     private val LAMBDA = hex("5363ad4cc05c30e0a5261c028812645a122e22ea20816678df02967c1b23bd72")

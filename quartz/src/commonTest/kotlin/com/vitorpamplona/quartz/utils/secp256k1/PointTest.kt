@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.quartz.utils.secp256k1
 
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -27,12 +29,9 @@ import kotlin.test.assertTrue
 
 /** Tests for elliptic curve point operations. */
 class PointTest {
-    private fun hex(s: String) =
-        U256.fromBytes(
-            s.chunked(2).map { it.toInt(16).toByte() }.toByteArray(),
-        )
+    private fun hex(s: String) = U256.fromBytes(s.hexToByteArray())
 
-    private fun toHex(a: LongArray) = U256.toBytes(a).joinToString("") { "%02x".format(it) }
+    private fun toHex(a: LongArray) = U256.toBytes(a).toHexKey()
 
     // ==================== Generator point ====================
 
@@ -361,11 +360,7 @@ class PointTest {
 
     @Test
     fun parseCompressedOddY() {
-        val privKeyBytes =
-            "65f039136f8da8d3e87b4818746b53318d5481e24b2673f162815144223a0b5a"
-                .chunked(2)
-                .map { it.toInt(16).toByte() }
-                .toByteArray()
+        val privKeyBytes = "65f039136f8da8d3e87b4818746b53318d5481e24b2673f162815144223a0b5a".hexToByteArray()
         val pubkey = Secp256k1.pubkeyCreate(privKeyBytes)
         val compressed = Secp256k1.pubKeyCompress(pubkey)
         assertEquals(0x03.toByte(), compressed[0]) // Odd y → 03 prefix

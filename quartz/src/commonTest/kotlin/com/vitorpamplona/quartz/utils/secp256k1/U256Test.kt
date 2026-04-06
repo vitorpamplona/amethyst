@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.quartz.utils.secp256k1
 
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -27,12 +29,9 @@ import kotlin.test.assertTrue
 
 /** Tests for 256-bit unsigned integer arithmetic. */
 class U256Test {
-    private fun hex(s: String) =
-        U256.fromBytes(
-            s.chunked(2).map { it.toInt(16).toByte() }.toByteArray(),
-        )
+    private fun hex(s: String) = U256.fromBytes(s.hexToByteArray())
 
-    private fun toHex(a: LongArray) = U256.toBytes(a).joinToString("") { "%02x".format(it) }
+    private fun toHex(a: LongArray) = U256.toBytes(a).toHexKey()
 
     // ==================== isZero / cmp ====================
 
@@ -150,10 +149,10 @@ class U256Test {
     @Test
     fun bytesRoundTrip() {
         val hex = "67E56582298859DDAE725F972992A07C6C4FB9F62A8FFF58CE3CA926A1063530"
-        val bytes = hex.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
+        val bytes = hex.hexToByteArray()
         val limbs = U256.fromBytes(bytes)
         val back = U256.toBytes(limbs)
-        assertEquals(hex.lowercase(), back.joinToString("") { "%02x".format(it) })
+        assertEquals(hex.lowercase(), back.toHexKey())
     }
 
     @Test

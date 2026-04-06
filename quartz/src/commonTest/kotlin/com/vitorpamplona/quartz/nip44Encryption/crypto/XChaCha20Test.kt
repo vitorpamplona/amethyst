@@ -20,12 +20,13 @@
  */
 package com.vitorpamplona.quartz.nip44Encryption.crypto
 
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 
 /** Test vectors from libsodium xchacha20.c */
 class XChaCha20Test {
-    private fun hex(s: String): ByteArray = s.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
+    private fun hex(s: String): ByteArray = s.hexToByteArray()
 
     // HChaCha20 test vectors from libsodium
     data class HChaCha20TV(

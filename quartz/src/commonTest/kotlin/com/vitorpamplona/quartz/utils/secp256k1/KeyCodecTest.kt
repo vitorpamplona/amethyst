@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.utils.secp256k1
 
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -27,7 +28,7 @@ import kotlin.test.assertTrue
 
 /** Tests for KeyCodec: key parsing, serialization, liftX, hasEvenY. */
 class KeyCodecTest {
-    private fun toHex(a: LongArray) = U256.toBytes(a).joinToString("") { "%02x".format(it) }
+    private fun toHex(a: LongArray) = U256.toBytes(a).toHexKey()
 
     // ==================== liftX ====================
 
