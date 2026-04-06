@@ -293,7 +293,14 @@ internal object FieldP {
     // ==================== Reduction ====================
 
     fun reduceSelf(a: LongArray) {
-        if (U256.cmp(a, P) >= 0) U256.subTo(a, a, P)
+        // Exploit P's structure: P = [P0, -1, -1, -1] where P[1..3] = 0xFFFFFFFFFFFFFFFF.
+        // a >= P only if a[3]==a[2]==a[1]==-1 AND a[0] >= P[0]. The first check (a[3]==-1)
+        // fails >99.99% of the time for random field elements, making this a single branch.
+        if (a[3] == -1L && a[2] == -1L && a[1] == -1L &&
+            (a[0] xor Long.MIN_VALUE) >= (P[0] xor Long.MIN_VALUE)
+        ) {
+            U256.subTo(a, a, P)
+        }
     }
 
     /**

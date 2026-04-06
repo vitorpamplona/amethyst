@@ -320,6 +320,18 @@ internal object ECPoint {
         val t = Array(12) { LongArray(4) }
         val dblCopy = MutablePoint() // Copy buffer for in-place doubling (out === input)
         val w = LongArray(8) // Wide buffer for FieldP.mul/sqr — shared, avoids ThreadLocal
+
+        // Pre-allocated scratch for wNAF encoding (avoids IntArray allocation per call).
+        // Size 145 = 129 (max bits after GLV split) + 15 (max window) + 1 (headroom).
+        val wnaf1 = IntArray(145)
+        val wnaf2 = IntArray(145)
+        val wnaf3 = IntArray(145) // mulDoubleG needs 4 wNAF arrays
+        val wnaf4 = IntArray(145)
+        val wnafTmp = LongArray(4) // scratch for wnaf scalar copy (GLV scalars are up to 4 limbs)
+
+        // Pre-allocated scratch for wNAF mixed addition
+        val mixTmp = MutablePoint()
+        val mixNegY = LongArray(4)
     }
 
     private val scratch = ThreadLocal.withInitial { PointScratch() }
@@ -540,8 +552,10 @@ internal object ECPoint {
 
         // Split scalar via GLV: scalar = k₁ + k₂·λ
         val split = Glv.splitScalar(scalar)
-        val wnaf1 = Glv.wnaf(split.k1, wnd, 129)
-        val wnaf2 = Glv.wnaf(split.k2, wnd, 129)
+        Glv.wnafInto(s.wnaf1, s.wnafTmp, split.k1, wnd, 129)
+        Glv.wnafInto(s.wnaf2, s.wnafTmp, split.k2, wnd, 129)
+        val wnaf1 = s.wnaf1
+        val wnaf2 = s.wnaf2
 
         // P odd-multiples [1P, 3P, 5P, ..., 15P] via 2P stepping (Jacobian)
         val p2 = MutablePoint()
@@ -568,16 +582,14 @@ internal object ECPoint {
         batchToAffinePair(pOddJac, pLamOddJac, pOdd, pLamOdd, s)
 
         // Find highest non-zero digit
-        var bits = maxOf(wnaf1.size, wnaf2.size)
-        while (bits > 0) {
-            val b = bits - 1
-            if ((b < wnaf1.size && wnaf1[b] != 0) || (b < wnaf2.size && wnaf2[b] != 0)) break
+        var bits = 129 + wnd
+        while (bits > 0 && wnaf1[bits - 1] == 0 && wnaf2[bits - 1] == 0) {
             bits--
         }
 
         out.setInfinity()
-        val tmp = MutablePoint()
-        val negY = LongArray(4)
+        val tmp = s.mixTmp
+        val negY = s.mixNegY
 
         for (i in bits - 1 downTo 0) {
             doublePoint(out, out, s)
@@ -658,10 +670,14 @@ internal object ECPoint {
         val eSplit = Glv.splitScalar(e)
 
         // Build wNAF: G-side uses wider window (cached table), P-side uses w=5
-        val wnafS1 = Glv.wnaf(sSplit.k1, WINDOW_G, 129)
-        val wnafS2 = Glv.wnaf(sSplit.k2, WINDOW_G, 129)
-        val wnafE1 = Glv.wnaf(eSplit.k1, wP, 129)
-        val wnafE2 = Glv.wnaf(eSplit.k2, wP, 129)
+        Glv.wnafInto(sc.wnaf1, sc.wnafTmp, sSplit.k1, WINDOW_G, 129)
+        Glv.wnafInto(sc.wnaf2, sc.wnafTmp, sSplit.k2, WINDOW_G, 129)
+        Glv.wnafInto(sc.wnaf3, sc.wnafTmp, eSplit.k1, wP, 129)
+        Glv.wnafInto(sc.wnaf4, sc.wnafTmp, eSplit.k2, wP, 129)
+        val wnafS1 = sc.wnaf1
+        val wnafS2 = sc.wnaf2
+        val wnafE1 = sc.wnaf3
+        val wnafE2 = sc.wnaf4
 
         // G tables: precomputed and cached (no per-verify allocation)
         val gOdd = gOddTable
@@ -689,17 +705,16 @@ internal object ECPoint {
         batchToAffinePair(pOddJac, pLamOddJac, pOdd, pLamOdd, sc)
 
         // Find highest non-zero digit across all 4 streams
-        val allWnaf = arrayOf(wnafS1, wnafS2, wnafE1, wnafE2)
-        var bits = allWnaf.maxOf { it.size }
-        while (bits > 0) {
-            val b = bits - 1
-            if (allWnaf.any { b < it.size && it[b] != 0 }) break
+        var bits = 129 + WINDOW_G // max possible wNAF length
+        while (bits > 0 && wnafS1[bits - 1] == 0 && wnafS2[bits - 1] == 0 &&
+            wnafE1[bits - 1] == 0 && wnafE2[bits - 1] == 0
+        ) {
             bits--
         }
 
         out.setInfinity()
-        val tmp = MutablePoint()
-        val negY = LongArray(4)
+        val tmp = sc.mixTmp
+        val negY = sc.mixNegY
 
         for (i in bits - 1 downTo 0) {
             doublePoint(out, out, sc)

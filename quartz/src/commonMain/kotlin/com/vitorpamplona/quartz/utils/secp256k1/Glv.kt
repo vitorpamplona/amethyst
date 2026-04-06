@@ -85,25 +85,46 @@ internal object Glv {
         maxBits: Int,
     ): IntArray {
         val totalBits = maxBits + w
-        val sLimbs = maxOf((totalBits + 63) / 64, scalar.size)
         val result = IntArray(totalBits)
-        val s = LongArray(sLimbs)
-        scalar.copyInto(s)
+        val s = LongArray(maxOf((totalBits + 63) / 64, scalar.size))
+        wnafInto(result, s, scalar, w, maxBits)
+        return result
+    }
+
+    /**
+     * Encode scalar into wNAF using pre-allocated output and scratch arrays.
+     * Returns the effective length (highest non-zero index + 1).
+     */
+    fun wnafInto(
+        result: IntArray,
+        sTmp: LongArray,
+        scalar: LongArray,
+        w: Int,
+        maxBits: Int,
+    ): Int {
+        val totalBits = maxBits + w
+        // Clear output and copy scalar into scratch
+        for (i in 0 until totalBits.coerceAtMost(result.size)) result[i] = 0
+        for (i in sTmp.indices) sTmp[i] = 0
+        scalar.copyInto(sTmp)
+
         var bit = 0
+        var highBit = 0
         while (bit < totalBits) {
-            if ((s[bit / 64] ushr (bit % 64)) and 1L == 0L) {
+            if ((sTmp[bit / 64] ushr (bit % 64)) and 1L == 0L) {
                 bit++
                 continue
             }
-            var word = getBitsVar(s, bit, w.coerceAtMost(totalBits - bit))
+            var word = getBitsVar(sTmp, bit, w.coerceAtMost(totalBits - bit))
             if (word >= (1 shl (w - 1))) {
                 word -= (1 shl w)
-                addBitTo(s, bit + w)
+                addBitTo(sTmp, bit + w)
             }
             result[bit] = word
+            highBit = bit + 1
             bit += w
         }
-        return result
+        return highBit
     }
 
     // ==================== Internal Helpers ====================
