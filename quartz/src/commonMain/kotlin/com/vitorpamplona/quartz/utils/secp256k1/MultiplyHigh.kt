@@ -69,6 +69,17 @@ internal fun multiplyHighFallback(
     val mid2 = aLo * bHi
     val low = aLo * bLo
 
+    // 1. Calculate the carry from the lower 64 bits to the upper 64 bits
     val carry = ((low ushr 32) + (mid1 and 0xFFFFFFFFL) + (mid2 and 0xFFFFFFFFL)) ushr 32
-    return aHi * bHi + (mid1 ushr 32) + (mid2 ushr 32) + carry
+
+    // 2. Base result (unsigned multiplication of the components)
+    var result = (aHi * bHi) + (mid1 ushr 32) + (mid2 ushr 32) + carry
+
+    // 3. The Fix: Apply corrections for signed numbers
+    // If a is negative, subtract b from the high 64 bits
+    if (a < 0) result -= b
+    // If b is negative, subtract a from the high 64 bits
+    if (b < 0) result -= a
+
+    return result
 }
