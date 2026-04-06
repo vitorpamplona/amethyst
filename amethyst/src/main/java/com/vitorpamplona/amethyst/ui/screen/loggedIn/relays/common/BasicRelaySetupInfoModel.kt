@@ -152,6 +152,18 @@ abstract class BasicRelaySetupInfoModel : ViewModel() {
         hasModified = true
     }
 
+    fun moveRelay(
+        from: Int,
+        to: Int,
+    ) {
+        _relays.update { list ->
+            list.toMutableList().apply {
+                add(to, removeAt(from))
+            }
+        }
+        hasModified = true
+    }
+
     fun deleteAll() {
         _relays.update { relays -> emptyList() }
         hasModified = true

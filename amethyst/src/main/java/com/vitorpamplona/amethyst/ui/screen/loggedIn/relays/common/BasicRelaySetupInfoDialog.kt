@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -33,6 +34,7 @@ fun BasicRelaySetupInfoDialog(
     nip11CachedRetriever: Nip11CachedRetriever,
     onDelete: ((BasicRelaySetupInfo) -> Unit)?,
     countResult: RelayCountResult? = null,
+    dragModifier: Modifier = Modifier,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -44,6 +46,7 @@ fun BasicRelaySetupInfoDialog(
         onClick = { nav.nav(Route.RelayInfo(item.relay.url)) },
         nip11CachedRetriever = nip11CachedRetriever,
         modifier = HalfVertPadding,
+        dragModifier = dragModifier,
         countResult = countResult,
         accountViewModel = accountViewModel,
         nav = nav,
