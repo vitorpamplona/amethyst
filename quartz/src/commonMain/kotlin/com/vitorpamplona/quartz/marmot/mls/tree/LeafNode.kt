@@ -58,8 +58,8 @@ sealed class Credential : TlsSerializable {
             writer.putVectorVarInt(
                 certChain.map { cert ->
                     object : TlsSerializable {
-                        override fun encodeTls(w: TlsWriter) {
-                            w.putOpaqueVarInt(cert)
+                        override fun encodeTls(writer: TlsWriter) {
+                            writer.putOpaqueVarInt(cert)
                         }
                     }
                 },

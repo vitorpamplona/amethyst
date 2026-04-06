@@ -105,7 +105,7 @@ class MarmotSubscriptionManagerTest {
 
         assertEquals(listOf(GiftWrapEvent.KIND), filter.kinds)
         assertNotNull(filter.tags)
-        assertEquals(listOf(userPubKey), filter.tags!!["p"])
+        assertEquals(listOf(userPubKey), filter.tags["p"])
         assertNull(filter.since)
     }
 
