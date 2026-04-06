@@ -30,15 +30,12 @@ import java.security.MessageDigest
  * (lock acquire + release) for ~2µs of actual hashing. ThreadLocal eliminates all locking
  * since each thread gets its own MessageDigest instance. digest() implicitly resets state.
  */
-private val threadLocalDigest =
+val threadLocalDigest =
     ThreadLocal.withInitial {
         MessageDigest.getInstance("SHA-256")
     }
 
 actual fun sha256(data: ByteArray): ByteArray = threadLocalDigest.get().digest(data)
-
-/** Pool for incremental hashing (used by EventHasherSerializer, HashingByteArrayBuilder). */
-val pool = Sha256Pool(25)
 
 /**
  * Calculate SHA256 hash while counting bytes read from the stream.
@@ -55,11 +52,15 @@ fun sha256StreamWithCount(
 ): Pair<ByteArray, Long> {
     val countingStream = CountingInputStream(inputStream)
     val digest = threadLocalDigest.get()
-    val buffer = ByteArray(bufferSize)
-    var bytesRead: Int
-    while (countingStream.read(buffer).also { bytesRead = it } != -1) {
-        digest.update(buffer, 0, bytesRead)
+    try {
+        val buffer = ByteArray(bufferSize)
+        var bytesRead: Int
+        while (countingStream.read(buffer).also { bytesRead = it } != -1) {
+            digest.update(buffer, 0, bytesRead)
+        }
+        return Pair(digest.digest(), countingStream.bytesRead)
+    } catch (e: Exception) {
+        digest.reset() // Clean up state on failure
+        throw e
     }
-    val hash = digest.digest()
-    return Pair(hash, countingStream.bytesRead)
 }

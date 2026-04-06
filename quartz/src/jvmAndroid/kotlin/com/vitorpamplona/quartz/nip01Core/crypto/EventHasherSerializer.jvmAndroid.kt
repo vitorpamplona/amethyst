@@ -32,7 +32,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import com.vitorpamplona.quartz.utils.Hex
-import com.vitorpamplona.quartz.utils.sha256.pool
+import com.vitorpamplona.quartz.utils.sha256.threadLocalDigest
 import java.io.IOException
 
 actual object EventHasherSerializer {
@@ -127,7 +127,8 @@ actual object EventHasherSerializer {
         content: String,
     ): Boolean {
         val br: BufferRecycler = JacksonMapper.mapper.factory._getBufferRecycler()
-        val bb = HashingByteArrayBuilder(br, pool)
+        val digest = threadLocalDigest.get()
+        val bb = HashingByteArrayBuilder(br, digest)
         try {
             val generator = JacksonMapper.mapper.createGenerator(bb, JsonEncoding.UTF8)
             generator.enable(JsonGenerator.Feature.COMBINE_UNICODE_SURROGATES_IN_UTF8)
