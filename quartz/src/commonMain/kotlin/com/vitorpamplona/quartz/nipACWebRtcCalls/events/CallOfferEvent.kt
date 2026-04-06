@@ -21,7 +21,6 @@
 package com.vitorpamplona.quartz.nipACWebRtcCalls.events
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
@@ -29,7 +28,6 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTagIds
 import com.vitorpamplona.quartz.nip31Alts.alt
-import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallIdTag
 import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType
 import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallTypeTag
 import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.callId
@@ -43,9 +41,7 @@ class CallOfferEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
-    fun callId() = tags.firstNotNullOfOrNull(CallIdTag::parse)
-
+) : WebRTCEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     fun callType() = tags.firstNotNullOfOrNull(CallTypeTag::parse)
 
     fun sdpOffer() = content
