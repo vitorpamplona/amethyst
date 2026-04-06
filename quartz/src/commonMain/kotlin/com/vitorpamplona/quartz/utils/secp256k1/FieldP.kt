@@ -160,6 +160,18 @@ internal object FieldP {
         a: LongArray,
     ) {
         require(!U256.isZero(a))
+        ModInv.modinv(out, a)
+    }
+
+    /**
+     * Modular inverse using Fermat's little theorem: a^(p-2) mod p.
+     * Kept as reference/fallback. Uses 255 squarings + 15 multiplications.
+     */
+    fun invFermat(
+        out: LongArray,
+        a: LongArray,
+    ) {
+        require(!U256.isZero(a))
         val w = wide.get()
         val x2 = LongArray(4)
         val x3 = LongArray(4)
