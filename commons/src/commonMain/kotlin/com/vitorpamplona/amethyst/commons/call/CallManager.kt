@@ -505,9 +505,12 @@ class CallManager(
             }
         }
 
+        // Transition immediately so the UI stops ringing/ringback before
+        // the (potentially slow) signing + relay publish completes.
+        transitionToEnded(callId, peerPubKeys, EndReason.HANGUP)
+
         val result = factory.createGroupHangup(peerPubKeys, callId, signer = signer)
         result.wraps.forEach { publishEvent(it) }
-        transitionToEnded(callId, peerPubKeys, EndReason.HANGUP)
     }
 
     fun onPeerHangup(event: CallHangupEvent) {

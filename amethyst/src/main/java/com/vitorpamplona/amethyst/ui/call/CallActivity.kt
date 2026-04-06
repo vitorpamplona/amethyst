@@ -207,8 +207,28 @@ class CallActivity : AppCompatActivity() {
         }
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     override fun onDestroy() {
         unregisterPipReceiver()
+
+        // Safety net: if the Activity is destroyed while a call is still
+        // ringing/offering, ensure the call is hung up so audio stops.
+        val manager = ActiveCallHolder.callManager
+        when (manager?.state?.value) {
+            is CallState.IncomingCall -> {
+                GlobalScope.launch { manager.rejectCall() }
+            }
+
+            is CallState.Offering,
+            is CallState.Connecting,
+            is CallState.Connected,
+            -> {
+                GlobalScope.launch { manager.hangup() }
+            }
+
+            else -> {}
+        }
+
         super.onDestroy()
     }
 
