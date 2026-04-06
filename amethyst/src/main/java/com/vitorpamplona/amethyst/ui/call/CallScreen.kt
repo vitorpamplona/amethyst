@@ -40,6 +40,8 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.BluetoothAudio
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CallEnd
@@ -571,8 +573,8 @@ private fun ConnectedCallUI(
                     Icon(
                         imageVector =
                             when (currentAudioRoute) {
-                                AudioRoute.EARPIECE -> Icons.Default.VolumeOff
-                                AudioRoute.SPEAKER -> Icons.Default.VolumeUp
+                                AudioRoute.EARPIECE -> Icons.AutoMirrored.Filled.VolumeOff
+                                AudioRoute.SPEAKER -> Icons.AutoMirrored.Filled.VolumeUp
                                 AudioRoute.BLUETOOTH -> Icons.Default.BluetoothAudio
                             },
                         contentDescription =

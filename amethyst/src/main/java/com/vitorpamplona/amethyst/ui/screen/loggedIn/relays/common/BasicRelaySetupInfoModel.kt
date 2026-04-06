@@ -132,8 +132,6 @@ abstract class BasicRelaySetupInfoModel : ViewModel() {
                             .useTor(it),
                 )
             }.distinctBy { it.relay }
-            .sortedBy { it.relayStat.receivedBytes }
-            .reversed()
     }
 
     fun clear() {
@@ -149,6 +147,18 @@ abstract class BasicRelaySetupInfoModel : ViewModel() {
 
     fun deleteRelay(relay: BasicRelaySetupInfo) {
         _relays.update { it.minus(relay) }
+        hasModified = true
+    }
+
+    fun moveRelay(
+        from: Int,
+        to: Int,
+    ) {
+        _relays.update { list ->
+            list.toMutableList().apply {
+                add(to, removeAt(from))
+            }
+        }
         hasModified = true
     }
 

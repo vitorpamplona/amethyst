@@ -33,6 +33,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.BluetoothAudio
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CallEnd
@@ -42,8 +44,6 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.VideocamOff
-import androidx.compose.material.icons.filled.VolumeOff
-import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -151,9 +151,9 @@ private fun PreviewCallControls(
                 Icon(
                     imageVector =
                         when (audioRoute) {
-                            "speaker" -> Icons.Default.VolumeUp
+                            "speaker" -> Icons.AutoMirrored.Filled.VolumeUp
                             "bluetooth" -> Icons.Default.BluetoothAudio
-                            else -> Icons.Default.VolumeOff
+                            else -> Icons.AutoMirrored.Filled.VolumeOff
                         },
                     contentDescription = "Audio route",
                     tint =

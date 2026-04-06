@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 class PaymentTargetsEvent(
@@ -38,6 +39,8 @@ class PaymentTargetsEvent(
 
     companion object {
         const val KIND = 10133
+        const val ALT = "Payment targets"
+        const val FIXED_D_TAG = ""
 
         fun createAddress(pubKey: HexKey): Address = Address(KIND, pubKey, FIXED_D_TAG)
 
@@ -51,12 +54,13 @@ class PaymentTargetsEvent(
                 earlierVersion.tags
                     .filter(PaymentTargetTag::notMatch)
                     .plus(targets.map { PaymentTargetTag.assemble(it) })
+                    .plusElement(AltTag.assemble(ALT))
                     .toTypedArray()
 
             return signer.sign(createdAt, KIND, tags, earlierVersion.content)
         }
 
-        fun createPaymentTargets(targets: List<PaymentTarget>) = targets.map { PaymentTargetTag.assemble(it) }.toTypedArray()
+        fun createPaymentTargets(targets: List<PaymentTarget>) = (targets.map { PaymentTargetTag.assemble(it) } + listOf(AltTag.assemble(ALT))).toTypedArray()
 
         suspend fun create(
             targets: List<PaymentTarget>,

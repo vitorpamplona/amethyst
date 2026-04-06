@@ -431,7 +431,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="private_articles_count">Zasebni članki(%1$s)</string>
     <string name="public_articles_label">Javni članki</string>
     <string name="public_articles_count">Javni članki(%1$s)</string>
-    <string name="manage_bookmark_label">Uredi %1$s v seznamu zaznamkov</string>
+    <string name="manage_bookmark_label">Uredi %1$s v seznam zaznamkov</string>
     <string name="post_bookmark_management_title">Dodaj objavo med zaznamke</string>
     <string name="article_bookmark_management_title">Dodaj članek med zaznamke</string>
     <string name="public_bookmark_presence_indicator">je javni zaznamek tukaj</string>
@@ -889,6 +889,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="settings">Nastavitve</string>
     <string name="account_settings">Nastavitve računa</string>
     <string name="app_settings">Nastavitve aplikacije</string>
+    <string name="danger_zone">Nevarno območje</string>
     <string name="connectivity_type_always">Vedno</string>
     <string name="connectivity_type_wifi_only">Samo Wifi</string>
     <string name="connectivity_type_unmetered_wifi_only">Samo z WiFi</string>
@@ -1450,6 +1451,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="select_list_to_filter">Izberite seznam za filtriranje vsebin</string>
     <string name="feed_group_feeds">Vsebina</string>
     <string name="feed_group_hashtags">Ključniki</string>
+    <string name="feed_group_locations">Lokacije</string>
     <string name="feed_group_communities">Skupnosti</string>
     <string name="feed_group_lists">Seznami</string>
     <string name="feed_group_relays">Releji</string>
@@ -1550,6 +1552,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="connected">Povezano</string>
     <string name="social_proof">Družbeno dokazilo</string>
     <string name="poll_submit">Oddaj</string>
+    <string name="poll_view_results">Preglej rezultate</string>
     <string name="restart">Ponovno zaženi</string>
     <string name="chess_accept">Sprejmi</string>
     <string name="chess_decline">Zavrni</string>

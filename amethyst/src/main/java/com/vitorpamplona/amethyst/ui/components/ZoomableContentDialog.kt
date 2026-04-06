@@ -95,7 +95,6 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import net.engawapg.lib.zoomable.rememberZoomState
 import net.engawapg.lib.zoomable.zoomable
 
@@ -143,6 +142,7 @@ private fun DialogContent(
 ) {
     val pagerState: PagerState = rememberPagerState { allImages.size }
     val controllerVisible = remember { mutableStateOf(true) }
+    val sharePopupExpanded = remember { mutableStateOf(false) }
 
     LaunchedEffect(key1 = pagerState, key2 = imageUrl) {
         launch {
@@ -151,11 +151,19 @@ private fun DialogContent(
                 pagerState.scrollToPage(page)
             }
         }
-        launch(Dispatchers.IO) {
+        launch {
             delay(2000)
-            withContext(Dispatchers.Main) {
+            if (!sharePopupExpanded.value) {
                 controllerVisible.value = false
             }
+        }
+    }
+
+    // Re-trigger auto-hide after the share dialog is dismissed
+    LaunchedEffect(sharePopupExpanded.value) {
+        if (!sharePopupExpanded.value && controllerVisible.value) {
+            delay(2000)
+            controllerVisible.value = false
         }
     }
 
@@ -164,7 +172,9 @@ private fun DialogContent(
             .fillMaxSize()
             .clickable(
                 onClick = {
-                    controllerVisible.value = !controllerVisible.value
+                    if (!sharePopupExpanded.value) {
+                        controllerVisible.value = !controllerVisible.value
+                    }
                 },
             ),
         Alignment.TopCenter,
@@ -227,10 +237,8 @@ private fun DialogContent(
 
                 allImages.getOrNull(pagerState.currentPage)?.let { myContent ->
                     if (myContent is MediaUrlImage || myContent is MediaLocalImage) {
-                        val popupExpanded = remember { mutableStateOf(false) }
-
                         OutlinedButton(
-                            onClick = { popupExpanded.value = true },
+                            onClick = { sharePopupExpanded.value = true },
                             contentPadding = PaddingValues(horizontal = Size5dp),
                             colors = ButtonDefaults.outlinedButtonColors().copy(containerColor = MaterialTheme.colorScheme.background),
                         ) {
@@ -240,7 +248,7 @@ private fun DialogContent(
                                 contentDescription = stringRes(R.string.quick_action_share),
                             )
 
-                            ShareMediaAction(accountViewModel = accountViewModel, popupExpanded = popupExpanded, myContent, onDismiss = { popupExpanded.value = false })
+                            ShareMediaAction(accountViewModel = accountViewModel, popupExpanded = sharePopupExpanded, myContent, onDismiss = { sharePopupExpanded.value = false })
                         }
 
                         if (myContent !is MediaUrlContent || !isLiveStreaming(myContent.url)) {

@@ -71,6 +71,17 @@ class CallManager(
     private var resetJob: Job? = null
     private val processedEventIds = mutableSetOf<String>()
 
+    /** Call IDs for which we have seen a hangup, reject, or answer-elsewhere
+     *  signal.  Checked before transitioning to [CallState.IncomingCall] so
+     *  that stale offer events replayed by relays after an app restart do not
+     *  trigger ringing for calls that already ended. */
+    private val completedCallIds = mutableSetOf<String>()
+
+    /** Timestamp (epoch seconds) when this CallManager was created.  Events
+     *  created before this are from a previous app session and should not
+     *  trigger ringing. */
+    private val initTimestamp = TimeUtils.now()
+
     /** Peers whose answers we saw while still ringing (IncomingCall).
      *  After we accept, we trigger callee-to-callee mesh setup with them. */
     private val discoveredCalleePeers = mutableSetOf<HexKey>()
@@ -81,7 +92,16 @@ class CallManager(
         const val MAX_EVENT_AGE_SECONDS = 20L // discard signaling events older than this
     }
 
-    private fun isEventTooOld(event: Event): Boolean = TimeUtils.now() - event.createdAt > MAX_EVENT_AGE_SECONDS
+    private fun isEventTooOld(event: Event): Boolean {
+        val age = TimeUtils.now() - event.createdAt
+        if (age > MAX_EVENT_AGE_SECONDS) return true
+        // Reject events created before this CallManager was initialized.
+        // After an app restart the relay replays old events; even if the
+        // wall-clock age is within the window, events from a previous
+        // session should never start ringing.
+        if (event.createdAt < initTimestamp - MAX_EVENT_AGE_SECONDS) return true
+        return false
+    }
 
     // ---- Call initiation (state + publish) ----
 
@@ -171,6 +191,11 @@ class CallManager(
 
         if (!isFollowing(callerPubKey)) {
             Log.d("CallManager") { "onIncomingCallEvent: caller not followed — ignoring" }
+            return
+        }
+
+        if (callId in completedCallIds) {
+            Log.d("CallManager") { "onIncomingCallEvent: callId=$callId already completed — ignoring stale offer" }
             return
         }
 
@@ -505,9 +530,12 @@ class CallManager(
             }
         }
 
+        // Transition immediately so the UI stops ringing/ringback before
+        // the (potentially slow) signing + relay publish completes.
+        transitionToEnded(callId, peerPubKeys, EndReason.HANGUP)
+
         val result = factory.createGroupHangup(peerPubKeys, callId, signer = signer)
         result.wraps.forEach { publishEvent(it) }
-        transitionToEnded(callId, peerPubKeys, EndReason.HANGUP)
     }
 
     fun onPeerHangup(event: CallHangupEvent) {
@@ -604,6 +632,21 @@ class CallManager(
 
         Log.d("CallManager") { "Processing signaling event kind=${event.kind} id=${event.id.take(8)} state=${_state.value::class.simpleName}" }
 
+        // Record call-ids from termination signals so that a later offer
+        // for the same call is recognised as stale (common after app restart
+        // when relay replays events out of order).
+        if (event is CallHangupEvent || event is CallRejectEvent) {
+            val terminatedCallId =
+                when (event) {
+                    is CallHangupEvent -> event.callId()
+                    is CallRejectEvent -> event.callId()
+                    else -> null
+                }
+            if (terminatedCallId != null) {
+                completedCallIds.add(terminatedCallId)
+            }
+        }
+
         when (event) {
             is CallOfferEvent -> onIncomingCallEvent(event)
             is CallAnswerEvent -> onCallAnswered(event)
@@ -652,6 +695,8 @@ class CallManager(
         resetJob = null
         processedEventIds.clear()
         discoveredCalleePeers.clear()
+        // Note: completedCallIds is intentionally NOT cleared here so that
+        // stale offers for previously-ended calls remain blocked.
     }
 
     private fun transitionToEnded(
@@ -659,6 +704,7 @@ class CallManager(
         peerPubKeys: Set<HexKey>,
         reason: EndReason,
     ) {
+        completedCallIds.add(callId)
         _state.value = CallState.Ended(callId, peerPubKeys, reason)
         cancelTimeout()
         resetJob?.cancel()

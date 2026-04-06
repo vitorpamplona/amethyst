@@ -247,10 +247,6 @@ sealed class Proposal : TlsSerializable {
                 ProposalType.EXTERNAL_INIT -> {
                     ExternalInit(reader.readOpaqueVarInt())
                 }
-
-                else -> {
-                    throw IllegalArgumentException("Unsupported proposal type: $type")
-                }
             }
         }
     }

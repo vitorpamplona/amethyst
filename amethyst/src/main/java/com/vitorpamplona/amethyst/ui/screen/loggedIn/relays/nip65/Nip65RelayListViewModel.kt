@@ -176,8 +176,6 @@ class Nip65RelayListViewModel : ViewModel() {
             relayList
                 .map { relaySetupInfoBuilder(it) }
                 .distinctBy { it.relay }
-                .sortedBy { it.relayStat.receivedBytes }
-                .reversed()
         }
 
         _notificationRelays.update {
@@ -186,8 +184,6 @@ class Nip65RelayListViewModel : ViewModel() {
             relayList
                 .map { relaySetupInfoBuilder(it) }
                 .distinctBy { it.relay }
-                .sortedBy { it.relayStat.receivedBytes }
-                .reversed()
         }
     }
 
@@ -215,6 +211,18 @@ class Nip65RelayListViewModel : ViewModel() {
         _homeRelays.update { it.replace(relay, relay.copy(paidRelay = paid)) }
     }
 
+    fun moveHomeRelay(
+        from: Int,
+        to: Int,
+    ) {
+        _homeRelays.update { list ->
+            list.toMutableList().apply {
+                add(to, removeAt(from))
+            }
+        }
+        hasModified = true
+    }
+
     fun addNotifRelay(relay: BasicRelaySetupInfo) {
         if (_notificationRelays.value.any { it.relay == relay.relay }) return
 
@@ -229,6 +237,18 @@ class Nip65RelayListViewModel : ViewModel() {
 
     fun deleteNotifAll() {
         _notificationRelays.update { relays -> emptyList() }
+        hasModified = true
+    }
+
+    fun moveNotifRelay(
+        from: Int,
+        to: Int,
+    ) {
+        _notificationRelays.update { list ->
+            list.toMutableList().apply {
+                add(to, removeAt(from))
+            }
+        }
         hasModified = true
     }
 
