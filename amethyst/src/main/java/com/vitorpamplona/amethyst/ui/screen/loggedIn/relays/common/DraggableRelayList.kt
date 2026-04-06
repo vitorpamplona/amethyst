@@ -71,6 +71,7 @@ class RelayDragState(
 
                 dragOffset += aboveHeight
                 draggedItemIndex = currentIndex - 1
+                return
             }
         }
 
@@ -87,6 +88,7 @@ class RelayDragState(
 
                 dragOffset -= belowHeight
                 draggedItemIndex = currentIndex + 1
+                return
             }
         }
     }
