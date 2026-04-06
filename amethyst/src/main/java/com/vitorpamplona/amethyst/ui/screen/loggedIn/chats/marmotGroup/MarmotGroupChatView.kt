@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.clearText
 import androidx.compose.material3.MaterialTheme
@@ -78,7 +77,6 @@ fun MarmotGroupChatView(
             modifier =
                 Modifier
                     .fillMaxHeight()
-                    .padding(vertical = 0.dp)
                     .weight(1f, true),
         ) {
             RefreshingChatroomFeedView(
