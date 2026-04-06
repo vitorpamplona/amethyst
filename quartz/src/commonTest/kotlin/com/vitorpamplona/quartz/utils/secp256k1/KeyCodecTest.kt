@@ -27,7 +27,7 @@ import kotlin.test.assertTrue
 
 /** Tests for KeyCodec: key parsing, serialization, liftX, hasEvenY. */
 class KeyCodecTest {
-    private fun toHex(a: IntArray) = U256.toBytes(a).joinToString("") { "%02x".format(it) }
+    private fun toHex(a: LongArray) = U256.toBytes(a).joinToString("") { "%02x".format(it) }
 
     // ==================== liftX ====================
 

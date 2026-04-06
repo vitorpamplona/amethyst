@@ -227,7 +227,7 @@ object Secp256k1 {
      */
     private fun signSchnorrInternal(
         data: ByteArray,
-        d0: IntArray,
+        d0: LongArray,
         pBytes: ByteArray,
         pubKeyHasEvenY: Boolean,
         auxrand: ByteArray?,

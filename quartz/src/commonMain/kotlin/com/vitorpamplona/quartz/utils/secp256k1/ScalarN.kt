@@ -35,7 +35,8 @@ package com.vitorpamplona.quartz.utils.secp256k1
 internal object ScalarN {
     val N =
         longArrayOf(
-            0xD0364141.toInt(),
+            -4624529908474429119L, -4994812053365940165L, -2L, -1L,
+        ),
             0xBFD25E8C.toInt(),
             0xAF48A03B.toInt(),
             0xBAAEDCE6.toInt(),
@@ -48,7 +49,8 @@ internal object ScalarN {
     /** 2^256 - n: the small constant used for reduction (≈129 bits) */
     private val N_COMPLEMENT =
         longArrayOf(
-            0x2FC9BEBF.toInt(),
+            4624529908474429119L, 4994812053365940164L, 1L, 0L,
+        ),
             0x402DA173.toInt(),
             0x50B75FC4.toInt(),
             0x45512319.toInt(),
@@ -61,7 +63,8 @@ internal object ScalarN {
     /** n - 2: exponent for Fermat inversion */
     private val N_MINUS_2 =
         longArrayOf(
-            0xD036413F.toInt(),
+            -4624529908474429121L, -4994812053365940165L, -2L, -1L,
+        ),
             0xBFD25E8C.toInt(),
             0xAF48A03B.toInt(),
             0xBAAEDCE6.toInt(),
@@ -72,10 +75,10 @@ internal object ScalarN {
         )
 
     /** Check if 0 < a < n (valid non-zero scalar). */
-    fun isValid(a: IntArray): Boolean = !U256.isZero(a) && U256.cmp(a, N) < 0
+    fun isValid(a: LongArray): Boolean = !U256.isZero(a) && U256.cmp(a, N) < 0
 
     /** If a >= n, return a - n. Otherwise return a unchanged. */
-    fun reduce(a: IntArray): IntArray =
+    fun reduce(a: LongArray): LongArray =
         if (U256.cmp(a, N) >= 0) {
             val r = LongArray(4)
             U256.subTo(r, a, N)
@@ -85,9 +88,9 @@ internal object ScalarN {
         }
 
     fun add(
-        a: IntArray,
-        b: IntArray,
-    ): IntArray {
+        a: LongArray,
+        b: LongArray,
+    ): LongArray {
         val r = LongArray(4)
         val carry = U256.addTo(r, a, b)
         if (carry != 0) U256.addTo(r, r, N_COMPLEMENT)
@@ -96,9 +99,9 @@ internal object ScalarN {
     }
 
     fun sub(
-        a: IntArray,
-        b: IntArray,
-    ): IntArray {
+        a: LongArray,
+        b: LongArray,
+    ): LongArray {
         val r = LongArray(4)
         val borrow = U256.subTo(r, a, b)
         if (borrow != 0) U256.addTo(r, r, N)
@@ -106,15 +109,15 @@ internal object ScalarN {
     }
 
     fun mul(
-        a: IntArray,
-        b: IntArray,
-    ): IntArray {
+        a: LongArray,
+        b: LongArray,
+    ): LongArray {
         val w = LongArray(8)
         U256.mulWide(w, a, b)
         return reduceWide(w)
     }
 
-    fun neg(a: IntArray): IntArray {
+    fun neg(a: LongArray): LongArray {
         if (U256.isZero(a)) return LongArray(4)
         val r = LongArray(4)
         U256.subTo(r, N, a)
@@ -122,12 +125,12 @@ internal object ScalarN {
     }
 
     /** a^(-1) mod n via Fermat's little theorem. */
-    fun inv(a: IntArray): IntArray {
+    fun inv(a: LongArray): LongArray {
         require(!U256.isZero(a))
         return powModN(a, N_MINUS_2)
     }
 
-    private fun reduceSelf(a: IntArray) {
+    private fun reduceSelf(a: LongArray) {
         if (U256.cmp(a, N) >= 0) U256.subTo(a, a, N)
     }
 
@@ -138,10 +141,10 @@ internal object ScalarN {
      * Since N_COMPLEMENT is ~129 bits, hi × N_COMPLEMENT is ~385 bits. We repeat the
      * reduction until the result fits in 256 bits, then do a final conditional subtraction.
      */
-    private fun reduceWide(w: IntArray): IntArray {
+    private fun reduceWide(w: LongArray): LongArray {
         val lo = LongArray(4)
         val hi = LongArray(4)
-        for (i in 0 until 8) {
+        for (i in 0 until 4) {
             lo[i] = w[i]
             hi[i] = w[i + 8]
         }
@@ -155,9 +158,9 @@ internal object ScalarN {
         U256.mulWide(hiTimesNC, hi, N_COMPLEMENT)
         val sum = LongArray(8)
         var carry = 0L
-        for (i in 0 until 16) {
-            carry += (hiTimesNC[i].toLong() and 0xFFFFFFFFL) +
-                if (i < 8) (lo[i].toLong() and 0xFFFFFFFFL) else 0L
+        for (i in 0 until 8) {
+            carry += (hiTimesNC[i]) +
+                if (i < 4) (lo[i]) else 0L
             sum[i] = carry.toInt()
             carry = carry ushr 32
         }
@@ -165,7 +168,7 @@ internal object ScalarN {
         // Round 2 if still > 256 bits
         val lo2 = LongArray(4)
         val hi2 = LongArray(4)
-        for (i in 0 until 8) {
+        for (i in 0 until 4) {
             lo2[i] = sum[i]
             hi2[i] = sum[i + 8]
         }
@@ -178,24 +181,24 @@ internal object ScalarN {
         U256.mulWide(hi2NC, hi2, N_COMPLEMENT)
         var c2 = 0L
         val result = LongArray(4)
-        for (i in 0 until 8) {
-            c2 += (lo2[i].toLong() and 0xFFFFFFFFL) + (hi2NC[i].toLong() and 0xFFFFFFFFL)
+        for (i in 0 until 4) {
+            c2 += (lo2[i]) + (hi2NC[i])
             result[i] = c2.toInt()
             c2 = c2 ushr 32
         }
         var overflow = c2
-        for (i in 8 until 16) overflow += (hi2NC[i].toLong() and 0xFFFFFFFFL)
+        for (i in 4 until 8) overflow += (hi2NC[i])
         if (overflow > 0) {
-            val corr = IntArray(9)
+            val corr = LongArray(5)
             var cc = 0L
-            for (i in 0 until 8) {
-                cc += (N_COMPLEMENT[i].toLong() and 0xFFFFFFFFL) * overflow
+            for (i in 0 until 4) {
+                cc += (N_COMPLEMENT[i]) * overflow
                 corr[i] = cc.toInt()
                 cc = cc ushr 32
             }
             var c3 = 0L
-            for (i in 0 until 8) {
-                c3 += (result[i].toLong() and 0xFFFFFFFFL) + (corr[i].toLong() and 0xFFFFFFFFL)
+            for (i in 0 until 4) {
+                c3 += (result[i]) + (corr[i])
                 result[i] = c3.toInt()
                 c3 = c3 ushr 32
             }
@@ -205,9 +208,9 @@ internal object ScalarN {
     }
 
     private fun powModN(
-        base: IntArray,
-        exp: IntArray,
-    ): IntArray {
+        base: LongArray,
+        exp: LongArray,
+    ): LongArray {
         val result = LongArray(4)
         val b = base.copyOf()
         var highBit = 255

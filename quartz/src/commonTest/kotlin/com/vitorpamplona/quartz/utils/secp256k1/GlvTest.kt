@@ -26,7 +26,7 @@ import kotlin.test.assertTrue
 
 /** Comprehensive tests for GLV endomorphism and wNAF encoding. */
 class GlvTest {
-    private fun toHex(a: IntArray) = U256.toBytes(a).joinToString("") { "%02x".format(it) }
+    private fun toHex(a: LongArray) = U256.toBytes(a).joinToString("") { "%02x".format(it) }
 
     private fun hex(s: String) =
         U256.fromBytes(
@@ -210,7 +210,7 @@ class GlvTest {
     // ==================== Helpers ====================
 
     /** Reconstruct a scalar from wNAF digits using Horner's method. */
-    private fun reconstructWnaf(digits: IntArray): IntArray {
+    private fun reconstructWnaf(digits: LongArray): LongArray {
         var acc = LongArray(4)
         for (bit in digits.size - 1 downTo 0) {
             val doubled = LongArray(4)

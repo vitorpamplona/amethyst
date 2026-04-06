@@ -32,7 +32,7 @@ class PointTest {
             s.chunked(2).map { it.toInt(16).toByte() }.toByteArray(),
         )
 
-    private fun toHex(a: IntArray) = U256.toBytes(a).joinToString("") { "%02x".format(it) }
+    private fun toHex(a: LongArray) = U256.toBytes(a).joinToString("") { "%02x".format(it) }
 
     // ==================== Generator point ====================
 

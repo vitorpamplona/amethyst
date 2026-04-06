@@ -71,19 +71,19 @@ package com.vitorpamplona.quartz.utils.secp256k1
  * multiplication, which performs thousands of doublings and additions per operation.
  */
 internal class MutablePoint(
-    val x: IntArray = LongArray(4),
-    val y: IntArray = LongArray(4),
-    val z: IntArray = LongArray(4),
+    val x: LongArray = LongArray(4),
+    val y: LongArray = LongArray(4),
+    val z: LongArray = LongArray(4),
 ) {
     fun isInfinity(): Boolean = U256.isZero(z)
 
     fun setInfinity() {
-        for (i in 0 until 8) {
-            x[i] = 0
-            z[i] = 0
+        for (i in 0 until 4) {
+            x[i] = 0L
+            z[i] = 0L
         }
-        y[0] = 1
-        for (i in 1 until 8) y[i] = 0
+        y[0] = 1L
+        for (i in 1 until 4) y[i] = 0L
     }
 
     fun copyFrom(other: MutablePoint) {
@@ -93,13 +93,13 @@ internal class MutablePoint(
     }
 
     fun setAffine(
-        ax: IntArray,
-        ay: IntArray,
+        ax: LongArray,
+        ay: LongArray,
     ) {
         ax.copyInto(x)
         ay.copyInto(y)
-        z[0] = 1
-        for (i in 1 until 8) z[i] = 0
+        z[0] = 1L
+        for (i in 1 until 4) z[i] = 0L
     }
 }
 
@@ -108,8 +108,8 @@ internal class MutablePoint(
  * Used for precomputed tables where we want compact storage and mixed addition.
  */
 internal class AffinePoint(
-    val x: IntArray = LongArray(4),
-    val y: IntArray = LongArray(4),
+    val x: LongArray = LongArray(4),
+    val y: LongArray = LongArray(4),
 )
 
 internal object ECPoint {
@@ -117,7 +117,8 @@ internal object ECPoint {
 
     val GX =
         longArrayOf(
-            0x16F81798.toInt(),
+            6481385041966929816L, 188021827762530521L, 6170039885052185351L, 8772561819708210092L,
+        ),
             0x59F2815B.toInt(),
             0x2DCE28D9.toInt(),
             0x029BFCDB.toInt(),
@@ -128,7 +129,8 @@ internal object ECPoint {
         )
     val GY =
         longArrayOf(
-            0xFB10D4B8.toInt(),
+            -7185545363635252040L, -209500633525038055L, 6747795201694173352L, 5204712524664259685L,
+        ),
             0x9C47D08F.toInt(),
             0xA6855419.toInt(),
             0xFD17B448.toInt(),
@@ -139,7 +141,7 @@ internal object ECPoint {
         )
 
     /** Curve constant b = 7 in y² = x³ + 7. */
-    private val B = longArrayOf(7, 0, 0, 0, 0, 0, 0, 0)
+    private val B = longArrayOf(7L, 0L, 0L, 0L)
 
     /**
      * wNAF window width for the G-side of scalar multiplication.
@@ -329,8 +331,8 @@ internal object ECPoint {
     fun addMixed(
         out: MutablePoint,
         p: MutablePoint,
-        qx: IntArray,
-        qy: IntArray,
+        qx: LongArray,
+        qy: LongArray,
     ) {
         if (p.isInfinity()) {
             out.setAffine(qx, qy)
@@ -450,7 +452,7 @@ internal object ECPoint {
     fun mul(
         out: MutablePoint,
         p: MutablePoint,
-        scalar: IntArray,
+        scalar: LongArray,
     ) {
         if (U256.isZero(scalar) || p.isInfinity()) {
             out.setInfinity()
@@ -513,7 +515,7 @@ internal object ECPoint {
      */
     fun mulG(
         out: MutablePoint,
-        scalar: IntArray,
+        scalar: LongArray,
     ) {
         if (U256.isZero(scalar)) {
             out.setInfinity()
@@ -559,9 +561,9 @@ internal object ECPoint {
      */
     fun mulDoubleG(
         out: MutablePoint,
-        s: IntArray,
+        s: LongArray,
         p: MutablePoint,
-        e: IntArray,
+        e: LongArray,
     ) {
         val wP = 5 // Window for P-side (table built per-call, keep small)
         val pTableSize = 1 shl (wP - 2) // 8 entries for P
@@ -629,8 +631,8 @@ internal object ECPoint {
     private fun addWnafMixed(
         out: MutablePoint,
         tmp: MutablePoint,
-        negY: IntArray,
-        wnafDigits: IntArray,
+        negY: LongArray,
+        wnafDigits: LongArray,
         bitIndex: Int,
         table: Array<AffinePoint>,
         glvNeg: Boolean,
@@ -654,7 +656,7 @@ internal object ECPoint {
         out: MutablePoint,
         tmp: MutablePoint,
         negScratch: MutablePoint,
-        wnafDigits: IntArray,
+        wnafDigits: LongArray,
         bitIndex: Int,
         table: Array<MutablePoint>,
         glvNeg: Boolean,
@@ -685,8 +687,8 @@ internal object ECPoint {
      */
     fun toAffine(
         p: MutablePoint,
-        outX: IntArray,
-        outY: IntArray,
+        outX: LongArray,
+        outY: LongArray,
     ): Boolean {
         if (p.isInfinity()) return false
         val zInv = LongArray(4)
@@ -703,26 +705,26 @@ internal object ECPoint {
     // ==================== Key Encoding (delegates to KeyCodec) ====================
 
     fun liftX(
-        outX: IntArray,
-        outY: IntArray,
-        x: IntArray,
+        outX: LongArray,
+        outY: LongArray,
+        x: LongArray,
     ) = KeyCodec.liftX(outX, outY, x)
 
-    fun hasEvenY(y: IntArray) = KeyCodec.hasEvenY(y)
+    fun hasEvenY(y: LongArray) = KeyCodec.hasEvenY(y)
 
     fun parsePublicKey(
         pubkey: ByteArray,
-        outX: IntArray,
-        outY: IntArray,
+        outX: LongArray,
+        outY: LongArray,
     ) = KeyCodec.parsePublicKey(pubkey, outX, outY)
 
     fun serializeUncompressed(
-        x: IntArray,
-        y: IntArray,
+        x: LongArray,
+        y: LongArray,
     ) = KeyCodec.serializeUncompressed(x, y)
 
     fun serializeCompressed(
-        x: IntArray,
-        y: IntArray,
+        x: LongArray,
+        y: LongArray,
     ) = KeyCodec.serializeCompressed(x, y)
 }

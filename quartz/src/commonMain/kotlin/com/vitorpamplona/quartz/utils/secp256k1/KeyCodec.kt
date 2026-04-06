@@ -39,16 +39,16 @@ package com.vitorpamplona.quartz.utils.secp256k1
  */
 internal object KeyCodec {
     /** Curve constant b = 7 in y² = x³ + 7. */
-    private val B = longArrayOf(7, 0, 0, 0, 0, 0, 0, 0)
+    private val B = longArrayOf(7L, 0L, 0L, 0L)
 
     /**
      * Lift an x-coordinate to a curve point with even y (BIP-340 convention).
      * Computes y = √(x³ + 7) mod p. Returns false if x is not a valid coordinate.
      */
     fun liftX(
-        outX: IntArray,
-        outY: IntArray,
-        x: IntArray,
+        outX: LongArray,
+        outY: LongArray,
+        x: LongArray,
     ): Boolean {
         if (U256.cmp(x, FieldP.P) >= 0) return false
         val t = LongArray(4)
@@ -62,7 +62,7 @@ internal object KeyCodec {
     }
 
     /** Check if y-coordinate is even (LSB = 0). */
-    fun hasEvenY(y: IntArray): Boolean = y[0] and 1 == 0
+    fun hasEvenY(y: LongArray): Boolean = y[0] and 1 == 0
 
     /**
      * Parse a serialized public key (33 bytes compressed or 65 bytes uncompressed).
@@ -71,8 +71,8 @@ internal object KeyCodec {
      */
     fun parsePublicKey(
         pubkey: ByteArray,
-        outX: IntArray,
-        outY: IntArray,
+        outX: LongArray,
+        outY: LongArray,
     ): Boolean =
         when {
             pubkey.size == 33 && (pubkey[0] == 0x02.toByte() || pubkey[0] == 0x03.toByte()) -> {
@@ -112,8 +112,8 @@ internal object KeyCodec {
 
     /** Serialize as 65-byte uncompressed: 04 || x (32 bytes) || y (32 bytes). */
     fun serializeUncompressed(
-        x: IntArray,
-        y: IntArray,
+        x: LongArray,
+        y: LongArray,
     ): ByteArray {
         val r = ByteArray(65)
         r[0] = 0x04
@@ -124,8 +124,8 @@ internal object KeyCodec {
 
     /** Serialize as 33-byte compressed: 02/03 || x (32 bytes). */
     fun serializeCompressed(
-        x: IntArray,
-        y: IntArray,
+        x: LongArray,
+        y: LongArray,
     ): ByteArray {
         val r = ByteArray(33)
         r[0] = if (hasEvenY(y)) 0x02 else 0x03
