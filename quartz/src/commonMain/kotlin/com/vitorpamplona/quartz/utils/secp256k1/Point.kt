@@ -550,7 +550,7 @@ internal object ECPoint {
         pOddJac[0].copyFrom(p)
         for (i in 1 until tableSize) addPoints(pOddJac[i], pOddJac[i - 1], p2, s)
 
-        // λ(P) odd-multiples: (β·X, Y, Z) in Jacobian
+        // λ(P) odd-multiples: (β·X, Y, Z) — Z is identical to pOddJac (endomorphism preserves Z)
         val pLamOddJac =
             Array(tableSize) { i ->
                 val lp = MutablePoint()
@@ -560,9 +560,12 @@ internal object ECPoint {
                 lp
             }
 
-        // Effective-affine: batch-convert both tables to affine for cheaper mixed additions
-        val pOdd = batchToAffine(pOddJac, s)
-        val pLamOdd = batchToAffine(pLamOddJac, s)
+        // Effective-affine: batch-convert to affine for cheaper mixed additions.
+        // Since pLamOddJac has the same Z coordinates as pOddJac, we batch-invert
+        // once and reuse the Z⁻¹ values for both tables (saves one full inversion).
+        val pOdd = Array(tableSize) { AffinePoint() }
+        val pLamOdd = Array(tableSize) { AffinePoint() }
+        batchToAffinePair(pOddJac, pLamOddJac, pOdd, pLamOdd, s)
 
         // Find highest non-zero digit
         var bits = maxOf(wnaf1.size, wnaf2.size)
@@ -680,9 +683,10 @@ internal object ECPoint {
                 lp
             }
 
-        // Effective-affine: batch-convert P-side tables for cheaper mixed additions
-        val pOdd = batchToAffine(pOddJac, sc)
-        val pLamOdd = batchToAffine(pLamOddJac, sc)
+        // Effective-affine: batch-convert P-side tables (shared Z inversion)
+        val pOdd = Array(pTableSize) { AffinePoint() }
+        val pLamOdd = Array(pTableSize) { AffinePoint() }
+        batchToAffinePair(pOddJac, pLamOddJac, pOdd, pLamOdd, sc)
 
         // Find highest non-zero digit across all 4 streams
         val allWnaf = arrayOf(wnafS1, wnafS2, wnafE1, wnafE2)
@@ -824,6 +828,59 @@ internal object ECPoint {
         FieldP.mul(result[0].y, points[0].y, zInv3, w)
 
         return result
+    }
+
+    /**
+     * Batch-convert a pair of Jacobian tables that share the same Z coordinates.
+     * This is the common case for GLV: pOdd and pLamOdd = (β·X, Y, Z) have identical Z.
+     * Uses a single batch inversion for both tables, saving ~270 field ops (one full inv).
+     */
+    private fun batchToAffinePair(
+        a: Array<MutablePoint>,
+        b: Array<MutablePoint>,
+        outA: Array<AffinePoint>,
+        outB: Array<AffinePoint>,
+        s: PointScratch,
+    ) {
+        val n = a.size
+        if (n == 0) return
+        val w = s.w
+
+        // Build prefix products of Z (shared between a and b)
+        val cumZ = Array(n) { LongArray(4) }
+        a[0].z.copyInto(cumZ[0])
+        for (i in 1 until n) {
+            FieldP.mul(cumZ[i], cumZ[i - 1], a[i].z, w)
+        }
+
+        // Single inversion of the total product
+        val inv = LongArray(4)
+        FieldP.inv(inv, cumZ[n - 1])
+
+        // Recover individual Z⁻¹ and convert both tables
+        val zInv = LongArray(4)
+        val zInv2 = LongArray(4)
+        val zInv3 = LongArray(4)
+
+        for (i in n - 1 downTo 1) {
+            FieldP.mul(zInv, inv, cumZ[i - 1], w)
+            FieldP.mul(inv, inv, a[i].z, w)
+            FieldP.sqr(zInv2, zInv, w)
+            FieldP.mul(zInv3, zInv2, zInv, w)
+            // Convert a[i]
+            FieldP.mul(outA[i].x, a[i].x, zInv2, w)
+            FieldP.mul(outA[i].y, a[i].y, zInv3, w)
+            // Convert b[i] — same zInv since b has same Z
+            FieldP.mul(outB[i].x, b[i].x, zInv2, w)
+            FieldP.mul(outB[i].y, b[i].y, zInv3, w)
+        }
+        // i == 0
+        FieldP.sqr(zInv2, inv, w)
+        FieldP.mul(zInv3, zInv2, inv, w)
+        FieldP.mul(outA[0].x, a[0].x, zInv2, w)
+        FieldP.mul(outA[0].y, a[0].y, zInv3, w)
+        FieldP.mul(outB[0].x, b[0].x, zInv2, w)
+        FieldP.mul(outB[0].y, b[0].y, zInv3, w)
     }
 
     // ==================== Coordinate Conversion ====================
