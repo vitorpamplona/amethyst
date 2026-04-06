@@ -36,37 +36,48 @@ import com.vitorpamplona.quartz.utils.sha256.sha256
  * - [privKeyTweakAdd]: BIP-32 key derivation (NIP-06)
  * - [pubKeyTweakMul] / [ecdhXOnly]: ECDH shared secrets (NIP-04, NIP-44)
  *
- * Performance on JVM (vs native C/JNI secp256k1, well-warmed):
- *   verify    ~5,600 ops/s (4.4× native)   — Strauss + GLV + wNAF-12
- *   sign      ~16,700 ops/s (1.5× native)  — comb method (cached pubkey)
- *   pubCreate ~23,400 ops/s (2.2× native)  — comb method, 3 doublings
- *   ECDH      ~7,100 ops/s (3.9× native)   — GLV + wNAF-5, effective-affine
- *   compress  ~4M ops/s (2× FASTER)        — pure Kotlin, no JNI overhead
- *   secKeyVerify ~5.7M ops/s (FASTER)      — scalar range check, no JNI
+ * Performance on Java 21 (vs native C/JNI secp256k1, well-warmed):
+ *   verify    ~8,000 ops/s (3.4× native)   — Strauss + GLV + wNAF-12
+ *   sign      ~26,000 ops/s (1.1× native)  — comb method (cached pubkey)
+ *   pubCreate ~36,000 ops/s (1.6× native)  — comb method, 3 doublings
+ *   ECDH      ~11,000 ops/s (2.8× native)  — GLV + wNAF-5, effective-affine
+ *   compress  ~7M ops/s (1.7× FASTER)      — pure Kotlin, no JNI overhead
+ *   secKeyVerify ~8M ops/s (1.2× FASTER)   — scalar range check, no JNI
  *
  * Architecture:
- *   Field arithmetic uses 4×64-bit limbs (LongArray(4)) with Math.multiplyHigh
- *   for 64×64→128-bit products (16 products per field multiply). On JVM 9+,
- *   multiplyHigh maps to a single hardware instruction (IMULH/SMULH). The main
- *   gap vs native C is per-field-op cost: unsignedMultiplyHigh requires 5 JVM
- *   instructions per product vs C's single MULQ with native uint128.
+ *   Field arithmetic uses 4×64-bit limbs (LongArray(4)) with Math.unsignedMultiplyHigh
+ *   (Java 18+, single UMULH instruction) for 64×64→128-bit products. 16 products per
+ *   field multiply vs C's 25 (5×52-bit limbs), but each C product is a single native
+ *   128-bit MUL instruction vs our UMULH + MUL + carry propagation (~7 insns total).
+ *
+ *   Per-doublePoint cost analysis (instruction-level, vs C libsecp256k1):
+ *     mul/sqr (7 ops):  Kotlin ~1,204 insns  vs  C ~455 insns  (2.6× — UMULH overhead)
+ *     add/neg/half:     Kotlin ~312 insns    vs  C ~75 insns   (4.2× — no lazy reduction)
+ *     Total:            Kotlin ~1,516 insns  vs  C ~530 insns  (2.9× — matches benchmarks)
  *
  * Optimizations implemented (matching or adapted from libsecp256k1):
+ *   - Math.unsignedMultiplyHigh (Java 18+): eliminates 4-insn signed→unsigned correction
  *   - GLV endomorphism: splits 256-bit scalars into 2×128-bit halves
  *   - wNAF encoding: windowed non-adjacent form for sparse addition patterns
  *   - Comb method: generator multiplication with only 3 doublings (Hamburg 2012)
  *   - Strauss/Shamir: interleaved multi-scalar multiplication for verification
- *   - Effective-affine: batch-inverts wNAF tables to affine for cheaper mixed adds
+ *   - Effective-affine: batch-inverts wNAF tables for cheaper mixed adds (saves ~4M/add)
+ *   - Shared Z inversion: GLV table pairs share Z coords, one inversion for both
  *   - Batch inversion: Montgomery's trick (1 inv + 3(n-1) muls for n inversions)
- *   - ThreadLocal elimination: pre-fetched scratch buffers avoid ~500 lookups/op
+ *   - Pre-allocated scratch: ThreadLocal PointScratch eliminates ~130 allocs/operation
  *   - Dedicated squaring: 10 products vs 16 for general multiplication
+ *   - secp256k1-specific reduceSelf: single branch on a[3]==-1 (>99.99% fast path)
  *
  * Differences from C libsecp256k1 (due to JVM constraints):
- *   - No lazy reduction (4×64 limbs have no headroom; C uses 5×52 with 12-bit spare)
- *   - Fermat inversion (255 sqr + 15 mul) instead of safegcd (safegcd is slower on
- *     JVM due to 128-bit arithmetic overhead in the inner divstep matrix multiply)
- *   - WINDOW_G=12 instead of 15 (JVM heap-allocated tables cause cache pressure
- *     at larger sizes; C uses contiguous compile-time .rodata arrays)
+ *   - No lazy reduction (4×64 limbs have no headroom; C's 5×52 limbs have 12-bit spare
+ *     capacity per limb, allowing 3-8 chained add/sub without normalizing — this accounts
+ *     for 24% of the remaining per-operation gap)
+ *   - Fermat inversion (255 sqr + 15 mul) instead of safegcd (safegcd is slower on JVM
+ *     due to 128-bit arithmetic overhead in the inner divstep matrix multiply)
+ *   - WINDOW_G=12 instead of 15 (JVM heap-allocated tables cause cache pressure at
+ *     larger sizes; C uses contiguous compile-time .rodata arrays)
+ *   - No constant-time guarantees (not needed for Nostr — secrets are nonces, not
+ *     long-term keys exposed to timing side-channels)
  */
 object Secp256k1 {
     // ==================== Cached BIP-340 tag hash prefixes ====================
