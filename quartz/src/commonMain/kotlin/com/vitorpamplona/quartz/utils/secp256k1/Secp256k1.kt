@@ -37,10 +37,11 @@ import com.vitorpamplona.quartz.utils.sha256.sha256
  * - [pubKeyTweakMul]: ECDH shared secrets (NIP-04, NIP-44)
  *
  * Performance on JVM (vs native C/JNI secp256k1):
- *   verify ~3,700 ops/s (~8×), sign ~14K ops/s (~2.3×), pubkeyCreate ~18K ops/s (~3.6×),
+ *   verify ~3,900 ops/s (~3.7×), sign ~7.4K ops/s (~2.1×), pubkeyCreate ~18K ops/s (~3.6×),
  *   compress ~7M ops/s (2× FASTER), secKeyVerify ~6M ops/s (FASTER).
- * The gap is primarily due to JVM's lack of 128-bit integer types (forcing 8×32-bit
- * limbs with 64 inner products per field multiply, vs C's 5×52-bit with 25).
+ * Uses 4×64-bit limbs (LongArray(4)) with Math.multiplyHigh for 64×64→128-bit products
+ * (16 products per field multiply, vs C's 5×52-bit with 25). On JVM 9+, multiplyHigh
+ * maps to a single hardware instruction (IMULH on x86-64, SMULH on ARM64).
  * All algorithmic optimizations from libsecp256k1 are implemented: GLV endomorphism,
  * wNAF encoding, Shamir's trick, comb method, and optimized addition chains.
  */
@@ -106,7 +107,7 @@ object Secp256k1 {
 
     /**
      * Verify that a byte array is a valid secret key (32 bytes, 0 < value < n).
-     * Operates directly on bytes without converting to limbs — avoids IntArray allocation.
+     * Operates directly on bytes without converting to limbs — avoids LongArray allocation.
      */
     fun secKeyVerify(seckey: ByteArray): Boolean {
         if (seckey.size != 32) return false
