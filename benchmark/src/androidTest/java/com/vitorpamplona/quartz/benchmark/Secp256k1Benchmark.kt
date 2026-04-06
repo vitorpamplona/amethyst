@@ -25,6 +25,7 @@ import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.utils.Secp256k1Instance
+import com.vitorpamplona.quartz.utils.Secp256k1InstanceOurs
 import junit.framework.TestCase.assertNotNull
 import junit.framework.TestCase.assertTrue
 import org.junit.Rule
@@ -118,6 +119,60 @@ class Secp256k1Benchmark {
     fun pubKeyTweakMulCompact() {
         benchmarkRule.measureRepeated {
             assertNotNull(Secp256k1Instance.pubKeyTweakMulCompact(pubKey2XOnly, privKey))
+        }
+    }
+
+    @Test
+    fun verifySchnorrOurs() {
+        benchmarkRule.measureRepeated {
+            assertTrue(Secp256k1InstanceOurs.verifySchnorr(signature, msg32, xOnlyPub))
+        }
+    }
+
+    @Test
+    fun signSchnorrOurs() {
+        benchmarkRule.measureRepeated {
+            assertNotNull(Secp256k1InstanceOurs.signSchnorr(msg32, privKey, auxRand))
+        }
+    }
+
+    @Test
+    fun compressedPubKeyForOurs() {
+        benchmarkRule.measureRepeated {
+            assertNotNull(Secp256k1InstanceOurs.compressedPubKeyFor(privKey))
+        }
+    }
+
+    // ==================== Key operations ====================
+
+    @Test
+    fun secKeyVerifyOurs() {
+        benchmarkRule.measureRepeated {
+            assertTrue(Secp256k1InstanceOurs.isPrivateKeyValid(privKey))
+        }
+    }
+
+    @Test
+    fun pubKeyCompressOurs() {
+        // Compress an already-compressed key (fast path)
+        benchmarkRule.measureRepeated {
+            assertNotNull(Secp256k1InstanceOurs.compressedPubKeyFor(privKey))
+        }
+    }
+
+    @Test
+    fun privateKeyAddOurs() {
+        benchmarkRule.measureRepeated {
+            assertNotNull(Secp256k1InstanceOurs.privateKeyAdd(privKey, privKey2))
+        }
+    }
+
+    // ==================== ECDH (NIP-04, NIP-44) ====================
+
+    @Test
+    fun pubKeyTweakMulCompactOurs() {
+        benchmarkRule.measureRepeated {
+            assertNotNull(Secp256k1InstanceOurs.pubKeyTweakMulCompact(pubKey2XOnly, privKey))
         }
     }
 }

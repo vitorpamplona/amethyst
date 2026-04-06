@@ -132,7 +132,7 @@ internal object FieldP {
         reduceWide(out, w)
     }
 
-    inline fun neg(
+    fun neg(
         out: LongArray,
         a: LongArray,
     ) {
