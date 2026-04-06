@@ -93,7 +93,7 @@ internal class MutablePoint(
     val y: LongArray = LongArray(4),
     val z: LongArray = LongArray(4),
 ) {
-    fun isInfinity(): Boolean = U256.isZero(z)
+    inline fun isInfinity(): Boolean = U256.isZero(z)
 
     fun setInfinity() {
         for (i in 0 until 4) {
@@ -163,7 +163,7 @@ internal object ECPoint {
      * w=12 is a good tradeoff for runtime-computed tables on JVM.
      */
     private const val WINDOW_G = 12
-    private val G_TABLE_SIZE = 1 shl (WINDOW_G - 2) // 64 for w=8
+    private val G_TABLE_SIZE = 1 shl (WINDOW_G - 2) // 1024 for w=12
 
     /**
      * Precomputed G odd-multiples for wNAF: gOddTable[i] = (2i+1)·G as affine, for i in 0..G_TABLE_SIZE-1.

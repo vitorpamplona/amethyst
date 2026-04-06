@@ -51,7 +51,7 @@ package com.vitorpamplona.quartz.utils.secp256k1
 internal object U256 {
     val ZERO = LongArray(4)
 
-    fun isZero(a: LongArray): Boolean = (a[0] or a[1] or a[2] or a[3]) == 0L
+    inline fun isZero(a: LongArray): Boolean = (a[0] or a[1] or a[2] or a[3]) == 0L
 
     /** Unsigned comparison. Returns -1 if a < b, 0 if equal, 1 if a > b. */
     fun cmp(
@@ -253,8 +253,8 @@ internal object U256 {
         return ((a[limb] ushr shift) and 0xF).toInt()
     }
 
-    /** Test if bit at position pos is set. */
-    fun testBit(
+    /** Test if bit at position pos is set. Called ~2,800× per mulG (comb table lookup). */
+    inline fun testBit(
         a: LongArray,
         pos: Int,
     ): Boolean = (a[pos / 64] ushr (pos % 64)) and 1L == 1L
