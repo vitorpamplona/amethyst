@@ -37,13 +37,13 @@ class U256Test {
     // ==================== isZero / cmp ====================
 
     @Test
-    fun isZeroTrue() = assertTrue(U256.isZero(IntArray(8)))
+    fun isZeroTrue() = assertTrue(U256.isZero(LongArray(4)))
 
     @Test
-    fun isZeroFalse() = assertFalse(U256.isZero(intArrayOf(1, 0, 0, 0, 0, 0, 0, 0)))
+    fun isZeroFalse() = assertFalse(U256.isZero(longArrayOf(1, 0, 0, 0, 0, 0, 0, 0)))
 
     @Test
-    fun isZeroHighBit() = assertFalse(U256.isZero(intArrayOf(0, 0, 0, 0, 0, 0, 0, 1)))
+    fun isZeroHighBit() = assertFalse(U256.isZero(longArrayOf(0, 0, 0, 0, 0, 0, 0, 1)))
 
     @Test
     fun cmpEqual() = assertEquals(0, U256.cmp(hex("0000000000000000000000000000000000000000000000000000000000000001"), hex("0000000000000000000000000000000000000000000000000000000000000001")))
@@ -58,7 +58,7 @@ class U256Test {
 
     @Test
     fun addSimple() {
-        val out = IntArray(8)
+        val out = LongArray(4)
         val carry = U256.addTo(out, hex("0000000000000000000000000000000000000000000000000000000000000001"), hex("0000000000000000000000000000000000000000000000000000000000000002"))
         assertEquals("0000000000000000000000000000000000000000000000000000000000000003", toHex(out))
         assertEquals(0, carry)
@@ -66,7 +66,7 @@ class U256Test {
 
     @Test
     fun addOverflow() {
-        val out = IntArray(8)
+        val out = LongArray(4)
         val carry = U256.addTo(out, hex("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"), hex("0000000000000000000000000000000000000000000000000000000000000001"))
         assertEquals("0000000000000000000000000000000000000000000000000000000000000000", toHex(out))
         assertEquals(1, carry)
@@ -74,14 +74,14 @@ class U256Test {
 
     @Test
     fun addLimbCarry() {
-        val out = IntArray(8)
+        val out = LongArray(4)
         U256.addTo(out, hex("00000000000000000000000000000000000000000000000000000000ffffffff"), hex("0000000000000000000000000000000000000000000000000000000000000001"))
         assertEquals("0000000000000000000000000000000000000000000000000000000100000000", toHex(out))
     }
 
     @Test
     fun subSimple() {
-        val out = IntArray(8)
+        val out = LongArray(4)
         val borrow = U256.subTo(out, hex("0000000000000000000000000000000000000000000000000000000000000003"), hex("0000000000000000000000000000000000000000000000000000000000000001"))
         assertEquals("0000000000000000000000000000000000000000000000000000000000000002", toHex(out))
         assertEquals(0, borrow)
@@ -89,7 +89,7 @@ class U256Test {
 
     @Test
     fun subUnderflow() {
-        val out = IntArray(8)
+        val out = LongArray(4)
         val borrow = U256.subTo(out, hex("0000000000000000000000000000000000000000000000000000000000000000"), hex("0000000000000000000000000000000000000000000000000000000000000001"))
         assertEquals("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", toHex(out))
         assertEquals(1, borrow)
@@ -99,7 +99,7 @@ class U256Test {
 
     @Test
     fun mulWideSmall() {
-        val out = IntArray(16)
+        val out = LongArray(8)
         U256.mulWide(out, hex("0000000000000000000000000000000000000000000000000000000000000003"), hex("0000000000000000000000000000000000000000000000000000000000000007"))
         // 3 * 7 = 21 = 0x15
         assertEquals(0x15, out[0])
@@ -109,8 +109,8 @@ class U256Test {
     @Test
     fun mulWideLarge() {
         // (2^128 - 1)² consistency: mulWide and sqrWide should match
-        val out1 = IntArray(16)
-        val out2 = IntArray(16)
+        val out1 = LongArray(8)
+        val out2 = LongArray(8)
         val maxHalf = hex("00000000000000000000000000000000ffffffffffffffffffffffffffffffff")
         U256.mulWide(out1, maxHalf, maxHalf)
         U256.sqrWide(out2, maxHalf)
@@ -123,9 +123,9 @@ class U256Test {
     fun sqrWideMatchesMulWide() {
         // sqrWide(a) should produce the same result as mulWide(a, a)
         val a = hex("67E56582298859DDAE725F972992A07C6C4FB9F62A8FFF58CE3CA926A1063530")
-        val mulResult = IntArray(16)
+        val mulResult = LongArray(8)
         U256.mulWide(mulResult, a, a)
-        val sqrResult = IntArray(16)
+        val sqrResult = LongArray(8)
         U256.sqrWide(sqrResult, a)
         for (i in 0 until 16) {
             assertEquals(mulResult[i], sqrResult[i], "Limb $i mismatch")
@@ -136,9 +136,9 @@ class U256Test {
     fun sqrWideMaxValue() {
         // (2^256 - 1)^2 should match mulWide
         val maxVal = hex("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
-        val mulResult = IntArray(16)
+        val mulResult = LongArray(8)
         U256.mulWide(mulResult, maxVal, maxVal)
-        val sqrResult = IntArray(16)
+        val sqrResult = LongArray(8)
         U256.sqrWide(sqrResult, maxVal)
         for (i in 0 until 16) {
             assertEquals(mulResult[i], sqrResult[i], "Limb $i mismatch for max value sqr")
@@ -201,7 +201,7 @@ class U256Test {
 
     @Test
     fun xorBasic() {
-        val out = IntArray(8)
+        val out = LongArray(4)
         U256.xorTo(out, hex("ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00"), hex("0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f"))
         assertEquals("f00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00f", toHex(out))
     }
@@ -221,7 +221,7 @@ class U256Test {
     @Test
     fun copyIntoTest() {
         val src = hex("67e56582298859ddae725f972992a07c6c4fb9f62a8fff58ce3ca926a1063530")
-        val dst = IntArray(8)
+        val dst = LongArray(4)
         U256.copyInto(dst, src)
         for (i in 0 until 8) assertEquals(src[i], dst[i])
     }

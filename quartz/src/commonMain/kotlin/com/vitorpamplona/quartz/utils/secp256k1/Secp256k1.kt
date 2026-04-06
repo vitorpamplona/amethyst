@@ -73,8 +73,8 @@ object Secp256k1 {
         require(ScalarN.isValid(scalar))
         val p = MutablePoint()
         ECPoint.mulG(p, scalar)
-        val x = IntArray(8)
-        val y = IntArray(8)
+        val x = LongArray(4)
+        val y = LongArray(4)
         check(ECPoint.toAffine(p, x, y))
         return ECPoint.serializeUncompressed(x, y)
     }
@@ -183,8 +183,8 @@ object Secp256k1 {
         // Derive public key (one G multiplication + one inversion)
         val pubPoint = MutablePoint()
         ECPoint.mulG(pubPoint, d0)
-        val px = IntArray(8)
-        val py = IntArray(8)
+        val px = LongArray(4)
+        val py = LongArray(4)
         check(ECPoint.toAffine(pubPoint, px, py))
 
         val xOnlyPub = U256.toBytes(px)
@@ -239,7 +239,7 @@ object Secp256k1 {
             if (auxrand != null) {
                 require(auxrand.size == 32)
                 val auxHash = sha256(AUX_PREFIX + auxrand)
-                val tArr = IntArray(8)
+                val tArr = LongArray(4)
                 U256.xorTo(tArr, U256.fromBytes(dBytes), U256.fromBytes(auxHash))
                 U256.toBytes(tArr)
             } else {
@@ -258,8 +258,8 @@ object Secp256k1 {
         // R = k0·G
         val rPoint = MutablePoint()
         ECPoint.mulG(rPoint, k0)
-        val rx = IntArray(8)
-        val ry = IntArray(8)
+        val rx = LongArray(4)
+        val ry = LongArray(4)
         check(ECPoint.toAffine(rPoint, rx, ry))
 
         val k = if (ECPoint.hasEvenY(ry)) k0 else ScalarN.neg(k0)
@@ -303,8 +303,8 @@ object Secp256k1 {
     ): Boolean {
         if (signature.size != 64 || pub.size != 32) return false
 
-        val px = IntArray(8)
-        val py = IntArray(8)
+        val px = LongArray(4)
+        val py = LongArray(4)
         if (!ECPoint.liftX(px, py, U256.fromBytes(pub))) return false
 
         val r = U256.fromBytes(signature, 0)
@@ -329,8 +329,8 @@ object Secp256k1 {
         ECPoint.mulDoubleG(result, s, pPoint, negE)
 
         if (result.isInfinity()) return false
-        val rx = IntArray(8)
-        val ry = IntArray(8)
+        val rx = LongArray(4)
+        val ry = LongArray(4)
         if (!ECPoint.toAffine(result, rx, ry)) return false
         if (!ECPoint.hasEvenY(ry)) return false
         return U256.cmp(rx, r) == 0
@@ -355,8 +355,8 @@ object Secp256k1 {
         tweak: ByteArray,
     ): ByteArray {
         require(tweak.size == 32)
-        val x = IntArray(8)
-        val y = IntArray(8)
+        val x = LongArray(4)
+        val y = LongArray(4)
         check(ECPoint.parsePublicKey(pubkey, x, y))
         val scalar = U256.fromBytes(tweak)
         require(ScalarN.isValid(scalar))
@@ -365,8 +365,8 @@ object Secp256k1 {
         p.setAffine(x, y)
         val result = MutablePoint()
         ECPoint.mul(result, p, scalar)
-        val rx = IntArray(8)
-        val ry = IntArray(8)
+        val rx = LongArray(4)
+        val ry = LongArray(4)
         check(ECPoint.toAffine(result, rx, ry))
 
         return if (pubkey.size == 33) {
@@ -402,16 +402,16 @@ object Secp256k1 {
         // Compute y = sqrt(x³ + 7). We need SOME valid y for EC point operations,
         // but the result's x-coordinate is the same regardless of y sign.
         // Use liftX which returns the even-y variant.
-        val px = IntArray(8)
-        val py = IntArray(8)
+        val px = LongArray(4)
+        val py = LongArray(4)
         check(ECPoint.liftX(px, py, x)) { "Not a valid x-coordinate on secp256k1" }
 
         val p = MutablePoint()
         p.setAffine(px, py)
         val result = MutablePoint()
         ECPoint.mul(result, p, k)
-        val rx = IntArray(8)
-        val ry = IntArray(8)
+        val rx = LongArray(4)
+        val ry = LongArray(4)
         check(ECPoint.toAffine(result, rx, ry))
         return U256.toBytes(rx)
     }

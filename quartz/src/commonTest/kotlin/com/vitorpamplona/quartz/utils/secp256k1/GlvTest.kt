@@ -50,7 +50,7 @@ class GlvTest {
 
     @Test
     fun splitScalarZero() {
-        val split = Glv.splitScalar(IntArray(8))
+        val split = Glv.splitScalar(LongArray(4))
         assertTrue(U256.isZero(split.k1) && U256.isZero(split.k2))
     }
 
@@ -106,7 +106,7 @@ class GlvTest {
         // β³ ≡ 1 (mod p) — the defining property of the cube root of unity
         val b2 = FieldP.sqr(Glv.BETA)
         val b3 = FieldP.mul(b2, Glv.BETA)
-        val one = intArrayOf(1, 0, 0, 0, 0, 0, 0, 0)
+        val one = longArrayOf(1, 0, 0, 0, 0, 0, 0, 0)
         assertEquals(toHex(one), toHex(b3))
     }
 
@@ -115,8 +115,8 @@ class GlvTest {
         // λ·G should equal (β·Gx, Gy)
         val result = MutablePoint()
         ECPoint.mulG(result, LAMBDA)
-        val rx = IntArray(8)
-        val ry = IntArray(8)
+        val rx = LongArray(4)
+        val ry = LongArray(4)
         ECPoint.toAffine(result, rx, ry)
         assertEquals(toHex(FieldP.mul(ECPoint.GX, Glv.BETA)), toHex(rx))
         assertEquals(toHex(ECPoint.GY), toHex(ry))
@@ -127,7 +127,7 @@ class GlvTest {
     @Test
     fun wnafReconstructionSmall() {
         // wNAF digits should reconstruct to the original scalar
-        val k = intArrayOf(17, 0, 0, 0, 0, 0, 0, 0) // 17 = 10001 in binary
+        val k = longArrayOf(17, 0, 0, 0, 0, 0, 0, 0) // 17 = 10001 in binary
         val digits = Glv.wnaf(k, 5, 256)
         assertEquals(k[0], reconstructWnaf(digits)[0])
     }
@@ -180,7 +180,7 @@ class GlvTest {
     @Test
     fun wnafSmallMaxBits() {
         // wNAF with maxBits=129 (used for GLV half-scalars)
-        val k = intArrayOf(0x12345678.toInt(), 0x9ABCDEF0.toInt(), 0x11111111, 0x22222222, 0, 0, 0, 0)
+        val k = longArrayOf(0x12345678.toInt(), 0x9ABCDEF0.toInt(), 0x11111111, 0x22222222, 0, 0, 0, 0)
         val digits = Glv.wnaf(k, 5, 129)
         val reconstructed = reconstructWnaf(digits)
         for (i in 0 until 4) assertEquals(k[i], reconstructed[i], "Limb $i mismatch for 129-bit wNAF")
@@ -193,16 +193,16 @@ class GlvTest {
         // s·G + 0·P = s·G
         val s = hex("67e56582298859ddae725f972992a07c6c4fb9f62a8fff58ce3ca926a1063530")
         val p = MutablePoint()
-        ECPoint.mulG(p, intArrayOf(2, 0, 0, 0, 0, 0, 0, 0))
+        ECPoint.mulG(p, longArrayOf(2, 0, 0, 0, 0, 0, 0, 0))
         val combined = MutablePoint()
-        ECPoint.mulDoubleG(combined, s, p, IntArray(8))
-        val cx = IntArray(8)
-        val cy = IntArray(8)
+        ECPoint.mulDoubleG(combined, s, p, LongArray(4))
+        val cx = LongArray(4)
+        val cy = LongArray(4)
         ECPoint.toAffine(combined, cx, cy)
         val direct = MutablePoint()
         ECPoint.mulG(direct, s)
-        val dx = IntArray(8)
-        val dy = IntArray(8)
+        val dx = LongArray(4)
+        val dy = LongArray(4)
         ECPoint.toAffine(direct, dx, dy)
         assertEquals(toHex(dx), toHex(cx))
     }
@@ -211,9 +211,9 @@ class GlvTest {
 
     /** Reconstruct a scalar from wNAF digits using Horner's method. */
     private fun reconstructWnaf(digits: IntArray): IntArray {
-        var acc = IntArray(8)
+        var acc = LongArray(4)
         for (bit in digits.size - 1 downTo 0) {
-            val doubled = IntArray(8)
+            val doubled = LongArray(4)
             var carry = 0L
             for (j in 0 until 8) {
                 carry += (acc[j].toLong() and 0xFFFFFFFFL) * 2L

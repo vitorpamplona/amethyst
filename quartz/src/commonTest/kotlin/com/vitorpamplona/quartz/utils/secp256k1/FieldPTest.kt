@@ -39,7 +39,7 @@ class FieldPTest {
     @Test
     fun addZeroIdentity() {
         val a = hex("67e56582298859ddae725f972992a07c6c4fb9f62a8fff58ce3ca926a1063530")
-        val zero = IntArray(8)
+        val zero = LongArray(4)
         assertEquals(toHex(a), toHex(FieldP.add(a, zero)))
     }
 
@@ -62,7 +62,7 @@ class FieldPTest {
     @Test
     fun mulOneIdentity() {
         val a = hex("67e56582298859ddae725f972992a07c6c4fb9f62a8fff58ce3ca926a1063530")
-        val one = intArrayOf(1, 0, 0, 0, 0, 0, 0, 0)
+        val one = longArrayOf(1, 0, 0, 0, 0, 0, 0, 0)
         assertEquals(toHex(a), toHex(FieldP.mul(a, one)))
     }
 
@@ -72,7 +72,7 @@ class FieldPTest {
     fun addNearP() {
         // (p - 1) + 1 = p ≡ 0 (mod p)
         val pMinus1 = hex("fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2e")
-        val one = intArrayOf(1, 0, 0, 0, 0, 0, 0, 0)
+        val one = longArrayOf(1, 0, 0, 0, 0, 0, 0, 0)
         val result = FieldP.add(pMinus1, one)
         assertTrue(U256.isZero(result))
     }
@@ -89,8 +89,8 @@ class FieldPTest {
     @Test
     fun subUnderflow() {
         // 0 - 1 ≡ p - 1 (mod p)
-        val zero = IntArray(8)
-        val one = intArrayOf(1, 0, 0, 0, 0, 0, 0, 0)
+        val zero = LongArray(4)
+        val one = longArrayOf(1, 0, 0, 0, 0, 0, 0, 0)
         val result = FieldP.sub(zero, one)
         val expected = hex("fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2e") // p-1
         assertEquals(toHex(expected), toHex(result))
@@ -106,7 +106,7 @@ class FieldPTest {
 
     @Test
     fun negZeroIsZero() {
-        assertTrue(U256.isZero(FieldP.neg(IntArray(8))))
+        assertTrue(U256.isZero(FieldP.neg(LongArray(4))))
     }
 
     @Test
@@ -149,13 +149,13 @@ class FieldPTest {
         val a = hex("67e56582298859ddae725f972992a07c6c4fb9f62a8fff58ce3ca926a1063530")
         val aInv = FieldP.inv(a)
         val product = FieldP.mul(a, aInv)
-        val one = intArrayOf(1, 0, 0, 0, 0, 0, 0, 0)
+        val one = longArrayOf(1, 0, 0, 0, 0, 0, 0, 0)
         assertEquals(toHex(one), toHex(product))
     }
 
     @Test
     fun invOfOne() {
-        val one = intArrayOf(1, 0, 0, 0, 0, 0, 0, 0)
+        val one = longArrayOf(1, 0, 0, 0, 0, 0, 0, 0)
         assertEquals(toHex(one), toHex(FieldP.inv(one)))
     }
 
@@ -170,8 +170,8 @@ class FieldPTest {
 
     @Test
     fun halfOfEven() {
-        val out = IntArray(8)
-        val four = intArrayOf(4, 0, 0, 0, 0, 0, 0, 0)
+        val out = LongArray(4)
+        val four = longArrayOf(4, 0, 0, 0, 0, 0, 0, 0)
         FieldP.half(out, four)
         assertEquals(2, out[0])
         for (i in 1 until 8) assertEquals(0, out[i])
@@ -180,8 +180,8 @@ class FieldPTest {
     @Test
     fun halfOfOdd() {
         // half(1) = (1 + p) / 2 = (p + 1) / 2
-        val out = IntArray(8)
-        val one = intArrayOf(1, 0, 0, 0, 0, 0, 0, 0)
+        val out = LongArray(4)
+        val one = longArrayOf(1, 0, 0, 0, 0, 0, 0, 0)
         FieldP.half(out, one)
         // Verify: 2 * half(1) = 1 mod p
         val doubled = FieldP.add(out, out)
@@ -192,7 +192,7 @@ class FieldPTest {
     @Test
     fun halfThenDoubleRoundTrips() {
         val a = hex("67e56582298859ddae725f972992a07c6c4fb9f62a8fff58ce3ca926a1063530")
-        val out = IntArray(8)
+        val out = LongArray(4)
         FieldP.half(out, a)
         val doubled = FieldP.add(out, out)
         assertEquals(toHex(a), toHex(doubled))
@@ -213,7 +213,7 @@ class FieldPTest {
     @Test
     fun sqrtOfNonResidue() {
         // 3 is not a quadratic residue mod p (for secp256k1's p)
-        val three = intArrayOf(3, 0, 0, 0, 0, 0, 0, 0)
+        val three = longArrayOf(3, 0, 0, 0, 0, 0, 0, 0)
         assertNull(FieldP.sqrt(three))
     }
 
@@ -223,7 +223,7 @@ class FieldPTest {
         val gx = ECPoint.GX
         val gy = ECPoint.GY
         val x3 = FieldP.mul(FieldP.sqr(gx), gx)
-        val y2 = FieldP.add(x3, intArrayOf(7, 0, 0, 0, 0, 0, 0, 0))
+        val y2 = FieldP.add(x3, longArrayOf(7, 0, 0, 0, 0, 0, 0, 0))
         val root = FieldP.sqrt(y2)!!
         // root should be gy or -gy
         val isGy = U256.cmp(root, gy) == 0
@@ -240,7 +240,7 @@ class FieldPTest {
         val result = FieldP.mul(pMinus1, pMinus1)
         assertTrue(U256.cmp(result, FieldP.P) < 0, "Result should be < p")
         // (p-1)² ≡ 1 (mod p)
-        val one = intArrayOf(1, 0, 0, 0, 0, 0, 0, 0)
+        val one = longArrayOf(1, 0, 0, 0, 0, 0, 0, 0)
         assertEquals(toHex(one), toHex(result))
     }
 
@@ -250,7 +250,7 @@ class FieldPTest {
     fun inPlaceAdd() {
         val a = hex("0000000000000000000000000000000000000000000000000000000000000005")
         val b = hex("0000000000000000000000000000000000000000000000000000000000000003")
-        val out = IntArray(8)
+        val out = LongArray(4)
         FieldP.add(out, a, b)
         assertEquals(8, out[0])
     }
@@ -258,7 +258,7 @@ class FieldPTest {
     @Test
     fun inPlaceSqr() {
         val a = hex("0000000000000000000000000000000000000000000000000000000000000005")
-        val out = IntArray(8)
+        val out = LongArray(4)
         FieldP.sqr(out, a)
         assertEquals(25, out[0]) // 5² = 25
     }
@@ -267,7 +267,7 @@ class FieldPTest {
     fun halfOfPMinus1() {
         // half(p-1) should equal (p-1)/2
         val pMinus1 = hex("fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2e")
-        val out = IntArray(8)
+        val out = LongArray(4)
         FieldP.half(out, pMinus1)
         // Verify: 2 * half(p-1) = p-1
         val doubled = FieldP.add(out, out)
@@ -276,23 +276,23 @@ class FieldPTest {
 
     @Test
     fun invOfTwo() {
-        val two = intArrayOf(2, 0, 0, 0, 0, 0, 0, 0)
+        val two = longArrayOf(2, 0, 0, 0, 0, 0, 0, 0)
         val inv2 = FieldP.inv(two)
         val product = FieldP.mul(two, inv2)
-        val one = intArrayOf(1, 0, 0, 0, 0, 0, 0, 0)
+        val one = longArrayOf(1, 0, 0, 0, 0, 0, 0, 0)
         assertEquals(toHex(one), toHex(product))
     }
 
     @Test
     fun sqrtOfZero() {
-        val zero = IntArray(8)
+        val zero = LongArray(4)
         val root = FieldP.sqrt(zero)
         assertTrue(root != null && U256.isZero(root))
     }
 
     @Test
     fun sqrtOfOne() {
-        val one = intArrayOf(1, 0, 0, 0, 0, 0, 0, 0)
+        val one = longArrayOf(1, 0, 0, 0, 0, 0, 0, 0)
         val root = FieldP.sqrt(one)!!
         assertEquals(toHex(one), toHex(root))
     }

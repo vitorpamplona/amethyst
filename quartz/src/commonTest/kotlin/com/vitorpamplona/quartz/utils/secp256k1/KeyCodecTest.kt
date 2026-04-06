@@ -33,8 +33,8 @@ class KeyCodecTest {
 
     @Test
     fun liftXGenerator() {
-        val x = IntArray(8)
-        val y = IntArray(8)
+        val x = LongArray(4)
+        val y = LongArray(4)
         assertTrue(KeyCodec.liftX(x, y, ECPoint.GX))
         assertEquals(toHex(ECPoint.GX), toHex(x))
         assertTrue(KeyCodec.hasEvenY(y))
@@ -43,25 +43,25 @@ class KeyCodecTest {
     @Test
     fun liftXInvalidFieldElement() {
         // p itself is not a valid x
-        val x = IntArray(8)
-        val y = IntArray(8)
+        val x = LongArray(4)
+        val y = LongArray(4)
         assertFalse(KeyCodec.liftX(x, y, FieldP.P))
     }
 
     @Test
     fun liftXNotOnCurve() {
         // x=2: y² = 8+7 = 15. 15 is not a quadratic residue mod p.
-        val x = IntArray(8)
-        val y = IntArray(8)
-        val two = intArrayOf(2, 0, 0, 0, 0, 0, 0, 0)
+        val x = LongArray(4)
+        val y = LongArray(4)
+        val two = longArrayOf(2, 0, 0, 0, 0, 0, 0, 0)
         // This may or may not be on the curve — just check it doesn't crash
         KeyCodec.liftX(x, y, two) // result doesn't matter, just no exception
     }
 
     @Test
     fun liftXAlwaysReturnsEvenY() {
-        val x = IntArray(8)
-        val y = IntArray(8)
+        val x = LongArray(4)
+        val y = LongArray(4)
         assertTrue(KeyCodec.liftX(x, y, ECPoint.GX))
         assertTrue(KeyCodec.hasEvenY(y), "liftX should always return even y")
     }
@@ -70,14 +70,14 @@ class KeyCodecTest {
 
     @Test
     fun hasEvenYForEvenValue() {
-        assertTrue(KeyCodec.hasEvenY(intArrayOf(2, 0, 0, 0, 0, 0, 0, 0)))
-        assertTrue(KeyCodec.hasEvenY(intArrayOf(0, 0, 0, 0, 0, 0, 0, 0)))
+        assertTrue(KeyCodec.hasEvenY(longArrayOf(2, 0, 0, 0, 0, 0, 0, 0)))
+        assertTrue(KeyCodec.hasEvenY(longArrayOf(0, 0, 0, 0, 0, 0, 0, 0)))
     }
 
     @Test
     fun hasEvenYForOddValue() {
-        assertFalse(KeyCodec.hasEvenY(intArrayOf(1, 0, 0, 0, 0, 0, 0, 0)))
-        assertFalse(KeyCodec.hasEvenY(intArrayOf(3, 0, 0, 0, 0, 0, 0, 0)))
+        assertFalse(KeyCodec.hasEvenY(longArrayOf(1, 0, 0, 0, 0, 0, 0, 0)))
+        assertFalse(KeyCodec.hasEvenY(longArrayOf(3, 0, 0, 0, 0, 0, 0, 0)))
     }
 
     // ==================== parsePublicKey ====================
@@ -86,8 +86,8 @@ class KeyCodecTest {
     fun parseCompressedEvenY() {
         val compressed = KeyCodec.serializeCompressed(ECPoint.GX, ECPoint.GY)
         assertEquals(0x02.toByte(), compressed[0])
-        val x = IntArray(8)
-        val y = IntArray(8)
+        val x = LongArray(4)
+        val y = LongArray(4)
         assertTrue(KeyCodec.parsePublicKey(compressed, x, y))
         assertEquals(toHex(ECPoint.GX), toHex(x))
         assertEquals(toHex(ECPoint.GY), toHex(y))
@@ -98,8 +98,8 @@ class KeyCodecTest {
         val negGy = FieldP.neg(ECPoint.GY)
         val compressed = KeyCodec.serializeCompressed(ECPoint.GX, negGy)
         assertEquals(0x03.toByte(), compressed[0])
-        val x = IntArray(8)
-        val y = IntArray(8)
+        val x = LongArray(4)
+        val y = LongArray(4)
         assertTrue(KeyCodec.parsePublicKey(compressed, x, y))
         assertEquals(toHex(ECPoint.GX), toHex(x))
         assertEquals(toHex(negGy), toHex(y))
@@ -109,8 +109,8 @@ class KeyCodecTest {
     fun parseUncompressed() {
         val uncompressed = KeyCodec.serializeUncompressed(ECPoint.GX, ECPoint.GY)
         assertEquals(0x04.toByte(), uncompressed[0])
-        val x = IntArray(8)
-        val y = IntArray(8)
+        val x = LongArray(4)
+        val y = LongArray(4)
         assertTrue(KeyCodec.parsePublicKey(uncompressed, x, y))
         assertEquals(toHex(ECPoint.GX), toHex(x))
         assertEquals(toHex(ECPoint.GY), toHex(y))
@@ -118,8 +118,8 @@ class KeyCodecTest {
 
     @Test
     fun parseInvalidSizes() {
-        val x = IntArray(8)
-        val y = IntArray(8)
+        val x = LongArray(4)
+        val y = LongArray(4)
         assertFalse(KeyCodec.parsePublicKey(ByteArray(0), x, y))
         assertFalse(KeyCodec.parsePublicKey(ByteArray(10), x, y))
         assertFalse(KeyCodec.parsePublicKey(ByteArray(32), x, y))
@@ -130,8 +130,8 @@ class KeyCodecTest {
 
     @Test
     fun parseInvalidPrefix() {
-        val x = IntArray(8)
-        val y = IntArray(8)
+        val x = LongArray(4)
+        val y = LongArray(4)
         assertFalse(KeyCodec.parsePublicKey(ByteArray(33), x, y)) // prefix 0x00
         assertFalse(KeyCodec.parsePublicKey(ByteArray(65), x, y)) // prefix 0x00
     }
@@ -143,8 +143,8 @@ class KeyCodecTest {
         fake[0] = 0x04
         fake[1] = 0x01 // x = 1 (padded)
         fake[33] = 0x01 // y = 1 (padded) — 1² ≠ 1³ + 7
-        val x = IntArray(8)
-        val y = IntArray(8)
+        val x = LongArray(4)
+        val y = LongArray(4)
         assertFalse(KeyCodec.parsePublicKey(fake, x, y))
     }
 
@@ -153,8 +153,8 @@ class KeyCodecTest {
     @Test
     fun compressDecompressRoundTrip() {
         val compressed = KeyCodec.serializeCompressed(ECPoint.GX, ECPoint.GY)
-        val x = IntArray(8)
-        val y = IntArray(8)
+        val x = LongArray(4)
+        val y = LongArray(4)
         assertTrue(KeyCodec.parsePublicKey(compressed, x, y))
         val recompressed = KeyCodec.serializeCompressed(x, y)
         assertEquals(compressed.toList(), recompressed.toList())
@@ -163,8 +163,8 @@ class KeyCodecTest {
     @Test
     fun uncompressedRoundTrip() {
         val uncompressed = KeyCodec.serializeUncompressed(ECPoint.GX, ECPoint.GY)
-        val x = IntArray(8)
-        val y = IntArray(8)
+        val x = LongArray(4)
+        val y = LongArray(4)
         assertTrue(KeyCodec.parsePublicKey(uncompressed, x, y))
         val reser = KeyCodec.serializeUncompressed(x, y)
         assertEquals(uncompressed.toList(), reser.toList())

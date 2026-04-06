@@ -39,7 +39,7 @@ package com.vitorpamplona.quartz.utils.secp256k1
  */
 internal object KeyCodec {
     /** Curve constant b = 7 in y² = x³ + 7. */
-    private val B = intArrayOf(7, 0, 0, 0, 0, 0, 0, 0)
+    private val B = longArrayOf(7, 0, 0, 0, 0, 0, 0, 0)
 
     /**
      * Lift an x-coordinate to a curve point with even y (BIP-340 convention).
@@ -51,7 +51,7 @@ internal object KeyCodec {
         x: IntArray,
     ): Boolean {
         if (U256.cmp(x, FieldP.P) >= 0) return false
-        val t = IntArray(8)
+        val t = LongArray(4)
         FieldP.sqr(t, x)
         FieldP.mul(t, t, x)
         FieldP.add(t, t, B) // t = x³ + 7
@@ -78,7 +78,7 @@ internal object KeyCodec {
             pubkey.size == 33 && (pubkey[0] == 0x02.toByte() || pubkey[0] == 0x03.toByte()) -> {
                 val x = U256.fromBytes(pubkey.copyOfRange(1, 33))
                 if (U256.cmp(x, FieldP.P) >= 0) return false
-                val t = IntArray(8)
+                val t = LongArray(4)
                 FieldP.sqr(t, x)
                 FieldP.mul(t, t, x)
                 FieldP.add(t, t, B) // y² = x³ + 7
@@ -92,9 +92,9 @@ internal object KeyCodec {
             pubkey.size == 65 && pubkey[0] == 0x04.toByte() -> {
                 val x = U256.fromBytes(pubkey.copyOfRange(1, 33))
                 val y = U256.fromBytes(pubkey.copyOfRange(33, 65))
-                val y2 = IntArray(8)
-                val x3p7 = IntArray(8)
-                val t = IntArray(8)
+                val y2 = LongArray(4)
+                val x3p7 = LongArray(4)
+                val t = LongArray(4)
                 FieldP.sqr(y2, y)
                 FieldP.sqr(t, x)
                 FieldP.mul(x3p7, t, x)

@@ -50,7 +50,7 @@ package com.vitorpamplona.quartz.utils.secp256k1
 internal object Glv {
     /** β: cube root of unity mod p. The endomorphism is φ(x,y) = (β·x, y). */
     val BETA =
-        intArrayOf(
+        longArrayOf(
             0x719501EE.toInt(),
             0xC1396C28.toInt(),
             0x12F58995.toInt(),
@@ -134,9 +134,9 @@ internal object Glv {
         k: IntArray,
         g: IntArray,
     ): IntArray {
-        val wide = IntArray(16)
+        val wide = LongArray(8)
         U256.mulWide(wide, k, g)
-        val result = IntArray(8)
+        val result = LongArray(4)
         for (i in 0 until 4) result[i] = wide[i + 12]
         if (wide[11] < 0) { // Round based on bit 383
             var c = 1L
@@ -182,7 +182,7 @@ internal object Glv {
 
     /** -λ mod n */
     private val MINUS_LAMBDA =
-        intArrayOf(
+        longArrayOf(
             0xB51283CF.toInt(),
             0xE0CFC810.toInt(),
             0x8EC739C2.toInt(),
@@ -195,7 +195,7 @@ internal object Glv {
 
     /** Babai rounding constant g1 = round(2^384 · |b2| / n) */
     private val G1 =
-        intArrayOf(
+        longArrayOf(
             0x45DBB031.toInt(),
             0xE893209A.toInt(),
             0x71E8CA7F.toInt(),
@@ -208,7 +208,7 @@ internal object Glv {
 
     /** Babai rounding constant g2 = round(2^384 · |b1| / n) */
     private val G2 =
-        intArrayOf(
+        longArrayOf(
             0x8AC47F71.toInt(),
             0x1571B4AE.toInt(),
             0x9DF506C6.toInt(),
@@ -221,7 +221,7 @@ internal object Glv {
 
     /** -b1 mod n (lattice basis vector) */
     private val MINUS_B1 =
-        intArrayOf(
+        longArrayOf(
             0x0ABFE4C3.toInt(),
             0x6F547FA9.toInt(),
             0x010E8828.toInt(),
@@ -234,7 +234,7 @@ internal object Glv {
 
     /** -b2 mod n (lattice basis vector) */
     private val MINUS_B2 =
-        intArrayOf(
+        longArrayOf(
             0x3DB1562C.toInt(),
             0xD765CDA8.toInt(),
             0x0774346D.toInt(),
@@ -247,7 +247,7 @@ internal object Glv {
 
     /** n / 2, used to determine if a half-scalar needs negation */
     private val N_HALF =
-        intArrayOf(
+        longArrayOf(
             0x681B20A0.toInt(),
             0xDFE92F46.toInt(),
             0x57A4501D.toInt(),

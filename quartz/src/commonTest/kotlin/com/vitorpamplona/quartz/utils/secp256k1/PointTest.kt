@@ -40,7 +40,7 @@ class PointTest {
     fun generatorIsOnCurve() {
         // y² = x³ + 7
         val x3 = FieldP.mul(FieldP.sqr(ECPoint.GX), ECPoint.GX)
-        val y2expected = FieldP.add(x3, intArrayOf(7, 0, 0, 0, 0, 0, 0, 0))
+        val y2expected = FieldP.add(x3, longArrayOf(7, 0, 0, 0, 0, 0, 0, 0))
         val y2actual = FieldP.sqr(ECPoint.GY)
         assertEquals(toHex(y2expected), toHex(y2actual))
     }
@@ -54,16 +54,16 @@ class PointTest {
         p.setAffine(ECPoint.GX, ECPoint.GY)
         val doubled = MutablePoint()
         ECPoint.doublePoint(doubled, p)
-        val dx = IntArray(8)
-        val dy = IntArray(8)
+        val dx = LongArray(4)
+        val dy = LongArray(4)
         ECPoint.toAffine(doubled, dx, dy)
 
         // 2·G via scalar multiplication
-        val two = intArrayOf(2, 0, 0, 0, 0, 0, 0, 0)
+        val two = longArrayOf(2, 0, 0, 0, 0, 0, 0, 0)
         val mulResult = MutablePoint()
         ECPoint.mulG(mulResult, two)
-        val mx = IntArray(8)
-        val my = IntArray(8)
+        val mx = LongArray(4)
+        val my = LongArray(4)
         ECPoint.toAffine(mulResult, mx, my)
 
         assertEquals(toHex(mx), toHex(dx))
@@ -76,15 +76,15 @@ class PointTest {
         val p = MutablePoint()
         p.setAffine(ECPoint.GX, ECPoint.GY)
         ECPoint.doublePoint(p, p)
-        val x = IntArray(8)
-        val y = IntArray(8)
+        val x = LongArray(4)
+        val y = LongArray(4)
         ECPoint.toAffine(p, x, y)
 
-        val two = intArrayOf(2, 0, 0, 0, 0, 0, 0, 0)
+        val two = longArrayOf(2, 0, 0, 0, 0, 0, 0, 0)
         val expected = MutablePoint()
         ECPoint.mulG(expected, two)
-        val ex = IntArray(8)
-        val ey = IntArray(8)
+        val ex = LongArray(4)
+        val ey = LongArray(4)
         ECPoint.toAffine(expected, ex, ey)
 
         assertEquals(toHex(ex), toHex(x))
@@ -107,14 +107,14 @@ class PointTest {
         g.setAffine(ECPoint.GX, ECPoint.GY)
         val sum = MutablePoint()
         ECPoint.addPoints(sum, g, g)
-        val sx = IntArray(8)
-        val sy = IntArray(8)
+        val sx = LongArray(4)
+        val sy = LongArray(4)
         ECPoint.toAffine(sum, sx, sy)
 
         val doubled = MutablePoint()
         ECPoint.doublePoint(doubled, g)
-        val dx = IntArray(8)
-        val dy = IntArray(8)
+        val dx = LongArray(4)
+        val dy = LongArray(4)
         ECPoint.toAffine(doubled, dx, dy)
 
         assertEquals(toHex(dx), toHex(sx))
@@ -130,15 +130,15 @@ class PointTest {
 
         val result = MutablePoint()
         ECPoint.addPoints(result, g, inf)
-        val rx = IntArray(8)
-        val ry = IntArray(8)
+        val rx = LongArray(4)
+        val ry = LongArray(4)
         ECPoint.toAffine(result, rx, ry)
         assertEquals(toHex(ECPoint.GX), toHex(rx))
 
         val result2 = MutablePoint()
         ECPoint.addPoints(result2, inf, g)
-        val r2x = IntArray(8)
-        val r2y = IntArray(8)
+        val r2x = LongArray(4)
+        val r2y = LongArray(4)
         ECPoint.toAffine(result2, r2x, r2y)
         assertEquals(toHex(ECPoint.GX), toHex(r2x))
     }
@@ -161,15 +161,15 @@ class PointTest {
     @Test
     fun addMixedMatchesFull() {
         // addMixed should produce the same result as addPoints when q is affine
-        val three = intArrayOf(3, 0, 0, 0, 0, 0, 0, 0)
+        val three = longArrayOf(3, 0, 0, 0, 0, 0, 0, 0)
         val p = MutablePoint()
         ECPoint.mulG(p, three) // 3G in Jacobian (z ≠ 1)
 
         // Add G as affine
         val mixed = MutablePoint()
         ECPoint.addMixed(mixed, p, ECPoint.GX, ECPoint.GY)
-        val mx = IntArray(8)
-        val my = IntArray(8)
+        val mx = LongArray(4)
+        val my = LongArray(4)
         ECPoint.toAffine(mixed, mx, my)
 
         // Add G as Jacobian
@@ -177,8 +177,8 @@ class PointTest {
         gJac.setAffine(ECPoint.GX, ECPoint.GY)
         val full = MutablePoint()
         ECPoint.addPoints(full, p, gJac)
-        val fx = IntArray(8)
-        val fy = IntArray(8)
+        val fx = LongArray(4)
+        val fy = LongArray(4)
         ECPoint.toAffine(full, fx, fy)
 
         assertEquals(toHex(fx), toHex(mx))
@@ -191,8 +191,8 @@ class PointTest {
         inf.setInfinity()
         val result = MutablePoint()
         ECPoint.addMixed(result, inf, ECPoint.GX, ECPoint.GY)
-        val rx = IntArray(8)
-        val ry = IntArray(8)
+        val rx = LongArray(4)
+        val ry = LongArray(4)
         ECPoint.toAffine(result, rx, ry)
         assertEquals(toHex(ECPoint.GX), toHex(rx))
     }
@@ -201,11 +201,11 @@ class PointTest {
 
     @Test
     fun mulGByOne() {
-        val one = intArrayOf(1, 0, 0, 0, 0, 0, 0, 0)
+        val one = longArrayOf(1, 0, 0, 0, 0, 0, 0, 0)
         val result = MutablePoint()
         ECPoint.mulG(result, one)
-        val rx = IntArray(8)
-        val ry = IntArray(8)
+        val rx = LongArray(4)
+        val ry = LongArray(4)
         ECPoint.toAffine(result, rx, ry)
         assertEquals(toHex(ECPoint.GX), toHex(rx))
         assertEquals(toHex(ECPoint.GY), toHex(ry))
@@ -213,7 +213,7 @@ class PointTest {
 
     @Test
     fun mulGByZeroIsInfinity() {
-        val zero = IntArray(8)
+        val zero = LongArray(4)
         val result = MutablePoint()
         ECPoint.mulG(result, zero)
         assertTrue(result.isInfinity())
@@ -233,16 +233,16 @@ class PointTest {
         val k = hex("67e56582298859ddae725f972992a07c6c4fb9f62a8fff58ce3ca926a1063530")
         val gResult = MutablePoint()
         ECPoint.mulG(gResult, k)
-        val gx = IntArray(8)
-        val gy = IntArray(8)
+        val gx = LongArray(4)
+        val gy = LongArray(4)
         ECPoint.toAffine(gResult, gx, gy)
 
         val g = MutablePoint()
         g.setAffine(ECPoint.GX, ECPoint.GY)
         val mResult = MutablePoint()
         ECPoint.mul(mResult, g, k)
-        val mx = IntArray(8)
-        val my = IntArray(8)
+        val mx = LongArray(4)
+        val my = LongArray(4)
         ECPoint.toAffine(mResult, mx, my)
 
         assertEquals(toHex(mx), toHex(gx))
@@ -256,14 +256,14 @@ class PointTest {
         val e = hex("3982f19bef1615bccfbb05e321c10e1d4cba3df0e841c2e41eeb6016347653c3")
 
         val p = MutablePoint()
-        val two = intArrayOf(2, 0, 0, 0, 0, 0, 0, 0)
+        val two = longArrayOf(2, 0, 0, 0, 0, 0, 0, 0)
         ECPoint.mulG(p, two) // P = 2·G
 
         // Combined
         val combined = MutablePoint()
         ECPoint.mulDoubleG(combined, s, p, e)
-        val cx = IntArray(8)
-        val cy = IntArray(8)
+        val cx = LongArray(4)
+        val cy = LongArray(4)
         ECPoint.toAffine(combined, cx, cy)
 
         // Separate
@@ -273,8 +273,8 @@ class PointTest {
         ECPoint.mul(eP, p, e)
         val sep = MutablePoint()
         ECPoint.addPoints(sep, sG, eP)
-        val sx = IntArray(8)
-        val sy = IntArray(8)
+        val sx = LongArray(4)
+        val sy = LongArray(4)
         ECPoint.toAffine(sep, sx, sy)
 
         assertEquals(toHex(sx), toHex(cx))
@@ -285,8 +285,8 @@ class PointTest {
 
     @Test
     fun liftXGenerator() {
-        val x = IntArray(8)
-        val y = IntArray(8)
+        val x = LongArray(4)
+        val y = LongArray(4)
         assertTrue(ECPoint.liftX(x, y, ECPoint.GX))
         assertEquals(toHex(ECPoint.GX), toHex(x))
         // liftX returns even y
@@ -296,8 +296,8 @@ class PointTest {
     @Test
     fun liftXInvalidX() {
         // p itself is not a valid x coordinate
-        val x = IntArray(8)
-        val y = IntArray(8)
+        val x = LongArray(4)
+        val y = LongArray(4)
         assertFalse(ECPoint.liftX(x, y, FieldP.P))
     }
 
@@ -306,8 +306,8 @@ class PointTest {
     @Test
     fun compressDecompressRoundTrip() {
         val compressed = ECPoint.serializeCompressed(ECPoint.GX, ECPoint.GY)
-        val x = IntArray(8)
-        val y = IntArray(8)
+        val x = LongArray(4)
+        val y = LongArray(4)
         assertTrue(ECPoint.parsePublicKey(compressed, x, y))
         assertEquals(toHex(ECPoint.GX), toHex(x))
         assertEquals(toHex(ECPoint.GY), toHex(y))
@@ -316,8 +316,8 @@ class PointTest {
     @Test
     fun uncompressedRoundTrip() {
         val uncompressed = ECPoint.serializeUncompressed(ECPoint.GX, ECPoint.GY)
-        val x = IntArray(8)
-        val y = IntArray(8)
+        val x = LongArray(4)
+        val y = LongArray(4)
         assertTrue(ECPoint.parsePublicKey(uncompressed, x, y))
         assertEquals(toHex(ECPoint.GX), toHex(x))
         assertEquals(toHex(ECPoint.GY), toHex(y))
@@ -325,8 +325,8 @@ class PointTest {
 
     @Test
     fun parseInvalidKey() {
-        val x = IntArray(8)
-        val y = IntArray(8)
+        val x = LongArray(4)
+        val y = LongArray(4)
         assertFalse(ECPoint.parsePublicKey(ByteArray(10), x, y))
         assertFalse(ECPoint.parsePublicKey(ByteArray(33), x, y)) // wrong prefix (0x00)
     }
@@ -338,13 +338,13 @@ class PointTest {
         p.setAffine(ECPoint.GX, ECPoint.GY)
         val result = MutablePoint()
         ECPoint.addMixed(result, p, ECPoint.GX, ECPoint.GY)
-        val rx = IntArray(8)
-        val ry = IntArray(8)
+        val rx = LongArray(4)
+        val ry = LongArray(4)
         ECPoint.toAffine(result, rx, ry)
         val doubled = MutablePoint()
         ECPoint.doublePoint(doubled, p)
-        val dx = IntArray(8)
-        val dy = IntArray(8)
+        val dx = LongArray(4)
+        val dy = LongArray(4)
         ECPoint.toAffine(doubled, dx, dy)
         assertEquals(toHex(dx), toHex(rx))
     }
@@ -369,8 +369,8 @@ class PointTest {
         val pubkey = Secp256k1.pubkeyCreate(privKeyBytes)
         val compressed = Secp256k1.pubKeyCompress(pubkey)
         assertEquals(0x03.toByte(), compressed[0]) // Odd y → 03 prefix
-        val x = IntArray(8)
-        val y = IntArray(8)
+        val x = LongArray(4)
+        val y = LongArray(4)
         assertTrue(ECPoint.parsePublicKey(compressed, x, y))
         // Round-trip: compress again should give same result
         val recompressed = ECPoint.serializeCompressed(x, y)

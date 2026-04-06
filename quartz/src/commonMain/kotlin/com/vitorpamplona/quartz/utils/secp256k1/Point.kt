@@ -71,9 +71,9 @@ package com.vitorpamplona.quartz.utils.secp256k1
  * multiplication, which performs thousands of doublings and additions per operation.
  */
 internal class MutablePoint(
-    val x: IntArray = IntArray(8),
-    val y: IntArray = IntArray(8),
-    val z: IntArray = IntArray(8),
+    val x: IntArray = LongArray(4),
+    val y: IntArray = LongArray(4),
+    val z: IntArray = LongArray(4),
 ) {
     fun isInfinity(): Boolean = U256.isZero(z)
 
@@ -108,15 +108,15 @@ internal class MutablePoint(
  * Used for precomputed tables where we want compact storage and mixed addition.
  */
 internal class AffinePoint(
-    val x: IntArray = IntArray(8),
-    val y: IntArray = IntArray(8),
+    val x: IntArray = LongArray(4),
+    val y: IntArray = LongArray(4),
 )
 
 internal object ECPoint {
     // ==================== Generator point G ====================
 
     val GX =
-        intArrayOf(
+        longArrayOf(
             0x16F81798.toInt(),
             0x59F2815B.toInt(),
             0x2DCE28D9.toInt(),
@@ -127,7 +127,7 @@ internal object ECPoint {
             0x79BE667E.toInt(),
         )
     val GY =
-        intArrayOf(
+        longArrayOf(
             0xFB10D4B8.toInt(),
             0x9C47D08F.toInt(),
             0xA6855419.toInt(),
@@ -139,7 +139,7 @@ internal object ECPoint {
         )
 
     /** Curve constant b = 7 in y² = x³ + 7. */
-    private val B = intArrayOf(7, 0, 0, 0, 0, 0, 0, 0)
+    private val B = longArrayOf(7, 0, 0, 0, 0, 0, 0, 0)
 
     /**
      * wNAF window width for the G-side of scalar multiplication.
@@ -174,8 +174,8 @@ internal object ECPoint {
         for (i in 1 until G_TABLE_SIZE) addPoints(jac[i], jac[i - 1], g2)
 
         return Array(G_TABLE_SIZE) { i ->
-            val x = IntArray(8)
-            val y = IntArray(8)
+            val x = LongArray(4)
+            val y = LongArray(4)
             toAffine(jac[i], x, y)
             AffinePoint(x, y)
         }
@@ -236,10 +236,10 @@ internal object ECPoint {
 
         return Array(tableSize) { i ->
             if (jac[i].isInfinity()) {
-                AffinePoint(IntArray(8), IntArray(8))
+                AffinePoint(LongArray(4), LongArray(4))
             } else {
-                val x = IntArray(8)
-                val y = IntArray(8)
+                val x = LongArray(4)
+                val y = LongArray(4)
                 toAffine(jac[i], x, y)
                 AffinePoint(x, y)
             }
@@ -256,7 +256,7 @@ internal object ECPoint {
      * returns immediately after the recursive call without using the temps further.
      */
     private class PointScratch {
-        val t = Array(12) { IntArray(8) }
+        val t = Array(12) { LongArray(4) }
         val dblCopy = MutablePoint() // Copy buffer for in-place doubling (out === input)
     }
 
@@ -347,7 +347,7 @@ internal object ECPoint {
 
         if (U256.isZero(t[4])) {
             // Same x-coordinate: either same point (double) or inverse (infinity)
-            val tmp = IntArray(8)
+            val tmp = LongArray(4)
             FieldP.sub(tmp, t[3], p.y)
             if (U256.isZero(tmp)) doublePoint(out, p) else out.setInfinity()
             return
@@ -607,7 +607,7 @@ internal object ECPoint {
 
         out.setInfinity()
         val tmp = MutablePoint()
-        val negY = IntArray(8)
+        val negY = LongArray(4)
         val negJac = MutablePoint() // Reused scratch for Jacobian negation
 
         for (i in bits - 1 downTo 0) {
@@ -689,9 +689,9 @@ internal object ECPoint {
         outY: IntArray,
     ): Boolean {
         if (p.isInfinity()) return false
-        val zInv = IntArray(8)
-        val zInv2 = IntArray(8)
-        val zInv3 = IntArray(8)
+        val zInv = LongArray(4)
+        val zInv2 = LongArray(4)
+        val zInv3 = LongArray(4)
         FieldP.inv(zInv, p.z)
         FieldP.sqr(zInv2, zInv)
         FieldP.mul(zInv3, zInv2, zInv)
