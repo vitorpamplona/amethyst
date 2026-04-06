@@ -155,6 +155,8 @@ val HalfVertPadding = Modifier.padding(vertical = 5.dp)
 val HorzPadding = Modifier.padding(horizontal = 10.dp)
 val VertPadding = Modifier.padding(vertical = 10.dp)
 
+val HorzHalfVertPadding = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+
 val DoubleHorzPadding = Modifier.padding(horizontal = 20.dp)
 val DoubleVertPadding = Modifier.padding(vertical = 20.dp)
 

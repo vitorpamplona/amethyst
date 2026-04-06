@@ -36,8 +36,10 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayCountResult
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayDragState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayUrlEditField
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.rememberRelayDragState
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -50,14 +52,19 @@ fun IndexerRelayList(
     nav: INav,
 ) {
     val feedState by postViewModel.relays.collectAsStateWithLifecycle()
-
     val newNav = rememberExtendedNav(nav, onClose)
+    val dragState =
+        rememberRelayDragState(
+            onMove = { from, to -> postViewModel.moveRelay(from, to) },
+            itemCount = { feedState.size },
+        )
 
     Row(verticalAlignment = Alignment.CenterVertically) {
         LazyColumn(
             contentPadding = FeedPadding,
+            userScrollEnabled = !dragState.isDragging,
         ) {
-            renderIndexerItems(feedState, postViewModel, accountViewModel, newNav)
+            renderIndexerItems(feedState, postViewModel, accountViewModel, newNav, dragState = dragState)
         }
     }
 }
@@ -68,6 +75,7 @@ fun LazyListScope.renderIndexerItems(
     accountViewModel: AccountViewModel,
     nav: INav,
     countResults: Map<NormalizedRelayUrl, RelayCountResult> = emptyMap(),
+    dragState: RelayDragState? = null,
 ) {
     itemsIndexed(feedState, key = { _, item -> "Indexer" + item.relay.url }) { index, item ->
         BasicRelaySetupInfoDialog(
@@ -75,6 +83,8 @@ fun LazyListScope.renderIndexerItems(
             onDelete = { postViewModel.deleteRelay(item) },
             nip11CachedRetriever = Amethyst.instance.nip11Cache,
             countResult = countResults[item.relay],
+            index = index,
+            dragState = dragState,
             accountViewModel = accountViewModel,
             nav = nav,
         )
