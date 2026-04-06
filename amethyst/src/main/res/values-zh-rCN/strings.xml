@@ -878,6 +878,7 @@
     <string name="settings">设置</string>
     <string name="account_settings">账户设置</string>
     <string name="app_settings">应用程序设置</string>
+    <string name="danger_zone">危险区</string>
     <string name="connectivity_type_always">始终</string>
     <string name="connectivity_type_wifi_only">仅限 WiFi</string>
     <string name="connectivity_type_unmetered_wifi_only">未计量的 WiFi</string>
@@ -1295,6 +1296,7 @@
     <string name="inbox_relays_not_found_examples">好的选项是：\n - nos.lol\n - nostr.mom\n - nostr.bitcoiner.social</string>
     <string name="dm_upload">DM 上传</string>
     <string name="relay_settings">中继设置</string>
+    <string name="relay_reorder">调整中继顺序</string>
     <string name="public_home_section">公共时间线中继</string>
     <string name="public_home_section_explainer_profile">用户正在将其内容发布到这些中继</string>
     <string name="public_home_section_explainer">这类中继会保存您的所有内容。Amethyst 会将您的事件发送到这些中继，其他人则通过这些中继查找您的内容。可以设置 1 ~ 3 个中继。它们可以是个人专用中继、付费中继或者公共中继。</string>
