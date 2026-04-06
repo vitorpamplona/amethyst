@@ -32,6 +32,16 @@ package com.vitorpamplona.quartz.utils.secp256k1
 // hardware instruction (IMULH on x86-64, SMULH on ARM64), reducing the inner product
 // count from 64 (with 8×32-bit limbs) to 16 per field multiplication.
 //
+// Comparison with C libsecp256k1's 5×52-bit representation:
+//   Ours: 4 limbs × 16 products = 16 multiplyHigh calls per mul
+//   C:    5 limbs × 25 products = 25 native 64×64 multiplies per mul
+//   We do fewer products, but each costs ~5 JVM instructions (multiplyHigh +
+//   unsigned correction: 2 AND + 1 SHR + 2 ADD) vs C's single MULQ instruction.
+//   Net effect: ~2.2× slower per field multiply, which is the dominant cost.
+//   C also benefits from 12 bits of headroom per limb enabling lazy reduction
+//   (chaining 3-8 adds without normalizing); our fully-packed limbs require
+//   normalization after every add/sub.
+//
 // Package structure: U256 → FieldP/ScalarN → Glv/KeyCodec → Point → Secp256k1
 // =====================================================================================
 

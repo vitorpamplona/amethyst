@@ -26,6 +26,17 @@ package com.vitorpamplona.quartz.utils.secp256k1
  *
  * Hot-path mul/sqr accept a pre-fetched LongArray(8) wide buffer to avoid
  * ThreadLocal.get() overhead (~20-30ns per call, 500+ calls per scalar mul).
+ *
+ * Key difference from C libsecp256k1: no lazy reduction / magnitude tracking.
+ * C's 5×52-bit limbs have 12 bits of headroom per limb, allowing 3-8 chained
+ * add/sub without normalizing. Our 4×64-bit limbs are fully packed, requiring
+ * reduceSelf after every add and conditional-add-p after every sub. This adds
+ * ~6 extra reductions per doublePoint, ~12 per addMixed.
+ *
+ * Inversion uses Fermat's little theorem (a^(p-2), 255 sqr + 15 mul). The
+ * safegcd algorithm (Bernstein-Yang 2019) was tested but is slower on JVM
+ * because 128-bit arithmetic in the inner divstep matrix multiply has higher
+ * constant overhead than well-optimized field squaring.
  */
 internal object FieldP {
     // p = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F

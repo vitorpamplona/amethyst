@@ -36,11 +36,11 @@ package com.vitorpamplona.quartz.utils.secp256k1
 //
 // The "point at infinity" (identity element) is represented by Z = 0.
 //
-// POINT DOUBLING
+// POINT FORMULAS
 // ==============
-// We use the 3M+4S formula from libsecp256k1 that computes L = (3/2)·X² using a cheap
-// field halving operation instead of a full multiplication. On the secp256k1 curve (a=0),
-// this is the most efficient known doubling formula.
+// - doublePoint: 3M+4S (uses fe_half for L=(3/2)·X², same as libsecp256k1)
+// - addMixed (Jacobian + Affine): 8M+3S (used for precomputed table lookups)
+// - addPoints (Jacobian + Jacobian): 11M+5S (used when both points are Jacobian)
 //
 // SCALAR MULTIPLICATION STRATEGIES
 // ================================
@@ -49,19 +49,37 @@ package com.vitorpamplona.quartz.utils.secp256k1
 // 1. mulG (Generator multiplication): Comb method (Hamburg 2012).
 //    Arranges scalar bits into a 4×66 matrix, processes 4 rows with 11 table lookups
 //    each. Only 3 doublings total. Uses a precomputed 704-entry affine table (~45KB).
-//    Cost: ~43 mixed additions + 3 doublings (vs ~130 dbl for GLV+wNAF).
+//    Cost: ~43 mixed additions + 3 doublings ≈ 494 field ops.
 //    Used by: pubkeyCreate, signSchnorr.
 //
 // 2. mul (Arbitrary point multiplication): GLV endomorphism + wNAF-5 (Glv.kt).
 //    Splits the 256-bit scalar into two ~128-bit halves via the secp256k1 endomorphism,
 //    then processes both with wNAF encoding in a single pass of ~130 shared doublings.
-//    Used by: pubKeyTweakMul (ECDH).
+//    P-side tables are batch-inverted to affine (effective-affine technique) so the
+//    main loop uses addMixed (8M+3S) instead of addPoints (11M+5S), saving ~4M per add.
+//    Used by: pubKeyTweakMul (ECDH), ecdhXOnly.
 //
 // 3. mulDoubleG (Verification: s·G + e·P): Strauss/Shamir trick with GLV + wNAF.
 //    Splits both scalars via GLV into 4 half-scalar streams. G-side uses a precomputed
-//    64-entry affine wNAF-8 table; P-side builds a Jacobian wNAF-5 table per call.
-//    All 4 streams share ~130 doublings in a single pass.
+//    1024-entry affine wNAF-12 table (~128KB); P-side tables batch-inverted to affine.
+//    All 4 streams share ~130 doublings with mixed additions throughout.
 //    Used by: verifySchnorr.
+//
+// BATCH INVERSION
+// ===============
+// Montgomery's trick: convert n Jacobian→affine with 1 inversion + 3(n-1) muls instead
+// of n individual inversions. Used for wNAF table construction and G table initialization.
+//
+// PRECOMPUTED TABLES
+// ==================
+// All tables are lazily initialized on first use (Kotlin `by lazy`):
+// - combTable: 704 affine points for mulG (~45KB, built once per process)
+// - gOddTable: 1024 affine points for G-side wNAF-12 (~128KB, batch-inverted)
+// - gLamTable: 1024 affine points for λ(G)-side wNAF-12 (~128KB, derived from gOddTable)
+//
+// Note: C libsecp256k1 uses WINDOW_G=15 (8192 entries, 1MB) as compile-time .rodata.
+// On JVM, w=15 is slower due to cache pressure from heap-allocated AffinePoint objects.
+// w=12 (1024 entries, ~128KB) is the sweet spot — fits in L2, fewer additions than w=8.
 // =====================================================================================
 
 /**

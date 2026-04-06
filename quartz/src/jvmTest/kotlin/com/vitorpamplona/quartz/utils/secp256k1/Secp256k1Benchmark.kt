@@ -150,8 +150,8 @@ class Secp256k1Benchmark {
         results +=
             bench(
                 name = "signSchnorr",
-                warmup = 10,
-                iterations = 50,
+                warmup = 100,
+                iterations = 200,
                 nativeOp = { native.signSchnorr(msg32, privKey, auxRand) },
                 kotlinOp = {
                     com.vitorpamplona.quartz.utils.secp256k1.Secp256k1.signSchnorr(
@@ -166,8 +166,8 @@ class Secp256k1Benchmark {
         results +=
             bench(
                 name = "signSchnorr (cached pk)",
-                warmup = 10,
-                iterations = 50,
+                warmup = 100,
+                iterations = 200,
                 nativeOp = { native.signSchnorr(msg32, privKey, auxRand) },
                 kotlinOp = {
                     com.vitorpamplona.quartz.utils.secp256k1.Secp256k1.signSchnorrWithPubKey(
@@ -183,8 +183,8 @@ class Secp256k1Benchmark {
         results +=
             bench(
                 name = "pubkeyCreate",
-                warmup = 20,
-                iterations = 100,
+                warmup = 100,
+                iterations = 500,
                 nativeOp = { native.pubkeyCreate(privKey) },
                 kotlinOp = {
                     com.vitorpamplona.quartz.utils.secp256k1.Secp256k1
@@ -200,8 +200,8 @@ class Secp256k1Benchmark {
         results +=
             bench(
                 name = "pubKeyCompress",
-                warmup = 50,
-                iterations = 200,
+                warmup = 200,
+                iterations = 1000,
                 nativeOp = { native.pubKeyCompress(uncompressedNative) },
                 kotlinOp = {
                     com.vitorpamplona.quartz.utils.secp256k1.Secp256k1
@@ -213,8 +213,8 @@ class Secp256k1Benchmark {
         results +=
             bench(
                 name = "pubKeyTweakMul (ECDH)",
-                warmup = 30,
-                iterations = 100,
+                warmup = 100,
+                iterations = 200,
                 nativeOp = { native.pubKeyTweakMul(pubKey2Uncompressed.copyOf(), privKey) },
                 kotlinOp = {
                     com.vitorpamplona.quartz.utils.secp256k1.Secp256k1.pubKeyTweakMul(
@@ -272,8 +272,8 @@ class Secp256k1Benchmark {
         results +=
             bench(
                 name = "tweakMulCompact (old)",
-                warmup = 10,
-                iterations = 50,
+                warmup = 100,
+                iterations = 200,
                 nativeOp = { native.pubKeyTweakMul(h02 + pub2xOnly, privKey).copyOfRange(1, 33) },
                 kotlinOp = {
                     com.vitorpamplona.quartz.utils.secp256k1.Secp256k1
@@ -288,8 +288,8 @@ class Secp256k1Benchmark {
         results +=
             bench(
                 name = "ecdhXOnly (Nostr)",
-                warmup = 10,
-                iterations = 50,
+                warmup = 100,
+                iterations = 200,
                 nativeOp = { native.pubKeyTweakMul(h02 + pub2xOnly, privKey).copyOfRange(1, 33) },
                 kotlinOp = {
                     com.vitorpamplona.quartz.utils.secp256k1.Secp256k1

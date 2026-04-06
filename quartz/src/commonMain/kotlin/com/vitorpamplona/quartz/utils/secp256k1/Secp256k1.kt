@@ -34,16 +34,39 @@ import com.vitorpamplona.quartz.utils.sha256.sha256
  * - [secKeyVerify]: Key validation
  * - [signSchnorr] / [verifySchnorr]: BIP-340 Schnorr signatures (NIP-01)
  * - [privKeyTweakAdd]: BIP-32 key derivation (NIP-06)
- * - [pubKeyTweakMul]: ECDH shared secrets (NIP-04, NIP-44)
+ * - [pubKeyTweakMul] / [ecdhXOnly]: ECDH shared secrets (NIP-04, NIP-44)
  *
- * Performance on JVM (vs native C/JNI secp256k1):
- *   verify ~3,900 ops/s (~3.7×), sign ~7.4K ops/s (~2.1×), pubkeyCreate ~18K ops/s (~3.6×),
- *   compress ~7M ops/s (2× FASTER), secKeyVerify ~6M ops/s (FASTER).
- * Uses 4×64-bit limbs (LongArray(4)) with Math.multiplyHigh for 64×64→128-bit products
- * (16 products per field multiply, vs C's 5×52-bit with 25). On JVM 9+, multiplyHigh
- * maps to a single hardware instruction (IMULH on x86-64, SMULH on ARM64).
- * All algorithmic optimizations from libsecp256k1 are implemented: GLV endomorphism,
- * wNAF encoding, Shamir's trick, comb method, and optimized addition chains.
+ * Performance on JVM (vs native C/JNI secp256k1, well-warmed):
+ *   verify    ~5,600 ops/s (4.4× native)   — Strauss + GLV + wNAF-12
+ *   sign      ~16,700 ops/s (1.5× native)  — comb method (cached pubkey)
+ *   pubCreate ~23,400 ops/s (2.2× native)  — comb method, 3 doublings
+ *   ECDH      ~7,100 ops/s (3.9× native)   — GLV + wNAF-5, effective-affine
+ *   compress  ~4M ops/s (2× FASTER)        — pure Kotlin, no JNI overhead
+ *   secKeyVerify ~5.7M ops/s (FASTER)      — scalar range check, no JNI
+ *
+ * Architecture:
+ *   Field arithmetic uses 4×64-bit limbs (LongArray(4)) with Math.multiplyHigh
+ *   for 64×64→128-bit products (16 products per field multiply). On JVM 9+,
+ *   multiplyHigh maps to a single hardware instruction (IMULH/SMULH). The main
+ *   gap vs native C is per-field-op cost: unsignedMultiplyHigh requires 5 JVM
+ *   instructions per product vs C's single MULQ with native uint128.
+ *
+ * Optimizations implemented (matching or adapted from libsecp256k1):
+ *   - GLV endomorphism: splits 256-bit scalars into 2×128-bit halves
+ *   - wNAF encoding: windowed non-adjacent form for sparse addition patterns
+ *   - Comb method: generator multiplication with only 3 doublings (Hamburg 2012)
+ *   - Strauss/Shamir: interleaved multi-scalar multiplication for verification
+ *   - Effective-affine: batch-inverts wNAF tables to affine for cheaper mixed adds
+ *   - Batch inversion: Montgomery's trick (1 inv + 3(n-1) muls for n inversions)
+ *   - ThreadLocal elimination: pre-fetched scratch buffers avoid ~500 lookups/op
+ *   - Dedicated squaring: 10 products vs 16 for general multiplication
+ *
+ * Differences from C libsecp256k1 (due to JVM constraints):
+ *   - No lazy reduction (4×64 limbs have no headroom; C uses 5×52 with 12-bit spare)
+ *   - Fermat inversion (255 sqr + 15 mul) instead of safegcd (safegcd is slower on
+ *     JVM due to 128-bit arithmetic overhead in the inner divstep matrix multiply)
+ *   - WINDOW_G=12 instead of 15 (JVM heap-allocated tables cause cache pressure
+ *     at larger sizes; C uses contiguous compile-time .rodata arrays)
  */
 object Secp256k1 {
     // ==================== Cached BIP-340 tag hash prefixes ====================
