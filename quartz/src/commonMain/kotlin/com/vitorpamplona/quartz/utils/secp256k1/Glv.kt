@@ -27,16 +27,9 @@ package com.vitorpamplona.quartz.utils.secp256k1
 // The GLV (Gallant-Lambert-Vanstone) endomorphism halves the number of point doublings
 // in scalar multiplication by exploiting a secp256k1-specific curve property.
 //
-// secp256k1 has an efficiently computable endomorphism φ(x,y) = (β·x, y) where β is a
-// cube root of unity in the field (β³ ≡ 1 mod p). The corresponding scalar λ satisfies
-// λ·P = φ(P) for any point P. Any 256-bit scalar k can be decomposed into
-// k = k₁ + k₂·λ (mod n) where k₁, k₂ are ~128 bits each, using Babai's nearest-plane
-// algorithm with precomputed lattice basis vectors.
-//
 // wNAF (windowed Non-Adjacent Form) is a scalar encoding where non-zero digits are odd
 // and separated by at least w-1 zero digits. Width-w wNAF uses digits ±{1,3,...,2^(w-1)-1}
-// with a table of 2^(w-2) odd multiples. For a 128-bit scalar with width 5, this produces
-// ~26 non-zero digits; with width 8, ~16 digits.
+// with a table of 2^(w-2) odd multiples.
 //
 // These techniques are used throughout the secp256k1 package:
 // - mul (arbitrary point): GLV + wNAF-5, ~130 shared doublings
@@ -44,27 +37,15 @@ package com.vitorpamplona.quartz.utils.secp256k1
 // - mulDoubleG (verify): Strauss + GLV + wNAF, 4 interleaved 128-bit streams
 // =====================================================================================
 
-/**
- * GLV endomorphism and wNAF encoding for secp256k1 scalar multiplication.
- */
 internal object Glv {
-    /** β: cube root of unity mod p. The endomorphism is φ(x,y) = (β·x, y). */
-    val BETA =
-        longArrayOf(
-            -4523465429756870162L, -7138124642204153451L, 7954561588662645993L, 8856726876819556112L,
-        ),
-            0xC1396C28.toInt(),
-            0x12F58995.toInt(),
-            0x9CF04975.toInt(),
-            0xAC3434E9.toInt(),
-            0x6E64479E.toInt(),
-            0x657C0710.toInt(),
-            0x7AE96A2B.toInt(),
-        )
+    /** β: cube root of unity mod p. φ(x,y) = (β·x, y). */
+    val BETA = longArrayOf(
+        -4523465429756870162L, -7138124642204153451L,
+        7954561588662645993L, 8856726876819556112L,
+    )
 
     // ==================== GLV Scalar Decomposition ====================
 
-    /** Result of splitting a 256-bit scalar into two ~128-bit halves via GLV. */
     data class Split(
         val k1: LongArray,
         val k2: LongArray,
@@ -72,11 +53,6 @@ internal object Glv {
         val negK2: Boolean,
     )
 
-    /**
-     * Decompose scalar k into (k₁, k₂) such that k ≡ k₁ + k₂·λ (mod n),
-     * with |k₁|, |k₂| ≈ 128 bits. Both are made positive for wNAF encoding;
-     * the negation flags indicate whether the corresponding point should be negated.
-     */
     fun splitScalar(k: LongArray): Split {
         val c1 = mulShift384(k, G1)
         val c2 = mulShift384(k, G2)
@@ -87,33 +63,27 @@ internal object Glv {
         return Split(
             if (neg1) ScalarN.neg(r1) else r1,
             if (neg2) ScalarN.neg(r2) else r2,
-            neg1,
-            neg2,
+            neg1, neg2,
         )
     }
 
     // ==================== wNAF Encoding ====================
 
     /**
-     * Encode a scalar in width-w wNAF. Returns IntArray where result[i] is the signed
-     * digit at bit position i. Digits are odd values in [-(2^(w-1)-1), 2^(w-1)-1].
+     * Encode a scalar in width-w wNAF. Returns IntArray where result[i] is the
+     * signed digit at bit position i.
      *
-     * The working array is extended beyond maxBits to handle carries from the highest
-     * bits — a fix for a bug where carries past bit 255 were silently dropped.
+     * The working copy is extended to handle carries past maxBits.
      */
-    fun wnaf(
-        scalar: LongArray,
-        w: Int,
-        maxBits: Int,
-    ): LongArray {
+    fun wnaf(scalar: LongArray, w: Int, maxBits: Int): IntArray {
         val totalBits = maxBits + w
-        val sLimbs = maxOf((totalBits + 31) / 32, scalar.size)
+        val sLimbs = maxOf((totalBits + 63) / 64, scalar.size)
         val result = IntArray(totalBits)
-        val s = IntArray(sLimbs)
+        val s = LongArray(sLimbs)
         scalar.copyInto(s)
         var bit = 0
         while (bit < totalBits) {
-            if (s[bit / 64] ushr (bit % 64) and 1 == 0) {
+            if ((s[bit / 64] ushr (bit % 64)) and 1L == 0L) {
                 bit++
                 continue
             }
@@ -130,140 +100,66 @@ internal object Glv {
 
     // ==================== Internal Helpers ====================
 
-    /** Multiply two 256-bit numbers, return the result shifted right by 384 bits (rounded). */
-    private fun mulShift384(
-        k: LongArray,
-        g: LongArray,
-    ): LongArray {
+    /** Multiply two 256-bit numbers, return result >> 384 (rounded). */
+    private fun mulShift384(k: LongArray, g: LongArray): LongArray {
         val wide = LongArray(8)
         U256.mulWide(wide, k, g)
         val result = LongArray(4)
-        for (i in 0 until 2) result[i] = wide[i + 6]
-        if (wide[5] < 0) { // Round based on bit 383
-            var c = 1L
-            for (i in 0 until 4) {
-                val s = result[i] + c
-                val ov = if (s.toULong() < result[i].toULong()) 1L else 0L
-                result[i] = s
-                c = ov
-            }
+        // 384 bits = 6 Long limbs. Result = wide[6..7], round at bit 383 (wide[5] bit 63)
+        result[0] = wide[6]
+        result[1] = wide[7]
+        if (wide[5] < 0) { // bit 63 of wide[5] = bit 383
+            result[0]++
+            if (result[0] == 0L) result[1]++
         }
         return result
     }
 
-    private fun getBitsVar(
-        s: LongArray,
-        bitPos: Int,
-        count: Int,
-    ): Int {
+    private fun getBitsVar(s: LongArray, bitPos: Int, count: Int): Int {
         if (count == 0) return 0
         val limb = bitPos / 64
-        val shift = bitPos % 32
+        val shift = bitPos % 64
         var r = (s[limb] ushr shift)
-        if (shift + count > 64 && limb + 1 < s.size) r = r or (s[limb + 1] shl (64 - shift))
+        if (shift + count > 64 && limb + 1 < s.size) {
+            r = r or (s[limb + 1] shl (64 - shift))
+        }
         return (r and ((1L shl count) - 1L)).toInt()
     }
 
-    private fun addBitTo(
-        s: LongArray,
-        bitPos: Int,
-    ) {
+    private fun addBitTo(s: LongArray, bitPos: Int) {
         val limb = bitPos / 64
         if (limb >= s.size) return
-        var carry = (1L shl (bitPos % 64))
+        val addVal = 1L shl (bitPos % 64)
         for (i in limb until s.size) {
-            val sum = s[i] + carry
-            val ov = if (sum.toULong() < s[i].toULong()) 1L else 0L
-            s[i] = sum
-            carry = ov
-            if (carry == 0L) break
+            val old = s[i]
+            s[i] = old + if (i == limb) addVal else 1L
+            if (s[i].toULong() >= old.toULong() || (i == limb && addVal == 0L)) break
+            // overflowed — carry to next limb
         }
     }
 
-    // ==================== Constants ====================
-    // All from libsecp256k1 scalar_impl.h
+    // ==================== Constants (from libsecp256k1) ====================
 
-    /** -λ mod n */
-    private val MINUS_LAMBDA =
-        longArrayOf(
-            -2247357714951666737L, -6304834983940376126L, 6546514211138018212L, -6008836872998760673L,
-        ),
-            0xE0CFC810.toInt(),
-            0x8EC739C2.toInt(),
-            0xA880B9FC.toInt(),
-            0x77ED9BA4.toInt(),
-            0x5AD9E3FD.toInt(),
-            0x3FA3CF1F.toInt(),
-            0xAC9C52B3.toInt(),
-        )
-
-    /** Babai rounding constant g1 = round(2^384 · |b2| / n) */
-    private val G1 =
-        longArrayOf(
-            -1687969588364726223L, 4443515802769476223L, -1698823648040391915L, 3496713202691238861L,
-        ),
-            0xE893209A.toInt(),
-            0x71E8CA7F.toInt(),
-            0x3DAA8A14.toInt(),
-            0x9284EB15.toInt(),
-            0xE86C90E4.toInt(),
-            0xA7D46BCD.toInt(),
-            0x3086D221.toInt(),
-        )
-
-    /** Babai rounding constant g2 = round(2^384 · |b1| / n) */
-    private val G2 =
-        longArrayOf(
-            1545214808910233457L, 2455034284347819718L, 8022177200260244676L, -1998614352016537560L,
-        ),
-            0x1571B4AE.toInt(),
-            0x9DF506C6.toInt(),
-            0x221208AC.toInt(),
-            0x0ABFE4C4.toInt(),
-            0x6F547FA9.toInt(),
-            0x010E8828.toInt(),
-            0xE4437ED6.toInt(),
-        )
-
-    /** -b1 mod n (lattice basis vector) */
-    private val MINUS_B1 =
-        longArrayOf(
-            8022177200260244675L, -1998614352016537560L, 0L, 0L,
-        ),
-            0x6F547FA9.toInt(),
-            0x010E8828.toInt(),
-            0xE4437ED6.toInt(),
-            0,
-            0,
-            0,
-            0,
-        )
-
-    /** -b2 mod n (lattice basis vector) */
-    private val MINUS_B2 =
-        longArrayOf(
-            -2925706260434037204L, -8491525256057179027L, -2L, -1L,
-        ),
-            0xD765CDA8.toInt(),
-            0x0774346D.toInt(),
-            0x8A280AC5.toInt(),
-            0xFFFFFFFE.toInt(),
-            0xFFFFFFFF.toInt(),
-            0xFFFFFFFF.toInt(),
-            0xFFFFFFFF.toInt(),
-        )
-
-    /** n / 2, used to determine if a half-scalar needs negation */
-    private val N_HALF =
-        longArrayOf(
-            -2312264954237214560L, 6725966010171805725L, -1L, 9223372036854775807L,
-        ),
-            0xDFE92F46.toInt(),
-            0x57A4501D.toInt(),
-            0x5D576E73.toInt(),
-            0xFFFFFFFF.toInt(),
-            0xFFFFFFFF.toInt(),
-            0xFFFFFFFF.toInt(),
-            0x7FFFFFFF.toInt(),
-        )
+    private val MINUS_LAMBDA = longArrayOf(
+        -2247357714951666737L, -6304834983940376126L,
+        6546514211138018212L, -6008836872998760673L,
+    )
+    private val G1 = longArrayOf(
+        -1687969588364726223L, 4443515802769476223L,
+        -1698823648040391915L, 3496713202691238861L,
+    )
+    private val G2 = longArrayOf(
+        1545214808910233457L, 2455034284347819718L,
+        8022177200260244676L, -1998614352016537560L,
+    )
+    private val MINUS_B1 = longArrayOf(
+        8022177200260244675L, -1998614352016537560L, 0L, 0L,
+    )
+    private val MINUS_B2 = longArrayOf(
+        -2925706260434037204L, -8491525256057179027L, -2L, -1L,
+    )
+    private val N_HALF = longArrayOf(
+        -2312264954237214560L, 6725966010171805725L,
+        -1L, 9223372036854775807L,
+    )
 }

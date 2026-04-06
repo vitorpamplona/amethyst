@@ -57,12 +57,12 @@ internal object KeyCodec {
         FieldP.add(t, t, B) // t = x³ + 7
         if (!FieldP.sqrt(outY, t)) return false
         U256.copyInto(outX, x)
-        if (outY[0] and 1 != 0) FieldP.neg(outY, outY) // Ensure even y
+        if (outY[0] and 1L != 0L) FieldP.neg(outY, outY) // Ensure even y
         return true
     }
 
     /** Check if y-coordinate is even (LSB = 0). */
-    fun hasEvenY(y: LongArray): Boolean = y[0] and 1 == 0
+    fun hasEvenY(y: LongArray): Boolean = y[0] and 1L == 0L
 
     /**
      * Parse a serialized public key (33 bytes compressed or 65 bytes uncompressed).
@@ -84,7 +84,7 @@ internal object KeyCodec {
                 FieldP.add(t, t, B) // y² = x³ + 7
                 if (!FieldP.sqrt(outY, t)) return false
                 U256.copyInto(outX, x)
-                val isOdd = outY[0] and 1 == 1
+                val isOdd = outY[0] and 1L == 1L
                 if (isOdd != (pubkey[0] == 0x03.toByte())) FieldP.neg(outY, outY)
                 true
             }

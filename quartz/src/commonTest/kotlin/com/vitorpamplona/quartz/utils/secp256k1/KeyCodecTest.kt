@@ -53,7 +53,7 @@ class KeyCodecTest {
         // x=2: y² = 8+7 = 15. 15 is not a quadratic residue mod p.
         val x = LongArray(4)
         val y = LongArray(4)
-        val two = longArrayOf(2, 0, 0, 0, 0, 0, 0, 0)
+        val two = longArrayOf(2, 0L, 0L, 0L)
         // This may or may not be on the curve — just check it doesn't crash
         KeyCodec.liftX(x, y, two) // result doesn't matter, just no exception
     }
@@ -70,14 +70,14 @@ class KeyCodecTest {
 
     @Test
     fun hasEvenYForEvenValue() {
-        assertTrue(KeyCodec.hasEvenY(longArrayOf(2, 0, 0, 0, 0, 0, 0, 0)))
-        assertTrue(KeyCodec.hasEvenY(longArrayOf(0, 0, 0, 0, 0, 0, 0, 0)))
+        assertTrue(KeyCodec.hasEvenY(longArrayOf(2, 0L, 0L, 0L)))
+        assertTrue(KeyCodec.hasEvenY(longArrayOf(0, 0L, 0L, 0L)))
     }
 
     @Test
     fun hasEvenYForOddValue() {
-        assertFalse(KeyCodec.hasEvenY(longArrayOf(1, 0, 0, 0, 0, 0, 0, 0)))
-        assertFalse(KeyCodec.hasEvenY(longArrayOf(3, 0, 0, 0, 0, 0, 0, 0)))
+        assertFalse(KeyCodec.hasEvenY(longArrayOf(1, 0L, 0L, 0L)))
+        assertFalse(KeyCodec.hasEvenY(longArrayOf(3, 0L, 0L, 0L)))
     }
 
     // ==================== parsePublicKey ====================

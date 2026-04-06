@@ -115,30 +115,14 @@ internal class AffinePoint(
 internal object ECPoint {
     // ==================== Generator point G ====================
 
-    val GX =
-        longArrayOf(
-            6481385041966929816L, 188021827762530521L, 6170039885052185351L, 8772561819708210092L,
-        ),
-            0x59F2815B.toInt(),
-            0x2DCE28D9.toInt(),
-            0x029BFCDB.toInt(),
-            0xCE870B07.toInt(),
-            0x55A06295.toInt(),
-            0xF9DCBBAC.toInt(),
-            0x79BE667E.toInt(),
-        )
-    val GY =
-        longArrayOf(
-            -7185545363635252040L, -209500633525038055L, 6747795201694173352L, 5204712524664259685L,
-        ),
-            0x9C47D08F.toInt(),
-            0xA6855419.toInt(),
-            0xFD17B448.toInt(),
-            0x0E1108A8.toInt(),
-            0x5DA4FBFC.toInt(),
-            0x26A3C465.toInt(),
-            0x483ADA77.toInt(),
-        )
+    val GX = longArrayOf(
+        6481385041966929816L, 188021827762530521L,
+        6170039885052185351L, 8772561819708210092L,
+    )
+    val GY = longArrayOf(
+        -7185545363635252040L, -209500633525038055L,
+        6747795201694173352L, 5204712524664259685L,
+    )
 
     /** Curve constant b = 7 in y² = x³ + 7. */
     private val B = longArrayOf(7L, 0L, 0L, 0L)
@@ -632,7 +616,7 @@ internal object ECPoint {
         out: MutablePoint,
         tmp: MutablePoint,
         negY: LongArray,
-        wnafDigits: LongArray,
+        wnafDigits: IntArray,
         bitIndex: Int,
         table: Array<AffinePoint>,
         glvNeg: Boolean,
@@ -656,7 +640,7 @@ internal object ECPoint {
         out: MutablePoint,
         tmp: MutablePoint,
         negScratch: MutablePoint,
-        wnafDigits: LongArray,
+        wnafDigits: IntArray,
         bitIndex: Int,
         table: Array<MutablePoint>,
         glvNeg: Boolean,

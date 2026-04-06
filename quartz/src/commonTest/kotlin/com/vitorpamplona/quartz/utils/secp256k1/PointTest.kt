@@ -40,7 +40,7 @@ class PointTest {
     fun generatorIsOnCurve() {
         // y² = x³ + 7
         val x3 = FieldP.mul(FieldP.sqr(ECPoint.GX), ECPoint.GX)
-        val y2expected = FieldP.add(x3, longArrayOf(7, 0, 0, 0, 0, 0, 0, 0))
+        val y2expected = FieldP.add(x3, longArrayOf(7, 0L, 0L, 0L))
         val y2actual = FieldP.sqr(ECPoint.GY)
         assertEquals(toHex(y2expected), toHex(y2actual))
     }
@@ -59,7 +59,7 @@ class PointTest {
         ECPoint.toAffine(doubled, dx, dy)
 
         // 2·G via scalar multiplication
-        val two = longArrayOf(2, 0, 0, 0, 0, 0, 0, 0)
+        val two = longArrayOf(2, 0L, 0L, 0L)
         val mulResult = MutablePoint()
         ECPoint.mulG(mulResult, two)
         val mx = LongArray(4)
@@ -80,7 +80,7 @@ class PointTest {
         val y = LongArray(4)
         ECPoint.toAffine(p, x, y)
 
-        val two = longArrayOf(2, 0, 0, 0, 0, 0, 0, 0)
+        val two = longArrayOf(2, 0L, 0L, 0L)
         val expected = MutablePoint()
         ECPoint.mulG(expected, two)
         val ex = LongArray(4)
@@ -161,7 +161,7 @@ class PointTest {
     @Test
     fun addMixedMatchesFull() {
         // addMixed should produce the same result as addPoints when q is affine
-        val three = longArrayOf(3, 0, 0, 0, 0, 0, 0, 0)
+        val three = longArrayOf(3, 0L, 0L, 0L)
         val p = MutablePoint()
         ECPoint.mulG(p, three) // 3G in Jacobian (z ≠ 1)
 
@@ -201,7 +201,7 @@ class PointTest {
 
     @Test
     fun mulGByOne() {
-        val one = longArrayOf(1, 0, 0, 0, 0, 0, 0, 0)
+        val one = longArrayOf(1, 0L, 0L, 0L)
         val result = MutablePoint()
         ECPoint.mulG(result, one)
         val rx = LongArray(4)
@@ -256,7 +256,7 @@ class PointTest {
         val e = hex("3982f19bef1615bccfbb05e321c10e1d4cba3df0e841c2e41eeb6016347653c3")
 
         val p = MutablePoint()
-        val two = longArrayOf(2, 0, 0, 0, 0, 0, 0, 0)
+        val two = longArrayOf(2, 0L, 0L, 0L)
         ECPoint.mulG(p, two) // P = 2·G
 
         // Combined

@@ -40,10 +40,10 @@ class U256Test {
     fun isZeroTrue() = assertTrue(U256.isZero(LongArray(4)))
 
     @Test
-    fun isZeroFalse() = assertFalse(U256.isZero(longArrayOf(1, 0, 0, 0, 0, 0, 0, 0)))
+    fun isZeroFalse() = assertFalse(U256.isZero(longArrayOf(1, 0L, 0L, 0L)))
 
     @Test
-    fun isZeroHighBit() = assertFalse(U256.isZero(longArrayOf(0, 0, 0, 0, 0, 0, 0, 1)))
+    fun isZeroHighBit() = assertFalse(U256.isZero(longArrayOf(0L, 0L, 0L, 1L)))
 
     @Test
     fun cmpEqual() = assertEquals(0, U256.cmp(hex("0000000000000000000000000000000000000000000000000000000000000001"), hex("0000000000000000000000000000000000000000000000000000000000000001")))
@@ -102,8 +102,8 @@ class U256Test {
         val out = LongArray(8)
         U256.mulWide(out, hex("0000000000000000000000000000000000000000000000000000000000000003"), hex("0000000000000000000000000000000000000000000000000000000000000007"))
         // 3 * 7 = 21 = 0x15
-        assertEquals(0x15, out[0])
-        for (i in 1 until 16) assertEquals(0, out[i])
+        assertEquals(0x15L, out[0])
+        for (i in 1 until 8) assertEquals(0L, out[i])
     }
 
     @Test
@@ -114,9 +114,9 @@ class U256Test {
         val maxHalf = hex("00000000000000000000000000000000ffffffffffffffffffffffffffffffff")
         U256.mulWide(out1, maxHalf, maxHalf)
         U256.sqrWide(out2, maxHalf)
-        for (i in 0 until 16) assertEquals(out1[i], out2[i], "Limb $i mismatch")
+        for (i in 0 until 8) assertEquals(out1[i], out2[i], "Limb $i mismatch")
         // Lowest limb is 1 (from +1 in (2^128-1)² = 2^256 - 2^129 + 1)
-        assertEquals(1, out1[0])
+        assertEquals(1L, out1[0])
     }
 
     @Test
@@ -127,7 +127,7 @@ class U256Test {
         U256.mulWide(mulResult, a, a)
         val sqrResult = LongArray(8)
         U256.sqrWide(sqrResult, a)
-        for (i in 0 until 16) {
+        for (i in 0 until 8) {
             assertEquals(mulResult[i], sqrResult[i], "Limb $i mismatch")
         }
     }
@@ -140,7 +140,7 @@ class U256Test {
         U256.mulWide(mulResult, maxVal, maxVal)
         val sqrResult = LongArray(8)
         U256.sqrWide(sqrResult, maxVal)
-        for (i in 0 until 16) {
+        for (i in 0 until 8) {
             assertEquals(mulResult[i], sqrResult[i], "Limb $i mismatch for max value sqr")
         }
     }
@@ -212,7 +212,7 @@ class U256Test {
         val dest = ByteArray(64)
         U256.toBytesInto(a, dest, 16) // write at offset 16
         // First 16 bytes should be zero
-        for (i in 0 until 16) assertEquals(0, dest[i].toInt())
+        for (i in 0 until 8) assertEquals(0, dest[i].toInt())
         // Bytes 16-47 should contain the value
         assertEquals(0x01, dest[16].toInt() and 0xFF)
         assertEquals(0x20, dest[47].toInt() and 0xFF)
@@ -223,7 +223,7 @@ class U256Test {
         val src = hex("67e56582298859ddae725f972992a07c6c4fb9f62a8fff58ce3ca926a1063530")
         val dst = LongArray(4)
         U256.copyInto(dst, src)
-        for (i in 0 until 8) assertEquals(src[i], dst[i])
+        for (i in 0 until 4) assertEquals(src[i], dst[i])
     }
 
     @Test
@@ -233,6 +233,6 @@ class U256Test {
         val expected = hex("67e56582298859ddae725f972992a07c6c4fb9f62a8fff58ce3ca926a1063530")
         U256.toBytesInto(expected, fullArray, 32)
         val decoded = U256.fromBytes(fullArray, 32)
-        for (i in 0 until 8) assertEquals(expected[i], decoded[i])
+        for (i in 0 until 4) assertEquals(expected[i], decoded[i])
     }
 }

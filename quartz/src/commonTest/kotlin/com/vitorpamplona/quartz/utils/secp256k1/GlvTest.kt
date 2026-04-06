@@ -106,7 +106,7 @@ class GlvTest {
         // β³ ≡ 1 (mod p) — the defining property of the cube root of unity
         val b2 = FieldP.sqr(Glv.BETA)
         val b3 = FieldP.mul(b2, Glv.BETA)
-        val one = longArrayOf(1, 0, 0, 0, 0, 0, 0, 0)
+        val one = longArrayOf(1L, 0L, 0L, 0L, 0, 0, 0, 0)
         assertEquals(toHex(one), toHex(b3))
     }
 
@@ -127,7 +127,7 @@ class GlvTest {
     @Test
     fun wnafReconstructionSmall() {
         // wNAF digits should reconstruct to the original scalar
-        val k = longArrayOf(17, 0, 0, 0, 0, 0, 0, 0) // 17 = 10001 in binary
+        val k = longArrayOf(17L, 0L, 0L, 0L) // 17 = 10001 in binary
         val digits = Glv.wnaf(k, 5, 256)
         assertEquals(k[0], reconstructWnaf(digits)[0])
     }
@@ -180,7 +180,7 @@ class GlvTest {
     @Test
     fun wnafSmallMaxBits() {
         // wNAF with maxBits=129 (used for GLV half-scalars)
-        val k = longArrayOf(0x12345678.toInt(), 0x9ABCDEF0.toInt(), 0x11111111, 0x22222222, 0, 0, 0, 0)
+        val k = longArrayOf(-7296712173568108936L, 2459565876494606609L, 0L, 0L)
         val digits = Glv.wnaf(k, 5, 129)
         val reconstructed = reconstructWnaf(digits)
         for (i in 0 until 4) assertEquals(k[i], reconstructed[i], "Limb $i mismatch for 129-bit wNAF")
@@ -193,7 +193,7 @@ class GlvTest {
         // s·G + 0·P = s·G
         val s = hex("67e56582298859ddae725f972992a07c6c4fb9f62a8fff58ce3ca926a1063530")
         val p = MutablePoint()
-        ECPoint.mulG(p, longArrayOf(2, 0, 0, 0, 0, 0, 0, 0))
+        ECPoint.mulG(p, longArrayOf(2L, 0L, 0L, 0L, 0, 0, 0, 0))
         val combined = MutablePoint()
         ECPoint.mulDoubleG(combined, s, p, LongArray(4))
         val cx = LongArray(4)
@@ -210,32 +210,29 @@ class GlvTest {
     // ==================== Helpers ====================
 
     /** Reconstruct a scalar from wNAF digits using Horner's method. */
-    private fun reconstructWnaf(digits: LongArray): LongArray {
+    private fun reconstructWnaf(digits: IntArray): LongArray {
         var acc = LongArray(4)
         for (bit in digits.size - 1 downTo 0) {
+            // Double: acc = acc * 2 (unsigned shift left by 1)
             val doubled = LongArray(4)
-            var carry = 0L
-            for (j in 0 until 8) {
-                carry += (acc[j].toLong() and 0xFFFFFFFFL) * 2L
-                doubled[j] = carry.toInt()
-                carry = carry ushr 32
+            var shiftCarry = 0L
+            for (j in 0 until 4) {
+                doubled[j] = (acc[j] shl 1) or shiftCarry
+                shiftCarry = acc[j] ushr 63
             }
             acc = doubled
+            // Add digit
             val d = digits[bit]
             if (d > 0) {
-                var c = 0L
-                for (j in 0 until 8) {
-                    c += (acc[j].toLong() and 0xFFFFFFFFL) + if (j == 0) d.toLong() else 0L
-                    acc[j] = c.toInt()
-                    c = c ushr 32
-                }
+                val s = acc[0] + d.toLong()
+                val c = if (s.toULong() < acc[0].toULong()) 1L else 0L
+                acc[0] = s
+                if (c != 0L) for (j in 1 until 4) { acc[j]++; if (acc[j] != 0L) break }
             } else if (d < 0) {
-                var b = 0L
-                for (j in 0 until 8) {
-                    val diff = (acc[j].toLong() and 0xFFFFFFFFL) - (if (j == 0) (-d).toLong() else 0L) - b
-                    acc[j] = diff.toInt()
-                    b = if (diff < 0) 1L else 0L
-                }
+                val s = acc[0] - (-d).toLong()
+                val b = if (acc[0].toULong() < (-d).toULong()) 1L else 0L
+                acc[0] = s
+                if (b != 0L) for (j in 1 until 4) { acc[j]--; if (acc[j] != -1L) break }
             }
         }
         return acc

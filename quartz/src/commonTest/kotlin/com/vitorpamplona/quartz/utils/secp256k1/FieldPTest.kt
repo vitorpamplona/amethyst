@@ -62,7 +62,7 @@ class FieldPTest {
     @Test
     fun mulOneIdentity() {
         val a = hex("67e56582298859ddae725f972992a07c6c4fb9f62a8fff58ce3ca926a1063530")
-        val one = longArrayOf(1, 0, 0, 0, 0, 0, 0, 0)
+        val one = longArrayOf(1L, 0L, 0L, 0L)
         assertEquals(toHex(a), toHex(FieldP.mul(a, one)))
     }
 
@@ -72,7 +72,7 @@ class FieldPTest {
     fun addNearP() {
         // (p - 1) + 1 = p ≡ 0 (mod p)
         val pMinus1 = hex("fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2e")
-        val one = longArrayOf(1, 0, 0, 0, 0, 0, 0, 0)
+        val one = longArrayOf(1L, 0L, 0L, 0L)
         val result = FieldP.add(pMinus1, one)
         assertTrue(U256.isZero(result))
     }
@@ -90,7 +90,7 @@ class FieldPTest {
     fun subUnderflow() {
         // 0 - 1 ≡ p - 1 (mod p)
         val zero = LongArray(4)
-        val one = longArrayOf(1, 0, 0, 0, 0, 0, 0, 0)
+        val one = longArrayOf(1L, 0L, 0L, 0L)
         val result = FieldP.sub(zero, one)
         val expected = hex("fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2e") // p-1
         assertEquals(toHex(expected), toHex(result))
@@ -149,13 +149,13 @@ class FieldPTest {
         val a = hex("67e56582298859ddae725f972992a07c6c4fb9f62a8fff58ce3ca926a1063530")
         val aInv = FieldP.inv(a)
         val product = FieldP.mul(a, aInv)
-        val one = longArrayOf(1, 0, 0, 0, 0, 0, 0, 0)
+        val one = longArrayOf(1L, 0L, 0L, 0L)
         assertEquals(toHex(one), toHex(product))
     }
 
     @Test
     fun invOfOne() {
-        val one = longArrayOf(1, 0, 0, 0, 0, 0, 0, 0)
+        val one = longArrayOf(1L, 0L, 0L, 0L)
         assertEquals(toHex(one), toHex(FieldP.inv(one)))
     }
 
@@ -171,22 +171,22 @@ class FieldPTest {
     @Test
     fun halfOfEven() {
         val out = LongArray(4)
-        val four = longArrayOf(4, 0, 0, 0, 0, 0, 0, 0)
+        val four = longArrayOf(4L, 0L, 0L, 0L)
         FieldP.half(out, four)
-        assertEquals(2, out[0])
-        for (i in 1 until 8) assertEquals(0, out[i])
+        assertEquals(2L, out[0])
+        for (i in 1 until 4) assertEquals(0L, out[i])
     }
 
     @Test
     fun halfOfOdd() {
         // half(1) = (1 + p) / 2 = (p + 1) / 2
         val out = LongArray(4)
-        val one = longArrayOf(1, 0, 0, 0, 0, 0, 0, 0)
+        val one = longArrayOf(1L, 0L, 0L, 0L)
         FieldP.half(out, one)
         // Verify: 2 * half(1) = 1 mod p
         val doubled = FieldP.add(out, out)
-        assertEquals(1, doubled[0])
-        for (i in 1 until 8) assertEquals(0, doubled[i])
+        assertEquals(1L, doubled[0])
+        for (i in 1 until 4) assertEquals(0L, doubled[i])
     }
 
     @Test
@@ -213,7 +213,7 @@ class FieldPTest {
     @Test
     fun sqrtOfNonResidue() {
         // 3 is not a quadratic residue mod p (for secp256k1's p)
-        val three = longArrayOf(3, 0, 0, 0, 0, 0, 0, 0)
+        val three = longArrayOf(3, 0L, 0L, 0L)
         assertNull(FieldP.sqrt(three))
     }
 
@@ -223,7 +223,7 @@ class FieldPTest {
         val gx = ECPoint.GX
         val gy = ECPoint.GY
         val x3 = FieldP.mul(FieldP.sqr(gx), gx)
-        val y2 = FieldP.add(x3, longArrayOf(7, 0, 0, 0, 0, 0, 0, 0))
+        val y2 = FieldP.add(x3, longArrayOf(7, 0L, 0L, 0L))
         val root = FieldP.sqrt(y2)!!
         // root should be gy or -gy
         val isGy = U256.cmp(root, gy) == 0
@@ -240,7 +240,7 @@ class FieldPTest {
         val result = FieldP.mul(pMinus1, pMinus1)
         assertTrue(U256.cmp(result, FieldP.P) < 0, "Result should be < p")
         // (p-1)² ≡ 1 (mod p)
-        val one = longArrayOf(1, 0, 0, 0, 0, 0, 0, 0)
+        val one = longArrayOf(1L, 0L, 0L, 0L)
         assertEquals(toHex(one), toHex(result))
     }
 
@@ -252,7 +252,7 @@ class FieldPTest {
         val b = hex("0000000000000000000000000000000000000000000000000000000000000003")
         val out = LongArray(4)
         FieldP.add(out, a, b)
-        assertEquals(8, out[0])
+        assertEquals(8L, out[0])
     }
 
     @Test
@@ -260,7 +260,7 @@ class FieldPTest {
         val a = hex("0000000000000000000000000000000000000000000000000000000000000005")
         val out = LongArray(4)
         FieldP.sqr(out, a)
-        assertEquals(25, out[0]) // 5² = 25
+        assertEquals(25L, out[0]) // 5² = 25
     }
 
     @Test
@@ -276,10 +276,10 @@ class FieldPTest {
 
     @Test
     fun invOfTwo() {
-        val two = longArrayOf(2, 0, 0, 0, 0, 0, 0, 0)
+        val two = longArrayOf(2, 0L, 0L, 0L)
         val inv2 = FieldP.inv(two)
         val product = FieldP.mul(two, inv2)
-        val one = longArrayOf(1, 0, 0, 0, 0, 0, 0, 0)
+        val one = longArrayOf(1L, 0L, 0L, 0L)
         assertEquals(toHex(one), toHex(product))
     }
 
@@ -292,7 +292,7 @@ class FieldPTest {
 
     @Test
     fun sqrtOfOne() {
-        val one = longArrayOf(1, 0, 0, 0, 0, 0, 0, 0)
+        val one = longArrayOf(1L, 0L, 0L, 0L)
         val root = FieldP.sqrt(one)!!
         assertEquals(toHex(one), toHex(root))
     }

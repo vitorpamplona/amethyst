@@ -96,7 +96,7 @@ class ScalarNTest {
     @Test
     fun mulOneIdentity() {
         val a = hex("67e56582298859ddae725f972992a07c6c4fb9f62a8fff58ce3ca926a1063530")
-        val one = longArrayOf(1, 0, 0, 0, 0, 0, 0, 0)
+        val one = longArrayOf(1, 0L, 0L, 0L)
         assertEquals(toHex(a), toHex(ScalarN.mul(a, one)))
     }
 
@@ -124,7 +124,7 @@ class ScalarNTest {
         val a = hex("67e56582298859ddae725f972992a07c6c4fb9f62a8fff58ce3ca926a1063530")
         val aInv = ScalarN.inv(a)
         val product = ScalarN.mul(a, aInv)
-        val one = longArrayOf(1, 0, 0, 0, 0, 0, 0, 0)
+        val one = longArrayOf(1, 0L, 0L, 0L)
         assertEquals(toHex(one), toHex(product))
     }
 
@@ -134,7 +134,7 @@ class ScalarNTest {
     fun addNearN() {
         // (n-1) + 1 should wrap to 0
         val nMinus1 = hex("fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364140")
-        val one = longArrayOf(1, 0, 0, 0, 0, 0, 0, 0)
+        val one = longArrayOf(1, 0L, 0L, 0L)
         assertTrue(U256.isZero(ScalarN.add(nMinus1, one)))
     }
 
@@ -142,9 +142,9 @@ class ScalarNTest {
     fun addNearNWrap() {
         // (n-1) + 2 should give 1
         val nMinus1 = hex("fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364140")
-        val two = longArrayOf(2, 0, 0, 0, 0, 0, 0, 0)
+        val two = longArrayOf(2, 0L, 0L, 0L)
         val result = ScalarN.add(nMinus1, two)
-        val one = longArrayOf(1, 0, 0, 0, 0, 0, 0, 0)
+        val one = longArrayOf(1, 0L, 0L, 0L)
         assertEquals(toHex(one), toHex(result))
     }
 
@@ -153,7 +153,7 @@ class ScalarNTest {
         // (n-1) * (n-1) ≡ 1 mod n (since (n-1) ≡ -1 and (-1)² = 1)
         val nMinus1 = hex("fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364140")
         val result = ScalarN.mul(nMinus1, nMinus1)
-        val one = longArrayOf(1, 0, 0, 0, 0, 0, 0, 0)
+        val one = longArrayOf(1, 0L, 0L, 0L)
         assertEquals(toHex(one), toHex(result))
     }
 
