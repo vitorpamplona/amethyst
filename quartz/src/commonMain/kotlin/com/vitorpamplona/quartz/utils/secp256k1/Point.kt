@@ -93,7 +93,7 @@ internal class MutablePoint(
     val y: LongArray = LongArray(4),
     val z: LongArray = LongArray(4),
 ) {
-    inline fun isInfinity(): Boolean = U256.isZero(z)
+    fun isInfinity(): Boolean = U256.isZero(z)
 
     fun setInfinity() {
         for (i in 0 until 4) {
@@ -279,7 +279,7 @@ internal object ECPoint {
             val base = b * COMB_POINTS
             jac[base].setInfinity()
             for (m in 1 until COMB_POINTS) {
-                val changedBit = Integer.numberOfTrailingZeros(m)
+                val changedBit = m.countTrailingZeroBits()
                 if (m and (m - 1) == 0) {
                     jac[base + m].copyFrom(toothG[b * COMB_TEETH + changedBit])
                 } else {

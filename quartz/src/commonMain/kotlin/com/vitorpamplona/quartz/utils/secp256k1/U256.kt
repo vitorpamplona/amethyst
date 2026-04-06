@@ -49,9 +49,7 @@ package com.vitorpamplona.quartz.utils.secp256k1
  * Raw 256-bit unsigned integer arithmetic using 4×64-bit limbs.
  */
 internal object U256 {
-    val ZERO = LongArray(4)
-
-    inline fun isZero(a: LongArray): Boolean = (a[0] or a[1] or a[2] or a[3]) == 0L
+    fun isZero(a: LongArray): Boolean = (a[0] or a[1] or a[2] or a[3]) == 0L
 
     /** Unsigned comparison. Returns -1 if a < b, 0 if equal, 1 if a > b. */
     fun cmp(
@@ -254,7 +252,7 @@ internal object U256 {
     }
 
     /** Test if bit at position pos is set. Called ~2,800× per mulG (comb table lookup). */
-    inline fun testBit(
+    fun testBit(
         a: LongArray,
         pos: Int,
     ): Boolean = (a[pos / 64] ushr (pos % 64)) and 1L == 1L

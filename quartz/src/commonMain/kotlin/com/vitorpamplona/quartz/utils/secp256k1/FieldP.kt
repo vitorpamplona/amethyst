@@ -298,7 +298,7 @@ internal object FieldP {
 
     // ==================== Reduction ====================
 
-    inline fun reduceSelf(a: LongArray) {
+    fun reduceSelf(a: LongArray) {
         // Exploit P's structure: P = [P0, -1, -1, -1] where P[1..3] = 0xFFFFFFFFFFFFFFFF.
         // a >= P only if a[3]==a[2]==a[1]==-1 AND a[0] >= P[0]. The first check (a[3]==-1)
         // fails >99.99% of the time for random field elements, making this a single branch.

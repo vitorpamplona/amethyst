@@ -49,7 +49,7 @@ internal object Glv {
 
     // ==================== GLV Scalar Decomposition ====================
 
-    data class Split(
+    class Split(
         val k1: LongArray,
         val k2: LongArray,
         val negK1: Boolean,

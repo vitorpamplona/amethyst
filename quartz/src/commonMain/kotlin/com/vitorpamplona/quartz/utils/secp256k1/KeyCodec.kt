@@ -74,8 +74,8 @@ internal object KeyCodec {
         outX: LongArray,
         outY: LongArray,
     ): Boolean =
-        when {
-            pubkey.size == 33 && (pubkey[0] == 0x02.toByte() || pubkey[0] == 0x03.toByte()) -> {
+        when (pubkey.size) {
+            33 if (pubkey[0] == 0x02.toByte() || pubkey[0] == 0x03.toByte()) -> {
                 val x = U256.fromBytes(pubkey.copyOfRange(1, 33))
                 if (U256.cmp(x, FieldP.P) >= 0) return false
                 val t = LongArray(4)
@@ -89,7 +89,7 @@ internal object KeyCodec {
                 true
             }
 
-            pubkey.size == 65 && pubkey[0] == 0x04.toByte() -> {
+            65 if pubkey[0] == 0x04.toByte() -> {
                 val x = U256.fromBytes(pubkey.copyOfRange(1, 33))
                 val y = U256.fromBytes(pubkey.copyOfRange(33, 65))
                 val y2 = LongArray(4)

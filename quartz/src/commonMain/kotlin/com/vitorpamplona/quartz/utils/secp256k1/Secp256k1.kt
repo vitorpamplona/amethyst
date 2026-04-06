@@ -122,15 +122,15 @@ object Secp256k1 {
      * For already-compressed keys: returns the input unchanged.
      */
     fun pubKeyCompress(pubkey: ByteArray): ByteArray =
-        when {
-            pubkey.size == 65 && pubkey[0] == 0x04.toByte() -> {
+        when (pubkey.size) {
+            65 if pubkey[0] == 0x04.toByte() -> {
                 val result = ByteArray(33)
                 result[0] = if (pubkey[64].toInt() and 1 == 0) 0x02 else 0x03
                 pubkey.copyInto(result, 1, 1, 33)
                 result
             }
 
-            pubkey.size == 33 && (pubkey[0] == 0x02.toByte() || pubkey[0] == 0x03.toByte()) -> {
+            33 if (pubkey[0] == 0x02.toByte() || pubkey[0] == 0x03.toByte()) -> {
                 pubkey
             }
 
