@@ -596,15 +596,31 @@ internal object ECPoint {
             bits--
         }
 
-        out.setInfinity()
-        val tmp = s.mixTmp
+        // Ping-pong: alternate between two point buffers to avoid copyFrom after
+        // every addition. Saves ~20 copyFroms per call (each = 12 Long copies).
+        // Also avoids the internal copy in doublePoint (out===inp path).
+        var cur = out
+        var alt = s.mixTmp
+        cur.setInfinity()
         val negY = s.mixNegY
 
         for (i in bits - 1 downTo 0) {
-            doublePoint(out, out, s)
-            addWnafMixed(out, tmp, negY, wnaf1, i, pOdd, split.negK1, s)
-            addWnafMixed(out, tmp, negY, wnaf2, i, pLamOdd, split.negK2, s)
+            doublePoint(alt, cur, s)
+            var t = cur
+            cur = alt
+            alt = t
+            if (addWnafMixedPP(cur, alt, negY, wnaf1, i, pOdd, split.negK1, s)) {
+                t = cur
+                cur = alt
+                alt = t
+            }
+            if (addWnafMixedPP(cur, alt, negY, wnaf2, i, pLamOdd, split.negK2, s)) {
+                t = cur
+                cur = alt
+                alt = t
+            }
         }
+        if (cur !== out) out.copyFrom(cur)
     }
 
     /**
@@ -628,12 +644,20 @@ internal object ECPoint {
 
         val s = scratch.get()
         val table = combTable
-        out.setInfinity()
-        val tmp = MutablePoint()
+
+        // Ping-pong: alternate between out and s.mixTmp to avoid copyFrom after
+        // every addMixed and the internal copy in in-place doublePoint.
+        // Also eliminates the MutablePoint() allocation that was here before.
+        var cur = out
+        var alt = s.mixTmp
+        cur.setInfinity()
 
         for (combOff in COMB_SPACING - 1 downTo 0) {
             if (combOff < COMB_SPACING - 1) {
-                doublePoint(out, out, s)
+                doublePoint(alt, cur, s)
+                val t = cur
+                cur = alt
+                alt = t
             }
             for (block in 0 until COMB_BLOCKS) {
                 var mask = 0
@@ -645,11 +669,14 @@ internal object ECPoint {
                 }
                 if (mask != 0) {
                     val entry = table[block * COMB_POINTS + mask]
-                    addMixed(tmp, out, entry.x, entry.y, s)
-                    out.copyFrom(tmp)
+                    addMixed(alt, cur, entry.x, entry.y, s)
+                    val t = cur
+                    cur = alt
+                    alt = t
                 }
             }
         }
+        if (cur !== out) out.copyFrom(cur)
     }
 
     /**
@@ -717,48 +744,75 @@ internal object ECPoint {
             bits--
         }
 
-        out.setInfinity()
-        val tmp = sc.mixTmp
+        // Ping-pong: alternate between out and sc.mixTmp to avoid copyFrom after
+        // every addition (~170 copies per verify → at most 1). Also avoids the
+        // internal copy buffer in doublePoint's out===inp path (~130 per verify).
+        var cur = out
+        var alt = sc.mixTmp
+        cur.setInfinity()
         val negY = sc.mixNegY
 
         for (i in bits - 1 downTo 0) {
-            doublePoint(out, out, sc)
+            doublePoint(alt, cur, sc)
+            var t = cur
+            cur = alt
+            alt = t
             // Streams 1-2: G-side (affine tables, mixed addition)
-            addWnafMixed(out, tmp, negY, wnafS1, i, gOdd, sSplit.negK1, sc)
-            addWnafMixed(out, tmp, negY, wnafS2, i, gLam, sSplit.negK2, sc)
+            if (addWnafMixedPP(cur, alt, negY, wnafS1, i, gOdd, sSplit.negK1, sc)) {
+                t = cur
+                cur = alt
+                alt = t
+            }
+            if (addWnafMixedPP(cur, alt, negY, wnafS2, i, gLam, sSplit.negK2, sc)) {
+                t = cur
+                cur = alt
+                alt = t
+            }
             // Streams 3-4: P-side (affine tables via effective-affine, mixed addition)
-            addWnafMixed(out, tmp, negY, wnafE1, i, pOdd, eSplit.negK1, sc)
-            addWnafMixed(out, tmp, negY, wnafE2, i, pLamOdd, eSplit.negK2, sc)
+            if (addWnafMixedPP(cur, alt, negY, wnafE1, i, pOdd, eSplit.negK1, sc)) {
+                t = cur
+                cur = alt
+                alt = t
+            }
+            if (addWnafMixedPP(cur, alt, negY, wnafE2, i, pLamOdd, eSplit.negK2, sc)) {
+                t = cur
+                cur = alt
+                alt = t
+            }
         }
+        if (cur !== out) out.copyFrom(cur)
     }
 
     /**
-     * Process one wNAF digit with mixed addition.
-     * The effective sign is: (wNAF digit sign) XOR (GLV negation flag).
-     * Positive = add as-is, negative = negate the table entry's y.
+     * Process one wNAF digit with mixed addition (ping-pong version).
+     * Reads from `cur`, writes result to `alt`. Returns true if an addition was
+     * performed (caller should swap cur/alt references).
+     *
+     * This avoids the copyFrom after every addition — the caller swaps references
+     * instead (free: just local variable reassignment).
      */
-    private fun addWnafMixed(
-        out: MutablePoint,
-        tmp: MutablePoint,
+    private fun addWnafMixedPP(
+        cur: MutablePoint,
+        alt: MutablePoint,
         negY: LongArray,
         wnafDigits: IntArray,
         bitIndex: Int,
         table: Array<AffinePoint>,
         glvNeg: Boolean,
         s: PointScratch,
-    ) {
-        if (bitIndex >= wnafDigits.size) return
+    ): Boolean {
+        if (bitIndex >= wnafDigits.size) return false
         val d = wnafDigits[bitIndex]
-        if (d == 0) return
+        if (d == 0) return false
         val idx = (if (d > 0) d else -d) / 2
         val effectiveNeg = (d < 0) xor glvNeg
         if (!effectiveNeg) {
-            addMixed(tmp, out, table[idx].x, table[idx].y, s)
+            addMixed(alt, cur, table[idx].x, table[idx].y, s)
         } else {
             FieldP.neg(negY, table[idx].y)
-            addMixed(tmp, out, table[idx].x, negY, s)
+            addMixed(alt, cur, table[idx].x, negY, s)
         }
-        out.copyFrom(tmp)
+        return true
     }
 
     /** Process one wNAF digit with full Jacobian addition (for P-side tables). */
