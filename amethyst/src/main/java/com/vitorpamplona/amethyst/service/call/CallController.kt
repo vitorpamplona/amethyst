@@ -99,6 +99,7 @@ class CallController(
     private var localAudioTrackInternal: AudioTrack? = null
     private var localVideoTrackInternal: VideoTrack? = null
     private var cameraCapturer: CameraVideoCapturer? = null
+    private var surfaceTextureHelper: SurfaceTextureHelper? = null
 
     private val callFactory = WebRtcCallFactory()
     val audioManager = CallAudioManager(context)
@@ -530,12 +531,14 @@ class CallController(
 
     // ---- UI toggle controls ----
 
+    @Synchronized
     fun toggleAudioMute() {
         val muted = !_isAudioMuted.value
         _isAudioMuted.value = muted
         localAudioTrackInternal?.setEnabled(!muted)
     }
 
+    @Synchronized
     fun toggleVideo() {
         val enabling = !_isVideoEnabled.value
 
@@ -634,21 +637,24 @@ class CallController(
         val frontCamera = enumerator.deviceNames.firstOrNull { enumerator.isFrontFacing(it) }
         val camera = frontCamera ?: enumerator.deviceNames.firstOrNull() ?: return
 
+        val helper = SurfaceTextureHelper.create("CaptureThread", egl.eglBaseContext)
+        surfaceTextureHelper = helper
         cameraCapturer =
             enumerator.createCapturer(camera, null)?.also {
-                it.initialize(
-                    SurfaceTextureHelper.create("CaptureThread", egl.eglBaseContext),
-                    context,
-                    source.capturerObserver,
-                )
+                it.initialize(helper, context, source.capturerObserver)
                 it.startCapture(1280, 720, 30)
             }
     }
 
     private fun stopCamera() {
-        cameraCapturer?.stopCapture()
+        try {
+            cameraCapturer?.stopCapture()
+        } catch (_: InterruptedException) {
+        }
         cameraCapturer?.dispose()
         cameraCapturer = null
+        surfaceTextureHelper?.dispose()
+        surfaceTextureHelper = null
     }
 
     // ---- Per-peer PeerConnection creation ----
@@ -664,7 +670,9 @@ class CallController(
                 onIceCandidate = { candidate -> onLocalIceCandidate(peerPubKey, candidate) },
                 onPeerConnected = {
                     Log.d(TAG) { "Peer ${peerPubKey.take(8)} connected!" }
-                    callManager.onPeerConnected()
+                    scope.launch {
+                        callManager.onPeerConnected()
+                    }
                     if (!foregroundServiceStarted) {
                         foregroundServiceStarted = true
                         startForegroundService()
@@ -780,7 +788,7 @@ class CallController(
         if (entry != null) {
             Log.d(TAG) { "disposePeerSession: closing session for ${peerPubKey.take(8)}" }
             try {
-                entry?.session?.dispose()
+                entry.session.dispose()
             } catch (e: Exception) {
                 Log.e(TAG, "disposePeerSession: dispose() failed for ${peerPubKey.take(8)}", e)
             }
@@ -807,6 +815,7 @@ class CallController(
 
     // ---- Cleanup ----
 
+    @Synchronized
     fun cleanup() {
         Log.d(TAG) { "cleanup: disposing ${peerSessionMgr.allSessionKeys().size} peer sessions, state=${callManager.state.value::class.simpleName}" }
         // Each block is wrapped individually so that a failure in one
