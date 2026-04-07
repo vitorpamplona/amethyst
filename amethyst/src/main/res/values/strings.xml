@@ -1935,6 +1935,7 @@
     <string name="kind_shorts">Shorts</string>
     <string name="kind_voice_msg">Voice Msg</string>
     <string name="kind_voice_reply">Voice Reply</string>
+    <string name="kind_wake">WakeUp</string>
     <string name="kind_web_bookmark">Web Bookmark</string>
     <string name="kind_wiki">Wiki</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Start with a great feed by following the same people as someone you trust.</string>
