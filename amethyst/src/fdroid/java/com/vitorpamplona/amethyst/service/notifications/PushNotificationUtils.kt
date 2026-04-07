@@ -39,6 +39,8 @@ object PushNotificationUtils {
         PushDistributorHandler.saveDistributor(currentDistributor)
         val token = PushDistributorHandler.getSavedEndpoint()
 
+        if (token.isEmpty()) return@with
+
         if (hasInit?.equals(accounts) == true && lastToken == token) {
             return@with
         }
