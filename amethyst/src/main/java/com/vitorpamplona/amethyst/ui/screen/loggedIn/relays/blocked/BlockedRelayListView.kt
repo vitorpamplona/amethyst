@@ -40,6 +40,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayUrlEditF
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.rememberRelayDragState
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
+import com.vitorpamplona.amethyst.ui.theme.HorzHalfVertPadding
+import com.vitorpamplona.amethyst.ui.theme.HorzPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 
 @Composable
@@ -79,6 +81,7 @@ fun LazyListScope.renderBlockedItems(
             item,
             onDelete = { postViewModel.deleteRelay(item) },
             nip11CachedRetriever = Amethyst.instance.nip11Cache,
+            modifier = HorzHalfVertPadding,
             index = index,
             dragState = dragState,
             accountViewModel = accountViewModel,
@@ -90,6 +93,7 @@ fun LazyListScope.renderBlockedItems(
         Spacer(modifier = StdVertSpacer)
         RelayUrlEditField(
             onNewRelay = { postViewModel.addRelay(relaySetupInfoBuilder(it)) },
+            modifier = HorzPadding,
             accountViewModel = accountViewModel,
             nav = nav,
         )

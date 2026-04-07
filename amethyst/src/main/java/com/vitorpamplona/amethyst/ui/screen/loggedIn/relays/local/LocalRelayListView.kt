@@ -25,11 +25,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material3.Switch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.navs.rememberExtendedNav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -39,7 +41,11 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayDragStat
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayUrlEditField
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.rememberRelayDragState
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
+import com.vitorpamplona.amethyst.ui.theme.HorzHalfVertPadding
+import com.vitorpamplona.amethyst.ui.theme.HorzPadding
+import com.vitorpamplona.amethyst.ui.theme.SettingsCategorySpacingWithHorzBorderModifier
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 
 @Composable
@@ -79,6 +85,7 @@ fun LazyListScope.renderLocalItems(
             item,
             onDelete = { postViewModel.deleteRelay(item) },
             nip11CachedRetriever = Amethyst.instance.nip11Cache,
+            modifier = HorzHalfVertPadding,
             index = index,
             dragState = dragState,
             accountViewModel = accountViewModel,
@@ -88,8 +95,26 @@ fun LazyListScope.renderLocalItems(
 
     item {
         Spacer(modifier = StdVertSpacer)
+        if (feedState.isNotEmpty()) {
+            SettingsRow(
+                R.string.send_kind0_to_local_relay_title,
+                R.string.send_kind0_to_local_relay_description,
+                SettingsCategorySpacingWithHorzBorderModifier,
+            ) {
+                val checked by accountViewModel.account.settings.syncedSettings.security.sendKind0EventsToLocalRelay
+                    .collectAsStateWithLifecycle()
+                Switch(
+                    checked = checked,
+                    onCheckedChange = {
+                        accountViewModel.toggleSendKind0ToLocalRelay(it)
+                    },
+                )
+            }
+        }
+        Spacer(modifier = StdVertSpacer)
         RelayUrlEditField(
             onNewRelay = { postViewModel.addRelay(relaySetupInfoBuilder(it)) },
+            modifier = HorzPadding,
             accountViewModel = accountViewModel,
             nav = nav,
         )

@@ -64,6 +64,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayUrlEditF
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.HorzHalfVertPadding
 import com.vitorpamplona.amethyst.ui.theme.SettingsCategoryFirstModifier
 import com.vitorpamplona.amethyst.ui.theme.SettingsCategorySpacingModifier
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
@@ -224,6 +225,7 @@ private fun ChannelMetadataScaffold(
                     item,
                     onDelete = { postViewModel.deleteHomeRelay(item) },
                     nip11CachedRetriever = Amethyst.instance.nip11Cache,
+                    modifier = HorzHalfVertPadding,
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
@@ -232,6 +234,7 @@ private fun ChannelMetadataScaffold(
             item {
                 RelayUrlEditField(
                     onNewRelay = { postViewModel.addHomeRelay(relaySetupInfoBuilder(it)) },
+                    modifier = Modifier,
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )

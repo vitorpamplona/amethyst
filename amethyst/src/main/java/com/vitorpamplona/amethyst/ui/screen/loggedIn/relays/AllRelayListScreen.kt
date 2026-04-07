@@ -37,7 +37,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -89,12 +88,11 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.search.SearchRelayLi
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.search.renderSearchItems
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.trusted.TrustedRelayListViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.trusted.renderTrustedItems
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
-import com.vitorpamplona.amethyst.ui.theme.SettingsCategoryFirstModifier
-import com.vitorpamplona.amethyst.ui.theme.SettingsCategorySpacingModifier
+import com.vitorpamplona.amethyst.ui.theme.SettingsCategoryFirstWithHorzBorderModifier
+import com.vitorpamplona.amethyst.ui.theme.SettingsCategorySpacingWithHorzBorderModifier
 import com.vitorpamplona.amethyst.ui.theme.grayText
 
 @Composable
@@ -339,7 +337,7 @@ fun MappedAllRelayListView(
                 SettingsCategory(
                     R.string.public_home_section,
                     R.string.public_home_section_explainer,
-                    SettingsCategoryFirstModifier,
+                    SettingsCategoryFirstWithHorzBorderModifier,
                 )
             }
             renderNip65HomeItems(homeFeedState, nip65ViewModel, accountViewModel, nav, outboxCounts, homeDragState)
@@ -348,7 +346,7 @@ fun MappedAllRelayListView(
                 SettingsCategory(
                     R.string.public_notif_section,
                     R.string.public_notif_section_explainer,
-                    SettingsCategorySpacingModifier,
+                    SettingsCategorySpacingWithHorzBorderModifier,
                 )
             }
             renderNip65NotifItems(notifFeedState, nip65ViewModel, accountViewModel, nav, inboxCounts, notifDragState)
@@ -357,7 +355,7 @@ fun MappedAllRelayListView(
                 SettingsCategoryWithButton(
                     R.string.private_inbox_section,
                     R.string.private_inbox_section_explainer,
-                    SettingsCategorySpacingModifier,
+                    SettingsCategorySpacingWithHorzBorderModifier,
                     action = {
                         ResetDMRelays(dmViewModel)
                     },
@@ -369,7 +367,7 @@ fun MappedAllRelayListView(
                 SettingsCategory(
                     R.string.private_outbox_section,
                     R.string.private_outbox_section_explainer,
-                    SettingsCategorySpacingModifier,
+                    SettingsCategorySpacingWithHorzBorderModifier,
                 )
             }
             renderPrivateOutboxItems(privateOutboxFeedState, privateOutboxViewModel, accountViewModel, nav, privateHomeCounts, privateOutboxDragState)
@@ -378,7 +376,7 @@ fun MappedAllRelayListView(
                 SettingsCategory(
                     R.string.proxy_section,
                     R.string.proxy_section_explainer,
-                    SettingsCategorySpacingModifier,
+                    SettingsCategorySpacingWithHorzBorderModifier,
                 )
             }
             renderProxyItems(proxyRelays, proxyViewModel, accountViewModel, nav, proxyCounts, proxyDragState)
@@ -387,7 +385,7 @@ fun MappedAllRelayListView(
                 SettingsCategory(
                     R.string.broadcast_section,
                     R.string.broadcast_section_explainer,
-                    SettingsCategorySpacingModifier,
+                    SettingsCategorySpacingWithHorzBorderModifier,
                 )
             }
             renderBroadcastItems(broadcastRelays, broadcastViewModel, accountViewModel, nav, broadcastDragState)
@@ -396,7 +394,7 @@ fun MappedAllRelayListView(
                 SettingsCategoryWithButton(
                     R.string.indexer_section,
                     R.string.indexer_section_explainer,
-                    SettingsCategorySpacingModifier,
+                    SettingsCategorySpacingWithHorzBorderModifier,
                 ) {
                     ResetIndexerRelays(indexerViewModel)
                 }
@@ -407,7 +405,7 @@ fun MappedAllRelayListView(
                 SettingsCategoryWithButton(
                     R.string.search_section,
                     R.string.search_section_explainer,
-                    SettingsCategorySpacingModifier,
+                    SettingsCategorySpacingWithHorzBorderModifier,
                 ) {
                     ResetSearchRelays(searchViewModel)
                 }
@@ -418,26 +416,8 @@ fun MappedAllRelayListView(
                 SettingsCategory(
                     R.string.local_section,
                     R.string.local_section_explainer,
-                    SettingsCategorySpacingModifier,
+                    SettingsCategorySpacingWithHorzBorderModifier,
                 )
-            }
-            item {
-                val sendKind0 by accountViewModel.account.settings.syncedSettings.security.sendKind0EventsToLocalRelay
-                    .collectAsStateWithLifecycle()
-                var checked by remember(sendKind0) { mutableStateOf(sendKind0) }
-
-                SettingsRow(
-                    R.string.send_kind0_to_local_relay_title,
-                    R.string.send_kind0_to_local_relay_description,
-                ) {
-                    Switch(
-                        checked = checked,
-                        onCheckedChange = {
-                            checked = it
-                            accountViewModel.toggleSendKind0ToLocalRelay(it)
-                        },
-                    )
-                }
             }
             renderLocalItems(localFeedState, localViewModel, accountViewModel, nav, localDragState)
 
@@ -445,7 +425,7 @@ fun MappedAllRelayListView(
                 SettingsCategory(
                     R.string.trusted_section,
                     R.string.trusted_section_explainer,
-                    SettingsCategorySpacingModifier,
+                    SettingsCategorySpacingWithHorzBorderModifier,
                 )
             }
             renderTrustedItems(trustedFeedState, trustedViewModel, accountViewModel, nav, trustedDragState)
@@ -454,7 +434,7 @@ fun MappedAllRelayListView(
                 SettingsCategory(
                     R.string.favorite_section,
                     R.string.favorite_section_explainer,
-                    SettingsCategorySpacingModifier,
+                    SettingsCategorySpacingWithHorzBorderModifier,
                 )
             }
             renderRelayFeedsItems(relayFeedsFeedState, relayFeedsViewModel, accountViewModel, nav, feedsDragState)
@@ -463,7 +443,7 @@ fun MappedAllRelayListView(
                 SettingsCategory(
                     R.string.blocked_section,
                     R.string.blocked_section_explainer,
-                    SettingsCategorySpacingModifier,
+                    SettingsCategorySpacingWithHorzBorderModifier,
                 )
             }
             renderBlockedItems(blockedFeedState, blockedViewModel, accountViewModel, nav, blockedDragState)
@@ -472,7 +452,7 @@ fun MappedAllRelayListView(
                 SettingsCategory(
                     R.string.connected_section,
                     R.string.connected_section_description,
-                    SettingsCategorySpacingModifier,
+                    SettingsCategorySpacingWithHorzBorderModifier,
                 )
             }
             renderConnectedItems(connectedRelays, connectedViewModel, accountViewModel, nav)

@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoDialog
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
+import com.vitorpamplona.amethyst.ui.theme.HorzHalfVertPadding
 
 @Composable
 fun ConnectedRelayList(
@@ -66,6 +67,7 @@ fun LazyListScope.renderConnectedItems(
             item,
             onDelete = null,
             nip11CachedRetriever = Amethyst.instance.nip11Cache,
+            modifier = HorzHalfVertPadding,
             accountViewModel = accountViewModel,
             nav = nav,
         )

@@ -41,6 +41,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayUrlEditF
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.rememberRelayDragState
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
+import com.vitorpamplona.amethyst.ui.theme.HorzHalfVertPadding
+import com.vitorpamplona.amethyst.ui.theme.HorzPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
@@ -82,6 +84,7 @@ fun LazyListScope.renderDMItems(
             item,
             onDelete = { postViewModel.deleteRelay(item) },
             nip11CachedRetriever = Amethyst.instance.nip11Cache,
+            modifier = HorzHalfVertPadding,
             countResult = countResults[item.relay],
             index = index,
             dragState = dragState,
@@ -94,6 +97,7 @@ fun LazyListScope.renderDMItems(
         Spacer(modifier = StdVertSpacer)
         RelayUrlEditField(
             onNewRelay = { postViewModel.addRelay(relaySetupInfoBuilder(it)) },
+            modifier = HorzPadding,
             accountViewModel = accountViewModel,
             nav = nav,
         )

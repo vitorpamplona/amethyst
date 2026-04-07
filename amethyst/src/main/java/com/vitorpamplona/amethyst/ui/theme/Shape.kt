@@ -345,6 +345,9 @@ val PostKeyboard =
 val SettingsCategoryFirstModifier = Modifier.padding(bottom = 8.dp)
 val SettingsCategorySpacingModifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
 
+val SettingsCategoryFirstWithHorzBorderModifier = Modifier.padding(bottom = 8.dp, start = 10.dp, end = 10.dp)
+val SettingsCategorySpacingWithHorzBorderModifier = Modifier.padding(top = 24.dp, bottom = 8.dp, start = 10.dp, end = 10.dp)
+
 val SquaredQuoteBorderModifier = Modifier.aspectRatio(1f).clip(shape = QuoteBorder)
 val FillWidthQuoteBorderModifier = Modifier.fillMaxWidth().clip(shape = QuoteBorder)
 
