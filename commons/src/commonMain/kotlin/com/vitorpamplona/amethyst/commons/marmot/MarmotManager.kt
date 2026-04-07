@@ -219,6 +219,18 @@ class MarmotManager(
     }
 
     /**
+     * Remove a member from a group.
+     * Returns the commit GroupEvent to publish.
+     */
+    suspend fun removeMember(
+        nostrGroupId: HexKey,
+        targetLeafIndex: Int,
+    ): OutboundGroupEvent {
+        val commitResult = groupManager.removeMember(nostrGroupId, targetLeafIndex)
+        return outboundProcessor.buildCommitEvent(nostrGroupId, commitResult.commitBytes)
+    }
+
+    /**
      * Update group metadata (name, description, etc.) via a GroupContextExtensions proposal.
      * Creates a GCE proposal, commits it, and returns the commit event to publish.
      */
@@ -226,12 +238,7 @@ class MarmotManager(
         nostrGroupId: HexKey,
         metadata: MarmotGroupData,
     ): OutboundGroupEvent {
-        val group =
-            groupManager.getGroup(nostrGroupId)
-                ?: throw IllegalStateException("Not a member of group $nostrGroupId")
-        group.proposeGroupContextExtensions(listOf(metadata.toExtension()))
-        val commitResult = group.commit()
-        groupManager.saveGroupState(nostrGroupId)
+        val commitResult = groupManager.updateGroupExtensions(nostrGroupId, listOf(metadata.toExtension()))
         return outboundProcessor.buildCommitEvent(nostrGroupId, commitResult.commitBytes)
     }
 
