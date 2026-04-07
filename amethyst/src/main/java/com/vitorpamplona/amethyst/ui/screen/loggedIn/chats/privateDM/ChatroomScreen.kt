@@ -27,7 +27,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import com.vitorpamplona.amethyst.ui.call.ActiveCallHolder
+import com.vitorpamplona.amethyst.service.call.CallSessionBridge
 import com.vitorpamplona.amethyst.ui.call.CallActivity
 import com.vitorpamplona.amethyst.ui.call.rememberCallWithPermission
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
@@ -52,13 +52,13 @@ fun ChatroomScreen(
     val isCallSupported = roomId.users.size <= 5
     val startVoiceCall =
         rememberCallWithPermission(context) {
-            ActiveCallHolder.set(accountViewModel.callManager, accountViewModel.callController, accountViewModel)
+            CallSessionBridge.set(accountViewModel.callManager, accountViewModel.callController, accountViewModel)
             accountViewModel.callController?.initiateGroupCall(roomId.users.toSet(), CallType.VOICE)
             CallActivity.launch(context)
         }
     val startVideoCall =
         rememberCallWithPermission(context, isVideo = true) {
-            ActiveCallHolder.set(accountViewModel.callManager, accountViewModel.callController, accountViewModel)
+            CallSessionBridge.set(accountViewModel.callManager, accountViewModel.callController, accountViewModel)
             accountViewModel.callController?.initiateGroupCall(roomId.users.toSet(), CallType.VIDEO)
             CallActivity.launch(context)
         }

@@ -22,10 +22,6 @@ package com.vitorpamplona.amethyst.service.call
 
 import android.content.Context
 import android.content.Intent
-import coil3.ImageLoader
-import coil3.asDrawable
-import coil3.request.ImageRequest
-import coil3.request.allowHardware
 import com.vitorpamplona.amethyst.commons.call.AnswerRouteAction
 import com.vitorpamplona.amethyst.commons.call.CallManager
 import com.vitorpamplona.amethyst.commons.call.CallState
@@ -34,11 +30,8 @@ import com.vitorpamplona.amethyst.commons.call.PeerSession
 import com.vitorpamplona.amethyst.commons.call.PeerSessionManager
 import com.vitorpamplona.amethyst.commons.call.SdpType
 import com.vitorpamplona.amethyst.commons.call.SignalingState
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
-import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.WebRtcCallFactory
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallIceCandidateEvent
@@ -47,30 +40,15 @@ import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.webrtc.AudioSource
-import org.webrtc.AudioTrack
-import org.webrtc.Camera2Enumerator
-import org.webrtc.CameraVideoCapturer
-import org.webrtc.DefaultVideoDecoderFactory
-import org.webrtc.DefaultVideoEncoderFactory
 import org.webrtc.EglBase
 import org.webrtc.IceCandidate
-import org.webrtc.MediaConstraints
-import org.webrtc.PeerConnectionFactory
-import org.webrtc.SurfaceTextureHelper
-import org.webrtc.VideoFrame
-import org.webrtc.VideoSink
-import org.webrtc.VideoSource
 import org.webrtc.VideoTrack
 import java.util.UUID
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicLong
 
 private const val TAG = "CallController"
 private const val VIDEO_MAX_BITRATE_BPS = 1_500_000
@@ -83,72 +61,31 @@ class CallController(
     private val signerProvider: suspend () -> com.vitorpamplona.quartz.nip01Core.signers.NostrSigner,
     localPubKey: HexKey,
 ) {
-    // ---- Per-peer session state (delegated to PeerSessionManager) ----
-
     private var peerSessionMgr = PeerSessionManager(localPubKey)
 
-    /** Retrieves the underlying WebRtcCallSession for a peer (for WebRTC-specific APIs like addTrack). */
     private fun webRtcSession(peerPubKey: HexKey): WebRtcCallSession? = (peerSessionMgr.getSession(peerPubKey)?.session as? WebRtcPeerSessionAdapter)?.webRtcSession
 
-    // ---- Shared WebRTC resources ----
-
-    private var peerConnectionFactory: PeerConnectionFactory? = null
-    private var sharedEglBase: EglBase? = null
-    private var localAudioSource: AudioSource? = null
-    private var localVideoSource: VideoSource? = null
-    private var localAudioTrackInternal: AudioTrack? = null
-    private var localVideoTrackInternal: VideoTrack? = null
-    private var cameraCapturer: CameraVideoCapturer? = null
-    private var surfaceTextureHelper: SurfaceTextureHelper? = null
-
-    private val callFactory = WebRtcCallFactory()
+    val mediaManager = CallMediaManager(context)
     val audioManager = CallAudioManager(context)
+    val videoMonitor = RemoteVideoMonitor(scope)
+    private val callFactory = WebRtcCallFactory()
 
     // ---- UI-exposed state ----
 
-    private val _localVideoTrack = MutableStateFlow<VideoTrack?>(null)
-    val localVideoTrack: StateFlow<VideoTrack?> = _localVideoTrack.asStateFlow()
-
-    // Primary remote track (first connected peer) for backward-compat with P2P UI
-    private val _remoteVideoTrack = MutableStateFlow<VideoTrack?>(null)
-    val remoteVideoTrack: StateFlow<VideoTrack?> = _remoteVideoTrack.asStateFlow()
-
-    // All remote tracks keyed by peer pubkey (for group call UI)
-    private val _remoteVideoTracks = MutableStateFlow<Map<HexKey, VideoTrack>>(emptyMap())
-    val remoteVideoTracks: StateFlow<Map<HexKey, VideoTrack>> = _remoteVideoTracks.asStateFlow()
+    val localVideoTrack: StateFlow<VideoTrack?> = mediaManager.localVideoTrackFlow
+    val remoteVideoTrack: StateFlow<VideoTrack?> = videoMonitor.remoteVideoTrack
+    val remoteVideoTracks: StateFlow<Map<HexKey, VideoTrack>> = videoMonitor.remoteVideoTracks
 
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
-    private val _isRemoteVideoActive = MutableStateFlow(false)
-    val isRemoteVideoActive: StateFlow<Boolean> = _isRemoteVideoActive.asStateFlow()
-    private val _remoteVideoAspectRatio = MutableStateFlow<Float?>(null)
-    val remoteVideoAspectRatio: StateFlow<Float?> = _remoteVideoAspectRatio.asStateFlow()
-    private val lastRemoteFrameTimeMs = AtomicLong(0L)
-    private var remoteVideoMonitorJob: kotlinx.coroutines.Job? = null
-    private val remoteFrameSink =
-        VideoSink { frame: VideoFrame ->
-            lastRemoteFrameTimeMs.set(System.currentTimeMillis())
-            val w = frame.rotatedWidth
-            val h = frame.rotatedHeight
-            if (w > 0 && h > 0) {
-                _remoteVideoAspectRatio.value = w.toFloat() / h.toFloat()
-            }
-        }
-
-    // Per-peer video activity monitoring for group calls
-    private val perPeerFrameSinks = ConcurrentHashMap<HexKey, VideoSink>()
-    private val perPeerLastFrameTimeMs = ConcurrentHashMap<HexKey, AtomicLong>()
-    private var groupVideoMonitorJob: kotlinx.coroutines.Job? = null
-
-    // Set of peer pubkeys that are actively sending video frames
-    private val _activePeerVideos = MutableStateFlow<Set<HexKey>>(emptySet())
-    val activePeerVideos: StateFlow<Set<HexKey>> = _activePeerVideos.asStateFlow()
+    val isRemoteVideoActive: StateFlow<Boolean> = videoMonitor.isRemoteVideoActive
+    val remoteVideoAspectRatio: StateFlow<Float?> = videoMonitor.remoteVideoAspectRatio
+    val activePeerVideos: StateFlow<Set<HexKey>> = videoMonitor.activePeerVideos
 
     private val _isAudioMuted = MutableStateFlow(false)
     val isAudioMuted: StateFlow<Boolean> = _isAudioMuted.asStateFlow()
-    private val _isVideoEnabled = MutableStateFlow(false)
-    val isVideoEnabled: StateFlow<Boolean> = _isVideoEnabled.asStateFlow()
+    val isVideoEnabled: StateFlow<Boolean> = mediaManager.isVideoEnabled
     val audioRoute: StateFlow<AudioRoute> = audioManager.audioRoute
     val isBluetoothAvailable: StateFlow<Boolean> = audioManager.isBluetoothAvailable
 
@@ -165,13 +102,9 @@ class CallController(
                 when (state) {
                     is CallState.IncomingCall -> {
                         withContext(Dispatchers.IO) { audioManager.startRinging() }
-                        // Launch notification in a separate coroutine so that
-                        // long-running network I/O (profile picture download)
-                        // does not block the state collector.  StateFlow is
-                        // conflated — if the collector is suspended when the
-                        // state transitions Ended → Idle, the Ended emission
-                        // is lost and cleanup/stopRinging never runs.
-                        scope.launch { showIncomingCallNotification(state.callerPubKey) }
+                        scope.launch {
+                            NotificationUtils.showIncomingCallNotification(state.callerPubKey, context)
+                        }
                     }
 
                     is CallState.Offering -> {
@@ -187,10 +120,6 @@ class CallController(
                     }
 
                     is CallState.Connected -> {
-                        // Stop ringing/ringback in case the Connecting state
-                        // was skipped due to StateFlow conflation (the value
-                        // can change Offering → Connecting → Connected before
-                        // the collector processes Connecting).
                         audioManager.stopRinging()
                         audioManager.stopRingbackTone()
                         withContext(Dispatchers.IO) { audioManager.switchToCallAudioMode() }
@@ -203,10 +132,6 @@ class CallController(
                     }
 
                     is CallState.Idle -> {
-                        // Safety net: full cleanup in case the Ended state
-                        // was missed due to StateFlow conflation.  cleanup()
-                        // is idempotent — calling it twice is harmless because
-                        // each resource is null-checked and nulled out.
                         cleanup()
                     }
                 }
@@ -215,33 +140,23 @@ class CallController(
 
         scope.launch {
             audioManager.isNearEar.collect { nearEar ->
-                val videoTrack = localVideoTrackInternal ?: return@collect
-                if (nearEar && _isVideoEnabled.value && !videoPausedByProximity) {
+                val videoTrack = mediaManager.localVideoTrack ?: return@collect
+                if (nearEar && mediaManager.isVideoEnabled.value && !videoPausedByProximity) {
                     videoPausedByProximity = true
                     videoTrack.setEnabled(false)
-                    stopCamera()
+                    mediaManager.stopCamera()
                 } else if (!nearEar && videoPausedByProximity) {
                     videoPausedByProximity = false
                     videoTrack.setEnabled(true)
-                    startCamera()
+                    mediaManager.startCamera()
                 }
             }
         }
     }
 
     // ---- Call initiation (caller side) ----
-    fun initiateGroupCall(
-        peerPubKeys: Set<String>,
-        callType: CallType,
-    ) {
-        initiateCallInternal(peerPubKeys, callType)
-    }
 
-    /**
-     * Creates a separate PeerConnection (and SDP offer) for each callee,
-     * establishing full-mesh connectivity for group calls.
-     */
-    private fun initiateCallInternal(
+    fun initiateGroupCall(
         peerPubKeys: Set<String>,
         callType: CallType,
     ) {
@@ -251,29 +166,23 @@ class CallController(
             _errorMessage.value = null
 
             try {
-                withContext(Dispatchers.IO) { initializeSharedResources(callType) }
-                Log.d(TAG) { "initiateCall: shared resources initialized" }
+                withContext(Dispatchers.IO) { mediaManager.initialize(callType) }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to initialize WebRTC", e)
                 _errorMessage.value = "Failed to start call: ${e.message}"
                 return@launch
             }
 
-            // Set state to Offering before creating peer sessions
             callManager.beginOffering(callId, peerPubKeys, callType)
 
-            // Create a PeerConnection + offer for each callee
             for (peerPubKey in peerPubKeys) {
                 try {
                     val webRtcSession = withContext(Dispatchers.IO) { createWebRtcSession(peerPubKey) }
                     val adapter = WebRtcPeerSessionAdapter(webRtcSession)
                     peerSessionMgr.registerSession(peerPubKey, adapter)
-                    Log.d(TAG) { "initiateCall: PeerConnection created for ${peerPubKey.take(8)}" }
                     webRtcSession.createOffer { sdp ->
-                        Log.d(TAG) { "initiateCall: offer created for ${peerPubKey.take(8)}, sdpLength=${sdp.description.length}" }
                         scope.launch {
                             callManager.publishOfferToPeer(peerPubKey, peerPubKeys, callType, callId, sdp.description)
-                            Log.d(TAG) { "initiateCall: offer published for ${peerPubKey.take(8)}" }
                         }
                     }
                 } catch (e: Exception) {
@@ -287,20 +196,14 @@ class CallController(
 
     fun acceptIncomingCall(sdpOffer: String) {
         val state = callManager.state.value
-        if (state !is CallState.IncomingCall) {
-            Log.d(TAG) { "acceptIncomingCall: state is ${state::class.simpleName}, not IncomingCall — ignoring" }
-            return
-        }
+        if (state !is CallState.IncomingCall) return
 
         val callerPubKey = state.callerPubKey
-        Log.d(TAG) { "acceptIncomingCall: callId=${state.callId}, callType=${state.callType}, sdpOfferLength=${sdpOffer.length}" }
-
         scope.launch {
             _errorMessage.value = null
 
             try {
-                withContext(Dispatchers.IO) { initializeSharedResources(state.callType) }
-                Log.d(TAG) { "acceptIncomingCall: shared resources initialized" }
+                withContext(Dispatchers.IO) { mediaManager.initialize(state.callType) }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to initialize WebRTC", e)
                 _errorMessage.value = "Failed to accept call: ${e.message}"
@@ -317,19 +220,13 @@ class CallController(
                 }
 
             val adapter = WebRtcPeerSessionAdapter(webRtcSession)
-            val entry = peerSessionMgr.registerSession(callerPubKey, adapter)
-
-            Log.d(TAG) { "acceptIncomingCall: setting remote description (OFFER)..." }
+            peerSessionMgr.registerSession(callerPubKey, adapter)
             adapter.setRemoteDescription(SdpType.OFFER, sdpOffer)
-            Log.d(TAG) { "acceptIncomingCall: flushing ${entry.pendingIceCandidates.size} pending ICE candidates..." }
             peerSessionMgr.flushPendingIceCandidates(callerPubKey)
 
-            Log.d(TAG) { "acceptIncomingCall: creating answer..." }
             webRtcSession.createAnswer { sdp ->
-                Log.d(TAG) { "acceptIncomingCall: answer created, sdpLength=${sdp.description.length}, publishing..." }
                 scope.launch {
                     callManager.acceptCall(sdp.description)
-                    Log.d(TAG) { "acceptIncomingCall: answer published, state=${callManager.state.value::class.simpleName}" }
                 }
             }
         }
@@ -337,27 +234,18 @@ class CallController(
 
     // ---- Answer routing ----
 
-    /**
-     * Routes an answer to the correct per-peer PeerConnection.
-     * For the caller: the answer is for a PeerConnection we already created.
-     * For a callee seeing another callee's answer: we don't have a session
-     * for them yet, so we trigger callee-to-callee connection.
-     */
     fun onCallAnswerReceived(
         peerPubKey: HexKey,
         sdpAnswer: String,
     ) {
-        Log.d(TAG) { "onCallAnswerReceived: from=${peerPubKey.take(8)}, knownSessions=${peerSessionMgr.allSessionKeys().map { it.take(8) }}" }
-
         val action = peerSessionMgr.routeAnswer(peerPubKey, sdpAnswer)
-        Log.d(TAG) { "onCallAnswerReceived: action=$action" }
         when (action) {
             AnswerRouteAction.APPLIED -> {
                 Log.d(TAG) { "Answer applied for ${peerPubKey.take(8)}" }
             }
 
             AnswerRouteAction.NO_SESSION -> {
-                Log.d(TAG) { "Answer from unknown peer ${peerPubKey.take(8)} — triggering callee-to-callee connection" }
+                Log.d(TAG) { "Answer from unknown peer ${peerPubKey.take(8)} — triggering callee-to-callee" }
                 onNewPeerInGroupCall(peerPubKey)
             }
 
@@ -369,16 +257,10 @@ class CallController(
 
     // ---- ICE candidate routing ----
 
-    /**
-     * Routes an incoming ICE candidate to the correct per-peer session.
-     * Before a session exists for a peer, candidates are buffered globally.
-     */
     fun onIceCandidateReceived(event: CallIceCandidateEvent) {
         try {
-            val senderPubKey = event.pubKey
             val candidate = IceCandidateData(event.candidateSdp(), event.sdpMid(), event.sdpMLineIndex())
-            val action = peerSessionMgr.routeIceCandidate(senderPubKey, candidate)
-            Log.d(TAG) { "ICE candidate from ${senderPubKey.take(8)}: $action" }
+            peerSessionMgr.routeIceCandidate(event.pubKey, candidate)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to parse ICE candidate", e)
         }
@@ -388,10 +270,8 @@ class CallController(
         peerPubKey: HexKey,
         candidate: IceCandidate,
     ) {
-        Log.d(TAG) { "Local ICE candidate for ${peerPubKey.take(8)}: ${candidate.sdp.take(50)}" }
         val callId = callManager.currentCallId() ?: return
         val candidateJson = CallIceCandidateEvent.serializeCandidate(candidate.sdp, candidate.sdpMid, candidate.sdpMLineIndex)
-
         scope.launch {
             val signer = signerProvider()
             val result = callFactory.createIceCandidate(candidateJson, peerPubKey, callId, signer)
@@ -401,31 +281,17 @@ class CallController(
 
     // ---- Callee-to-callee mesh connections ----
 
-    /**
-     * Another callee joined the group call. Establish a direct PeerConnection
-     * to them. To avoid glare (both sides sending offers simultaneously), the
-     * peer with the lexicographically lower pubkey initiates.
-     */
     fun onNewPeerInGroupCall(peerPubKey: HexKey) {
-        if (peerSessionMgr.hasSession(peerPubKey)) {
-            Log.d(TAG) { "onNewPeerInGroupCall: session already exists for ${peerPubKey.take(8)} — skipping" }
-            return
-        }
-
+        if (peerSessionMgr.hasSession(peerPubKey)) return
         scope.launch {
-            Log.d(TAG) { "onNewPeerInGroupCall: peer=${peerPubKey.take(8)}, shouldInitiate=${peerSessionMgr.shouldInitiateOffer(peerPubKey)}" }
             if (peerSessionMgr.shouldInitiateOffer(peerPubKey)) {
-                Log.d(TAG) { "Initiating callee-to-callee connection to ${peerPubKey.take(8)} (I have lower pubkey)" }
                 createAndOfferToPeer(peerPubKey)
-            } else {
-                Log.d(TAG) { "Waiting for callee-to-callee offer from ${peerPubKey.take(8)} (they have lower pubkey)" }
             }
         }
     }
 
     private suspend fun createAndOfferToPeer(peerPubKey: HexKey) {
-        if (peerConnectionFactory == null) return
-
+        if (mediaManager.peerConnectionFactory == null) return
         val webRtcSession =
             try {
                 withContext(Dispatchers.IO) { createWebRtcSession(peerPubKey) }
@@ -433,38 +299,20 @@ class CallController(
                 Log.e(TAG, "Failed to create PeerConnection for ${peerPubKey.take(8)}", e)
                 return
             }
-
         val adapter = WebRtcPeerSessionAdapter(webRtcSession)
         peerSessionMgr.registerSession(peerPubKey, adapter)
-
         webRtcSession.createOffer { sdp ->
-            Log.d(TAG) { "Callee-to-callee offer created for ${peerPubKey.take(8)}, sdpLength=${sdp.description.length}" }
-            scope.launch {
-                callManager.publishOfferToPeer(peerPubKey, sdp.description)
-            }
+            scope.launch { callManager.publishOfferToPeer(peerPubKey, sdp.description) }
         }
     }
 
-    /**
-     * A mid-call offer was received from another callee in the group.
-     * Create a PeerSession, accept their offer, and send back an answer.
-     */
     fun onMidCallOfferReceived(
         peerPubKey: HexKey,
         sdpOffer: String,
     ) {
-        if (peerSessionMgr.hasSession(peerPubKey)) {
-            Log.d(TAG) { "Mid-call offer from ${peerPubKey.take(8)} but session already exists — ignoring" }
-            return
-        }
-
-        Log.d(TAG) { "Mid-call offer from ${peerPubKey.take(8)}, sdpLength=${sdpOffer.length}" }
+        if (peerSessionMgr.hasSession(peerPubKey)) return
         scope.launch {
-            if (peerConnectionFactory == null) {
-                Log.e(TAG, "Mid-call offer but factory not initialized")
-                return@launch
-            }
-
+            if (mediaManager.peerConnectionFactory == null) return@launch
             val webRtcSession =
                 try {
                     withContext(Dispatchers.IO) { createWebRtcSession(peerPubKey) }
@@ -472,17 +320,12 @@ class CallController(
                     Log.e(TAG, "Failed to create PeerConnection for mid-call offer from ${peerPubKey.take(8)}", e)
                     return@launch
                 }
-
             val adapter = WebRtcPeerSessionAdapter(webRtcSession)
             peerSessionMgr.registerSession(peerPubKey, adapter)
             adapter.setRemoteDescription(SdpType.OFFER, sdpOffer)
             peerSessionMgr.flushPendingIceCandidates(peerPubKey)
-
             webRtcSession.createAnswer { sdp ->
-                Log.d(TAG) { "Callee-to-callee answer for ${peerPubKey.take(8)}, sdpLength=${sdp.description.length}" }
-                scope.launch {
-                    callManager.publishAnswerToPeer(peerPubKey, sdp.description)
-                }
+                scope.launch { callManager.publishAnswerToPeer(peerPubKey, sdp.description) }
             }
         }
     }
@@ -492,14 +335,10 @@ class CallController(
     private fun onRenegotiationOfferReceived(event: CallRenegotiateEvent) {
         val peerPubKey = event.pubKey
         val sdpOffer = event.sdpOffer()
-        Log.d(TAG) { "Renegotiation offer from ${peerPubKey.take(8)}, sdpLength=${sdpOffer.length}" }
-
         scope.launch {
-            val resolution =
-                peerSessionMgr.resolveRenegotiationGlare(peerPubKey, sdpOffer) { entry ->
-                    applyRenegotiationOffer(entry.session, peerPubKey, sdpOffer)
-                }
-            Log.d(TAG) { "Renegotiation glare resolution with ${peerPubKey.take(8)}: $resolution" }
+            peerSessionMgr.resolveRenegotiationGlare(peerPubKey, sdpOffer) { entry ->
+                applyRenegotiationOffer(entry.session, peerPubKey, sdpOffer)
+            }
         }
     }
 
@@ -510,9 +349,7 @@ class CallController(
     ) {
         session.setRemoteDescription(SdpType.OFFER, sdpOffer)
         session.createAnswer { sdpAnswer ->
-            scope.launch {
-                callManager.sendRenegotiationAnswer(sdpAnswer, peerPubKey)
-            }
+            scope.launch { callManager.sendRenegotiationAnswer(sdpAnswer, peerPubKey) }
         }
     }
 
@@ -520,12 +357,8 @@ class CallController(
         val webRtcSession = webRtcSession(peerPubKey) ?: return
         val state = callManager.state.value
         if (state !is CallState.Connected && state !is CallState.Connecting) return
-
-        Log.d(TAG) { "Starting renegotiation with ${peerPubKey.take(8)}" }
         webRtcSession.createOffer { sdp ->
-            scope.launch {
-                callManager.sendRenegotiation(sdp.description, peerPubKey)
-            }
+            scope.launch { callManager.sendRenegotiation(sdp.description, peerPubKey) }
         }
     }
 
@@ -534,31 +367,24 @@ class CallController(
     fun toggleAudioMute() {
         val muted = !_isAudioMuted.value
         _isAudioMuted.value = muted
-        localAudioTrackInternal?.setEnabled(!muted)
+        mediaManager.setAudioMuted(muted)
     }
 
     fun toggleVideo() {
-        val enabling = !_isVideoEnabled.value
-
+        val enabling = !mediaManager.isVideoEnabled.value
         if (enabling) {
-            if (localVideoTrackInternal == null) {
-                // Voice → video upgrade: create video source/track and add to all sessions
-                createVideoResources()
+            if (mediaManager.localVideoTrack == null) {
+                mediaManager.createVideoResources()
                 peerSessionMgr.allSessionKeys().forEach { key ->
                     webRtcSession(key)?.let { session ->
-                        localVideoTrackInternal?.let { track -> session.addTrack(track, VIDEO_MAX_BITRATE_BPS) }
+                        mediaManager.localVideoTrack?.let { track -> session.addTrack(track, VIDEO_MAX_BITRATE_BPS) }
                     }
                 }
             } else {
-                localVideoTrackInternal?.setEnabled(true)
-                startCamera()
+                mediaManager.enableVideo()
             }
-            _localVideoTrack.value = localVideoTrackInternal
-            _isVideoEnabled.value = true
         } else {
-            localVideoTrackInternal?.setEnabled(false)
-            stopCamera()
-            _isVideoEnabled.value = false
+            mediaManager.disableVideo()
         }
     }
 
@@ -566,101 +392,24 @@ class CallController(
         audioManager.cycleAudioRoute()
     }
 
-    fun getEglBase(): EglBase? = sharedEglBase
+    fun getEglBase(): EglBase? = mediaManager.sharedEglBase
 
     fun invitePeer(peerPubKey: String) {
-        scope.launch {
-            createAndOfferToPeer(peerPubKey)
-        }
+        scope.launch { createAndOfferToPeer(peerPubKey) }
     }
 
     fun hangup() {
-        scope.launch {
-            callManager.hangup()
-        }
+        scope.launch { callManager.hangup() }
     }
 
     fun clearError() {
         _errorMessage.value = null
     }
 
-    // ---- Shared resource management ----
-
-    private fun initializeSharedResources(callType: CallType) {
-        if (peerConnectionFactory != null) return // already initialized
-
-        sharedEglBase = EglBase.create()
-
-        PeerConnectionFactory.initialize(
-            PeerConnectionFactory
-                .InitializationOptions
-                .builder(context)
-                .createInitializationOptions(),
-        )
-
-        peerConnectionFactory =
-            PeerConnectionFactory
-                .builder()
-                .setVideoDecoderFactory(DefaultVideoDecoderFactory(sharedEglBase!!.eglBaseContext))
-                .setVideoEncoderFactory(DefaultVideoEncoderFactory(sharedEglBase!!.eglBaseContext, true, true))
-                .createPeerConnectionFactory()
-
-        // Audio
-        localAudioSource = peerConnectionFactory?.createAudioSource(MediaConstraints())
-        localAudioTrackInternal = peerConnectionFactory?.createAudioTrack("audio0", localAudioSource)
-
-        // Video (if video call)
-        if (callType == CallType.VIDEO) {
-            createVideoResources()
-        }
-    }
-
-    private fun createVideoResources() {
-        if (localVideoSource != null) return
-        val factory = peerConnectionFactory ?: return
-
-        localVideoSource = factory.createVideoSource(false)
-        localVideoTrackInternal = factory.createVideoTrack("video0", localVideoSource)
-        _localVideoTrack.value = localVideoTrackInternal
-        _isVideoEnabled.value = true
-        startCamera()
-    }
-
-    private fun startCamera() {
-        if (cameraCapturer != null) return
-        val source = localVideoSource ?: return
-        val egl = sharedEglBase ?: return
-
-        val enumerator = Camera2Enumerator(context)
-        val frontCamera = enumerator.deviceNames.firstOrNull { enumerator.isFrontFacing(it) }
-        val camera = frontCamera ?: enumerator.deviceNames.firstOrNull() ?: return
-
-        val helper = SurfaceTextureHelper.create("CaptureThread", egl.eglBaseContext)
-        surfaceTextureHelper = helper
-        cameraCapturer =
-            enumerator.createCapturer(camera, null)?.also {
-                it.initialize(helper, context, source.capturerObserver)
-                it.startCapture(1280, 720, 30)
-            }
-    }
-
-    private fun stopCamera() {
-        try {
-            cameraCapturer?.stopCapture()
-        } catch (_: InterruptedException) {
-        }
-        cameraCapturer?.dispose()
-        cameraCapturer = null
-        surfaceTextureHelper?.dispose()
-        surfaceTextureHelper = null
-    }
-
     // ---- Per-peer PeerConnection creation ----
 
     private fun createWebRtcSession(peerPubKey: HexKey): WebRtcCallSession {
-        Log.d(TAG) { "createWebRtcSession: ${peerPubKey.take(8)}, existing sessions=${peerSessionMgr.allSessionKeys().map { it.take(8) }}" }
-        val factory = peerConnectionFactory ?: throw IllegalStateException("PeerConnectionFactory not initialized")
-
+        val factory = mediaManager.peerConnectionFactory ?: throw IllegalStateException("PeerConnectionFactory not initialized")
         val session =
             WebRtcCallSession(
                 peerConnectionFactory = factory,
@@ -668,95 +417,26 @@ class CallController(
                 onIceCandidate = { candidate -> onLocalIceCandidate(peerPubKey, candidate) },
                 onPeerConnected = {
                     Log.d(TAG) { "Peer ${peerPubKey.take(8)} connected!" }
-                    scope.launch {
-                        callManager.onPeerConnected()
-                    }
+                    scope.launch { callManager.onPeerConnected() }
                     if (!foregroundServiceStarted) {
                         foregroundServiceStarted = true
                         startForegroundService()
                     }
                 },
-                onRemoteVideoTrack = { track -> onRemoteVideoTrack(peerPubKey, track) },
+                onRemoteVideoTrack = { track -> videoMonitor.onRemoteVideoTrack(peerPubKey, track) },
                 onDisconnected = { onPeerDisconnected(peerPubKey) },
                 onError = { error -> _errorMessage.value = error },
                 onRenegotiationNeeded = { performRenegotiation(peerPubKey) },
             )
-
         try {
             session.createPeerConnection()
         } catch (e: Exception) {
             session.dispose()
             throw e
         }
-
-        // Add shared local tracks to this PeerConnection
-        localAudioTrackInternal?.let { session.addTrack(it) }
-        localVideoTrackInternal?.let { session.addTrack(it, VIDEO_MAX_BITRATE_BPS) }
-
+        mediaManager.localAudioTrack?.let { session.addTrack(it) }
+        mediaManager.localVideoTrack?.let { session.addTrack(it, VIDEO_MAX_BITRATE_BPS) }
         return session
-    }
-
-    private fun onRemoteVideoTrack(
-        peerPubKey: HexKey,
-        track: VideoTrack,
-    ) {
-        Log.d(TAG) { "Remote video track from ${peerPubKey.take(8)}" }
-        _remoteVideoTracks.value = _remoteVideoTracks.value + (peerPubKey to track)
-        // Backward-compat: set the first remote track as the primary
-        if (_remoteVideoTrack.value == null) {
-            _remoteVideoTrack.value = track
-            startRemoteVideoMonitor(track)
-        }
-        // Monitor this peer's video activity for group call UI
-        startPeerVideoMonitor(peerPubKey, track)
-    }
-
-    private fun startPeerVideoMonitor(
-        peerPubKey: HexKey,
-        track: VideoTrack,
-    ) {
-        // Remove any existing sink for this peer
-        stopPeerVideoMonitor(peerPubKey)
-
-        val lastFrameTime = AtomicLong(System.currentTimeMillis())
-        perPeerLastFrameTimeMs[peerPubKey] = lastFrameTime
-        val sink =
-            VideoSink { frame: VideoFrame ->
-                lastFrameTime.set(System.currentTimeMillis())
-            }
-        perPeerFrameSinks[peerPubKey] = sink
-        track.addSink(sink)
-        ensureGroupVideoMonitorRunning()
-    }
-
-    private fun stopPeerVideoMonitor(peerPubKey: HexKey) {
-        val sink = perPeerFrameSinks.remove(peerPubKey) ?: return
-        perPeerLastFrameTimeMs.remove(peerPubKey)
-        val track = _remoteVideoTracks.value[peerPubKey]
-        try {
-            track?.removeSink(sink)
-        } catch (_: Exception) {
-        }
-    }
-
-    private fun ensureGroupVideoMonitorRunning() {
-        if (groupVideoMonitorJob != null) return
-        groupVideoMonitorJob =
-            scope.launch {
-                while (true) {
-                    delay(1500)
-                    val now = System.currentTimeMillis()
-                    val activePeers = mutableSetOf<HexKey>()
-                    for ((peerKey, lastFrame) in perPeerLastFrameTimeMs) {
-                        if (now - lastFrame.get() < 2000) {
-                            activePeers.add(peerKey)
-                        }
-                    }
-                    _activePeerVideos.value = activePeers
-                    val anyActive = activePeers.isNotEmpty()
-                    _isRemoteVideoActive.value = anyActive || (now - lastRemoteFrameTimeMs.get() < 2000)
-                }
-            }
     }
 
     private fun onPeerDisconnected(peerPubKey: HexKey) {
@@ -768,57 +448,27 @@ class CallController(
                     peerSessionMgr.getSession(key)?.remoteDescriptionSet != true
             }
         if (allDisconnected) {
-            Log.d(TAG) { "onPeerDisconnected: all peers disconnected, hanging up" }
             scope.launch { callManager.hangup() }
-        } else {
-            Log.d(TAG) { "onPeerDisconnected: other peers still active, continuing call" }
         }
     }
 
     // ---- Per-peer cleanup ----
 
-    /**
-     * Disposes a single peer's WebRTC session when they leave the call
-     * but the call continues with remaining peers.
-     */
     fun disposePeerSession(peerPubKey: HexKey) {
         val entry = peerSessionMgr.removeSession(peerPubKey)
         if (entry != null) {
-            Log.d(TAG) { "disposePeerSession: closing session for ${peerPubKey.take(8)}" }
             try {
                 entry.session.dispose()
             } catch (e: Exception) {
                 Log.e(TAG, "disposePeerSession: dispose() failed for ${peerPubKey.take(8)}", e)
             }
-            // Clean up per-peer video monitor
-            stopPeerVideoMonitor(peerPubKey)
-            // Update remote video tracks
-            val currentTracks = _remoteVideoTracks.value
-            if (peerPubKey in currentTracks) {
-                _remoteVideoTracks.value = currentTracks - peerPubKey
-                // If the disposed peer was the primary remote track, pick a new one
-                if (_remoteVideoTrack.value == currentTracks[peerPubKey]) {
-                    stopRemoteVideoMonitor()
-                    val nextTrack = _remoteVideoTracks.value.values.firstOrNull()
-                    _remoteVideoTrack.value = nextTrack
-                    if (nextTrack != null) {
-                        startRemoteVideoMonitor(nextTrack)
-                    }
-                }
-            }
-        } else {
-            Log.d(TAG) { "disposePeerSession: no session for ${peerPubKey.take(8)} (already disposed or never created)" }
+            videoMonitor.onPeerRemoved(peerPubKey)
         }
     }
 
     // ---- Cleanup ----
 
     fun cleanup() {
-        Log.d(TAG) { "cleanup: disposing ${peerSessionMgr.allSessionKeys().size} peer sessions, state=${callManager.state.value::class.simpleName}" }
-        // Each block is wrapped individually so that a failure in one
-        // (e.g. a WebRTC native crash) does not prevent the rest from
-        // running.  Without this, a single exception could leave the
-        // camera open, audio mode stuck, or the foreground service alive.
         try {
             audioManager.release()
         } catch (e: Exception) {
@@ -831,14 +481,9 @@ class CallController(
         }
         foregroundServiceStarted = false
         NotificationUtils.cancelCallNotification(context)
-        stopRemoteVideoMonitor()
 
-        // Clean up per-peer video monitors
-        for (peerPubKey in perPeerFrameSinks.keys.toList()) {
-            stopPeerVideoMonitor(peerPubKey)
-        }
+        videoMonitor.dispose()
 
-        // Dispose all peer sessions
         try {
             peerSessionMgr.disposeAll()
         } catch (e: Exception) {
@@ -846,87 +491,10 @@ class CallController(
         }
         peerSessionMgr = PeerSessionManager(peerSessionMgr.localPubKey)
 
-        // Dispose shared resources — each in its own try-catch so one
-        // failure does not prevent the others from being released.
-        try {
-            stopCamera()
-        } catch (e: Exception) {
-            Log.e(TAG, "cleanup: stopCamera() failed", e)
-        }
-        try {
-            localAudioTrackInternal?.dispose()
-        } catch (e: Exception) {
-            Log.e(TAG, "cleanup: localAudioTrack.dispose() failed", e)
-        }
-        try {
-            localVideoTrackInternal?.dispose()
-        } catch (e: Exception) {
-            Log.e(TAG, "cleanup: localVideoTrack.dispose() failed", e)
-        }
-        try {
-            localAudioSource?.dispose()
-        } catch (e: Exception) {
-            Log.e(TAG, "cleanup: localAudioSource.dispose() failed", e)
-        }
-        try {
-            localVideoSource?.dispose()
-        } catch (e: Exception) {
-            Log.e(TAG, "cleanup: localVideoSource.dispose() failed", e)
-        }
-        try {
-            peerConnectionFactory?.dispose()
-        } catch (e: Exception) {
-            Log.e(TAG, "cleanup: peerConnectionFactory.dispose() failed", e)
-        }
-        try {
-            sharedEglBase?.release()
-        } catch (e: Exception) {
-            Log.e(TAG, "cleanup: sharedEglBase.release() failed", e)
-        }
+        mediaManager.dispose()
 
-        localAudioTrackInternal = null
-        localVideoTrackInternal = null
-        localAudioSource = null
-        localVideoSource = null
-        peerConnectionFactory = null
-        sharedEglBase = null
-
-        _remoteVideoTrack.value = null
-        _remoteVideoTracks.value = emptyMap()
-        _localVideoTrack.value = null
         _isAudioMuted.value = false
-        _isVideoEnabled.value = false
-        _isRemoteVideoActive.value = false
-        _remoteVideoAspectRatio.value = null
-        _activePeerVideos.value = emptySet()
         videoPausedByProximity = false
-    }
-
-    // ---- Remote video monitoring ----
-
-    private fun startRemoteVideoMonitor(track: VideoTrack) {
-        stopRemoteVideoMonitor()
-        lastRemoteFrameTimeMs.set(System.currentTimeMillis())
-        track.addSink(remoteFrameSink)
-        remoteVideoMonitorJob =
-            scope.launch {
-                while (true) {
-                    delay(1500)
-                    val elapsed = System.currentTimeMillis() - lastRemoteFrameTimeMs.get()
-                    _isRemoteVideoActive.value = elapsed < 2000
-                }
-            }
-    }
-
-    private fun stopRemoteVideoMonitor() {
-        remoteVideoMonitorJob?.cancel()
-        remoteVideoMonitorJob = null
-        groupVideoMonitorJob?.cancel()
-        groupVideoMonitorJob = null
-        try {
-            _remoteVideoTrack.value?.removeSink(remoteFrameSink)
-        } catch (_: Exception) {
-        }
     }
 
     // ---- Foreground service ----
@@ -934,7 +502,7 @@ class CallController(
     private fun startForegroundService() {
         try {
             val peerName = callManager.currentPeerPubKey() ?: ""
-            val isVideo = _isVideoEnabled.value
+            val isVideo = mediaManager.isVideoEnabled.value
             val intent =
                 Intent(context, CallForegroundService::class.java).apply {
                     action = CallForegroundService.ACTION_START
@@ -956,38 +524,5 @@ class CallController(
             context.startService(intent)
         } catch (_: Exception) {
         }
-    }
-
-    // ---- Incoming call notification ----
-
-    private suspend fun showIncomingCallNotification(callerPubKey: String) {
-        val callerUser = LocalCache.getUserIfExists(callerPubKey)
-        val callerName = callerUser?.toBestDisplayName() ?: callerPubKey.take(8) + "..."
-        val uri = "nostr:${callerPubKey.hexToByteArray().toNpub()}"
-
-        val callerBitmap =
-            callerUser?.profilePicture()?.let { pictureUrl ->
-                withContext(Dispatchers.IO) {
-                    try {
-                        val request =
-                            ImageRequest
-                                .Builder(context)
-                                .data(pictureUrl)
-                                .allowHardware(false)
-                                .build()
-                        val result = ImageLoader(context).execute(request)
-                        (result.image?.asDrawable(context.resources) as? android.graphics.drawable.BitmapDrawable)?.bitmap
-                    } catch (_: Exception) {
-                        null
-                    }
-                }
-            }
-
-        NotificationUtils.sendCallNotification(
-            callerName = callerName,
-            callerBitmap = callerBitmap,
-            uri = uri,
-            applicationContext = context,
-        )
     }
 }
