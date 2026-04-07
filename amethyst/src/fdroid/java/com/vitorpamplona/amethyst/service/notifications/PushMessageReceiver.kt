@@ -86,19 +86,20 @@ class PushMessageReceiver : MessagingReceiver() {
         instance: String,
     ) {
         val sanitizedEndpoint = if (endpoint.url.endsWith("?up=1")) endpoint.url.dropLast(5) else endpoint.url
-        if (sanitizedEndpoint != pushHandler.getSavedEndpoint()) {
-            Log.d(TAG) { "New endpoint provided:- $endpoint for Instance: $instance ${pushHandler.getSavedEndpoint()} $sanitizedEndpoint" }
-            pushHandler.setEndpoint(sanitizedEndpoint)
-            scope.launch(Dispatchers.IO) {
-                PushNotificationUtils.checkAndInit(sanitizedEndpoint, LocalPreferences.allSavedAccounts()) {
-                    Amethyst.instance.okHttpClients.getHttpClient(Amethyst.instance.torManager.isSocksReady())
-                }
-                NotificationUtils.getOrCreateZapChannel(appContext)
-                NotificationUtils.getOrCreateDMChannel(appContext)
+        // if (sanitizedEndpoint != pushHandler.getSavedEndpoint()) {
+        Log.d(TAG) { "New endpoint provided:- ${endpoint.url} for Instance: $instance ${pushHandler.getSavedEndpoint()} $sanitizedEndpoint" }
+        pushHandler.setEndpoint(sanitizedEndpoint)
+        scope.launch(Dispatchers.IO) {
+            PushNotificationUtils.checkAndInit(sanitizedEndpoint, LocalPreferences.allSavedAccounts()) {
+                Log.d(TAG) { "Building okHttpClient, useTor: ${Amethyst.instance.torManager.isSocksReady()}" }
+                Amethyst.instance.okHttpClients.getHttpClient(Amethyst.instance.torManager.isSocksReady())
             }
-        } else {
-            Log.d(TAG) { "Same endpoint provided:- $endpoint for Instance: $instance $sanitizedEndpoint" }
+            NotificationUtils.getOrCreateZapChannel(appContext)
+            NotificationUtils.getOrCreateDMChannel(appContext)
         }
+        // } else {
+        Log.d(TAG) { "Same endpoint provided:- ${endpoint.url} for Instance: $instance $sanitizedEndpoint" }
+        // }
     }
 
     override fun onRegistrationFailed(
