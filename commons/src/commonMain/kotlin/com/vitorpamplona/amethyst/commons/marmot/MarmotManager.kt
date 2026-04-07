@@ -182,9 +182,17 @@ class MarmotManager(
      * Returns proposal bytes to publish (as a GroupEvent).
      */
     suspend fun leaveGroup(nostrGroupId: HexKey): OutboundGroupEvent {
-        val proposalBytes = groupManager.leaveGroup(nostrGroupId)
+        // Build the outbound event BEFORE deleting group state (needs exporter secret)
+        val group =
+            groupManager.getGroup(nostrGroupId)
+                ?: throw IllegalStateException("Not a member of group $nostrGroupId")
+        val proposalBytes = group.selfRemove()
+        val outboundEvent = outboundProcessor.buildCommitEvent(nostrGroupId, proposalBytes)
+
+        // Now clean up group state
+        groupManager.removeGroupState(nostrGroupId)
         subscriptionManager.unsubscribeGroup(nostrGroupId)
-        return outboundProcessor.buildCommitEvent(nostrGroupId, proposalBytes)
+        return outboundEvent
     }
 
     // --- KeyPackage Management ---

@@ -223,18 +223,18 @@ class MarmotInboundProcessor(
         epoch: Long,
     ): GroupEventResult? {
         val winner =
-            commitTracker.resolve(epoch)
+            commitTracker.resolve(groupId, epoch)
                 ?: return null
 
         val result = applyCommit(groupId, winner)
-        commitTracker.clearEpoch(epoch)
+        commitTracker.clearEpoch(groupId, epoch)
         return result
     }
 
     /**
-     * Get all epochs that have pending unresolved commits.
+     * Get all (group, epoch) keys that have pending unresolved commits.
      */
-    fun pendingCommitEpochs(): Set<Long> = commitTracker.pendingEpochs()
+    fun pendingCommitGroupEpochs(): Set<CommitOrdering.GroupEpochKey> = commitTracker.pendingGroupEpochs()
 
     /**
      * Clear all pending commit state.
@@ -303,13 +303,13 @@ class MarmotInboundProcessor(
             groupManager.getGroup(groupId)
                 ?: return GroupEventResult.Error(groupId, "Group not found")
         val currentEpoch = group.epoch
-        commitTracker.addCommit(currentEpoch, groupEvent)
+        commitTracker.addCommit(groupId, currentEpoch, groupEvent)
 
         // If this is the only commit for this epoch, apply immediately
-        val pending = commitTracker.pendingForEpoch(currentEpoch)
+        val pending = commitTracker.pendingForEpoch(groupId, currentEpoch)
         return if (pending.size == 1) {
             val result = applyCommit(groupId, groupEvent)
-            commitTracker.clearEpoch(currentEpoch)
+            commitTracker.clearEpoch(groupId, currentEpoch)
             result
         } else {
             GroupEventResult.CommitPending(groupId, currentEpoch)
